@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT测试工具 - PhoneBox</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📱 PhoneBox MQTT测试工具</h1>
+            <p>ESP32手机管理箱远程控制与状态监控</p>
+        </header>
+
+        <div class="main-content">
+            <section class="config-section">
+                <h2>🔧 连接配置</h2>
+                <div class="form-row">
+                    <label>服务器地址:</label>
+                    <input type="text" id="mqttServer" value="nc5233fc.ala.cn-hangzhou.emqxsl.cn">
+                </div>
+                <div class="form-row">
+                    <label>端口:</label>
+                    <input type="number" id="mqttPort" value="8084" min="1" max="65535">
+                </div>
+                <div class="form-row">
+                    <label>SSL:</label>
+                    <input type="checkbox" id="mqttSSL" checked>
+                </div>
+                <div class="form-row">
+                    <label>客户端ID:</label>
+                    <input type="text" id="mqttClientId" value="mqtt_test_tool_">
+                </div>
+                <div class="form-row">
+                    <label>用户名:</label>
+                    <input type="text" id="mqttUsername" value="phoneboxtest">
+                </div>
+                <div class="form-row">
+                    <label>密码:</label>
+                    <input type="password" id="mqttPassword" value="123456">
+                </div>
+                <div class="button-group">
+                    <button id="btnConnect" class="btn btn-primary">🔗 连接</button>
+                    <button id="btnDisconnect" class="btn btn-danger">✖️ 断开</button>
+                    <button id="btnClearCache" class="btn btn-secondary">🔄 重置配置</button>
+                    <button id="btnClearLog" class="btn btn-secondary">🗑️ 清空日志</button>
+                </div>
+                <div id="connectionStatus" class="status status-disconnected">
+                    ⚠️ 未连接
+                </div>
+            </section>
+
+            <section class="control-section">
+                <h2>🎮 设备控制</h2>
+                <div class="control-group">
+                    <h3>A箱控制</h3>
+                    <button id="btnUnlockA" class="control-btn btn-a">🔓 开A箱 (远程开锁)</button>
+                </div>
+                <div class="control-group">
+                    <h3>B箱控制</h3>
+                    <button id="btnUnlockBSuccess" class="control-btn btn-success">✅ B箱开锁成功 (积分充足)</button>
+                    <button id="btnUnlockBFailScore" class="control-btn btn-warning">⚠️ B箱开锁失败 (积分不足)</button>
+                    <button id="btnUnlockBFailCard" class="control-btn btn-danger">❌ B箱开锁失败 (卡号未注册)</button>
+                </div>
+                <div class="control-group">
+                    <h3>手动发布</h3>
+                    <input type="text" id="manualTopic" placeholder="主题" value="phonebox/test">
+                    <input type="text" id="manualMessage" placeholder="消息内容">
+                    <select id="manualQos">
+                        <option value="0">QoS 0</option>
+                        <option value="1">QoS 1</option>
+                        <option value="2">QoS 2</option>
+                    </select>
+                    <button id="btnManualPublish" class="btn btn-primary">📤 发布</button>
+                </div>
+            </section>
+
+            <section class="status-section">
+                <h2>📊 设备状态</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">连接状态</span>
+                        <span id="statusConnect" class="status-value status-offline">● 离线</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">A箱状态</span>
+                        <span id="statusDoorA" class="status-value">未知</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">B箱状态</span>
+                        <span id="statusDoorB" class="status-value">未知</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">消息计数</span>
+                        <span id="statusMessageCount" class="status-value">0</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="log-section">
+            <h2>📝 消息日志</h2>
+            <div id="messageLog" class="log-container">
+                <div class="log-entry log-info">
+                    <span class="log-time">系统启动</span>
+                    <span class="log-content">MQTT测试工具已就绪，请配置并连接</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

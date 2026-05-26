@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>连接测试</title>
+    <script>
+        async function testLogin() {
+            try {
+                const response = await fetch('/api/admins/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = '<span style="color:green;">✅ 登录成功！</span><br>' + JSON.stringify(data, null, 2);
+                } else {
+                    document.getElementById('result').innerHTML = '<span style="color:red;">❌ 登录失败：</span><br>' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<span style="color:red;">❌ 请求失败：</span>' + error.message;
+            }
+        }
+        
+        async function testBackendDirectly() {
+            try {
+                const response = await fetch('http://localhost:5000/api/admins/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('backend-result').innerHTML = '<span style="color:green;">✅ 直接连接后端成功！</span><br>' + JSON.stringify(data, null, 2);
+                } else {
+                    document.getElementById('backend-result').innerHTML = '<span style="color:red;">❌ 直接连接后端失败：</span><br>' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                document.getElementById('backend-result').innerHTML = '<span style="color:red;">❌ 直接连接后端失败：</span>' + error.message;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>连接测试页面</h1>
+    <button onclick="testLogin()">测试通过代理登录</button>
+    <div id="result"></div>
+    <hr>
+    <button onclick="testBackendDirectly()">测试直接连接后端</button>
+    <div id="backend-result"></div>
+</body>
+</html>

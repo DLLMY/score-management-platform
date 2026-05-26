@@ -1,0 +1,22 @@
+
+{
+  "apps": [
+    {
+      "name": "score-backend",
+      "script": "app.py",
+      "interpreter": "python",
+      "cwd": "./backend",
+      "env": {
+        "FLASK_ENV": "production",
+        "PYTHONPATH": "./backend"
+      },
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "256M",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss",
+      "error_file": "./logs/error.log",
+      "out_file": "./logs/out.log",
+      "merge_logs": true
+    }
+  ]
+}
