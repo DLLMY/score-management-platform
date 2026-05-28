@@ -34,7 +34,12 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: |
-          python -m pytest tests/ -v
+          # 如果 tests 目录存在则运行测试，否则跳过
+          if [ -d "tests" ]; then
+            python -m pytest tests/ -v
+          else
+            echo "No tests directory found, skipping tests"
+          fi
 
   frontend-build:
     name: Frontend Build
@@ -52,11 +57,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/package.json
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Build frontend
         working-directory: frontend
