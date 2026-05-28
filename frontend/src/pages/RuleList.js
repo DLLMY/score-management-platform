@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Download, Upload, AlertCircle, X, Filter, RefreshCw, FileJson, Check, Sliders, Tag, Info } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Search, Edit2, Trash2, Download, Upload, AlertCircle, X, Filter, RefreshCw, FileJson, Sliders, Info } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { validateForm } from '../utils/validation';
 
 function RuleList() {
   const [rules, setRules] = useState([]);
@@ -11,10 +13,10 @@ function RuleList() {
   const [editingRule, setEditingRule] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [message, setMessage] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [filterActive, setFilterActive] = useState(null);
+  
+  const { showToast } = useToast();
   const [pagination, setPagination] = useState({
     page: 1,
     per_page: 50,
@@ -32,12 +34,26 @@ function RuleList() {
     min_interval: 0
   });
 
-  useEffect(() => {
-    fetchRules();
-    fetchCategories();
+  const [formErrors, setFormErrors] = useState({});
+
+  const validationRules = {
+    name: ['required', { maxLength: 100 }],
+    score: ['required', 'integer', { min: -1000 }, { max: 1000 }],
+    description: [{ maxLength: 500 }],
+    max_per_day: ['integer', { min: 0 }, { max: 100 }],
+    min_interval: ['integer', { min: 0 }, { max: 1440 }]
+  };
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await api.categories.getAll();
+      setCategories(data.categories || data);
+    } catch (err) {
+      console.error('获取分类失败:', err);
+    }
   }, []);
 
-  const fetchRules = async () => {
+  const fetchRules = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -45,7 +61,7 @@ function RuleList() {
         page: pagination.page,
         per_page: pagination.per_page,
         category_id: selectedCategory || undefined,
-        is_active: filterActive
+        is_active: null
       });
       if (Array.isArray(data)) {
         setRules(data);
@@ -67,65 +83,65 @@ function RuleList() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [pagination.page, pagination.per_page, selectedCategory]);
 
   useEffect(() => {
     fetchRules();
-  }, [pagination.page, selectedCategory, filterActive]);
+    fetchCategories();
+  }, [fetchRules, fetchCategories]);
 
-  const fetchCategories = async () => {
-    try {
-      const data = await api.categories.getAll();
-      setCategories(data);
-    } catch (err) {
-      console.error('获取分类失败:', err);
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      setMessage({ type: 'error', text: '请输入规则名称' });
+    const { isValid, errors } = validateForm(formData, validationRules);
+    
+    if (!isValid) {
+      setFormErrors(errors);
       return;
     }
+    
+    setFormErrors({});
 
     try {
       if (editingRule) {
-        await api.rules.update(editingRule.id, formData);
-        setMessage({ type: 'success', text: '规则更新成功' });
+        const updatedRule = await api.rules.update(editingRule.id, formData);
+        showToast('规则更新成功', 'success');
+        
+        setRules(prevRules => 
+          prevRules.map(rule => 
+            rule.id === editingRule.id ? updatedRule : rule
+          )
+        );
       } else {
-        await api.rules.create(formData);
-        setMessage({ type: 'success', text: '规则添加成功' });
+        const newRule = await api.rules.create(formData);
+        showToast('规则添加成功', 'success');
+        
+        setRules(prevRules => [newRule, ...prevRules]);
       }
-      fetchRules();
       setShowModal(false);
       setEditingRule(null);
       setFormData({ name: '', description: '', category_id: '', score: 0, is_active: true, max_per_day: 0, min_interval: 0 });
     } catch (err) {
-      setMessage({ type: 'error', text: '操作失败: ' + err.message });
+      showToast('操作失败: ' + err.message, 'error');
     }
+  }, [formData, editingRule, showToast]);
 
-    setTimeout(() => setMessage(null), 3000);
-  };
-
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!window.confirm('确定要删除该规则吗？此操作不可撤销。')) {
       return;
     }
     
     try {
       await api.rules.delete(id);
-      setMessage({ type: 'success', text: '删除成功' });
-      fetchRules();
+      showToast('删除成功', 'success');
+      
+      setRules(prevRules => prevRules.filter(rule => rule.id !== id));
     } catch (err) {
-      setMessage({ type: 'error', text: '删除失败: ' + err.message });
+      showToast('删除失败: ' + err.message, 'error');
     }
-    
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [showToast]);
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     try {
       const data = await api.rules.export();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -137,15 +153,13 @@ function RuleList() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setMessage({ type: 'success', text: '导出成功' });
+      showToast('导出成功', 'success');
     } catch (err) {
-      setMessage({ type: 'error', text: '导出失败: ' + err.message });
+      showToast('导出失败: ' + err.message, 'error');
     }
-    
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [showToast]);
 
-  const handleDownloadTemplate = async () => {
+  const handleDownloadTemplate = useCallback(async () => {
     try {
       const response = await fetch(api.rules.downloadTemplate());
       const blob = await response.blob();
@@ -159,12 +173,11 @@ function RuleList() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('下载模板失败:', error);
-      setMessage({ type: 'error', text: '下载模板失败: ' + error.message });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('下载模板失败: ' + error.message, 'error');
     }
-  };
+  }, [showToast]);
 
-  const handleImport = async (e) => {
+  const handleImport = useCallback(async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
@@ -177,14 +190,13 @@ function RuleList() {
         const lines = text.split('\n').filter(line => line.trim());
         
         if (lines.length < 2) {
-          setMessage({ type: 'error', text: '导入文件格式错误或没有有效数据' });
+          showToast('导入文件格式错误或没有有效数据', 'error');
           setImporting(false);
-          setTimeout(() => setMessage(null), 3000);
           return;
         }
         
         const headers = lines[0].split(',').map(h => h.trim());
-        const rules = [];
+        const rulesData = [];
         
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
@@ -211,51 +223,59 @@ function RuleList() {
             }
           });
           if (rule.name) {
-            rules.push(rule);
+            rulesData.push(rule);
           }
         }
         
-        if (rules.length === 0) {
-          setMessage({ type: 'error', text: '没有有效数据' });
+        if (rulesData.length === 0) {
+          showToast('没有有效数据', 'error');
           setImporting(false);
-          setTimeout(() => setMessage(null), 3000);
           return;
         }
         
-        const result = await api.rules.import({ rules });
-        setMessage({ type: 'success', text: result.message });
+        const result = await api.rules.import({ rules: rulesData });
+        showToast(result.message, 'success');
         if (result.errors && result.errors.length > 0) {
           console.warn('导入错误:', result.errors);
         }
         setShowImportModal(false);
-        fetchRules();
+        
+        if (result.rules && result.rules.length > 0) {
+          setRules(prevRules => [...result.rules, ...prevRules]);
+        }
       } catch (err) {
-        setMessage({ type: 'error', text: '导入失败: ' + err.message });
+        showToast('导入失败: ' + err.message, 'error');
       }
       setImporting(false);
-      setTimeout(() => setMessage(null), 3000);
     };
     
     reader.readAsText(file);
-  };
+  }, [showToast]);
 
-  const filteredRules = rules.filter(rule => {
-    const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rule.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const categoryId = selectedCategory ? parseInt(selectedCategory) : null;
-    const matchesCategory = !selectedCategory || rule.category_id === categoryId;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredRules = useMemo(() => {
+    return rules.filter(rule => {
+      if (!rule) return false;
+      const matchesSearch = (rule.name && rule.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           (rule.description && rule.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      const categoryId = selectedCategory ? parseInt(selectedCategory) : null;
+      const matchesCategory = !selectedCategory || rule.category_id === categoryId;
+      return matchesSearch && matchesCategory;
+    });
+  }, [rules, searchTerm, selectedCategory]);
 
-  const getCategoryName = (categoryId) => {
-    const cat = categories.find(c => c.id === categoryId);
-    return cat ? cat.name : '-';
-  };
+  const getCategoryName = useMemo(() => {
+    return (categoryId) => {
+      const cat = categories.find(c => c.id === categoryId);
+      return cat ? cat.name : '-';
+    };
+  }, [categories]);
 
-  const getCategoryColor = (categoryId) => {
-    const cat = categories.find(c => c.id === categoryId);
-    return cat ? cat.color : '#6b7280';
-  };
+  const getCategoryColor = useMemo(() => {
+    return (categoryId) => {
+      const cat = categories.find(c => c.id === categoryId);
+      return cat ? cat.color : '#6b7280';
+    };
+  }, [categories]);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -293,23 +313,7 @@ function RuleList() {
         </div>
       </div>
 
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success' 
-            ? 'bg-success-50 border border-success-200 text-success-700' 
-            : 'bg-danger-50 border border-danger-200 text-danger-700'
-        }`}>
-          {message.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span className="font-medium">{message.text}</span>
-          <button onClick={() => setMessage(null)} className="ml-auto text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      
 
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 flex items-center gap-3">
@@ -496,12 +500,22 @@ function RuleList() {
                 <label className="form-label">规则名称 <span className="text-danger-500">*</span></label>
                 <input
                   type="text"
-                  required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="form-input"
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    if (formErrors.name) {
+                      setFormErrors(prev => ({ ...prev, name: null }));
+                    }
+                  }}
+                  className={`form-input ${formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                   placeholder="请输入规则名称"
                 />
+                {formErrors.name && (
+                  <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {formErrors.name}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
@@ -519,25 +533,47 @@ function RuleList() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">积分值</label>
+                <label className="form-label">积分值 <span className="text-danger-500">*</span></label>
                 <input
                   type="number"
                   value={formData.score}
-                  onChange={(e) => setFormData({ ...formData, score: parseInt(e.target.value) || 0 })}
-                  className="form-input"
+                  onChange={(e) => {
+                    setFormData({ ...formData, score: parseInt(e.target.value) || 0 });
+                    if (formErrors.score) {
+                      setFormErrors(prev => ({ ...prev, score: null }));
+                    }
+                  }}
+                  className={`form-input ${formErrors.score ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                   placeholder="正数为加分，负数为扣分"
                 />
+                {formErrors.score && (
+                  <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {formErrors.score}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
                 <label className="form-label">规则描述</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="form-input resize-none"
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    if (formErrors.description) {
+                      setFormErrors(prev => ({ ...prev, description: null }));
+                    }
+                  }}
+                  className={`form-input resize-none ${formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                   rows={3}
                   placeholder="请输入规则描述"
                 />
+                {formErrors.description && (
+                  <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {formErrors.description}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -547,10 +583,21 @@ function RuleList() {
                     type="number"
                     min="0"
                     value={formData.max_per_day}
-                    onChange={(e) => setFormData({ ...formData, max_per_day: parseInt(e.target.value) || 0 })}
-                    className="form-input"
+                    onChange={(e) => {
+                      setFormData({ ...formData, max_per_day: parseInt(e.target.value) || 0 });
+                      if (formErrors.max_per_day) {
+                        setFormErrors(prev => ({ ...prev, max_per_day: null }));
+                      }
+                    }}
+                    className={`form-input ${formErrors.max_per_day ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                     placeholder="0表示无限制"
                   />
+                  {formErrors.max_per_day && (
+                    <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {formErrors.max_per_day}
+                    </p>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">最小间隔(分钟)</label>
@@ -558,10 +605,21 @@ function RuleList() {
                     type="number"
                     min="0"
                     value={formData.min_interval}
-                    onChange={(e) => setFormData({ ...formData, min_interval: parseInt(e.target.value) || 0 })}
-                    className="form-input"
+                    onChange={(e) => {
+                      setFormData({ ...formData, min_interval: parseInt(e.target.value) || 0 });
+                      if (formErrors.min_interval) {
+                        setFormErrors(prev => ({ ...prev, min_interval: null }));
+                      }
+                    }}
+                    className={`form-input ${formErrors.min_interval ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                     placeholder="0表示无限制"
                   />
+                  {formErrors.min_interval && (
+                    <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {formErrors.min_interval}
+                    </p>
+                  )}
                 </div>
               </div>
 

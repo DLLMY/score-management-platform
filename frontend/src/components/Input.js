@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function Input({ 
   label, 
   type = 'text', 
@@ -30,4 +32,4 @@ function Input({
   );
 }
 
-export default Input;
+export default memo(Input);

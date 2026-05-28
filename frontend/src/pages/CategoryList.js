@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, AlertCircle, X, RefreshCw, Check, Tag, Palette } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertCircle, X, RefreshCw, Tag, Palette } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { validateForm } from '../utils/validation';
 
 const COLORS = [
   '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', 
@@ -14,7 +16,7 @@ function CategoryList() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [message, setMessage] = useState(null);
+  const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +24,13 @@ function CategoryList() {
     color: COLORS[0],
     is_active: true
   });
+
+  const [formErrors, setFormErrors] = useState({});
+
+  const validationRules = {
+    name: ['required', { maxLength: 50 }],
+    description: [{ maxLength: 200 }]
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -32,7 +41,7 @@ function CategoryList() {
     setError(null);
     try {
       const data = await api.categories.getAll();
-      setCategories(data);
+      setCategories(data.categories || data);
     } catch (err) {
       setError('获取分类列表失败: ' + err.message);
     } finally {
@@ -43,28 +52,37 @@ function CategoryList() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      setMessage({ type: 'error', text: '请输入分类名称' });
+    const { isValid, errors } = validateForm(formData, validationRules);
+    
+    if (!isValid) {
+      setFormErrors(errors);
       return;
     }
+    
+    setFormErrors({});
 
     try {
       if (editingCategory) {
-        await api.categories.update(editingCategory.id, formData);
-        setMessage({ type: 'success', text: '分类更新成功' });
+        const updatedCategory = await api.categories.update(editingCategory.id, formData);
+        showToast('分类更新成功', 'success');
+        
+        setCategories(prevCategories => 
+          prevCategories.map(cat => 
+            cat.id === editingCategory.id ? updatedCategory : cat
+          )
+        );
       } else {
-        await api.categories.create(formData);
-        setMessage({ type: 'success', text: '分类添加成功' });
+        const newCategory = await api.categories.create(formData);
+        showToast('分类添加成功', 'success');
+        
+        setCategories(prevCategories => [newCategory, ...prevCategories]);
       }
-      fetchCategories();
       setShowModal(false);
       setEditingCategory(null);
       setFormData({ name: '', description: '', color: COLORS[0], is_active: true });
     } catch (err) {
-      setMessage({ type: 'error', text: '操作失败: ' + err.message });
+      showToast('操作失败: ' + err.message, 'error');
     }
-
-    setTimeout(() => setMessage(null), 3000);
   };
 
   const handleDelete = async (id) => {
@@ -74,13 +92,12 @@ function CategoryList() {
     
     try {
       await api.categories.delete(id);
-      setMessage({ type: 'success', text: '删除成功' });
-      fetchCategories();
+      showToast('删除成功', 'success');
+      
+      setCategories(prevCategories => prevCategories.filter(cat => cat.id !== id));
     } catch (err) {
-      setMessage({ type: 'error', text: '删除失败: ' + err.message });
+      showToast('删除失败: ' + err.message, 'error');
     }
-    
-    setTimeout(() => setMessage(null), 3000);
   };
 
   const filteredCategories = categories.filter(cat => 
@@ -112,23 +129,7 @@ function CategoryList() {
         </div>
       </div>
 
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success' 
-            ? 'bg-success-50 border border-success-200 text-success-700' 
-            : 'bg-danger-50 border border-danger-200 text-danger-700'
-        }`}>
-          {message.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span className="font-medium">{message.text}</span>
-          <button onClick={() => setMessage(null)} className="ml-auto text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      
 
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 flex items-center gap-3">
@@ -268,23 +269,44 @@ function CategoryList() {
                 <label className="form-label">分类名称 <span className="text-danger-500">*</span></label>
                 <input
                   type="text"
-                  required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="form-input"
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    if (formErrors.name) {
+                      setFormErrors(prev => ({ ...prev, name: null }));
+                    }
+                  }}
+                  className={`form-input ${formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                   placeholder="请输入分类名称"
                 />
+                {formErrors.name && (
+                  <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {formErrors.name}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
                 <label className="form-label">分类描述</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="form-input resize-none"
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    if (formErrors.description) {
+                      setFormErrors(prev => ({ ...prev, description: null }));
+                    }
+                  }}
+                  className={`form-input resize-none ${formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                   rows={3}
                   placeholder="请输入分类描述"
                 />
+                {formErrors.description && (
+                  <p className="mt-2 text-sm text-danger-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {formErrors.description}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">

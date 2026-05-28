@@ -1,4 +1,3 @@
-
 # ================ 数据库和数据文件 ================
 # SQLite 数据库
 backend/instance/
@@ -23,7 +22,7 @@ frontend/.env.development.local
 frontend/.env.test.local
 frontend/.env.production.local
 
-# 构建产物（服务器构建）
+# 构建产物
 frontend/build/
 
 # npm 锁文件（可选：如果团队使用相同 Node.js 版本可以保留）
@@ -32,6 +31,9 @@ frontend/yarn.lock
 
 
 # ================ 后端相关 ================
+# 环境变量
+backend/.env
+
 # Python 缓存
 __pycache__/
 *.pyc
@@ -44,9 +46,8 @@ venv/
 env/
 
 # 测试文件
-test_backend.py
-test_proxy.py
-test_proxy_timeout.py
+test_*.py
+test_mqtt.py
 
 
 # ================ 部署相关 ================
@@ -55,14 +56,18 @@ deploy/ngrok/ngrok.yml
 deploy/ngrok/*.log
 deploy/ngrok/ngrok.exe
 
+# 服务管理器日志
+deploy/service_manager.log
+
 # 压缩包
 *.zip
 *.rar
 *.7z
 
-# PM2 进程文件
+# PM2 进程文件（已删除 auto_deploy，保留以防万一）
 .pm2/
 logs/
+pm2.config.json
 
 
 # ================ 系统和 IDE ================

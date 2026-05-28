@@ -5,12 +5,12 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { Card, Button, Modal, LoadingSpinner } from '../components';
+import { useToast } from '../context/ToastContext';
 
 function UserManagement() {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('teachers');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // 教师数据
@@ -43,20 +43,18 @@ function UserManagement() {
       setTeachers(Array.isArray(adminsData) ? adminsData.filter(a => a.role === 'teacher') : (adminsData.admins || []).filter(a => a.role === 'teacher'));
       setClasses(Array.isArray(classesData) ? classesData : classesData.classes || []);
     } catch (err) {
-      setError('获取数据失败: ' + err.message);
+      showToast('获取数据失败: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const showSuccess = (text) => {
-    setMessage({ type: 'success', text });
-    setTimeout(() => setMessage(null), 3000);
+    showToast(text, 'success');
   };
 
   const showError = (text) => {
-    setMessage({ type: 'error', text });
-    setTimeout(() => setMessage(null), 3000);
+    showToast(text, 'error');
   };
 
   // 教师操作
@@ -101,14 +99,20 @@ function UserManagement() {
       if (editingTeacher) {
         const updateData = { ...teacherFormData };
         if (!updateData.password) delete updateData.password;
-        await api.admins.update(editingTeacher.id, updateData);
+        const result = await api.admins.update(editingTeacher.id, updateData);
         showSuccess('教师信息更新成功');
+        const updatedTeacher = result.admin || { ...editingTeacher, ...updateData };
+        setTeachers(prev => prev.map(t => t.id === editingTeacher.id ? updatedTeacher : t));
       } else {
-        await api.admins.create(teacherFormData);
+        const result = await api.admins.create(teacherFormData);
         showSuccess('教师添加成功');
+        const newTeacher = {
+          id: result.admin_id,
+          ...teacherFormData
+        };
+        setTeachers(prev => [newTeacher, ...prev]);
       }
       setShowTeacherModal(false);
-      fetchData();
     } catch (err) {
       showError('操作失败: ' + err.message);
     }
@@ -119,7 +123,7 @@ function UserManagement() {
     try {
       await api.admins.delete(teacher.id);
       showSuccess('教师删除成功');
-      fetchData();
+      setTeachers(prev => prev.filter(t => t.id !== teacher.id));
     } catch (err) {
       showError('删除失败: ' + err.message);
     }
@@ -136,14 +140,6 @@ function UserManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      {message && (
-        <div className={`p-4 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-        }`}>
-          {message.text}
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">用户管理</h1>

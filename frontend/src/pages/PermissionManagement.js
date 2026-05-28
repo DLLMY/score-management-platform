@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
-  Users, Shield, School, Plus, Edit2, Trash2, Search, 
-  Key, UserPlus, Eye, Settings, CheckCircle, XCircle
+  Users, Shield, School, Plus, Edit2, Trash2, 
+  Key, UserPlus, CheckCircle, XCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { Card, Button, Modal, LoadingSpinner } from '../components';
+import { useToast } from '../context/ToastContext';
 
 function PermissionManagement() {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('admins');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
 
   // 管理员数据
   const [admins, setAdmins] = useState([]);
@@ -50,11 +50,7 @@ function PermissionManagement() {
   // 权限日志
   const [permissionLogs, setPermissionLogs] = useState([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [adminsData, classesData, logsData] = await Promise.all([
@@ -66,39 +62,33 @@ function PermissionManagement() {
       setClasses(Array.isArray(classesData) ? classesData : classesData.classes || []);
       setPermissionLogs(Array.isArray(logsData) ? logsData : logsData.logs || []);
     } catch (err) {
-      setError('获取数据失败: ' + err.message);
+      showToast('获取数据失败: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const fetchSubAccounts = async () => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const fetchSubAccounts = useCallback(async () => {
     try {
       const data = await api.subAccounts.getAll();
       setSubAccounts(Array.isArray(data) ? data : data.sub_accounts || []);
     } catch (err) {
-      setError('获取子账号失败: ' + err.message);
+      showToast('获取子账号失败: ' + err.message, 'error');
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     if (activeTab === 'subaccounts') {
       fetchSubAccounts();
     }
-  }, [activeTab]);
-
-  const showSuccess = (text) => {
-    setMessage({ type: 'success', text });
-    setTimeout(() => setMessage(null), 3000);
-  };
-
-  const showError = (text) => {
-    setMessage({ type: 'error', text });
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [activeTab, fetchSubAccounts]);
 
   // 管理员操作
-  const handleCreateAdmin = () => {
+  const handleCreateAdmin = useCallback(() => {
     setEditingAdmin(null);
     setAdminFormData({
       username: '',
@@ -109,9 +99,9 @@ function PermissionManagement() {
       class_name: ''
     });
     setShowAdminModal(true);
-  };
+  }, []);
 
-  const handleEditAdmin = (admin) => {
+  const handleEditAdmin = useCallback((admin) => {
     setEditingAdmin(admin);
     setAdminFormData({
       username: admin.username,
@@ -122,16 +112,16 @@ function PermissionManagement() {
       class_name: admin.class_name || ''
     });
     setShowAdminModal(true);
-  };
+  }, []);
 
-  const handleSaveAdmin = async () => {
+  const handleSaveAdmin = useCallback(async () => {
     if (!adminFormData.username) {
-      showError('请输入用户名');
+      showToast('请输入用户名', 'error');
       return;
     }
 
     if (!editingAdmin && !adminFormData.password) {
-      showError('请输入密码');
+      showToast('请输入密码', 'error');
       return;
     }
 
@@ -139,38 +129,44 @@ function PermissionManagement() {
       if (editingAdmin) {
         const updateData = { ...adminFormData };
         if (!updateData.password) delete updateData.password;
-        await api.admins.update(editingAdmin.id, updateData);
-        showSuccess('管理员更新成功');
+        const result = await api.admins.update(editingAdmin.id, updateData);
+        showToast('管理员更新成功', 'success');
+        const updatedAdmin = result.admin || { ...editingAdmin, ...updateData };
+        setAdmins(prev => prev.map(a => a.id === editingAdmin.id ? updatedAdmin : a));
       } else {
-        await api.admins.create(adminFormData);
-        showSuccess('管理员创建成功');
+        const result = await api.admins.create(adminFormData);
+        showToast('管理员创建成功', 'success');
+        const newAdmin = {
+          id: result.admin_id,
+          ...adminFormData
+        };
+        setAdmins(prev => [newAdmin, ...prev]);
       }
       setShowAdminModal(false);
-      fetchData();
     } catch (err) {
-      showError('操作失败: ' + err.message);
+      showToast('操作失败: ' + err.message, 'error');
     }
-  };
+  }, [adminFormData, editingAdmin, showToast]);
 
-  const handleDeleteAdmin = async (admin) => {
+  const handleDeleteAdmin = useCallback(async (admin) => {
     if (!window.confirm(`确定要删除管理员 ${admin.real_name} 吗？`)) return;
     try {
       await api.admins.delete(admin.id);
-      showSuccess('管理员删除成功');
-      fetchData();
+      showToast('管理员删除成功', 'success');
+      setAdmins(prev => prev.filter(a => a.id !== admin.id));
     } catch (err) {
-      showError('删除失败: ' + err.message);
+      showToast('删除失败: ' + err.message, 'error');
     }
-  };
+  }, [showToast]);
 
   // 班级操作
-  const handleCreateClass = () => {
+  const handleCreateClass = useCallback(() => {
     setEditingClass(null);
     setClassFormData({ name: '', grade: '', description: '' });
     setShowClassModal(true);
-  };
+  }, []);
 
-  const handleEditClass = (cls) => {
+  const handleEditClass = useCallback((cls) => {
     setEditingClass(cls);
     setClassFormData({
       name: cls.name,
@@ -178,42 +174,43 @@ function PermissionManagement() {
       description: cls.description
     });
     setShowClassModal(true);
-  };
+  }, []);
 
-  const handleSaveClass = async () => {
+  const handleSaveClass = useCallback(async () => {
     if (!classFormData.name) {
-      showError('请输入班级名称');
+      showToast('请输入班级名称', 'error');
       return;
     }
 
     try {
       if (editingClass) {
-        await api.classes.update(editingClass.id, classFormData);
-        showSuccess('班级更新成功');
+        const updatedClass = await api.classes.update(editingClass.id, classFormData);
+        showToast('班级更新成功', 'success');
+        setClasses(prev => prev.map(c => c.id === editingClass.id ? updatedClass : c));
       } else {
-        await api.classes.create(classFormData);
-        showSuccess('班级创建成功');
+        const newClass = await api.classes.create(classFormData);
+        showToast('班级创建成功', 'success');
+        setClasses(prev => [newClass, ...prev]);
       }
       setShowClassModal(false);
-      fetchData();
     } catch (err) {
-      showError('操作失败: ' + err.message);
+      showToast('操作失败: ' + err.message, 'error');
     }
-  };
+  }, [classFormData, editingClass, showToast]);
 
-  const handleDeleteClass = async (cls) => {
+  const handleDeleteClass = useCallback(async (cls) => {
     if (!window.confirm(`确定要删除班级 ${cls.name} 吗？`)) return;
     try {
       await api.classes.delete(cls.id);
-      showSuccess('班级删除成功');
-      fetchData();
+      showToast('班级删除成功', 'success');
+      setClasses(prev => prev.filter(c => c.id !== cls.id));
     } catch (err) {
-      showError('删除失败: ' + err.message);
+      showToast('删除失败: ' + err.message, 'error');
     }
-  };
+  }, [showToast]);
 
   // 子账号操作
-  const handleCreateSubAccount = () => {
+  const handleCreateSubAccount = useCallback(() => {
     setEditingSubAccount(null);
     setSubAccountFormData({
       username: '',
@@ -223,9 +220,9 @@ function PermissionManagement() {
       role_type: 'dashboard_viewer'
     });
     setShowSubAccountModal(true);
-  };
+  }, []);
 
-  const handleEditSubAccount = (sub) => {
+  const handleEditSubAccount = useCallback((sub) => {
     setEditingSubAccount(sub);
     setSubAccountFormData({
       username: sub.username,
@@ -235,16 +232,16 @@ function PermissionManagement() {
       role_type: sub.role_type
     });
     setShowSubAccountModal(true);
-  };
+  }, []);
 
-  const handleSaveSubAccount = async () => {
+  const handleSaveSubAccount = useCallback(async () => {
     if (!subAccountFormData.username) {
-      showError('请输入用户名');
+      showToast('请输入用户名', 'error');
       return;
     }
 
     if (!editingSubAccount && !subAccountFormData.password) {
-      showError('请输入密码');
+      showToast('请输入密码', 'error');
       return;
     }
 
@@ -252,71 +249,57 @@ function PermissionManagement() {
       if (editingSubAccount) {
         const updateData = { ...subAccountFormData };
         if (!updateData.password) delete updateData.password;
-        await api.subAccounts.update(editingSubAccount.id, updateData);
-        showSuccess('子账号更新成功');
+        const updatedSub = await api.subAccounts.update(editingSubAccount.id, updateData);
+        showToast('子账号更新成功', 'success');
+        setSubAccounts(prev => prev.map(s => s.id === editingSubAccount.id ? updatedSub : s));
       } else {
-        await api.subAccounts.create(subAccountFormData);
-        showSuccess('子账号创建成功');
+        const newSub = await api.subAccounts.create(subAccountFormData);
+        showToast('子账号创建成功', 'success');
+        setSubAccounts(prev => [newSub, ...prev]);
       }
       setShowSubAccountModal(false);
-      fetchSubAccounts();
     } catch (err) {
-      showError('操作失败: ' + err.message);
+      showToast('操作失败: ' + err.message, 'error');
     }
-  };
+  }, [subAccountFormData, editingSubAccount, showToast]);
 
-  const handleDeleteSubAccount = async (sub) => {
+  const handleDeleteSubAccount = useCallback(async (sub) => {
     if (!window.confirm(`确定要删除子账号 ${sub.real_name} 吗？`)) return;
     try {
       await api.subAccounts.delete(sub.id);
-      showSuccess('子账号删除成功');
-      fetchSubAccounts();
+      showToast('子账号删除成功', 'success');
+      setSubAccounts(prev => prev.filter(s => s.id !== sub.id));
     } catch (err) {
-      showError('删除失败: ' + err.message);
+      showToast('删除失败: ' + err.message, 'error');
     }
-  };
+  }, [showToast]);
 
-  // 分配班级给管理员
-  const handleAssignClass = async (admin, classId, isPrimary = false) => {
-    try {
-      await api.adminClasses.assign(admin.id, classId, isPrimary);
-      showSuccess('班级分配成功');
-      fetchData();
-    } catch (err) {
-      showError('分配失败: ' + err.message);
-    }
-  };
-
-  const getRoleLabel = (role) => {
-    const roles = {
-      admin: '超级管理员',
-      teacher: '班主任',
-      dashboard: '数据大屏用户'
+  const getRoleLabel = useMemo(() => {
+    return (role) => {
+      const roles = {
+        admin: '超级管理员',
+        teacher: '班主任',
+        dashboard: '数据大屏用户'
+      };
+      return roles[role] || role;
     };
-    return roles[role] || role;
-  };
+  }, []);
 
-  const getRoleBadgeColor = (role) => {
-    const colors = {
-      admin: 'bg-red-100 text-red-800',
-      teacher: 'bg-blue-100 text-blue-800',
-      dashboard: 'bg-purple-100 text-purple-800'
+  const getRoleBadgeColor = useMemo(() => {
+    return (role) => {
+      const colors = {
+        admin: 'bg-red-100 text-red-800',
+        teacher: 'bg-blue-100 text-blue-800',
+        dashboard: 'bg-purple-100 text-purple-800'
+      };
+      return colors[role] || 'bg-gray-100 text-gray-800';
     };
-    return colors[role] || 'bg-gray-100 text-gray-800';
-  };
+  }, []);
 
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className="p-6 space-y-6">
-      {message && (
-        <div className={`p-4 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-        }`}>
-          {message.text}
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">用户及权限管理</h1>

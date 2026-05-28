@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Clock, 
   Filter, 
@@ -9,8 +9,7 @@ import {
   User,
   Database,
   Settings,
-  Activity,
-  AlertCircle
+  Activity
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -28,7 +27,7 @@ function OperationLogs() {
     total: 0
   });
 
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -49,58 +48,64 @@ function OperationLogs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.per_page, filters]);
 
   useEffect(() => {
     loadLogs();
-  }, [pagination.page, filters]);
+  }, [loadLogs]);
 
-  const handleFilterChange = (key, value) => {
+  const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPagination(prev => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = useCallback((newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
-  };
+  }, []);
 
-  const getOperationIcon = (type) => {
-    switch (type) {
-      case 'create':
-      case 'update':
-      case 'delete':
-        return <Database className="w-4 h-4" />;
-      case 'mqtt_connect':
-      case 'mqtt_disconnect':
-      case 'mqtt_message':
-        return <Activity className="w-4 h-4" />;
-      case 'update_config':
-        return <Settings className="w-4 h-4" />;
-      default:
-        return <User className="w-4 h-4" />;
-    }
-  };
+  const getOperationIcon = useMemo(() => {
+    return (type) => {
+      switch (type) {
+        case 'create':
+        case 'update':
+        case 'delete':
+          return <Database className="w-4 h-4" />;
+        case 'mqtt_connect':
+        case 'mqtt_disconnect':
+        case 'mqtt_message':
+          return <Activity className="w-4 h-4" />;
+        case 'update_config':
+          return <Settings className="w-4 h-4" />;
+        default:
+          return <User className="w-4 h-4" />;
+      }
+    };
+  }, []);
 
-  const getOperationColor = (type) => {
-    switch (type) {
-      case 'create':
-        return 'text-green-600 bg-green-50';
-      case 'update':
-        return 'text-blue-600 bg-blue-50';
-      case 'delete':
-        return 'text-red-600 bg-red-50';
-      case 'mqtt_connect':
-        return 'text-green-600 bg-green-50';
-      case 'mqtt_disconnect':
-        return 'text-orange-600 bg-orange-50';
-      case 'update_config':
-        return 'text-purple-600 bg-purple-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
+  const getOperationColor = useMemo(() => {
+    return (type) => {
+      switch (type) {
+        case 'create':
+          return 'text-green-600 bg-green-50';
+        case 'update':
+          return 'text-blue-600 bg-blue-50';
+        case 'delete':
+          return 'text-red-600 bg-red-50';
+        case 'mqtt_connect':
+          return 'text-green-600 bg-green-50';
+        case 'mqtt_disconnect':
+          return 'text-orange-600 bg-orange-50';
+        case 'update_config':
+          return 'text-purple-600 bg-purple-50';
+        default:
+          return 'text-gray-600 bg-gray-50';
+      }
+    };
+  }, []);
 
-  const totalPages = Math.ceil(pagination.total / pagination.per_page);
+  const totalPages = useMemo(() => {
+    return Math.ceil(pagination.total / pagination.per_page);
+  }, [pagination.total, pagination.per_page]);
 
   return (
     <div className="min-h-screen bg-gray-50">

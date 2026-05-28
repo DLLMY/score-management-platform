@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
-import { User, Mail, Phone, Shield, Globe, Calendar, Edit2, Save, X, Check, ChevronRight, Key, RefreshCw, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { User, Mail, Phone, Shield, Globe, Calendar, Edit2, Save, Check, ChevronRight, Key, RefreshCw } from 'lucide-react';
 import { Card, Button, Modal } from '../components';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 function Profile() {
+  const { showToast } = useToast();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // 从 localStorage 获取当前管理员ID，默认是1
@@ -51,12 +52,7 @@ function Profile() {
     { time: '2026-05-16 16:45', ip: '192.168.1.102', device: 'Firefox on Linux', status: 'failed' },
   ];
 
-  // 加载管理员信息
-  useEffect(() => {
-    loadAdminInfo();
-  }, []);
-
-  const loadAdminInfo = async () => {
+  const loadAdminInfo = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.admins.getById(adminId);
@@ -79,9 +75,13 @@ function Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [adminId]);
 
-  const handleSaveProfile = async () => {
+  useEffect(() => {
+    loadAdminInfo();
+  }, [loadAdminInfo]);
+
+  const handleSaveProfile = useCallback(async () => {
     try {
       setSaving(true);
       await api.admins.update(adminId, {
@@ -91,26 +91,22 @@ function Profile() {
       });
       await loadAdminInfo();
       setShowEditModal(false);
-      setMessage({ type: 'success', text: '资料修改成功' });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('资料修改成功', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '保存失败: ' + (error.message || '未知错误') });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('保存失败: ' + (error.message || '未知错误'), 'error');
     } finally {
       setSaving(false);
     }
-  };
+  }, [adminId, editForm, loadAdminInfo, showToast]);
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = useCallback(async () => {
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setMessage({ type: 'error', text: '两次输入的密码不一致' });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('两次输入的密码不一致', 'error');
       return;
     }
 
     if (passwordForm.new_password.length < 6) {
-      setMessage({ type: 'error', text: '新密码长度至少6位' });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('新密码长度至少6位', 'error');
       return;
     }
 
@@ -122,15 +118,13 @@ function Profile() {
       });
       setShowPasswordModal(false);
       setPasswordForm({ old_password: '', new_password: '', confirm_password: '' });
-      setMessage({ type: 'success', text: '密码修改成功' });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('密码修改成功', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '密码修改失败: ' + (error.message || '未知错误') });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('密码修改失败: ' + (error.message || '未知错误'), 'error');
     } finally {
       setSaving(false);
     }
-  };
+  }, [passwordForm, adminId, showToast]);
 
   if (loading) {
     return (
@@ -142,21 +136,6 @@ function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-700'
-        }`}>
-          {message.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
-
       <div className="flex items-center gap-4 mb-7">
         <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/30">
           <User className="w-6 h-6 text-white" />

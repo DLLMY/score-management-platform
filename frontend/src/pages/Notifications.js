@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Bell, Search, Filter, Check, Trash2, RefreshCw, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Bell, Filter, Check, Trash2, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, Button, Modal } from '../components';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 function Notifications() {
+  const { showToast } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendForm, setSendForm] = useState({ user_id: '', title: '', content: '', type: 'info' });
-  const [message, setMessage] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, per_page: 20, total: 0 });
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const params = { page: pagination.page, per_page: pagination.per_page };
@@ -22,78 +23,81 @@ function Notifications() {
       setPagination(prev => ({ ...prev, total: data.total }));
     } catch (error) {
       console.error('加载通知失败:', error);
-      setMessage({ type: 'error', text: '加载通知失败' });
+      showToast('加载通知失败', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.per_page, filterStatus, showToast]);
 
   useEffect(() => {
     loadNotifications();
-  }, [pagination.page, filterStatus]);
+  }, [loadNotifications]);
 
-  const handleMarkRead = async (id) => {
+  const handleMarkRead = useCallback(async (id) => {
     try {
       await api.notifications.markRead(id);
-      await loadNotifications();
-      setMessage({ type: 'success', text: '已标记为已读' });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: 'read' } : n));
+      showToast('已标记为已读', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '操作失败' });
+      showToast('操作失败', 'error');
     }
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [showToast]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!window.confirm('确定要删除这条通知吗？')) return;
     try {
       await api.notifications.delete(id);
-      await loadNotifications();
-      setMessage({ type: 'success', text: '删除成功' });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      showToast('删除成功', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '删除失败' });
+      showToast('删除失败', 'error');
     }
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [showToast]);
 
-  const handleSendNotification = async (e) => {
+  const handleSendNotification = useCallback(async (e) => {
     e.preventDefault();
     try {
-      await api.notifications.send(sendForm);
+      const newNotification = await api.notifications.send(sendForm);
       setShowSendModal(false);
       setSendForm({ user_id: '', title: '', content: '', type: 'info' });
-      await loadNotifications();
-      setMessage({ type: 'success', text: '通知发送成功' });
+      setNotifications(prev => [newNotification, ...prev]);
+      showToast('通知发送成功', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '发送失败' });
+      showToast('发送失败', 'error');
     }
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [sendForm, showToast]);
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending':
-        return <AlertCircle className="w-4 h-4 text-yellow-600" />;
-      case 'read':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      default:
-        return <Bell className="w-4 h-4 text-gray-400" />;
-    }
-  };
+  const getStatusIcon = useMemo(() => {
+    return (status) => {
+      switch (status) {
+        case 'pending':
+          return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+        case 'read':
+          return <CheckCircle className="w-4 h-4 text-green-600" />;
+        default:
+          return <Bell className="w-4 h-4 text-gray-400" />;
+      }
+    };
+  }, []);
 
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-100 text-green-700';
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'error':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-blue-100 text-blue-700';
-    }
-  };
+  const getTypeColor = useMemo(() => {
+    return (type) => {
+      switch (type) {
+        case 'success':
+          return 'bg-green-100 text-green-700';
+        case 'warning':
+          return 'bg-yellow-100 text-yellow-700';
+        case 'error':
+          return 'bg-red-100 text-red-700';
+        default:
+          return 'bg-blue-100 text-blue-700';
+      }
+    };
+  }, []);
 
-  const totalPages = Math.ceil(pagination.total / pagination.per_page);
+  const totalPages = useMemo(() => {
+    return Math.ceil(pagination.total / pagination.per_page);
+  }, [pagination.total, pagination.per_page]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -112,21 +116,6 @@ function Notifications() {
           发送通知
         </Button>
       </div>
-
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-700'
-        }`}>
-          {message.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
 
       <Card title="通知列表">
         <div className="flex items-center gap-4 mb-4 flex-wrap">

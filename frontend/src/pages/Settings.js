@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -16,8 +16,10 @@ import {
   Loader2
 } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 function Settings() {
+  const { showToast } = useToast();
   const [settings, setSettings] = useState({
     systemName: '积分管理平台',
     systemLogo: '',
@@ -32,17 +34,16 @@ function Settings() {
   });
 
   const [saved, setSaved] = useState(false);
-  const [message, setMessage] = useState(null);
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState({ backup: false, restore: false, cache: false, config: true });
 
-  // 加载系统配置
-  useEffect(() => {
-    loadConfig();
-    fetchBackups();
+  // 记忆化配置更新函数
+  const updateSettingsField = useCallback((field, value) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const loadConfig = async () => {
+  // 加载系统配置
+  const loadConfig = useCallback(async () => {
     try {
       const data = await api.system.getConfig();
       setSettings({
@@ -62,9 +63,24 @@ function Settings() {
     } finally {
       setLoading(prev => ({ ...prev, config: false }));
     }
-  };
+  }, []);
 
-  const handleSave = async () => {
+  // 获取备份列表
+  const fetchBackups = useCallback(async () => {
+    try {
+      const data = await api.system.listBackups();
+      setBackups(data);
+    } catch (error) {
+      console.error('获取备份列表失败:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConfig();
+    fetchBackups();
+  }, [loadConfig, fetchBackups]);
+
+  const handleSave = useCallback(async () => {
     try {
       setLoading(prev => ({ ...prev, config: true }));
       await api.system.updateConfig({
@@ -80,20 +96,18 @@ function Settings() {
         language: settings.language
       });
       setSaved(true);
-      setMessage({ type: 'success', text: '配置已保存' });
+      showToast('配置已保存', 'success');
       setTimeout(() => {
         setSaved(false);
-        setMessage(null);
       }, 2000);
     } catch (error) {
-      setMessage({ type: 'error', text: '保存失败: ' + error.message });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('保存失败: ' + error.message, 'error');
     } finally {
       setLoading(prev => ({ ...prev, config: false }));
     }
-  };
+  }, [settings, showToast]);
 
-  const handleReset = async () => {
+  const handleReset = useCallback(async () => {
     const defaultSettings = {
       systemName: '积分管理平台',
       systemLogo: '',
@@ -121,76 +135,62 @@ function Settings() {
         theme: defaultSettings.theme,
         language: defaultSettings.language
       });
-      setMessage({ type: 'success', text: '已恢复默认设置' });
-      setTimeout(() => setMessage(null), 2000);
+      showToast('已恢复默认设置', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '恢复失败: ' + error.message });
-      setTimeout(() => setMessage(null), 3000);
+      showToast('恢复失败: ' + error.message, 'error');
     } finally {
       setLoading(prev => ({ ...prev, config: false }));
     }
-  };
+  }, [showToast]);
 
-  const handleBackup = async () => {
+  const handleBackup = useCallback(async () => {
     setLoading(prev => ({ ...prev, backup: true }));
     try {
       const response = await api.system.backup();
-      setMessage({ type: 'success', text: response.message });
+      showToast(response.message, 'success');
       fetchBackups();
     } catch (error) {
-      setMessage({ type: 'error', text: '备份失败: ' + error.message });
+      showToast('备份失败: ' + error.message, 'error');
     } finally {
       setLoading(prev => ({ ...prev, backup: false }));
-      setTimeout(() => setMessage(null), 3000);
     }
-  };
+  }, [showToast, fetchBackups]);
 
-  const handleRestore = async (filename) => {
+  const handleRestore = useCallback(async (filename) => {
     if (!window.confirm(`确定要从备份文件 ${filename} 恢复数据吗？此操作将覆盖当前数据！`)) {
       return;
     }
     setLoading(prev => ({ ...prev, restore: true }));
     try {
       const response = await api.system.restore(filename);
-      setMessage({ type: 'success', text: response.message });
+      showToast(response.message, 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '恢复失败: ' + error.message });
+      showToast('恢复失败: ' + error.message, 'error');
     } finally {
       setLoading(prev => ({ ...prev, restore: false }));
-      setTimeout(() => setMessage(null), 3000);
     }
-  };
+  }, [showToast]);
 
-  const handleClearCache = async () => {
+  const handleClearCache = useCallback(async () => {
     if (!window.confirm('确定要清理缓存吗？')) {
       return;
     }
     setLoading(prev => ({ ...prev, cache: true }));
     try {
       const response = await api.system.clearCache();
-      setMessage({ type: 'success', text: response.message });
+      showToast(response.message, 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '清理失败: ' + error.message });
+      showToast('清理失败: ' + error.message, 'error');
     } finally {
       setLoading(prev => ({ ...prev, cache: false }));
-      setTimeout(() => setMessage(null), 3000);
     }
-  };
+  }, [showToast]);
 
-  const fetchBackups = async () => {
-    try {
-      const data = await api.system.listBackups();
-      setBackups(data);
-    } catch (error) {
-      console.error('获取备份列表失败:', error);
-    }
-  };
-
-  const formatFileSize = (bytes) => {
+  const formatFileSize = useCallback((bytes) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -206,21 +206,6 @@ function Settings() {
             </div>
           </div>
         </header>
-
-        {message && (
-          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-            message.type === 'success' 
-              ? 'bg-green-50 border border-green-200 text-green-700' 
-              : 'bg-red-50 border border-red-200 text-red-700'
-          }`}>
-            {message.type === 'success' ? (
-              <Check className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
 
         {loading.config ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -242,7 +227,7 @@ function Settings() {
                 <input
                   type="text"
                   value={settings.systemName}
-                  onChange={(e) => setSettings({ ...settings, systemName: e.target.value })}
+                  onChange={(e) => updateSettingsField('systemName', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -253,7 +238,7 @@ function Settings() {
                   <input
                     type="number"
                     value={settings.defaultScore}
-                    onChange={(e) => setSettings({ ...settings, defaultScore: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => updateSettingsField('defaultScore', parseInt(e.target.value) || 0)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
@@ -262,7 +247,7 @@ function Settings() {
                   <input
                     type="number"
                     value={settings.minScore}
-                    onChange={(e) => setSettings({ ...settings, minScore: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => updateSettingsField('minScore', parseInt(e.target.value) || 0)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
@@ -271,7 +256,7 @@ function Settings() {
                   <input
                     type="number"
                     value={settings.maxScore}
-                    onChange={(e) => setSettings({ ...settings, maxScore: parseInt(e.target.value) || 100 })}
+                    onChange={(e) => updateSettingsField('maxScore', parseInt(e.target.value) || 100)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
@@ -293,7 +278,7 @@ function Settings() {
                   <p className="text-sm text-gray-500">接收系统通知和提醒</p>
                 </div>
                 <button
-                  onClick={() => setSettings({ ...settings, enableNotifications: !settings.enableNotifications })}
+                  onClick={() => updateSettingsField('enableNotifications', !settings.enableNotifications)}
                   className={`relative w-12 h-6 rounded-full transition-colors ${
                     settings.enableNotifications ? 'bg-primary-600' : 'bg-gray-300'
                   }`}
@@ -312,7 +297,7 @@ function Settings() {
                   <p className="text-sm text-gray-500">收到通知时播放提示音</p>
                 </div>
                 <button
-                  onClick={() => setSettings({ ...settings, notificationSound: !settings.notificationSound })}
+                  onClick={() => updateSettingsField('notificationSound', !settings.notificationSound)}
                   className={`relative w-12 h-6 rounded-full transition-colors ${
                     settings.notificationSound ? 'bg-primary-600' : 'bg-gray-300'
                   }`}
@@ -331,7 +316,7 @@ function Settings() {
                   <p className="text-sm text-gray-500">自动保存更改，无需手动保存</p>
                 </div>
                 <button
-                  onClick={() => setSettings({ ...settings, autoSave: !settings.autoSave })}
+                  onClick={() => updateSettingsField('autoSave', !settings.autoSave)}
                   className={`relative w-12 h-6 rounded-full transition-colors ${
                     settings.autoSave ? 'bg-primary-600' : 'bg-gray-300'
                   }`}

@@ -19,7 +19,7 @@ echo 第1步：启动后端服务
 echo ================================================
 echo.
 echo 正在打开后端窗口...
-start "后端服务 - 学生积分管理平台" cmd /k "cd /d %~dp0..\backend && python app.py"
+start "后端服务 - 学生积分管理平台" cmd /k "cd /d %~dp0..\backend && py app.py"
 
 echo.
 echo 等待后端启动中...

@@ -19,6 +19,8 @@
 | **stop.bat** | 停止所有服务 |
 | **check_services.bat** | 检查服务状态 |
 | **install_dependencies.bat** | 安装依赖 |
+| **verify_deployment.bat** | 部署包验证工具 |
+| **service_manager.py** | 服务管理器（核心） |
 | **QUICK_REFERENCE.md** | 快速参考文档 |
 | **DEPLOYMENT_GUIDE.md** | 完整部署指南 |
 | **ngrok/** | 内网穿透工具 |

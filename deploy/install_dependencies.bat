@@ -13,13 +13,13 @@ set "BACKEND_DIR=%DEPLOY_DIR%..\backend"
 set "FRONTEND_DIR=%DEPLOY_DIR%..\frontend"
 
 echo [1/4] 检查Python环境...
-python --version >nul 2>&1
+py --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo ✗ Python未安装或未添加到PATH
     pause
     exit /b 1
 )
-python --version
+py --version
 echo ✓ Python环境正常
 
 echo.
@@ -38,13 +38,13 @@ echo [3/4] 安装后端依赖...
 cd /d "%BACKEND_DIR%"
 echo.
 echo 正在安装后端依赖...
-pip install -r requirements.txt
+py -m pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo.
     echo ⚠ 安装遇到问题，尝试继续...
     echo.
 )
-pip install flask_restx apscheduler waitress
+py -m pip install flask_restx apscheduler waitress
 echo ✓ 后端依赖安装完成
 
 echo.

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
-import { ClipboardCheck, Check, X, Filter, RefreshCw, AlertCircle, Clock, User, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ClipboardCheck, Check, X, Filter, RefreshCw, Clock, User, Plus } from 'lucide-react';
 import { Card, Button, Modal } from '../components';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 function Approvals() {
+  const { showToast } = useToast();
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
@@ -11,11 +13,10 @@ function Approvals() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [createForm, setCreateForm] = useState({ user_id: '', title: '', description: '', type: 'score_adjust', score_change: 0 });
-  const [message, setMessage] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, per_page: 20, total: 0 });
 
-  const loadApprovals = async () => {
+  const loadApprovals = useCallback(async () => {
     try {
       setLoading(true);
       const params = { page: pagination.page, per_page: pagination.per_page };
@@ -25,102 +26,105 @@ function Approvals() {
       setPagination(prev => ({ ...prev, total: data.total }));
     } catch (error) {
       console.error('加载审批失败:', error);
-      setMessage({ type: 'error', text: '加载审批失败' });
+      showToast('加载审批失败', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.per_page, filterStatus, showToast]);
 
   useEffect(() => {
     loadApprovals();
-  }, [pagination.page, filterStatus]);
+  }, [loadApprovals]);
 
-  const handleViewDetail = async (id) => {
+  const handleViewDetail = useCallback(async (id) => {
     try {
       const data = await api.approvals.getById(id);
       setSelectedApproval(data);
       setShowDetailModal(true);
     } catch (error) {
-      setMessage({ type: 'error', text: '获取详情失败' });
+      showToast('获取详情失败', 'error');
     }
-  };
+  }, [showToast]);
 
-  const handleApprove = async (id, comment = '') => {
+  const handleApprove = useCallback(async (id, comment = '') => {
     if (!window.confirm('确定要通过这个申请吗？')) return;
     try {
       setActionLoading(true);
       await api.approvals.approve(id, { comment });
-      await loadApprovals();
+      setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'approved' } : a));
       setShowDetailModal(false);
-      setMessage({ type: 'success', text: '审批通过' });
+      showToast('审批通过', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '操作失败' });
+      showToast('操作失败', 'error');
     } finally {
       setActionLoading(false);
     }
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [showToast]);
 
-  const handleReject = async (id, comment = '') => {
+  const handleReject = useCallback(async (id, comment = '') => {
     if (!window.confirm('确定要拒绝这个申请吗？')) return;
     try {
       setActionLoading(true);
       await api.approvals.reject(id, { comment });
-      await loadApprovals();
+      setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected' } : a));
       setShowDetailModal(false);
-      setMessage({ type: 'success', text: '已拒绝' });
+      showToast('已拒绝', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '操作失败' });
+      showToast('操作失败', 'error');
     } finally {
       setActionLoading(false);
     }
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [showToast]);
 
-  const handleCreateApproval = async (e) => {
+  const handleCreateApproval = useCallback(async (e) => {
     e.preventDefault();
     try {
       setActionLoading(true);
-      await api.approvals.create(createForm);
+      const newApproval = await api.approvals.create(createForm);
       setShowCreateModal(false);
       setCreateForm({ user_id: '', title: '', description: '', type: 'score_adjust', score_change: 0 });
-      await loadApprovals();
-      setMessage({ type: 'success', text: '申请创建成功' });
+      setApprovals(prev => [newApproval, ...prev]);
+      showToast('申请创建成功', 'success');
     } catch (error) {
-      setMessage({ type: 'error', text: '创建失败' });
+      showToast('创建失败', 'error');
     } finally {
       setActionLoading(false);
     }
-    setTimeout(() => setMessage(null), 3000);
-  };
+  }, [createForm, showToast]);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'pending':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">待审批</span>;
-      case 'approved':
-        return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">已通过</span>;
-      case 'rejected':
-        return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">已拒绝</span>;
-      default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{status}</span>;
-    }
-  };
+  const getStatusBadge = useMemo(() => {
+    return (status) => {
+      switch (status) {
+        case 'pending':
+          return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">待审批</span>;
+        case 'approved':
+          return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">已通过</span>;
+        case 'rejected':
+          return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">已拒绝</span>;
+        default:
+          return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{status}</span>;
+      }
+    };
+  }, []);
 
-  const getTypeLabel = (type) => {
-    switch (type) {
-      case 'score_adjust':
-        return '积分调整';
-      case 'special_reward':
-        return '特殊奖励';
-      case 'other':
-        return '其他';
-      default:
-        return type;
-    }
-  };
+  const getTypeLabel = useMemo(() => {
+    return (type) => {
+      switch (type) {
+        case 'score_adjust':
+          return '积分调整';
+        case 'special_reward':
+          return '特殊奖励';
+        case 'other':
+          return '其他';
+        default:
+          return type;
+      }
+    };
+  }, []);
 
-  const totalPages = Math.ceil(pagination.total / pagination.per_page);
+  const totalPages = useMemo(() => {
+    return Math.ceil(pagination.total / pagination.per_page);
+  }, [pagination.total, pagination.per_page]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -139,21 +143,6 @@ function Approvals() {
           创建申请
         </Button>
       </div>
-
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-700'
-        }`}>
-          {message.type === 'success' ? (
-            <Check className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
 
       <Card title="申请列表">
         <div className="flex items-center gap-4 mb-4 flex-wrap">

@@ -485,6 +485,14 @@ void reconnect() {
   while (!mqtt.connected()) {
     Serial.print("Attempting MQTT connection...");
     
+    // 配置SSL（如果启用）
+    if (config.mqtt_ssl) {
+      espClient.setInsecure(); // 跳过证书验证
+      Serial.println("SSL enabled");
+    }
+    
+    mqtt.setServer(config.mqtt_server, config.mqtt_port);
+    
     bool connected;
     if (strlen(config.mqtt_username) > 0) {
       connected = mqtt.connect(config.mqtt_client_id, config.mqtt_username, config.mqtt_password);

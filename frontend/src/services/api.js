@@ -1,4 +1,4 @@
-const API_URL = '';
+
 
 const getCurrentAdmin = () => {
   const admin = localStorage.getItem('admin');
@@ -10,38 +10,231 @@ const getCurrentAdmin = () => {
   }
 };
 
-const request = async (url, options = {}) => {
-  const admin = getCurrentAdmin();
+const getAccessToken = () => {
+  return localStorage.getItem('access_token');
+};
+
+const getRefreshToken = () => {
+  return localStorage.getItem('refresh_token');
+};
+
+const clearAuthData = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('admin');
+};
+
+const cache = new Map();
+const cacheTTL = 60000;
+const pendingRequests = new Map();
+let isRefreshing = false;
+let refreshPromise = null;
+
+const getCacheKey = (url, method) => {
+  return `${method}:${url}`;
+};
+
+const clearRelatedCache = (url) => {
+  const keysToDelete = [];
+  for (const key of cache.keys()) {
+    if (key.includes(url.split('?')[0])) {
+      keysToDelete.push(key);
+    }
+  }
+  keysToDelete.forEach(key => cache.delete(key));
+};
+
+const errorMessages = {
+  400: '请求参数错误，请检查输入内容',
+  401: '登录已过期，请重新登录',
+  403: '您没有权限执行此操作',
+  404: '请求的资源不存在',
+  422: '数据验证失败，请检查输入内容',
+  429: '请求过于频繁，请稍后再试',
+  500: '服务器内部错误，请稍后重试',
+  502: '服务器暂时不可用，请稍后重试',
+  503: '服务维护中，请稍后重试',
+};
+
+const getErrorMessage = (status, errorData) => {
+  if (errorData && errorData.message) {
+    return errorData.message;
+  }
+  if (errorData && errorData.error) {
+    return errorData.error;
+  }
+  return errorMessages[status] || `请求失败 (${status})`;
+};
+
+const handleApiError = (error, url, method) => {
+  console.error(`API Error [${method}] ${url}:`, error);
+  
+  const errorInfo = {
+    message: error.message,
+    type: 'api_error',
+    url,
+    method,
+    timestamp: Date.now()
+  };
+  
+  return errorInfo;
+};
+
+const refreshToken = async () => {
+  if (isRefreshing) {
+    return refreshPromise;
+  }
+  
+  isRefreshing = true;
+  const refreshToken = getRefreshToken();
   
   try {
-    const response = await fetch(url, {
-      ...options,
+    const response = await fetch('/api/admins/refresh-token', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(admin && admin.id ? { 'X-Admin-Id': admin.id.toString() } : {}),
-        ...options.headers,
       },
+      body: JSON.stringify({ refresh_token: refreshToken })
     });
     
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      const errorMsg = error.message || error.error || `请求失败 (${response.status})`;
-      throw new Error(errorMsg);
+      throw new Error('刷新令牌失败');
     }
     
     const data = await response.json();
-    return data;
-  } catch (error) {
-    if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-      throw new Error('网络连接失败，请检查网络或服务器是否可用');
+    if (data.access_token) {
+      localStorage.setItem('access_token', data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
+      return data.access_token;
+    } else {
+      throw new Error('刷新令牌失败');
     }
-    if (error.message.includes('NetworkError') || error.message.includes('net::ERR')) {
-      throw new Error('网络错误，请检查服务器连接');
+  } catch (error) {
+    clearAuthData();
+    window.location.href = '/login';
+    throw error;
+  } finally {
+    isRefreshing = false;
+  }
+};
+
+const request = async (url, options = {}, retryCount = 0) => {
+  const admin = getCurrentAdmin();
+  const accessToken = getAccessToken();
+  const method = options.method || 'GET';
+  const cacheKey = getCacheKey(url, method);
+  
+  if (method === 'GET' && !options.skipCache) {
+    if (cache.has(cacheKey)) {
+      const cached = cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < cacheTTL) {
+        return cached.data;
+      }
+      cache.delete(cacheKey);
     }
     
-    console.error(`API Error [${options.method || 'GET'}] ${url}:`, error);
-    throw error;
+    if (pendingRequests.has(cacheKey)) {
+      return pendingRequests.get(cacheKey);
+    }
   }
+  
+  const promise = (async () => {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      };
+      
+      // 优先使用JWT令牌，兼容旧的ID认证方式
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      } else if (admin && admin.id) {
+        headers['X-Admin-Id'] = admin.id.toString();
+      }
+      
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+      
+      if (!response.ok) {
+        // 处理401未授权错误 - token过期
+        if (response.status === 401 && retryCount < 1) {
+          // 尝试刷新token并重试请求
+          const newToken = await refreshToken();
+          if (newToken) {
+            // 更新headers中的token
+            headers['Authorization'] = `Bearer ${newToken}`;
+            // 重试原始请求
+            const retryResponse = await fetch(url, {
+              ...options,
+              headers,
+            });
+            
+            if (!retryResponse.ok) {
+              const error = await retryResponse.json().catch(() => ({}));
+              const errorMsg = getErrorMessage(retryResponse.status, error);
+              const apiError = new Error(errorMsg);
+              apiError.status = retryResponse.status;
+              throw apiError;
+            }
+            
+            const data = await retryResponse.json();
+            
+            if (method === 'GET') {
+              cache.set(cacheKey, { data, timestamp: Date.now() });
+            } else {
+              clearRelatedCache(url);
+            }
+            
+            return data;
+          }
+        }
+        
+        const error = await response.json().catch(() => ({}));
+        const errorMsg = getErrorMessage(response.status, error);
+        const apiError = new Error(errorMsg);
+        apiError.status = response.status;
+        apiError.errorData = error;
+        throw apiError;
+      }
+      
+      const data = await response.json();
+      
+      if (method === 'GET') {
+        cache.set(cacheKey, { data, timestamp: Date.now() });
+      } else {
+        clearRelatedCache(url);
+      }
+      
+      return data;
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        const networkError = new Error('网络连接失败，请检查网络或服务器是否可用');
+        networkError.type = 'network';
+        throw networkError;
+      }
+      if (error.message.includes('NetworkError') || error.message.includes('net::ERR')) {
+        const networkError = new Error('网络错误，请检查服务器连接');
+        networkError.type = 'network';
+        throw networkError;
+      }
+      
+      handleApiError(error, url, method);
+      
+      throw error;
+    } finally {
+      pendingRequests.delete(cacheKey);
+    }
+  })();
+  
+  if (method === 'GET') {
+    pendingRequests.set(cacheKey, promise);
+  }
+  
+  return promise;
 };
 
 const api = {
@@ -224,7 +417,7 @@ const api = {
       method: 'PUT',
       body: JSON.stringify(data)
     }),
-    getStatus: () => request('/api/mqtt/status'),
+    getStatus: () => request(`/api/mqtt/status?_=${Date.now()}`, { skipCache: true }),
     connect: () => request('/api/mqtt/connect', {
       method: 'POST'
     }),
@@ -243,7 +436,7 @@ const api = {
       method: 'POST',
       body: JSON.stringify(data)
     }),
-    getLogs: (limit = 100) => request(`/api/mqtt/logs?limit=${limit}`),
+    getLogs: (limit = 100) => request(`/api/mqtt/logs?limit=${limit}&_=${Date.now()}`, { skipCache: true }),
     unlock: (data) => request('/api/mqtt/unlock', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -258,9 +451,12 @@ const api = {
       body: JSON.stringify({ filename })
     }),
     listBackups: () => request('/api/system/backups'),
-    clearCache: () => request('/api/system/clear-cache', {
-      method: 'POST'
-    }),
+    clearCache: () => {
+      cache.clear();
+      return request('/api/system/clear-cache', {
+        method: 'POST'
+      });
+    },
     getConfig: () => request('/api/system/config'),
     updateConfig: (data) => request('/api/system/config', {
       method: 'PUT',
@@ -375,6 +571,14 @@ const api = {
   },
   dashboard: {
     getData: () => request('/api/dashboard/data')
+  },
+  cache: {
+    clear: () => cache.clear(),
+    clearByUrl: (url) => clearRelatedCache(url),
+    getStats: () => ({
+      size: cache.size,
+      ttl: cacheTTL
+    })
   }
 };
 

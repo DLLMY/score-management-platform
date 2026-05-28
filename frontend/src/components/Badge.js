@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function Badge({ children, variant = 'default', className = '' }) {
   const variants = {
     default: 'bg-gray-100 text-gray-700',
@@ -16,4 +18,4 @@ function Badge({ children, variant = 'default', className = '' }) {
   );
 }
 
-export default Badge;
+export default memo(Badge);

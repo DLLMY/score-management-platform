@@ -1,25 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 function UserDetail() {
+  const { showToast } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [message, setMessage] = useState(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [scoreChange, setScoreChange] = useState({ amount: 0, description: '' });
 
-  useEffect(() => {
-    fetchUser();
-    fetchRecords();
-  }, [id]);
-
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -30,42 +26,59 @@ function UserDetail() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       const data = await api.records.getByUser(id);
       setRecords(data.reverse());
     } catch (err) {
       console.error('获取记录失败:', err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchUser();
+    fetchRecords();
+  }, [fetchUser, fetchRecords]);
 
   const handleScoreChange = async (e) => {
     e.preventDefault();
     
     if (scoreChange.amount === 0) {
-      setMessage({ type: 'error', text: '请输入积分变化值' });
+      showToast('请输入积分变化值', 'error');
       return;
     }
 
     try {
-      await api.records.create({
+      const result = await api.records.create({
         user_id: id,
         score_change: scoreChange.amount,
         description: scoreChange.description || (scoreChange.amount > 0 ? '手动加分' : '手动扣分'),
         operator: '管理员'
       });
-      setMessage({ type: 'success', text: scoreChange.amount > 0 ? '加分成功' : '扣分成功' });
+      
+      setUser(prev => ({
+        ...prev,
+        current_score: prev.current_score + scoreChange.amount
+      }));
+      
+      const newRecord = {
+        id: result.id,
+        user_id: id,
+        score_change: scoreChange.amount,
+        description: scoreChange.description || (scoreChange.amount > 0 ? '手动加分' : '手动扣分'),
+        operator: '管理员',
+        created_at: new Date().toISOString()
+      };
+      setRecords(prev => [newRecord, ...prev]);
+      
+      showToast(scoreChange.amount > 0 ? '加分成功' : '扣分成功', 'success');
       setShowScoreModal(false);
       setScoreChange({ amount: 0, description: '' });
-      fetchUser();
-      fetchRecords();
     } catch (err) {
-      setMessage({ type: 'error', text: '操作失败: ' + err.message });
+      showToast('操作失败: ' + err.message, 'error');
     }
-
-    setTimeout(() => setMessage(null), 3000);
   };
 
   const getRank = (score) => {
@@ -149,24 +162,6 @@ function UserDetail() {
           刷新
         </button>
       </div>
-
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-          message.type === 'success' 
-            ? 'bg-success-50 border border-success-200 text-success-700' 
-            : 'bg-danger-50 border border-danger-200 text-danger-700'
-        }`}>
-          {message.type === 'success' ? (
-            <AlertCircle className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span className="font-medium">{message.text}</span>
-          <button onClick={() => setMessage(null)} className="ml-auto text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-6">

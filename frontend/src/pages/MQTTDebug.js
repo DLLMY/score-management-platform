@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import { 
   Wifi, 
   WifiOff, 
@@ -20,11 +20,60 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
+// 工具函数
+const formatTime = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('zh-CN', { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit',
+    hour12: false 
+  });
+};
+
+const formatDateTime = (timestamp) => {
+  if (!timestamp) return '无记录';
+  const date = new Date(timestamp);
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
+
+// 节流函数
+const throttle = (fn, limit = 1000) => {
+  let inThrottle = false;
+  return (...args) => {
+    if (!inThrottle) {
+      fn(...args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  };
+};
+
+// 日志状态reducer
+const logReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_LOGS':
+      return { ...state, logs: action.payload, lastUpdate: Date.now() };
+    case 'ADD_LOG':
+      return { ...state, logs: [action.payload, ...state.logs].slice(0, 500) };
+    case 'CLEAR_LOGS':
+      return { ...state, logs: [], lastUpdate: null };
+    default:
+      return state;
+  }
+};
+
 function MQTTDebug() {
   const [activeTab, setActiveTab] = useState('status');
   const [mqttStatus, setMqttStatus] = useState(false);
   const [subscribedTopics, setSubscribedTopics] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [logState, dispatchLog] = useReducer(logReducer, { logs: [], lastUpdate: null });
   const [filterLogs, setFilterLogs] = useState('all');
   const [isConnecting, setIsConnecting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -32,11 +81,13 @@ function MQTTDebug() {
     A: { status: 'unknown', lastUpdate: null },
     B: { status: 'unknown', lastUpdate: null }
   });
+  const [autoRefresh] = useState(true);
+  const [refreshInterval] = useState(3000);
   const logContainerRef = useRef(null);
 
   const [config, setConfig] = useState({
     broker: 'nc5233fc.ala.cn-hangzhou.emqxsl.cn',
-    port: 8883,
+    port: 8084,
     clientId: 'score_backend',
     username: 'phoneboxtest',
     password: '123456',
@@ -56,35 +107,42 @@ function MQTTDebug() {
     qos: 0
   });
 
-  useEffect(() => {
-    fetchConfig();
-    fetchStatus();
-    fetchLogs();
-    
-    const interval = setInterval(() => {
-      fetchStatus();
-      fetchLogs();
-    }, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  // 记忆化tabs配置
+  const tabs = useMemo(() => [
+    { id: 'status', label: '连接状态', icon: Server },
+    { id: 'publish', label: '消息发布', icon: Send },
+    { id: 'subscribe', label: '主题订阅', icon: Radio },
+    { id: 'logs', label: '消息日志', icon: Terminal },
+    { id: 'devices', label: '设备控制', icon: Box },
+  ], []);
 
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [logs]);
+  // 记忆化过滤后的日志
+  const filteredLogs = useMemo(() => {
+    return logState.logs.filter(log => {
+      if (filterLogs === 'all') return true;
+      return log.direction === filterLogs;
+    });
+  }, [logState.logs, filterLogs]);
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const data = await api.mqtt.getConfig();
-      setConfig(data);
+      setConfig({
+        broker: data.broker,
+        port: data.port,
+        clientId: data.client_id || data.clientId,
+        username: data.username,
+        password: data.password,
+        ssl: data.ssl,
+        timeout: data.timeout,
+        keepalive: data.keepalive
+      });
     } catch (error) {
       console.error('获取配置失败:', error);
     }
-  };
+  }, []);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const data = await api.mqtt.getStatus();
       setMqttStatus(data.connected);
@@ -92,45 +150,171 @@ function MQTTDebug() {
     } catch (error) {
       console.error('获取状态失败:', error);
     }
-  };
+  }, []);
 
-  const fetchLogs = async () => {
-    try {
-      const data = await api.mqtt.getLogs(200);
-      setLogs(data.reverse());
-      
-      setBoxStatus(prevStatus => {
-        const newBoxStatus = { ...prevStatus };
-        data.forEach(log => {
-          if (log.topic === 'phonebox/status' && log.direction === 'receive') {
-            try {
+  const updateBoxStatusFromLogs = useCallback((logsData) => {
+    setBoxStatus(prevStatus => {
+      const newBoxStatus = { ...prevStatus };
+      // 按时间戳升序排列，确保最新状态覆盖旧状态
+      const sortedLogs = [...logsData].sort((a, b) => {
+        const timeA = new Date(a.timestamp || 0).getTime();
+        const timeB = new Date(b.timestamp || 0).getTime();
+        return timeA - timeB;
+      });
+      sortedLogs.forEach(log => {
+        // 处理 phonebox/status 主题
+        if (log.topic === 'phonebox/status' && log.direction === 'receive') {
+          try {
+            const msg = JSON.parse(log.message);
+            if (msg.box_id && msg.status) {
+              // 统一状态值格式：open -> opened, close -> closed
+              const normalizedStatus = msg.status === 'open' ? 'opened' : 
+                                      msg.status === 'close' ? 'closed' : msg.status;
+              newBoxStatus[msg.box_id] = {
+                status: normalizedStatus,
+                lastUpdate: log.timestamp
+              };
+            }
+          } catch (e) {}
+        }
+        // 处理 phonebox/heartbeat 主题（设备心跳包含箱状态）
+        if (log.topic === 'phonebox/heartbeat' && log.direction === 'receive') {
+          try {
+            const msg = JSON.parse(log.message);
+            if (msg.box_a_status) {
+              newBoxStatus['A'] = {
+                status: msg.box_a_status === 'open' ? 'opened' : msg.box_a_status === 'closed' ? 'closed' : msg.box_a_status,
+                lastUpdate: log.timestamp
+              };
+            }
+            if (msg.box_b_status) {
+              newBoxStatus['B'] = {
+                status: msg.box_b_status === 'open' ? 'opened' : msg.box_b_status === 'closed' ? 'closed' : msg.box_b_status,
+                lastUpdate: log.timestamp
+              };
+            }
+          } catch (e) {}
+        }
+        // 处理 phonebox/unlock/{box_id} 主题（设备开锁回复）
+        if (log.topic.startsWith('phonebox/unlock/') && log.direction === 'receive') {
+          try {
+            const boxId = log.topic.split('/')[2];
+            if (boxId && (boxId === 'A' || boxId === 'B')) {
               const msg = JSON.parse(log.message);
-              if (msg.box_id && msg.status) {
-                newBoxStatus[msg.box_id] = {
-                  status: msg.status,
+              // 根据开锁结果更新状态
+              if (msg.result === 'true' || msg.result === true) {
+                newBoxStatus[boxId] = {
+                  status: 'opened',
+                  lastUpdate: log.timestamp
+                };
+              } else if (msg.reason) {
+                // 失败情况下显示失败原因
+                newBoxStatus[boxId] = {
+                  status: msg.reason === 'score_low' ? 'locked' : 'error',
                   lastUpdate: log.timestamp
                 };
               }
-            } catch (e) {}
-          }
-        });
-        return newBoxStatus;
+            }
+          } catch (e) {}
+        }
       });
+      return newBoxStatus;
+    });
+  }, []);
+
+  const fetchLogs = useCallback(async (force = false) => {
+    try {
+      const data = await api.mqtt.getLogs(200);
+      
+      // 使用reducer更新日志
+      dispatchLog({ type: 'SET_LOGS', payload: data.reverse() });
+      
+      // 更新设备状态
+      updateBoxStatusFromLogs(data);
+      
     } catch (error) {
       console.error('获取日志失败:', error);
     }
-  };
+  }, [updateBoxStatusFromLogs]);
 
-  const handleSaveConfig = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
-      await api.mqtt.updateConfig(config);
+      const data = await api.devices.getAll();
+      if (data && data.length > 0) {
+        const device = data[0];
+        setBoxStatus(prev => ({
+          ...prev,
+          'A': {
+            status: device.box_a_status === 'open' ? 'opened' : device.box_a_status === 'closed' ? 'closed' : device.box_a_status,
+            lastUpdate: device.last_heartbeat
+          },
+          'B': {
+            status: device.box_b_status === 'open' ? 'opened' : device.box_b_status === 'closed' ? 'closed' : device.box_b_status,
+            lastUpdate: device.last_heartbeat
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('获取设备状态失败:', error);
+    }
+  }, []);
+
+  // 自动刷新函数
+  const doRefresh = useCallback(async () => {
+    await fetchStatus();
+    await fetchLogs();
+  }, [fetchStatus, fetchLogs]);
+
+  useEffect(() => {
+    fetchConfig();
+    fetchStatus();
+    fetchLogs();
+    fetchDevices();
+  }, [fetchConfig, fetchStatus, fetchLogs, fetchDevices]);
+
+  // 自动刷新逻辑
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(doRefresh, refreshInterval);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, doRefresh, refreshInterval]);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [logState.logs]);
+
+  const addLog = useCallback((message, direction) => {
+    const now = new Date();
+    dispatchLog({
+      type: 'ADD_LOG',
+      payload: {
+        id: Date.now(),
+        timestamp: now.toISOString(),
+        topic: '',
+        message: message,
+        direction: direction
+      }
+    });
+  }, []);
+
+  const handleSaveConfig = useCallback(async () => {
+    try {
+      const configData = {
+        ...config,
+        client_id: config.clientId,
+      };
+      delete configData.clientId;
+      await api.mqtt.updateConfig(configData);
       addLog('配置已保存', 'info');
     } catch (error) {
       addLog('保存配置失败: ' + (error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, [config, addLog]);
 
-  const handleConnect = async () => {
+  const handleConnect = useCallback(async () => {
     setIsConnecting(true);
     try {
       await api.mqtt.connect();
@@ -143,9 +327,9 @@ function MQTTDebug() {
       addLog('连接失败: ' + (error.response?.data?.error || error.message), 'error');
       setIsConnecting(false);
     }
-  };
+  }, [addLog, fetchStatus]);
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = useCallback(async () => {
     try {
       await api.mqtt.disconnect();
       addLog('已断开连接', 'info');
@@ -153,9 +337,9 @@ function MQTTDebug() {
     } catch (error) {
       addLog('断开失败: ' + (error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, [addLog]);
 
-  const handlePublish = async () => {
+  const handlePublish = useCallback(async () => {
     if (!publish.topic.trim()) {
       addLog('请输入主题', 'error');
       return;
@@ -171,9 +355,9 @@ function MQTTDebug() {
     } catch (error) {
       addLog('发布失败: ' + (error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, [publish, addLog]);
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = useCallback(async () => {
     if (!subscribe.topic.trim()) {
       addLog('请输入主题', 'error');
       return;
@@ -190,9 +374,9 @@ function MQTTDebug() {
     } catch (error) {
       addLog('订阅失败: ' + (error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, [subscribe, addLog, fetchStatus]);
 
-  const handleUnsubscribe = async (topic) => {
+  const handleUnsubscribe = useCallback(async (topic) => {
     try {
       await api.mqtt.unsubscribe({ topic });
       addLog(`取消订阅: ${topic}`, 'info');
@@ -200,22 +384,22 @@ function MQTTDebug() {
     } catch (error) {
       addLog('取消订阅失败: ' + (error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, [addLog, fetchStatus]);
 
-  const clearLogs = () => {
-    setLogs([]);
+  const clearLogs = useCallback(() => {
+    dispatchLog({ type: 'CLEAR_LOGS' });
     addLog('日志已清空', 'info');
-  };
+  }, [addLog]);
 
-  const copyConfig = async () => {
+  const copyConfig = useCallback(async () => {
     const configText = JSON.stringify(config, null, 2);
     await navigator.clipboard.writeText(configText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     addLog('配置已复制到剪贴板', 'info');
-  };
+  }, [config, addLog]);
 
-  const resetConfig = () => {
+  const resetConfig = useCallback(() => {
     setConfig({
       broker: 'nc5233fc.ala.cn-hangzhou.emqxsl.cn',
       port: 8883,
@@ -227,83 +411,65 @@ function MQTTDebug() {
       keepalive: 60
     });
     addLog('配置已重置', 'info');
-  };
+  }, [addLog]);
 
-  const handleCardTest = async (card) => {
-    if (!mqttStatus) return;
+  const handleCardTest = useCallback(async (card) => {
+    if (!mqttStatus) {
+      addLog('MQTT未连接，无法执行操作', 'error');
+      return;
+    }
     
     try {
       addLog(`模拟刷卡: ${card.id} (${card.name})`, 'info');
       
+      let response;
       if (card.status === 'success') {
-        await api.mqtt.unlock({ 
+        response = await api.mqtt.unlock({ 
           box_id: 'B', 
           response: { result: 'true', reason: 'score_ok', current_score: card.score } 
         });
         addLog(`验证通过: ${card.reason} -> phonebox/unlock/B`, 'send');
       } else if (card.status === 'fail') {
-        await api.mqtt.unlock({ 
+        response = await api.mqtt.unlock({ 
           box_id: 'B', 
           response: { result: 'false', reason: 'score_low', current_score: card.score } 
         });
         addLog(`验证失败: ${card.reason}`, 'error');
       } else {
-        await api.mqtt.unlock({ 
+        response = await api.mqtt.unlock({ 
           box_id: 'B', 
           response: { result: 'false', reason: 'card_not_found' } 
         });
         addLog(`验证失败: ${card.reason}`, 'error');
       }
+      
+      console.log('API响应:', response);
+      
+      // 强制清除MQTT相关缓存，确保获取最新日志
+      api.cache.clearByUrl('/api/mqtt/logs');
+      
+      // 刷新日志以显示新发送的消息
+      await fetchLogs();
+      
+      addLog('日志已刷新', 'info');
     } catch (error) {
-      addLog('测试失败: ' + (error.response?.data?.error || error.message), 'error');
+      console.error('测试失败:', error);
+      addLog('测试失败: ' + (error.response?.data?.message || error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, [mqttStatus, addLog, fetchLogs]);
 
-  const addLog = (message, direction) => {
-    const now = new Date();
-    setLogs(prev => [...prev.slice(-199), {
-      id: Date.now(),
-      timestamp: now.toISOString(),
-      topic: '',
-      message: message,
-      direction: direction
-    }]);
-  };
+  // 记忆化配置更新函数
+  const updateConfigField = useCallback((field, value) => {
+    setConfig(prev => ({ ...prev, [field]: value }));
+  }, []);
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit',
-      hour12: false 
-    });
-  };
+  const updatePublishField = useCallback((field, value) => {
+    setPublish(prev => ({ ...prev, [field]: value }));
+  }, []);
 
-  const formatDateTime = (timestamp) => {
-    if (!timestamp) return '无记录';
-    const date = new Date(timestamp);
-    return date.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  const filteredLogs = logs.filter(log => {
-    if (filterLogs === 'all') return true;
-    return log.direction === filterLogs;
-  });
-
-  const tabs = [
-    { id: 'status', label: '连接状态', icon: Server },
-    { id: 'publish', label: '消息发布', icon: Send },
-    { id: 'subscribe', label: '主题订阅', icon: Radio },
-    { id: 'logs', label: '消息日志', icon: Terminal },
-    { id: 'devices', label: '设备控制', icon: Box },
-  ];
+  const updateSubscribeField = useCallback((field, value) => {
+    setSubscribe(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -372,7 +538,7 @@ function MQTTDebug() {
                         <input
                           type="text"
                           value={config.broker}
-                          onChange={(e) => setConfig({ ...config, broker: e.target.value })}
+                          onChange={(e) => updateConfigField('broker', e.target.value)}
                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>
@@ -381,7 +547,7 @@ function MQTTDebug() {
                         <input
                           type="number"
                           value={config.port}
-                          onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 0 })}
+                          onChange={(e) => updateConfigField('port', parseInt(e.target.value) || 0)}
                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>
@@ -392,7 +558,7 @@ function MQTTDebug() {
                       <input
                         type="text"
                         value={config.clientId}
-                        onChange={(e) => setConfig({ ...config, clientId: e.target.value })}
+                        onChange={(e) => updateConfigField('clientId', e.target.value)}
                         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
@@ -403,7 +569,7 @@ function MQTTDebug() {
                         <input
                           type="text"
                           value={config.username}
-                          onChange={(e) => setConfig({ ...config, username: e.target.value })}
+                          onChange={(e) => updateConfigField('username', e.target.value)}
                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>
@@ -412,7 +578,7 @@ function MQTTDebug() {
                         <input
                           type="password"
                           value={config.password}
-                          onChange={(e) => setConfig({ ...config, password: e.target.value })}
+                          onChange={(e) => updateConfigField('password', e.target.value)}
                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>
@@ -423,7 +589,7 @@ function MQTTDebug() {
                         <input
                           type="checkbox"
                           checked={config.ssl}
-                          onChange={(e) => setConfig({ ...config, ssl: e.target.checked })}
+                          onChange={(e) => updateConfigField('ssl', e.target.checked)}
                           className="w-4 h-4 text-primary-600 rounded"
                         />
                         启用 SSL
@@ -519,7 +685,7 @@ function MQTTDebug() {
                   <input
                     type="text"
                     value={publish.topic}
-                    onChange={(e) => setPublish({ ...publish, topic: e.target.value })}
+                    onChange={(e) => updatePublishField('topic', e.target.value)}
                     placeholder="例如: phonebox/test"
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
@@ -529,7 +695,7 @@ function MQTTDebug() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">消息内容</label>
                   <textarea
                     value={publish.message}
-                    onChange={(e) => setPublish({ ...publish, message: e.target.value })}
+                    onChange={(e) => updatePublishField('message', e.target.value)}
                     placeholder="输入 JSON 或文本消息..."
                     rows={5}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-mono"
@@ -543,7 +709,7 @@ function MQTTDebug() {
                       {[0, 1, 2].map(qos => (
                         <button
                           key={qos}
-                          onClick={() => setPublish({ ...publish, qos })}
+                          onClick={() => updatePublishField('qos', qos)}
                           className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
                             publish.qos === qos
                               ? 'bg-white shadow-sm text-gray-900'
@@ -575,7 +741,7 @@ function MQTTDebug() {
                     {['phonebox/test', 'phonebox/unlock/A', 'phonebox/unlock/B', 'phonebox/status'].map(topic => (
                       <button
                         key={topic}
-                        onClick={() => setPublish({ ...publish, topic })}
+                        onClick={() => updatePublishField('topic', topic)}
                         className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-primary-50 hover:border-primary-200 transition-all"
                       >
                         {topic}
@@ -594,7 +760,7 @@ function MQTTDebug() {
                     <input
                       type="text"
                       value={subscribe.topic}
-                      onChange={(e) => setSubscribe({ ...subscribe, topic: e.target.value })}
+                      onChange={(e) => updateSubscribeField('topic', e.target.value)}
                       placeholder="例如: phonebox/status"
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
@@ -603,7 +769,7 @@ function MQTTDebug() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">QoS</label>
                     <select
                       value={subscribe.qos}
-                      onChange={(e) => setSubscribe({ ...subscribe, qos: e.target.value })}
+                      onChange={(e) => updateSubscribeField('qos', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="0">QoS 0</option>
@@ -657,7 +823,7 @@ function MQTTDebug() {
                     {['phonebox/status', 'phonebox/log', 'phonebox/query', 'phonebox/unlock/+'].map(topic => (
                       <button
                         key={topic}
-                        onClick={() => setSubscribe({ ...subscribe, topic })}
+                        onClick={() => updateSubscribeField('topic', topic)}
                         className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-primary-50 hover:border-primary-200 transition-all"
                       >
                         {topic}
@@ -817,10 +983,25 @@ function MQTTDebug() {
                         <button
                           onClick={async () => {
                             try {
-                              await api.mqtt.unlock({ box_id: boxId });
+                              if (!mqttStatus) {
+                                addLog('MQTT未连接，无法执行操作', 'error');
+                                return;
+                              }
+                              const response = await api.mqtt.unlock({ 
+                                box_id: boxId,
+                                response: { result: 'true', reason: 'manual' }
+                              });
                               addLog(`指令: phonebox/unlock/${boxId}`, 'send');
+                              console.log('远程开锁API响应:', response);
+                              
+                              // 强制清除缓存，确保获取最新日志和状态
+                              api.cache.clearByUrl('/api/mqtt/logs');
+                              await fetchLogs();
+                              
+                              addLog('等待设备响应...', 'info');
                             } catch (error) {
-                              addLog('失败: ' + (error.response?.data?.error || error.message), 'error');
+                              console.error('远程开锁失败:', error);
+                              addLog('失败: ' + (error.response?.data?.message || error.response?.data?.error || error.message), 'error');
                             }
                           }}
                           disabled={!mqttStatus}
@@ -906,77 +1087,32 @@ function MQTTDebug() {
                       <h4 className="text-sm font-semibold text-gray-700 mb-3">快捷测试按钮</h4>
                       <div className="flex flex-wrap gap-2">
                         <button
-                          onClick={() => handleCardTest({ id: 'STU001', name: '张小明', score: 85, status: 'success', color: 'green', reason: '积分充足' })}
+                          onClick={() => handleCardTest({ id: 'STU001', name: '张小明', score: 85, status: 'success', reason: '积分充足' })}
                           disabled={!mqttStatus}
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-green-500 text-white hover:bg-green-600'
+                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-green-100 text-green-700 hover:bg-green-200'
                           }`}
                         >
-                          ✅ B箱成功
+                          ✅ 测试通过
                         </button>
                         <button
-                          onClick={() => handleCardTest({ id: 'STU002', name: '李小红', score: 45, status: 'fail', color: 'yellow', reason: '积分不足' })}
+                          onClick={() => handleCardTest({ id: 'STU002', name: '李小红', score: 45, status: 'fail', reason: '积分不足' })}
                           disabled={!mqttStatus}
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                           }`}
                         >
-                          ⚠️ B箱积分不足
+                          ❌ 测试失败
                         </button>
                         <button
-                          onClick={() => handleCardTest({ id: 'STU999', name: '未注册', score: 0, status: 'error', color: 'red', reason: '卡号未注册' })}
+                          onClick={() => handleCardTest({ id: 'STU999', name: '未注册', score: 0, status: 'error', reason: '卡号未注册' })}
                           disabled={!mqttStatus}
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'
+                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-red-100 text-red-700 hover:bg-red-200'
                           }`}
                         >
-                          ❌ B箱未注册
+                          ⚠️ 卡号未注册
                         </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await api.mqtt.unlock({ box_id: 'A' });
-                              addLog('指令: phonebox/unlock/A', 'send');
-                            } catch (error) {
-                              addLog('失败: ' + (error.response?.data?.error || error.message), 'error');
-                            }
-                          }}
-                          disabled={!mqttStatus}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            !mqttStatus ? 'bg-gray-200 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'
-                          }`}
-                        >
-                          🔓 开A箱
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <Server className="w-5 h-5 text-gray-600" />
-                      <h3 className="font-semibold text-gray-900">MQTT 主题说明</h3>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <div className="font-mono text-sm text-blue-700">phonebox/query</div>
-                        <div className="text-xs text-gray-600 mt-1">ESP32刷卡后发送查询</div>
-                      </div>
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <div className="font-mono text-sm text-green-700">phonebox/unlock/A</div>
-                        <div className="text-xs text-gray-600 mt-1">A箱开锁指令</div>
-                      </div>
-                      <div className="p-3 bg-purple-50 rounded-lg">
-                        <div className="font-mono text-sm text-purple-700">phonebox/unlock/B</div>
-                        <div className="text-xs text-gray-600 mt-1">B箱开锁指令(带积分验证)</div>
-                      </div>
-                      <div className="p-3 bg-orange-50 rounded-lg">
-                        <div className="font-mono text-sm text-orange-700">phonebox/status</div>
-                        <div className="text-xs text-gray-600 mt-1">门状态上报</div>
                       </div>
                     </div>
                   </div>

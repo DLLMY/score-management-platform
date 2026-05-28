@@ -1,0 +1,12 @@
+# ngrok配置模板
+# 复制此文件为 ngrok.yml 并填写你的配置
+# ngrok.yml 已加入 .gitignore，不会被提交到仓库
+
+tunnels:
+    web:
+        proto: http
+        addr: 3000
+version: "3"
+agent:
+    authtoken: "your_ngrok_authtoken_here"
+    connect_url: connect.us.ngrok-agent.com:443
