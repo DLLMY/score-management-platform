@@ -2,12 +2,16 @@
 
 一个功能完善的学生积分管理系统，支持设备集成、数据分析、权限管理等功能。
 
+![CI](https://github.com/DLLMY/class-manger-integral/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/DLLMY/class-manger-integral/actions/workflows/deploy.yml/badge.svg)
+
 ## 📋 目录
 
 - [功能特性](#-功能特性)
 - [技术栈](#-技术栈)
 - [环境要求](#-环境要求)
 - [快速开始](#-快速开始)
+- [CI/CD 流水线](#-cicd-流水线)
 - [项目结构](#-项目结构)
 - [开发指南](#-开发指南)
 - [部署说明](#-部署说明)
@@ -50,6 +54,11 @@
 - paho-mqtt 1.6.1 (MQTT客户端)
 - Waitress 2.1.2 (WSGI服务器)
 
+### CI/CD
+- GitHub Actions - 自动化流水线
+- GitHub Releases - 版本管理
+- Windows PowerShell - 部署脚本
+
 ### 数据库
 - SQLite (开发环境)
 - 支持MySQL/PostgreSQL (生产环境)
@@ -67,8 +76,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
-cd 管理平台设计
+git clone https://github.com/DLLMY/class-manger-integral.git
+cd class-manger-integral
 ```
 
 ### 2. 配置环境变量
@@ -133,6 +142,7 @@ npm start
 |------|------|
 | 前端 | http://localhost:3000 |
 | 后端API | http://localhost:5000 |
+| API文档 | http://localhost:5000/api/docs/ |
 | ngrok管理面板 | http://localhost:4040 |
 
 ### 默认账户
@@ -141,15 +151,68 @@ npm start
 |------|--------|------|
 | 管理员 | admin | admin123 |
 
+## 🔄 CI/CD 流水线
+
+### 概述
+本项目使用 GitHub Actions 实现完整的 CI/CD 流程，自动测试、构建和部署。
+
+### CI (持续集成)
+
+**触发条件**
+- Push 到 `main` 或 `develop` 分支
+- 提交 Pull Request
+
+**执行任务**
+- 后端测试 (Python 3.10, 3.11)
+- 前端构建 (Node.js 18, 20)
+
+**查看 CI 状态**
+- 访问 GitHub Actions 页面
+- 或查看 README 顶部的徽章
+
+### CD (持续部署)
+
+**触发条件**
+- 创建并推送 Tag (格式: `v*`)
+- 手动触发 Workflow
+
+**执行任务**
+- 自动创建 GitHub Release
+- 生成 Release Notes
+- (可选) 部署到生产服务器
+
+### 发布新版本
+
+```bash
+# 1. 确保在 main 分支
+git checkout main
+
+# 2. 创建版本标签
+git tag -a v1.0.0 -m "Release version 1.0.0"
+
+# 3. 推送标签，触发 CD
+git push origin v1.0.0
+```
+
+### 详细文档
+完整的 CI/CD 配置和使用说明请参考 [deploy/CICD_GUIDE.md](deploy/CICD_GUIDE.md)。
+
 ## 📁 项目结构
 
 ```
-管理平台设计/
+class-manger-integral/
+├── .github/
+│   └── workflows/          # GitHub Actions 工作流
+│       ├── ci.yml         # CI 流水线
+│       └── deploy.yml     # CD 流水线
+│
 ├── backend/                 # 后端代码
 │   ├── models/             # 数据模型
 │   ├── routes/             # API路由
 │   ├── services/           # 业务服务
 │   ├── utils/              # 工具函数
+│   ├── scripts/            # 数据库脚本
+│   ├── tests/              # 测试用例
 │   ├── instance/           # 数据库文件 (gitignore)
 │   ├── backups/            # 备份文件 (gitignore)
 │   ├── app.py              # 主应用入口
@@ -161,8 +224,11 @@ npm start
 │   ├── public/             # 静态资源
 │   ├── src/
 │   │   ├── components/     # 组件
+│   │   │   ├── charts/    # 图表组件
+│   │   │   └── __tests__/ # 组件测试
 │   │   ├── pages/          # 页面
 │   │   ├── services/       # API服务
+│   │   │   └── __tests__/ # 服务测试
 │   │   ├── utils/          # 工具函数
 │   │   ├── context/        # React Context
 │   │   ├── App.js          # 主应用
@@ -178,18 +244,66 @@ npm start
 │   ├── install_dependencies.bat
 │   ├── service_manager.py  # 服务管理器
 │   ├── verify_deployment.bat
+│   ├── windows-service.ps1 # Windows服务管理
+│   ├── deploy-production.ps1 # 生产部署脚本
 │   ├── ngrok/              # ngrok配置
 │   ├── README.md           # 部署说明
 │   ├── QUICK_REFERENCE.md  # 快速参考
-│   └── DEPLOYMENT_GUIDE.md # 完整指南
+│   ├── DEPLOYMENT_GUIDE.md # 完整指南
+│   └── CICD_GUIDE.md       # CI/CD指南
 │
 ├── docs/                   # 文档
 ├── mqtt-test-tool/         # MQTT测试工具
+├── CHANGELOG.md            # 版本变更日志
 ├── .gitignore              # Git忽略文件
 └── README.md               # 本文件
 ```
 
 ## 💻 开发指南
+
+### 分支策略
+
+```
+main        # 生产环境分支 (受保护)
+  └─ develop # 开发分支
+       └─ feature/* # 功能分支
+       └─ bugfix/*  # 修复分支
+```
+
+### 标准开发流程
+
+```bash
+# 1. 拉取最新代码
+git checkout main
+git pull origin main
+
+# 2. 创建功能分支
+git checkout -b feature/new-feature
+
+# 3. 开发并提交
+git add .
+git commit -m "feat: add new feature"
+
+# 4. 推送到远程
+git push origin feature/new-feature
+
+# 5. 创建 Pull Request
+# 访问 GitHub 创建 PR
+```
+
+### Commit Message 规范
+
+参考 [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat: 新功能
+fix: 修复bug
+docs: 文档更新
+style: 代码格式调整
+refactor: 重构
+test: 测试相关
+chore: 构建/工具相关
+```
 
 ### 后端开发
 
@@ -201,6 +315,9 @@ python app.py
 
 # 生产模式启动
 python run.py
+
+# 运行测试
+python -m pytest tests/ -v
 ```
 
 ### 前端开发
@@ -226,8 +343,6 @@ npm test
 
 ## 🚀 部署说明
 
-详细部署说明请参考 [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md)。
-
 ### 快速部署（Windows）
 
 ```bash
@@ -243,9 +358,31 @@ verify_deployment.bat
 start.bat
 ```
 
+### Windows 服务管理
+
+```powershell
+# 查看状态
+.\deploy\windows-service.ps1 -Action status
+
+# 启动服务
+.\deploy\windows-service.ps1 -Action start
+
+# 停止服务
+.\deploy\windows-service.ps1 -Action stop
+
+# 重启服务
+.\deploy\windows-service.ps1 -Action restart
+```
+
+### 生产环境部署
+
+详细部署说明请参考:
+- [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md) - 完整部署指南
+- [deploy/CICD_GUIDE.md](deploy/CICD_GUIDE.md) - CI/CD 配置指南
+
 ## 📚 API文档
 
-API文档正在开发中，将支持Swagger/OpenAPI规范。
+启动后端后访问: http://localhost:5000/api/docs/
 
 主要API端点：
 - `/api/users` - 用户管理
@@ -261,7 +398,7 @@ API文档正在开发中，将支持Swagger/OpenAPI规范。
 
 1. Fork 本仓库
 2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+3. 提交更改 (`git commit -m 'feat: add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 Pull Request
 
