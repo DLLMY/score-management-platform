@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_wtf.csrf import generate_csrf
 from models import db, SystemConfig
 from utils.permission import requires_admin
+from services.cache_service import cache_service
 from datetime import datetime
 import os
 import shutil
@@ -241,6 +242,31 @@ class SystemClearCache(Resource):
             return {'success': True, 'message': '缓存清理成功'}
         except Exception as e:
             return {'success': False, 'message': f'清理失败: {str(e)}'}, 500
+
+@ns_system.route('/cache-stats')
+class SystemCacheStats(Resource):
+    @ns_system.doc('get_cache_stats', description='获取缓存统计信息', security='Bearer')
+    @ns_system.response(200, '成功')
+    @requires_admin
+    def get(self):
+        """
+        获取缓存统计信息
+        
+        获取Redis缓存的使用统计信息，包括命中率、操作次数等。
+        """
+        return cache_service.get_stats()
+
+    @ns_system.doc('flush_cache', description='刷新缓存', security='Bearer')
+    @ns_system.response(200, '成功')
+    @requires_admin
+    def post(self):
+        """
+        刷新缓存
+        
+        清空所有缓存数据，需要管理员权限。
+        """
+        result = cache_service.flush_all()
+        return {'success': result, 'message': '缓存刷新成功' if result else '缓存刷新失败'}
 
 @ns_system.route('/csrf-token')
 class SystemCsrfToken(Resource):

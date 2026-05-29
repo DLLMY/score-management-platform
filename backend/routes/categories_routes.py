@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from models import db, ScoreCategory, ScoreRule
 from utils.permission import requires_admin
+from services.cache_service import cache_service
 from datetime import datetime
 
 ns_categories = Namespace('categories', description='分类管理相关操作')
@@ -17,8 +18,13 @@ category_model = ns_categories.model('ScoreCategory', {
 class CategoryList(Resource):
     @ns_categories.doc('list_categories')
     def get(self):
+        cache_key = 'categories_all'
+        cached_result = cache_service.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         categories = ScoreCategory.query.all()
-        return {
+        result = {
             'categories': [{
                 'id': c.id,
                 'name': c.name,
@@ -28,6 +34,9 @@ class CategoryList(Resource):
                 'created_at': c.created_at.isoformat() if c.created_at else None
             } for c in categories]
         }
+
+        cache_service.set(cache_key, result, ttl=300, tags=['categories'])
+        return result
 
     @ns_categories.doc('create_category')
     @ns_categories.expect(category_model)
@@ -42,6 +51,9 @@ class CategoryList(Resource):
         )
         db.session.add(category)
         db.session.commit()
+        
+        cache_service.invalidate_by_tag('categories')
+        
         return {'success': True, 'message': '分类创建成功', 'category_id': category.id}, 201
 
 @ns_categories.route('/<int:id>')
@@ -49,8 +61,13 @@ class CategoryList(Resource):
 class CategoryResource(Resource):
     @ns_categories.doc('get_category')
     def get(self, id):
+        cache_key = f'category_{id}'
+        cached_result = cache_service.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         category = ScoreCategory.query.get_or_404(id)
-        return {
+        result = {
             'id': category.id,
             'name': category.name,
             'description': category.description,
@@ -58,6 +75,9 @@ class CategoryResource(Resource):
             'is_active': category.is_active,
             'created_at': category.created_at.isoformat() if category.created_at else None
         }
+
+        cache_service.set(cache_key, result, ttl=300, tags=['categories'])
+        return result
 
     @ns_categories.doc('update_category')
     @ns_categories.expect(category_model)
@@ -70,6 +90,9 @@ class CategoryResource(Resource):
         category.color = data.get('color', category.color)
         category.is_active = data.get('is_active', category.is_active)
         db.session.commit()
+        
+        cache_service.invalidate_by_tag('categories')
+        
         return {'success': True, 'message': '分类更新成功'}
 
     @ns_categories.doc('delete_category')
@@ -81,4 +104,8 @@ class CategoryResource(Resource):
             rule.category_id = None
         db.session.delete(category)
         db.session.commit()
+        
+        cache_service.invalidate_by_tag('categories')
+        cache_service.invalidate_by_tag('rules')
+        
         return {'success': True, 'message': '分类删除成功'}

@@ -3,7 +3,7 @@ import shutil
 import json
 import zipfile
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pathlib import Path
 import sqlite3
 

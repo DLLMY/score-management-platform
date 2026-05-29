@@ -82,7 +82,7 @@ class RuleList(Resource):
             'pages': pagination.pages
         }
 
-        cache_service.set(cache_key, result, ttl=300)
+        cache_service.set(cache_key, result, ttl=300, tags=['rules'])
         return result
 
     @ns_rules.doc('create_rule', description='创建积分规则', security='Bearer')
@@ -118,7 +118,7 @@ class RuleList(Resource):
         db.session.add(rule)
         db.session.commit()
         
-        cache_service.flush_all()
+        cache_service.invalidate_by_tag('rules')
         
         return {'success': True, 'message': '规则创建成功', 'rule_id': rule.id}, 201
 
@@ -172,7 +172,7 @@ class RuleResource(Resource):
         rule.updated_at = datetime.now()
         db.session.commit()
         
-        cache_service.flush_all()
+        cache_service.invalidate_by_tag('rules')
         
         return {'success': True, 'message': '规则更新成功'}
 
@@ -190,7 +190,7 @@ class RuleResource(Resource):
         db.session.delete(rule)
         db.session.commit()
         
-        cache_service.flush_all()
+        cache_service.invalidate_by_tag('rules')
         
         return {'success': True, 'message': '规则删除成功'}
 
