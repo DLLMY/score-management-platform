@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Users, UserPlus, Edit2, Trash2, Search, ChevronDown,
   User, GraduationCap, Phone, Building
@@ -13,7 +13,6 @@ function UserManagement() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 教师数据
   const [teachers, setTeachers] = useState([]);
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
@@ -26,14 +25,9 @@ function UserManagement() {
     class_name: ''
   });
 
-  // 班级数据
   const [classes, setClasses] = useState([]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [adminsData, classesData] = await Promise.all([
@@ -47,7 +41,11 @@ function UserManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const showSuccess = (text) => {
     showToast(text, 'success');

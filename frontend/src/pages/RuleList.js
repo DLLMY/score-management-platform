@@ -36,13 +36,13 @@ function RuleList() {
 
   const [formErrors, setFormErrors] = useState({});
 
-  const validationRules = {
+  const validationRules = useMemo(() => ({
     name: ['required', { maxLength: 100 }],
     score: ['required', 'integer', { min: -1000 }, { max: 1000 }],
     description: [{ maxLength: 500 }],
     max_per_day: ['integer', { min: 0 }, { max: 100 }],
     min_interval: ['integer', { min: 0 }, { max: 1440 }]
-  };
+  }), []);
 
   const fetchCategories = useCallback(async () => {
     try {
