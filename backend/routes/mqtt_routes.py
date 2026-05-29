@@ -24,6 +24,16 @@ mqtt_config_model = ns_mqtt.model('MQTTConfig', {
     'keepalive': fields.Integer(description='心跳间隔')
 })
 
+mqtt_publish_model = ns_mqtt.model('MQTTPublish', {
+    'topic': fields.String(required=True, description='MQTT主题'),
+    'message': fields.String(required=True, description='消息内容')
+})
+
+mqtt_status_response = ns_mqtt.model('MQTTStatusResponse', {
+    'connected': fields.Boolean(description='是否已连接'),
+    'subscribed_topics': fields.List(fields.String, description='已订阅的主题列表')
+})
+
 def check_time_valid(box_id, hour, minute):
     time_rules = TimeRule.query.filter_by(is_active=True).all()
     if not time_rules:
@@ -441,8 +451,14 @@ def handle_mqtt_message(client, topic, message):
 
 @ns_mqtt.route('/logs')
 class MQTTLogs(Resource):
-    @ns_mqtt.doc('get_mqtt_logs')
+    @ns_mqtt.doc('get_mqtt_logs', description='获取MQTT日志')
+    @ns_mqtt.response(200, '成功')
     def get(self):
+        """
+        获取MQTT日志
+        
+        获取最近的MQTT消息日志记录，最多返回100条。
+        """
         logs = MQTTLog.query.order_by(MQTTLog.timestamp.desc()).limit(100).all()
         return [{
             'id': l.id,
@@ -454,8 +470,14 @@ class MQTTLogs(Resource):
 
 @ns_mqtt.route('/config')
 class MQTTConfigResource(Resource):
-    @ns_mqtt.doc('get_mqtt_config')
+    @ns_mqtt.doc('get_mqtt_config', description='获取MQTT配置')
+    @ns_mqtt.response(200, '成功')
     def get(self):
+        """
+        获取MQTT配置
+        
+        获取当前的MQTT连接配置信息。
+        """
         config = MQTTConfig.query.first()
         if not config:
             config = MQTTConfig()
@@ -474,10 +496,16 @@ class MQTTConfigResource(Resource):
             'updated_at': config.updated_at.isoformat() if config.updated_at else None
         }
 
-    @ns_mqtt.doc('update_mqtt_config')
+    @ns_mqtt.doc('update_mqtt_config', description='更新MQTT配置', security='Bearer')
     @ns_mqtt.expect(mqtt_config_model)
+    @ns_mqtt.response(200, '更新成功')
     @requires_admin
     def put(self):
+        """
+        更新MQTT配置
+        
+        更新MQTT连接配置，需要管理员权限。
+        """
         config = MQTTConfig.query.first()
         if not config:
             config = MQTTConfig()
@@ -500,8 +528,14 @@ class MQTTConfigResource(Resource):
 
 @ns_mqtt.route('/status')
 class MQTTStatus(Resource):
-    @ns_mqtt.doc('get_mqtt_status')
+    @ns_mqtt.doc('get_mqtt_status', description='获取MQTT连接状态')
+    @ns_mqtt.response(200, '成功', mqtt_status_response)
     def get(self):
+        """
+        获取MQTT连接状态
+        
+        获取当前MQTT连接的状态信息。
+        """
         status = mqtt_manager.get_status()
         return {
             'connected': status['connected'],
@@ -510,9 +544,21 @@ class MQTTStatus(Resource):
 
 @ns_mqtt.route('/publish')
 class MQTTPublish(Resource):
-    @ns_mqtt.doc('publish_mqtt_message')
+    @ns_mqtt.doc('publish_mqtt_message', description='发布MQTT消息', security='Bearer')
+    @ns_mqtt.expect(mqtt_publish_model)
+    @ns_mqtt.response(200, '发布成功')
+    @ns_mqtt.response(400, '参数错误')
     @requires_admin
     def post(self):
+        """
+        发布MQTT消息
+        
+        向指定主题发布MQTT消息，需要管理员权限。
+        
+        请求体：
+        - topic: MQTT主题（必填）
+        - message: 消息内容（必填）
+        """
         data = ns_mqtt.payload
         topic = data.get('topic')
         message = data.get('message')
@@ -525,17 +571,65 @@ class MQTTPublish(Resource):
 
 @ns_mqtt.route('/recent')
 class MQTTRecentLogs(Resource):
-    @ns_mqtt.doc('get_recent_mqtt_logs')
+    @ns_mqtt.doc('get_recent_mqtt_logs', description='获取最近MQTT日志')
+    @ns_mqtt.response(200, '成功')
     def get(self):
+        """
+        获取最近MQTT日志
+        
+        获取内存中的最近MQTT消息日志，最多50条。
+        """
         return mqtt_logs[-50:] if len(mqtt_logs) > 50 else mqtt_logs
+
+mqtt_connect_model = ns_mqtt.model('MQTTConnect', {
+    'broker': fields.String(description='MQTT Broker地址'),
+    'port': fields.Integer(description='端口'),
+    'client_id': fields.String(description='客户端ID'),
+    'username': fields.String(description='用户名'),
+    'password': fields.String(description='密码'),
+    'ssl': fields.Boolean(description='是否启用SSL'),
+    'timeout': fields.Integer(description='超时时间'),
+    'keepalive': fields.Integer(description='心跳间隔'),
+    'transport': fields.String(description='传输协议（tcp/websocket）'),
+    'ws_path': fields.String(description='WebSocket路径')
+})
+
+mqtt_subscribe_model = ns_mqtt.model('MQTTSubscribe', {
+    'topic': fields.String(required=True, description='MQTT主题'),
+    'qos': fields.Integer(description='QoS级别（0/1/2）')
+})
+
+mqtt_unlock_model = ns_mqtt.model('MQTTUnlock', {
+    'box_id': fields.String(description='箱子ID（A/B）')
+})
 
 @ns_mqtt.route('/connect')
 class MQTTConnect(Resource):
-    @ns_mqtt.doc('connect_mqtt')
+    @ns_mqtt.doc('connect_mqtt', description='连接MQTT服务器')
+    @ns_mqtt.expect(mqtt_connect_model)
+    @ns_mqtt.response(200, '连接成功')
+    @ns_mqtt.response(500, '连接失败')
     def post(self):
+        """
+        连接MQTT服务器
+        
+        连接到MQTT Broker服务器。如果已连接则直接返回成功。
+        可以不传入参数，使用数据库中保存的配置或默认配置。
+        
+        请求体（可选）：
+        - broker: MQTT Broker地址
+        - port: 端口
+        - client_id: 客户端ID
+        - username: 用户名
+        - password: 密码
+        - ssl: 是否启用SSL
+        - timeout: 超时时间
+        - keepalive: 心跳间隔
+        - transport: 传输协议（tcp/websocket）
+        - ws_path: WebSocket路径
+        """
         print("=== MQTT连接API被调用 ===")
         try:
-            # 检查当前连接状态，如果已经连接则直接返回成功
             if mqtt_manager.is_connected:
                 print("MQTT已经连接，无需重新连接")
                 return {'success': True, 'message': 'MQTT已经连接', 'status': 'connected'}
@@ -572,11 +666,10 @@ class MQTTConnect(Resource):
                     'ssl': data.get('ssl', config_dict['ssl'] if config_dict else True),
                     'timeout': data.get('timeout', config_dict['timeout'] if config_dict else 10),
                     'keepalive': data.get('keepalive', config_dict['keepalive'] if config_dict else 60),
-                    'transport': data.get('transport', 'tcp'),  # 默认使用TCP
+                    'transport': data.get('transport', 'tcp'),
                     'ws_path': data.get('ws_path', '/mqtt')
                 }
             else:
-                # 如果没有传入数据，使用默认配置（TCP协议）
                 if not config_dict:
                     config_dict = {
                         'broker': 'nc5233fc.ala.cn-hangzhou.emqxsl.cn',
@@ -613,8 +706,15 @@ class MQTTConnect(Resource):
 
 @ns_mqtt.route('/disconnect')
 class MQTTDisconnect(Resource):
-    @ns_mqtt.doc('disconnect_mqtt')
+    @ns_mqtt.doc('disconnect_mqtt', description='断开MQTT连接')
+    @ns_mqtt.response(200, '断开成功')
+    @ns_mqtt.response(500, '断开失败')
     def post(self):
+        """
+        断开MQTT连接
+        
+        断开与MQTT Broker的连接。
+        """
         try:
             mqtt_manager.disconnect()
             return {'success': True, 'message': 'MQTT已断开连接'}
@@ -623,8 +723,21 @@ class MQTTDisconnect(Resource):
 
 @ns_mqtt.route('/subscribe')
 class MQTTSubscribe(Resource):
-    @ns_mqtt.doc('subscribe_mqtt_topic')
+    @ns_mqtt.doc('subscribe_mqtt_topic', description='订阅MQTT主题')
+    @ns_mqtt.expect(mqtt_subscribe_model)
+    @ns_mqtt.response(200, '订阅成功')
+    @ns_mqtt.response(400, '参数错误')
+    @ns_mqtt.response(500, '订阅失败')
     def post(self):
+        """
+        订阅MQTT主题
+        
+        订阅指定的MQTT主题。
+        
+        请求体：
+        - topic: MQTT主题（必填）
+        - qos: QoS级别（可选，默认0）
+        """
         data = ns_mqtt.payload
         topic = data.get('topic')
         qos = data.get('qos', 0)
@@ -640,8 +753,20 @@ class MQTTSubscribe(Resource):
 
 @ns_mqtt.route('/unsubscribe')
 class MQTTUnsubscribe(Resource):
-    @ns_mqtt.doc('unsubscribe_mqtt_topic')
+    @ns_mqtt.doc('unsubscribe_mqtt_topic', description='取消订阅MQTT主题')
+    @ns_mqtt.expect(mqtt_subscribe_model)
+    @ns_mqtt.response(200, '取消订阅成功')
+    @ns_mqtt.response(400, '参数错误')
+    @ns_mqtt.response(500, '取消订阅失败')
     def post(self):
+        """
+        取消订阅MQTT主题
+        
+        取消订阅指定的MQTT主题。
+        
+        请求体：
+        - topic: MQTT主题（必填）
+        """
         data = ns_mqtt.payload
         topic = data.get('topic')
 
@@ -656,10 +781,18 @@ class MQTTUnsubscribe(Resource):
 
 @ns_mqtt.route('/unlock')
 class MQTTUnlock(Resource):
-    @ns_mqtt.doc('publish_unlock_command')
+    @ns_mqtt.doc('publish_unlock_command', description='发送开锁命令')
+    @ns_mqtt.expect(mqtt_unlock_model)
+    @ns_mqtt.response(200, '发送成功')
     def post(self):
-        data = ns_mqtt.payload
-        box_id = data.get('box_id', 'A')
+        """
+        发送开锁命令
+        
+        向指定的箱子发送开锁命令。A箱开锁无需验证，B箱开锁需要验证积分。
+        
+        请求体：
+        - box_id: 箱子ID（A/B，默认A）
+        """
         
         try:
             topic = f'phonebox/unlock/{box_id}'
