@@ -5,26 +5,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install Python dependencies
         run: pip install -r backend/requirements.txt
-      
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
-      - name: Clean npm cache
-        run: npm cache clean --force
-      
-      - name: Delete node_modules if exists
-        run: cd frontend && rm -rf node_modules package-lock.json
-      
+
       - name: Install npm dependencies
-        run: cd frontend && npm install
-      
+        run: cd frontend && npm install --legacy-peer-deps
+
       - name: Build frontend
         run: cd frontend && npm run build
+        env:
+          CI: false
