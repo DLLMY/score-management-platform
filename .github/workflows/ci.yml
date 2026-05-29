@@ -6,27 +6,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev gcc g++ make
-      
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-      
       - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt --verbose
+        run: pip install -r backend/requirements.txt
       
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
       
+      - name: Clean npm cache
+        run: npm cache clean --force
+      
+      - name: Delete node_modules if exists
+        run: cd frontend && rm -rf node_modules package-lock.json
+      
       - name: Install npm dependencies
-        run: cd frontend && npm install --legacy-peer-deps --verbose
+        run: cd frontend && npm install
       
       - name: Build frontend
         run: cd frontend && npm run build
