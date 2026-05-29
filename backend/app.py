@@ -96,9 +96,13 @@ def check_csrf_exempt():
         pass
 
 from utils.logger import log_request_middleware, log_info
+from utils.error_handler import register_error_handlers
 
 # 注册日志中间件
 log_request_middleware(app)
+
+# 注册全局异常处理器
+register_error_handlers(app)
 
 from routes import register_routes
 api = register_routes(app)
@@ -117,28 +121,24 @@ for rule in app.url_map.iter_rules():
 
 from services.mqtt_service import connect_mqtt
 
-def backup_database():
+def scheduled_backup():
+    """定时备份任务"""
     try:
-        backup_dir = os.path.join(basedir, 'backups')
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_path = os.path.join(backup_dir, f'score_management_{timestamp}.db')
-        source_path = os.path.join(basedir, 'instance', 'score_management.db')
-        
-        if os.path.exists(source_path):
-            shutil.copy2(source_path, backup_path)
-            print(f"数据库备份成功: {backup_path}")
-            
-            backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('score_management_')])
-            if len(backups) > 10:
-                oldest = backups[0]
-                os.remove(os.path.join(backup_dir, oldest))
-                print(f"删除旧备份: {oldest}")
+        from utils.backup_utils import backup_manager
+        result = backup_manager.create_backup('full')
+        if result['success']:
+            print(f"数据库定时备份成功: {result['filename']}")
+            # 清理过期备份
+            backup_manager.clean_old_backups()
+        else:
+            print(f"数据库定时备份失败: {result['message']}")
     except Exception as e:
-        print(f"数据库备份失败: {e}")
+        print(f"数据库定时备份异常: {e}")
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(backup_database, 'interval', hours=24)
+scheduler.add_job(scheduled_backup, 'cron', hour=2, minute=0)
 scheduler.start()
+print("定时备份任务已启动，每天凌晨2:00执行")
 
 mqtt_started = False
 

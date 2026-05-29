@@ -6,6 +6,7 @@ import {
   Database, Globe, Shield, TrendingDown as TrendingDownIcon, Sparkles, ZapOff, Wifi, Battery
 } from 'lucide-react';
 import api from '../services/api';
+import { DashboardSkeleton } from '../components/Skeleton';
 
 const initialState = {
   users: [],
@@ -1002,6 +1003,10 @@ function Dashboard() {
         </div>
       </div>
 
+      {state.loading ? (
+        <DashboardSkeleton />
+      ) : (
+      <>
       {/* 统计卡片 */}
       <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <StatCard 
@@ -1313,6 +1318,8 @@ function Dashboard() {
         </div>
         <p>© 2024 积分管理平台</p>
       </div>
+      </>
+      )}
     </div>
   );
 }

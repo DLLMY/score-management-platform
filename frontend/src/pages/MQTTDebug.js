@@ -72,6 +72,9 @@ function MQTTDebug() {
   const [autoRefresh] = useState(true);
   const [refreshInterval] = useState(3000);
   const logContainerRef = useRef(null);
+  // 新增设备列表和选中设备状态
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState(null);
 
   const [config, setConfig] = useState({
     broker: 'nc5233fc.ala.cn-hangzhou.emqxsl.cn',
@@ -228,24 +231,35 @@ function MQTTDebug() {
   const fetchDevices = useCallback(async () => {
     try {
       const data = await api.devices.getAll();
-      if (data && data.length > 0) {
-        const device = data[0];
-        setBoxStatus(prev => ({
-          ...prev,
-          'A': {
-            status: device.box_a_status === 'open' ? 'opened' : device.box_a_status === 'closed' ? 'closed' : device.box_a_status,
-            lastUpdate: device.last_heartbeat
-          },
-          'B': {
-            status: device.box_b_status === 'open' ? 'opened' : device.box_b_status === 'closed' ? 'closed' : device.box_b_status,
-            lastUpdate: device.last_heartbeat
-          }
-        }));
+      setDevices(data || []);
+      
+      // 如果还没有选中设备，选择第一个在线设备
+      if (data && data.length > 0 && !selectedDevice) {
+        const onlineDevice = data.find(d => d.status === 'online') || data[0];
+        setSelectedDevice(onlineDevice);
+      }
+      
+      // 更新选中设备的状态
+      if (selectedDevice && data) {
+        const device = data.find(d => d.id === selectedDevice.id);
+        if (device) {
+          setBoxStatus(prev => ({
+            ...prev,
+            'A': {
+              status: device.box_a_status === 'open' ? 'opened' : device.box_a_status === 'closed' ? 'closed' : device.box_a_status,
+              lastUpdate: device.last_heartbeat
+            },
+            'B': {
+              status: device.box_b_status === 'open' ? 'opened' : device.box_b_status === 'closed' ? 'closed' : device.box_b_status,
+              lastUpdate: device.last_heartbeat
+            }
+          }));
+        }
       }
     } catch (error) {
       console.error('获取设备状态失败:', error);
     }
-  }, []);
+  }, [selectedDevice]);
 
   // 自动刷新函数
   const doRefresh = useCallback(async () => {
@@ -407,6 +421,11 @@ function MQTTDebug() {
       return;
     }
     
+    if (!selectedDevice) {
+      addLog('请先选择设备', 'error');
+      return;
+    }
+    
     try {
       addLog(`模拟刷卡: ${card.id} (${card.name})`, 'info');
       
@@ -414,18 +433,21 @@ function MQTTDebug() {
       if (card.status === 'success') {
         response = await api.mqtt.unlock({ 
           box_id: 'B', 
+          device_id: selectedDevice.device_id,
           response: { result: 'true', reason: 'score_ok', current_score: card.score } 
         });
-        addLog(`验证通过: ${card.reason} -> phonebox/unlock/B`, 'send');
+        addLog(`验证通过: ${card.reason} -> phonebox/unlock/B (设备: ${selectedDevice.device_id})`, 'send');
       } else if (card.status === 'fail') {
         response = await api.mqtt.unlock({ 
           box_id: 'B', 
+          device_id: selectedDevice.device_id,
           response: { result: 'false', reason: 'score_low', current_score: card.score } 
         });
         addLog(`验证失败: ${card.reason}`, 'error');
       } else {
         response = await api.mqtt.unlock({ 
           box_id: 'B', 
+          device_id: selectedDevice.device_id,
           response: { result: 'false', reason: 'card_not_found' } 
         });
         addLog(`验证失败: ${card.reason}`, 'error');
@@ -444,7 +466,7 @@ function MQTTDebug() {
       console.error('测试失败:', error);
       addLog('测试失败: ' + (error.response?.data?.message || error.response?.data?.error || error.message), 'error');
     }
-  }, [mqttStatus, addLog, fetchLogs]);
+  }, [mqttStatus, selectedDevice, addLog, fetchLogs]);
 
   // 记忆化配置更新函数
   const updateConfigField = useCallback((field, value) => {
@@ -927,6 +949,68 @@ function MQTTDebug() {
                   </div>
                 </div>
 
+                {/* 设备选择下拉框 */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Server className="w-5 h-5 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700">选择设备</span>
+                    </div>
+                    <select
+                      value={selectedDevice?.id || ''}
+                      onChange={(e) => {
+                        const deviceId = parseInt(e.target.value);
+                        const device = devices.find(d => d.id === deviceId);
+                        setSelectedDevice(device);
+                        if (device) {
+                          setBoxStatus({
+                            'A': {
+                              status: device.box_a_status === 'open' ? 'opened' : device.box_a_status === 'closed' ? 'closed' : device.box_a_status,
+                              lastUpdate: device.last_heartbeat
+                            },
+                            'B': {
+                              status: device.box_b_status === 'open' ? 'opened' : device.box_b_status === 'closed' ? 'closed' : device.box_b_status,
+                              lastUpdate: device.last_heartbeat
+                            }
+                          });
+                        }
+                      }}
+                      className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[200px]"
+                    >
+                      <option value="">请选择设备</option>
+                      {devices.map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name || device.device_id} ({device.status === 'online' ? '在线' : '离线'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedDevice && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">设备ID:</span>
+                          <p className="font-mono text-gray-900">{selectedDevice.device_id}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">设备名称:</span>
+                          <p className="text-gray-900">{selectedDevice.name || '未命名'}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">状态:</span>
+                          <p className={`font-medium ${selectedDevice.status === 'online' ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedDevice.status === 'online' ? '在线' : '离线'}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">最后心跳:</span>
+                          <p className="text-gray-900">{formatDateTime(selectedDevice.last_heartbeat)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {['A', 'B'].map(boxId => (
                     <div key={boxId} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -975,11 +1059,16 @@ function MQTTDebug() {
                                 addLog('MQTT未连接，无法执行操作', 'error');
                                 return;
                               }
+                              if (!selectedDevice) {
+                                addLog('请先选择设备', 'error');
+                                return;
+                              }
                               const response = await api.mqtt.unlock({ 
                                 box_id: boxId,
+                                device_id: selectedDevice.device_id,
                                 response: { result: 'true', reason: 'manual' }
                               });
-                              addLog(`指令: phonebox/unlock/${boxId}`, 'send');
+                              addLog(`指令: phonebox/unlock/${boxId} (设备: ${selectedDevice.device_id})`, 'send');
                               console.log('远程开锁API响应:', response);
                               
                               // 强制清除缓存，确保获取最新日志和状态
@@ -992,9 +1081,9 @@ function MQTTDebug() {
                               addLog('失败: ' + (error.response?.data?.message || error.response?.data?.error || error.message), 'error');
                             }
                           }}
-                          disabled={!mqttStatus}
+                          disabled={!mqttStatus || !selectedDevice}
                           className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
-                            !mqttStatus
+                            !mqttStatus || !selectedDevice
                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                               : boxId === 'A' 
                                 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-500/30'

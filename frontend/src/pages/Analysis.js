@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 import { BarChart3, Users, Award, TrendingUp, Medal, Target, Filter, User, TrendingDown, Clock, Activity, Zap, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
+import { EmptyState } from '../components/EmptyState';
 
 function Analysis() {
   const [users, setUsers] = useState([]);
@@ -402,10 +403,11 @@ function Analysis() {
                     </div>
                   ))}
                   {topUsers.length === 0 && (
-                    <div className="text-center py-14">
-                      <Medal className="w-14 h-14 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-500">暂无数据</p>
-                    </div>
+                    <EmptyState
+                      icon="users"
+                      title="暂无数据"
+                      description="当前筛选条件下没有学生数据"
+                    />
                   )}
                 </div>
               </div>

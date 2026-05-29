@@ -7,6 +7,7 @@ import ToastContainer from './components/ToastContainer';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageTransition from './components/PageTransition';
 import { ToastProvider, useToast } from './context/ToastContext';
+import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
 
 // 懒加载页面组件
 const UserList = lazy(() => import('./pages/UserList'));
@@ -115,6 +116,8 @@ function DashboardLayout() {
 
 // 主应用布局 - 带侧边栏和头部
 function AppLayout() {
+  useGlobalKeyboardShortcuts();
+
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
       <Sidebar />

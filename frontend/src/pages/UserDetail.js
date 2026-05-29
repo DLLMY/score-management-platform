@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus } from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { EmptyState } from '../components/EmptyState';
 
 function UserDetail() {
   const { showToast } = useToast();
@@ -298,10 +299,11 @@ function UserDetail() {
             </div>
             <div className="card-body">
               {records.length === 0 ? (
-                <div className="text-center py-16">
-                  <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">暂无积分变动记录</p>
-                </div>
+                <EmptyState
+                  icon="file"
+                  title="暂无积分变动记录"
+                  description="该学生暂无积分变动记录"
+                />
               ) : (
                 <div className="space-y-3">
                   {records.map(record => (

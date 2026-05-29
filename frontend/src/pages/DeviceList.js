@@ -3,6 +3,7 @@ import { RefreshCw, Wifi, WifiOff, Box, Clock, Activity, Edit2, Trash2, Eye, Lin
 import api from '../services/api';
 import { Card, Button, Modal, Badge, Select } from '../components';
 import { useToast } from '../context/ToastContext';
+import { EmptyState } from '../components/EmptyState';
 
 // 工具函数 - 纯函数，不依赖组件状态
 const formatUptime = (seconds) => {
@@ -420,11 +421,14 @@ function DeviceList() {
               </tbody>
             </table>
 
-            {devices.length === 0 && (
-              <div className="text-center py-12 text-gray-400">
-                <Box className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>暂无设备</p>
-              </div>
+            {devices.length === 0 && !initialLoading && (
+              <EmptyState
+                icon="wifi"
+                title="暂无设备"
+                description="添加设备开始监控系统"
+                actionLabel="添加设备"
+                onAction={() => setShowAddModal(true)}
+              />
             )}
           </div>
         )}

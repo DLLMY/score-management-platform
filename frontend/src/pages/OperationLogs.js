@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Clock, 
-  Filter, 
-  Search, 
+import {
+  Clock,
+  Filter,
+  Search,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +12,7 @@ import {
   Activity
 } from 'lucide-react';
 import api from '../services/api';
+import { EmptyState } from '../components/EmptyState';
 
 function OperationLogs() {
   const [logs, setLogs] = useState([]);
@@ -192,10 +193,11 @@ function OperationLogs() {
               <p className="text-gray-500">加载中...</p>
             </div>
           ) : logs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Search className="w-10 h-10 text-gray-300 mb-4" />
-              <p className="text-gray-500">暂无操作记录</p>
-            </div>
+            <EmptyState
+              icon="search"
+              title="暂无操作记录"
+              description="没有找到符合条件的操作记录"
+            />
           ) : (
             <>
               <div className="overflow-x-auto">

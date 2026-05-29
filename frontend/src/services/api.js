@@ -137,7 +137,6 @@ const refreshToken = async () => {
     }
   } catch (error) {
     clearAuthData();
-    window.location.href = '/login';
     throw error;
   } finally {
     isRefreshing = false;
@@ -191,7 +190,8 @@ const request = async (url, options = {}, retryCount = 0) => {
       
       if (!response.ok) {
         // 处理401未授权错误 - token过期
-        if (response.status === 401 && retryCount < 1) {
+        // 跳过登录请求的令牌刷新，避免登录失败时重定向
+        if (response.status === 401 && retryCount < 1 && !url.includes('/login')) {
           // 尝试刷新token并重试请求
           const newToken = await refreshToken();
           if (newToken) {
@@ -253,6 +253,13 @@ const request = async (url, options = {}, retryCount = 0) => {
       }
       
       handleApiError(error, url, method);
+      
+      // 如果是401错误且不是登录请求，重定向到登录页面
+      if (error.status === 401 && !url.includes('/login')) {
+        clearAuthData();
+        window.location.href = '/login';
+        return;
+      }
       
       throw error;
     } finally {

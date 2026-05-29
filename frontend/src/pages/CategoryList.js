@@ -3,6 +3,8 @@ import { Plus, Search, Edit2, Trash2, AlertCircle, X, RefreshCw, Tag, Palette } 
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { validateForm } from '../utils/validation';
+import { EmptyState } from '../components/EmptyState';
+import { Skeleton, CategoryCardSkeleton } from '../components/Skeleton';
 
 const COLORS = [
   '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', 
@@ -163,11 +165,10 @@ function CategoryList() {
 
         <div className="card-body">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin mb-3" />
-                <span className="text-gray-500 text-sm">加载中...</span>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <CategoryCardSkeleton key={i} />
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -229,17 +230,15 @@ function CategoryList() {
                 </div>
               ))}
 
-              {filteredCategories.length === 0 && (
-                <div className="col-span-full text-center py-20">
-                  <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <Tag className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">暂无分类数据</h3>
-                  <p className="text-gray-500 mb-6">添加分类开始组织积分规则</p>
-                  <button onClick={() => setShowModal(true)} className="btn btn-primary shadow-lg hover:shadow-xl transition-all">
-                    <Plus className="w-5 h-5 mr-2" />
-                    添加第一个分类
-                  </button>
+              {filteredCategories.length === 0 && !isLoading && (
+                <div className="col-span-full">
+                  <EmptyState
+                    icon="folder"
+                    title="暂无分类数据"
+                    description="添加分类开始组织积分规则"
+                    actionLabel="添加分类"
+                    onAction={() => setShowModal(true)}
+                  />
                 </div>
               )}
             </div>

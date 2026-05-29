@@ -121,9 +121,9 @@ def auth_headers(sample_admin):
 @pytest.fixture
 def jwt_auth_headers(sample_admin):
     """创建JWT认证头"""
-    from utils.security import generate_access_token
+    from utils.security import generate_tokens
 
-    token = generate_access_token(sample_admin.id, sample_admin.username, sample_admin.role)
+    token = generate_tokens(sample_admin.id, sample_admin.username, sample_admin.role)['access_token']
 
     return {
         'Authorization': f'Bearer {token}',

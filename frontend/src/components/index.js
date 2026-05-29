@@ -15,3 +15,4 @@ export { default as AnimatedScore } from './AnimatedScore';
 export { default as Toast } from './Toast';
 export { default as ToastContainer } from './ToastContainer';
 export { default as withToast } from './withToast';
+export { default as ImportExportPanel } from './ImportExportPanel';

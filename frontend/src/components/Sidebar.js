@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Users, BookOpen, Tags, BarChart3, GraduationCap, Settings, HelpCircle, 
@@ -17,7 +17,7 @@ function getCurrentRole() {
   }
 }
 
-const MenuItem = ({ item, isActive, depth = 0, index = 0 }) => {
+const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
   const Icon = item.icon;
   
   return (
@@ -60,9 +60,9 @@ const MenuItem = ({ item, isActive, depth = 0, index = 0 }) => {
       </Link>
     </li>
   );
-};
+});
 
-const GroupHeader = ({ group, hasActive, isExpanded, onToggle }) => {
+const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
   const GroupIcon = group.icon;
   
   return (
@@ -101,7 +101,7 @@ const GroupHeader = ({ group, hasActive, isExpanded, onToggle }) => {
       </div>
     </button>
   );
-};
+});
 
 function Sidebar() {
   const location = useLocation();

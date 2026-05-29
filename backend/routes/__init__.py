@@ -13,6 +13,7 @@ def register_routes(app):
     from routes.rank_routes import ns_rank
     from routes.mqtt_routes import ns_mqtt
     from routes.export_routes import ns_export
+    from routes.import_export_routes import ns_import_export
     from routes.admins_routes import ns_admins
     from routes.notifications_routes import ns_notifications
     from routes.approvals_routes import ns_approvals
@@ -37,6 +38,7 @@ def register_routes(app):
     api.add_namespace(ns_rank)
     api.add_namespace(ns_mqtt)
     api.add_namespace(ns_export)
+    api.add_namespace(ns_import_export)
     api.add_namespace(ns_admins)
     api.add_namespace(ns_notifications)
     api.add_namespace(ns_approvals)

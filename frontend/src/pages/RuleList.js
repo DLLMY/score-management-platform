@@ -3,6 +3,8 @@ import { Plus, Search, Edit2, Trash2, Download, Upload, AlertCircle, X, Filter, 
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { validateForm } from '../utils/validation';
+import { EmptyState } from '../components/EmptyState';
+import { Skeleton } from '../components/Skeleton';
 
 function RuleList() {
   const [rules, setRules] = useState([]);
@@ -362,11 +364,23 @@ function RuleList() {
 
         <div className="card-body">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin mb-3" />
-                <span className="text-gray-500 text-sm">加载中...</span>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse">
+                  <div className="flex items-start gap-3 mb-4">
+                    <Skeleton variant="avatar" className="w-10 h-10 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton variant="title" className="w-32 h-4" />
+                      <Skeleton variant="text" className="w-20 h-3" />
+                    </div>
+                  </div>
+                  <Skeleton variant="paragraph" />
+                  <div className="flex gap-2 mt-4">
+                    <Skeleton variant="button" className="w-20 h-8" />
+                    <Skeleton variant="button" className="w-20 h-8" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -460,18 +474,14 @@ function RuleList() {
                 </div>
               ))}
 
-              {filteredRules.length === 0 && (
-                <div className="text-center py-20">
-                  <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <Sliders className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">暂无规则数据</h3>
-                  <p className="text-gray-500 mb-6">添加规则开始配置积分系统</p>
-                  <button onClick={() => setShowModal(true)} className="btn btn-primary shadow-lg hover:shadow-xl transition-all">
-                    <Plus className="w-5 h-5 mr-2" />
-                    添加第一个规则
-                  </button>
-                </div>
+              {filteredRules.length === 0 && !isLoading && (
+                <EmptyState
+                  icon="file"
+                  title="暂无规则数据"
+                  description="添加规则开始配置积分系统"
+                  actionLabel="添加规则"
+                  onAction={() => setShowModal(true)}
+                />
               )}
             </div>
           )}

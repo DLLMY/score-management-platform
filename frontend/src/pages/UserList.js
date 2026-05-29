@@ -2,7 +2,7 @@ import { useReducer, useEffect, useMemo, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit2, Trash2, ArrowUpRight, ArrowDownRight, Users, Eye, RefreshCw, User, Upload, Download, CheckSquare, Square, FileText, Zap, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import api from '../services/api';
-import { Card, Button, Modal, Badge, SearchFilter, LoadingSpinner, VirtualList, AnimatedScore } from '../components';
+import { Card, Button, Modal, Badge, SearchFilter, LoadingSpinner, VirtualList, AnimatedScore, ImportExportPanel } from '../components';
 import { useToast } from '../context/ToastContext';
 import { validateForm } from '../utils/validation';
 
@@ -224,6 +224,7 @@ function UserList() {
   }, [state.rankRules]);
 
   const [formErrors, setFormErrors] = useState({});
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
   const validationRules = {
     name: ['required', { maxLength: 50 }],
@@ -560,20 +561,17 @@ function UserList() {
             <RefreshCw className={`w-4 h-4 ${state.isLoading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
-          <Button 
-            variant="outline"
-            onClick={handleDownloadTemplate}
-          >
-            <Download className="w-4 h-4" />
-            下载模板
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}
-          >
-            <Upload className="w-4 h-4" />
-            导入学生
-          </Button>
+          <div className="relative">
+            <Button variant="outline" onClick={() => setShowExportPanel(!showExportPanel)}>
+              <Download className="w-4 h-4" />
+              导入/导出
+            </Button>
+            {showExportPanel && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 p-3 z-50">
+                <ImportExportPanel type="user" />
+              </div>
+            )}
+          </div>
           {state.selectedUsers.length > 0 && (
             <>
               <Button 
