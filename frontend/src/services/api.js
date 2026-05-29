@@ -18,6 +18,30 @@ const getRefreshToken = () => {
   return localStorage.getItem('refresh_token');
 };
 
+const getCsrfToken = () => {
+  return localStorage.getItem('csrf_token');
+};
+
+const setCsrfToken = (token) => {
+  localStorage.setItem('csrf_token', token);
+};
+
+const fetchCsrfToken = async () => {
+  try {
+    const response = await fetch('/api/system/csrf-token');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.csrf_token) {
+        setCsrfToken(data.csrf_token);
+        return data.csrf_token;
+      }
+    }
+  } catch (error) {
+    console.warn('获取CSRF token失败:', error);
+  }
+  return null;
+};
+
 const clearAuthData = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
@@ -146,6 +170,12 @@ const request = async (url, options = {}, retryCount = 0) => {
         'Content-Type': 'application/json',
         ...options.headers,
       };
+      
+      // 添加CSRF token
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
       
       // 优先使用JWT令牌，兼容旧的ID认证方式
       if (accessToken) {
@@ -350,6 +380,7 @@ const api = {
       method: 'POST',
       body: JSON.stringify(data)
     }),
+    getCsrfToken: () => request('/api/admins/csrf-token'),
     getAll: () => request('/api/admins'),
     getById: (id) => request(`/api/admins/${id}`),
     create: (data) => request('/api/admins', {
@@ -505,7 +536,7 @@ const api = {
     })
   },
   devices: {
-    getAll: () => request('/api/devices'),
+    getAll: (skipCache = false) => request('/api/devices', { skipCache }),
     getById: (deviceId) => request(`/api/devices/${deviceId}`),
     create: (data) => request('/api/devices', {
       method: 'POST',
@@ -517,7 +548,17 @@ const api = {
     }),
     delete: (deviceId) => request(`/api/devices/${deviceId}`, { method: 'DELETE' }),
     getHeartbeats: (deviceId, page = 1, perPage = 50) => request(`/api/devices/${deviceId}/heartbeats?page=${page}&per_page=${perPage}`),
-    getStats: () => request('/api/devices/stats')
+    getStats: (skipCache = false) => request('/api/devices/stats', { skipCache }),
+    bindClass: (deviceId, data) => request(`/api/devices/${deviceId}/bind-class`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    bindAdmin: (deviceId, data) => request(`/api/devices/${deviceId}/bind-admin`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    getByClass: (classId) => request(`/api/devices/class/${classId}`),
+    getByAdmin: (adminId) => request(`/api/devices/admin/${adminId}`)
   },
   classes: {
     getAll: () => request('/api/classes'),
@@ -583,3 +624,4 @@ const api = {
 };
 
 export default api;
+export { getCsrfToken, setCsrfToken, fetchCsrfToken };

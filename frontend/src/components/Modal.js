@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 
-function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+function Modal({ isOpen, onClose, title, children, size = 'md', footer }) {
   if (!isOpen) return null;
 
   const sizeStyles = {
@@ -29,6 +29,11 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
         <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
+        {footer && (
+          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

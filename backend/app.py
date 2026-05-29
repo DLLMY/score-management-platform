@@ -11,6 +11,7 @@ import threading
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
+from models import db
 
 app = Flask(__name__)
 
@@ -64,18 +65,35 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here_c
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.url_map.strict_slashes = False
 
-# CSRF防护配置
-app.config['WTF_CSRF_ENABLED'] = os.getenv('CSRF_ENABLED', 'true').lower() == 'true'
+# CSRF防护配置 - 生产环境建议启用
+app.config['WTF_CSRF_ENABLED'] = True
 app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('CSRF_SECRET_KEY', app.config['SECRET_KEY'])
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # CSRF令牌有效期1小时
+# CSRF豁免视图列表
+app.config['WTF_CSRF_EXEMPT_VIEWS'] = ['api.admins_admin_login', 'api.admins_admin_refresh_token']
 
-from models import db
+# 初始化数据库
 db.init_app(app)
 
 CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
 
 # 初始化CSRF保护
 csrf = CSRFProtect(app)
+
+# 创建一个集合来存储需要豁免CSRF保护的视图函数
+csrf_exempt_views = set()
+
+def csrf_exempt(view_func):
+    """装饰器：标记视图函数不需要CSRF保护"""
+    csrf_exempt_views.add(view_func.__name__)
+    return view_func
+
+# 在CSRF保护之前检查是否需要豁免
+@app.before_request
+def check_csrf_exempt():
+    if request.endpoint and request.endpoint.rsplit('.', 1)[-1] in csrf_exempt_views:
+        # 跳过CSRF检查
+        pass
 
 from utils.logger import log_request_middleware, log_info
 
@@ -88,6 +106,14 @@ api = register_routes(app)
 # 注册日志路由（使用普通Flask Blueprint）
 from routes.logs_routes import register_logs_routes
 register_logs_routes(app)
+
+# 为登录和刷新令牌接口添加CSRF豁免
+# 获取所有注册的端点并找到登录和刷新令牌接口
+for rule in app.url_map.iter_rules():
+    if rule.rule in ['/api/admins/login', '/api/admins/refresh-token']:
+        view_func = app.view_functions[rule.endpoint]
+        csrf.exempt(view_func)
+        print(f"已为 {rule.rule} 添加CSRF豁免")
 
 from services.mqtt_service import connect_mqtt
 

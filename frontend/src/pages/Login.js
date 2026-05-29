@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, User, LogIn, AlertCircle, Shield, Fingerprint } from 'lucide-react';
 import api from '../services/api';
 import { validateForm } from '../utils/validation';
+import { fetchCsrfToken } from '../services/api';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -47,6 +48,9 @@ function Login() {
       if (result.refresh_token) {
         localStorage.setItem('refresh_token', result.refresh_token);
       }
+      
+      // 获取CSRF token
+      await fetchCsrfToken();
       
       // 根据角色跳转到不同页面
       const role = adminData.role;
@@ -107,7 +111,7 @@ function Login() {
                 用户名 <span className="text-red-400">*</span>
               </label>
               <div className="relative">
-                <div className={`absolute inset-0 rounded-xl transition-all duration-300 ${
+                <div className={`absolute inset-0 rounded-xl transition-all duration-300 pointer-events-none ${
                   usernameFocused ? 'bg-gradient-to-r from-primary-500/20 via-blue-500/20 to-cyan-500/20 shadow-lg shadow-primary-500/15 ring-2 ring-primary-500/30' : 'bg-slate-700/50'
                 }`} />
                 <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${usernameFocused ? 'text-primary-400 scale-110' : 'text-slate-400'}`}>
@@ -143,7 +147,7 @@ function Login() {
                 密码 <span className="text-red-400">*</span>
               </label>
               <div className="relative">
-                <div className={`absolute inset-0 rounded-xl transition-all duration-300 ${
+                <div className={`absolute inset-0 rounded-xl transition-all duration-300 pointer-events-none ${
                   passwordFocused ? 'bg-gradient-to-r from-primary-500/20 via-blue-500/20 to-cyan-500/20 shadow-lg shadow-primary-500/15 ring-2 ring-primary-500/30' : 'bg-slate-700/50'
                 }`} />
                 <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${passwordFocused ? 'text-primary-400 scale-110' : 'text-slate-400'}`}>

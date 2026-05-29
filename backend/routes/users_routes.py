@@ -2,8 +2,8 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from models import db, User
-from utils.permission import requires_admin
+from models import db, User, ClassInfo, AdminClass
+from utils.permission import requires_admin, get_current_admin, get_admin_class_ids
 from utils.logger import log_operation
 from services.cache_service import cache_service, cached
 from datetime import datetime
@@ -32,21 +32,50 @@ user_model = ns_users.model('User', {
     'current_score': fields.Float(description='当前积分')
 })
 
+def get_classes_for_admin(admin):
+    """获取管理员可以访问的班级名称列表"""
+    if not admin or admin.role == 'admin':
+        return None
+    
+    class_ids = get_admin_class_ids(admin.id)
+    if class_ids:
+        classes = ClassInfo.query.filter(ClassInfo.id.in_(class_ids)).all()
+        return [c.name for c in classes]
+    
+    return []
+
 @ns_users.route('/')
 class UserList(Resource):
     @ns_users.doc('list_users')
+    @requires_admin
     def get(self):
+        admin = get_current_admin()
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 100, type=int)
         search = request.args.get('search', '')
         class_name = request.args.get('class_name', '')
 
-        cache_key = f"users_list:{page}:{per_page}:{search}:{class_name}"
+        # 缓存键包含管理员角色，确保不同角色看到不同的结果
+        cache_key = f"users_list:{admin.role}:{page}:{per_page}:{search}:{class_name}"
         cached_result = cache_service.get(cache_key)
         if cached_result is not None:
             return cached_result
 
         query = User.query
+        
+        # 根据管理员权限过滤班级
+        allowed_classes = get_classes_for_admin(admin)
+        # 如果不是超级管理员且没有分配班级，返回空结果
+        if allowed_classes == []:
+            return {'users': [], 'total': 0, 'page': page, 'per_page': per_page, 'pages': 0}
+        # 如果不是超级管理员，只显示允许的班级
+        if allowed_classes is not None:
+            if class_name:
+                if class_name not in allowed_classes:
+                    return {'users': [], 'total': 0, 'page': page, 'per_page': per_page, 'pages': 0}
+            else:
+                query = query.filter(User.class_name.in_(allowed_classes))
+        
         if search:
             query = query.filter(
                 (User.name.like(f'%{search}%')) |

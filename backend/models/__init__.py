@@ -192,8 +192,13 @@ class Device(db.Model):
     box_a_status = db.Column(db.String(20), default='closed')
     box_b_status = db.Column(db.String(20), default='closed')
     system_state = db.Column(db.Integer, default=0)
+    class_info_id = db.Column(db.Integer, db.ForeignKey('class_info.id'), index=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), index=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+    class_info = db.relationship('ClassInfo', backref=db.backref('devices', lazy=True))
+    admin = db.relationship('Admin', backref=db.backref('devices', lazy=True))
 
 class DeviceHeartbeat(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { RefreshCw, Wifi, WifiOff, Box, Clock, Activity, Edit2, Trash2, Eye } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, Box, Clock, Activity, Edit2, Trash2, Eye, Link, Unlink, Users, Building2 } from 'lucide-react';
 import api from '../services/api';
-import { Card, Button, Modal, Badge } from '../components';
+import { Card, Button, Modal, Badge, Select } from '../components';
 import { useToast } from '../context/ToastContext';
 
 // 工具函数 - 纯函数，不依赖组件状态
@@ -50,7 +50,11 @@ function DeviceList() {
   const [heartbeats, setHeartbeats] = useState([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBindModal, setShowBindModal] = useState(false);
   const [newDevice, setNewDevice] = useState({ device_id: '', name: '' });
+  const [bindForm, setBindForm] = useState({ class_id: '', admin_id: '' });
+  const [classes, setClasses] = useState([]);
+  const [admins, setAdmins] = useState([]);
 
   const loadDevices = useCallback(async (manualRefresh = false) => {
     if (manualRefresh) {
@@ -58,8 +62,8 @@ function DeviceList() {
     }
     try {
       const [devicesData, statsData] = await Promise.all([
-        api.devices.getAll(),
-        api.devices.getStats()
+        api.devices.getAll(manualRefresh),
+        api.devices.getStats(manualRefresh)
       ]);
       setDevices(devicesData);
       setStats(statsData);
@@ -74,8 +78,25 @@ function DeviceList() {
     }
   }, []);
 
+  const loadClassesAndAdmins = useCallback(async () => {
+    try {
+      const classesData = await api.classes.getAll();
+      setClasses(classesData.classes || classesData || []);
+    } catch (error) {
+      console.error('加载班级数据失败:', error);
+    }
+    
+    try {
+      const adminsData = await api.admins.getAll();
+      setAdmins(adminsData.admins || adminsData || []);
+    } catch (error) {
+      console.error('加载管理员数据失败:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadDevices();
+    loadClassesAndAdmins();
     let interval = null;
     if (autoRefresh) {
       interval = setInterval(() => {
@@ -85,7 +106,7 @@ function DeviceList() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh, loadDevices]);
+  }, [autoRefresh, loadDevices, loadClassesAndAdmins]);
 
   const handleAddDevice = useCallback(async () => {
     if (!newDevice.device_id.trim()) {
@@ -136,8 +157,41 @@ function DeviceList() {
     setShowDetailModal(true);
   }, []);
 
+  const handleBindDevice = useCallback(async () => {
+    if (!selectedDevice) return;
+    
+    try {
+      if (bindForm.class_id !== undefined) {
+        await api.devices.bindClass(selectedDevice.id, { class_id: bindForm.class_id || null });
+      }
+      if (bindForm.admin_id !== undefined) {
+        await api.devices.bindAdmin(selectedDevice.id, { admin_id: bindForm.admin_id || null });
+      }
+      
+      loadDevices(true);
+      setShowBindModal(false);
+      setBindForm({ class_id: '', admin_id: '' });
+      showToast('设备绑定成功', 'success');
+    } catch (error) {
+      showToast('绑定失败: ' + error.message, 'error');
+    }
+  }, [selectedDevice, bindForm, showToast, loadDevices]);
+
+  const handleOpenBindModal = useCallback((device) => {
+    setSelectedDevice(device);
+    setBindForm({
+      class_id: device.class_info_id || '',
+      admin_id: device.admin_id || ''
+    });
+    setShowBindModal(true);
+  }, []);
+
   const handleNewDeviceChange = useCallback((field, value) => {
     setNewDevice(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleBindChange = useCallback((field, value) => {
+    setBindForm(prev => ({ ...prev, [field]: value }));
   }, []);
 
   // 记忆化设备统计数据
@@ -253,6 +307,8 @@ function DeviceList() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">设备ID</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">设备名称</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">状态</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">所属班级</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">绑定班主任</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">信号强度</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">运行时长</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">A箱</th>
@@ -279,6 +335,22 @@ function DeviceList() {
                         )}
                         {device.is_online ? '在线' : '离线'}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Building2 className="w-3 h-3 text-gray-400" />
+                        <span className="text-sm">
+                          {device.class_name || <span className="text-gray-400">未绑定</span>}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-gray-400" />
+                        <span className="text-sm">
+                          {device.admin_name || <span className="text-gray-400">未绑定</span>}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -319,6 +391,13 @@ function DeviceList() {
                           onClick={() => handleViewDetail(device)}
                         >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="primary" 
+                          size="small" 
+                          onClick={() => handleOpenBindModal(device)}
+                        >
+                          <Link className="w-4 h-4" />
                         </Button>
                         <Button 
                           variant="warning" 
@@ -390,6 +469,66 @@ function DeviceList() {
       </Modal>
 
       <Modal 
+        title={`设备绑定 - ${selectedDevice?.device_id}`} 
+        isOpen={showBindModal}
+        onClose={() => {
+          setShowBindModal(false);
+          setBindForm({ class_id: '', admin_id: '' });
+        }}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowBindModal(false)}>取消</Button>
+            <Button onClick={handleBindDevice}>确认绑定</Button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              绑定班级
+            </label>
+            <Select
+              value={bindForm.class_id}
+              onChange={(value) => handleBindChange('class_id', value === 'unbind' ? '' : value)}
+              className="w-full"
+            >
+              <option value="unbind">取消绑定</option>
+              <option value="">选择班级...</option>
+              {classes.map(cls => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              绑定班主任
+            </label>
+            <Select
+              value={bindForm.admin_id}
+              onChange={(value) => handleBindChange('admin_id', value === 'unbind' ? '' : value)}
+              className="w-full"
+            >
+              <option value="unbind">取消绑定</option>
+              <option value="">选择班主任...</option>
+              {admins.map(admin => (
+                <option key={admin.id} value={admin.id}>
+                  {admin.real_name || admin.username}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700 flex items-start gap-2">
+              <Unlink className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              选择"取消绑定"可解除当前设备与班级/班主任的关联
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal 
         title={`设备详情 - ${selectedDevice?.device_id}`} 
         visible={showDetailModal}
         onClose={() => setShowDetailModal(false)}
@@ -407,6 +546,14 @@ function DeviceList() {
                 <p className={`text-lg font-medium ${selectedDevice.is_online ? 'text-green-600' : 'text-red-600'}`}>
                   {selectedDevice.is_online ? '在线' : '离线'}
                 </p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-500">所属班级</p>
+                <p className="text-lg font-medium">{selectedDevice.class_name || '未绑定'}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-500">绑定班主任</p>
+                <p className="text-lg font-medium">{selectedDevice.admin_name || '未绑定'}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-500">WiFi信号</p>

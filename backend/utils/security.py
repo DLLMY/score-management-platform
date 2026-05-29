@@ -8,7 +8,7 @@ import json
 import os
 
 # JWT配置
-JWT_SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here')
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here'))
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
@@ -17,7 +17,7 @@ JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 def generate_tokens(admin_id: int, username: str, role: str):
     """生成访问令牌和刷新令牌"""
     access_payload = {
-        'sub': admin_id,
+        'sub': str(admin_id),  # JWT的sub字段必须是字符串
         'username': username,
         'role': role,
         'type': 'access',
@@ -25,7 +25,7 @@ def generate_tokens(admin_id: int, username: str, role: str):
     }
     
     refresh_payload = {
-        'admin_id': admin_id,
+        'admin_id': str(admin_id),  # 统一使用字符串
         'username': username,
         'type': 'refresh',
         'exp': datetime.utcnow() + JWT_REFRESH_TOKEN_EXPIRES

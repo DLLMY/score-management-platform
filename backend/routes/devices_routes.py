@@ -1,7 +1,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, Device, DeviceHeartbeat
-from utils.permission import requires_admin
+from models import db, Device, DeviceHeartbeat, ClassInfo, Admin, AdminClass
+from utils.permission import requires_admin, get_current_admin, get_admin_class_ids
 from datetime import datetime
 
 ns_devices = Namespace('devices', description='设备管理相关操作')
@@ -15,11 +15,31 @@ device_model = ns_devices.model('Device', {
     'uptime': fields.Integer(description='运行时间')
 })
 
+def get_devices_for_admin(admin):
+    """根据管理员权限获取设备列表"""
+    if not admin:
+        return Device.query.filter_by(status='online').all()
+    
+    if admin.role == 'admin':
+        return Device.query.all()
+    
+    class_ids = get_admin_class_ids(admin.id)
+    if class_ids:
+        return Device.query.filter(
+            (Device.class_info_id.in_(class_ids)) | 
+            (Device.admin_id == admin.id)
+        ).all()
+    
+    return Device.query.filter(Device.admin_id == admin.id).all()
+
 @ns_devices.route('/')
 class DeviceList(Resource):
     @ns_devices.doc('list_devices')
+    @requires_admin
     def get(self):
-        devices = Device.query.all()
+        admin = get_current_admin()
+        devices = get_devices_for_admin(admin)
+        
         return [{
             'id': d.id,
             'device_id': d.device_id,
@@ -32,6 +52,11 @@ class DeviceList(Resource):
             'box_a_status': d.box_a_status,
             'box_b_status': d.box_b_status,
             'system_state': d.system_state,
+            'class_info_id': d.class_info_id,
+            'class_name': d.class_info.name if d.class_info else None,
+            'admin_id': d.admin_id,
+            'admin_name': d.admin.real_name if d.admin else None,
+            'admin_username': d.admin.username if d.admin else None,
             'created_at': d.created_at.isoformat() if d.created_at else None,
             'updated_at': d.updated_at.isoformat() if d.updated_at else None
         } for d in devices]
@@ -67,6 +92,11 @@ class DeviceResource(Resource):
             'box_a_status': device.box_a_status,
             'box_b_status': device.box_b_status,
             'system_state': device.system_state,
+            'class_info_id': device.class_info_id,
+            'class_name': device.class_info.name if device.class_info else None,
+            'admin_id': device.admin_id,
+            'admin_name': device.admin.real_name if device.admin else None,
+            'admin_username': device.admin.username if device.admin else None,
             'created_at': device.created_at.isoformat() if device.created_at else None,
             'updated_at': device.updated_at.isoformat() if device.updated_at else None
         }
@@ -166,5 +196,115 @@ class OnlineDevices(Resource):
             'status': d.status,
             'is_online': True,
             'last_heartbeat': d.last_heartbeat.isoformat() if d.last_heartbeat else None,
-            'wifi_signal': d.wifi_signal
+            'wifi_signal': d.wifi_signal,
+            'class_info_id': d.class_info_id,
+            'class_name': d.class_info.name if d.class_info else None,
+            'admin_id': d.admin_id,
+            'admin_name': d.admin.real_name if d.admin else None
+        } for d in devices]
+
+@ns_devices.route('/<int:id>/bind-class')
+@ns_devices.param('id', '设备ID')
+class BindDeviceClass(Resource):
+    @ns_devices.doc('bind_device_class')
+    @requires_admin
+    def post(self, id):
+        admin = get_current_admin()
+        device = Device.query.get_or_404(id)
+        data = request.get_json()
+        class_id = data.get('class_id')
+        
+        # 非超级管理员只能绑定到自己管理的班级
+        if admin.role != 'admin':
+            class_ids = get_admin_class_ids(admin.id)
+            if class_id and class_id not in class_ids:
+                return {'success': False, 'message': '无权绑定到该班级'}, 403
+        
+        if class_id:
+            class_info = ClassInfo.query.get(class_id)
+            if not class_info:
+                return {'success': False, 'message': '班级不存在'}, 404
+            device.class_info_id = class_id
+        else:
+            device.class_info_id = None
+        
+        device.updated_at = datetime.now()
+        db.session.commit()
+        
+        return {
+            'success': True, 
+            'message': '设备绑定班级成功',
+            'class_info_id': device.class_info_id,
+            'class_name': device.class_info.name if device.class_info else None
+        }
+
+@ns_devices.route('/<int:id>/bind-admin')
+@ns_devices.param('id', '设备ID')
+class BindDeviceAdmin(Resource):
+    @ns_devices.doc('bind_device_admin')
+    @requires_admin
+    def post(self, id):
+        admin = get_current_admin()
+        
+        # 只有超级管理员可以绑定管理员
+        if admin.role != 'admin':
+            return {'success': False, 'message': '只有超级管理员可以绑定管理员'}, 403
+        
+        device = Device.query.get_or_404(id)
+        data = request.get_json()
+        admin_id = data.get('admin_id')
+        
+        if admin_id:
+            target_admin = Admin.query.get(admin_id)
+            if not target_admin:
+                return {'success': False, 'message': '管理员不存在'}, 404
+            device.admin_id = admin_id
+        else:
+            device.admin_id = None
+        
+        device.updated_at = datetime.now()
+        db.session.commit()
+        
+        return {
+            'success': True, 
+            'message': '设备绑定管理员成功',
+            'admin_id': device.admin_id,
+            'admin_name': device.admin.real_name if device.admin else None,
+            'admin_username': device.admin.username if device.admin else None
+        }
+
+@ns_devices.route('/class/<int:class_id>')
+@ns_devices.param('class_id', '班级ID')
+class DevicesByClass(Resource):
+    @ns_devices.doc('get_devices_by_class')
+    def get(self, class_id):
+        devices = Device.query.filter_by(class_info_id=class_id).all()
+        return [{
+            'id': d.id,
+            'device_id': d.device_id,
+            'name': d.name,
+            'status': d.status,
+            'is_online': d.status == 'online',
+            'last_heartbeat': d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+            'wifi_signal': d.wifi_signal,
+            'admin_name': d.admin.real_name if d.admin else None,
+            'updated_at': d.updated_at.isoformat() if d.updated_at else None
+        } for d in devices]
+
+@ns_devices.route('/admin/<int:admin_id>')
+@ns_devices.param('admin_id', '管理员ID')
+class DevicesByAdmin(Resource):
+    @ns_devices.doc('get_devices_by_admin')
+    def get(self, admin_id):
+        devices = Device.query.filter_by(admin_id=admin_id).all()
+        return [{
+            'id': d.id,
+            'device_id': d.device_id,
+            'name': d.name,
+            'status': d.status,
+            'is_online': d.status == 'online',
+            'last_heartbeat': d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+            'wifi_signal': d.wifi_signal,
+            'class_name': d.class_info.name if d.class_info else None,
+            'updated_at': d.updated_at.isoformat() if d.updated_at else None
         } for d in devices]

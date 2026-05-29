@@ -2,6 +2,13 @@ from flask import request, session
 from flask_restx import Namespace, Resource, fields
 from flask_wtf.csrf import generate_csrf
 from models import db, Admin, AdminClass, ClassInfo
+
+# 导入CSRF豁免装饰器
+try:
+    from app import csrf_exempt
+except ImportError:
+    def csrf_exempt(func):
+        return func
 from utils.permission import requires_admin, requires_permission
 from utils.logger import log_operation, log_login_attempt, log_security_event
 from utils.security import hash_password, verify_password, generate_tokens, validate_token, is_strong_password
@@ -106,6 +113,7 @@ class AdminResource(Resource):
 @ns_admins.route('/login')
 class AdminLogin(Resource):
     @ns_admins.doc('admin_login')
+    @csrf_exempt
     def post(self):
         data = request.get_json()
         username = data.get('username')

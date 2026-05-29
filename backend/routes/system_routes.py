@@ -1,4 +1,5 @@
 from flask_restx import Namespace, Resource, fields
+from flask_wtf.csrf import generate_csrf
 from models import db, SystemConfig
 from utils.permission import requires_admin
 from datetime import datetime
@@ -170,3 +171,11 @@ class SystemClearCache(Resource):
             return {'success': True, 'message': '缓存清理成功'}
         except Exception as e:
             return {'success': False, 'message': f'清理失败: {str(e)}'}, 500
+
+@ns_system.route('/csrf-token')
+class SystemCsrfToken(Resource):
+    @ns_system.doc('get_csrf_token')
+    def get(self):
+        """获取CSRF令牌"""
+        csrf_token = generate_csrf()
+        return {'csrf_token': csrf_token}
