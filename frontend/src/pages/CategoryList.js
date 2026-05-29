@@ -3,8 +3,8 @@ import { Plus, Search, Edit2, Trash2, AlertCircle, X, RefreshCw, Tag, Palette } 
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { validateForm } from '../utils/validation';
-import { EmptyState } from '../components/EmptyState';
-import { Skeleton, CategoryCardSkeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
+import { CategoryCardSkeleton } from '../components/Skeleton';
 
 const COLORS = [
   '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', 

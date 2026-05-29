@@ -3,7 +3,7 @@ import { RefreshCw, Wifi, WifiOff, Box, Clock, Activity, Edit2, Trash2, Eye, Lin
 import api from '../services/api';
 import { Card, Button, Modal, Badge, Select } from '../components';
 import { useToast } from '../context/ToastContext';
-import { EmptyState } from '../components/EmptyState';
+import EmptyState from '../components/EmptyState';
 
 // 工具函数 - 纯函数，不依赖组件状态
 const formatUptime = (seconds) => {

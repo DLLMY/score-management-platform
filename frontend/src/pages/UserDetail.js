@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus } from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { EmptyState } from '../components/EmptyState';
+import EmptyState from '../components/EmptyState';
 
 function UserDetail() {
   const { showToast } = useToast();

@@ -3,8 +3,8 @@ import { Plus, Search, Edit2, Trash2, Download, Upload, AlertCircle, X, Filter, 
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { validateForm } from '../utils/validation';
-import { EmptyState } from '../components/EmptyState';
-import { Skeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
+import Skeleton from '../components/Skeleton';
 
 function RuleList() {
   const [rules, setRules] = useState([]);

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Clock,
   Filter,
-  Search,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -12,7 +11,7 @@ import {
   Activity
 } from 'lucide-react';
 import api from '../services/api';
-import { EmptyState } from '../components/EmptyState';
+import EmptyState from '../components/EmptyState';
 
 function OperationLogs() {
   const [logs, setLogs] = useState([]);
