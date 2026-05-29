@@ -26,7 +26,7 @@ frontend/.env.production.local
 frontend/build/
 
 # npm 锁文件（可选：如果团队使用相同 Node.js 版本可以保留）
-frontend/package-lock.json
+# frontend/package-lock.json  # 已移除，确保 CI 构建一致性
 frontend/yarn.lock
 
 
