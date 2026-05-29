@@ -124,7 +124,7 @@ function RuleList() {
     } catch (err) {
       showToast('操作失败: ' + err.message, 'error');
     }
-  }, [formData, editingRule, showToast]);
+  }, [formData, editingRule, showToast, validationRules]);
 
   const handleDelete = useCallback(async (id) => {
     if (!window.confirm('确定要删除该规则吗？此操作不可撤销。')) {

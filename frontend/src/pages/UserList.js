@@ -537,7 +537,7 @@ function UserList() {
         </div>
       </div>
     );
-  }, [state.selectedUsers, getRankInfo, toggleUserSelection]);
+  }, [state.selectedUsers, getRankInfo, toggleUserSelection, handleAddScore, handleDelete]);
 
   return (
     <div className="max-w-7xl mx-auto">

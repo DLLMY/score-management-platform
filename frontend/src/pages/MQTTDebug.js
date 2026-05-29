@@ -43,18 +43,6 @@ const formatDateTime = (timestamp) => {
   });
 };
 
-// 节流函数
-const throttle = (fn, limit = 1000) => {
-  let inThrottle = false;
-  return (...args) => {
-    if (!inThrottle) {
-      fn(...args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
-};
-
 // 日志状态reducer
 const logReducer = (state, action) => {
   switch (action.type) {

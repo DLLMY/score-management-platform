@@ -1,6 +1,5 @@
 import { Component } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 class ErrorBoundary extends Component {
   constructor(props) {

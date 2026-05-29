@@ -31,7 +31,7 @@ function UserManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const fetchData = async () => {
     setLoading(true);
