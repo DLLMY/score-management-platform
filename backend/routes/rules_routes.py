@@ -14,16 +14,35 @@ rule_model = ns_rules.model('ScoreRule', {
     'name': fields.String(required=True, description='规则名称'),
     'description': fields.String(description='规则描述'),
     'category_id': fields.Integer(description='分类ID'),
-    'score': fields.Float(required=True, description='分数'),
+    'score': fields.Float(required=True, description='分数（正数加分，负数扣分）'),
     'is_active': fields.Boolean(description='是否启用'),
-    'daily_limit': fields.Integer(description='每日上限'),
-    'min_interval': fields.Integer(description='最小间隔')
+    'daily_limit': fields.Integer(description='每日上限（0表示无限制）'),
+    'min_interval': fields.Integer(description='最小间隔（秒，0表示无限制）')
+})
+
+rule_list_response = ns_rules.model('RuleListResponse', {
+    'rules': fields.List(fields.Nested(rule_model), description='规则列表'),
+    'total': fields.Integer(description='总记录数'),
+    'page': fields.Integer(description='当前页码'),
+    'per_page': fields.Integer(description='每页数量'),
+    'pages': fields.Integer(description='总页数')
 })
 
 @ns_rules.route('/')
 class RuleList(Resource):
-    @ns_rules.doc('list_rules')
+    @ns_rules.doc('list_rules', description='获取积分规则列表', params={
+        'page': '页码（默认1）',
+        'per_page': '每页数量（默认100）',
+        'category_id': '分类ID筛选',
+        'is_active': '是否启用筛选（true/false）'
+    })
+    @ns_rules.response(200, '成功', rule_list_response)
     def get(self):
+        """
+        获取积分规则列表
+        
+        支持分页、分类筛选和状态筛选。
+        """
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 100, type=int)
         category_id = request.args.get('category_id', type=int)
@@ -66,10 +85,26 @@ class RuleList(Resource):
         cache_service.set(cache_key, result, ttl=300)
         return result
 
-    @ns_rules.doc('create_rule')
+    @ns_rules.doc('create_rule', description='创建积分规则', security='Bearer')
     @ns_rules.expect(rule_model)
+    @ns_rules.response(201, '创建成功')
+    @ns_rules.response(400, '请求参数错误')
     @requires_admin
     def post(self):
+        """
+        创建积分规则
+        
+        创建新的积分规则，需要管理员权限。
+        
+        请求体：
+        - name: 规则名称（必填）
+        - description: 规则描述
+        - category_id: 分类ID
+        - score: 分数（正数加分，负数扣分，必填）
+        - is_active: 是否启用（默认true）
+        - daily_limit: 每日上限（0表示无限制）
+        - min_interval: 最小间隔（秒，0表示无限制）
+        """
         data = ns_rules.payload
         rule = ScoreRule(
             name=data.get('name'),
@@ -90,8 +125,15 @@ class RuleList(Resource):
 @ns_rules.route('/<int:id>')
 @ns_rules.param('id', '规则ID')
 class RuleResource(Resource):
-    @ns_rules.doc('get_rule')
+    @ns_rules.doc('get_rule', description='获取单个规则详情')
+    @ns_rules.response(200, '成功', rule_model)
+    @ns_rules.response(404, '规则不存在')
     def get(self, id):
+        """
+        获取单个规则详情
+        
+        根据规则ID获取规则的详细信息。
+        """
         rule = ScoreRule.query.get_or_404(id)
         return {
             'id': rule.id,
@@ -107,10 +149,17 @@ class RuleResource(Resource):
             'updated_at': rule.updated_at.isoformat() if rule.updated_at else None
         }
 
-    @ns_rules.doc('update_rule')
+    @ns_rules.doc('update_rule', description='更新规则', security='Bearer')
     @ns_rules.expect(rule_model)
+    @ns_rules.response(200, '更新成功')
+    @ns_rules.response(404, '规则不存在')
     @requires_admin
     def put(self, id):
+        """
+        更新规则
+        
+        更新指定规则的信息，需要管理员权限。
+        """
         rule = ScoreRule.query.get_or_404(id)
         data = ns_rules.payload
         rule.name = data.get('name', rule.name)
@@ -127,9 +176,16 @@ class RuleResource(Resource):
         
         return {'success': True, 'message': '规则更新成功'}
 
-    @ns_rules.doc('delete_rule')
+    @ns_rules.doc('delete_rule', description='删除规则', security='Bearer')
+    @ns_rules.response(200, '删除成功')
+    @ns_rules.response(404, '规则不存在')
     @requires_admin
     def delete(self, id):
+        """
+        删除规则
+        
+        删除指定的规则，需要管理员权限。
+        """
         rule = ScoreRule.query.get_or_404(id)
         db.session.delete(rule)
         db.session.commit()
@@ -140,9 +196,14 @@ class RuleResource(Resource):
 
 @ns_rules.route('/export')
 class RuleExport(Resource):
-    @ns_rules.doc('export_rules')
+    @ns_rules.doc('export_rules', description='导出规则列表', security='Bearer')
     @requires_admin
     def get(self):
+        """
+        导出规则列表
+        
+        将所有规则导出为CSV文件，需要管理员权限。
+        """
         rules = ScoreRule.query.all()
         output = io.StringIO()
         writer = csv.writer(output)
@@ -170,9 +231,17 @@ class RuleExport(Resource):
 
 @ns_rules.route('/import')
 class RuleImport(Resource):
-    @ns_rules.doc('import_rules')
+    @ns_rules.doc('import_rules', description='批量导入规则', security='Bearer')
     @requires_admin
     def post(self):
+        """
+        批量导入规则
+        
+        批量导入规则数据，需要管理员权限。
+        
+        请求体：
+        - rules: 规则数据列表
+        """
         data = request.get_json()
         rules_data = data.get('rules', [])
 

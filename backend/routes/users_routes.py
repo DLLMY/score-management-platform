@@ -32,6 +32,20 @@ user_model = ns_users.model('User', {
     'current_score': fields.Float(description='当前积分')
 })
 
+user_list_response = ns_users.model('UserListResponse', {
+    'users': fields.List(fields.Nested(user_model), description='用户列表'),
+    'total': fields.Integer(description='总记录数'),
+    'page': fields.Integer(description='当前页码'),
+    'per_page': fields.Integer(description='每页数量'),
+    'pages': fields.Integer(description='总页数')
+})
+
+batch_score_model = ns_users.model('BatchScoreRequest', {
+    'ids': fields.List(fields.Integer, required=True, description='用户ID列表'),
+    'score_change': fields.Integer(required=True, description='积分变化量'),
+    'description': fields.String(description='操作描述')
+})
+
 def get_classes_for_admin(admin):
     """获取管理员可以访问的班级名称列表"""
     if not admin or admin.role == 'admin':
@@ -46,9 +60,28 @@ def get_classes_for_admin(admin):
 
 @ns_users.route('/')
 class UserList(Resource):
-    @ns_users.doc('list_users')
+    @ns_users.doc('list_users', description='获取学生列表', security='Bearer', params={
+        'page': '页码，默认1',
+        'per_page': '每页数量，默认100',
+        'search': '搜索关键词（姓名、卡号、电话）',
+        'class_name': '班级名称筛选'
+    })
+    @ns_users.response(200, '成功', user_list_response)
     @requires_admin
     def get(self):
+        """
+        获取学生列表
+        
+        根据权限返回学生列表。超级管理员可以查看所有学生，教师只能查看所属班级的学生。
+        
+        查询参数：
+        - page: 页码（默认1）
+        - per_page: 每页数量（默认100）
+        - search: 搜索关键词，匹配姓名、卡号、电话
+        - class_name: 班级名称筛选
+        
+        返回分页结果，包含用户列表和分页信息。
+        """
         admin = get_current_admin()
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 100, type=int)
@@ -116,10 +149,32 @@ class UserList(Resource):
         cache_service.set(cache_key, result, ttl=300)
         return result
 
-    @ns_users.doc('create_user')
+    @ns_users.doc('create_user', description='创建学生', security='Bearer')
     @ns_users.expect(user_model)
+    @ns_users.response(201, '创建成功')
+    @ns_users.response(400, '参数错误')
     @requires_admin
     def post(self):
+        """
+        创建新学生
+        
+        创建一个新的学生账户。需要管理员权限。
+        
+        请求体：
+        - name: 学生姓名（必填）
+        - gender: 性别（可选）
+        - class_name: 班级（可选）
+        - phone: 联系电话（可选）
+        - father_name: 父亲姓名（可选）
+        - father_phone: 父亲电话（可选）
+        - mother_name: 母亲姓名（可选）
+        - mother_phone: 母亲电话（可选）
+        - guardian_name: 监护人姓名（可选）
+        - guardian_phone: 监护人电话（可选）
+        - guardian_relation: 监护关系（可选）
+        - card_id: 卡片ID（可选）
+        - current_score: 当前积分（可选，默认0）
+        """
         data = ns_users.payload
         user = User(
             name=data.get('name'),
@@ -154,8 +209,15 @@ class UserList(Resource):
 @ns_users.route('/<int:id>')
 @ns_users.param('id', '用户ID')
 class UserResource(Resource):
-    @ns_users.doc('get_user')
+    @ns_users.doc('get_user', description='获取单个学生信息')
+    @ns_users.response(200, '成功', user_model)
+    @ns_users.response(404, '学生不存在')
     def get(self, id):
+        """
+        获取单个学生详细信息
+        
+        根据学生ID获取详细信息。
+        """
         user = User.query.get_or_404(id)
         return {
             'id': user.id,
@@ -176,10 +238,19 @@ class UserResource(Resource):
             'updated_at': user.updated_at.isoformat() if user.updated_at else None
         }
 
-    @ns_users.doc('update_user')
+    @ns_users.doc('update_user', description='更新学生信息', security='Bearer')
     @ns_users.expect(user_model)
+    @ns_users.response(200, '更新成功')
+    @ns_users.response(404, '学生不存在')
     @requires_admin
     def put(self, id):
+        """
+        更新学生信息
+        
+        更新指定学生的信息。需要管理员权限。
+        
+        请求体参数均为可选，只更新提供的字段。
+        """
         user = User.query.get_or_404(id)
         
         before_data = {
@@ -221,9 +292,16 @@ class UserResource(Resource):
         
         return {'success': True, 'message': '用户更新成功'}
 
-    @ns_users.doc('delete_user')
+    @ns_users.doc('delete_user', description='删除学生', security='Bearer')
+    @ns_users.response(200, '删除成功')
+    @ns_users.response(404, '学生不存在')
     @requires_admin
     def delete(self, id):
+        """
+        删除学生
+        
+        删除指定的学生账户。需要管理员权限。
+        """
         user = User.query.get_or_404(id)
         
         before_data = {
@@ -251,8 +329,15 @@ class UserResource(Resource):
 @ns_users.route('/by-card/<string:cardId>')
 @ns_users.param('cardId', '卡片ID')
 class UserByCard(Resource):
-    @ns_users.doc('get_user_by_card')
+    @ns_users.doc('get_user_by_card', description='通过卡片ID获取学生信息')
+    @ns_users.response(200, '成功')
+    @ns_users.response(404, '未找到用户')
     def get(self, cardId):
+        """
+        通过卡片ID获取学生信息
+        
+        根据学生的卡片ID查询学生信息。
+        """
         user = User.query.filter_by(card_id=cardId).first()
         if not user:
             return {'success': False, 'message': '未找到用户'}, 404
@@ -268,9 +353,24 @@ class UserByCard(Resource):
 
 @ns_users.route('/import')
 class UserImport(Resource):
-    @ns_users.doc('import_users')
+    @ns_users.doc('import_users', description='批量导入学生（JSON格式）', security='Bearer')
+    @ns_users.expect(ns_users.model('UserImportRequest', {
+        'users': fields.List(fields.Nested(user_model), required=True, description='学生列表')
+    }))
+    @ns_users.response(200, '导入完成')
+    @ns_users.response(400, '没有导入数据')
     @requires_admin
     def post(self):
+        """
+        批量导入学生（JSON格式）
+        
+        通过JSON格式批量导入学生数据。需要管理员权限。
+        
+        请求体：
+        - users: 学生列表数组
+        
+        返回导入结果，包含成功和失败数量。
+        """
         data = request.get_json()
         users_data = data.get('users', [])
 
@@ -320,9 +420,24 @@ class UserImport(Resource):
 
 @ns_users.route('/batch-delete')
 class UserBatchDelete(Resource):
-    @ns_users.doc('batch_delete_users')
+    @ns_users.doc('batch_delete_users', description='批量删除学生', security='Bearer')
+    @ns_users.expect(ns_users.model('BatchDeleteRequest', {
+        'ids': fields.List(fields.Integer, required=True, description='用户ID列表')
+    }))
+    @ns_users.response(200, '删除完成')
+    @ns_users.response(400, '没有提供删除ID')
     @requires_admin
     def post(self):
+        """
+        批量删除学生
+        
+        批量删除指定的学生。需要管理员权限。
+        
+        请求体：
+        - ids: 用户ID列表
+        
+        返回删除结果。
+        """
         data = request.get_json()
         ids = data.get('ids', [])
 
@@ -341,14 +456,24 @@ class UserBatchDelete(Resource):
 
 @ns_users.route('/batch-score')
 class UserBatchScore(Resource):
-    @ns_users.doc('batch_update_user_score')
-    @ns_users.expect(ns_users.model('BatchScore', {
-        'ids': fields.List(fields.Integer, required=True, description='用户ID列表'),
-        'score_change': fields.Integer(required=True, description='积分变化量'),
-        'description': fields.String(description='操作描述')
-    }))
+    @ns_users.doc('batch_update_user_score', description='批量调整学生积分', security='Bearer')
+    @ns_users.expect(batch_score_model)
+    @ns_users.response(200, '调整完成')
+    @ns_users.response(400, '没有提供用户ID')
     @requires_admin
     def post(self):
+        """
+        批量调整学生积分
+        
+        为多个学生同时调整积分。需要管理员权限。
+        
+        请求体：
+        - ids: 用户ID列表（必填）
+        - score_change: 积分变化量（必填，正数加分，负数扣分）
+        - description: 操作描述（可选）
+        
+        返回调整结果。
+        """
         data = request.get_json()
         ids = data.get('ids', [])
         score_change = data.get('score_change', 0)
@@ -379,8 +504,13 @@ class UserBatchScore(Resource):
 
 @ns_users.route('/template/download')
 class UserTemplate(Resource):
-    @ns_users.doc('download_user_template')
+    @ns_users.doc('download_user_template', description='下载导入模板')
     def get(self):
+        """
+        下载CSV导入模板
+        
+        下载学生批量导入的CSV模板文件。
+        """
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(['姓名', '性别', '班级', '联系电话', '卡片ID', '父亲姓名', '父亲电话', '母亲姓名', '母亲电话', '监护人姓名', '监护人电话', '监护关系', '初始积分'])
@@ -410,9 +540,24 @@ def detect_encoding(content_bytes):
 
 @ns_users.route('/import-file', methods=['POST'])
 class UserImportFile(Resource):
-    @ns_users.doc('import_users_file')
+    @ns_users.doc('import_users_file', description='通过CSV文件批量导入学生', security='Bearer')
+    @ns_users.response(200, '导入完成')
+    @ns_users.response(400, '文件错误')
     @requires_admin
     def post(self):
+        """
+        通过CSV文件批量导入学生
+        
+        上传CSV文件批量导入学生数据。支持UTF-8和GBK编码。需要管理员权限。
+        
+        请求：multipart/form-data
+        - file: CSV文件
+        
+        CSV文件格式：
+        姓名,性别,班级,联系电话,卡片ID,父亲姓名,父亲电话,母亲姓名,母亲电话,监护人姓名,监护人电话,监护关系,初始积分
+        
+        返回导入结果，包含新增、更新数量和错误信息。
+        """
         from flask import request
         if 'file' not in request.files:
             return {'success': False, 'message': '请选择文件'}, 400

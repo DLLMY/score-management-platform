@@ -11,16 +11,45 @@ record_model = ns_records.model('ScoreRecord', {
     'id': fields.Integer(readOnly=True, description='记录ID'),
     'user_id': fields.Integer(required=True, description='学生ID'),
     'rule_id': fields.Integer(description='规则ID'),
-    'score_change': fields.Float(required=True, description='积分变化'),
+    'score_change': fields.Float(required=True, description='积分变化（正数加分，负数扣分）'),
     'description': fields.String(description='操作说明'),
     'operator': fields.String(description='操作人'),
     'created_at': fields.DateTime(readOnly=True, description='创建时间')
 })
 
+record_list_response = ns_records.model('RecordListResponse', {
+    'records': fields.List(fields.Nested(record_model), description='记录列表'),
+    'total': fields.Integer(description='总记录数'),
+    'page': fields.Integer(description='当前页码'),
+    'per_page': fields.Integer(description='每页数量'),
+    'pages': fields.Integer(description='总页数')
+})
+
+record_statistics_response = ns_records.model('RecordStatistics', {
+    'total_records': fields.Integer(description='总记录数'),
+    'total_add': fields.Float(description='累计加分'),
+    'total_subtract': fields.Float(description='累计扣分'),
+    'net_change': fields.Float(description='净变化'),
+    'today_count': fields.Integer(description='今日记录数')
+})
+
 @ns_records.route('/')
 class RecordList(Resource):
-    @ns_records.doc('list_records')
+    @ns_records.doc('list_records', description='获取积分记录列表', params={
+        'page': '页码（默认1）',
+        'per_page': '每页数量（默认50）',
+        'user_id': '学生ID筛选',
+        'rule_id': '规则ID筛选',
+        'start_date': '开始日期（ISO格式）',
+        'end_date': '结束日期（ISO格式）'
+    })
+    @ns_records.response(200, '成功', record_list_response)
     def get(self):
+        """
+        获取积分记录列表
+        
+        支持分页、学生筛选、规则筛选和日期范围筛选。
+        """
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
         user_id = request.args.get('user_id', type=int)
@@ -60,10 +89,24 @@ class RecordList(Resource):
             'pages': pagination.pages
         }
 
-    @ns_records.doc('create_record')
+    @ns_records.doc('create_record', description='创建积分记录', security='Bearer')
     @ns_records.expect(record_model)
+    @ns_records.response(201, '创建成功')
+    @ns_records.response(400, '请求参数错误')
     @requires_admin
     def post(self):
+        """
+        创建积分记录
+        
+        创建新的积分变动记录，需要管理员权限。同时会更新学生的当前积分。
+        
+        请求体：
+        - user_id: 学生ID（必填）
+        - rule_id: 规则ID
+        - score_change: 积分变化（必填，正数加分，负数扣分）
+        - description: 操作说明
+        - operator: 操作人（默认system）
+        """
         data = request.get_json() or ns_records.payload
         record = ScoreRecord(
             user_id=data.get('user_id'),
@@ -96,8 +139,17 @@ class RecordList(Resource):
 @ns_records.route('/user/<int:user_id>')
 @ns_records.param('user_id', '用户ID')
 class RecordByUser(Resource):
-    @ns_records.doc('get_records_by_user')
+    @ns_records.doc('get_records_by_user', description='获取指定学生的积分记录', params={
+        'page': '页码（默认1）',
+        'per_page': '每页数量（默认50）'
+    })
+    @ns_records.response(200, '成功', record_list_response)
     def get(self, user_id):
+        """
+        获取指定学生的积分记录
+        
+        根据学生ID获取该学生的所有积分变动记录。
+        """
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
 
@@ -125,8 +177,19 @@ class RecordByUser(Resource):
 
 @ns_records.route('/statistics')
 class RecordStatistics(Resource):
-    @ns_records.doc('get_record_statistics')
+    @ns_records.doc('get_record_statistics', description='获取积分统计信息', params={
+        'user_id': '学生ID筛选',
+        'class_name': '班级名称筛选',
+        'start_date': '开始日期（ISO格式）',
+        'end_date': '结束日期（ISO格式）'
+    })
+    @ns_records.response(200, '成功', record_statistics_response)
     def get(self):
+        """
+        获取积分统计信息
+        
+        获取积分记录的统计数据，包括总记录数、累计加分、累计扣分等。
+        """
         user_id = request.args.get('user_id', type=int)
         class_name = request.args.get('class_name')
         start_date = request.args.get('start_date')
@@ -165,8 +228,15 @@ class RecordStatistics(Resource):
 @ns_records.route('/<int:id>')
 @ns_records.param('id', '记录ID')
 class RecordResource(Resource):
-    @ns_records.doc('get_record')
+    @ns_records.doc('get_record', description='获取单个记录详情')
+    @ns_records.response(200, '成功', record_model)
+    @ns_records.response(404, '记录不存在')
     def get(self, id):
+        """
+        获取单个记录详情
+        
+        根据记录ID获取积分记录的详细信息。
+        """
         record = ScoreRecord.query.get_or_404(id)
         return {
             'id': record.id,
@@ -180,9 +250,16 @@ class RecordResource(Resource):
             'created_at': record.created_at.isoformat() if record.created_at else None
         }
 
-    @ns_records.doc('delete_record')
+    @ns_records.doc('delete_record', description='删除积分记录', security='Bearer')
+    @ns_records.response(200, '删除成功')
+    @ns_records.response(404, '记录不存在')
     @requires_admin
     def delete(self, id):
+        """
+        删除积分记录
+        
+        删除指定的积分记录，需要管理员权限。删除时会回滚学生的积分。
+        """
         record = ScoreRecord.query.get_or_404(id)
         
         before_data = {
