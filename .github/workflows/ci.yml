@@ -1,40 +1,15 @@
-name: CI - Build and Test
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-
+name: CI
+on: [push, pull_request]
 jobs:
-  build:
-    name: Build
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: pip install -r requirements.txt
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm install --legacy-peer-deps
-
-      - name: Build frontend
-        working-directory: frontend
-        env:
-          REACT_APP_API_URL: http://localhost:5000
-          CI: false
-        run: npm run build
+      - run: pip install -r backend/requirements.txt
+      - run: cd frontend && npm install --legacy-peer-deps && npm run build
