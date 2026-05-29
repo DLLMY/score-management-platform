@@ -17,11 +17,40 @@ sub_account_model = ns_sub_accounts.model('SubAccount', {
     'is_active': fields.Boolean(description='是否启用')
 })
 
+sub_account_response = ns_sub_accounts.model('SubAccountResponse', {
+    'id': fields.Integer(description='子账号ID'),
+    'username': fields.String(description='用户名'),
+    'real_name': fields.String(description='真实姓名'),
+    'phone': fields.String(description='联系电话'),
+    'role_type': fields.String(description='角色类型'),
+    'permissions': fields.String(description='权限列表'),
+    'is_active': fields.Boolean(description='是否启用'),
+    'created_at': fields.String(description='创建时间'),
+    'updated_at': fields.String(description='更新时间')
+})
+
+sub_account_list_response = ns_sub_accounts.model('SubAccountListResponse', {
+    'accounts': fields.List(fields.Nested(sub_account_response), description='子账号列表')
+})
+
+sub_account_login_response = ns_sub_accounts.model('SubAccountLoginResponse', {
+    'success': fields.Boolean(description='登录是否成功'),
+    'message': fields.String(description='登录消息'),
+    'token': fields.String(description='登录令牌'),
+    'account': fields.Nested(sub_account_response, description='账号信息')
+})
+
 @ns_sub_accounts.route('/')
 class SubAccountList(Resource):
-    @ns_sub_accounts.doc('list_sub_accounts')
+    @ns_sub_accounts.doc('list_sub_accounts', description='获取子账号列表', security='Bearer')
+    @ns_sub_accounts.response(200, '成功', sub_account_list_response)
     @requires_admin
     def get(self):
+        """
+        获取子账号列表
+
+        获取系统中所有子账号的列表。
+        """
         accounts = SubAccount.query.all()
         return {
             'accounts': [{
@@ -37,10 +66,27 @@ class SubAccountList(Resource):
             } for a in accounts]
         }
 
-    @ns_sub_accounts.doc('create_sub_account')
+    @ns_sub_accounts.doc('create_sub_account', description='创建子账号', security='Bearer')
     @ns_sub_accounts.expect(sub_account_model)
+    @ns_sub_accounts.response(201, '创建成功')
+    @ns_sub_accounts.response(400, '请求参数错误')
     @requires_admin
     def post(self):
+        """
+        创建子账号
+
+        创建新的子账号，需要管理员权限。
+
+        请求体：
+        - parent_admin_id: 父管理员ID（必填）
+        - username: 用户名（必填）
+        - password: 密码（必填）
+        - real_name: 真实姓名（可选）
+        - phone: 联系电话（可选）
+        - role_type: 角色类型（可选，默认dashboard_viewer）
+        - permissions: 权限列表（可选）
+        - is_active: 是否启用（可选，默认True）
+        """
         data = ns_sub_accounts.payload
         account = SubAccount(
             parent_admin_id=data.get('parent_admin_id'),
@@ -59,9 +105,19 @@ class SubAccountList(Resource):
 @ns_sub_accounts.route('/<int:id>')
 @ns_sub_accounts.param('id', '子账号ID')
 class SubAccountResource(Resource):
-    @ns_sub_accounts.doc('get_sub_account')
+    @ns_sub_accounts.doc('get_sub_account', description='获取子账号详情', security='Bearer')
+    @ns_sub_accounts.response(200, '成功')
+    @ns_sub_accounts.response(404, '子账号不存在')
     @requires_admin
     def get(self, id):
+        """
+        获取子账号详情
+
+        根据ID获取子账号的详细信息。
+
+        参数：
+        - id: 子账号ID（路径参数）
+        """
         account = SubAccount.query.get_or_404(id)
         return {
             'id': account.id,
@@ -76,10 +132,21 @@ class SubAccountResource(Resource):
             'updated_at': account.updated_at.isoformat() if account.updated_at else None
         }
 
-    @ns_sub_accounts.doc('update_sub_account')
+    @ns_sub_accounts.doc('update_sub_account', description='更新子账号', security='Bearer')
     @ns_sub_accounts.expect(sub_account_model)
+    @ns_sub_accounts.response(200, '更新成功')
+    @ns_sub_accounts.response(404, '子账号不存在')
     @requires_admin
     def put(self, id):
+        """
+        更新子账号
+
+        更新指定子账号的信息，需要管理员权限。
+        如果密码为空，则不更新密码。
+
+        参数：
+        - id: 子账号ID（路径参数）
+        """
         account = SubAccount.query.get_or_404(id)
         data = ns_sub_accounts.payload
         account.username = data.get('username', account.username)
@@ -94,9 +161,19 @@ class SubAccountResource(Resource):
         db.session.commit()
         return {'success': True, 'message': '子账号更新成功'}
 
-    @ns_sub_accounts.doc('delete_sub_account')
+    @ns_sub_accounts.doc('delete_sub_account', description='删除子账号', security='Bearer')
+    @ns_sub_accounts.response(200, '删除成功')
+    @ns_sub_accounts.response(404, '子账号不存在')
     @requires_admin
     def delete(self, id):
+        """
+        删除子账号
+
+        删除指定的子账号，需要管理员权限。
+
+        参数：
+        - id: 子账号ID（路径参数）
+        """
         account = SubAccount.query.get_or_404(id)
         db.session.delete(account)
         db.session.commit()
@@ -104,8 +181,20 @@ class SubAccountResource(Resource):
 
 @ns_sub_accounts.route('/login')
 class SubAccountLogin(Resource):
-    @ns_sub_accounts.doc('sub_account_login')
+    @ns_sub_accounts.doc('sub_account_login', description='子账号登录')
+    @ns_sub_accounts.expect(sub_account_model)
+    @ns_sub_accounts.response(200, '登录成功', sub_account_login_response)
+    @ns_sub_accounts.response(401, '用户名或密码错误')
     def post(self):
+        """
+        子账号登录
+
+        使用用户名和密码登录子账号。
+
+        请求体：
+        - username: 用户名（必填）
+        - password: 密码（必填）
+        """
         data = ns_sub_accounts.payload
         username = data.get('username')
         password = data.get('password')
