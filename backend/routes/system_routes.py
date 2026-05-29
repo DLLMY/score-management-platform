@@ -22,10 +22,26 @@ system_config_model = ns_system.model('SystemConfig', {
     'language': fields.String(description='语言')
 })
 
+backup_restore_model = ns_system.model('BackupRestore', {
+    'filename': fields.String(required=True, description='备份文件名')
+})
+
+backup_info_model = ns_system.model('BackupInfo', {
+    'filename': fields.String(description='文件名'),
+    'size': fields.Integer(description='文件大小（字节）'),
+    'created_at': fields.String(description='创建时间')
+})
+
 @ns_system.route('/config')
 class SystemConfigResource(Resource):
-    @ns_system.doc('get_system_config')
+    @ns_system.doc('get_system_config', description='获取系统配置')
+    @ns_system.response(200, '成功')
     def get(self):
+        """
+        获取系统配置
+        
+        获取当前系统的配置信息。
+        """
         config = SystemConfig.query.first()
         if not config:
             config = SystemConfig()
@@ -46,10 +62,28 @@ class SystemConfigResource(Resource):
             'updated_at': config.updated_at.isoformat() if config.updated_at else None
         }
 
-    @ns_system.doc('update_system_config')
+    @ns_system.doc('update_system_config', description='更新系统配置', security='Bearer')
     @ns_system.expect(system_config_model)
+    @ns_system.response(200, '更新成功')
     @requires_admin
     def put(self):
+        """
+        更新系统配置
+        
+        更新系统配置信息，需要管理员权限。
+        
+        请求体：
+        - system_name: 系统名称
+        - system_logo: 系统Logo
+        - default_score: 默认积分
+        - min_score: 最低积分
+        - max_score: 最高积分
+        - enable_notifications: 启用通知
+        - notification_sound: 通知声音
+        - auto_save: 自动保存
+        - theme: 主题
+        - language: 语言
+        """
         config = SystemConfig.query.first()
         if not config:
             config = SystemConfig()
@@ -73,9 +107,18 @@ class SystemConfigResource(Resource):
 
 @ns_system.route('/backup')
 class SystemBackup(Resource):
-    @ns_system.doc('backup_database')
+    @ns_system.doc('backup_database', description='备份数据库', security='Bearer')
+    @ns_system.response(200, '备份成功')
+    @ns_system.response(404, '数据库文件不存在')
+    @ns_system.response(500, '备份失败')
     @requires_admin
     def post(self):
+        """
+        备份数据库
+        
+        创建数据库的完整备份。备份文件保存在backups目录下，
+        最多保留10个备份文件，超出后自动删除最旧的备份。
+        """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
             backup_dir = os.path.join(basedir, '..', 'backups')
@@ -101,9 +144,15 @@ class SystemBackup(Resource):
 
 @ns_system.route('/backups')
 class SystemBackupsList(Resource):
-    @ns_system.doc('list_backups')
+    @ns_system.doc('list_backups', description='获取备份列表', security='Bearer')
+    @ns_system.response(200, '成功')
     @requires_admin
     def get(self):
+        """
+        获取备份列表
+        
+        获取所有可用数据库备份文件的列表。
+        """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
             backup_dir = os.path.join(basedir, '..', 'backups')
@@ -128,9 +177,23 @@ class SystemBackupsList(Resource):
 
 @ns_system.route('/restore')
 class SystemRestore(Resource):
-    @ns_system.doc('restore_database')
+    @ns_system.doc('restore_database', description='恢复数据库', security='Bearer')
+    @ns_system.expect(backup_restore_model)
+    @ns_system.response(200, '恢复成功')
+    @ns_system.response(400, '请提供备份文件名')
+    @ns_system.response(404, '备份文件不存在')
+    @ns_system.response(500, '恢复失败')
     @requires_admin
     def post(self):
+        """
+        恢复数据库
+        
+        从备份文件恢复数据库，需要管理员权限。
+        警告：此操作会覆盖当前的数据库内容。
+        
+        请求体：
+        - filename: 备份文件名（必填）
+        """
         try:
             data = ns_system.payload
             filename = data.get('filename')
@@ -153,9 +216,16 @@ class SystemRestore(Resource):
 
 @ns_system.route('/clear-cache')
 class SystemClearCache(Resource):
-    @ns_system.doc('clear_cache')
+    @ns_system.doc('clear_cache', description='清理缓存', security='Bearer')
+    @ns_system.response(200, '清理成功')
+    @ns_system.response(500, '清理失败')
     @requires_admin
     def post(self):
+        """
+        清理缓存
+        
+        清理Python缓存文件（__pycache__），需要管理员权限。
+        """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
             cache_dir = os.path.join(basedir, '..', '__pycache__')
@@ -174,8 +244,13 @@ class SystemClearCache(Resource):
 
 @ns_system.route('/csrf-token')
 class SystemCsrfToken(Resource):
-    @ns_system.doc('get_csrf_token')
+    @ns_system.doc('get_csrf_token', description='获取CSRF令牌')
+    @ns_system.response(200, '成功')
     def get(self):
-        """获取CSRF令牌"""
+        """
+        获取CSRF令牌
+        
+        获取用于表单提交的CSRF防护令牌。
+        """
         csrf_token = generate_csrf()
         return {'csrf_token': csrf_token}
