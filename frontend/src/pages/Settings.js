@@ -201,11 +201,11 @@ function Settings() {
   }, []);
 
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <div className='min-h-screen bg-slate-50'>
       <div className='max-w-4xl mx-auto px-4 py-6'>
         <header className='mb-6'>
           <div className='flex items-center gap-3'>
-            <div className='w-12 h-12 rounded-xl bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center shadow-lg'>
+            <div className='w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-primary-500/30'>
               <SettingsIcon className='w-6 h-6 text-white' />
             </div>
             <div>
@@ -222,70 +222,70 @@ function Settings() {
           </div>
         ) : (
           <div className='space-y-6'>
-            <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-              <div className='px-6 py-4 bg-gray-50 border-b border-gray-100'>
+            <div className='card'>
+              <div className='card-header'>
                 <div className='flex items-center gap-2'>
                   <Palette className='w-5 h-5 text-gray-600' />
                   <h3 className='font-semibold text-gray-900'>基本设置</h3>
                 </div>
               </div>
-              <div className='p-6 space-y-6'>
+              <div className='card-body space-y-6'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>系统名称</label>
+                  <label className='form-label'>系统名称</label>
                   <input
                     type='text'
                     value={settings.systemName}
                     onChange={(e) => updateSettingsField('systemName', e.target.value)}
-                    className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+                    className='form-input'
                   />
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>默认积分</label>
+                    <label className='form-label'>默认积分</label>
                     <input
                       type='number'
                       value={settings.defaultScore}
                       onChange={(e) =>
                         updateSettingsField('defaultScore', parseInt(e.target.value) || 0)
                       }
-                      className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+                      className='form-input'
                     />
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>最低积分</label>
+                    <label className='form-label'>最低积分</label>
                     <input
                       type='number'
                       value={settings.minScore}
                       onChange={(e) =>
                         updateSettingsField('minScore', parseInt(e.target.value) || 0)
                       }
-                      className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+                      className='form-input'
                     />
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>最高积分</label>
+                    <label className='form-label'>最高积分</label>
                     <input
                       type='number'
                       value={settings.maxScore}
                       onChange={(e) =>
                         updateSettingsField('maxScore', parseInt(e.target.value) || 100)
                       }
-                      className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+                      className='form-input'
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-              <div className='px-6 py-4 bg-gray-50 border-b border-gray-100'>
+            <div className='card'>
+              <div className='card-header'>
                 <div className='flex items-center gap-2'>
                   <Bell className='w-5 h-5 text-gray-600' />
                   <h3 className='font-semibold text-gray-900'>通知设置</h3>
                 </div>
               </div>
-              <div className='p-6 space-y-4'>
+              <div className='card-body space-y-4'>
                 <div className='flex items-center justify-between'>
                   <div>
                     <h4 className='font-medium text-gray-900'>启用通知</h4>
@@ -349,16 +349,16 @@ function Settings() {
               </div>
             </div>
 
-            <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-              <div className='px-6 py-4 bg-gray-50 border-b border-gray-100'>
+            <div className='card'>
+              <div className='card-header'>
                 <div className='flex items-center gap-2'>
                   <Shield className='w-5 h-5 text-gray-600' />
                   <h3 className='font-semibold text-gray-900'>外观设置</h3>
                 </div>
               </div>
-              <div className='p-6 space-y-6'>
+              <div className='card-body space-y-6'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-3'>主题模式</label>
+                  <label className='form-label'>主题模式</label>
                   <div className='flex gap-3'>
                     {[
                       { id: 'light', label: '浅色', description: '明亮清爽的界面' },
@@ -382,11 +382,11 @@ function Settings() {
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-3'>语言设置</label>
+                  <label className='form-label'>语言设置</label>
                   <select
                     value={settings.language}
                     onChange={(e) => setSettings({ ...settings, language: e.target.value })}
-                    className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+                    className='form-select'
                   >
                     <option value='zh-CN'>简体中文</option>
                     <option value='zh-TW'>繁体中文</option>
@@ -396,14 +396,14 @@ function Settings() {
               </div>
             </div>
 
-            <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-              <div className='px-6 py-4 bg-gray-50 border-b border-gray-100'>
+            <div className='card'>
+              <div className='card-header'>
                 <div className='flex items-center gap-2'>
                   <Database className='w-5 h-5 text-gray-600' />
                   <h3 className='font-semibold text-gray-900'>数据管理</h3>
                 </div>
               </div>
-              <div className='p-6'>
+              <div className='card-body'>
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
                   <button
                     onClick={handleBackup}
@@ -493,19 +493,19 @@ function Settings() {
               <button
                 onClick={handleSave}
                 disabled={loading.config}
-                className='flex-1 py-3 bg-gradient-to-r from-primary-500 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                className='btn btn-primary flex-1 justify-center'
               >
                 {loading.config ? (
                   <>
-                    <Loader2 className='w-4 h-4 animate-spin' /> 保存中...
+                    <Loader2 className='w-4 h-4 animate-spin mr-2' /> 保存中...
                   </>
                 ) : saved ? (
                   <>
-                    <Check className='w-4 h-4' /> 已保存
+                    <Check className='w-4 h-4 mr-2' /> 已保存
                   </>
                 ) : (
                   <>
-                    <Save className='w-4 h-4' /> 保存设置
+                    <Save className='w-4 h-4 mr-2' /> 保存设置
                   </>
                 )}
               </button>

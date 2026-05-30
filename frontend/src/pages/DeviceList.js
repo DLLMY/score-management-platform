@@ -234,7 +234,7 @@ function DeviceList() {
   return (
     <div className='space-y-6'>
       <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-        <Card className='bg-gradient-to-br from-blue-500 to-blue-600 text-white'>
+        <div className='card-gradient p-6'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-blue-100 text-sm'>设备总数</p>
@@ -244,8 +244,8 @@ function DeviceList() {
               <Box className='w-6 h-6' />
             </div>
           </div>
-        </Card>
-        <Card className='bg-gradient-to-br from-green-500 to-green-600 text-white'>
+        </div>
+        <div className='card-gradient-green p-6'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-green-100 text-sm'>在线设备</p>
@@ -255,8 +255,8 @@ function DeviceList() {
               <Wifi className='w-6 h-6' />
             </div>
           </div>
-        </Card>
-        <Card className='bg-gradient-to-br from-red-500 to-red-600 text-white'>
+        </div>
+        <div className='card-gradient-red p-6'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-red-100 text-sm'>离线设备</p>
@@ -266,8 +266,8 @@ function DeviceList() {
               <WifiOff className='w-6 h-6' />
             </div>
           </div>
-        </Card>
-        <Card className='bg-gradient-to-br from-purple-500 to-purple-600 text-white'>
+        </div>
+        <div className='card-gradient-purple p-6'>
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-purple-100 text-sm'>今日心跳</p>
@@ -277,13 +277,13 @@ function DeviceList() {
               <Activity className='w-6 h-6' />
             </div>
           </div>
-        </Card>
+        </div>
       </div>
 
-      <Card>
-        <div className='flex items-center justify-between mb-4'>
+      <div className='card'>
+        <div className='card-header flex items-center justify-between'>
           <div className='flex items-center gap-4'>
-            <h2 className='text-lg font-semibold'>设备列表</h2>
+            <h2 className='text-lg font-semibold text-gray-900'>设备列表</h2>
             {lastUpdateTime && (
               <span className='text-sm text-gray-500 flex items-center'>
                 <Clock className='w-4 h-4 mr-1' />
@@ -309,158 +309,166 @@ function DeviceList() {
           </div>
         </div>
 
-        {initialLoading ? (
-          <div className='text-center py-12'>
-            <RefreshCw className='w-8 h-8 text-blue-500 animate-spin mx-auto mb-4' />
-            <p>加载中...</p>
-          </div>
-        ) : (
-          <div className='overflow-x-auto'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gray-50'>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>设备ID</th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    设备名称
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>状态</th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    所属班级
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    绑定班主任
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    信号强度
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    运行时长
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>A箱</th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>B箱</th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    系统状态
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                    最后心跳
-                  </th>
-                  <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devicesWithSignal.map((device) => (
-                  <tr key={device.device_id} className='border-b hover:bg-gray-50'>
-                    <td className='px-4 py-3 text-sm font-medium text-blue-600'>
-                      {device.device_id}
-                    </td>
-                    <td className='px-4 py-3 text-sm'>{device.name}</td>
-                    <td className='px-4 py-3'>
-                      <Badge
-                        variant={device.is_online ? 'success' : 'danger'}
-                        className='flex items-center'
-                      >
-                        {device.is_online ? (
-                          <Wifi className='w-3 h-3 mr-1' />
-                        ) : (
-                          <WifiOff className='w-3 h-3 mr-1' />
-                        )}
-                        {device.is_online ? '在线' : '离线'}
-                      </Badge>
-                    </td>
-                    <td className='px-4 py-3'>
-                      <div className='flex items-center gap-1'>
-                        <Building2 className='w-3 h-3 text-gray-400' />
-                        <span className='text-sm'>
-                          {device.class_name || <span className='text-gray-400'>未绑定</span>}
-                        </span>
-                      </div>
-                    </td>
-                    <td className='px-4 py-3'>
-                      <div className='flex items-center gap-1'>
-                        <Users className='w-3 h-3 text-gray-400' />
-                        <span className='text-sm'>
-                          {device.admin_name || <span className='text-gray-400'>未绑定</span>}
-                        </span>
-                      </div>
-                    </td>
-                    <td className='px-4 py-3'>
-                      <div className='flex items-center gap-2'>
-                        <div className={`w-6 h-2 rounded-full ${device.signalInfo.color}`} />
-                        <span className='text-sm'>{device.signalInfo.text}</span>
-                        {device.wifi_signal && (
-                          <span className='text-xs text-gray-400'>({device.wifi_signal} dBm)</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className='px-4 py-3 text-sm'>{formatUptime(device.uptime)}</td>
-                    <td className='px-4 py-3'>
-                      <Badge variant={device.box_a_status === 'opened' ? 'warning' : 'success'}>
-                        {device.box_a_status === 'opened' ? '打开' : '关闭'}
-                      </Badge>
-                    </td>
-                    <td className='px-4 py-3'>
-                      <Badge variant={device.box_b_status === 'opened' ? 'warning' : 'success'}>
-                        {device.box_b_status === 'opened' ? '打开' : '关闭'}
-                      </Badge>
-                    </td>
-                    <td className='px-4 py-3 text-sm'>{getSystemStateText(device.system_state)}</td>
-                    <td className='px-4 py-3'>
-                      <div className='flex items-center gap-1 text-sm'>
-                        <Clock className='w-3 h-3 text-gray-400' />
-                        {device.last_heartbeat
-                          ? new Date(device.last_heartbeat).toLocaleTimeString('zh-CN')
-                          : '-'}
-                      </div>
-                    </td>
-                    <td className='px-4 py-3'>
-                      <div className='flex gap-2'>
-                        <Button
-                          variant='secondary'
-                          size='small'
-                          onClick={() => handleViewDetail(device)}
-                        >
-                          <Eye className='w-4 h-4' />
-                        </Button>
-                        <Button
-                          variant='primary'
-                          size='small'
-                          onClick={() => handleOpenBindModal(device)}
-                        >
-                          <Link className='w-4 h-4' />
-                        </Button>
-                        <Button
-                          variant='warning'
-                          size='small'
-                          onClick={() => setShowAddModal(true)}
-                        >
-                          <Edit2 className='w-4 h-4' />
-                        </Button>
-                        <Button
-                          variant='danger'
-                          size='small'
-                          onClick={() => handleDeleteDevice(device.device_id)}
-                        >
-                          <Trash2 className='w-4 h-4' />
-                        </Button>
-                      </div>
-                    </td>
+        <div className='card-body'>
+          {initialLoading ? (
+            <div className='text-center py-12'>
+              <RefreshCw className='w-8 h-8 text-blue-500 animate-spin mx-auto mb-4' />
+              <p>加载中...</p>
+            </div>
+          ) : (
+            <div className='overflow-x-auto'>
+              <table className='w-full'>
+                <thead>
+                  <tr className='bg-gray-50'>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      设备ID
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      设备名称
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>状态</th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      所属班级
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      绑定班主任
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      信号强度
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      运行时长
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>A箱</th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>B箱</th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      系统状态
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                      最后心跳
+                    </th>
+                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {devicesWithSignal.map((device) => (
+                    <tr key={device.device_id} className='border-b hover:bg-gray-50'>
+                      <td className='px-4 py-3 text-sm font-medium text-blue-600'>
+                        {device.device_id}
+                      </td>
+                      <td className='px-4 py-3 text-sm'>{device.name}</td>
+                      <td className='px-4 py-3'>
+                        <Badge
+                          variant={device.is_online ? 'success' : 'danger'}
+                          className='flex items-center'
+                        >
+                          {device.is_online ? (
+                            <Wifi className='w-3 h-3 mr-1' />
+                          ) : (
+                            <WifiOff className='w-3 h-3 mr-1' />
+                          )}
+                          {device.is_online ? '在线' : '离线'}
+                        </Badge>
+                      </td>
+                      <td className='px-4 py-3'>
+                        <div className='flex items-center gap-1'>
+                          <Building2 className='w-3 h-3 text-gray-400' />
+                          <span className='text-sm'>
+                            {device.class_name || <span className='text-gray-400'>未绑定</span>}
+                          </span>
+                        </div>
+                      </td>
+                      <td className='px-4 py-3'>
+                        <div className='flex items-center gap-1'>
+                          <Users className='w-3 h-3 text-gray-400' />
+                          <span className='text-sm'>
+                            {device.admin_name || <span className='text-gray-400'>未绑定</span>}
+                          </span>
+                        </div>
+                      </td>
+                      <td className='px-4 py-3'>
+                        <div className='flex items-center gap-2'>
+                          <div className={`w-6 h-2 rounded-full ${device.signalInfo.color}`} />
+                          <span className='text-sm'>{device.signalInfo.text}</span>
+                          {device.wifi_signal && (
+                            <span className='text-xs text-gray-400'>
+                              ({device.wifi_signal} dBm)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className='px-4 py-3 text-sm'>{formatUptime(device.uptime)}</td>
+                      <td className='px-4 py-3'>
+                        <Badge variant={device.box_a_status === 'opened' ? 'warning' : 'success'}>
+                          {device.box_a_status === 'opened' ? '打开' : '关闭'}
+                        </Badge>
+                      </td>
+                      <td className='px-4 py-3'>
+                        <Badge variant={device.box_b_status === 'opened' ? 'warning' : 'success'}>
+                          {device.box_b_status === 'opened' ? '打开' : '关闭'}
+                        </Badge>
+                      </td>
+                      <td className='px-4 py-3 text-sm'>
+                        {getSystemStateText(device.system_state)}
+                      </td>
+                      <td className='px-4 py-3'>
+                        <div className='flex items-center gap-1 text-sm'>
+                          <Clock className='w-3 h-3 text-gray-400' />
+                          {device.last_heartbeat
+                            ? new Date(device.last_heartbeat).toLocaleTimeString('zh-CN')
+                            : '-'}
+                        </div>
+                      </td>
+                      <td className='px-4 py-3'>
+                        <div className='flex gap-2'>
+                          <Button
+                            variant='secondary'
+                            size='small'
+                            onClick={() => handleViewDetail(device)}
+                          >
+                            <Eye className='w-4 h-4' />
+                          </Button>
+                          <Button
+                            variant='primary'
+                            size='small'
+                            onClick={() => handleOpenBindModal(device)}
+                          >
+                            <Link className='w-4 h-4' />
+                          </Button>
+                          <Button
+                            variant='warning'
+                            size='small'
+                            onClick={() => setShowAddModal(true)}
+                          >
+                            <Edit2 className='w-4 h-4' />
+                          </Button>
+                          <Button
+                            variant='danger'
+                            size='small'
+                            onClick={() => handleDeleteDevice(device.device_id)}
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-            {devices.length === 0 && !initialLoading && (
-              <EmptyState
-                icon='wifi'
-                title='暂无设备'
-                description='添加设备开始监控系统'
-                actionLabel='添加设备'
-                onAction={() => setShowAddModal(true)}
-              />
-            )}
-          </div>
-        )}
-      </Card>
+              {devices.length === 0 && !initialLoading && (
+                <EmptyState
+                  icon='wifi'
+                  title='暂无设备'
+                  description='添加设备开始监控系统'
+                  actionLabel='添加设备'
+                  onAction={() => setShowAddModal(true)}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       <Modal
         title='添加设备'

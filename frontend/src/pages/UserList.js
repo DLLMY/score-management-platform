@@ -670,8 +670,8 @@ function UserList() {
         </div>
       )}
 
-      <Card>
-        <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4'>
+      <div className='card'>
+        <div className='card-header flex flex-col md:flex-row md:items-center justify-between gap-4'>
           <SearchFilter
             searchTerm={state.searchTerm}
             onSearchChange={(value) => dispatch({ type: 'SET_SEARCH_TERM', payload: value })}
@@ -697,32 +697,34 @@ function UserList() {
           </div>
         </div>
 
-        {state.isLoading ? (
-          <div className='flex items-center justify-center py-16'>
-            <LoadingSpinner size='lg' text='加载中...' />
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className='text-center py-20'>
-            <div className='w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-5'>
-              <Users className='w-12 h-12 text-gray-400' />
+        <div className='card-body'>
+          {state.isLoading ? (
+            <div className='flex items-center justify-center py-16'>
+              <LoadingSpinner size='lg' text='加载中...' />
             </div>
-            <h3 className='text-xl font-semibold text-gray-600 mb-2'>暂无学生数据</h3>
-            <p className='text-gray-500 mb-6'>添加学生开始管理积分系统</p>
-            <Button onClick={() => dispatch({ type: 'SET_SHOW_MODAL', payload: true })}>
-              <Plus className='w-5 h-5' />
-              添加第一个学生
-            </Button>
-          </div>
-        ) : (
-          <VirtualList
-            items={filteredUsers}
-            itemHeight={80}
-            renderItem={renderUserRow}
-            keyExtractor={(user) => user.id}
-            containerHeight={600}
-          />
-        )}
-      </Card>
+          ) : filteredUsers.length === 0 ? (
+            <div className='text-center py-20'>
+              <div className='w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-5'>
+                <Users className='w-12 h-12 text-gray-400' />
+              </div>
+              <h3 className='text-xl font-semibold text-gray-600 mb-2'>暂无学生数据</h3>
+              <p className='text-gray-500 mb-6'>添加学生开始管理积分系统</p>
+              <Button onClick={() => dispatch({ type: 'SET_SHOW_MODAL', payload: true })}>
+                <Plus className='w-5 h-5' />
+                添加第一个学生
+              </Button>
+            </div>
+          ) : (
+            <VirtualList
+              items={filteredUsers}
+              itemHeight={80}
+              renderItem={renderUserRow}
+              keyExtractor={(user) => user.id}
+              containerHeight={600}
+            />
+          )}
+        </div>
+      </div>
 
       {state.pagination.pages > 1 && (
         <div className='flex items-center justify-between mt-6 pt-4 border-t border-gray-100'>

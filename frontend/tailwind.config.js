@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // 主色调 - 现代化蓝色系
+        // ===== 主色调系统 =====
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -22,7 +22,7 @@ module.exports = {
           900: '#0c4a6e',
           950: '#082f49',
         },
-        // 强调色 - 紫色系
+        // ===== 强调色系统 =====
         accent: {
           50: '#faf5ff',
           100: '#f3e8ff',
@@ -36,7 +36,7 @@ module.exports = {
           900: '#581c87',
           950: '#3b0764',
         },
-        // 成功色 - 翠绿色系
+        // ===== 状态色系统 =====
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -50,7 +50,6 @@ module.exports = {
           900: '#14532d',
           950: '#052e16',
         },
-        // 警告色 - 琥珀色系
         warning: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -64,7 +63,6 @@ module.exports = {
           900: '#78350f',
           950: '#451a03',
         },
-        // 危险色 - 玫瑰色系
         danger: {
           50: '#fef2f2',
           100: '#fee2e2',
@@ -78,7 +76,6 @@ module.exports = {
           900: '#7f1d1d',
           950: '#450a0a',
         },
-        // 信息色 - 青色系
         info: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -92,7 +89,7 @@ module.exports = {
           900: '#0c4a6e',
           950: '#082f49',
         },
-        // 深色模式背景
+        // ===== 中性色系统 =====
         slate: {
           50: '#f8fafc',
           100: '#f1f5f9',
@@ -106,7 +103,38 @@ module.exports = {
           900: '#0f172a',
           950: '#020617',
         },
-        // 现代化渐变色
+        // ===== 平台色系扩展 =====
+        platform: {
+          // 侧边栏背景
+          sidebar: '#0f172a',
+          sidebarLight: '#1e293b',
+          sidebarHover: '#334155',
+          
+          // 主内容区背景
+          content: '#f8fafc',
+          contentDark: '#1e293b',
+          
+          // 卡片背景
+          card: '#ffffff',
+          cardDark: '#1e293b',
+          
+          // 文字颜色
+          textPrimary: '#0f172a',
+          textSecondary: '#475569',
+          textTertiary: '#94a3b8',
+          textPrimaryDark: '#f8fafc',
+          textSecondaryDark: '#cbd5e1',
+          textTertiaryDark: '#64748b',
+          
+          // 边框颜色
+          border: '#e2e8f0',
+          borderDark: '#334155',
+          
+          // 阴影颜色
+          shadow: 'rgba(0, 0, 0, 0.1)',
+          shadowDark: 'rgba(0, 0, 0, 0.3)',
+        },
+        // ===== 渐变色配色 =====
         gradient: {
           primary: '#0ea5e9',
           secondary: '#a855f7',

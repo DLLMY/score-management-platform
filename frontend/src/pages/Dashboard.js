@@ -144,15 +144,11 @@ const StatCard = memo(
 
     return (
       <div
-        className='group relative overflow-hidden rounded-2xl bg-white border border-gray-200/50 p-4 hover:border-gray-300/70 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/15 animate-fade-in'
+        className='group relative overflow-hidden card p-5 card-hover animate-fade-in'
         style={{ animationDelay: `${delay}ms` }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div
-          className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${gradient}`}
-          style={{ opacity: 0.05 }}
-        />
         <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${gradient}`} />
 
         <div className='relative z-10'>
@@ -169,7 +165,7 @@ const StatCard = memo(
             </div>
             {trend && (
               <div
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-300 ${trend > 0 ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-500 border border-green-500/30' : 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-500 border border-red-500/30'} ${isHovered ? 'scale-110' : ''}`}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-300 ${trend > 0 ? 'bg-gradient-to-r from-success-500/20 to-emerald-500/20 text-success-500 border border-success-500/30' : 'bg-gradient-to-r from-danger-500/20 to-rose-500/20 text-danger-500 border border-danger-500/30'} ${isHovered ? 'scale-110' : ''}`}
               >
                 {trend > 0 ? (
                   <ArrowUp className='w-3 h-3' />
@@ -180,7 +176,7 @@ const StatCard = memo(
               </div>
             )}
           </div>
-          <p className={`text-xs font-medium ${color} mb-1`}>{label}</p>
+          <p className={`text-xs font-semibold ${color} mb-1`}>{label}</p>
           {description && <p className='text-xs text-gray-500 mb-2'>{description}</p>}
           <div className='flex items-baseline gap-1.5'>
             <span className='text-2xl md:text-3xl font-bold text-gray-900'>
@@ -198,10 +194,6 @@ const StatCard = memo(
         <div
           className={`absolute -bottom-2 -right-2 w-24 h-24 bg-gradient-to-br from-gray-100/50 to-transparent rounded-full blur-3xl transition-all duration-500 ${isHovered ? 'opacity-100 scale-125' : 'opacity-0'}`}
         />
-
-        <div className='absolute top-2 right-2 w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
-          <Eye className='w-2.5 h-2.5 text-gray-500' />
-        </div>
       </div>
     );
   }
@@ -1348,7 +1340,7 @@ function Dashboard() {
 
           {/* 数据图表区域 */}
           <div className='relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3 mb-4'>
-            <div className='bg-white border border-gray-200/50 rounded-2xl p-4 hover:border-gray-300/60 transition-all duration-300'>
+            <div className='card p-4'>
               <div className='flex items-center gap-2 mb-3'>
                 <div className='w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30'>
                   <BarChart3 className='w-4 h-4 text-white' />
@@ -1364,7 +1356,7 @@ function Dashboard() {
               />
             </div>
 
-            <div className='bg-white border border-gray-200/50 rounded-2xl p-4 hover:border-gray-300/60 transition-all duration-300'>
+            <div className='card p-4'>
               <div className='flex items-center gap-2 mb-3'>
                 <div className='w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30'>
                   <LineChart className='w-4 h-4 text-white' />
@@ -1380,7 +1372,7 @@ function Dashboard() {
               />
             </div>
 
-            <div className='bg-white border border-gray-200/50 rounded-2xl p-4 hover:border-gray-300/60 transition-all duration-300 flex flex-col items-center'>
+            <div className='card p-4 flex flex-col items-center'>
               <div className='flex items-center gap-2 mb-3 w-full'>
                 <div className='w-8 h-8 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30'>
                   <PieChart className='w-4 h-4 text-white' />
@@ -1400,8 +1392,8 @@ function Dashboard() {
           {/* 主要内容区域 */}
           <div className='relative z-10 flex flex-col lg:flex-row gap-3'>
             {/* 积分排名 - 主区域 */}
-            <div className='flex-1 bg-white border border-gray-200/50 rounded-2xl p-4'>
-              <div className='flex flex-col sm:flex-row sm:items-center justify-between mb-4'>
+            <div className='card'>
+              <div className='card-header flex flex-col sm:flex-row sm:items-center justify-between'>
                 <div className='flex items-center gap-2'>
                   <div className='relative'>
                     <div className='w-8 h-8 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30'>
@@ -1421,7 +1413,7 @@ function Dashboard() {
                     <select
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(e.target.value)}
-                      className='bg-gray-50 border border-gray-300/50 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 cursor-pointer appearance-none pr-6'
+                      className='form-select-sm'
                     >
                       <option value=''>全部班级</option>
                       {classes.map((cls) => (
@@ -1446,78 +1438,84 @@ function Dashboard() {
                 </div>
               </div>
 
-              <div
-                ref={scrollContainerRef}
-                className='overflow-y-auto rounded-xl'
-                style={{
-                  maxHeight: '400px',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#94a3b8 #e2e8f0',
-                }}
-              >
-                {state.loading ? (
-                  <div className='flex flex-col items-center justify-center py-12'>
-                    <div className='w-8 h-8 border-3 border-gray-300 rounded-full animate-spin border-t-yellow-500' />
-                    <p className='text-gray-500 text-sm mt-2'>加载中...</p>
-                  </div>
-                ) : classGroups.length === 0 ? (
-                  <div className='text-center py-12'>
-                    <Users className='w-12 h-12 text-gray-400 mx-auto mb-3' />
-                    <p className='text-gray-500 text-base'>暂无学生数据</p>
-                    <p className='text-gray-400 text-sm'>请添加学生信息</p>
-                  </div>
-                ) : (
-                  <div className='space-y-3'>
-                    {classGroups.map((group, groupIndex) => (
-                      <div key={group.class_name} className='space-y-2'>
-                        <div className='flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 rounded-xl border border-gray-200/50 sticky top-0 z-10'>
-                          <div className='w-6 h-6 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center'>
-                            <Building2 className='w-3 h-3 text-white' />
+              <div className='card-body'>
+                <div
+                  ref={scrollContainerRef}
+                  className='overflow-y-auto rounded-xl'
+                  style={{
+                    maxHeight: '400px',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#94a3b8 #e2e8f0',
+                  }}
+                >
+                  {state.loading ? (
+                    <div className='flex flex-col items-center justify-center py-12'>
+                      <div className='w-8 h-8 border-3 border-gray-300 rounded-full animate-spin border-t-yellow-500' />
+                      <p className='text-gray-500 text-sm mt-2'>加载中...</p>
+                    </div>
+                  ) : classGroups.length === 0 ? (
+                    <div className='text-center py-12'>
+                      <Users className='w-12 h-12 text-gray-400 mx-auto mb-3' />
+                      <p className='text-gray-500 text-base'>暂无学生数据</p>
+                      <p className='text-gray-400 text-sm'>请添加学生信息</p>
+                    </div>
+                  ) : (
+                    <div className='space-y-3'>
+                      {classGroups.map((group, groupIndex) => (
+                        <div key={group.class_name} className='space-y-2'>
+                          <div className='flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 rounded-xl border border-gray-200/50 sticky top-0 z-10'>
+                            <div className='w-6 h-6 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center'>
+                              <Building2 className='w-3 h-3 text-white' />
+                            </div>
+                            <span className='text-sm font-semibold text-gray-900'>
+                              {group.class_name}
+                            </span>
+                            <span className='text-xs text-gray-500 ml-auto flex items-center gap-1'>
+                              <Users className='w-3 h-3' />
+                              {group.students.length}人
+                            </span>
                           </div>
-                          <span className='text-sm font-semibold text-gray-900'>
-                            {group.class_name}
-                          </span>
-                          <span className='text-xs text-gray-500 ml-auto flex items-center gap-1'>
-                            <Users className='w-3 h-3' />
-                            {group.students.length}人
-                          </span>
+                          <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2'>
+                            {group.students.map((user) => {
+                              const globalIndex = filteredUsers.findIndex((u) => u.id === user.id);
+                              return (
+                                <UserCard key={user.id} user={user} globalIndex={globalIndex} />
+                              );
+                            })}
+                          </div>
+                          {groupIndex < classGroups.length - 1 && (
+                            <div className='h-px bg-gradient-to-r from-transparent via-gray-300/30 to-transparent' />
+                          )}
                         </div>
-                        <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2'>
-                          {group.students.map((user) => {
-                            const globalIndex = filteredUsers.findIndex((u) => u.id === user.id);
-                            return <UserCard key={user.id} user={user} globalIndex={globalIndex} />;
-                          })}
-                        </div>
-                        {groupIndex < classGroups.length - 1 && (
-                          <div className='h-px bg-gradient-to-r from-transparent via-gray-300/30 to-transparent' />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* 右侧 - 设备状态 + 积分记录 */}
             <div className='flex flex-col gap-3 lg:w-72'>
               {/* 设备状态 */}
-              <div className='bg-white border border-gray-200/50 rounded-2xl p-4 flex-1'>
-                <div className='flex items-center justify-between mb-3'>
-                  <div className='flex items-center gap-2'>
-                    <div className='w-7 h-7 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/30'>
-                      <Smartphone className='w-3.5 h-3.5 text-white' />
+              <div className='card flex-1'>
+                <div className='card-header pb-2'>
+                  <div className='flex items-center justify-between'>
+                    <div className='flex items-center gap-2'>
+                      <div className='w-7 h-7 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/30'>
+                        <Smartphone className='w-3.5 h-3.5 text-white' />
+                      </div>
+                      <div>
+                        <h2 className='text-sm font-bold text-gray-900'>设备状态</h2>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className='text-sm font-bold text-gray-900'>设备状态</h2>
+                    <div className='flex items-center gap-1.5'>
+                      <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
+                      <span className='text-xs text-gray-500'>实时</span>
                     </div>
-                  </div>
-                  <div className='flex items-center gap-1.5'>
-                    <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse' />
-                    <span className='text-xs text-gray-500'>实时</span>
                   </div>
                 </div>
 
-                <div className='space-y-2'>
+                <div className='card-body p-3 space-y-2'>
                   {state.loading ? (
                     <div className='flex items-center justify-center py-4'>
                       <div className='w-4 h-4 border-2 border-slate-700 rounded-full animate-spin border-t-cyan-500' />
@@ -1536,20 +1534,22 @@ function Dashboard() {
               </div>
 
               {/* 积分记录 */}
-              <div className='bg-white border border-gray-200/50 rounded-2xl p-4 flex-1'>
-                <div className='flex items-center justify-between mb-3'>
-                  <div className='flex items-center gap-2'>
-                    <div className='w-7 h-7 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/30'>
-                      <Eye className='w-3.5 h-3.5 text-white' />
+              <div className='card flex-1'>
+                <div className='card-header pb-2'>
+                  <div className='flex items-center justify-between'>
+                    <div className='flex items-center gap-2'>
+                      <div className='w-7 h-7 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/30'>
+                        <Eye className='w-3.5 h-3.5 text-white' />
+                      </div>
+                      <div>
+                        <h2 className='text-sm font-bold text-gray-900'>积分记录</h2>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className='text-sm font-bold text-gray-900'>积分记录</h2>
-                    </div>
+                    <span className='text-xs text-gray-500'>{state.records.length}条</span>
                   </div>
-                  <span className='text-xs text-gray-500'>{state.records.length}条</span>
                 </div>
 
-                <div className='space-y-2'>
+                <div className='card-body p-3 space-y-2'>
                   {state.loading ? (
                     <div className='flex items-center justify-center py-4'>
                       <div className='w-4 h-4 border-2 border-gray-300 rounded-full animate-spin border-t-green-500' />
@@ -1571,44 +1571,48 @@ function Dashboard() {
 
           {/* 最新通知 */}
           <div className='relative z-10 mt-3'>
-            <div className='bg-white border border-gray-200/50 rounded-2xl p-4'>
-              <div className='flex items-center justify-between mb-3'>
-                <div className='flex items-center gap-2'>
-                  <div className='w-8 h-8 bg-gradient-to-br from-pink-500 via-purple-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/30'>
-                    <Bell className='w-4 h-4 text-white' />
+            <div className='card'>
+              <div className='card-header'>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <div className='w-8 h-8 bg-gradient-to-br from-pink-500 via-purple-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/30'>
+                      <Bell className='w-4 h-4 text-white' />
+                    </div>
+                    <div>
+                      <h2 className='text-base font-bold text-gray-900'>最新通知</h2>
+                      <p className='text-xs text-gray-500'>消息提醒</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className='text-base font-bold text-gray-900'>最新通知</h2>
-                    <p className='text-xs text-gray-500'>消息提醒</p>
+                  <div className='flex items-center gap-2'>
+                    {state.notifications.filter((n) => !n.read).length > 0 && (
+                      <span className='px-2 py-1 bg-red-100 text-red-600 text-xs font-semibold rounded-full flex items-center gap-1'>
+                        <AlertTriangle className='w-3 h-3' />
+                        {state.notifications.filter((n) => !n.read).length} 条未读
+                      </span>
+                    )}
                   </div>
-                </div>
-                <div className='flex items-center gap-2'>
-                  {state.notifications.filter((n) => !n.read).length > 0 && (
-                    <span className='px-2 py-1 bg-red-100 text-red-600 text-xs font-semibold rounded-full flex items-center gap-1'>
-                      <AlertTriangle className='w-3 h-3' />
-                      {state.notifications.filter((n) => !n.read).length} 条未读
-                    </span>
-                  )}
                 </div>
               </div>
 
-              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2'>
-                {state.loading ? (
-                  <div className='col-span-full flex items-center justify-center py-4'>
-                    <div className='w-4 h-4 border-2 border-gray-300 rounded-full animate-spin border-t-pink-500' />
-                  </div>
-                ) : state.notifications.length > 0 ? (
-                  state.notifications
-                    .slice(0, 4)
-                    .map((notification) => (
-                      <NotificationCard key={notification.id} notification={notification} />
-                    ))
-                ) : (
-                  <div className='col-span-full text-center py-4'>
-                    <Bell className='w-10 h-10 text-slate-600 mx-auto mb-2' />
-                    <p className='text-slate-400 text-sm'>暂无通知</p>
-                  </div>
-                )}
+              <div className='card-body'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2'>
+                  {state.loading ? (
+                    <div className='col-span-full flex items-center justify-center py-4'>
+                      <div className='w-4 h-4 border-2 border-gray-300 rounded-full animate-spin border-t-pink-500' />
+                    </div>
+                  ) : state.notifications.length > 0 ? (
+                    state.notifications
+                      .slice(0, 4)
+                      .map((notification) => (
+                        <NotificationCard key={notification.id} notification={notification} />
+                      ))
+                  ) : (
+                    <div className='col-span-full text-center py-4'>
+                      <Bell className='w-10 h-10 text-slate-600 mx-auto mb-2' />
+                      <p className='text-slate-400 text-sm'>暂无通知</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -66,9 +66,7 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
 
         <div
           className={`relative w-7 h-7 rounded-md flex items-center justify-center transition-all duration-250 ${
-            isActive
-              ? 'bg-primary-500/30'
-              : 'bg-slate-700/40 group-hover:bg-slate-600/40'
+            isActive ? 'bg-primary-500/30' : 'bg-slate-700/40 group-hover:bg-slate-600/40'
           }`}
         >
           <Icon
@@ -128,9 +126,7 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
         }`}
       >
         <GroupIcon className={`w-5 h-5 ${hasActive ? 'text-white' : ''}`} />
-        {hasActive && (
-          <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />
-        )}
+        {hasActive && <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />}
       </div>
 
       <span className='relative font-semibold flex-1 text-left text-sm z-10 transition-all duration-300 tracking-wide'>
@@ -139,9 +135,7 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
 
       <div
         className={`relative w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-300 z-10 ${
-          hasActive
-            ? 'bg-white/20'
-            : 'bg-slate-700/50 group-hover:bg-slate-600/50'
+          hasActive ? 'bg-white/20' : 'bg-slate-700/50 group-hover:bg-slate-600/50'
         }`}
       >
         {isExpanded ? (
