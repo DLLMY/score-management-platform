@@ -45,55 +45,47 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
   return (
     <li
       key={item.path}
-      className={`ml-${depth * 3} animate-slide-right`}
+      className={`ml-${depth * 2} animate-slide-right`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <Link
         to={item.path}
-        className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 group ${
+        className={`relative w-full flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg transition-all duration-250 group ${
           isActive
-            ? 'bg-gradient-to-r from-primary-600 via-blue-600 to-accent-600 text-white shadow-lg shadow-primary-600/30'
-            : 'text-slate-300 hover:bg-slate-700/60 hover:text-white'
+            ? 'bg-slate-700/80 text-white'
+            : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
         }`}
       >
         <div
-          className={`absolute inset-0 rounded-xl transition-all duration-500 ${
+          className={`absolute left-3 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full transition-all duration-250 ${
             isActive
-              ? 'scale-100'
-              : 'scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100'
+              ? 'bg-primary-400 opacity-100'
+              : 'bg-slate-600 opacity-0 group-hover:opacity-60'
           }`}
-        >
-          <div className='absolute inset-0 bg-gradient-to-r from-primary-500/10 via-blue-500/5 to-accent-500/10 rounded-xl' />
-        </div>
+        />
 
         <div
-          className={`relative w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+          className={`relative w-7 h-7 rounded-md flex items-center justify-center transition-all duration-250 ${
             isActive
-              ? 'bg-white/20 scale-110'
-              : 'bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:scale-110'
+              ? 'bg-primary-500/30'
+              : 'bg-slate-700/40 group-hover:bg-slate-600/40'
           }`}
         >
           <Icon
-            className={`w-4.5 h-4.5 transition-all duration-300 ${isActive ? 'text-white' : 'group-hover:text-white'}`}
+            className={`w-4 h-4 transition-all duration-250 ${
+              isActive ? 'text-primary-400' : 'group-hover:text-slate-200'
+            }`}
           />
-          {!isActive && (
-            <div className='absolute inset-0 bg-gradient-to-br from-primary-500/20 to-accent-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
-          )}
         </div>
 
-        <span className='relative font-medium flex-1 text-left text-sm transition-all duration-300'>
+        <span className='relative font-medium flex-1 text-left text-sm transition-all duration-250'>
           {item.label}
         </span>
 
         {isActive && (
-          <div className='relative'>
-            <ChevronRightIcon className='w-4 h-4 animate-pulse' />
-            <div className='absolute -inset-1 bg-primary-500/20 rounded-lg blur-md' />
+          <div className='relative w-5 h-5 flex items-center justify-center rounded-md bg-primary-500/20'>
+            <ChevronRightIcon className='w-3.5 h-3.5 text-primary-400' />
           </div>
-        )}
-
-        {!isActive && (
-          <div className='w-1.5 h-1.5 rounded-full bg-slate-600 opacity-0 group-hover:opacity-100 group-hover:bg-primary-400 group-hover:scale-150 transition-all duration-300' />
         )}
       </Link>
     </li>
@@ -106,42 +98,56 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
   return (
     <button
       onClick={onToggle}
-      className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 group overflow-hidden ${
+      className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-300 group overflow-hidden ${
         hasActive || isExpanded ? 'text-white' : 'text-slate-400 hover:text-white'
       }`}
     >
       <div
-        className={`absolute inset-0 bg-gradient-to-r ${
-          hasActive ? 'from-primary-500/15' : 'from-primary-500/5'
-        } to-transparent transition-all duration-300 ${hasActive || isExpanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
+          hasActive
+            ? 'bg-gradient-to-r from-primary-500/20 via-blue-500/10 to-transparent'
+            : isExpanded
+              ? 'bg-slate-700/40'
+              : 'bg-slate-800/30 group-hover:bg-slate-700/50'
+        }`}
       />
 
       <div
-        className={`relative w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 z-10 ${
+        className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full transition-all duration-300 z-10 ${
           hasActive
-            ? 'bg-gradient-to-br from-primary-500/40 to-accent-500/40 scale-110 shadow-lg shadow-primary-500/30'
-            : 'bg-slate-700/50 group-hover:bg-slate-600/50 group-hover:scale-110'
+            ? 'bg-gradient-to-b from-primary-400 to-accent-500 opacity-100'
+            : 'bg-slate-600 opacity-0 group-hover:opacity-50'
+        }`}
+      />
+
+      <div
+        className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 z-10 ${
+          hasActive
+            ? 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/40 scale-110'
+            : 'bg-slate-700/70 group-hover:bg-slate-600/70 group-hover:scale-110'
         }`}
       >
-        <GroupIcon className='w-4.5 h-4.5' />
+        <GroupIcon className={`w-5 h-5 ${hasActive ? 'text-white' : ''}`} />
         {hasActive && (
-          <div className='absolute inset-0 bg-gradient-to-br from-primary-500/30 to-accent-500/30 rounded-xl animate-pulse' />
+          <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />
         )}
       </div>
 
-      <span className='relative font-medium flex-1 text-left text-sm z-10 transition-all duration-300'>
+      <span className='relative font-semibold flex-1 text-left text-sm z-10 transition-all duration-300 tracking-wide'>
         {group.label}
       </span>
 
       <div
-        className={`relative w-6 h-6 flex items-center justify-center rounded-lg transition-all duration-300 z-10 ${
-          hasActive ? 'bg-primary-500/20' : 'bg-slate-700/30 group-hover:bg-slate-600/30'
+        className={`relative w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-300 z-10 ${
+          hasActive
+            ? 'bg-white/20'
+            : 'bg-slate-700/50 group-hover:bg-slate-600/50'
         }`}
       >
         {isExpanded ? (
-          <ChevronDown className='w-4 h-4 transition-transform duration-300' />
+          <ChevronDown className='w-4.5 h-4.5 transition-transform duration-300' />
         ) : (
-          <ChevronRight className='w-4 h-4 transition-transform duration-300' />
+          <ChevronRight className='w-4.5 h-4.5 transition-transform duration-300' />
         )}
       </div>
     </button>
