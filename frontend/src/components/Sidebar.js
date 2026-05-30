@@ -27,6 +27,8 @@ import {
   ChevronRight as ChevronRightIcon,
   Sparkles,
   Zap,
+  History,
+  Command,
 } from 'lucide-react';
 
 function getCurrentRole() {
@@ -182,14 +184,18 @@ function Sidebar() {
   const isAdmin = useMemo(() => role === 'admin', [role]);
   const [expandedGroups, setExpandedGroups] = useState({
     main: true,
-    scoreRules: true,
-    systemMonitor: true,
-    notifications: true,
-    systemAdmin: isAdmin,
+    scoreRules: false,
+    systemMonitor: false,
+    notifications: false,
+    systemAdmin: false,
   });
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isAnimating, setIsAnimating] = useState(true);
+  const [recentVisits, setRecentVisits] = useState(() => {
+    const saved = localStorage.getItem('recentVisits');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setIsAnimating(false), 500);
@@ -210,12 +216,59 @@ function Sidebar() {
     return () => window.removeEventListener('resize', handleResize);
   }, [isAnimating]);
 
+  useEffect(() => {
+    const allItems = menuGroups
+      .flatMap((g) => g.items)
+      .concat([{ path: '/help', label: '帮助中心', icon: HelpCircle }]);
+    const currentItem = allItems.find(
+      (item) =>
+        item.path === location.pathname || (location.pathname === '/' && item.path === '/dashboard')
+    );
+
+    if (currentItem) {
+      setRecentVisits((prev) => {
+        const filtered = prev.filter((item) => item.path !== currentItem.path);
+        const updated = [{ path: currentItem.path, label: currentItem.label }, ...filtered].slice(
+          0,
+          5
+        );
+        localStorage.setItem('recentVisits', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setIsCollapsed((prev) => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+        e.preventDefault();
+        window.location.href = '/dashboard';
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '2') {
+        e.preventDefault();
+        window.location.href = '/users';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const toggleGroup = useCallback((groupName) => {
     setExpandedGroups((prev) => ({
       ...prev,
       [groupName]: !prev[groupName],
     }));
   }, []);
+
+  const clearRecentVisits = () => {
+    setRecentVisits([]);
+    localStorage.removeItem('recentVisits');
+  };
 
   const isItemActive = useCallback(
     (path) => {
@@ -337,7 +390,7 @@ function Sidebar() {
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isCollapsed ? 'bg-white/80 dark:bg-slate-700/80 shadow-md shadow-black/5 text-gray-600 dark:text-slate-300 hover:shadow-lg' : 'bg-gray-200/50 dark:bg-slate-700/50 hover:bg-gray-300/50 dark:hover:bg-slate-600/50 text-gray-600 dark:text-slate-300'}`}
-          title={isCollapsed ? '展开侧边栏' : '收起侧边栏'}
+          title={`${isCollapsed ? '展开侧边栏' : '收起侧边栏'} (Ctrl+B)`}
         >
           {isCollapsed ? (
             <ChevronRightIcon className='w-5 h-5' />
@@ -349,6 +402,68 @@ function Sidebar() {
 
       <nav className='flex-1 px-3 py-3 relative z-10 overflow-y-auto overflow-x-hidden scrollbar-thin'>
         <ul className='space-y-1'>
+          {recentVisits.length > 0 && !isCollapsed && (
+            <li className='relative mb-2 animate-fade-in'>
+              <div className='flex items-center justify-between px-3 py-2 mb-1'>
+                <div className='flex items-center gap-2 text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider'>
+                  <History className='w-3.5 h-3.5' />
+                  最近访问
+                </div>
+                <button
+                  onClick={clearRecentVisits}
+                  className='text-xs text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors'
+                >
+                  清除
+                </button>
+              </div>
+              <ul className='space-y-1'>
+                {recentVisits.map((item, index) => {
+                  const allItems = menuGroups
+                    .flatMap((g) => g.items)
+                    .concat([{ path: '/help', label: '帮助中心', icon: HelpCircle }]);
+                  const matchedItem = allItems.find((i) => i.path === item.path);
+                  const Icon = matchedItem?.icon || HelpCircle;
+                  const isActive = isItemActive(item.path);
+                  return (
+                    <li
+                      key={item.path}
+                      style={{ animationDelay: `${index * 30}ms` }}
+                      className='animate-slide-right'
+                    >
+                      <Link
+                        to={item.path}
+                        onMouseEnter={() => setHoveredItem(item.path)}
+                        onMouseLeave={() => setHoveredItem(null)}
+                        className={`relative w-full flex items-center gap-2 pl-3 pr-3 py-2 rounded-xl transition-all duration-200 group ${
+                          isActive
+                            ? 'bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-500/10 dark:to-accent-500/5 text-gray-800 dark:text-slate-200'
+                            : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/40 hover:text-gray-700 dark:hover:text-slate-300'
+                        }`}
+                      >
+                        <div
+                          className={`relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-200 ${
+                            isActive
+                              ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm'
+                              : 'bg-gray-100/50 dark:bg-slate-700/40 text-gray-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <Icon className='w-3.5 h-3.5' />
+                        </div>
+                        <span className='relative font-medium text-sm flex-1 text-left'>
+                          {item.label}
+                        </span>
+                        {isActive && (
+                          <div className='absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full bg-gradient-to-b from-primary-500 to-accent-500' />
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className='h-px bg-gradient-to-r from-transparent via-gray-200/60 dark:via-slate-700/60 to-transparent my-2' />
+            </li>
+          )}
+
           {filteredMenuGroups.map((group, groupIndex) => {
             const hasActive = hasActiveItem(group.items);
             const isExpanded = expandedGroups[group.id];
@@ -357,7 +472,7 @@ function Sidebar() {
               <li
                 key={group.id}
                 className='relative animate-fade-in'
-                style={{ animationDelay: `${groupIndex * 100}ms` }}
+                style={{ animationDelay: `${groupIndex * 80}ms` }}
               >
                 <GroupHeader
                   group={group}
@@ -427,16 +542,22 @@ function Sidebar() {
       </div>
 
       {isCollapsed && hoveredItem && (
-        <div className='fixed left-16 top-1/2 -translate-y-1/2 px-3 py-2 bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-xl shadow-elevated z-50 animate-bounce-in'>
-          <div className='absolute inset-0 bg-gradient-to-r from-primary-500/5 to-accent-500/5 rounded-xl' />
-          <span className='relative text-sm text-white whitespace-nowrap font-medium'>
-            {menuGroups.flatMap((g) => g.items).find((i) => i.path === hoveredItem)?.label ||
-            hoveredItem === '/help'
-              ? '帮助中心'
-              : hoveredItem === 'logout'
-                ? '退出登录'
-                : ''}
-          </span>
+        <div className='fixed left-16 top-1/2 -translate-y-1/2 px-4 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-2xl shadow-elevated z-50 animate-bounce-in'>
+          <div className='absolute inset-0 bg-gradient-to-r from-primary-500/5 to-accent-500/5 rounded-2xl' />
+          <div className='relative flex items-center gap-2'>
+            <span className='text-sm text-white whitespace-nowrap font-medium'>
+              {menuGroups.flatMap((g) => g.items).find((i) => i.path === hoveredItem)?.label ||
+              hoveredItem === '/help'
+                ? '帮助中心'
+                : hoveredItem === 'logout'
+                  ? '退出登录'
+                  : ''}
+            </span>
+            <div className='flex items-center gap-1 text-xs text-slate-400'>
+              <Command className='w-3 h-3' />
+              <span>点击</span>
+            </div>
+          </div>
         </div>
       )}
     </aside>

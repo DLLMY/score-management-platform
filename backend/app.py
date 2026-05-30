@@ -223,6 +223,25 @@ def start_mqtt_in_background():
 with app.app_context():
     db.create_all()
     
+    # 初始化默认管理员
+    from models import Admin
+    from utils.security import hash_password
+    existing_admin = Admin.query.first()
+    if not existing_admin:
+        print("初始化默认管理员...")
+        default_admin = Admin(
+            username='admin',
+            password=hash_password('admin123'),
+            role='admin',
+            real_name='系统管理员',
+            phone='13800138000'
+        )
+        db.session.add(default_admin)
+        db.session.commit()
+        print("默认管理员创建成功!")
+        print("用户名: admin")
+        print("密码: admin123")
+    
     # 初始化MQTT配置
     from models import MQTTConfig
     mqtt_config = MQTTConfig.query.first()

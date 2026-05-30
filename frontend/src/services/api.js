@@ -199,11 +199,14 @@ const request = async (url, options = {}, retryCount = 0) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      // 优先使用JWT令牌，兼容旧的ID认证方式
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      } else if (admin && admin.id) {
-        headers['X-Admin-Id'] = admin.id.toString();
+      // 只有在非登录请求时才添加认证信息
+      if (!options.skipAuth) {
+        // 优先使用JWT令牌，兼容旧的ID认证方式
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        } else if (admin && admin.id) {
+          headers['X-Admin-Id'] = admin.id.toString();
+        }
       }
 
       const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
@@ -426,6 +429,7 @@ const api = {
       request('/api/admins/login', {
         method: 'POST',
         body: JSON.stringify(data),
+        skipAuth: true,
       }),
     getCsrfToken: () => request('/api/admins/csrf-token'),
     getAll: () => request('/api/admins'),
