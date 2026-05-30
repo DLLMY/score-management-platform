@@ -130,7 +130,11 @@ app.config['WTF_CSRF_EXEMPT_VIEWS'] = ['api.admins_admin_login', 'api.admins_adm
 # 初始化数据库
 db.init_app(app)
 
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
+CORS(app, 
+     supports_credentials=True, 
+     resources={r"/api/*": {"origins": "*"}},
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "X-Admin-Id", "X-CSRFToken"])
 
 # 初始化CSRF保护
 csrf = CSRFProtect(app)

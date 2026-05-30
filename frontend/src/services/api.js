@@ -1,3 +1,5 @@
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const getCurrentAdmin = () => {
   const admin = localStorage.getItem('admin');
   if (!admin) return null;
@@ -26,7 +28,7 @@ const setCsrfToken = (token) => {
 
 const fetchCsrfToken = async () => {
   try {
-    const response = await fetch('/api/system/csrf-token');
+    const response = await fetch(`${API_BASE_URL}/api/system/csrf-token`);
     if (response.ok) {
       const data = await response.json();
       if (data.csrf_token) {
@@ -112,7 +114,7 @@ const refreshToken = async () => {
   const refreshToken = getRefreshToken();
 
   try {
-    const response = await fetch('/api/admins/refresh-token', {
+    const response = await fetch(`${API_BASE_URL}/api/admins/refresh-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -204,7 +206,9 @@ const request = async (url, options = {}, retryCount = 0) => {
         headers['X-Admin-Id'] = admin.id.toString();
       }
 
-      const response = await fetchWithTimeout(url, {
+      const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
+
+      const response = await fetchWithTimeout(fullUrl, {
         ...options,
         headers,
       });
@@ -219,7 +223,7 @@ const request = async (url, options = {}, retryCount = 0) => {
             // 更新headers中的token
             headers['Authorization'] = `Bearer ${newToken}`;
             // 重试原始请求
-            const retryResponse = await fetchWithTimeout(url, {
+            const retryResponse = await fetchWithTimeout(fullUrl, {
               ...options,
               headers,
             });
