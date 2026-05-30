@@ -285,7 +285,9 @@ function Sidebar() {
       ${isAnimating ? 'opacity-0 translate-x-[-20px]' : 'opacity-100 translate-x-0'}
     `}
     >
-      <div className='p-4 border-b border-gray-200/50 dark:border-slate-700/50 relative z-10 flex items-center justify-between bg-gray-50/50 dark:bg-slate-700/30'>
+      <div
+        className={`p-4 border-b border-gray-200/50 dark:border-slate-700/50 relative z-10 bg-gray-50/50 dark:bg-slate-700/30 ${isCollapsed ? 'flex flex-col items-center gap-2' : 'flex items-center justify-between'}`}
+      >
         <div
           className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}
         >
@@ -309,7 +311,7 @@ function Sidebar() {
         </div>
 
         <div
-          className={`relative w-10 h-10 rounded-xl overflow-hidden ${!isCollapsed ? 'hidden' : 'flex'} items-center justify-center`}
+          className={`relative w-10 h-10 rounded-xl overflow-hidden transition-all duration-300 ${!isCollapsed ? 'hidden' : 'flex items-center justify-center'}`}
         >
           <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-500' />
           <GraduationCap className='relative w-5 h-5 text-white' />
@@ -317,7 +319,7 @@ function Sidebar() {
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className='hidden lg:flex w-8 h-8 rounded-lg bg-gray-200/50 dark:bg-slate-700/50 hover:bg-gray-300/50 dark:hover:bg-slate-600/50 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 text-gray-600 dark:text-slate-300'
+          className='lg:flex w-8 h-8 rounded-lg bg-gray-200/50 dark:bg-slate-700/50 hover:bg-gray-300/50 dark:hover:bg-slate-600/50 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 text-gray-600 dark:text-slate-300'
           title={isCollapsed ? '展开侧边栏' : '收起侧边栏'}
         >
           {isCollapsed ? (
