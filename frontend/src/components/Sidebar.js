@@ -94,13 +94,13 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
   );
 });
 
-const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
+const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle, isCollapsed }) => {
   const GroupIcon = group.icon;
 
   return (
     <button
       onClick={onToggle}
-      className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-300 group overflow-hidden ${
+      className={`relative w-full flex items-center justify-center ${isCollapsed ? 'px-2 py-3' : 'gap-3 px-3 py-3'} rounded-2xl transition-all duration-300 group overflow-hidden ${
         hasActive || isExpanded
           ? 'text-gray-800 dark:text-slate-200'
           : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
@@ -118,9 +118,9 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
 
       <div
         className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full transition-all duration-300 z-10 ${
-          hasActive
+          hasActive && !isCollapsed
             ? 'bg-gradient-to-b from-primary-500 to-accent-500 opacity-100'
-            : 'bg-gray-400 dark:bg-slate-500 opacity-0 group-hover:opacity-50'
+            : 'opacity-0'
         }`}
       />
 
@@ -137,12 +137,14 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
         {hasActive && <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />}
       </div>
 
-      <span className='relative font-semibold flex-1 text-left text-sm z-10 transition-all duration-300 tracking-wide'>
+      <span
+        className={`relative font-semibold flex-1 text-left text-sm z-10 transition-all duration-300 tracking-wide ${isCollapsed ? 'hidden' : ''}`}
+      >
         {group.label}
       </span>
 
       <div
-        className={`relative w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-300 z-10 ${
+        className={`relative w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-300 z-10 ${isCollapsed ? 'hidden' : ''} ${
           hasActive
             ? 'bg-primary-100/80 dark:bg-primary-500/20 text-primary-600'
             : 'bg-gray-100/50 dark:bg-slate-700/50 group-hover:bg-gray-200/50 dark:group-hover:bg-slate-600/50 text-gray-500 dark:text-slate-400'
@@ -343,6 +345,7 @@ function Sidebar() {
                   hasActive={hasActive}
                   isExpanded={isExpanded}
                   onToggle={() => toggleGroup(group.id)}
+                  isCollapsed={isCollapsed}
                 />
 
                 <ul
