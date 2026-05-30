@@ -643,7 +643,9 @@ function Header() {
                   <div className='flex items-center gap-3'>
                     <div className='relative w-10 h-10 rounded-xl overflow-hidden'>
                       <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-600' />
-                      <User className='relative w-5 h-5 text-white' />
+                      <div className='relative w-full h-full flex items-center justify-center'>
+                        <User className='w-5 h-5 text-white' />
+                      </div>
                     </div>
                     <div>
                       <p className='font-semibold text-gray-800 dark:text-slate-200'>
