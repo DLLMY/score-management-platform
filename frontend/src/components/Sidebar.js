@@ -52,26 +52,24 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
         to={item.path}
         className={`relative w-full flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg transition-all duration-250 group ${
           isActive
-            ? 'bg-slate-700/80 text-white'
-            : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+            ? 'bg-primary-50/80 dark:bg-primary-500/15 text-gray-800 dark:text-slate-200'
+            : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100/60 dark:hover:bg-slate-700/60 hover:text-gray-700 dark:hover:text-slate-300'
         }`}
       >
         <div
           className={`absolute left-3 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full transition-all duration-250 ${
-            isActive
-              ? 'bg-primary-400 opacity-100'
-              : 'bg-slate-600 opacity-0 group-hover:opacity-60'
+            isActive ? 'bg-primary-500 opacity-100' : 'bg-gray-400 dark:bg-slate-500 opacity-0 group-hover:opacity-60'
           }`}
         />
 
         <div
           className={`relative w-7 h-7 rounded-md flex items-center justify-center transition-all duration-250 ${
-            isActive ? 'bg-primary-500/30' : 'bg-slate-700/40 group-hover:bg-slate-600/40'
+            isActive ? 'bg-primary-100/80 dark:bg-primary-500/20' : 'bg-gray-100/40 dark:bg-slate-700/40 group-hover:bg-gray-200/40 dark:group-hover:bg-slate-600/40'
           }`}
         >
           <Icon
             className={`w-4 h-4 transition-all duration-250 ${
-              isActive ? 'text-primary-400' : 'group-hover:text-slate-200'
+              isActive ? 'text-primary-600' : 'text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-slate-300'
             }`}
           />
         </div>
@@ -81,8 +79,8 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
         </span>
 
         {isActive && (
-          <div className='relative w-5 h-5 flex items-center justify-center rounded-md bg-primary-500/20'>
-            <ChevronRightIcon className='w-3.5 h-3.5 text-primary-400' />
+          <div className='relative w-5 h-5 flex items-center justify-center rounded-md bg-primary-100/80 dark:bg-primary-500/20'>
+            <ChevronRightIcon className='w-3.5 h-3.5 text-primary-600' />
           </div>
         )}
       </Link>
@@ -97,35 +95,35 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
     <button
       onClick={onToggle}
       className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-300 group overflow-hidden ${
-        hasActive || isExpanded ? 'text-white' : 'text-slate-400 hover:text-white'
+        hasActive || isExpanded ? 'text-gray-800 dark:text-slate-200' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
       }`}
     >
       <div
         className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
           hasActive
-            ? 'bg-gradient-to-r from-primary-500/20 via-blue-500/10 to-transparent'
+            ? 'bg-gradient-to-r from-primary-500/10 via-blue-500/5 to-transparent'
             : isExpanded
-              ? 'bg-slate-700/40'
-              : 'bg-slate-800/30 group-hover:bg-slate-700/50'
+              ? 'bg-gray-100/60 dark:bg-slate-700/50'
+              : 'bg-gray-50/50 dark:bg-slate-800/50 group-hover:bg-gray-100/60 dark:group-hover:bg-slate-700/50'
         }`}
       />
 
       <div
         className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full transition-all duration-300 z-10 ${
           hasActive
-            ? 'bg-gradient-to-b from-primary-400 to-accent-500 opacity-100'
-            : 'bg-slate-600 opacity-0 group-hover:opacity-50'
+            ? 'bg-gradient-to-b from-primary-500 to-accent-500 opacity-100'
+            : 'bg-gray-400 dark:bg-slate-500 opacity-0 group-hover:opacity-50'
         }`}
       />
 
       <div
         className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 z-10 ${
           hasActive
-            ? 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/40 scale-110'
-            : 'bg-slate-700/70 group-hover:bg-slate-600/70 group-hover:scale-110'
+            ? 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/30 scale-110'
+            : 'bg-gray-100/70 dark:bg-slate-700/50 group-hover:bg-gray-200/70 dark:group-hover:bg-slate-600/50 group-hover:scale-110'
         }`}
       >
-        <GroupIcon className={`w-5 h-5 ${hasActive ? 'text-white' : ''}`} />
+        <GroupIcon className={`w-5 h-5 ${hasActive ? 'text-white' : 'text-gray-600 dark:text-slate-300'}`} />
         {hasActive && <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />}
       </div>
 
@@ -135,7 +133,9 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
 
       <div
         className={`relative w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-300 z-10 ${
-          hasActive ? 'bg-white/20' : 'bg-slate-700/50 group-hover:bg-slate-600/50'
+          hasActive
+            ? 'bg-primary-100/80 dark:bg-primary-500/20 text-primary-600'
+            : 'bg-gray-100/50 dark:bg-slate-700/50 group-hover:bg-gray-200/50 dark:group-hover:bg-slate-600/50 text-gray-500 dark:text-slate-400'
         }`}
       >
         {isExpanded ? (
@@ -267,41 +267,30 @@ function Sidebar() {
   return (
     <aside
       className={`
-      relative bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 text-white 
-      flex flex-col shadow-xl transition-all duration-500 ease-out
+      relative bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200
+      flex flex-col shadow-lg border-r border-gray-200/50 dark:border-slate-700/50 transition-all duration-500 ease-out
       ${isCollapsed ? 'w-16' : 'w-64'}
       ${isAnimating ? 'opacity-0 translate-x-[-20px]' : 'opacity-100 translate-x-0'}
     `}
     >
-      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent' />
-        <div className='absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent-500/50 to-transparent' />
-        <div className='absolute top-1/4 -left-20 w-40 h-40 bg-primary-500/5 rounded-full blur-3xl animate-pulse-slow' />
-        <div
-          className='absolute bottom-1/4 -right-20 w-40 h-40 bg-accent-500/5 rounded-full blur-3xl animate-pulse-slow'
-          style={{ animationDelay: '1s' }}
-        />
-        <div className='absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.03)_0%,transparent_50%)]' />
-      </div>
-
-      <div className='p-4 border-b border-slate-700/50 relative z-10 flex items-center justify-between'>
+      <div className='p-4 border-b border-gray-200/50 dark:border-slate-700/50 relative z-10 flex items-center justify-between bg-gray-50/50 dark:bg-slate-700/30'>
         <div
           className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}
         >
           <div className='relative w-10 h-10 rounded-xl overflow-hidden group'>
-            <div className='absolute inset-0 bg-gradient-to-br from-primary-400 via-blue-500 to-accent-500' />
-            <div className='absolute inset-0 bg-gradient-to-br from-primary-400 via-blue-500 to-accent-500 opacity-50 group-hover:opacity-100 transition-opacity duration-300 blur-xl' />
+            <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-500' />
+            <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-500 opacity-50 group-hover:opacity-100 transition-opacity duration-300 blur-xl' />
             <div className='relative w-full h-full flex items-center justify-center'>
               <GraduationCap className='w-6 h-6 text-white' />
             </div>
             <Sparkles className='absolute -top-1 -right-1 w-4 h-4 text-yellow-400 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:scale-125' />
           </div>
           <div>
-            <h1 className='text-base font-bold bg-gradient-to-r from-white via-blue-200 to-cyan-200 bg-clip-text text-transparent'>
+            <h1 className='text-base font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 dark:from-slate-200 dark:via-slate-300 dark:to-slate-400 bg-clip-text text-transparent'>
               积分管理平台
             </h1>
-            <p className='text-xs text-slate-400 flex items-center gap-1'>
-              <Zap className='w-2 h-2 text-yellow-400' />
+            <p className='text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1'>
+              <Zap className='w-2 h-2 text-yellow-500' />
               Student Score System
             </p>
           </div>
@@ -310,13 +299,13 @@ function Sidebar() {
         <div
           className={`relative w-10 h-10 rounded-xl overflow-hidden ${!isCollapsed ? 'hidden' : 'flex'} items-center justify-center`}
         >
-          <div className='absolute inset-0 bg-gradient-to-br from-primary-400 via-blue-500 to-accent-500' />
+          <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-500' />
           <GraduationCap className='relative w-5 h-5 text-white' />
         </div>
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className='hidden lg:flex w-8 h-8 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95'
+          className='hidden lg:flex w-8 h-8 rounded-lg bg-gray-200/50 dark:bg-slate-700/50 hover:bg-gray-300/50 dark:hover:bg-slate-600/50 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 text-gray-600 dark:text-slate-300'
           title={isCollapsed ? '展开侧边栏' : '收起侧边栏'}
         >
           {isCollapsed ? (
@@ -367,21 +356,21 @@ function Sidebar() {
         </ul>
       </nav>
 
-      <div className='px-3 py-3 border-t border-slate-700/50 space-y-1 relative z-10'>
+      <div className='px-3 py-3 border-t border-gray-200/50 dark:border-slate-700/50 space-y-1 relative z-10 bg-gray-50/30 dark:bg-slate-700/30'>
         <Link
           to='/help'
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-700/60 hover:text-white transition-all duration-300 ${isCollapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/60 hover:text-gray-800 dark:hover:text-slate-200 transition-all duration-300 ${isCollapsed ? 'justify-center' : ''}`}
           onMouseEnter={() => setHoveredItem('/help')}
           onMouseLeave={() => setHoveredItem(null)}
         >
-          <div className='relative w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center group-hover:bg-slate-600/50 transition-all duration-300 group-hover:scale-110'>
+          <div className='relative w-8 h-8 rounded-lg bg-gray-100/50 dark:bg-slate-700/50 flex items-center justify-center group-hover:bg-gray-200/50 dark:group-hover:bg-slate-600/50 transition-all duration-300 group-hover:scale-110'>
             <HelpCircle className='w-4.5 h-4.5' />
           </div>
           {!isCollapsed && <span className='font-medium text-sm'>帮助中心</span>}
         </Link>
 
         <button
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-danger-400 hover:bg-danger-500/25 hover:text-danger-300 transition-all duration-300 ${isCollapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 transition-all duration-300 ${isCollapsed ? 'justify-center' : ''}`}
           onMouseEnter={() => setHoveredItem('logout')}
           onMouseLeave={() => setHoveredItem(null)}
           onClick={() => {

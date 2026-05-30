@@ -63,15 +63,14 @@ function Login() {
   };
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/50 to-purple-900/50 flex items-center justify-center p-4'>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/50 to-purple-50/30 flex items-center justify-center p-4'>
       <div className='fixed inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl animate-pulse-slow' />
+        <div className='absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow' />
         <div
-          className='absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl animate-pulse-slow'
+          className='absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse-slow'
           style={{ animationDelay: '1s' }}
         />
-        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-3xl' />
-        <div className='absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0f172a_70%)]' />
+        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-pink-500/6 rounded-full blur-3xl' />
       </div>
 
       <div className='w-full max-w-md relative z-10'>
@@ -89,17 +88,17 @@ function Login() {
           >
             积分管理平台
           </h1>
-          <p className='text-slate-400 animate-fade-in' style={{ animationDelay: '200ms' }}>
+          <p className='text-gray-500 animate-fade-in' style={{ animationDelay: '200ms' }}>
             请登录以继续
           </p>
         </div>
 
         <div
-          className='bg-slate-800/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 p-8 animate-fade-in'
+          className='bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-gray-200/50 p-8 animate-fade-in'
           style={{ animationDelay: '300ms' }}
         >
-          <div className='flex items-center justify-center gap-2 mb-6 text-xs text-slate-400'>
-            <Fingerprint className='w-4 h-4 text-green-400' />
+          <div className='flex items-center justify-center gap-2 mb-6 text-xs text-gray-500'>
+            <Fingerprint className='w-4 h-4 text-green-500' />
             <span>安全登录 - 数据已加密</span>
           </div>
 
@@ -112,19 +111,19 @@ function Login() {
             )}
 
             <div>
-              <label className='block text-sm font-medium text-slate-300 mb-2'>
-                用户名 <span className='text-red-400'>*</span>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                用户名 <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <div
                   className={`absolute inset-0 rounded-xl transition-all duration-300 pointer-events-none ${
                     usernameFocused
-                      ? 'bg-gradient-to-r from-primary-500/20 via-blue-500/20 to-cyan-500/20 shadow-lg shadow-primary-500/15 ring-2 ring-primary-500/30'
-                      : 'bg-slate-700/50'
+                      ? 'bg-gradient-to-r from-primary-500/10 via-blue-500/10 to-cyan-500/10 shadow-lg shadow-primary-500/10 ring-2 ring-primary-500/30'
+                      : 'bg-gray-100'
                   }`}
                 />
                 <div
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${usernameFocused ? 'text-primary-400 scale-110' : 'text-slate-400'}`}
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${usernameFocused ? 'text-primary-500 scale-110' : 'text-gray-400'}`}
                 >
                   <User className='w-5 h-5' />
                 </div>
@@ -141,13 +140,13 @@ function Login() {
                   onFocus={() => setUsernameFocused(true)}
                   onBlur={() => setUsernameFocused(false)}
                   autoComplete='username'
-                  className={`w-full pl-12 pr-4 py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full pl-12 pr-4 py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none transition-all ${
                     formErrors.username ? 'ring-2 ring-red-500/50' : ''
                   }`}
                 />
               </div>
               {formErrors.username && (
-                <p className='mt-2 text-sm text-red-400 flex items-center gap-1'>
+                <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                   <AlertCircle className='w-4 h-4' />
                   {formErrors.username}
                 </p>
@@ -155,19 +154,19 @@ function Login() {
             </div>
 
             <div>
-              <label className='block text-sm font-medium text-slate-300 mb-2'>
-                密码 <span className='text-red-400'>*</span>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                密码 <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <div
                   className={`absolute inset-0 rounded-xl transition-all duration-300 pointer-events-none ${
                     passwordFocused
-                      ? 'bg-gradient-to-r from-primary-500/20 via-blue-500/20 to-cyan-500/20 shadow-lg shadow-primary-500/15 ring-2 ring-primary-500/30'
-                      : 'bg-slate-700/50'
+                      ? 'bg-gradient-to-r from-primary-500/10 via-blue-500/10 to-cyan-500/10 shadow-lg shadow-primary-500/10 ring-2 ring-primary-500/30'
+                      : 'bg-gray-100'
                   }`}
                 />
                 <div
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${passwordFocused ? 'text-primary-400 scale-110' : 'text-slate-400'}`}
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${passwordFocused ? 'text-primary-500 scale-110' : 'text-gray-400'}`}
                 >
                   <Lock className='w-5 h-5' />
                 </div>
@@ -184,13 +183,13 @@ function Login() {
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
                   autoComplete='current-password'
-                  className={`w-full pl-12 pr-4 py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full pl-12 pr-4 py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none transition-all ${
                     formErrors.password ? 'ring-2 ring-red-500/50' : ''
                   }`}
                 />
               </div>
               {formErrors.password && (
-                <p className='mt-2 text-sm text-red-400 flex items-center gap-1'>
+                <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                   <AlertCircle className='w-4 h-4' />
                   {formErrors.password}
                 </p>
@@ -216,7 +215,7 @@ function Login() {
           </form>
         </div>
 
-        <div className='text-center mt-6 text-sm text-slate-400'>
+        <div className='text-center mt-6 text-sm text-gray-500'>
           <p>© 2024 积分管理平台</p>
         </div>
       </div>

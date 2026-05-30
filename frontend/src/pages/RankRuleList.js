@@ -241,22 +241,22 @@ function RankRuleList() {
         </div>
       )}
 
-      <div className='bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-2xl border border-slate-700/50'>
-        <div className='px-6 py-5 border-b border-slate-700/50 bg-slate-700/20 flex flex-col md:flex-row md:items-center justify-between gap-4'>
+      <div className='bg-white rounded-2xl border border-gray-200/50 shadow-lg'>
+        <div className='px-6 py-5 border-b border-gray-200/50 bg-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4'>
           <div className='relative'>
-            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400' />
+            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
             <input
               type='text'
               placeholder='搜索等级名称...'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full md:w-72 px-12 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50'
+              className='w-full md:w-72 px-12 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50'
             />
           </div>
           <div className='flex items-center gap-3'>
-            <div className='flex items-center gap-2 px-4 py-2 bg-primary-500/20 rounded-xl'>
-              <Trophy className='w-4 h-4 text-primary-400' />
-              <span className='text-sm font-semibold text-primary-400'>
+            <div className='flex items-center gap-2 px-4 py-2 bg-primary-50/80 rounded-xl'>
+              <Trophy className='w-4 h-4 text-primary-500' />
+              <span className='text-sm font-semibold text-primary-600'>
                 {filteredRules.length} 个等级
               </span>
             </div>
@@ -268,7 +268,7 @@ function RankRuleList() {
             <div className='flex items-center justify-center py-16'>
               <div className='flex flex-col items-center'>
                 <div className='w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin mb-3' />
-                <span className='text-slate-400 text-sm'>加载中...</span>
+                <span className='text-gray-400 text-sm'>加载中...</span>
               </div>
             </div>
           ) : (
@@ -278,11 +278,11 @@ function RankRuleList() {
                 return (
                   <div
                     key={rule.id}
-                    className='bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-2xl p-6 border border-slate-700/50 hover:border-slate-600/70 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative overflow-hidden'
-                    style={{ borderColor: `${rule.color}50` }}
+                    className='bg-white rounded-2xl p-6 border border-gray-200/50 hover:border-gray-300/70 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative overflow-hidden shadow-sm'
+                    style={{ borderColor: `${rule.color}40` }}
                   >
                     <div
-                      className='absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-10'
+                      className='absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-5'
                       style={{ backgroundColor: rule.color }}
                     />
 
@@ -290,18 +290,18 @@ function RankRuleList() {
                       <div className='flex items-start justify-between mb-4'>
                         <div className='flex items-center gap-4'>
                           <div
-                            className='w-14 h-14 rounded-xl flex items-center justify-center shadow-lg'
-                            style={{ backgroundColor: `${rule.color}20` }}
+                            className='w-14 h-14 rounded-xl flex items-center justify-center shadow-md'
+                            style={{ backgroundColor: `${rule.color}15` }}
                           >
                             <IconComponent className='w-7 h-7' style={{ color: rule.color }} />
                           </div>
                           <div>
-                            <h3 className='text-xl font-bold text-white'>{rule.name}</h3>
+                            <h3 className='text-xl font-bold text-gray-800'>{rule.name}</h3>
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs font-semibold mt-1 inline-block ${
                                 rule.is_active
-                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                  : 'bg-slate-600/50 text-slate-400'
+                                  ? 'bg-green-50 text-green-600 border border-green-200/30'
+                                  : 'bg-gray-100/50 text-gray-500'
                               }`}
                             >
                               {rule.is_active ? '启用' : '禁用'}
@@ -310,14 +310,14 @@ function RankRuleList() {
                         </div>
                       </div>
 
-                      <div className='bg-slate-700/50 rounded-xl p-4 mb-4'>
+                      <div className='bg-gray-50/80 rounded-xl p-4 mb-4'>
                         <div className='flex items-center justify-between'>
-                          <span className='text-sm text-slate-400'>分数范围</span>
+                          <span className='text-sm text-gray-500'>分数范围</span>
                           <span className='font-bold text-lg' style={{ color: rule.color }}>
                             {rule.min_score} - {rule.max_score} 分
                           </span>
                         </div>
-                        <div className='mt-3 h-2 bg-slate-600 rounded-full overflow-hidden'>
+                        <div className='mt-3 h-2 bg-gray-200 rounded-full overflow-hidden'>
                           <div
                             className='h-full rounded-full transition-all'
                             style={{
@@ -329,16 +329,16 @@ function RankRuleList() {
                       </div>
 
                       {rule.description && (
-                        <p className='text-sm text-slate-300 mb-4'>{rule.description}</p>
+                        <p className='text-sm text-gray-600 mb-4'>{rule.description}</p>
                       )}
 
-                      <div className='flex items-center justify-between pt-4 border-t border-slate-700/50'>
+                      <div className='flex items-center justify-between pt-4 border-t border-gray-200/50'>
                         <div className='flex items-center gap-2'>
                           <div
-                            className='w-5 h-5 rounded-full border-2 border-slate-600'
+                            className='w-5 h-5 rounded-full border-2 border-gray-300'
                             style={{ backgroundColor: rule.color }}
                           />
-                          <span className='text-xs text-slate-400 font-mono'>{rule.color}</span>
+                          <span className='text-xs text-gray-500 font-mono'>{rule.color}</span>
                         </div>
                         <div className='flex items-center gap-2'>
                           <button
@@ -347,13 +347,13 @@ function RankRuleList() {
                               setFormData(rule);
                               setShowModal(true);
                             }}
-                            className='p-2.5 rounded-xl text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-all'
+                            className='p-2.5 rounded-xl text-amber-500 hover:bg-amber-50 hover:text-amber-600 transition-all'
                           >
                             <Edit2 className='w-5 h-5' />
                           </button>
                           <button
                             onClick={() => handleDelete(rule.id)}
-                            className='p-2.5 rounded-xl text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all'
+                            className='p-2.5 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all'
                           >
                             <Trash2 className='w-5 h-5' />
                           </button>
@@ -366,11 +366,11 @@ function RankRuleList() {
 
               {filteredRules.length === 0 && (
                 <div className='col-span-full text-center py-20'>
-                  <div className='w-24 h-24 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center mx-auto mb-5'>
-                    <Trophy className='w-12 h-12 text-slate-400' />
+                  <div className='w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-5'>
+                    <Trophy className='w-12 h-12 text-gray-400' />
                   </div>
-                  <h3 className='text-xl font-semibold text-slate-300 mb-2'>暂无排名规则</h3>
-                  <p className='text-slate-400 mb-6'>添加等级开始配置排名体系</p>
+                  <h3 className='text-xl font-semibold text-gray-700 mb-2'>暂无排名规则</h3>
+                  <p className='text-gray-500 mb-6'>添加等级开始配置排名体系</p>
                   <button
                     onClick={() => setShowModal(true)}
                     className='bg-gradient-to-r from-primary-500 via-blue-500 to-accent-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl hover:shadow-primary-500/30 hover:scale-[1.02] transition-all'
@@ -387,14 +387,14 @@ function RankRuleList() {
 
       {showModal && (
         <div
-          className='fixed inset-0 bg-black/60 backdrop-blur-md flex items-start justify-center z-[100] p-4 pt-16'
+          className='fixed inset-0 bg-black/40 backdrop-blur-md flex items-start justify-center z-[100] p-4 pt-16'
           onClick={() => setShowModal(false)}
         >
           <div
-            className='bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700/50 w-full max-w-md overflow-hidden animate-slide-up'
+            className='bg-white rounded-2xl border border-gray-200/50 w-full max-w-md overflow-hidden shadow-xl animate-slide-up'
             onClick={(e) => e.stopPropagation()}
           >
-            <div className='px-6 py-5 border-b border-slate-700/50 flex items-center justify-between bg-slate-700/20'>
+            <div className='px-6 py-5 border-b border-gray-200/50 flex items-center justify-between bg-gray-50/50'>
               <div className='flex items-center gap-3'>
                 <div className='w-10 h-10 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center'>
                   {editingRule ? (
@@ -404,10 +404,10 @@ function RankRuleList() {
                   )}
                 </div>
                 <div>
-                  <h3 className='text-lg font-semibold text-white'>
+                  <h3 className='text-lg font-semibold text-gray-800'>
                     {editingRule ? '编辑等级' : '添加新等级'}
                   </h3>
-                  <p className='text-xs text-slate-400'>
+                  <p className='text-xs text-gray-500'>
                     {editingRule ? '修改等级的详细信息' : '创建新的积分等级'}
                   </p>
                 </div>
@@ -417,15 +417,15 @@ function RankRuleList() {
                   setShowModal(false);
                   setEditingRule(null);
                 }}
-                className='p-2.5 hover:bg-slate-700/50 rounded-xl transition-all'
+                className='p-2.5 hover:bg-gray-100/50 rounded-xl transition-all'
               >
-                <X className='w-5 h-5 text-slate-400' />
+                <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
             <form onSubmit={handleSubmit} className='px-6 py-6 space-y-5'>
               <div className='mb-5'>
-                <label className='block text-sm font-semibold text-slate-300 mb-2.5'>
-                  等级名称 <span className='text-red-400'>*</span>
+                <label className='block text-sm font-semibold text-gray-700 mb-2.5'>
+                  等级名称 <span className='text-red-500'>*</span>
                 </label>
                 <input
                   type='text'
@@ -436,11 +436,11 @@ function RankRuleList() {
                       setFormErrors((prev) => ({ ...prev, rank_name: null }));
                     }
                   }}
-                  className={`w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.rank_name ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                  className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.rank_name ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
                   placeholder='如：卓越、优秀、合格'
                 />
                 {formErrors.rank_name && (
-                  <p className='mt-2 text-sm text-red-400 flex items-center gap-1'>
+                  <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                     <AlertCircle className='w-4 h-4' />
                     {formErrors.rank_name}
                   </p>
@@ -449,7 +449,7 @@ function RankRuleList() {
 
               {formErrors.range && (
                 <div className='mb-5'>
-                  <p className='text-sm text-red-400 flex items-center gap-1'>
+                  <p className='text-sm text-red-500 flex items-center gap-1'>
                     <AlertCircle className='w-4 h-4' />
                     {formErrors.range}
                   </p>
@@ -458,8 +458,8 @@ function RankRuleList() {
 
               <div className='grid grid-cols-2 gap-4'>
                 <div className='mb-5'>
-                  <label className='block text-sm font-semibold text-slate-300 mb-2.5'>
-                    最低分 <span className='text-red-400'>*</span>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2.5'>
+                    最低分 <span className='text-red-500'>*</span>
                   </label>
                   <input
                     type='number'
@@ -471,19 +471,19 @@ function RankRuleList() {
                         setFormErrors((prev) => ({ ...prev, min_score: null, range: null }));
                       }
                     }}
-                    className={`w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.min_score ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                    className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.min_score ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
                     placeholder='0'
                   />
                   {formErrors.min_score && (
-                    <p className='mt-2 text-sm text-red-400 flex items-center gap-1'>
+                    <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                       <AlertCircle className='w-4 h-4' />
                       {formErrors.min_score}
                     </p>
                   )}
                 </div>
                 <div className='mb-5'>
-                  <label className='block text-sm font-semibold text-slate-300 mb-2.5'>
-                    最高分 <span className='text-red-400'>*</span>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2.5'>
+                    最高分 <span className='text-red-500'>*</span>
                   </label>
                   <input
                     type='number'
@@ -495,11 +495,11 @@ function RankRuleList() {
                         setFormErrors((prev) => ({ ...prev, max_score: null, range: null }));
                       }
                     }}
-                    className={`w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.max_score ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                    className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.max_score ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
                     placeholder='100'
                   />
                   {formErrors.max_score && (
-                    <p className='mt-2 text-sm text-red-400 flex items-center gap-1'>
+                    <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                       <AlertCircle className='w-4 h-4' />
                       {formErrors.max_score}
                     </p>
@@ -508,9 +508,7 @@ function RankRuleList() {
               </div>
 
               <div className='mb-5'>
-                <label className='block text-sm font-semibold text-slate-300 mb-2.5'>
-                  颜色标识
-                </label>
+                <label className='block text-sm font-semibold text-gray-700 mb-2.5'>颜色标识</label>
                 <div className='flex flex-wrap gap-2'>
                   {COLORS.map((color) => (
                     <button
@@ -519,7 +517,7 @@ function RankRuleList() {
                       onClick={() => setFormData({ ...formData, color })}
                       className={`w-8 h-8 rounded-full transition-all hover:scale-110 ${
                         formData.color === color
-                          ? 'ring-2 ring-offset-2 ring-primary-400 scale-110'
+                          ? 'ring-2 ring-offset-2 ring-primary-500 scale-110'
                           : ''
                       }`}
                       style={{ backgroundColor: color }}
@@ -529,9 +527,7 @@ function RankRuleList() {
               </div>
 
               <div className='mb-5'>
-                <label className='block text-sm font-semibold text-slate-300 mb-2.5'>
-                  图标选择
-                </label>
+                <label className='block text-sm font-semibold text-gray-700 mb-2.5'>图标选择</label>
                 <div className='flex flex-wrap gap-2'>
                   {ICONS.map((iconName) => {
                     const Icon = getIconComponent(iconName);
@@ -543,7 +539,7 @@ function RankRuleList() {
                         className={`w-10 h-10 rounded-xl transition-all hover:scale-110 flex items-center justify-center ${
                           formData.icon === iconName
                             ? 'bg-primary-500 text-white shadow-lg'
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         <Icon className='w-5 h-5' />
@@ -554,9 +550,7 @@ function RankRuleList() {
               </div>
 
               <div className='mb-5'>
-                <label className='block text-sm font-semibold text-slate-300 mb-2.5'>
-                  等级描述
-                </label>
+                <label className='block text-sm font-semibold text-gray-700 mb-2.5'>等级描述</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => {
@@ -565,12 +559,12 @@ function RankRuleList() {
                       setFormErrors((prev) => ({ ...prev, description: null }));
                     }
                   }}
-                  className={`w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 resize-none ${formErrors.description ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                  className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 resize-none ${formErrors.description ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
                   rows={3}
                   placeholder='请输入等级描述'
                 />
                 {formErrors.description && (
-                  <p className='mt-2 text-sm text-red-400 flex items-center gap-1'>
+                  <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                     <AlertCircle className='w-4 h-4' />
                     {formErrors.description}
                   </p>
@@ -583,20 +577,20 @@ function RankRuleList() {
                     type='checkbox'
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className='w-5 h-5 text-primary-500 rounded focus:ring-primary-500 bg-slate-700 border-slate-600'
+                    className='w-5 h-5 text-primary-500 rounded focus:ring-primary-500 bg-gray-100 border-gray-300'
                   />
-                  <span className='text-sm font-medium text-slate-300'>启用等级</span>
+                  <span className='text-sm font-medium text-gray-700'>启用等级</span>
                 </label>
               </div>
 
-              <div className='px-6 py-4 border-t border-slate-700/50 flex justify-end gap-3 bg-slate-700/10'>
+              <div className='px-6 py-4 border-t border-gray-200/50 flex justify-end gap-3 bg-gray-50/50'>
                 <button
                   type='button'
                   onClick={() => {
                     setShowModal(false);
                     setEditingRule(null);
                   }}
-                  className='px-4 py-2.5 rounded-xl font-medium border-2 border-slate-600 text-slate-300 hover:bg-slate-700/50 hover:border-slate-500 hover:text-white transition-all'
+                  className='px-4 py-2.5 rounded-xl font-medium border-2 border-gray-300 text-gray-600 hover:bg-gray-100/50 hover:border-gray-400 hover:text-gray-800 transition-all'
                 >
                   取消
                 </button>

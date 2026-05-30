@@ -23,9 +23,10 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 function Header() {
-  const [isDark, setIsDark] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -162,9 +163,7 @@ function Header() {
     navigate('/login');
   }, [navigate]);
 
-  const toggleDarkMode = useCallback(() => {
-    setIsDark((prev) => !prev);
-  }, []);
+  const isDark = theme === 'dark';
 
   const toggleNotifications = useCallback(() => {
     setShowNotifications((prev) => !prev);
@@ -276,14 +275,14 @@ function Header() {
   }, [admin]);
 
   return (
-    <header className='relative bg-gradient-to-r from-white/90 via-white/80 to-white/90 backdrop-blur-xl border-b border-gray-100/80 px-4 md:px-6 py-3 shadow-sm shadow-black/5 sticky top-0 z-40'>
-      <div className='absolute inset-0 bg-gradient-to-r from-primary-50/50 via-transparent to-accent-50/50 opacity-0 transition-opacity duration-300' />
+    <header className='relative bg-gradient-to-r from-white/90 via-white/80 to-white/90 dark:from-slate-800/90 dark:via-slate-800/80 dark:to-slate-800/90 backdrop-blur-xl border-b border-gray-100/80 dark:border-slate-700/60 px-4 md:px-6 py-3 shadow-sm shadow-black/5 dark:shadow-black/20 sticky top-0 z-40'>
+      <div className='absolute inset-0 bg-gradient-to-r from-primary-50/50 via-transparent to-accent-50/50 dark:from-primary-500/10 dark:to-accent-500/10 opacity-0 transition-opacity duration-300' />
 
       <div className='relative flex items-center justify-between'>
         <div className='flex items-center gap-3'>
-          <button className='md:hidden p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200 group'>
+          <button className='md:hidden p-2.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 group'>
             <svg
-              className='w-6 h-6 text-gray-600 group-hover:text-gray-800 transition-colors'
+              className='w-6 h-6 text-gray-600 dark:text-slate-300 group-hover:text-gray-800 dark:group-hover:text-slate-100 transition-colors'
               fill='none'
               stroke='currentColor'
               viewBox='0 0 24 24'
@@ -301,11 +300,11 @@ function Header() {
             className={`relative hidden md:block transition-all duration-500 ease-out ${searchFocused ? 'w-[450px]' : 'w-64'}`}
           >
             <div
-              className={`absolute inset-0 rounded-2xl transition-all duration-500 ${searchFocused ? 'bg-gradient-to-r from-primary-50 via-blue-50 to-cyan-50 shadow-xl shadow-primary-500/15 ring-2 ring-primary-200' : 'bg-gray-50'}`}
+              className={`absolute inset-0 rounded-2xl transition-all duration-500 ${searchFocused ? 'bg-gradient-to-r from-primary-50 via-blue-50 to-cyan-50 dark:from-primary-500/20 dark:via-blue-500/10 dark:to-cyan-500/10 shadow-xl shadow-primary-500/15 dark:shadow-primary-500/10 ring-2 ring-primary-200 dark:ring-primary-500/30' : 'bg-gray-50 dark:bg-slate-700/50'}`}
             />
 
             <div
-              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${searchFocused ? 'text-primary-500 scale-110' : 'text-gray-400'}`}
+              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${searchFocused ? 'text-primary-500 scale-110' : 'text-gray-400 dark:text-slate-500'}`}
             >
               <Search
                 className={`w-5 h-5 transition-all duration-300 ${searchFocused ? 'animate-bounce-once' : ''}`}
@@ -318,13 +317,13 @@ function Header() {
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder='搜索学生、规则、设备... (Ctrl+K)'
-              className='w-full pl-12 pr-10 py-3 bg-transparent border-2 border-transparent rounded-2xl text-sm focus:outline-none focus:border-primary-300 focus:ring-4 focus:ring-primary-500/20 transition-all duration-300'
+              className='w-full pl-12 pr-10 py-3 bg-transparent border-2 border-transparent rounded-2xl text-sm text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:border-primary-300 focus:ring-4 focus:ring-primary-500/20 dark:focus:ring-primary-500/30 transition-all duration-300'
               onFocus={handleSearchFocus}
               onBlur={handleSearchBlur}
             />
 
             {searchValue.length === 0 && (
-              <kbd className='absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-100 rounded-lg text-xs text-gray-500 font-mono hover:bg-gray-200 hover:text-gray-700 transition-all duration-200 flex items-center gap-1'>
+              <kbd className='absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-100 dark:bg-slate-600 rounded-lg text-xs text-gray-500 dark:text-slate-400 font-mono hover:bg-gray-200 dark:hover:bg-slate-500 hover:text-gray-700 dark:hover:text-slate-300 transition-all duration-200 flex items-center gap-1'>
                 <Command className='w-3 h-3' />
                 <span>K</span>
               </kbd>
@@ -333,22 +332,22 @@ function Header() {
             {searchValue.length > 0 && (
               <button
                 onClick={() => setSearchValue('')}
-                className='absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gray-200 hover:bg-danger-100 hover:text-danger-500 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95'
+                className='absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 hover:bg-danger-100 dark:hover:bg-danger-500/20 hover:text-danger-500 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95'
               >
-                <X className='w-4 h-4 text-gray-500' />
+                <X className='w-4 h-4 text-gray-500 dark:text-slate-400' />
               </button>
             )}
 
             {searchFocused && (
-              <div className='absolute top-full left-0 right-0 mt-2.5 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-slide-up shadow-primary-500/5'>
-                <div className='px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-primary-50 via-blue-50 to-cyan-50'>
+              <div className='absolute top-full left-0 right-0 mt-2.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden z-50 animate-slide-up shadow-primary-500/5'>
+                <div className='px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-primary-50 via-blue-50 to-cyan-50 dark:from-primary-500/10 dark:via-blue-500/5 dark:to-cyan-500/5'>
                   <div className='flex items-center justify-between'>
-                    <p className='text-xs font-semibold text-gray-500 flex items-center gap-2'>
+                    <p className='text-xs font-semibold text-gray-500 dark:text-slate-400 flex items-center gap-2'>
                       <Sparkles className='w-3.5 h-3.5 text-primary-500' />
                       快速搜索
                     </p>
-                    <div className='flex items-center gap-1 text-xs text-gray-400'>
-                      <kbd className='px-1.5 py-0.5 bg-gray-200/80 rounded text-gray-500'>Esc</kbd>
+                    <div className='flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500'>
+                      <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>Esc</kbd>
                       <span>关闭</span>
                     </div>
                   </div>
@@ -363,64 +362,64 @@ function Header() {
                         setSearchValue('');
                         setSearchFocused(false);
                       }}
-                      className='w-full px-4 py-3 flex items-center gap-3 hover:bg-gradient-to-r hover:from-primary-50/70 hover:to-blue-50/70 transition-all duration-200 text-left group animate-fade-in'
+                      className='w-full px-4 py-3 flex items-center gap-3 hover:bg-gradient-to-r hover:from-primary-50/70 hover:to-blue-50/70 dark:hover:from-primary-500/10 dark:hover:to-blue-500/10 transition-all duration-200 text-left group animate-fade-in'
                       style={{ animationDelay: `${index * 40}ms` }}
                     >
                       <div
                         className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
                           searchFocused
-                            ? 'bg-gradient-to-br from-primary-100 to-blue-100'
-                            : 'bg-gray-100'
+                            ? 'bg-gradient-to-br from-primary-100 to-blue-100 dark:from-primary-500/20 dark:to-blue-500/15'
+                            : 'bg-gray-100 dark:bg-slate-700'
                         } group-hover:scale-115 group-hover:shadow-lg group-hover:shadow-primary-500/20`}
                       >
                         <result.icon className='w-5 h-5 text-primary-600' />
                       </div>
                       <div className='flex-1 min-w-0'>
                         <div className='flex items-center gap-2'>
-                          <span className='text-sm font-medium text-gray-800 group-hover:text-primary-700 transition-colors truncate'>
+                          <span className='text-sm font-medium text-gray-800 dark:text-slate-200 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors truncate'>
                             {searchValue.length > 0 ? result.sublabel : result.label}
                           </span>
                           {searchValue.length > 0 && (
-                            <span className='text-xs text-primary-600 font-medium bg-primary-50 px-1.5 py-0.5 rounded-full flex-shrink-0'>
+                            <span className='text-xs text-primary-600 dark:text-primary-400 font-medium bg-primary-50 dark:bg-primary-500/20 px-1.5 py-0.5 rounded-full flex-shrink-0'>
                               {searchValue}
                             </span>
                           )}
                         </div>
-                        <p className='text-xs text-gray-400'>
+                        <p className='text-xs text-gray-400 dark:text-slate-500'>
                           {searchValue.length > 0 ? '点击跳转搜索结果' : result.sublabel}
                         </p>
                       </div>
                       <div className='flex items-center gap-2'>
-                        <kbd className='px-1.5 py-0.5 bg-gray-100 rounded text-xs text-gray-500 font-mono'>
+                        <kbd className='px-1.5 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs text-gray-500 dark:text-slate-400 font-mono'>
                           {result.hotkey}
                         </kbd>
-                        <ArrowRight className='w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-1.5 group-hover:-translate-y-0.5 transition-all duration-200' />
+                        <ArrowRight className='w-4 h-4 text-gray-300 dark:text-slate-600 group-hover:text-primary-500 group-hover:translate-x-1.5 group-hover:-translate-y-0.5 transition-all duration-200' />
                       </div>
                     </button>
                   ))}
                 </div>
 
-                <div className='px-4 py-3 border-t border-gray-100 bg-gray-50/50'>
-                  <div className='flex items-center justify-between text-xs text-gray-400'>
+                <div className='px-4 py-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-700/30'>
+                  <div className='flex items-center justify-between text-xs text-gray-400 dark:text-slate-500'>
                     <div className='flex items-center gap-3'>
-                      <span className='flex items-center gap-1 text-gray-500'>
-                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 rounded text-gray-500'>
+                      <span className='flex items-center gap-1 text-gray-500 dark:text-slate-400'>
+                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>
                           Enter
                         </kbd>
                         <span>跳转</span>
                       </span>
-                      <span className='flex items-center gap-1 text-gray-500'>
-                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 rounded text-gray-500'>
+                      <span className='flex items-center gap-1 text-gray-500 dark:text-slate-400'>
+                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>
                           Tab
                         </kbd>
                         <span>切换</span>
                       </span>
-                      <span className='flex items-center gap-1 text-gray-500'>
-                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 rounded text-gray-500'>↑↓</kbd>
+                      <span className='flex items-center gap-1 text-gray-500 dark:text-slate-400'>
+                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>↑↓</kbd>
                         <span>导航</span>
                       </span>
                     </div>
-                    <button className='flex items-center gap-1 text-primary-600 hover:text-primary-700 font-medium transition-colors'>
+                    <button className='flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors'>
                       <Filter className='w-3 h-3' />
                       高级搜索
                     </button>
@@ -433,8 +432,8 @@ function Header() {
 
         <div className='flex items-center gap-1.5'>
           <button
-            onClick={toggleDarkMode}
-            className='relative p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200 group'
+            onClick={toggleTheme}
+            className='relative p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200 group dark:hover:bg-slate-700'
             title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
           >
             {isDark ? (
@@ -455,8 +454,8 @@ function Header() {
               onClick={toggleNotifications}
               className={`relative p-2.5 rounded-xl transition-all duration-200 ${
                 showNotifications
-                  ? 'bg-gradient-to-r from-primary-50 to-blue-50 text-primary-600'
-                  : 'hover:bg-gray-100 text-gray-600'
+                  ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-500/15 dark:to-blue-500/10 text-primary-600 dark:text-primary-400'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300'
               }`}
             >
               <div
@@ -477,15 +476,15 @@ function Header() {
             </button>
 
             {showNotifications && (
-              <div className='absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-slide-up'>
-                <div className='px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50'>
+              <div className='absolute right-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden z-50 animate-slide-up'>
+                <div className='px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 dark:from-blue-500/10 dark:via-purple-500/5 dark:to-pink-500/5'>
                   <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-2'>
                       <div className='relative w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-pink-600 flex items-center justify-center shadow-lg shadow-blue-500/30'>
                         <BellRing className='w-4 h-4 text-white' />
                         <div className='absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-600 rounded-lg opacity-50 blur-xl' />
                       </div>
-                      <h3 className='font-semibold text-gray-800'>通知中心</h3>
+                      <h3 className='font-semibold text-gray-800 dark:text-slate-200'>通知中心</h3>
                       {unreadCount > 0 && (
                         <span className='px-2 py-0.5 bg-gradient-to-r from-danger-500 to-rose-500 text-white rounded-full text-xs font-medium shadow-md'>
                           {unreadCount} 未读
@@ -494,13 +493,13 @@ function Header() {
                     </div>
                     <button
                       onClick={toggleNotifications}
-                      className='p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95'
+                      className='p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95'
                     >
-                      <X className='w-4 h-4 text-gray-500' />
+                      <X className='w-4 h-4 text-gray-500 dark:text-slate-400' />
                     </button>
                   </div>
                   {unreadCount > 0 && (
-                    <button className='mt-2.5 text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1.5 hover:gap-2 transition-all duration-200 group'>
+                    <button className='mt-2.5 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium flex items-center gap-1.5 hover:gap-2 transition-all duration-200 group'>
                       <Check className='w-3 h-3 group-hover:scale-110 transition-transform' />
                       全部标为已读
                     </button>
@@ -511,10 +510,10 @@ function Header() {
                   {notifications.map((notification, index) => (
                     <div
                       key={notification.id}
-                      className={`px-5 py-4 border-b border-gray-50 transition-all duration-200 cursor-pointer group ${
+                      className={`px-5 py-4 border-b border-gray-50 dark:border-slate-700/50 transition-all duration-200 cursor-pointer group ${
                         notification.read
-                          ? 'hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/50'
-                          : 'bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5'
+                          ? 'hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/50 dark:hover:from-slate-700/50 dark:hover:to-slate-600/30'
+                          : 'bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 dark:from-blue-500/8 dark:via-purple-500/5 dark:to-pink-500/5'
                       }`}
                       style={{ animationDelay: `${index * 40}ms` }}
                       onMouseEnter={() => {
@@ -557,7 +556,7 @@ function Header() {
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-center justify-between'>
                             <p
-                              className={`font-semibold transition-colors duration-200 ${notification.read ? 'text-gray-600' : 'text-gray-800'}`}
+                              className={`font-semibold transition-colors duration-200 ${notification.read ? 'text-gray-600 dark:text-slate-400' : 'text-gray-800 dark:text-slate-200'}`}
                             >
                               {notification.title}
                             </p>
@@ -565,11 +564,11 @@ function Header() {
                               <span className='w-2 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full animate-pulse' />
                             )}
                           </div>
-                          <p className='text-sm text-gray-500 mt-0.5 line-clamp-2'>
+                          <p className='text-sm text-gray-500 dark:text-slate-400 mt-0.5 line-clamp-2'>
                             {notification.message}
                           </p>
                           <div className='flex items-center justify-between mt-2'>
-                            <p className='text-xs text-gray-400 flex items-center gap-1'>
+                            <p className='text-xs text-gray-400 dark:text-slate-500 flex items-center gap-1'>
                               {notification.time.includes('分钟') ? (
                                 <Zap className='w-3 h-3 text-primary-400' />
                               ) : (
@@ -578,7 +577,7 @@ function Header() {
                               {notification.time}
                             </p>
                             {notification.priority === 'high' && (
-                              <span className='text-xs px-1.5 py-0.5 bg-danger-100 text-danger-600 rounded-full font-medium'>
+                              <span className='text-xs px-1.5 py-0.5 bg-danger-100 dark:bg-danger-500/20 text-danger-600 dark:text-danger-400 rounded-full font-medium'>
                                 紧急
                               </span>
                             )}
@@ -589,8 +588,8 @@ function Header() {
                   ))}
                 </div>
 
-                <div className='px-5 py-4 bg-gradient-to-r from-gray-50 to-gray-100/50'>
-                  <button className='w-full text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors flex items-center justify-center gap-2 hover:gap-3 transition-all duration-200 group'>
+                <div className='px-5 py-4 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-slate-700/30 dark:to-slate-600/20'>
+                  <button className='w-full text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors flex items-center justify-center gap-2 hover:gap-3 transition-all duration-200 group'>
                     查看全部通知
                     <ChevronRight className='w-4 h-4 group-hover:translate-x-1 transition-transform' />
                   </button>
@@ -603,7 +602,7 @@ function Header() {
             <button
               onClick={toggleUserMenu}
               className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-200 ${
-                showUserMenu ? 'bg-gradient-to-r from-primary-50 to-blue-50' : 'hover:bg-gray-100'
+                showUserMenu ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-500/15 dark:to-blue-500/10' : 'hover:bg-gray-100 dark:hover:bg-slate-700'
               }`}
             >
               <div className='relative w-10 h-10 rounded-xl overflow-hidden group'>
@@ -615,8 +614,8 @@ function Header() {
               </div>
 
               <div className='hidden md:block text-left'>
-                <p className='text-sm font-semibold text-gray-800'>{displayName}</p>
-                <p className='text-xs text-gray-500 flex items-center gap-1'>
+                <p className='text-sm font-semibold text-gray-800 dark:text-slate-200'>{displayName}</p>
+                <p className='text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1'>
                   <span className='relative'>
                     <span className='w-1.5 h-1.5 bg-green-500 rounded-full' />
                     <span className='absolute inset-0 w-1.5 h-1.5 bg-green-500 rounded-full animate-ping opacity-75' />
@@ -626,21 +625,21 @@ function Header() {
               </div>
 
               <ChevronDown
-                className={`w-4 h-4 transition-transform duration-300 ${showUserMenu ? 'rotate-180 text-primary-500' : 'text-gray-400'}`}
+                className={`w-4 h-4 transition-transform duration-300 ${showUserMenu ? 'rotate-180 text-primary-500' : 'text-gray-400 dark:text-slate-500'}`}
               />
             </button>
 
             {showUserMenu && (
-              <div className='absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-elevated border border-gray-100 overflow-hidden z-50 animate-bounce-in-down'>
-                <div className='px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 via-white to-gray-50'>
+              <div className='absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-elevated border border-gray-100 dark:border-slate-700 overflow-hidden z-50 animate-bounce-in-down'>
+                <div className='px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-slate-700/50 dark:via-slate-800 dark:to-slate-700/50'>
                   <div className='flex items-center gap-3'>
                     <div className='relative w-10 h-10 rounded-xl overflow-hidden'>
                       <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-600' />
                       <User className='relative w-5 h-5 text-white' />
                     </div>
                     <div>
-                      <p className='font-semibold text-gray-800'>{displayName}</p>
-                      <p className='text-xs text-gray-500'>{roleLabel}</p>
+                      <p className='font-semibold text-gray-800 dark:text-slate-200'>{displayName}</p>
+                      <p className='text-xs text-gray-500 dark:text-slate-400'>{roleLabel}</p>
                     </div>
                   </div>
                 </div>
@@ -649,49 +648,49 @@ function Header() {
                   <Link
                     to='/profile'
                     onClick={toggleUserMenu}
-                    className='w-full px-5 py-3 text-left hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-blue-50/50 transition-all duration-200 flex items-center gap-3 group'
+                    className='w-full px-5 py-3 text-left hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-blue-50/50 dark:hover:from-primary-500/10 dark:hover:to-blue-500/5 transition-all duration-200 flex items-center gap-3 group'
                   >
-                    <div className='w-9 h-9 rounded-xl bg-gradient-to-br from-primary-100 to-blue-100 flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform'>
+                    <div className='w-9 h-9 rounded-xl bg-gradient-to-br from-primary-100 to-blue-100 dark:from-primary-500/20 dark:to-blue-500/15 flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform'>
                       <User className='w-4.5 h-4.5 text-primary-600' />
                     </div>
                     <div className='flex-1'>
-                      <span className='text-sm font-medium text-gray-800 group-hover:text-primary-700 transition-colors'>
+                      <span className='text-sm font-medium text-gray-800 dark:text-slate-200 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors'>
                         个人资料
                       </span>
-                      <p className='text-xs text-gray-400'>查看和编辑个人信息</p>
+                      <p className='text-xs text-gray-400 dark:text-slate-500'>查看和编辑个人信息</p>
                     </div>
-                    <ChevronRight className='w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all duration-200' />
+                    <ChevronRight className='w-4 h-4 text-gray-300 dark:text-slate-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all duration-200' />
                   </Link>
 
                   <Link
                     to='/settings'
                     onClick={toggleUserMenu}
-                    className='w-full px-5 py-3 text-left hover:bg-gradient-to-r hover:from-accent-50/50 hover:to-purple-50/50 transition-all duration-200 flex items-center gap-3 group'
+                    className='w-full px-5 py-3 text-left hover:bg-gradient-to-r hover:from-accent-50/50 hover:to-purple-50/50 dark:hover:from-accent-500/10 dark:hover:to-purple-500/5 transition-all duration-200 flex items-center gap-3 group'
                   >
-                    <div className='w-9 h-9 rounded-xl bg-gradient-to-br from-accent-100 to-purple-100 flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform'>
+                    <div className='w-9 h-9 rounded-xl bg-gradient-to-br from-accent-100 to-purple-100 dark:from-accent-500/20 dark:to-purple-500/15 flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform'>
                       <Settings className='w-4.5 h-4.5 text-accent-600' />
                     </div>
                     <div className='flex-1'>
-                      <span className='text-sm font-medium text-gray-800 group-hover:text-accent-700 transition-colors'>
+                      <span className='text-sm font-medium text-gray-800 dark:text-slate-200 group-hover:text-accent-700 dark:group-hover:text-accent-400 transition-colors'>
                         账户设置
                       </span>
-                      <p className='text-xs text-gray-400'>管理账户安全和偏好</p>
+                      <p className='text-xs text-gray-400 dark:text-slate-500'>管理账户安全和偏好</p>
                     </div>
-                    <ChevronRight className='w-4 h-4 text-gray-300 group-hover:text-accent-500 group-hover:translate-x-1 transition-all duration-200' />
+                    <ChevronRight className='w-4 h-4 text-gray-300 dark:text-slate-600 group-hover:text-accent-500 group-hover:translate-x-1 transition-all duration-200' />
                   </Link>
                 </div>
 
-                <div className='border-t border-gray-100'>
+                <div className='border-t border-gray-100 dark:border-slate-700'>
                   <button
                     onClick={handleLogout}
-                    className='w-full px-5 py-3 text-left hover:bg-gradient-to-r hover:from-danger-50/50 hover:to-red-50/50 transition-all duration-200 flex items-center gap-3 group'
+                    className='w-full px-5 py-3 text-left hover:bg-gradient-to-r hover:from-danger-50/50 hover:to-red-50/50 dark:hover:from-danger-500/10 dark:hover:to-red-500/5 transition-all duration-200 flex items-center gap-3 group'
                   >
-                    <div className='w-9 h-9 rounded-xl bg-gradient-to-br from-danger-100 to-red-100 flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform'>
+                    <div className='w-9 h-9 rounded-xl bg-gradient-to-br from-danger-100 to-red-100 dark:from-danger-500/20 dark:to-red-500/15 flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-transform'>
                       <LogOut className='w-4.5 h-4.5 text-danger-600' />
                     </div>
                     <div className='flex-1'>
                       <span className='text-sm font-medium text-danger-600'>退出登录</span>
-                      <p className='text-xs text-gray-400'>安全退出当前账户</p>
+                      <p className='text-xs text-gray-400 dark:text-slate-500'>安全退出当前账户</p>
                     </div>
                   </button>
                 </div>

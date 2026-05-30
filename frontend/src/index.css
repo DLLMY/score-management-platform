@@ -695,6 +695,120 @@ body {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     animation: shine 3s infinite;
   }
+
+  /* 暗色模式组件样式 */
+  .dark .btn-ghost {
+    @apply text-slate-400 hover:text-slate-200 hover:bg-slate-700;
+  }
+
+  .dark .btn-icon {
+    @apply hover:bg-slate-700;
+  }
+
+  .dark .card {
+    @apply bg-slate-800/80 border-slate-700/60;
+  }
+
+  .dark .card-header {
+    @apply border-slate-700/60 bg-gradient-to-r from-slate-700/30 to-slate-800/50;
+  }
+
+  .dark .card-footer {
+    @apply border-slate-700/60 bg-slate-700/30;
+  }
+
+  .dark .card-glass {
+    @apply bg-slate-800/80 backdrop-blur-xl border-slate-700/50;
+  }
+
+  .dark .form-label {
+    @apply text-slate-300;
+  }
+
+  .dark .form-input,
+  .dark .form-select,
+  .dark .form-textarea {
+    @apply bg-slate-700/50 border-slate-600/50 text-slate-200 placeholder-slate-500 focus:ring-primary-500/50 focus:border-primary-500/50;
+  }
+
+  .dark .form-select-sm {
+    @apply bg-slate-700/50 border-slate-600/50 text-slate-200;
+  }
+
+  .dark .table th {
+    @apply text-slate-400 bg-slate-800/80;
+  }
+
+  .dark .table tbody tr {
+    @apply border-slate-700/30 hover:bg-slate-700/30;
+  }
+
+  .dark .modal-content {
+    @apply bg-slate-800 border-slate-700/50;
+  }
+
+  .dark .modal-header {
+    @apply border-slate-700/50 bg-slate-700/30;
+  }
+
+  .dark .modal-footer {
+    @apply border-slate-700/50 bg-slate-700/30;
+  }
+
+  .dark .stats-card {
+    @apply bg-slate-800/80 border-slate-700/50;
+  }
+
+  .dark .stats-card:hover {
+    @apply border-slate-600/70;
+  }
+
+  .dark .progress-bar {
+    @apply bg-slate-700/50;
+  }
+
+  .dark .page-title {
+    @apply text-slate-100;
+  }
+
+  .dark .page-subtitle {
+    @apply text-slate-400;
+  }
+
+  .dark .glass-card {
+    @apply bg-slate-800/70 border-slate-700/50;
+  }
+
+  .dark .glass-dark {
+    @apply bg-slate-800/90 border-slate-700/50;
+  }
+}
+
+/* ========== 暗色模式全局样式 ========== */
+.dark body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+.dark #root {
+  background-color: #0f172a;
+}
+
+/* 暗色模式滚动条 */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark ::-webkit-scrollbar-thumb:active {
+  background: #94a3b8;
 }
 
 /* ========== 自定义动画关键帧 ========== */
@@ -1170,7 +1284,198 @@ body {
   }
 }
 
-/* 暗色模式 */
+/* ========== 暗色模式全局样式 ========== */
+.dark body {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.dark #root {
+  min-height: 100vh;
+}
+
+/* 暗色模式滚动条 */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* 暗色模式组件样式 */
+@layer components {
+  /* 暗色模式按钮 */
+  .dark .btn-outline {
+    @apply border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500;
+  }
+
+  .dark .btn-ghost {
+    @apply text-slate-400 hover:text-slate-200 hover:bg-slate-700;
+  }
+
+  .dark .btn-icon {
+    @apply hover:bg-slate-700;
+  }
+
+  /* 暗色模式卡片 */
+  .dark .card {
+    @apply bg-slate-800/80 border-slate-700/60 shadow-dark-card;
+  }
+
+  .dark .card-header {
+    @apply border-slate-700/60 bg-gradient-to-r from-slate-800/50 to-slate-700/30;
+  }
+
+  .dark .card-footer {
+    @apply border-slate-700/60 bg-slate-800/30;
+  }
+
+  .dark .card-glass {
+    @apply bg-slate-800/60 backdrop-blur-xl border-slate-700/50;
+  }
+
+  /* 暗色模式表单 */
+  .dark .form-label {
+    @apply text-slate-300;
+  }
+
+  .dark .form-input,
+  .dark .form-select,
+  .dark .form-textarea {
+    @apply bg-slate-700/50 border-slate-600/50 text-slate-200 placeholder-slate-500 focus:ring-primary-500/50 focus:border-primary-500/50 hover:border-slate-500/50;
+  }
+
+  /* 暗色模式Badge */
+  .dark .badge {
+    @apply border-slate-600/50;
+  }
+
+  /* 暗色模式表格 */
+  .dark .table {
+    @apply text-slate-300;
+  }
+
+  .dark .table-header {
+    @apply bg-slate-800/80 text-slate-300 border-b border-slate-700/60;
+  }
+
+  .dark .table-row {
+    @apply border-b border-slate-700/30 hover:bg-slate-700/30;
+  }
+
+  .dark .table-row-alternate {
+    @apply bg-slate-800/30;
+  }
+
+  /* 暗色模式模态框 */
+  .dark .modal-overlay {
+    @apply bg-black/70 backdrop-blur-sm;
+  }
+
+  .dark .modal-content {
+    @apply bg-slate-800/95 border-slate-700/60 shadow-dark-elevated;
+  }
+
+  .dark .modal-header {
+    @apply border-b border-slate-700/60 bg-slate-700/30;
+  }
+
+  .dark .modal-footer {
+    @apply border-t border-slate-700/60 bg-slate-700/30;
+  }
+
+  /* 暗色模式Tabs */
+  .dark .tabs {
+    @apply bg-slate-800/50 border-slate-700/50;
+  }
+
+  .dark .tab-item {
+    @apply text-slate-400 hover:text-slate-200 hover:bg-slate-700/50;
+  }
+
+  .dark .tab-item-active {
+    @apply text-primary-400 bg-primary-500/10 border-primary-500/50;
+  }
+
+  /* 暗色模式开关 */
+  .dark .toggle-switch {
+    @apply bg-slate-600;
+  }
+
+  .dark .toggle-thumb {
+    @apply bg-slate-400;
+  }
+
+  /* 暗色模式进度条 */
+  .dark .progress-bar {
+    @apply bg-slate-700;
+  }
+
+  /* 暗色模式Alert */
+  .dark .alert {
+    @apply border-slate-700/60;
+  }
+
+  .dark .alert-success {
+    @apply bg-green-500/10 border-green-500/30 text-green-400;
+  }
+
+  .dark .alert-danger {
+    @apply bg-danger-500/10 border-danger-500/30 text-danger-400;
+  }
+
+  .dark .alert-warning {
+    @apply bg-warning-500/10 border-warning-500/30 text-warning-400;
+  }
+
+  .dark .alert-info {
+    @apply bg-primary-500/10 border-primary-500/30 text-primary-400;
+  }
+
+  /* 暗色模式工具提示 */
+  .dark .tooltip {
+    @apply bg-slate-800 border-slate-600 text-slate-200;
+  }
+
+  /* 暗色模式头像 */
+  .dark .avatar {
+    @apply bg-slate-700;
+  }
+
+  /* 暗色模式下拉菜单 */
+  .dark .dropdown-menu {
+    @apply bg-slate-800 border-slate-700/60 shadow-dark-elevated;
+  }
+
+  .dark .dropdown-item {
+    @apply text-slate-300 hover:bg-slate-700/50 hover:text-slate-100;
+  }
+
+  /* 暗色模式分页 */
+  .dark .pagination-item {
+    @apply text-slate-400 bg-slate-700/50 hover:bg-slate-600/50 hover:text-slate-200;
+  }
+
+  .dark .pagination-item-active {
+    @apply bg-primary-500 text-white;
+  }
+
+  /* 暗色模式滑块 */
+  .dark .slider-track {
+    @apply bg-slate-700;
+  }
+
+  .dark .slider-thumb {
+    @apply bg-primary-500;
+  }
+}
+
+/* 暗色模式媒体查询 */
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

@@ -1043,7 +1043,7 @@ function Dashboard() {
                 }}
               >
                 {hoveredIndex === index && (
-                  <div className='absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 rounded-lg text-xs text-white whitespace-nowrap shadow-lg animate-fade-in'>
+                  <div className='absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 rounded-lg text-xs text-white whitespace-nowrap shadow-lg animate-fade-in'>
                     {value}分
                   </div>
                 )}
@@ -1220,16 +1220,15 @@ function Dashboard() {
   }, [classGroups]);
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-3 md:p-4'>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100/50 to-blue-50/30 p-3 md:p-4'>
       {/* 背景装饰 */}
       <div className='fixed inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-500/6 rounded-full blur-3xl animate-pulse-slow' />
+        <div className='absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow' />
         <div
-          className='absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/6 rounded-full blur-3xl animate-pulse-slow'
+          className='absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-3xl animate-pulse-slow'
           style={{ animationDelay: '1s' }}
         />
-        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-pink-500/4 rounded-full blur-3xl' />
-        <div className='absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0f172a_80%)]' />
+        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-pink-500/6 rounded-full blur-3xl' />
       </div>
 
       {/* 头部 */}
@@ -1247,8 +1246,8 @@ function Dashboard() {
             <h1 className='text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent'>
               积分管理平台
             </h1>
-            <p className='text-slate-400 text-sm flex items-center gap-1.5'>
-              <Zap className='w-3.5 h-3.5 text-yellow-400' />
+            <p className='text-gray-500 text-sm flex items-center gap-1.5'>
+              <Zap className='w-3.5 h-3.5 text-yellow-500' />
               实时数据监控中心
             </p>
           </div>
@@ -1257,15 +1256,15 @@ function Dashboard() {
         <div className='flex flex-col sm:flex-row items-end sm:items-center gap-3'>
           <div className='text-right'>
             <div className='flex items-center justify-end gap-2'>
-              <Flame className='w-4 h-4 text-orange-400' />
-              <p className='text-lg md:text-xl font-bold text-white font-mono'>
+              <Flame className='w-4 h-4 text-orange-500' />
+              <p className='text-lg md:text-xl font-bold text-gray-800 font-mono'>
                 {formatTime(currentTimeRef.current)}
               </p>
             </div>
-            <p className='text-slate-400 text-xs flex items-center justify-end gap-2'>
+            <p className='text-gray-500 text-xs flex items-center justify-end gap-2'>
               <span>{formatDateFull(currentTimeRef.current)}</span>
               {state.lastUpdateTime && (
-                <span className='text-slate-400 flex items-center gap-1'>
+                <span className='text-gray-500 flex items-center gap-1'>
                   <RefreshCw className='w-3 h-3' />
                   更新于 {formatTime(state.lastUpdateTime)}
                 </span>
@@ -1526,8 +1525,8 @@ function Dashboard() {
                       .map((device) => <DeviceCard key={device.id} device={device} />)
                   ) : (
                     <div className='text-center py-4'>
-                      <Smartphone className='w-8 h-8 text-slate-600 mx-auto mb-2' />
-                      <p className='text-slate-400 text-sm'>暂无设备</p>
+                      <Smartphone className='w-8 h-8 text-gray-400 mx-auto mb-2' />
+                      <p className='text-gray-500 text-sm'>暂无设备</p>
                     </div>
                   )}
                 </div>
@@ -1608,8 +1607,8 @@ function Dashboard() {
                       ))
                   ) : (
                     <div className='col-span-full text-center py-4'>
-                      <Bell className='w-10 h-10 text-slate-600 mx-auto mb-2' />
-                      <p className='text-slate-400 text-sm'>暂无通知</p>
+                      <Bell className='w-10 h-10 text-gray-400 mx-auto mb-2' />
+                      <p className='text-gray-500 text-sm'>暂无通知</p>
                     </div>
                   )}
                 </div>
@@ -1618,7 +1617,7 @@ function Dashboard() {
           </div>
 
           {/* 底部信息 */}
-          <div className='relative z-10 mt-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-slate-400'>
+          <div className='relative z-10 mt-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-gray-500'>
             <div className='flex items-center gap-3'>
               <div className='flex items-center gap-1.5'>
                 <Globe className='w-3 h-3' />
