@@ -39,18 +39,18 @@ function getCurrentRole() {
   }
 }
 
-const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
+const MenuItem = memo(({ item, isActive, depth = 0, index = 0, isCollapsed = false }) => {
   const Icon = item.icon;
 
   return (
     <li
       key={item.path}
-      className={`ml-${depth * 2} animate-slide-right`}
+      className={`${isCollapsed ? 'ml-0' : `ml-${depth * 2}`} animate-slide-right`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <Link
         to={item.path}
-        className={`relative w-full flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg transition-all duration-250 group ${
+        className={`relative w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2' : 'gap-2.5 pl-6 pr-3 py-2'} rounded-lg transition-all duration-250 group ${
           isActive
             ? 'bg-primary-50/80 dark:bg-primary-500/15 text-gray-800 dark:text-slate-200'
             : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100/60 dark:hover:bg-slate-700/60 hover:text-gray-700 dark:hover:text-slate-300'
@@ -58,9 +58,7 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
       >
         <div
           className={`absolute left-3 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full transition-all duration-250 ${
-            isActive
-              ? 'bg-primary-500 opacity-100'
-              : 'bg-gray-400 dark:bg-slate-500 opacity-0 group-hover:opacity-60'
+            isActive && !isCollapsed ? 'bg-primary-500 opacity-100' : 'opacity-0'
           }`}
         />
 
@@ -80,11 +78,13 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
           />
         </div>
 
-        <span className='relative font-medium flex-1 text-left text-sm transition-all duration-250'>
+        <span
+          className={`relative font-medium flex-1 text-left text-sm transition-all duration-250 ${isCollapsed ? 'hidden' : ''}`}
+        >
           {item.label}
         </span>
 
-        {isActive && (
+        {isActive && !isCollapsed && (
           <div className='relative w-5 h-5 flex items-center justify-center rounded-md bg-primary-100/80 dark:bg-primary-500/20'>
             <ChevronRightIcon className='w-3.5 h-3.5 text-primary-600' />
           </div>
@@ -350,7 +350,9 @@ function Sidebar() {
 
                 <ul
                   className={`overflow-hidden transition-all duration-350 ease-in-out ${
-                    isExpanded ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'
+                    isExpanded && !isCollapsed
+                      ? 'max-h-[500px] opacity-100 mt-1'
+                      : 'max-h-0 opacity-0 mt-0'
                   }`}
                 >
                   {group.items.map((item, index) => (
@@ -359,7 +361,12 @@ function Sidebar() {
                       onMouseEnter={() => setHoveredItem(item.path)}
                       onMouseLeave={() => setHoveredItem(null)}
                     >
-                      <MenuItem item={item} isActive={isItemActive(item.path)} index={index} />
+                      <MenuItem
+                        item={item}
+                        isActive={isItemActive(item.path)}
+                        index={index}
+                        isCollapsed={isCollapsed}
+                      />
                     </div>
                   ))}
                 </ul>
