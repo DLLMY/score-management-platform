@@ -347,7 +347,9 @@ function Header() {
                       快速搜索
                     </p>
                     <div className='flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500'>
-                      <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>Esc</kbd>
+                      <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>
+                        Esc
+                      </kbd>
                       <span>关闭</span>
                     </div>
                   </div>
@@ -415,7 +417,9 @@ function Header() {
                         <span>切换</span>
                       </span>
                       <span className='flex items-center gap-1 text-gray-500 dark:text-slate-400'>
-                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>↑↓</kbd>
+                        <kbd className='px-1.5 py-0.5 bg-gray-200/80 dark:bg-slate-600 rounded text-gray-500 dark:text-slate-400'>
+                          ↑↓
+                        </kbd>
                         <span>导航</span>
                       </span>
                     </div>
@@ -602,7 +606,9 @@ function Header() {
             <button
               onClick={toggleUserMenu}
               className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-200 ${
-                showUserMenu ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-500/15 dark:to-blue-500/10' : 'hover:bg-gray-100 dark:hover:bg-slate-700'
+                showUserMenu
+                  ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-500/15 dark:to-blue-500/10'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-700'
               }`}
             >
               <div className='relative w-10 h-10 rounded-xl overflow-hidden group'>
@@ -614,7 +620,9 @@ function Header() {
               </div>
 
               <div className='hidden md:block text-left'>
-                <p className='text-sm font-semibold text-gray-800 dark:text-slate-200'>{displayName}</p>
+                <p className='text-sm font-semibold text-gray-800 dark:text-slate-200'>
+                  {displayName}
+                </p>
                 <p className='text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1'>
                   <span className='relative'>
                     <span className='w-1.5 h-1.5 bg-green-500 rounded-full' />
@@ -638,7 +646,9 @@ function Header() {
                       <User className='relative w-5 h-5 text-white' />
                     </div>
                     <div>
-                      <p className='font-semibold text-gray-800 dark:text-slate-200'>{displayName}</p>
+                      <p className='font-semibold text-gray-800 dark:text-slate-200'>
+                        {displayName}
+                      </p>
                       <p className='text-xs text-gray-500 dark:text-slate-400'>{roleLabel}</p>
                     </div>
                   </div>
@@ -657,7 +667,9 @@ function Header() {
                       <span className='text-sm font-medium text-gray-800 dark:text-slate-200 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors'>
                         个人资料
                       </span>
-                      <p className='text-xs text-gray-400 dark:text-slate-500'>查看和编辑个人信息</p>
+                      <p className='text-xs text-gray-400 dark:text-slate-500'>
+                        查看和编辑个人信息
+                      </p>
                     </div>
                     <ChevronRight className='w-4 h-4 text-gray-300 dark:text-slate-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all duration-200' />
                   </Link>
@@ -674,7 +686,9 @@ function Header() {
                       <span className='text-sm font-medium text-gray-800 dark:text-slate-200 group-hover:text-accent-700 dark:group-hover:text-accent-400 transition-colors'>
                         账户设置
                       </span>
-                      <p className='text-xs text-gray-400 dark:text-slate-500'>管理账户安全和偏好</p>
+                      <p className='text-xs text-gray-400 dark:text-slate-500'>
+                        管理账户安全和偏好
+                      </p>
                     </div>
                     <ChevronRight className='w-4 h-4 text-gray-300 dark:text-slate-600 group-hover:text-accent-500 group-hover:translate-x-1 transition-all duration-200' />
                   </Link>

@@ -58,18 +58,24 @@ const MenuItem = memo(({ item, isActive, depth = 0, index = 0 }) => {
       >
         <div
           className={`absolute left-3 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full transition-all duration-250 ${
-            isActive ? 'bg-primary-500 opacity-100' : 'bg-gray-400 dark:bg-slate-500 opacity-0 group-hover:opacity-60'
+            isActive
+              ? 'bg-primary-500 opacity-100'
+              : 'bg-gray-400 dark:bg-slate-500 opacity-0 group-hover:opacity-60'
           }`}
         />
 
         <div
           className={`relative w-7 h-7 rounded-md flex items-center justify-center transition-all duration-250 ${
-            isActive ? 'bg-primary-100/80 dark:bg-primary-500/20' : 'bg-gray-100/40 dark:bg-slate-700/40 group-hover:bg-gray-200/40 dark:group-hover:bg-slate-600/40'
+            isActive
+              ? 'bg-primary-100/80 dark:bg-primary-500/20'
+              : 'bg-gray-100/40 dark:bg-slate-700/40 group-hover:bg-gray-200/40 dark:group-hover:bg-slate-600/40'
           }`}
         >
           <Icon
             className={`w-4 h-4 transition-all duration-250 ${
-              isActive ? 'text-primary-600' : 'text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-slate-300'
+              isActive
+                ? 'text-primary-600'
+                : 'text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-slate-300'
             }`}
           />
         </div>
@@ -95,7 +101,9 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
     <button
       onClick={onToggle}
       className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-300 group overflow-hidden ${
-        hasActive || isExpanded ? 'text-gray-800 dark:text-slate-200' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+        hasActive || isExpanded
+          ? 'text-gray-800 dark:text-slate-200'
+          : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
       }`}
     >
       <div
@@ -123,7 +131,9 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
             : 'bg-gray-100/70 dark:bg-slate-700/50 group-hover:bg-gray-200/70 dark:group-hover:bg-slate-600/50 group-hover:scale-110'
         }`}
       >
-        <GroupIcon className={`w-5 h-5 ${hasActive ? 'text-white' : 'text-gray-600 dark:text-slate-300'}`} />
+        <GroupIcon
+          className={`w-5 h-5 ${hasActive ? 'text-white' : 'text-gray-600 dark:text-slate-300'}`}
+        />
         {hasActive && <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />}
       </div>
 
