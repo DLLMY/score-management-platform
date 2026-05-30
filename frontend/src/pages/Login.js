@@ -23,36 +23,32 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     const { isValid, errors } = validateForm({ username, password }, validationRules);
-    
+
     if (!isValid) {
       setFormErrors(errors);
       return;
     }
-    
+
     setFormErrors({});
     setLoading(true);
 
     try {
       const result = await api.admins.login({ username, password });
-      
-      // 保存登录信息到 localStorage
+
       const adminData = result.admin || result;
       localStorage.setItem('admin', JSON.stringify(adminData));
-      
-      // 保存JWT令牌
+
       if (result.access_token) {
         localStorage.setItem('access_token', result.access_token);
       }
       if (result.refresh_token) {
         localStorage.setItem('refresh_token', result.refresh_token);
       }
-      
-      // 获取CSRF token
+
       await fetchCsrfToken();
-      
-      // 根据角色跳转到不同页面
+
       const role = adminData.role;
       if (role === 'dashboard') {
         navigate('/dashboard');
@@ -68,7 +64,6 @@ function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/50 to-purple-900/50 flex items-center justify-center p-4">
-      {/* 背景装饰 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl animate-pulse-slow" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
@@ -92,7 +87,6 @@ function Login() {
         </div>
 
         <div className="bg-slate-800/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 p-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          {/* 安全标识 */}
           <div className="flex items-center justify-center gap-2 mb-6 text-xs text-slate-400">
             <Fingerprint className="w-4 h-4 text-green-400" />
             <span>安全登录 - 数据已加密</span>
@@ -129,6 +123,7 @@ function Login() {
                   placeholder="请输入用户名"
                   onFocus={() => setUsernameFocused(true)}
                   onBlur={() => setUsernameFocused(false)}
+                  autoComplete="username"
                   className={`w-full pl-12 pr-4 py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none transition-all ${
                     formErrors.username ? 'ring-2 ring-red-500/50' : ''
                   }`}
@@ -165,6 +160,7 @@ function Login() {
                   placeholder="请输入密码"
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
+                  autoComplete="current-password"
                   className={`w-full pl-12 pr-4 py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none transition-all ${
                     formErrors.password ? 'ring-2 ring-red-500/50' : ''
                   }`}

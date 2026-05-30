@@ -30,6 +30,7 @@ def register_routes(app):
     from routes.admin_classes_routes import ns_admin_classes
     from routes.analysis_routes import ns_analysis
     from routes.box_routes import ns_box
+    from routes.alerts_routes import ns_alerts
     
     api.add_namespace(ns_users)
     api.add_namespace(ns_rules)
@@ -55,5 +56,6 @@ def register_routes(app):
     api.add_namespace(ns_admin_classes)
     api.add_namespace(ns_analysis)
     api.add_namespace(ns_box)
+    api.add_namespace(ns_alerts)
     
     return api

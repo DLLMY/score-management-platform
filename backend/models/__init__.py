@@ -266,3 +266,15 @@ class PermissionLog(db.Model):
     description = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+class Alert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    alert_type = db.Column(db.String(50), nullable=False, index=True)
+    severity = db.Column(db.String(20), default='info', index=True)
+    message = db.Column(db.Text, nullable=False)
+    device_id = db.Column(db.String(100), index=True)
+    device_name = db.Column(db.String(100))
+    extra_data = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    read_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)

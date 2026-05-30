@@ -1,6 +1,13 @@
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
-function ToastContainer({ toasts, onRemove }) {
+function ToastContainer() {
+  const { toasts, removeToast } = useToast();
+  
+  if (!toasts || toasts.length === 0) {
+    return null;
+  }
+
   return (
     <div 
       className="fixed space-y-3"
@@ -36,7 +43,7 @@ function ToastContainer({ toasts, onRemove }) {
           </div>
           <span className="font-medium flex-1 text-sm leading-relaxed">{toast.message}</span>
           <button
-            onClick={() => onRemove(toast.id)}
+            onClick={() => removeToast(toast.id)}
             className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
             style={{ padding: '4px 8px' }}
           >

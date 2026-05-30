@@ -3,9 +3,14 @@ from flask_wtf.csrf import generate_csrf
 from models import db, SystemConfig
 from utils.permission import requires_admin
 from services.cache_service import cache_service
+from services.mqtt_manager import mqtt_manager
 from datetime import datetime
+from sqlalchemy import text
 import os
 import shutil
+import psutil
+import time
+import threading
 
 ns_system = Namespace('system', description='系统管理相关操作')
 
@@ -280,3 +285,212 @@ class SystemCsrfToken(Resource):
         """
         csrf_token = generate_csrf()
         return {'csrf_token': csrf_token}
+
+# 性能监控相关端点
+
+@ns_system.route('/health')
+class SystemHealth(Resource):
+    @ns_system.doc('get_system_health', description='获取系统健康状态')
+    @ns_system.response(200, '成功')
+    def get(self):
+        """
+        获取系统健康状态
+        
+        返回系统各组件的健康状态，包括数据库、Redis、MQTT等。
+        """
+        health_status = {
+            'timestamp': datetime.now().isoformat(),
+            'status': 'healthy',
+            'components': {}
+        }
+        
+        # 检查数据库连接
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text('SELECT 1'))
+            health_status['components']['database'] = {
+                'status': 'healthy',
+                'message': '数据库连接正常'
+            }
+        except Exception as e:
+            health_status['status'] = 'unhealthy'
+            health_status['components']['database'] = {
+                'status': 'unhealthy',
+                'message': f'数据库连接失败: {str(e)}'
+            }
+        
+        # 检查Redis缓存
+        try:
+            redis_stats = cache_service.get_stats()
+            health_status['components']['redis'] = {
+                'status': 'healthy' if redis_stats.get('redis_available') else 'degraded',
+                'message': 'Redis可用' if redis_stats.get('redis_available') else '使用内存缓存',
+                'hit_rate': redis_stats.get('hit_rate', 'N/A'),
+                'operations': redis_stats.get('total_operations', 0)
+            }
+        except Exception as e:
+            health_status['status'] = 'unhealthy'
+            health_status['components']['redis'] = {
+                'status': 'unhealthy',
+                'message': f'Redis连接失败: {str(e)}'
+            }
+        
+        # 检查MQTT连接
+        try:
+            mqtt_connected = False
+            mqtt_message = 'MQTT未连接'
+            if mqtt_manager and hasattr(mqtt_manager, 'is_connected'):
+                mqtt_connected = mqtt_manager.is_connected
+                mqtt_message = 'MQTT连接正常' if mqtt_connected else 'MQTT连接断开'
+            
+            health_status['components']['mqtt'] = {
+                'status': 'healthy' if mqtt_connected else 'degraded',
+                'message': mqtt_message
+            }
+        except Exception as e:
+            health_status['components']['mqtt'] = {
+                'status': 'unknown',
+                'message': f'MQTT状态检查失败: {str(e)}'
+            }
+        
+        return health_status
+
+@ns_system.route('/performance')
+class SystemPerformance(Resource):
+    @ns_system.doc('get_system_performance', description='获取系统性能指标')
+    @ns_system.response(200, '成功')
+    def get(self):
+        """
+        获取系统性能指标
+        
+        返回CPU、内存、磁盘等系统资源使用情况。
+        """
+        try:
+            # CPU信息
+            cpu_percent = psutil.cpu_percent(interval=1)
+            cpu_count = psutil.cpu_count()
+            cpu_freq = psutil.cpu_freq()
+            
+            # 内存信息
+            memory = psutil.virtual_memory()
+            
+            # 磁盘信息
+            disk = psutil.disk_usage('/')
+            
+            # 网络信息
+            net_io = psutil.net_io_counters()
+            
+            # 进程信息
+            process = psutil.Process()
+            process_memory = process.memory_info()
+            
+            return {
+                'timestamp': datetime.now().isoformat(),
+                'cpu': {
+                    'percent': cpu_percent,
+                    'count': cpu_count,
+                    'frequency': {
+                        'current': cpu_freq.current if cpu_freq else None,
+                        'min': cpu_freq.min if cpu_freq else None,
+                        'max': cpu_freq.max if cpu_freq else None
+                    }
+                },
+                'memory': {
+                    'total': memory.total,
+                    'available': memory.available,
+                    'used': memory.used,
+                    'percent': memory.percent
+                },
+                'disk': {
+                    'total': disk.total,
+                    'used': disk.used,
+                    'free': disk.free,
+                    'percent': disk.percent
+                },
+                'network': {
+                    'bytes_sent': net_io.bytes_sent,
+                    'bytes_recv': net_io.bytes_recv,
+                    'packets_sent': net_io.packets_sent,
+                    'packets_recv': net_io.packets_recv
+                },
+                'process': {
+                    'pid': process.pid,
+                    'memory_rss': process_memory.rss,
+                    'memory_vms': process_memory.vms,
+                    'cpu_percent': process.cpu_percent(),
+                    'threads': process.num_threads()
+                }
+            }
+        except Exception as e:
+            return {'success': False, 'message': f'获取性能指标失败: {str(e)}'}, 500
+
+@ns_system.route('/stats')
+class SystemStats(Resource):
+    @ns_system.doc('get_system_stats', description='获取系统统计信息')
+    @ns_system.response(200, '成功')
+    def get(self):
+        """
+        获取系统统计信息
+        
+        返回系统的综合统计数据，包括用户数、积分记录数等。
+        """
+        try:
+            # 获取缓存统计
+            cache_stats = cache_service.get_stats()
+            
+            # 获取数据库统计（使用更安全的方式）
+            user_count = 0
+            record_count = 0
+            rule_count = 0
+            category_count = 0
+            device_count = 0
+            admin_count = 0
+            
+            try:
+                with db.engine.connect() as conn:
+                    user_count = conn.execute(text('SELECT COUNT(*) FROM users')).scalar() or 0
+            except Exception:
+                user_count = 0
+            
+            try:
+                with db.engine.connect() as conn:
+                    record_count = conn.execute(text('SELECT COUNT(*) FROM score_records')).scalar() or 0
+            except Exception:
+                record_count = 0
+            
+            try:
+                with db.engine.connect() as conn:
+                    rule_count = conn.execute(text('SELECT COUNT(*) FROM score_rules')).scalar() or 0
+            except Exception:
+                rule_count = 0
+            
+            try:
+                with db.engine.connect() as conn:
+                    category_count = conn.execute(text('SELECT COUNT(*) FROM score_categories')).scalar() or 0
+            except Exception:
+                category_count = 0
+            
+            try:
+                with db.engine.connect() as conn:
+                    device_count = conn.execute(text('SELECT COUNT(*) FROM devices')).scalar() or 0
+            except Exception:
+                device_count = 0
+            
+            try:
+                with db.engine.connect() as conn:
+                    admin_count = conn.execute(text('SELECT COUNT(*) FROM admins')).scalar() or 0
+            except Exception:
+                admin_count = 0
+            
+            return {
+                'timestamp': datetime.now().isoformat(),
+                'users': user_count,
+                'records': record_count,
+                'rules': rule_count,
+                'categories': category_count,
+                'devices': device_count,
+                'admins': admin_count,
+                'cache': cache_stats
+            }
+        except Exception as e:
+            return {'success': False, 'message': f'获取系统统计失败: {str(e)}'}, 500

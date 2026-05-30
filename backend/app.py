@@ -4,6 +4,7 @@ from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
+from flasgger import Swagger, LazyString, LazyJSONEncoder
 from datetime import datetime, timedelta
 import os
 import shutil
@@ -14,6 +15,60 @@ from dotenv import load_dotenv
 from models import db
 
 app = Flask(__name__)
+
+# 配置Flasgger Swagger文档
+app.json_encoder = LazyJSONEncoder
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "积分管理平台 API",
+        "description": "积分管理平台的RESTful API文档，提供用户管理、积分规则、分类管理等功能",
+        "version": "1.0.0",
+        "contact": {
+            "name": "开发团队",
+            "email": "support@example.com"
+        }
+    },
+    "host": LazyString(lambda: request.host),
+    "basePath": "/api",
+    "schemes": LazyString(lambda: ['http', 'https'] if request.is_secure else ['http']),
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT令牌格式: Bearer {token}"
+        },
+        "X-Admin-Id": {
+            "type": "apiKey",
+            "name": "X-Admin-Id",
+            "in": "header",
+            "description": "管理员ID"
+        }
+    },
+    "security": [
+        {
+            "Bearer": []
+        }
+    ]
+}
+
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": 'api_spec',
+            "route": '/api/spec',
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/swagger/"
+}
+
+swagger = Swagger(app, template=swagger_template, config=swagger_config)
 
 # 加载环境变量
 basedir = os.path.abspath(os.path.dirname(__file__))
