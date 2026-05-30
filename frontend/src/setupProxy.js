@@ -12,7 +12,21 @@ module.exports = function(app) {
       pathRewrite: {
         '^/api': '/api'
       },
-      logLevel: 'debug'
+      logLevel: 'debug',
+      timeout: 30000,
+      proxyTimeout: 30000,
+      onError: (err, req, res) => {
+        console.error('[PROXY] Error:', err.message);
+        if (!res.headersSent) {
+          res.writeHead(504, {
+            'Content-Type': 'application/json'
+          });
+          res.end(JSON.stringify({
+            success: false,
+            message: '请求超时，请稍后重试'
+          }));
+        }
+      }
     })
   );
   

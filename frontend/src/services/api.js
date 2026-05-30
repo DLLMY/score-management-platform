@@ -78,6 +78,7 @@ const errorMessages = {
   500: '服务器内部错误，请稍后重试',
   502: '服务器暂时不可用，请稍后重试',
   503: '服务维护中，请稍后重试',
+  504: '请求超时，请检查网络或稍后重试',
 };
 
 const getErrorMessage = (status, errorData) => {
@@ -143,6 +144,28 @@ const refreshToken = async () => {
   }
 };
 
+const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('请求超时，请检查网络或稍后重试');
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+    throw error;
+  }
+};
+
 const request = async (url, options = {}, retryCount = 0) => {
   const admin = getCurrentAdmin();
   const accessToken = getAccessToken();
@@ -183,7 +206,7 @@ const request = async (url, options = {}, retryCount = 0) => {
         headers['X-Admin-Id'] = admin.id.toString();
       }
       
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         ...options,
         headers,
       });
@@ -198,7 +221,7 @@ const request = async (url, options = {}, retryCount = 0) => {
             // 更新headers中的token
             headers['Authorization'] = `Bearer ${newToken}`;
             // 重试原始请求
-            const retryResponse = await fetch(url, {
+            const retryResponse = await fetchWithTimeout(url, {
               ...options,
               headers,
             });
