@@ -134,7 +134,9 @@ const GroupHeader = memo(({ group, hasActive, isExpanded, onToggle }) => {
         <GroupIcon
           className={`w-5 h-5 ${hasActive ? 'text-white' : 'text-gray-600 dark:text-slate-300'}`}
         />
-        {hasActive && <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />}
+        {hasActive && (
+          <div className='absolute inset-0 bg-white/20 rounded-xl animate-pulse' />
+        )}
       </div>
 
       <span className='relative font-semibold flex-1 text-left text-sm z-10 transition-all duration-300 tracking-wide'>
@@ -201,7 +203,10 @@ function Sidebar() {
 
   const isItemActive = useCallback(
     (path) => {
-      return location.pathname === path || (path === '/dashboard' && location.pathname === '/');
+      return (
+        location.pathname === path ||
+        (path === '/dashboard' && location.pathname === '/')
+      );
     },
     [location.pathname]
   );
@@ -347,7 +352,9 @@ function Sidebar() {
 
                 <ul
                   className={`overflow-hidden transition-all duration-350 ease-in-out ${
-                    isExpanded ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'
+                    isExpanded
+                      ? 'max-h-[500px] opacity-100 mt-1'
+                      : 'max-h-0 opacity-0 mt-0'
                   }`}
                 >
                   {group.items.map((item, index) => (
@@ -356,7 +363,11 @@ function Sidebar() {
                       onMouseEnter={() => setHoveredItem(item.path)}
                       onMouseLeave={() => setHoveredItem(null)}
                     >
-                      <MenuItem item={item} isActive={isItemActive(item.path)} index={index} />
+                      <MenuItem
+                        item={item}
+                        isActive={isItemActive(item.path)}
+                        index={index}
+                      />
                     </div>
                   ))}
                 </ul>
@@ -376,7 +387,9 @@ function Sidebar() {
           <div className='relative w-8 h-8 rounded-lg bg-gray-100/50 dark:bg-slate-700/50 flex items-center justify-center group-hover:bg-gray-200/50 dark:group-hover:bg-slate-600/50 transition-all duration-300 group-hover:scale-110'>
             <HelpCircle className='w-4.5 h-4.5' />
           </div>
-          {!isCollapsed && <span className='font-medium text-sm'>帮助中心</span>}
+          {!isCollapsed && (
+            <span className='font-medium text-sm'>帮助中心</span>
+          )}
         </Link>
 
         <button
@@ -393,7 +406,9 @@ function Sidebar() {
           <div className='relative w-8 h-8 rounded-lg bg-danger-500/20 flex items-center justify-center group-hover:bg-danger-500/30 transition-all duration-300 group-hover:scale-110'>
             <LogOut className='w-4.5 h-4.5' />
           </div>
-          {!isCollapsed && <span className='font-medium text-sm'>退出登录</span>}
+          {!isCollapsed && (
+            <span className='font-medium text-sm'>退出登录</span>
+          )}
         </button>
       </div>
 
@@ -401,7 +416,9 @@ function Sidebar() {
         <div className='fixed left-16 top-1/2 -translate-y-1/2 px-3 py-2 bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/50 rounded-xl shadow-elevated z-50 animate-bounce-in'>
           <div className='absolute inset-0 bg-gradient-to-r from-primary-500/5 to-accent-500/5 rounded-xl' />
           <span className='relative text-sm text-white whitespace-nowrap font-medium'>
-            {menuGroups.flatMap((g) => g.items).find((i) => i.path === hoveredItem)?.label ||
+            {menuGroups
+              .flatMap((g) => g.items)
+              .find((i) => i.path === hoveredItem)?.label ||
             hoveredItem === '/help'
               ? '帮助中心'
               : hoveredItem === 'logout'
