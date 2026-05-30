@@ -3,14 +3,14 @@ import { useToast } from '../context/ToastContext';
 
 function ToastContainer() {
   const { toasts, removeToast } = useToast();
-  
+
   if (!toasts || toasts.length === 0) {
     return null;
   }
 
   return (
-    <div 
-      className="fixed space-y-3"
+    <div
+      className='fixed space-y-3'
       style={{
         top: '80px',
         left: '50%',
@@ -20,34 +20,34 @@ function ToastContainer() {
         margin: 0,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center'
+        alignItems: 'center',
       }}
     >
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="flex items-center gap-4 px-6 py-4 rounded-xl min-w-[280px] max-w-[450px]"
+          className='flex items-center gap-4 px-6 py-4 rounded-xl min-w-[280px] max-w-[450px]'
           style={{
             backgroundColor: toast.type === 'success' ? '#22c55e' : '#ef4444',
             color: 'white',
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
-            opacity: 1
+            opacity: 1,
           }}
         >
-          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+          <div className='flex-shrink-0 w-8 h-8 flex items-center justify-center'>
             {toast.type === 'success' ? (
-              <CheckCircle className="w-5 h-5" />
+              <CheckCircle className='w-5 h-5' />
             ) : (
-              <AlertCircle className="w-5 h-5" />
+              <AlertCircle className='w-5 h-5' />
             )}
           </div>
-          <span className="font-medium flex-1 text-sm leading-relaxed">{toast.message}</span>
+          <span className='font-medium flex-1 text-sm leading-relaxed'>{toast.message}</span>
           <button
             onClick={() => removeToast(toast.id)}
-            className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+            className='ml-2 p-1 hover:bg-white/20 rounded-full transition-colors'
             style={{ padding: '4px 8px' }}
           >
-            <X className="w-4 h-4" />
+            <X className='w-4 h-4' />
           </button>
         </div>
       ))}

@@ -1,11 +1,11 @@
 import { memo } from 'react';
 import { Loader2 } from 'lucide-react';
 
-function Button({ 
-  children, 
-  variant = 'primary', 
-  size = 'md', 
-  disabled = false, 
+function Button({
+  children,
+  variant = 'primary',
+  size = 'md',
+  disabled = false,
   loading = false,
   className = '',
   onClick,
@@ -17,10 +17,10 @@ function Button({
   type = 'button',
   ariaLabel,
   ariaDisabled,
-  tabIndex = 0
+  tabIndex = 0,
 }) {
   const baseStyles = {
-    primary: gradient 
+    primary: gradient
       ? 'bg-gradient-to-r from-primary-500 via-blue-500 to-indigo-600 text-white hover:shadow-xl hover:shadow-primary-500/40 hover:from-primary-600 hover:via-blue-600 hover:to-indigo-700'
       : 'bg-primary-500 text-white hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/30',
     secondary: gradient
@@ -41,9 +41,10 @@ function Button({
     purple: gradient
       ? 'bg-gradient-to-r from-purple-500 via-violet-500 to-fuchsia-600 text-white hover:shadow-xl hover:shadow-purple-500/40'
       : 'bg-purple-500 text-white hover:bg-purple-600 hover:shadow-lg hover:shadow-purple-500/30',
-    outline: 'border-2 border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50',
+    outline:
+      'border-2 border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50',
     ghost: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100',
-    link: 'text-primary-600 hover:text-primary-700 underline-offset-2 hover:underline'
+    link: 'text-primary-600 hover:text-primary-700 underline-offset-2 hover:underline',
   };
 
   const sizeStyles = {
@@ -51,7 +52,7 @@ function Button({
     sm: 'px-3 py-1.5 text-sm font-medium gap-2',
     md: 'px-4 py-2.5 text-sm font-semibold gap-2',
     lg: 'px-6 py-3 text-base font-semibold gap-2.5',
-    xl: 'px-8 py-4 text-lg font-bold gap-3'
+    xl: 'px-8 py-4 text-lg font-bold gap-3',
   };
 
   const roundedStyles = {
@@ -59,7 +60,7 @@ function Button({
     sm: 'rounded-md',
     md: 'rounded-lg',
     lg: 'rounded-xl',
-    full: 'rounded-full'
+    full: 'rounded-full',
   };
 
   const iconSize = {
@@ -67,7 +68,7 @@ function Button({
     sm: 'w-4 h-4',
     md: 'w-4 h-4',
     lg: 'w-5 h-5',
-    xl: 'w-6 h-6'
+    xl: 'w-6 h-6',
   };
 
   return (

@@ -10,23 +10,23 @@ function AnimatedScore({ score, className = '' }) {
       const endScore = score;
       const duration = 400;
       const startTime = Date.now();
-      
+
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         const easeOutQuart = 1 - Math.pow(1 - progress, 4);
         const currentScore = Math.round(startScore + (endScore - startScore) * easeOutQuart);
-        
+
         setDisplayScore(currentScore);
-        
+
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
           setDisplayScore(endScore);
         }
       };
-      
+
       requestAnimationFrame(animate);
       previousScore.current = score;
     }
@@ -39,9 +39,7 @@ function AnimatedScore({ score, className = '' }) {
   };
 
   return (
-    <span className={`text-lg font-bold ${getScoreColor()} ${className}`}>
-      {displayScore}
-    </span>
+    <span className={`text-lg font-bold ${getScoreColor()} ${className}`}>{displayScore}</span>
   );
 }
 

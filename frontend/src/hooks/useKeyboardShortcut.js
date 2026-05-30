@@ -1,23 +1,26 @@
 import { useEffect, useCallback } from 'react';
 
 export function useKeyboardShortcut(shortcuts) {
-  const handleKeyDown = useCallback((event) => {
-    const { key, metaKey, ctrlKey, shiftKey, altKey } = event;
+  const handleKeyDown = useCallback(
+    (event) => {
+      const { key, metaKey, ctrlKey, shiftKey, altKey } = event;
 
-    shortcuts.forEach(shortcut => {
-      const matchesKey = shortcut.key.toLowerCase() === key.toLowerCase();
-      const matchesMeta = !!shortcut.meta === (metaKey || ctrlKey);
-      const matchesShift = !!shortcut.shift === shiftKey;
-      const matchesAlt = !!shortcut.alt === altKey;
+      shortcuts.forEach((shortcut) => {
+        const matchesKey = shortcut.key.toLowerCase() === key.toLowerCase();
+        const matchesMeta = !!shortcut.meta === (metaKey || ctrlKey);
+        const matchesShift = !!shortcut.shift === shiftKey;
+        const matchesAlt = !!shortcut.alt === altKey;
 
-      if (matchesKey && matchesMeta && matchesShift && matchesAlt) {
-        if (shortcut.preventDefault !== false) {
-          event.preventDefault();
+        if (matchesKey && matchesMeta && matchesShift && matchesAlt) {
+          if (shortcut.preventDefault !== false) {
+            event.preventDefault();
+          }
+          shortcut.action(event);
         }
-        shortcut.action(event);
-      }
-    });
-  }, [shortcuts]);
+      });
+    },
+    [shortcuts]
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -38,7 +41,7 @@ export function useGlobalKeyboardShortcuts() {
           }
         }
       },
-      description: '关闭弹窗'
+      description: '关闭弹窗',
     },
     {
       key: '?',
@@ -49,7 +52,7 @@ export function useGlobalKeyboardShortcuts() {
           helpModal.click();
         }
       },
-      description: '显示帮助'
+      description: '显示帮助',
     },
     {
       key: 'k',
@@ -60,7 +63,7 @@ export function useGlobalKeyboardShortcuts() {
           searchInput.focus();
         }
       },
-      description: '聚焦搜索框 (Cmd/Ctrl + K)'
+      description: '聚焦搜索框 (Cmd/Ctrl + K)',
     },
     {
       key: 'n',
@@ -71,7 +74,7 @@ export function useGlobalKeyboardShortcuts() {
           addButton.click();
         }
       },
-      description: '新建项目 (Cmd/Ctrl + N)'
+      description: '新建项目 (Cmd/Ctrl + N)',
     },
     {
       key: 'r',
@@ -79,8 +82,8 @@ export function useGlobalKeyboardShortcuts() {
       action: () => {
         window.location.reload();
       },
-      description: '刷新页面 (Cmd/Ctrl + R)'
-    }
+      description: '刷新页面 (Cmd/Ctrl + R)',
+    },
   ]);
 }
 

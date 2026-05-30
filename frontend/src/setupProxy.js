@@ -1,8 +1,8 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-module.exports = function(app) {
+module.exports = function (app) {
   console.log('[PROXY] Initializing proxy configuration...');
-  
+
   app.use(
     '/api',
     createProxyMiddleware({
@@ -10,7 +10,7 @@ module.exports = function(app) {
       changeOrigin: true,
       secure: false,
       pathRewrite: {
-        '^/api': '/api'
+        '^/api': '/api',
       },
       logLevel: 'debug',
       timeout: 30000,
@@ -19,16 +19,18 @@ module.exports = function(app) {
         console.error('[PROXY] Error:', err.message);
         if (!res.headersSent) {
           res.writeHead(504, {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           });
-          res.end(JSON.stringify({
-            success: false,
-            message: '请求超时，请稍后重试'
-          }));
+          res.end(
+            JSON.stringify({
+              success: false,
+              message: '请求超时，请稍后重试',
+            })
+          );
         }
-      }
+      },
     })
   );
-  
+
   console.log('[PROXY] Proxy configuration completed!');
 };

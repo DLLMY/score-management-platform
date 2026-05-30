@@ -1,11 +1,11 @@
 import { memo, useState } from 'react';
 
-function Input({ 
-  label, 
-  type = 'text', 
-  value, 
-  onChange, 
-  placeholder = '', 
+function Input({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder = '',
   className = '',
   disabled = false,
   required = false,
@@ -23,7 +23,7 @@ function Input({
   pattern,
   readOnly,
   onFocus,
-  onBlur
+  onBlur,
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -40,22 +40,22 @@ function Input({
   return (
     <div className={className}>
       {label && (
-        <label 
-          htmlFor={id} 
-          className={`block text-sm font-medium mb-2 ${
-            error ? 'text-red-500' : 'text-slate-700'
-          }`}
+        <label
+          htmlFor={id}
+          className={`block text-sm font-medium mb-2 ${error ? 'text-red-500' : 'text-slate-700'}`}
         >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className='text-red-500 ml-1'>*</span>}
         </label>
       )}
-      <div className="relative">
+      <div className='relative'>
         {Icon && iconPosition === 'left' && (
-          <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none ${
-            error ? 'text-red-500' : isFocused ? 'text-primary-500' : 'text-slate-400'
-          }`}>
-            <Icon className="w-5 h-5" />
+          <div
+            className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none ${
+              error ? 'text-red-500' : isFocused ? 'text-primary-500' : 'text-slate-400'
+            }`}
+          >
+            <Icon className='w-5 h-5' />
           </div>
         )}
         <input
@@ -86,27 +86,30 @@ function Input({
             disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100
             read-only:bg-slate-100 read-only:cursor-default
             ${Icon ? (iconPosition === 'left' ? 'pl-12' : 'pr-12') : ''}
-            ${isFocused 
-              ? error 
-                ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                : 'border-primary-400 focus:border-primary-500 focus:ring-primary-200'
-              : error 
-                ? 'border-red-300' 
-                : 'border-slate-200 hover:border-slate-300'
+            ${
+              isFocused
+                ? error
+                  ? 'border-red-400 focus:border-red-500 focus:ring-red-200'
+                  : 'border-primary-400 focus:border-primary-500 focus:ring-primary-200'
+                : error
+                  ? 'border-red-300'
+                  : 'border-slate-200 hover:border-slate-300'
             }
           `}
         />
         {Icon && iconPosition === 'right' && (
-          <div className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${
-            error ? 'text-red-500' : isFocused ? 'text-primary-500' : 'text-slate-400'
-          }`}>
-            <Icon className="w-5 h-5" />
+          <div
+            className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${
+              error ? 'text-red-500' : isFocused ? 'text-primary-500' : 'text-slate-400'
+            }`}
+          >
+            <Icon className='w-5 h-5' />
           </div>
         )}
       </div>
       {error && errorMessage && (
-        <p id={`${id}-error`} className="mt-2 text-sm text-red-500 flex items-center gap-1">
-          <span className="text-xs">!</span>
+        <p id={`${id}-error`} className='mt-2 text-sm text-red-500 flex items-center gap-1'>
+          <span className='text-xs'>!</span>
           {errorMessage}
         </p>
       )}

@@ -3,7 +3,7 @@ let vitals = {
   FID: 0,
   LCP: 0,
   FCP: 0,
-  TTFB: 0
+  TTFB: 0,
 };
 
 const observers = [];
@@ -17,7 +17,7 @@ export const observeVitals = (callback) => {
 };
 
 const notifyObservers = () => {
-  observers.forEach(cb => cb(vitals));
+  observers.forEach((cb) => cb(vitals));
 };
 
 const measureTTFB = () => {
@@ -73,9 +73,11 @@ const measureCLS = () => {
           const firstSessionEntry = sessionEntries[0];
           const lastSessionEntry = sessionEntries[sessionEntries.length - 1];
 
-          if (sessionValue &&
-              entry.startTime - lastSessionEntry.startTime < 1000 &&
-              entry.startTime - firstSessionEntry.startTime < 5000) {
+          if (
+            sessionValue &&
+            entry.startTime - lastSessionEntry.startTime < 1000 &&
+            entry.startTime - firstSessionEntry.startTime < 5000
+          ) {
             sessionValue += entry.value;
             sessionEntries.push(entry);
           } else {
@@ -114,7 +116,7 @@ const measureFID = () => {
 
 export const initVitalsMonitor = () => {
   if (process.env.REACT_APP_ENABLE_DEV_TOOLS !== 'true') return;
-  
+
   console.group('🔍 Web Vitals Monitor');
   measureTTFB();
   measureFCP();
@@ -122,7 +124,7 @@ export const initVitalsMonitor = () => {
   const cleanupCLS = measureCLS();
   const cleanupFID = measureFID();
   console.groupEnd();
-  
+
   return () => {
     cleanupLCP?.();
     cleanupCLS?.();

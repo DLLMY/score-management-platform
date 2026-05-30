@@ -9,7 +9,7 @@ describe('Card Component', () => {
 
   it('renders card with title', () => {
     render(
-      <Card title="Card Title">
+      <Card title='Card Title'>
         <p>Card content</p>
       </Card>
     );
@@ -18,7 +18,7 @@ describe('Card Component', () => {
   });
 
   it('applies elevated variant with shadow', () => {
-    const { container } = render(<Card variant="elevated">Content</Card>);
+    const { container } = render(<Card variant='elevated'>Content</Card>);
     const card = container.querySelector('div');
     expect(card).toHaveClass('shadow-lg');
   });
@@ -30,25 +30,29 @@ describe('Card Component', () => {
   });
 
   it('applies dark variant', () => {
-    const { container } = render(<Card variant="dark">Content</Card>);
+    const { container } = render(<Card variant='dark'>Content</Card>);
     const card = container.querySelector('div');
     expect(card).toHaveClass('from-slate-800/90');
   });
 
   it('applies glass variant', () => {
-    const { container } = render(<Card variant="glass">Content</Card>);
+    const { container } = render(<Card variant='glass'>Content</Card>);
     const card = container.querySelector('div');
     expect(card).toHaveClass('backdrop-blur-xl');
   });
 
   it('applies custom className', () => {
-    const { container } = render(<Card className="custom-class">Content</Card>);
+    const { container } = render(<Card className='custom-class'>Content</Card>);
     const card = container.querySelector('div');
     expect(card).toHaveClass('custom-class');
   });
 
   it('applies gradient with dark variant', () => {
-    const { container } = render(<Card variant="dark" gradient>Content</Card>);
+    const { container } = render(
+      <Card variant='dark' gradient>
+        Content
+      </Card>
+    );
     const card = container.querySelector('div');
     expect(card).toHaveClass('bg-gradient-to-br');
   });

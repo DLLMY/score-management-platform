@@ -22,7 +22,7 @@ describe('Modal Component', () => {
 
   it('renders modal with title', () => {
     render(
-      <Modal isOpen={true} title="Modal Title" onClose={() => {}}>
+      <Modal isOpen={true} title='Modal Title' onClose={() => {}}>
         <p>Content</p>
       </Modal>
     );
@@ -37,7 +37,7 @@ describe('Modal Component', () => {
         <p>Content</p>
       </Modal>
     );
-    
+
     fireEvent.click(screen.getByRole('button'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -49,7 +49,7 @@ describe('Modal Component', () => {
         <p>Content</p>
       </Modal>
     );
-    
+
     const backdrop = container.querySelector('.bg-black\\/50');
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -59,21 +59,21 @@ describe('Modal Component', () => {
     const onClose = jest.fn();
     render(
       <Modal isOpen={true} onClose={onClose}>
-        <div data-testid="content">Content</div>
+        <div data-testid='content'>Content</div>
       </Modal>
     );
-    
+
     fireEvent.click(screen.getByTestId('content'));
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('applies custom size', () => {
     const { container } = render(
-      <Modal isOpen={true} size="lg" onClose={() => {}}>
+      <Modal isOpen={true} size='lg' onClose={() => {}}>
         <p>Content</p>
       </Modal>
     );
-    
+
     const modalContent = container.querySelector('.max-w-4xl');
     expect(modalContent).toBeInTheDocument();
   });
@@ -93,7 +93,7 @@ describe('Modal Component', () => {
         <p>Content</p>
       </Modal>
     );
-    
+
     const modalContent = container.querySelector('.max-w-2xl');
     expect(modalContent).toBeInTheDocument();
   });

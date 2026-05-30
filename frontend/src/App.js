@@ -11,23 +11,23 @@ import { ToastProvider, useToast } from './context/ToastContext';
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
 
 const RouteLoading = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-900">
-    <div className="text-center">
-      <div className="w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-slate-400">加载中...</p>
+  <div className='min-h-screen flex items-center justify-center bg-slate-900'>
+    <div className='text-center'>
+      <div className='w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-4'></div>
+      <p className='text-slate-400'>加载中...</p>
     </div>
   </div>
 );
 
 const RouteError = ({ error }) => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-    <div className="text-center max-w-md">
-      <div className="text-red-400 text-6xl mb-4">⚠️</div>
-      <h2 className="text-xl font-bold text-white mb-2">页面加载失败</h2>
-      <p className="text-slate-400 mb-4">{error?.message || '请刷新页面重试'}</p>
+  <div className='min-h-screen flex items-center justify-center bg-slate-900 p-4'>
+    <div className='text-center max-w-md'>
+      <div className='text-red-400 text-6xl mb-4'>⚠️</div>
+      <h2 className='text-xl font-bold text-white mb-2'>页面加载失败</h2>
+      <p className='text-slate-400 mb-4'>{error?.message || '请刷新页面重试'}</p>
       <button
         onClick={() => window.location.reload()}
-        className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        className='px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors'
       >
         刷新页面
       </button>
@@ -37,7 +37,7 @@ const RouteError = ({ error }) => (
 
 const createLazyComponent = (importFn) => {
   const LazyComponent = lazy(importFn);
-  
+
   const WrappedComponent = (props) => (
     <ErrorBoundary fallback={<RouteError />}>
       <Suspense fallback={<RouteLoading />}>
@@ -45,7 +45,7 @@ const createLazyComponent = (importFn) => {
       </Suspense>
     </ErrorBoundary>
   );
-  
+
   WrappedComponent.displayName = `Lazy(${importFn.name || 'Component'})`;
   return WrappedComponent;
 };
@@ -75,11 +75,11 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
   const admin = adminStr ? JSON.parse(adminStr) : null;
 
   if (!admin) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to='/login' state={{ from: location }} replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(admin.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to='/' replace />;
   }
 
   return children;
@@ -90,11 +90,11 @@ function AppLayout() {
   useGlobalKeyboardShortcuts(showToast);
 
   return (
-    <div className="flex min-h-screen bg-slate-900">
+    <div className='flex min-h-screen bg-slate-900'>
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className='flex-1 flex flex-col'>
         <Header />
-        <main className="flex-1 p-6">
+        <main className='flex-1 p-6'>
           <PageTransition>
             <Outlet />
           </PageTransition>
@@ -107,7 +107,7 @@ function AppLayout() {
 
 function DashboardLayout() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/50 to-purple-900/50">
+    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/50 to-purple-900/50'>
       <Outlet />
       <ToastContainer />
     </div>
@@ -125,41 +125,38 @@ function App() {
         <BrowserRouter
           future={{
             v7_startTransition: true,
-            v7_relativeSplatPath: true
+            v7_relativeSplatPath: true,
           }}
         >
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path='/login' element={<Login />} />
             <Route
-              path="/dashboard"
+              path='/dashboard'
               element={
                 <ProtectedRoute>
                   <DashboardLayout />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/"
-              element={<AppLayout />}
-            >
+            <Route path='/' element={<AppLayout />}>
               <Route index element={<Dashboard />} />
-              <Route path="users" element={<UserList />} />
-              <Route path="users/:id" element={<UserDetail />} />
-              <Route path="rules" element={<RuleList />} />
-              <Route path="rank-rules" element={<RankRuleList />} />
-              <Route path="categories" element={<CategoryList />} />
-              <Route path="time-rules" element={<TimeRuleList />} />
-              <Route path="devices" element={<DeviceList />} />
-              <Route path="analysis" element={<Analysis />} />
-              <Route path="mqtt" element={<MQTTDebug />} />
-              <Route path="operation-logs" element={<OperationLogs />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="approvals" element={<Approvals />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="help" element={<HelpCenter />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="permission" element={<PermissionManagement />} />
-              <Route path="user-management" element={<UserManagement />} />
+              <Route path='users' element={<UserList />} />
+              <Route path='users/:id' element={<UserDetail />} />
+              <Route path='rules' element={<RuleList />} />
+              <Route path='rank-rules' element={<RankRuleList />} />
+              <Route path='categories' element={<CategoryList />} />
+              <Route path='time-rules' element={<TimeRuleList />} />
+              <Route path='devices' element={<DeviceList />} />
+              <Route path='analysis' element={<Analysis />} />
+              <Route path='mqtt' element={<MQTTDebug />} />
+              <Route path='operation-logs' element={<OperationLogs />} />
+              <Route path='notifications' element={<Notifications />} />
+              <Route path='approvals' element={<Approvals />} />
+              <Route path='settings' element={<Settings />} />
+              <Route path='help' element={<HelpCenter />} />
+              <Route path='profile' element={<Profile />} />
+              <Route path='permission' element={<PermissionManagement />} />
+              <Route path='user-management' element={<UserManagement />} />
             </Route>
           </Routes>
         </BrowserRouter>

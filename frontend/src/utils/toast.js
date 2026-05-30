@@ -5,15 +5,15 @@ export function useToast() {
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type }]);
   };
 
   const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   useEffect(() => {
-    const timers = toasts.map(toast => {
+    const timers = toasts.map((toast) => {
       return setTimeout(() => {
         removeToast(toast.id);
       }, 3000);

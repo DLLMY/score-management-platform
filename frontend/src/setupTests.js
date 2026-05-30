@@ -23,10 +23,7 @@ window.location = { href: '/', reload: jest.fn() };
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args) => {
-    if (
-      args[0]?.includes?.('Warning:') ||
-      args[0]?.includes?.('Error Boundary caught an error')
-    ) {
+    if (args[0]?.includes?.('Warning:') || args[0]?.includes?.('Error Boundary caught an error')) {
       return;
     }
     originalError.call(console, ...args);

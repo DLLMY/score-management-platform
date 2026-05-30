@@ -16,7 +16,9 @@
     "no-console": "warn",
     "react/no-unknown-property": "error",
     "react/prop-types": "off",
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "testing-library/no-container": "off",
+    "testing-library/no-node-access": "off"
   },
   "parserOptions": {
     "ecmaFeatures": {

@@ -8,19 +8,25 @@ describe('Toast Component', () => {
   });
 
   it('renders success toast', () => {
-    const { container } = render(<Toast message={{ text: 'Success message', type: 'success' }} onClose={() => {}} />);
+    const { container } = render(
+      <Toast message={{ text: 'Success message', type: 'success' }} onClose={() => {}} />
+    );
     const toast = container.querySelector('.from-green-500');
     expect(toast).toBeInTheDocument();
   });
 
   it('renders error toast', () => {
-    const { container } = render(<Toast message={{ text: 'Error message', type: 'error' }} onClose={() => {}} />);
+    const { container } = render(
+      <Toast message={{ text: 'Error message', type: 'error' }} onClose={() => {}} />
+    );
     const toast = container.querySelector('.from-red-500');
     expect(toast).toBeInTheDocument();
   });
 
   it('renders warning toast', () => {
-    const { container } = render(<Toast message={{ text: 'Warning message', type: 'warning' }} onClose={() => {}} />);
+    const { container } = render(
+      <Toast message={{ text: 'Warning message', type: 'warning' }} onClose={() => {}} />
+    );
     const toast = container.querySelector('.from-amber-500');
     expect(toast).toBeInTheDocument();
   });
@@ -34,7 +40,7 @@ describe('Toast Component', () => {
   it('calls onClose when close button is clicked', () => {
     const onClose = jest.fn();
     render(<Toast message={{ text: 'Closeable' }} onClose={onClose} />);
-    
+
     fireEvent.click(screen.getByRole('button'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -42,17 +48,17 @@ describe('Toast Component', () => {
   it('auto closes after duration', async () => {
     jest.useFakeTimers();
     const onClose = jest.fn();
-    
+
     render(<Toast message={{ text: 'Auto close' }} onClose={onClose} />);
-    
+
     expect(screen.getByText('Auto close')).toBeInTheDocument();
-    
+
     jest.advanceTimersByTime(4000);
-    
+
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-    
+
     jest.useRealTimers();
   });
 

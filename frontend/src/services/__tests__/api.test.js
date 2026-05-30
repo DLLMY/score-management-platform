@@ -42,10 +42,10 @@ describe('API Service', () => {
 
   it('should set admin header when admin is logged in', async () => {
     localStorage.setItem('admin', JSON.stringify({ id: 1, username: 'test' }));
-    
+
     mockFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] })
+      json: () => Promise.resolve({ data: [] }),
     });
 
     await api.users.getAll();
@@ -58,7 +58,7 @@ describe('API Service', () => {
   it('should handle network errors', async () => {
     // 清除缓存
     api.cache.clear();
-    
+
     mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(api.users.getAll()).rejects.toThrow('网络连接失败，请检查网络或服务器是否可用');
@@ -67,10 +67,10 @@ describe('API Service', () => {
   it('should handle HTTP errors', async () => {
     // 清除缓存
     api.cache.clear();
-    
+
     mockFetch.mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve({ message: '请求失败' })
+      json: () => Promise.resolve({ message: '请求失败' }),
     });
 
     await expect(api.users.getAll()).rejects.toThrow('请求失败');

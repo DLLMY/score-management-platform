@@ -1,6 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus } from 'lucide-react';
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  BookOpen,
+  CreditCard,
+  Award,
+  History,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  RefreshCw,
+  X,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import EmptyState from '../components/EmptyState';
@@ -45,7 +60,7 @@ function UserDetail() {
 
   const handleScoreChange = async (e) => {
     e.preventDefault();
-    
+
     if (scoreChange.amount === 0) {
       showToast('请输入积分变化值', 'error');
       return;
@@ -56,24 +71,24 @@ function UserDetail() {
         user_id: id,
         score_change: scoreChange.amount,
         description: scoreChange.description || (scoreChange.amount > 0 ? '手动加分' : '手动扣分'),
-        operator: '管理员'
+        operator: '管理员',
       });
-      
-      setUser(prev => ({
+
+      setUser((prev) => ({
         ...prev,
-        current_score: prev.current_score + scoreChange.amount
+        current_score: prev.current_score + scoreChange.amount,
       }));
-      
+
       const newRecord = {
         id: result.id,
         user_id: id,
         score_change: scoreChange.amount,
         description: scoreChange.description || (scoreChange.amount > 0 ? '手动加分' : '手动扣分'),
         operator: '管理员',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
-      setRecords(prev => [newRecord, ...prev]);
-      
+      setRecords((prev) => [newRecord, ...prev]);
+
       showToast(scoreChange.amount > 0 ? '加分成功' : '扣分成功', 'success');
       setShowScoreModal(false);
       setScoreChange({ amount: 0, description: '' });
@@ -100,7 +115,7 @@ function UserDetail() {
   };
 
   const getScoreChangeIcon = (change) => {
-    return change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />;
+    return change >= 0 ? <TrendingUp className='w-4 h-4' /> : <TrendingDown className='w-4 h-4' />;
   };
 
   const formatDate = (dateString) => {
@@ -110,19 +125,23 @@ function UserDetail() {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
-  const totalPositive = records.filter(r => r.score_change > 0).reduce((sum, r) => sum + r.score_change, 0);
-  const totalNegative = records.filter(r => r.score_change < 0).reduce((sum, r) => sum + Math.abs(r.score_change), 0);
+  const totalPositive = records
+    .filter((r) => r.score_change > 0)
+    .reduce((sum, r) => sum + r.score_change, 0);
+  const totalNegative = records
+    .filter((r) => r.score_change < 0)
+    .reduce((sum, r) => sum + Math.abs(r.score_change), 0);
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto flex items-center justify-center py-24">
-        <div className="flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <span className="text-gray-500">加载中...</span>
+      <div className='max-w-5xl mx-auto flex items-center justify-center py-24'>
+        <div className='flex flex-col items-center'>
+          <div className='w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4' />
+          <span className='text-gray-500'>加载中...</span>
         </div>
       </div>
     );
@@ -130,18 +149,21 @@ function UserDetail() {
 
   if (error || !user) {
     return (
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate('/users')} className="flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+      <div className='max-w-5xl mx-auto'>
+        <div className='flex items-center gap-3 mb-6'>
+          <button
+            onClick={() => navigate('/users')}
+            className='flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors'
+          >
+            <ArrowLeft className='w-5 h-5' />
             返回列表
           </button>
         </div>
-        <div className="card p-8 text-center">
-          <AlertCircle className="w-16 h-16 text-danger-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-600 mb-2">获取学生信息失败</h3>
-          <p className="text-gray-500 mb-6">{error || '学生不存在'}</p>
-          <button onClick={() => navigate('/users')} className="btn btn-primary">
+        <div className='card p-8 text-center'>
+          <AlertCircle className='w-16 h-16 text-danger-500 mx-auto mb-4' />
+          <h3 className='text-xl font-semibold text-gray-600 mb-2'>获取学生信息失败</h3>
+          <p className='text-gray-500 mb-6'>{error || '学生不存在'}</p>
+          <button onClick={() => navigate('/users')} className='btn btn-primary'>
             返回学生列表
           </button>
         </div>
@@ -152,85 +174,100 @@ function UserDetail() {
   const rank = getRank(user.current_score);
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center gap-3 mb-7">
-        <button onClick={() => navigate('/users')} className="flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
+    <div className='max-w-5xl mx-auto'>
+      <div className='flex items-center gap-3 mb-7'>
+        <button
+          onClick={() => navigate('/users')}
+          className='flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors'
+        >
+          <ArrowLeft className='w-5 h-5' />
           返回列表
         </button>
-        <button onClick={() => { fetchUser(); fetchRecords(); }} className="flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors">
-          <RefreshCw className="w-4 h-4" />
+        <button
+          onClick={() => {
+            fetchUser();
+            fetchRecords();
+          }}
+          className='flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors'
+        >
+          <RefreshCw className='w-4 h-4' />
           刷新
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 space-y-6">
-          <div className="card p-6">
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-accent-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-primary-500/30 mb-4">
-                <User className="w-12 h-12" />
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        <div className='lg:col-span-1 space-y-6'>
+          <div className='card p-6'>
+            <div className='flex flex-col items-center text-center mb-6'>
+              <div className='w-24 h-24 bg-gradient-to-br from-primary-500 to-accent-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-primary-500/30 mb-4'>
+                <User className='w-12 h-12' />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
-              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${rank.bg} ${rank.color} mt-2`}>
-                <Award className="w-4 h-4" />
+              <h2 className='text-2xl font-bold text-gray-800'>{user.name}</h2>
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${rank.bg} ${rank.color} mt-2`}
+              >
+                <Award className='w-4 h-4' />
                 {rank.name}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 bg-info-100 rounded-xl flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-info-600" />
+            <div className='space-y-4'>
+              <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                <div className='w-10 h-10 bg-info-100 rounded-xl flex items-center justify-center'>
+                  <BookOpen className='w-5 h-5 text-info-600' />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">班级</p>
-                  <p className="font-semibold text-gray-800">{user.class_name || '-'}</p>
+                  <p className='text-xs text-gray-500'>班级</p>
+                  <p className='font-semibold text-gray-800'>{user.class_name || '-'}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 bg-accent-100 rounded-xl flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-accent-600" />
+              <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                <div className='w-10 h-10 bg-accent-100 rounded-xl flex items-center justify-center'>
+                  <Phone className='w-5 h-5 text-accent-600' />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">联系电话</p>
-                  <p className="font-semibold text-gray-800">{user.phone || '-'}</p>
+                  <p className='text-xs text-gray-500'>联系电话</p>
+                  <p className='font-semibold text-gray-800'>{user.phone || '-'}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 bg-success-100 rounded-xl flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-success-600" />
+              <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                <div className='w-10 h-10 bg-success-100 rounded-xl flex items-center justify-center'>
+                  <CreditCard className='w-5 h-5 text-success-600' />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">饭卡号</p>
-                  <p className="font-mono font-semibold text-gray-800">{user.card_id}</p>
+                  <p className='text-xs text-gray-500'>饭卡号</p>
+                  <p className='font-mono font-semibold text-gray-800'>{user.card_id}</p>
                 </div>
               </div>
 
-              {(user.father_name || user.father_phone || user.mother_name || user.mother_phone || user.guardian_name) && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-warning-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-warning-600" />
+              {(user.father_name ||
+                user.father_phone ||
+                user.mother_name ||
+                user.mother_phone ||
+                user.guardian_name) && (
+                <div className='space-y-3'>
+                  <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                    <div className='w-10 h-10 bg-warning-100 rounded-xl flex items-center justify-center flex-shrink-0'>
+                      <User className='w-5 h-5 text-warning-600' />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500">父亲信息</p>
-                      <p className="font-semibold text-gray-800">
+                    <div className='flex-1'>
+                      <p className='text-xs text-gray-500'>父亲信息</p>
+                      <p className='font-semibold text-gray-800'>
                         {user.father_name || '-'}
                         {user.father_name && user.father_phone && ' / '}
                         {user.father_phone || ''}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-pink-600" />
+                  <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                    <div className='w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0'>
+                      <User className='w-5 h-5 text-pink-600' />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500">母亲信息</p>
-                      <p className="font-semibold text-gray-800">
+                    <div className='flex-1'>
+                      <p className='text-xs text-gray-500'>母亲信息</p>
+                      <p className='font-semibold text-gray-800'>
                         {user.mother_name || '-'}
                         {user.mother_name && user.mother_phone && ' / '}
                         {user.mother_phone || ''}
@@ -238,13 +275,13 @@ function UserDetail() {
                     </div>
                   </div>
                   {user.guardian_name && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-info-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-info-600" />
+                    <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                      <div className='w-10 h-10 bg-info-100 rounded-xl flex items-center justify-center flex-shrink-0'>
+                        <User className='w-5 h-5 text-info-600' />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-500">监护人</p>
-                        <p className="font-semibold text-gray-800">
+                      <div className='flex-1'>
+                        <p className='text-xs text-gray-500'>监护人</p>
+                        <p className='font-semibold text-gray-800'>
                           {user.guardian_name}
                           {user.guardian_relation && ` (${user.guardian_relation})`}
                           {user.guardian_phone && ` / ${user.guardian_phone}`}
@@ -257,71 +294,79 @@ function UserDetail() {
             </div>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">当前积分</h3>
+          <div className='card p-6'>
+            <div className='flex items-center justify-between mb-4'>
+              <h3 className='font-semibold text-gray-800'>当前积分</h3>
               <button
                 onClick={() => setShowScoreModal(true)}
-                className="btn btn-primary flex items-center gap-2"
+                className='btn btn-primary flex items-center gap-2'
               >
-                <Plus className="w-4 h-4" />
+                <Plus className='w-4 h-4' />
                 调整积分
               </button>
             </div>
-            <div className="text-center py-6">
+            <div className='text-center py-6'>
               <div className={`text-5xl font-bold ${getScoreColor(user.current_score)} mb-2`}>
                 {user.current_score}
               </div>
-              <p className="text-gray-500">分</p>
+              <p className='text-gray-500'>分</p>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="bg-success-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-success-600">+{totalPositive}</p>
-                <p className="text-xs text-success-700 mt-1">累计加分</p>
+
+            <div className='grid grid-cols-2 gap-4 mt-4'>
+              <div className='bg-success-50 rounded-xl p-4 text-center'>
+                <p className='text-2xl font-bold text-success-600'>+{totalPositive}</p>
+                <p className='text-xs text-success-700 mt-1'>累计加分</p>
               </div>
-              <div className="bg-danger-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-danger-600">-{totalNegative}</p>
-                <p className="text-xs text-danger-700 mt-1">累计扣分</p>
+              <div className='bg-danger-50 rounded-xl p-4 text-center'>
+                <p className='text-2xl font-bold text-danger-600'>-{totalNegative}</p>
+                <p className='text-xs text-danger-700 mt-1'>累计扣分</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-2">
-          <div className="card">
-            <div className="card-header">
-              <div className="flex items-center gap-3">
-                <History className="w-5 h-5 text-primary-600" />
-                <h3 className="font-semibold text-gray-800">积分变动记录</h3>
-                <span className="text-sm text-gray-500">({records.length} 条记录)</span>
+        <div className='lg:col-span-2'>
+          <div className='card'>
+            <div className='card-header'>
+              <div className='flex items-center gap-3'>
+                <History className='w-5 h-5 text-primary-600' />
+                <h3 className='font-semibold text-gray-800'>积分变动记录</h3>
+                <span className='text-sm text-gray-500'>({records.length} 条记录)</span>
               </div>
             </div>
-            <div className="card-body">
+            <div className='card-body'>
               {records.length === 0 ? (
                 <EmptyState
-                  icon="file"
-                  title="暂无积分变动记录"
-                  description="该学生暂无积分变动记录"
+                  icon='file'
+                  title='暂无积分变动记录'
+                  description='该学生暂无积分变动记录'
                 />
               ) : (
-                <div className="space-y-3">
-                  {records.map(record => (
-                    <div key={record.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        record.score_change >= 0 ? 'bg-success-100' : 'bg-danger-100'
-                      }`}>
+                <div className='space-y-3'>
+                  {records.map((record) => (
+                    <div
+                      key={record.id}
+                      className='flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors'
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          record.score_change >= 0 ? 'bg-success-100' : 'bg-danger-100'
+                        }`}
+                      >
                         {getScoreChangeIcon(record.score_change)}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-800">{record.description}</p>
-                        <p className="text-xs text-gray-500">{formatDate(record.created_at)}</p>
+                      <div className='flex-1'>
+                        <p className='font-medium text-gray-800'>{record.description}</p>
+                        <p className='text-xs text-gray-500'>{formatDate(record.created_at)}</p>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-bold ${getScoreChangeColor(record.score_change)}`}>
-                          {record.score_change >= 0 ? '+' : ''}{record.score_change}
+                      <div className='text-right'>
+                        <p
+                          className={`text-lg font-bold ${getScoreChangeColor(record.score_change)}`}
+                        >
+                          {record.score_change >= 0 ? '+' : ''}
+                          {record.score_change}
                         </p>
-                        <p className="text-xs text-gray-500">分</p>
+                        <p className='text-xs text-gray-500'>分</p>
                       </div>
                     </div>
                   ))}
@@ -333,68 +378,85 @@ function UserDetail() {
       </div>
 
       {showScoreModal && (
-        <div className="modal-overlay" onClick={() => setShowScoreModal(false)}>
-          <div className="modal-content max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-white" />
+        <div className='modal-overlay' onClick={() => setShowScoreModal(false)}>
+          <div className='modal-content max-w-md' onClick={(e) => e.stopPropagation()}>
+            <div className='modal-header'>
+              <div className='flex items-center gap-3'>
+                <div className='w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center'>
+                  <Plus className='w-5 h-5 text-white' />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">调整积分</h3>
-                  <p className="text-xs text-gray-500">为 {user.name} 添加或扣除积分</p>
+                  <h3 className='text-lg font-semibold text-gray-800'>调整积分</h3>
+                  <p className='text-xs text-gray-500'>为 {user.name} 添加或扣除积分</p>
                 </div>
               </div>
-              <button onClick={() => setShowScoreModal(false)} className="p-2.5 hover:bg-gray-100 rounded-xl transition-all">
-                <X className="w-5 h-5 text-gray-500" />
+              <button
+                onClick={() => setShowScoreModal(false)}
+                className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'
+              >
+                <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
-            <form onSubmit={handleScoreChange} className="modal-body">
-              <div className="form-group">
-                <label className="form-label">积分变动</label>
-                <div className="flex items-center gap-3">
-                  <div className="flex">
+            <form onSubmit={handleScoreChange} className='modal-body'>
+              <div className='form-group'>
+                <label className='form-label'>积分变动</label>
+                <div className='flex items-center gap-3'>
+                  <div className='flex'>
                     <button
-                      type="button"
-                      onClick={() => setScoreChange({ ...scoreChange, amount: -Math.abs(scoreChange.amount) })}
-                      className="btn btn-outline h-12 w-12 rounded-l-xl"
+                      type='button'
+                      onClick={() =>
+                        setScoreChange({ ...scoreChange, amount: -Math.abs(scoreChange.amount) })
+                      }
+                      className='btn btn-outline h-12 w-12 rounded-l-xl'
                     >
-                      <Minus className="w-5 h-5" />
+                      <Minus className='w-5 h-5' />
                     </button>
                     <input
-                      type="number"
+                      type='number'
                       value={scoreChange.amount}
-                      onChange={(e) => setScoreChange({ ...scoreChange, amount: parseInt(e.target.value) || 0 })}
-                      className="form-input text-center w-32"
-                      placeholder="0"
+                      onChange={(e) =>
+                        setScoreChange({ ...scoreChange, amount: parseInt(e.target.value) || 0 })
+                      }
+                      className='form-input text-center w-32'
+                      placeholder='0'
                     />
                     <button
-                      type="button"
-                      onClick={() => setScoreChange({ ...scoreChange, amount: Math.abs(scoreChange.amount) })}
-                      className="btn btn-outline h-12 w-12 rounded-r-xl"
+                      type='button'
+                      onClick={() =>
+                        setScoreChange({ ...scoreChange, amount: Math.abs(scoreChange.amount) })
+                      }
+                      className='btn btn-outline h-12 w-12 rounded-r-xl'
                     >
-                      <Plus className="w-5 h-5" />
+                      <Plus className='w-5 h-5' />
                     </button>
                   </div>
-                  <span className="text-gray-600 font-medium">分</span>
+                  <span className='text-gray-600 font-medium'>分</span>
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">变动原因</label>
+              <div className='form-group'>
+                <label className='form-label'>变动原因</label>
                 <input
-                  type="text"
+                  type='text'
                   value={scoreChange.description}
                   onChange={(e) => setScoreChange({ ...scoreChange, description: e.target.value })}
-                  className="form-input"
-                  placeholder="如：课堂表现优秀"
+                  className='form-input'
+                  placeholder='如：课堂表现优秀'
                 />
               </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setShowScoreModal(false)} className="btn btn-outline">
+              <div className='modal-footer'>
+                <button
+                  type='button'
+                  onClick={() => setShowScoreModal(false)}
+                  className='btn btn-outline'
+                >
                   取消
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {scoreChange.amount > 0 ? '确认加分' : scoreChange.amount < 0 ? '确认扣分' : '确认'}
+                <button type='submit' className='btn btn-primary'>
+                  {scoreChange.amount > 0
+                    ? '确认加分'
+                    : scoreChange.amount < 0
+                      ? '确认扣分'
+                      : '确认'}
                 </button>
               </div>
             </form>

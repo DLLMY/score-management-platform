@@ -8,9 +8,9 @@ function PageTransition({ children }) {
 
   useEffect(() => {
     if (location.pathname === prevLocation.current) return;
-    
+
     setIsAnimating(true);
-    
+
     const timer = setTimeout(() => {
       prevLocation.current = location.pathname;
       setIsAnimating(false);
@@ -20,11 +20,11 @@ function PageTransition({ children }) {
   }, [location.pathname]);
 
   return (
-    <div className={`relative transition-all duration-300 ease-out ${
-      isAnimating 
-        ? 'opacity-0 translate-y-2 scale-[0.99]' 
-        : 'opacity-100 translate-y-0 scale-100'
-    }`}>
+    <div
+      className={`relative transition-all duration-300 ease-out ${
+        isAnimating ? 'opacity-0 translate-y-2 scale-[0.99]' : 'opacity-100 translate-y-0 scale-100'
+      }`}
+    >
       {children}
     </div>
   );
