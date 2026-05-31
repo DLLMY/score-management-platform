@@ -29,6 +29,7 @@ import {
   Zap,
   History,
   Command,
+  Upload,
 } from 'lucide-react';
 
 function getCurrentRole() {
@@ -293,6 +294,8 @@ function Sidebar() {
         items: [
           { path: '/dashboard', label: '数据概览', icon: Activity },
           { path: '/users', label: '学生管理', icon: Users },
+          { path: '/analysis', label: '数据分析', icon: BarChart3 },
+          { path: '/operation-logs', label: '操作日志', icon: History },
         ],
       },
       {
@@ -312,9 +315,8 @@ function Sidebar() {
         icon: Box,
         items: [
           { path: '/devices', label: '设备管理', icon: Box },
+          { path: '/firmware', label: '固件管理', icon: Upload },
           { path: '/mqtt', label: 'MQTT调试', icon: Wifi },
-          { path: '/analysis', label: '数据分析', icon: BarChart3 },
-          { path: '/operation-logs', label: '操作日志', icon: Activity },
         ],
       },
       {

@@ -25,7 +25,9 @@ const RouteError = ({ error }) => (
     <div className='text-center max-w-md'>
       <div className='text-red-400 text-6xl mb-4'>⚠️</div>
       <h2 className='text-xl font-bold text-gray-800 dark:text-white mb-2'>页面加载失败</h2>
-      <p className='text-gray-500 dark:text-slate-400 mb-4'>{error?.message || '请刷新页面重试'}</p>
+      <p className='text-gray-500 dark:text-slate-400 mb-4'>
+        {error?.message || '请刷新页面重试'}
+      </p>
       <button
         onClick={() => window.location.reload()}
         className='px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors'
@@ -57,7 +59,7 @@ const RuleList = createLazyComponent(() => import('./pages/RuleList'));
 const RankRuleList = createLazyComponent(() => import('./pages/RankRuleList'));
 const CategoryList = createLazyComponent(() => import('./pages/CategoryList'));
 const TimeRuleList = createLazyComponent(() => import('./pages/TimeRuleList'));
-const DeviceList = createLazyComponent(() => import('./pages/DeviceList'));
+const DeviceManagement = createLazyComponent(() => import('./pages/DeviceManagement'));
 const Analysis = createLazyComponent(() => import('./pages/Analysis'));
 const MQTTDebug = createLazyComponent(() => import('./pages/MQTTDebug'));
 const OperationLogs = createLazyComponent(() => import('./pages/OperationLogs'));
@@ -69,6 +71,7 @@ const Profile = createLazyComponent(() => import('./pages/Profile'));
 const PermissionManagement = createLazyComponent(() => import('./pages/PermissionManagement'));
 const UserManagement = createLazyComponent(() => import('./pages/UserManagement'));
 const Dashboard = createLazyComponent(() => import('./pages/Dashboard'));
+const FirmwareManagement = createLazyComponent(() => import('./pages/FirmwareManagement'));
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
@@ -150,7 +153,9 @@ function App() {
                 <Route path='rank-rules' element={<RankRuleList />} />
                 <Route path='categories' element={<CategoryList />} />
                 <Route path='time-rules' element={<TimeRuleList />} />
-                <Route path='devices' element={<DeviceList />} />
+                <Route path='devices' element={<DeviceManagement />} />
+                <Route path='device-monitor' element={<Navigate to='/devices' replace />} />
+                <Route path='firmware' element={<FirmwareManagement />} />
                 <Route path='analysis' element={<Analysis />} />
                 <Route path='mqtt' element={<MQTTDebug />} />
                 <Route path='operation-logs' element={<OperationLogs />} />

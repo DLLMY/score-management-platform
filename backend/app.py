@@ -177,6 +177,10 @@ for rule in app.url_map.iter_rules():
         view_func = app.view_functions[rule.endpoint]
         csrf.exempt(view_func)
         print(f"已为 {rule.rule} 添加CSRF豁免")
+    elif rule.rule == '/api/devices/<int:id>/remote-control':
+        view_func = app.view_functions[rule.endpoint]
+        csrf.exempt(view_func)
+        print(f"已为 {rule.rule} 添加CSRF豁免")
 
 from services.mqtt_service import connect_mqtt
 

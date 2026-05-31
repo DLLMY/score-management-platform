@@ -37,9 +37,6 @@ export const useRenderCount = (name) => {
 
   useEffect(() => {
     countRef.current++;
-    if (isDev) {
-      console.log(`🔄 ${name} 渲染次数:`, countRef.current);
-    }
   });
 
   return countRef.current;
@@ -82,12 +79,6 @@ export const useNavigationPerf = () => {
         const loadTime = navigation.loadEventEnd - navigation.startTime;
 
         setMetrics({ ttfb, domContentLoaded, loadTime });
-
-        console.group('🚀 页面性能指标');
-        console.log('TTFB:', `${ttfb.toFixed(2)}ms`);
-        console.log('DOM内容加载:', `${domContentLoaded.toFixed(2)}ms`);
-        console.log('页面完全加载:', `${loadTime.toFixed(2)}ms`);
-        console.groupEnd();
       }
     };
 

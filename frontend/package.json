@@ -7,7 +7,7 @@
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
     "http-proxy-middleware": "^2.0.6",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^1.17.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.3.0",
@@ -15,10 +15,6 @@
     "recharts": "^2.10.3",
     "tailwindcss": "^3.3.3",
     "web-vitals": "^2.1.4"
-  },
-  "overrides": {
-    "ajv": "^8.0.0",
-    "ajv-keywords": "^3.5.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -43,5 +39,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "prettier": "^3.8.3"
   }
 }

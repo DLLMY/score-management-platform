@@ -48,6 +48,7 @@ function PermissionManagement() {
   const [showSubAccountModal, setShowSubAccountModal] = useState(false);
   const [editingSubAccount, setEditingSubAccount] = useState(null);
   const [subAccountFormData, setSubAccountFormData] = useState({
+    parent_admin_id: '',
     username: '',
     password: '',
     real_name: '',
@@ -225,8 +226,10 @@ function PermissionManagement() {
 
   // 子账号操作
   const handleCreateSubAccount = useCallback(() => {
+    const admin = JSON.parse(localStorage.getItem('admin') || '{}');
     setEditingSubAccount(null);
     setSubAccountFormData({
+      parent_admin_id: admin.id || '',
       username: '',
       password: '',
       real_name: '',
@@ -239,6 +242,7 @@ function PermissionManagement() {
   const handleEditSubAccount = useCallback((sub) => {
     setEditingSubAccount(sub);
     setSubAccountFormData({
+      parent_admin_id: sub.parent_admin_id || '',
       username: sub.username,
       password: '',
       real_name: sub.real_name,

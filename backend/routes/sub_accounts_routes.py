@@ -1,9 +1,30 @@
 from flask_restx import Namespace, Resource, fields
-from models import db, SubAccount
+from flask import request
+from models import db, SubAccount, PermissionLog
 from utils.permission import requires_admin
+from utils.security import hash_password, verify_password
 from datetime import datetime
 
 ns_sub_accounts = Namespace('sub-accounts', description='子账号管理相关操作')
+
+def log_permission_action(action, target_id=None, description=None):
+    """记录权限操作日志"""
+    try:
+        admin_id = request.headers.get('X-Admin-Id')
+        log = PermissionLog(
+            operator_id=admin_id,
+            operator_type='admin',
+            action=action,
+            target_type='sub_account',
+            target_id=target_id,
+            description=description,
+            ip_address=request.remote_addr if request else None,
+            created_at=datetime.now()
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        pass
 
 sub_account_model = ns_sub_accounts.model('SubAccount', {
     'id': fields.Integer(readOnly=True, description='子账号ID'),
@@ -30,7 +51,7 @@ sub_account_response = ns_sub_accounts.model('SubAccountResponse', {
 })
 
 sub_account_list_response = ns_sub_accounts.model('SubAccountListResponse', {
-    'accounts': fields.List(fields.Nested(sub_account_response), description='子账号列表')
+    'sub_accounts': fields.List(fields.Nested(sub_account_response), description='子账号列表')
 })
 
 sub_account_login_response = ns_sub_accounts.model('SubAccountLoginResponse', {
@@ -53,7 +74,7 @@ class SubAccountList(Resource):
         """
         accounts = SubAccount.query.all()
         return {
-            'accounts': [{
+            'sub_accounts': [{
                 'id': a.id,
                 'parent_admin_id': a.parent_admin_id,
                 'username': a.username,
@@ -88,10 +109,14 @@ class SubAccountList(Resource):
         - is_active: 是否启用（可选，默认True）
         """
         data = ns_sub_accounts.payload
+        password = data.get('password')
+        if not password:
+            return {'success': False, 'message': '请提供密码'}, 400
+        
         account = SubAccount(
             parent_admin_id=data.get('parent_admin_id'),
             username=data.get('username'),
-            password=data.get('password'),
+            password=hash_password(password),
             real_name=data.get('real_name'),
             phone=data.get('phone'),
             role_type=data.get('role_type', 'dashboard_viewer'),
@@ -100,6 +125,10 @@ class SubAccountList(Resource):
         )
         db.session.add(account)
         db.session.commit()
+        
+        # 记录权限日志
+        log_permission_action('create', account.id, f'创建子账号: {account.username}')
+        
         return {'success': True, 'message': '子账号创建成功', 'account_id': account.id}, 201
 
 @ns_sub_accounts.route('/<int:id>')
@@ -151,7 +180,7 @@ class SubAccountResource(Resource):
         data = ns_sub_accounts.payload
         account.username = data.get('username', account.username)
         if data.get('password'):
-            account.password = data.get('password')
+            account.password = hash_password(data.get('password'))
         account.real_name = data.get('real_name', account.real_name)
         account.phone = data.get('phone', account.phone)
         account.role_type = data.get('role_type', account.role_type)
@@ -159,6 +188,10 @@ class SubAccountResource(Resource):
         account.is_active = data.get('is_active', account.is_active)
         account.updated_at = datetime.now()
         db.session.commit()
+        
+        # 记录权限日志
+        log_permission_action('update', account.id, f'更新子账号: {account.username}')
+        
         return {'success': True, 'message': '子账号更新成功'}
 
     @ns_sub_accounts.doc('delete_sub_account', description='删除子账号', security='Bearer')
@@ -175,8 +208,13 @@ class SubAccountResource(Resource):
         - id: 子账号ID（路径参数）
         """
         account = SubAccount.query.get_or_404(id)
+        username = account.username
         db.session.delete(account)
         db.session.commit()
+        
+        # 记录权限日志
+        log_permission_action('delete', id, f'删除子账号: {username}')
+        
         return {'success': True, 'message': '子账号删除成功'}
 
 @ns_sub_accounts.route('/login')
@@ -200,7 +238,7 @@ class SubAccountLogin(Resource):
         password = data.get('password')
         
         account = SubAccount.query.filter_by(username=username).first()
-        if account and account.password == password and account.is_active:
+        if account and verify_password(password, account.password) and account.is_active:
             return {'success': True, 'message': '登录成功', 'token': str(account.id), 'account': {
                 'id': account.id,
                 'username': account.username,

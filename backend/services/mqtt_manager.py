@@ -77,6 +77,8 @@ class MQTTManager:
             ('phonebox/query', 1),
             ('phonebox/heartbeat', 1),
             ('phonebox/unlock/+', 1),
+            ('phonebox/ota/status', 1),
+            ('phonebox/ota/+/status', 1),
             ('score/add', 1),
             ('score/undo', 1),
             ('score/rules/query', 1)
@@ -170,12 +172,12 @@ class MQTTManager:
         try:
             message = msg.payload.decode()
             topic = msg.topic
-            
+
             # 性能优化：异步处理消息
             self._queue_message(topic, message)
-            
-            # 关键消息（如查询、开锁回复）立即处理
-            if topic == 'phonebox/query' or topic.startswith('phonebox/unlock/'):
+
+            # 关键消息（如查询、开锁回复、OTA状态）立即处理
+            if topic == 'phonebox/query' or topic.startswith('phonebox/unlock/') or topic.startswith('phonebox/ota/'):
                 self._process_critical_message(topic, message)
 
         except Exception as e:
@@ -251,12 +253,118 @@ class MQTTManager:
                 self._process_heartbeat(data['topic'], data['message'])
 
     def _process_critical_message(self, topic, message):
-        """立即处理关键消息（如刷卡查询）"""
+        """立即处理关键消息（如刷卡查询、OTA状态）"""
+        if topic.startswith('phonebox/ota/'):
+            self._process_ota_status(topic, message)
+
         for callback in self._message_callbacks:
             try:
                 callback(topic, message)
             except Exception as e:
                 print(f"[MQTTManager] 消息回调处理错误: {e}")
+
+    def _process_ota_status(self, topic, message):
+        """处理OTA状态消息
+
+        设备通过 phonebox/ota/status 或 phonebox/ota/{device_id}/status 主题
+        上报OTA升级进度和结果。
+        """
+        try:
+            data = json.loads(message)
+            device_id = data.get('device_id')
+            status = data.get('status')
+            progress = data.get('progress', -1)
+            from_version = data.get('from_version')
+            to_version = data.get('to_version')
+            error_message = data.get('error_message')
+
+            print(f"[OTA] 设备 {device_id} OTA状态更新: status={status}, progress={progress}%")
+
+            from app import app
+            from models import db, DeviceFirmwareUpdate, OperationLog
+
+            with app.app_context():
+                if status == 'started':
+                    record = DeviceFirmwareUpdate(
+                        device_id=device_id,
+                        from_version=from_version,
+                        to_version=to_version,
+                        status='in_progress',
+                        started_at=datetime.now()
+                    )
+                    db.session.add(record)
+                    db.session.commit()
+                    print(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
+
+                elif status == 'downloading' or status == 'updating':
+                    record = DeviceFirmwareUpdate.query.filter_by(
+                        device_id=device_id,
+                        to_version=to_version,
+                        status='in_progress'
+                    ).order_by(DeviceFirmwareUpdate.started_at.desc()).first()
+
+                    if record:
+                        print(f"[OTA] 设备 {device_id} 升级进度: {progress}%")
+                    else:
+                        record = DeviceFirmwareUpdate(
+                            device_id=device_id,
+                            from_version=from_version,
+                            to_version=to_version,
+                            status='in_progress',
+                            started_at=datetime.now()
+                        )
+                        db.session.add(record)
+                        db.session.commit()
+
+                elif status == 'success' or status == 'completed':
+                    record = DeviceFirmwareUpdate.query.filter_by(
+                        device_id=device_id,
+                        to_version=to_version,
+                        status='in_progress'
+                    ).order_by(DeviceFirmwareUpdate.started_at.desc()).first()
+
+                    if record:
+                        record.status = 'completed'
+                        record.completed_at = datetime.now()
+                        db.session.commit()
+                        print(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
+
+                    log = OperationLog(
+                        operation_type='firmware_upgrade_success',
+                        target_type='device',
+                        target_id=device_id,
+                        operator='OTA System',
+                        description=f'设备 {device_id} 固件升级成功: {from_version} -> {to_version}'
+                    )
+                    db.session.add(log)
+                    db.session.commit()
+
+                elif status == 'failed' or status == 'error':
+                    record = DeviceFirmwareUpdate.query.filter_by(
+                        device_id=device_id,
+                        to_version=to_version,
+                        status='in_progress'
+                    ).order_by(DeviceFirmwareUpdate.started_at.desc()).first()
+
+                    if record:
+                        record.status = 'failed'
+                        record.completed_at = datetime.now()
+                        record.error_message = error_message
+                        db.session.commit()
+                        print(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
+
+                    log = OperationLog(
+                        operation_type='firmware_upgrade_failed',
+                        target_type='device',
+                        target_id=device_id,
+                        operator='OTA System',
+                        description=f'设备 {device_id} 固件升级失败: {from_version} -> {to_version}, 错误: {error_message}'
+                    )
+                    db.session.add(log)
+                    db.session.commit()
+
+        except Exception as e:
+            print(f"[OTA] 处理OTA状态消息失败: {e}")
 
     def _process_heartbeat(self, topic, message):
         """处理心跳消息，更新设备状态"""
@@ -546,6 +654,37 @@ class MQTTManager:
         """清除所有缓存"""
         with self._cache_lock:
             self._user_cache.clear()
+
+    def publish_ota_command(self, device_id=None, payload=None):
+        """发布OTA固件升级指令
+
+        Args:
+            device_id: 目标设备ID（可选，为None时向所有设备广播）
+            payload: OTA指令内容，包含:
+                - url: 固件下载URL
+                - version: 目标版本
+                - md5: MD5校验值（可选）
+                - force: 是否强制升级（可选）
+
+        Returns:
+            bool: 发布是否成功
+        """
+        if payload is None:
+            payload = {}
+
+        if device_id:
+            topic = f'phonebox/ota/{device_id}'
+        else:
+            topic = 'phonebox/ota'
+
+        ota_payload = {
+            'action': 'update',
+            'timestamp': int(time.time())
+        }
+        ota_payload.update(payload)
+
+        print(f"[OTA] 发送OTA指令到 {topic}: {json.dumps(ota_payload)}")
+        return self.publish(topic, json.dumps(ota_payload), qos=1)
 
 
 mqtt_manager = MQTTManager()

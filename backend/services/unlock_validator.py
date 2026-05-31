@@ -1,0 +1,202 @@
+from models import db, User, TimeRule
+from datetime import datetime, date
+from typing import Dict, Tuple, Optional
+
+
+class UnlockValidator:
+    MIN_SCORE = 60
+    UNLOCK_COST = 10
+
+    @staticmethod
+    def validate_unlock(card_id: str) -> Tuple[bool, str, Optional[Dict]]:
+        """
+        验证开锁资格
+
+        Returns:
+            Tuple[是否允许, 原因, 用户信息]
+        """
+        user = User.query.filter_by(card_id=card_id).first()
+
+        if not user:
+            return False, 'card_not_found', None
+
+        if not user.is_active:
+            return False, 'user_inactive', {'current_score': user.current_score}
+
+        if user.is_blacklisted:
+            if user.blacklist_until and user.blacklist_until > datetime.now():
+                return False, 'user_blacklisted', {
+                    'reason': user.blacklist_reason,
+                    'until': user.blacklist_until.isoformat(),
+                    'current_score': user.current_score
+                }
+            elif user.blacklist_until is None:
+                return False, 'user_permanently_blacklisted', {
+                    'reason': user.blacklist_reason,
+                    'current_score': user.current_score
+                }
+
+        if user.current_score < UnlockValidator.MIN_SCORE:
+            return False, 'score_low', {'current_score': user.current_score}
+
+        if not UnlockValidator._check_daily_limit(user):
+            return False, 'daily_limit_exceeded', {
+                'current_score': user.current_score,
+                'limit': user.daily_unlock_limit,
+                'used': user.today_unlock_count
+            }
+
+        if not UnlockValidator._check_time_window():
+            return False, 'not_in_time_window', {'current_score': user.current_score}
+
+        return True, 'ok', {
+            'user_id': user.id,
+            'name': user.name,
+            'current_score': user.current_score,
+            'class_name': user.class_name
+        }
+
+    @staticmethod
+    def _check_daily_limit(user: User) -> bool:
+        today = date.today()
+
+        if user.last_unlock_date != today:
+            user.today_unlock_count = 0
+            user.last_unlock_date = today
+
+        return user.today_unlock_count < user.daily_unlock_limit
+
+    @staticmethod
+    def _check_time_window() -> bool:
+        now = datetime.now()
+        current_time = now.time()
+
+        time_rules = TimeRule.query.filter_by(is_active=True).all()
+
+        if not time_rules:
+            return True
+
+        for rule in time_rules:
+            if rule.start_time and rule.end_time:
+                start = rule.start_time.time() if isinstance(rule.start_time, datetime) else rule.start_time
+                end = rule.end_time.time() if isinstance(rule.end_time, datetime) else rule.end_time
+
+                if start <= current_time <= end:
+                    return True
+
+            if rule.days_of_week:
+                days = [int(d) for d in rule.days_of_week.split(',')]
+                if now.isoweekday() in days:
+                    if rule.start_time and rule.end_time:
+                        start = rule.start_time.time() if isinstance(rule.start_time, datetime) else rule.start_time
+                        end = rule.end_time.time() if isinstance(rule.end_time, datetime) else rule.end_time
+                        if start <= current_time <= end:
+                            return True
+
+        return True
+
+    @staticmethod
+    def record_unlock(user: User) -> None:
+        today = date.today()
+
+        if user.last_unlock_date != today:
+            user.today_unlock_count = 0
+            user.last_unlock_date = today
+
+        user.today_unlock_count += 1
+        user.current_score = max(0, user.current_score - UnlockValidator.UNLOCK_COST)
+        user.updated_at = datetime.now()
+
+        db.session.commit()
+
+    @staticmethod
+    def get_unlock_status(card_id: str) -> Dict:
+        user = User.query.filter_by(card_id=card_id).first()
+
+        if not user:
+            return {'exists': False}
+
+        today = date.today()
+        if user.last_unlock_date != today:
+            unlock_count = 0
+        else:
+            unlock_count = user.today_unlock_count
+
+        return {
+            'exists': True,
+            'user_id': user.id,
+            'name': user.name,
+            'current_score': user.current_score,
+            'is_blacklisted': user.is_blacklisted,
+            'daily_unlock_limit': user.daily_unlock_limit,
+            'today_unlock_count': unlock_count,
+            'remaining': max(0, user.daily_unlock_limit - unlock_count),
+            'is_active': user.is_active
+        }
+
+
+def check_user_blacklist(card_id: str) -> Tuple[bool, str]:
+    user = User.query.filter_by(card_id=card_id).first()
+
+    if not user:
+        return False, 'user_not_found'
+
+    if not user.is_active:
+        return False, 'user_inactive'
+
+    if user.is_blacklisted:
+        if user.blacklist_until and user.blacklist_until > datetime.now():
+            return True, user.blacklist_reason or '暂时禁用'
+        elif user.blacklist_until is None:
+            return True, user.blacklist_reason or '永久禁用'
+
+    return False, ''
+
+
+def add_to_blacklist(card_id: str, reason: str, until: datetime = None) -> Tuple[bool, str]:
+    user = User.query.filter_by(card_id=card_id).first()
+
+    if not user:
+        return False, 'user_not_found'
+
+    user.is_blacklisted = True
+    user.blacklist_reason = reason
+    user.blacklist_until = until
+    user.updated_at = datetime.now()
+
+    db.session.commit()
+
+    return True, '用户已加入黑名单'
+
+
+def remove_from_blacklist(card_id: str) -> Tuple[bool, str]:
+    user = User.query.filter_by(card_id=card_id).first()
+
+    if not user:
+        return False, 'user_not_found'
+
+    user.is_blacklisted = False
+    user.blacklist_reason = None
+    user.blacklist_until = None
+    user.updated_at = datetime.now()
+
+    db.session.commit()
+
+    return True, '用户已从黑名单移除'
+
+
+def set_daily_unlock_limit(card_id: str, limit: int) -> Tuple[bool, str]:
+    if limit < 0 or limit > 100:
+        return False, 'limit_out_of_range'
+
+    user = User.query.filter_by(card_id=card_id).first()
+
+    if not user:
+        return False, 'user_not_found'
+
+    user.daily_unlock_limit = limit
+    user.updated_at = datetime.now()
+
+    db.session.commit()
+
+    return True, f'每日开锁限制已设置为 {limit}'

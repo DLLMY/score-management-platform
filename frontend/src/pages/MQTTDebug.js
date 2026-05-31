@@ -485,8 +485,6 @@ function MQTTDebug() {
           addLog(`验证失败: ${card.reason}`, 'error');
         }
 
-        console.log('API响应:', response);
-
         // 强制清除MQTT相关缓存，确保获取最新日志
         api.cache.clearByUrl('/api/mqtt/logs');
 
@@ -1197,7 +1195,6 @@ function MQTTDebug() {
                                 `指令: phonebox/unlock/${boxId} (设备: ${selectedDevice.device_id})`,
                                 'send'
                               );
-                              console.log('远程开锁API响应:', response);
 
                               // 强制清除缓存，确保获取最新日志和状态
                               api.cache.clearByUrl('/api/mqtt/logs');

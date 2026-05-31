@@ -19,6 +19,13 @@ class User(db.Model):
     guardian_relation = db.Column(db.String(50))
     card_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
     current_score = db.Column(db.Integer, default=0, index=True)
+    is_blacklisted = db.Column(db.Boolean, default=False, index=True)
+    blacklist_reason = db.Column(db.String(500))
+    blacklist_until = db.Column(db.DateTime)
+    daily_unlock_limit = db.Column(db.Integer, default=5)
+    today_unlock_count = db.Column(db.Integer, default=0)
+    last_unlock_date = db.Column(db.Date)
+    is_active = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -194,11 +201,31 @@ class Device(db.Model):
     system_state = db.Column(db.Integer, default=0)
     class_info_id = db.Column(db.Integer, db.ForeignKey('class_info.id'), index=True)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), index=True)
+    ip_address = db.Column(db.String(45))
+    fw_version = db.Column(db.String(20))
+    platform = db.Column(db.String(50))
+    free_heap = db.Column(db.Integer)
+    last_error = db.Column(db.String(500))
+    error_count = db.Column(db.Integer, default=0)
+    alert_enabled = db.Column(db.Boolean, default=True)
+    heartbeat_timeout = db.Column(db.Integer, default=30)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
     class_info = db.relationship('ClassInfo', backref=db.backref('devices', lazy=True))
     admin = db.relationship('Admin', backref=db.backref('devices', lazy=True))
+
+
+class DeviceAlert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(100), nullable=False, index=True)
+    alert_type = db.Column(db.String(50), nullable=False)
+    severity = db.Column(db.String(20), default='warning')
+    message = db.Column(db.String(500))
+    is_resolved = db.Column(db.Boolean, default=False, index=True)
+    resolved_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
 
 class DeviceHeartbeat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -278,3 +305,34 @@ class Alert(db.Model):
     is_read = db.Column(db.Boolean, default=False, index=True)
     read_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+class FirmwareVersion(db.Model):
+    __tablename__ = 'firmware_versions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    description = db.Column(db.Text)
+    file_path = db.Column(db.String(500))
+    file_size = db.Column(db.Integer)
+    md5 = db.Column(db.String(64))
+    min_compatible_version = db.Column(db.String(50))
+    is_mandatory = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_by = db.Column(db.Integer)
+
+
+class DeviceFirmwareUpdate(db.Model):
+    __tablename__ = 'device_firmware_updates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(100), index=True)
+    device_name = db.Column(db.String(100))
+    from_version = db.Column(db.String(50))
+    to_version = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='pending')
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)

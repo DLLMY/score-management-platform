@@ -1,0 +1,36 @@
+{
+  "name": "学生积分管理平台",
+  "short_name": "积分管理",
+  "description": "学生积分管理系统，支持设备集成、数据分析、权限管理等功能",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3B82F6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["education", "productivity"],
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "数据概览",
+      "short_name": "概览",
+      "description": "查看数据统计概览",
+      "url": "/dashboard"
+    },
+    {
+      "name": "学生管理",
+      "short_name": "学生",
+      "description": "管理系统学生",
+      "url": "/users"
+    },
+    {
+      "name": "积分规则",
+      "short_name": "规则",
+      "description": "管理积分规则",
+      "url": "/rules"
+    }
+  ]
+}

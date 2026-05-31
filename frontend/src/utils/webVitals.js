@@ -26,7 +26,6 @@ const measureTTFB = () => {
     if (entry) {
       vitals.TTFB = entry.responseStart;
       notifyObservers();
-      console.log('📊 TTFB:', `${vitals.TTFB.toFixed(2)}ms`);
     }
   } catch (e) {}
 };
@@ -38,7 +37,6 @@ const measureFCP = () => {
         if (entry.name === 'first-contentful-paint') {
           vitals.FCP = entry.startTime;
           notifyObservers();
-          console.log('📊 FCP:', `${vitals.FCP.toFixed(2)}ms`);
           observer.disconnect();
         }
       }
@@ -54,7 +52,6 @@ const measureLCP = () => {
       const lastEntry = entries[entries.length - 1];
       vitals.LCP = lastEntry.startTime;
       notifyObservers();
-      console.log('📊 LCP:', `${vitals.LCP.toFixed(2)}ms`);
     });
     observer.observe({ entryTypes: ['largest-contentful-paint'] });
     return () => observer.disconnect();
@@ -89,7 +86,6 @@ const measureCLS = () => {
             clsValue = sessionValue;
             vitals.CLS = clsValue;
             notifyObservers();
-            console.log('📊 CLS:', clsValue.toFixed(4));
           }
         }
       }
@@ -105,7 +101,6 @@ const measureFID = () => {
       for (const entry of list.getEntries()) {
         vitals.FID = entry.processingStart - entry.startTime;
         notifyObservers();
-        console.log('📊 FID:', `${vitals.FID.toFixed(2)}ms`);
         observer.disconnect();
       }
     });

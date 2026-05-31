@@ -572,6 +572,11 @@ const api = {
       const query = new URLSearchParams(params).toString();
       return request(`/api/operation-logs?${query}`);
     },
+    getStats: (params) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/operation-logs/stats?${query}`);
+    },
+    getSummary: () => request('/api/operation-logs/summary'),
   },
   notifications: {
     getAll: (params) => {
@@ -643,6 +648,40 @@ const api = {
       }),
     getByClass: (classId) => request(`/api/devices/class/${classId}`),
     getByAdmin: (adminId) => request(`/api/devices/admin/${adminId}`),
+    getAlerts: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/devices/alerts?${query}`);
+    },
+    resolveAlert: (deviceId, alertId) =>
+      request(`/api/devices/${deviceId}/resolve-alert/${alertId}`, { method: 'POST' }),
+    getAlertHistory: (deviceId) => request(`/api/devices/${deviceId}/alerts`),
+    remoteControl: (deviceId, action) =>
+      request(`/api/devices/${deviceId}/remote-control`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      }),
+    getAdvancedStats: () => request('/api/devices/advanced-stats'),
+    checkHeartbeatTimeout: () => request('/api/devices/heartbeat-timeout-check'),
+    updateSettings: (deviceId, data) =>
+      request(`/api/devices/${deviceId}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    batchControl: (deviceIds, action) =>
+      request('/api/devices/batch-control', {
+        method: 'POST',
+        body: JSON.stringify({ device_ids: deviceIds, action }),
+      }),
+    otaUpgrade: (deviceId, data) =>
+      request(`/api/devices/${deviceId}/ota-upgrade`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    bulkOTAUpgrade: (data) =>
+      request('/api/devices/ota-upgrade-all', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
   classes: {
     getAll: () => request('/api/classes'),
@@ -700,6 +739,51 @@ const api = {
         method: 'POST',
       }),
     getByAdmin: (adminId) => request(`/api/admin-classes/${adminId}`),
+  },
+  firmware: {
+    getVersions: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/firmware/versions?${query}`);
+    },
+    getVersionById: (id) => request(`/api/firmware/versions/${id}`),
+    createVersion: (data) =>
+      request('/api/firmware/versions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateVersion: (id, data) =>
+      request(`/api/firmware/versions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deleteVersion: (id) => request(`/api/firmware/versions/${id}`, { method: 'DELETE' }),
+    upload: async (formData) => {
+      const token = getAccessToken();
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/firmware/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error('上传失败');
+      }
+      return response.json();
+    },
+    getLatest: () => request('/api/firmware/latest'),
+    getOTAStatus: () => request('/api/firmware/ota-status'),
+    getUpgradeRecords: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/firmware/upgrade-records?${query}`);
+    },
+    batchUpgrade: (data) =>
+      request('/api/firmware/batch-upgrade', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
   dashboard: {
     getData: () => request('/api/dashboard/data'),

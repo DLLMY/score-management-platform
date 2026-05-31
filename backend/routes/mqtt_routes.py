@@ -186,6 +186,13 @@ def handle_mqtt_message(client, topic, message):
             box_b_status = data.get('box_b_status')
             system_state = data.get('system_state')
             
+            # ESP32 设备额外字段
+            fw_version = data.get('fw_version')
+            platform = data.get('platform')
+            free_heap = data.get('free_heap')
+            last_error = data.get('last_error')
+            error_count = data.get('error_count')
+            
             # 使用延迟导入获取app
             app = get_app_context()
             with app.app_context():
@@ -211,6 +218,18 @@ def handle_mqtt_message(client, topic, message):
                     device.box_b_status = box_b_status
                     device.system_state = system_state
                     device.updated_at = datetime.now()
+                    
+                    # 更新ESP32设备额外字段
+                    if fw_version is not None:
+                        device.fw_version = fw_version
+                    if platform is not None:
+                        device.platform = platform
+                    if free_heap is not None:
+                        device.free_heap = free_heap
+                    if last_error is not None:
+                        device.last_error = last_error
+                    if error_count is not None:
+                        device.error_count = error_count
                 else:
                     device = Device(
                         device_id=device_id,
@@ -221,7 +240,12 @@ def handle_mqtt_message(client, topic, message):
                         uptime=uptime,
                         box_a_status=box_a_status,
                         box_b_status=box_b_status,
-                        system_state=system_state
+                        system_state=system_state,
+                        fw_version=fw_version,
+                        platform=platform,
+                        free_heap=free_heap,
+                        last_error=last_error,
+                        error_count=error_count or 0
                     )
                     db.session.add(device)
                 

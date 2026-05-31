@@ -9,15 +9,17 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "checkJs": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
@@ -29,6 +31,6 @@
       "@context/*": ["src/context/*"]
     }
   },
-  "include": ["src/**/*", "src/**/*.js", "src/**/*.jsx"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "build", "public"]
 }

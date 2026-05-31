@@ -103,3 +103,74 @@ def clear_mqtt_logs():
 def get_mqtt_status():
     """获取MQTT状态"""
     return mqtt_manager.get_status()
+
+OTA_TOPIC = 'phonebox/ota'
+OTA_STATUS_TOPIC = 'phonebox/ota/status'
+
+def publish_ota_command(device_id, payload):
+    """发布OTA固件升级指令
+
+    Args:
+        device_id: 目标设备ID（可选，用于定向升级）
+        payload: OTA指令内容，包含:
+            - url: 固件下载URL
+            - version: 目标版本
+            - md5: MD5校验值（可选）
+            - force: 是否强制升级（可选）
+
+    Returns:
+        bool: 发布是否成功
+    """
+    import time
+
+    if device_id:
+        topic = f'phonebox/ota/{device_id}'
+    else:
+        topic = OTA_TOPIC
+
+    ota_payload = {
+        'action': 'update',
+        'timestamp': int(time.time())
+    }
+    ota_payload.update(payload)
+
+    print(f"[OTA] 发送OTA指令到 {topic}: {json.dumps(ota_payload)}")
+    return publish_mqtt(topic, json.dumps(ota_payload), qos=1)
+
+def get_ota_status(device_id=None):
+    """获取OTA升级状态
+
+    Args:
+        device_id: 设备ID（可选）
+
+    Returns:
+        dict: OTA状态信息
+    """
+    try:
+        from app import app
+        from models import db, DeviceFirmwareUpdate
+
+        with app.app_context():
+            query = DeviceFirmwareUpdate.query
+
+            if device_id:
+                query = query.filter_by(device_id=device_id)
+
+            records = query.order_by(DeviceFirmwareUpdate.created_at.desc()).limit(10).all()
+
+            return {
+                'records': [{
+                    'id': r.id,
+                    'device_id': r.device_id,
+                    'device_name': r.device_name,
+                    'from_version': r.from_version,
+                    'to_version': r.to_version,
+                    'status': r.status,
+                    'started_at': r.started_at.isoformat() if r.started_at else None,
+                    'completed_at': r.completed_at.isoformat() if r.completed_at else None,
+                    'error_message': r.error_message
+                } for r in records]
+            }
+    except Exception as e:
+        print(f"[OTA] 获取OTA状态失败: {e}")
+        return {'records': []}
