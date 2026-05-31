@@ -63,7 +63,7 @@ class UserList(Resource):
     @ns_users.doc('list_users', description='获取学生列表', security='Bearer', params={
         'page': '页码，默认1',
         'per_page': '每页数量，默认100',
-        'search': '搜索关键词（姓名、卡号、电话）',
+        'search': '搜索关键词（姓名、学号、电话）',
         'class_name': '班级名称筛选'
     })
     @ns_users.response(200, '成功', user_list_response)
@@ -172,7 +172,7 @@ class UserList(Resource):
         - guardian_name: 监护人姓名（可选）
         - guardian_phone: 监护人电话（可选）
         - guardian_relation: 监护关系（可选）
-        - card_id: 卡片ID（可选）
+        - card_id: 学号（必填）
         - current_score: 当前积分（可选，默认0）
         """
         data = ns_users.payload
@@ -204,7 +204,27 @@ class UserList(Resource):
         
         cache_service.flush_all()
         
-        return {'success': True, 'message': '用户创建成功', 'user_id': user.id}, 201
+        return {
+            'success': True,
+            'message': '用户创建成功',
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'gender': user.gender,
+                'class_name': user.class_name,
+                'phone': user.phone,
+                'father_name': user.father_name,
+                'father_phone': user.father_phone,
+                'mother_name': user.mother_name,
+                'mother_phone': user.mother_phone,
+                'guardian_name': user.guardian_name,
+                'guardian_phone': user.guardian_phone,
+                'guardian_relation': user.guardian_relation,
+                'card_id': user.card_id,
+                'current_score': user.current_score,
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            }
+        }, 201
 
 @ns_users.route('/<int:id>')
 @ns_users.param('id', '用户ID')
@@ -290,7 +310,27 @@ class UserResource(Resource):
         
         cache_service.flush_all()
         
-        return {'success': True, 'message': '用户更新成功'}
+        return {
+            'success': True,
+            'message': '用户更新成功',
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'gender': user.gender,
+                'class_name': user.class_name,
+                'phone': user.phone,
+                'father_name': user.father_name,
+                'father_phone': user.father_phone,
+                'mother_name': user.mother_name,
+                'mother_phone': user.mother_phone,
+                'guardian_name': user.guardian_name,
+                'guardian_phone': user.guardian_phone,
+                'guardian_relation': user.guardian_relation,
+                'card_id': user.card_id,
+                'current_score': user.current_score,
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            }
+        }
 
     @ns_users.doc('delete_user', description='删除学生', security='Bearer')
     @ns_users.response(200, '删除成功')
@@ -386,7 +426,7 @@ class UserImport(Resource):
                 existing = User.query.filter_by(card_id=user_data.get('card_id')).first()
                 if existing:
                     error_count += 1
-                    errors.append(f'第{idx+1}行: 卡号 {user_data.get("card_id")} 已存在')
+                    errors.append(f'第{idx+1}行: 学号 {user_data.get("card_id")} 已存在')
                     continue
 
                 user = User(
@@ -610,6 +650,7 @@ class UserImportFile(Resource):
                 '监护关系': 'guardian_relation',
                 '卡片ID': 'card_id',
                 '饭卡号': 'card_id',
+                '学号': 'card_id',
                 '初始积分': 'current_score',
                 '积分': 'current_score'
             }
@@ -625,7 +666,7 @@ class UserImportFile(Resource):
                     row_number = idx + 2
                     
                     if not card_id:
-                        errors.append(f'第{row_number}行：缺少卡片ID')
+                        errors.append(f'第{row_number}行：缺少学号')
                         continue
                     
                     existing = User.query.filter_by(card_id=card_id).first()

@@ -74,12 +74,14 @@ function RankRuleList() {
     icon: 'Star',
     description: '',
     is_active: true,
+    unlock_min_score: null,
+    weekly_unlock_limit: null,
   });
 
   const [formErrors, setFormErrors] = useState({});
 
   const validationRules = {
-    rank_name: ['required', { maxLength: 50 }],
+    name: ['required', { maxLength: 50 }],
     min_score: ['required', 'integer', { min: 0 }, { max: 10000 }],
     max_score: ['required', 'integer', { min: 0 }, { max: 10000 }],
     description: [{ maxLength: 200 }],
@@ -143,6 +145,8 @@ function RankRuleList() {
         icon: 'Star',
         description: '',
         is_active: true,
+        unlock_min_score: null,
+        weekly_unlock_limit: null,
       });
     } catch (err) {
       showToast('操作失败: ' + err.message, 'error');
@@ -317,6 +321,22 @@ function RankRuleList() {
                             {rule.min_score} - {rule.max_score} 分
                           </span>
                         </div>
+                        {(rule.unlock_min_score !== null || rule.weekly_unlock_limit !== null) && (
+                          <div className='mt-2 pt-2 border-t border-gray-200/50 grid grid-cols-2 gap-2 text-xs'>
+                            {rule.unlock_min_score !== null && (
+                              <div className='flex items-center gap-1'>
+                                <span className='text-gray-400'>开门分数:</span>
+                                <span className='font-semibold text-amber-600'>{rule.unlock_min_score}</span>
+                              </div>
+                            )}
+                            {rule.weekly_unlock_limit !== null && (
+                              <div className='flex items-center gap-1'>
+                                <span className='text-gray-400'>每周次数:</span>
+                                <span className='font-semibold text-blue-600'>{rule.weekly_unlock_limit}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div className='mt-3 h-2 bg-gray-200 rounded-full overflow-hidden'>
                           <div
                             className='h-full rounded-full transition-all'
@@ -429,20 +449,20 @@ function RankRuleList() {
                 </label>
                 <input
                   type='text'
-                  value={formData.rank_name}
+                  value={formData.name}
                   onChange={(e) => {
-                    setFormData({ ...formData, rank_name: e.target.value });
-                    if (formErrors.rank_name) {
-                      setFormErrors((prev) => ({ ...prev, rank_name: null }));
+                    setFormData({ ...formData, name: e.target.value });
+                    if (formErrors.name) {
+                      setFormErrors((prev) => ({ ...prev, name: null }));
                     }
                   }}
-                  className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.rank_name ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                  className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.name ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
                   placeholder='如：卓越、优秀、合格'
                 />
-                {formErrors.rank_name && (
+                {formErrors.name && (
                   <p className='mt-2 text-sm text-red-500 flex items-center gap-1'>
                     <AlertCircle className='w-4 h-4' />
-                    {formErrors.rank_name}
+                    {formErrors.name}
                   </p>
                 )}
               </div>
@@ -505,6 +525,40 @@ function RankRuleList() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className='mb-5'>
+                <label className='block text-sm font-semibold text-gray-700 mb-2.5'>
+                  开门最低分数 <span className='text-xs text-gray-400'>(留空使用全局默认80分)</span>
+                </label>
+                <input
+                  type='number'
+                  min='0'
+                  value={formData.unlock_min_score ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, unlock_min_score: val === '' ? null : parseInt(val) || 0 });
+                  }}
+                  className='w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50'
+                  placeholder='留空使用默认值80'
+                />
+              </div>
+
+              <div className='mb-5'>
+                <label className='block text-sm font-semibold text-gray-700 mb-2.5'>
+                  每周开门次数 <span className='text-xs text-gray-400'>(留空使用全局默认5次)</span>
+                </label>
+                <input
+                  type='number'
+                  min='0'
+                  value={formData.weekly_unlock_limit ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, weekly_unlock_limit: val === '' ? null : parseInt(val) || 0 });
+                  }}
+                  className='w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50'
+                  placeholder='留空使用默认值5'
+                />
               </div>
 
               <div className='mb-5'>

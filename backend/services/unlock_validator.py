@@ -1,11 +1,24 @@
-from models import db, User, TimeRule
+from models import db, User, TimeRule, ScoreRankRule
 from datetime import datetime, date
 from typing import Dict, Tuple, Optional
 
 
 class UnlockValidator:
-    MIN_SCORE = 60
+    MIN_SCORE = 80
     UNLOCK_COST = 10
+    WEEKLY_LIMIT = 5
+
+    @staticmethod
+    def get_user_rank(user: User) -> Optional[ScoreRankRule]:
+        """根据用户分数获取对应的排名规则"""
+        if not user.current_score:
+            return None
+        rules = ScoreRankRule.query.filter_by(is_active=True).order_by(ScoreRankRule.min_score.desc()).all()
+        for rule in rules:
+            if user.current_score >= rule.min_score:
+                if rule.max_score is None or user.current_score <= rule.max_score:
+                    return rule
+        return None
 
     @staticmethod
     def validate_unlock(card_id: str) -> Tuple[bool, str, Optional[Dict]]:
@@ -36,8 +49,19 @@ class UnlockValidator:
                     'current_score': user.current_score
                 }
 
-        if user.current_score < UnlockValidator.MIN_SCORE:
-            return False, 'score_low', {'current_score': user.current_score}
+        rank = UnlockValidator.get_user_rank(user)
+        min_score = rank.unlock_min_score if rank and rank.unlock_min_score is not None else UnlockValidator.MIN_SCORE
+
+        if user.current_score < min_score:
+            return False, 'score_low', {'current_score': user.current_score, 'min_required': min_score}
+
+        weekly_limit = rank.weekly_unlock_limit if rank and rank.weekly_unlock_limit is not None else UnlockValidator.WEEKLY_LIMIT
+        if not UnlockValidator._check_weekly_limit(user, weekly_limit):
+            return False, 'weekly_limit_exceeded', {
+                'current_score': user.current_score,
+                'limit': weekly_limit,
+                'used': user.weekly_unlock_count if hasattr(user, 'weekly_unlock_count') else 0
+            }
 
         if not UnlockValidator._check_daily_limit(user):
             return False, 'daily_limit_exceeded', {
@@ -53,7 +77,8 @@ class UnlockValidator:
             'user_id': user.id,
             'name': user.name,
             'current_score': user.current_score,
-            'class_name': user.class_name
+            'class_name': user.class_name,
+            'rank_name': rank.name if rank else None
         }
 
     @staticmethod
@@ -65,6 +90,23 @@ class UnlockValidator:
             user.last_unlock_date = today
 
         return user.today_unlock_count < user.daily_unlock_limit
+
+    @staticmethod
+    def _check_weekly_limit(user: User, weekly_limit: int) -> bool:
+        """检查每周开门次数限制"""
+        if not hasattr(user, 'weekly_unlock_count'):
+            user.weekly_unlock_count = 0
+        if not hasattr(user, 'week_start_date'):
+            user.week_start_date = None
+
+        current_week_start = date.today().isoformat()[:4] + '-W' + str(date.today().isocalendar()[1]).zfill(2)
+        user_week_start = user.week_start_date.isoformat()[:4] + '-W' + str(user.week_start_date.isocalendar()[1]).zfill(2) if user.week_start_date else None
+
+        if user_week_start != current_week_start:
+            user.weekly_unlock_count = 0
+            user.week_start_date = date.today()
+
+        return user.weekly_unlock_count < weekly_limit
 
     @staticmethod
     def _check_time_window() -> bool:
@@ -103,7 +145,15 @@ class UnlockValidator:
             user.today_unlock_count = 0
             user.last_unlock_date = today
 
+        current_week_start = date.today().isoformat()[:4] + '-W' + str(date.today().isocalendar()[1]).zfill(2)
+        user_week_start = user.week_start_date.isoformat()[:4] + '-W' + str(user.week_start_date.isocalendar()[1]).zfill(2) if user.week_start_date else None
+
+        if user_week_start != current_week_start:
+            user.weekly_unlock_count = 0
+            user.week_start_date = today
+
         user.today_unlock_count += 1
+        user.weekly_unlock_count = getattr(user, 'weekly_unlock_count', 0) + 1
         user.current_score = max(0, user.current_score - UnlockValidator.UNLOCK_COST)
         user.updated_at = datetime.now()
 

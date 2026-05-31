@@ -263,3 +263,97 @@ CACHE_KEYS = {
     'blacklist': 'blacklist:user:{user_id}',
     'rate_limit': 'ratelimit:{ip}:{endpoint}',
 }
+
+def warmup_cache(app):
+    """
+    缓存预热函数 - 在应用启动时预加载常用数据到Redis缓存
+    """
+    if not cache.client:
+        print("Redis未连接，跳过缓存预热")
+        return
+    
+    print("开始缓存预热...")
+    
+    with app.app_context():
+        try:
+            # 预热规则数据
+            from models import ScoreRule
+            rules = ScoreRule.query.all()
+            rules_data = [
+                {
+                    'id': r.id,
+                    'name': r.name,
+                    'score': r.score,
+                    'category_id': r.category_id,
+                    'enabled': r.is_active,
+                    'description': r.description
+                } for r in rules
+            ]
+            cache.set('rules:all', rules_data, expire=3600)
+            print(f"预热规则数据: {len(rules_data)} 条")
+            
+            # 预热分类数据
+            from models import ScoreCategory
+            categories = ScoreCategory.query.all()
+            categories_data = [
+                {
+                    'id': c.id,
+                    'name': c.name,
+                    'color': c.color,
+                    'enabled': c.is_active
+                } for c in categories
+            ]
+            cache.set('categories:all', categories_data, expire=3600)
+            print(f"预热分类数据: {len(categories_data)} 条")
+            
+            # 预热设备在线状态
+            from models import Device
+            devices = Device.query.all()
+            online_devices = [d.device_id for d in devices if d.status == 'online']
+            if online_devices:
+                cache.client.delete(cache._key('devices:online'))
+                cache.client.sadd(cache._key('devices:online'), *online_devices)
+            print(f"预热设备在线状态: {len(online_devices)} 台在线")
+            
+            # 预热排名规则
+            from models import ScoreRankRule
+            rank_rules = ScoreRankRule.query.all()
+            rank_rules_data = [
+                {
+                    'id': r.id,
+                    'name': r.name,
+                    'min_score': r.min_score,
+                    'max_score': r.max_score,
+                    'enabled': r.is_active,
+                    'color': r.color
+                } for r in rank_rules
+            ]
+            cache.set('rank_rules:all', rank_rules_data, expire=3600)
+            print(f"预热排名规则: {len(rank_rules_data)} 条")
+            
+            # 预热时间规则
+            from models import TimeRule
+            time_rules = TimeRule.query.all()
+            time_rules_data = [
+                {
+                    'id': t.id,
+                    'name': t.name,
+                    'day_of_week': t.day_of_week,
+                    'start_hour': t.start_hour,
+                    'start_minute': t.start_minute,
+                    'end_hour': t.end_hour,
+                    'end_minute': t.end_minute,
+                    'enabled': t.is_active
+                } for t in time_rules
+            ]
+            cache.set('time_rules:all', time_rules_data, expire=3600)
+            print(f"预热时间规则: {len(time_rules_data)} 条")
+            
+            # 设置缓存预热时间戳
+            cache.set('cache_warmup:timestamp', datetime.now().isoformat(), expire=7200)
+            print("缓存预热完成")
+            
+        except Exception as e:
+            print(f"缓存预热失败: {e}")
+            import traceback
+            traceback.print_exc()

@@ -33,29 +33,55 @@ class ScoreImportHelper:
 
         headers = [cell.value for cell in sheet[1]]
 
-        required_headers = ['card_id', 'subject', 'score']
-        optional_headers = ['full_score', 'student_name', 'class_name']
+        # 支持的表头映射（支持英文和中文）
+        header_mapping = {
+            'card_id': ['card_id', '学号', '卡号', 'id', '学生id'],
+            'student_name': ['student_name', '姓名', '学生姓名'],
+            'class_name': ['class_name', '班级', '班级名称'],
+            'subject': ['subject', '科目', '考试科目'],
+            'score': ['score', '分数', '成绩'],
+            'full_score': ['full_score', '满分', '总分'],
+            'remark': ['remark', '备注', '说明']
+        }
 
-        header_lower = [h.lower().strip() if h else '' for h in headers]
+        header_lower = [str(h).lower().strip() if h else '' for h in headers]
 
-        for req in required_headers:
-            if req not in header_lower:
-                matched = False
-                for h in header_lower:
-                    if req.replace('_', '') in h.replace('_', ''):
-                        matched = True
-                        break
-                if not matched:
-                    errors.append(f'缺少必需列: {req}')
+        # 检查必需的列
+        required_fields = ['card_id', 'subject', 'score']
+        for field in required_fields:
+            found = False
+            for alias in header_mapping.get(field, []):
+                if alias.lower() in header_lower:
+                    found = True
+                    break
+            if not found:
+                errors.append(f'缺少必需列: {field}（或中文表头）')
 
         return {'valid': len(errors) == 0, 'errors': errors, 'headers': headers}
 
     @staticmethod
     def find_column_index(headers, target_column: str) -> int:
-        """查找列的索引，支持模糊匹配"""
+        """查找列的索引，支持模糊匹配和中英文表头"""
+        # 支持的表头映射
+        header_mapping = {
+            'card_id': ['card_id', '学号', '卡号', 'id', '学生id'],
+            'student_name': ['student_name', '姓名', '学生姓名'],
+            'class_name': ['class_name', '班级', '班级名称'],
+            'subject': ['subject', '科目', '考试科目'],
+            'score': ['score', '分数', '成绩'],
+            'full_score': ['full_score', '满分', '总分'],
+            'remark': ['remark', '备注', '说明']
+        }
+        
+        # 获取目标列的所有别名
+        aliases = header_mapping.get(target_column, [target_column])
+        
         for i, header in enumerate(headers):
-            if header and target_column.lower() in header.lower():
-                return i
+            if header:
+                header_str = str(header).lower().strip()
+                for alias in aliases:
+                    if alias.lower() in header_str:
+                        return i
         return -1
 
     @staticmethod
@@ -199,6 +225,7 @@ class PreviewImportData(Resource):
             subject_idx = ScoreImportHelper.find_column_index(headers, 'subject')
             score_idx = ScoreImportHelper.find_column_index(headers, 'score')
             full_score_idx = ScoreImportHelper.find_column_index(headers, 'full_score')
+            remark_idx = ScoreImportHelper.find_column_index(headers, 'remark')
 
             results = []
             errors = []
@@ -212,6 +239,7 @@ class PreviewImportData(Resource):
                 subject = row[subject_idx] if subject_idx >= 0 else None
                 score_val = ScoreImportHelper.parse_score_value(row[score_idx]) if score_idx >= 0 else None
                 full_score = ScoreImportHelper.parse_score_value(row[full_score_idx]) if full_score_idx >= 0 else 100
+                remark = str(row[remark_idx]).strip() if remark_idx >= 0 and row[remark_idx] else None
 
                 if not card_id:
                     errors.append(f'行{i+2}: 学号为空')
@@ -244,6 +272,7 @@ class PreviewImportData(Resource):
                     'subject': subject,
                     'score': score_val,
                     'full_score': full_score,
+                    'remark': remark,
                     'will_update': existing_score is not None,
                     'will_insert': existing_score is None
                 })
@@ -312,6 +341,7 @@ class ExecuteImport(Resource):
             subject_idx = ScoreImportHelper.find_column_index(headers, 'subject')
             score_idx = ScoreImportHelper.find_column_index(headers, 'score')
             full_score_idx = ScoreImportHelper.find_column_index(headers, 'full_score')
+            remark_idx = ScoreImportHelper.find_column_index(headers, 'remark')
 
             success_count = 0
             update_count = 0
@@ -328,6 +358,7 @@ class ExecuteImport(Resource):
                     subject = row[subject_idx] if subject_idx >= 0 else None
                     score_val = ScoreImportHelper.parse_score_value(row[score_idx]) if score_idx >= 0 else None
                     full_score = ScoreImportHelper.parse_score_value(row[full_score_idx]) if full_score_idx >= 0 else 100
+                    remark = str(row[remark_idx]).strip() if remark_idx >= 0 and row[remark_idx] else None
 
                     if not card_id or not subject:
                         failed_count += 1
@@ -357,6 +388,7 @@ class ExecuteImport(Resource):
                         if update_existing:
                             existing_score.score = score_val
                             existing_score.full_score = full_score
+                            existing_score.remark = remark
                             existing_score.status = 'pending'
                             existing_score.entered_by = entered_by
                             update_count += 1
@@ -371,6 +403,7 @@ class ExecuteImport(Resource):
                             subject=subject,
                             score=score_val,
                             full_score=full_score,
+                            remark=remark,
                             status='pending',
                             entered_by=entered_by
                         )
@@ -409,44 +442,153 @@ class DownloadTemplate(Resource):
         下载成绩导入Excel模板
         """
         exam_id = request.args.get('exam_id', type=int)
+        class_id = request.args.get('class_id', type=int)
 
+        exam = None
         if exam_id:
             exam = Exam.query.get(exam_id)
-            subjects = exam.subjects if exam else ['语文', '数学', '英语']
+        
+        subjects = exam.subjects if exam else ['语文', '数学', '英语']
+        
+        # 获取学生列表
+        if class_id:
+            # 如果指定了班级，获取该班级所有学生
+            students = User.query.filter_by(class_id=class_id, role='student').order_by(User.card_id).all()
         else:
-            subjects = ['语文', '数学', '英语']
+            # 如果没有指定班级，获取所有学生（用于全校考试）
+            students = User.query.filter_by(role='student').order_by(User.class_name, User.card_id).all()
 
         wb = openpyxl.Workbook()
-        sheet = wb.active
-        sheet.title = '成绩导入'
-
-        headers = ['card_id', 'student_name', 'subject', 'score', 'full_score']
-        sheet.append(headers)
-
-        sample_students = User.query.limit(5).all()
-        for student in sample_students:
-            for subject in subjects[:2]:
-                sheet.append([
-                    student.card_id,
-                    student.name,
-                    subject,
-                    '',
-                    100
+        
+        # 1. 创建成绩导入表
+        sheet_data = wb.active
+        sheet_data.title = '成绩导入'
+        
+        # 2. 创建说明表
+        sheet_notes = wb.create_sheet(title='填写说明')
+        
+        # --- 填写说明表 ---
+        notes_header_style = openpyxl.styles.Font(bold=True, size=12, color='FFFFFF')
+        notes_header_fill = openpyxl.styles.PatternFill(start_color='4A90D9', end_color='4A90D9', fill_type='solid')
+        notes_header_alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+        
+        notes_data = [
+            ['列名', '说明', '填写方式', '示例'],
+            ['学号', '学生的学号，系统自动填入，请勿修改', '系统自动', '202401001'],
+            ['姓名', '学生姓名，系统自动填入，仅作参考', '系统自动', '张三'],
+            ['班级', '班级名称，系统自动填入', '系统自动', '高一(1)班'],
+            ['科目', '科目名称，系统自动填入对应考试科目', '系统自动', '语文'],
+            ['分数', '学生成绩，教师必须填写，必须为数字', '教师填写', '85'],
+            ['满分', '科目满分，默认100，可修改', '默认100', '100'],
+            ['备注', '成绩备注信息，可选填写', '可选', '进步明显']
+        ]
+        
+        for row_idx, row_data in enumerate(notes_data, 1):
+            for col_idx, cell_value in enumerate(row_data, 1):
+                cell = sheet_notes.cell(row=row_idx, column=col_idx, value=cell_value)
+                if row_idx == 1:
+                    cell.font = notes_header_style
+                    cell.fill = notes_header_fill
+                    cell.alignment = notes_header_alignment
+        
+        # 设置列宽
+        sheet_notes.column_dimensions['A'].width = 20
+        sheet_notes.column_dimensions['B'].width = 40
+        sheet_notes.column_dimensions['C'].width = 10
+        sheet_notes.column_dimensions['D'].width = 20
+        
+        # 添加考试信息
+        if exam:
+            sheet_notes.cell(row=10, column=1, value='考试信息')
+            sheet_notes.cell(row=10, column=1).font = openpyxl.styles.Font(bold=True)
+            sheet_notes.cell(row=11, column=1, value=f'考试名称: {exam.name}')
+            sheet_notes.cell(row=12, column=1, value=f'考试科目: {", ".join(exam.subjects)}')
+            if exam.start_time:
+                sheet_notes.cell(row=13, column=1, value=f'开始时间: {exam.start_time.strftime("%Y-%m-%d %H:%M")}')
+            if exam.end_time:
+                sheet_notes.cell(row=14, column=1, value=f'结束时间: {exam.end_time.strftime("%Y-%m-%d %H:%M")}')
+        
+        # --- 成绩导入表 ---
+        header_style = openpyxl.styles.Font(bold=True, size=11, color='FFFFFF')
+        header_fill = openpyxl.styles.PatternFill(start_color='4A90D9', end_color='4A90D9', fill_type='solid')
+        header_alignment = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+        
+        headers = ['学号', '姓名', '班级', '科目', '分数', '满分', '备注']
+        sheet_data.append(headers)
+        
+        # 应用样式
+        for col_idx in range(1, len(headers) + 1):
+            cell = sheet_data.cell(row=1, column=col_idx)
+            cell.font = header_style
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # 设置列宽
+        col_widths = [15, 12, 15, 12, 10, 10, 20]
+        for col_idx, width in enumerate(col_widths, 1):
+            sheet_data.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+        
+        # 添加学生数据 - 为每个学生生成所有科目的成绩行
+        for student in students:
+            for subject in subjects:
+                sheet_data.append([
+                    student.card_id,      # 学号（已填入）
+                    student.name,         # 姓名（已填入）
+                    student.class_name or '',  # 班级（已填入）
+                    subject,              # 科目（已填入）
+                    '',                   # 分数（教师填写）
+                    100,                  # 满分（默认100）
+                    ''                    # 备注（可选填写）
                 ])
-
-        for col in ['A', 'B', 'C', 'D', 'E']:
-            sheet.column_dimensions[col].width = 15
-
+        
+        # 添加数据验证 - 确保分数是数字
+        from openpyxl.worksheet.datavalidation import DataValidation
+        score_validation = DataValidation(
+            type='decimal',
+            operator='between',
+            formula1='0',
+            formula2='200',
+            allow_blank=True,
+            errorTitle='分数无效',
+            error='请输入有效的分数（0-200之间）'
+        )
+        sheet_data.add_data_validation(score_validation)
+        score_validation.add('E:E')
+        
+        # 冻结首行
+        sheet_data.freeze_panes = 'A2'
+        
+        # 添加自动筛选
+        sheet_data.auto_filter.ref = sheet_data.dimensions
+        
+        # 添加条件格式 - 分数列
+        from openpyxl.formatting.rule import CellIsRule
+        from openpyxl.styles import Font, PatternFill
+        
+        # 红色 - 不及格（假设满分100，60分以下）
+        red_fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+        red_font = Font(color='9C0006')
+        red_rule = CellIsRule(operator='lessThan', formula=['60'], fill=red_fill, font=red_font)
+        
+        # 绿色 - 优秀（90分以上）
+        green_fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+        green_font = Font(color='006100')
+        green_rule = CellIsRule(operator='greaterThan', formula=['90'], fill=green_fill, font=green_font)
+        
+        sheet_data.conditional_formatting.add('E2:E1000', red_rule)
+        sheet_data.conditional_formatting.add('E2:E1000', green_rule)
+        
         output = BytesIO()
         wb.save(output)
         output.seek(0)
 
         from flask import send_file
+        filename = f'成绩导入模板_{exam.name if exam else "通用"}.xlsx'
         return send_file(
             output,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
-            attachment_filename=f'score_import_template.xlsx'
+            attachment_filename=filename
         )
 
 

@@ -278,14 +278,14 @@ function UserList() {
 
     try {
       if (state.editingUser) {
-        const updatedUser = await api.users.update(state.editingUser.id, state.formData);
+        const result = await api.users.update(state.editingUser.id, state.formData);
         showToast('学生信息更新成功', 'success');
-        dispatch({ type: 'UPDATE_USER', payload: { userId: state.editingUser.id, updatedUser } });
+        dispatch({ type: 'UPDATE_USER', payload: { userId: state.editingUser.id, updatedUser: result.user } });
       } else {
-        const newUser = await api.users.create(state.formData);
-        showToast('学生添加成功', 'success');
-        dispatch({ type: 'ADD_USER', payload: newUser });
-      }
+          const result = await api.users.create(state.formData);
+          showToast('学生添加成功', 'success');
+          dispatch({ type: 'ADD_USER', payload: result.user });
+        }
       dispatch({ type: 'SET_SHOW_MODAL', payload: false });
       dispatch({ type: 'SET_EDITING_USER', payload: null });
       dispatch({ type: 'RESET_FORM_DATA' });
@@ -484,16 +484,21 @@ function UserList() {
 
   const filteredUsers = useMemo(() => {
     return state.users.filter((user) => {
+      const searchLower = (state.searchTerm || '').toLowerCase();
       const matchesSearch =
-        user.name.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
-        user.card_id.includes(state.searchTerm) ||
-        user.class_name.toLowerCase().includes(state.searchTerm.toLowerCase());
+        !state.searchTerm ||
+        (user.name && user.name.toLowerCase().includes(searchLower)) ||
+        (user.card_id && user.card_id.toLowerCase().includes(searchLower)) ||
+        (user.class_name && user.class_name.toLowerCase().includes(searchLower));
       const matchesClass = !state.selectedClass || user.class_name === state.selectedClass;
       return matchesSearch && matchesClass;
     });
   }, [state.users, state.searchTerm, state.selectedClass]);
 
-  const classes = useMemo(() => [...new Set(state.users.map((u) => u.class_name))], [state.users]);
+  const classes = useMemo(() => 
+    [...new Set(state.users.map((u) => u.class_name).filter(Boolean))].sort(), 
+    [state.users]
+  );
 
   const renderUserRow = useCallback(
     (user) => {
@@ -529,11 +534,15 @@ function UserList() {
               </Link>
               <Badge variant={user.gender === '男' ? 'blue' : 'purple'}>{user.gender}</Badge>
               <span className='text-gray-600 text-sm'>{user.class_name}</span>
-              <span className='font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+            </div>
+            <div className='flex items-center gap-2 text-sm'>
+              <span className='text-gray-500'>学号:</span>
+              <span className='font-mono text-primary-600 font-semibold bg-primary-50 px-2 py-0.5 rounded'>
                 {user.card_id}
               </span>
+              <span className='text-gray-300'>|</span>
+              <span className='text-gray-500'>{user.phone || '暂无电话'}</span>
             </div>
-            <p className='text-xs text-gray-500 hidden sm:block'>{user.phone || '暂无电话'}</p>
           </div>
 
           <div className='flex-shrink-0 flex items-center gap-2'>
@@ -685,7 +694,7 @@ function UserList() {
               dispatch({ type: 'SET_SELECTED_CLASS', payload: value });
               dispatch({ type: 'SET_PAGINATION', payload: { page: 1 } });
             }}
-            placeholder='搜索姓名、班级或饭卡号...'
+            placeholder='搜索姓名、班级或学号...'
           />
           <div className='flex items-center gap-3'>
             <div className='flex items-center gap-2 px-4 py-2 bg-primary-50 rounded-xl'>
@@ -988,7 +997,7 @@ function UserList() {
           <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                饭卡号 <span className='text-red-500'>*</span>
+                学号 <span className='text-red-500'>*</span>
               </label>
               <input
                 type='text'
@@ -1004,7 +1013,7 @@ function UserList() {
                     ? 'border-danger-300 focus:ring-danger-500'
                     : 'border-gray-200 focus:ring-primary-500'
                 }`}
-                placeholder='请输入饭卡号'
+                placeholder='请输入学号'
               />
               {formErrors.card_id && (
                 <p className='mt-2 text-sm text-danger-600 flex items-center gap-1'>
@@ -1099,9 +1108,9 @@ function UserList() {
                 <h4 className='font-medium text-blue-800'>导入说明</h4>
                 <ul className='text-sm text-blue-700 mt-2 space-y-1'>
                   <li>• 支持 CSV 格式文件</li>
-                  <li>• 第一行必须为表头（姓名、性别、班级、电话、家长信息、饭卡号、初始积分）</li>
-                  <li>• 饭卡号为必填项，其他为可选项</li>
-                  <li>• 如果饭卡号已存在，将更新该学生信息</li>
+                  <li>• 第一行必须为表头（姓名、性别、班级、电话、家长信息、学号、初始积分）</li>
+                  <li>• 学号为必填项，其他为可选项</li>
+                  <li>• 如果学号已存在，将更新该学生信息</li>
                 </ul>
               </div>
             </div>

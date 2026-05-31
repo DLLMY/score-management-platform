@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -10,6 +10,7 @@ import DevTools from './components/DevTools';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
+import { fetchCsrfToken } from './services/api';
 
 const RouteLoading = () => (
   <div className='min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900'>
@@ -96,6 +97,16 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
 function AppLayout() {
   const { showToast } = useToast();
   useGlobalKeyboardShortcuts(showToast);
+
+  useEffect(() => {
+    const initCsrfToken = async () => {
+      const storedToken = localStorage.getItem('csrf_token');
+      if (!storedToken) {
+        await fetchCsrfToken();
+      }
+    };
+    initCsrfToken();
+  }, []);
 
   return (
     <div className='flex min-h-screen bg-gray-50 dark:bg-slate-900'>

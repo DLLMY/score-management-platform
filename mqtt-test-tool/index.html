@@ -77,6 +77,21 @@
                 </div>
             </section>
 
+            <section class="card-section">
+                <h2>💳 刷卡检测 <span class="subtitle">(饭卡登记专用)</span></h2>
+                <div class="current-card">
+                    <span class="card-label">当前卡号:</span>
+                    <span id="currentCardNumber" class="card-number">--</span>
+                    <button id="btnCopyCard" class="btn btn-small" title="复制卡号">📋 复制</button>
+                    <button id="btnClearCard" class="btn btn-small btn-secondary" title="清除">✖️</button>
+                </div>
+                <div class="card-history">
+                    <h3>刷卡历史 <span class="history-count">(<span id="cardHistoryCount">0</span>条)</span></h3>
+                    <div id="cardHistoryList" class="card-list"></div>
+                    <button id="btnClearHistory" class="btn btn-small btn-secondary">清空历史</button>
+                </div>
+            </section>
+
             <section class="status-section">
                 <h2>📊 设备状态</h2>
                 <div class="status-grid">

@@ -37,6 +37,7 @@ def register_routes(app):
     from routes.security_routes import ns_security
     from routes.exam_routes import ns_exam, ns_scores, ns_score_analysis
     from routes.exam_import_routes import ns_exam_import
+    from routes.subject_routes import ns_subjects
 
     api.add_namespace(ns_users)
     api.add_namespace(ns_rules)
@@ -71,5 +72,6 @@ def register_routes(app):
     api.add_namespace(ns_scores)
     api.add_namespace(ns_score_analysis)
     api.add_namespace(ns_exam_import)
+    api.add_namespace(ns_subjects)
 
     return api

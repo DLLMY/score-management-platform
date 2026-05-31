@@ -13,7 +13,9 @@ rank_rule_model = ns_rank.model('ScoreRankRule', {
     'color': fields.String(description='颜色'),
     'icon': fields.String(description='图标'),
     'description': fields.String(description='描述'),
-    'is_active': fields.Boolean(description='是否启用')
+    'is_active': fields.Boolean(description='是否启用'),
+    'unlock_min_score': fields.Integer(description='开门最低分数要求（NULL使用全局默认值）'),
+    'weekly_unlock_limit': fields.Integer(description='每周开门次数限制（NULL使用全局默认值）')
 })
 
 @ns_rank.route('/')
@@ -31,6 +33,8 @@ class RankRuleList(Resource):
                 'icon': r.icon,
                 'description': r.description,
                 'is_active': r.is_active,
+                'unlock_min_score': r.unlock_min_score,
+                'weekly_unlock_limit': r.weekly_unlock_limit,
                 'created_at': r.created_at.isoformat() if r.created_at else None
             } for r in rules]
         }
@@ -47,7 +51,9 @@ class RankRuleList(Resource):
             color=data.get('color', '#0ea5e9'),
             icon=data.get('icon', 'Award'),
             description=data.get('description'),
-            is_active=data.get('is_active', True)
+            is_active=data.get('is_active', True),
+            unlock_min_score=data.get('unlock_min_score'),
+            weekly_unlock_limit=data.get('weekly_unlock_limit')
         )
         db.session.add(rule)
         db.session.commit()
@@ -68,6 +74,8 @@ class RankRuleResource(Resource):
             'icon': rule.icon,
             'description': rule.description,
             'is_active': rule.is_active,
+            'unlock_min_score': rule.unlock_min_score,
+            'weekly_unlock_limit': rule.weekly_unlock_limit,
             'created_at': rule.created_at.isoformat() if rule.created_at else None,
             'updated_at': rule.updated_at.isoformat() if rule.updated_at else None
         }
@@ -85,6 +93,10 @@ class RankRuleResource(Resource):
         rule.icon = data.get('icon', rule.icon)
         rule.description = data.get('description', rule.description)
         rule.is_active = data.get('is_active', rule.is_active)
+        if 'unlock_min_score' in data:
+            rule.unlock_min_score = data['unlock_min_score']
+        if 'weekly_unlock_limit' in data:
+            rule.weekly_unlock_limit = data['weekly_unlock_limit']
         rule.updated_at = datetime.now()
         db.session.commit()
         return {'success': True, 'message': '排名规则更新成功'}
@@ -115,7 +127,9 @@ class RankByScore(Resource):
                             'max_score': rule.max_score,
                             'color': rule.color,
                             'icon': rule.icon,
-                            'description': rule.description
+                            'description': rule.description,
+                            'unlock_min_score': rule.unlock_min_score,
+                            'weekly_unlock_limit': rule.weekly_unlock_limit
                         }
                     }
 

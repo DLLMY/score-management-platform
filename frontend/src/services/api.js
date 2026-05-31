@@ -27,6 +27,19 @@ const setCsrfToken = (token) => {
 };
 
 const fetchCsrfToken = async () => {
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  };
+  
+  const csrfFromCookie = getCookie('csrf_token');
+  if (csrfFromCookie) {
+    setCsrfToken(csrfFromCookie);
+    return csrfFromCookie;
+  }
+  
   try {
     const response = await fetch(`${API_BASE_URL}/api/system/csrf-token`);
     if (response.ok) {
@@ -60,11 +73,32 @@ const getCacheKey = (url, method) => {
 
 const clearRelatedCache = (url) => {
   const keysToDelete = [];
+  const baseUrl = url.split('?')[0];
+  
+  // 特殊处理：相关操作应该清除列表缓存
+  let relatedPatterns = [baseUrl];
+  
+  if (baseUrl.includes('/api/exams')) {
+    relatedPatterns.push('/api/exams');
+  }
+  
+  if (baseUrl.includes('/api/users')) {
+    relatedPatterns.push('/api/users');
+  }
+  
+  if (baseUrl.includes('/api/rank')) {
+    relatedPatterns.push('/api/rank');
+  }
+  
   for (const key of cache.keys()) {
-    if (key.includes(url.split('?')[0])) {
-      keysToDelete.push(key);
+    for (const pattern of relatedPatterns) {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+        break;
+      }
     }
   }
+  
   keysToDelete.forEach((key) => cache.delete(key));
 };
 
@@ -248,6 +282,43 @@ const request = async (url, options = {}, retryCount = 0) => {
             }
 
             return data;
+          }
+        }
+
+        // 处理CSRF错误 - 获取新token并重试
+        const errorText = await response.text().catch(() => '');
+        if ((response.status === 400 || response.status === 419) && 
+            (errorText.includes('CSRF') || errorText.includes('csrf') || errorText.includes('token'))) {
+          if (retryCount < 1 && !url.includes('/login')) {
+            // 获取新CSRF token
+            await fetchCsrfToken();
+            const newCsrfToken = getCsrfToken();
+            if (newCsrfToken) {
+              headers['X-CSRFToken'] = newCsrfToken;
+              // 重试原始请求
+              const retryResponse = await fetchWithTimeout(fullUrl, {
+                ...options,
+                headers,
+              });
+
+              if (!retryResponse.ok) {
+                const error = await retryResponse.json().catch(() => ({}));
+                const errorMsg = getErrorMessage(retryResponse.status, error);
+                const apiError = new Error(errorMsg);
+                apiError.status = retryResponse.status;
+                throw apiError;
+              }
+
+              const data = await retryResponse.json();
+
+              if (method === 'GET') {
+                cache.set(cacheKey, { data, timestamp: Date.now() });
+              } else {
+                clearRelatedCache(url);
+              }
+
+              return data;
+            }
           }
         }
 
@@ -788,12 +859,28 @@ const api = {
   dashboard: {
     getData: () => request('/api/dashboard/data'),
   },
+  subjects: {
+    getAll: () => request('/api/subjects'),
+    create: (data) =>
+      request('/api/subjects', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id, data) =>
+      request(`/api/subjects/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id) => request(`/api/subjects/${id}`, { method: 'DELETE' }),
+  },
   exams: {
     getAll: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.class_id) queryParams.append('class_id', params.class_id);
       const query = queryParams.toString();
-      return request(`/api/exams${query ? '?' + query : ''}`);
+      const options = {};
+      if (params.skipCache) options.skipCache = true;
+      return request(`/api/exams${query ? '?' + query : ''}`, options);
     },
     getById: (id) => request(`/api/exams/${id}`),
     create: (data) =>
@@ -807,6 +894,14 @@ const api = {
         body: JSON.stringify(data),
       }),
     delete: (id) => request(`/api/exams/${id}`, { method: 'DELETE' }),
+    publish: (id) =>
+      request(`/api/exams/${id}/publish`, {
+        method: 'POST',
+      }),
+    close: (id) =>
+      request(`/api/exams/${id}/close`, {
+        method: 'POST',
+      }),
   },
   scores: {
     getAll: (params = {}) => {

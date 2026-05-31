@@ -37,6 +37,15 @@ class ScoreCategory(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+class Subject(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    description = db.Column(db.String(200))
+    color = db.Column(db.String(20), default='#10B981')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
+
 class ScoreRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, index=True)
@@ -74,6 +83,8 @@ class ScoreRankRule(db.Model):
     icon = db.Column(db.String(50), default='Award')
     description = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
+    unlock_min_score = db.Column(db.Integer, nullable=True, comment='开门最低分数要求，NULL则使用全局默认值')
+    weekly_unlock_limit = db.Column(db.Integer, nullable=True, comment='每周开门次数限制，NULL则使用全局默认值')
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -369,6 +380,7 @@ class Score(db.Model):
     full_score = db.Column(db.Float, default=100)
     rank = db.Column(db.Integer)
     status = db.Column(db.String(20), default='pending', index=True)
+    remark = db.Column(db.String(200))
     entered_by = db.Column(db.Integer, db.ForeignKey('admin.id'), index=True)
     entered_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)

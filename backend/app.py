@@ -123,10 +123,13 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here_c
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.url_map.strict_slashes = False
 
-# CSRF防护配置 - 生产环境建议启用
-app.config['WTF_CSRF_ENABLED'] = True
+# CSRF防护配置
+# 注意：对于API应用，使用JWT token进行身份验证，CSRF保护不是必需的
+# 如果你的前端不是浏览器表单，而是通过JS发送请求（携带Authorization头）
+# 那么CSRF保护可以禁用
+app.config['WTF_CSRF_ENABLED'] = False
 app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('CSRF_SECRET_KEY', app.config['SECRET_KEY'])
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # CSRF令牌有效期1小时
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 # CSRF豁免视图列表
 app.config['WTF_CSRF_EXEMPT_VIEWS'] = ['api.admins_admin_login', 'api.admins_admin_refresh_token']
 
@@ -141,6 +144,7 @@ CORS(app,
 
 # 初始化CSRF保护
 csrf = CSRFProtect(app)
+print(f"CSRF保护已 {'启用' if app.config.get('WTF_CSRF_ENABLED') else '禁用'}")
 
 # 创建一个集合来存储需要豁免CSRF保护的视图函数
 csrf_exempt_views = set()
@@ -241,123 +245,135 @@ def start_mqtt_in_background():
     except Exception as e:
         print(f"MQTT启动线程异常: {e}")
 
-with app.app_context():
-    db.create_all()
-    
-    # 初始化默认管理员
-    from models import Admin
-    from utils.security import hash_password
-    existing_admin = Admin.query.first()
-    if not existing_admin:
-        print("初始化默认管理员...")
-        default_admin = Admin(
-            username='admin',
-            password=hash_password('admin123'),
-            role='admin',
-            real_name='系统管理员',
-            phone='13800138000'
-        )
-        db.session.add(default_admin)
-        db.session.commit()
-        print("默认管理员创建成功!")
-        print("用户名: admin")
-        print("密码: admin123")
-    
-    # 初始化MQTT配置
-    from models import MQTTConfig
-    mqtt_config = MQTTConfig.query.first()
-    if not mqtt_config:
-        print("初始化MQTT配置...")
-        mqtt_config = MQTTConfig(
-            broker=os.getenv('MQTT_BROKER', 'nc5233fc.ala.cn-hangzhou.emqxsl.cn'),
-            port=int(os.getenv('MQTT_PORT', 8084)),
-            client_id=os.getenv('MQTT_CLIENT_ID', 'score_backend'),
-            username=os.getenv('MQTT_USERNAME', 'phoneboxtest'),
-            password=os.getenv('MQTT_PASSWORD', '123456'),
-            ssl=os.getenv('MQTT_SSL', 'true').lower() == 'true',
-            timeout=int(os.getenv('MQTT_TIMEOUT', 10)),
-            keepalive=int(os.getenv('MQTT_KEEPALIVE', 60))
-        )
-        db.session.add(mqtt_config)
-        db.session.commit()
-        print(f"MQTT配置已初始化: broker={mqtt_config.broker}")
-    
-    # 准备MQTT配置（双协议支持）
-    # 配置1: WebSocket协议（用于测试和调试，与mqtt-test-tool一致）
-    ws_mqtt_config = {
-        'broker': mqtt_config.broker,
-        'port': 8084,
-        'client_id': mqtt_config.client_id + '_ws',
-        'username': mqtt_config.username,
-        'password': mqtt_config.password,
-        'ssl': True,
-        'timeout': mqtt_config.timeout,
-        'keepalive': mqtt_config.keepalive,
-        'transport': 'websockets',
-        'ws_path': '/mqtt'
-    }
-    
-    # 配置2: TCP协议（用于生产环境，更稳定）
-    tcp_mqtt_config = {
-        'broker': mqtt_config.broker,
-        'port': 8883,
-        'client_id': mqtt_config.client_id + '_tcp',
-        'username': mqtt_config.username,
-        'password': mqtt_config.password,
-        'ssl': True,
-        'timeout': mqtt_config.timeout,
-        'keepalive': mqtt_config.keepalive,
-        'transport': 'tcp'
-    }
-
-    # 在后台线程中尝试连接MQTT（双协议支持）
-    def try_connect_mqtt():
+def init_database():
+    """异步初始化数据库和默认数据"""
+    with app.app_context():
+        db.create_all()
+        print("数据库表创建完成")
+        
+        # 初始化默认管理员
         try:
-            # 延迟5秒后再连接MQTT，等待后端服务完全启动
-            print("后台线程：等待5秒后连接MQTT...", flush=True)
-            time.sleep(5)
-            print("后台线程：等待完成，开始连接MQTT...", flush=True)
+            from models import Admin
+            from utils.security import hash_password
+            existing_admin = Admin.query.first()
+            if not existing_admin:
+                print("初始化默认管理员...")
+                default_admin = Admin(
+                    username='admin',
+                    password=hash_password('admin123'),
+                    role='admin',
+                    real_name='系统管理员',
+                    phone='13800138000'
+                )
+                db.session.add(default_admin)
+                db.session.commit()
+                print("默认管理员创建成功!")
+        except Exception as e:
+            print(f"初始化管理员失败: {e}")
+        
+        # 初始化MQTT配置
+        try:
+            from models import MQTTConfig
+            mqtt_config = MQTTConfig.query.first()
+            if not mqtt_config:
+                print("初始化MQTT配置...")
+                mqtt_config = MQTTConfig(
+                    broker=os.getenv('MQTT_BROKER', 'nc5233fc.ala.cn-hangzhou.emqxsl.cn'),
+                    port=int(os.getenv('MQTT_PORT', 8084)),
+                    client_id=os.getenv('MQTT_CLIENT_ID', 'score_backend'),
+                    username=os.getenv('MQTT_USERNAME', 'phoneboxtest'),
+                    password=os.getenv('MQTT_PASSWORD', '123456'),
+                    ssl=os.getenv('MQTT_SSL', 'true').lower() == 'true',
+                    timeout=int(os.getenv('MQTT_TIMEOUT', 10)),
+                    keepalive=int(os.getenv('MQTT_KEEPALIVE', 60))
+                )
+                db.session.add(mqtt_config)
+                db.session.commit()
+                print(f"MQTT配置已初始化: broker={mqtt_config.broker}")
+        except Exception as e:
+            print(f"初始化MQTT配置失败: {e}")
+
+def init_mqtt():
+    """异步初始化MQTT连接"""
+    try:
+        # 延迟3秒后再连接MQTT，等待后端服务完全启动
+        print("后台线程：等待3秒后连接MQTT...", flush=True)
+        time.sleep(3)
+        
+        # 获取MQTT配置
+        with app.app_context():
+            from models import MQTTConfig
+            mqtt_config = MQTTConfig.query.first()
+            if not mqtt_config:
+                print("MQTT配置未找到，跳过MQTT连接", flush=True)
+                return
             
-            print("后台线程：导入mqtt_manager...", flush=True)
-            from services.mqtt_manager import MQTTManager
-            print("后台线程：mqtt_manager导入成功", flush=True)
+            # 配置1: WebSocket协议
+            ws_mqtt_config = {
+                'broker': mqtt_config.broker,
+                'port': 8084,
+                'client_id': mqtt_config.client_id + '_ws',
+                'username': mqtt_config.username,
+                'password': mqtt_config.password,
+                'ssl': True,
+                'timeout': mqtt_config.timeout,
+                'keepalive': mqtt_config.keepalive,
+                'transport': 'websockets',
+                'ws_path': '/mqtt'
+            }
             
-            # 注册消息处理回调
-            print("后台线程：注册消息回调...", flush=True)
-            def on_mqtt_message_received(topic, message):
-                try:
+            # 配置2: TCP协议
+            tcp_mqtt_config = {
+                'broker': mqtt_config.broker,
+                'port': 8883,
+                'client_id': mqtt_config.client_id + '_tcp',
+                'username': mqtt_config.username,
+                'password': mqtt_config.password,
+                'ssl': True,
+                'timeout': min(5, mqtt_config.timeout),  # 缩短超时时间
+                'keepalive': mqtt_config.keepalive,
+                'transport': 'tcp'
+            }
+        
+        print("后台线程：导入mqtt_manager...", flush=True)
+        from services.mqtt_manager import MQTTManager
+        
+        # 注册消息处理回调
+        def on_mqtt_message_received(topic, message):
+            try:
+                with app.app_context():
                     from routes.mqtt_routes import handle_mqtt_message
                     handle_mqtt_message(None, topic, message)
-                except Exception as e:
-                    print(f"处理MQTT消息失败: {e}")
-            
-            # 创建WebSocket连接实例
-            print("后台线程：创建WebSocket MQTT连接...", flush=True)
-            ws_manager = MQTTManager('websocket')
-            ws_manager.add_message_callback(on_mqtt_message_received)
-            ws_manager.connect(ws_mqtt_config)
-            print("后台线程：WebSocket MQTT连接调用完成", flush=True)
-            
-            # 创建TCP连接实例
-            print("后台线程：创建TCP MQTT连接...", flush=True)
-            tcp_manager = MQTTManager('tcp')
-            tcp_manager.add_message_callback(on_mqtt_message_received)
-            tcp_manager.connect(tcp_mqtt_config)
-            print("后台线程：TCP MQTT连接调用完成", flush=True)
-            
-            # 设置默认使用的连接（优先使用TCP）
-            print("后台线程：设置默认MQTT管理器...", flush=True)
-            global mqtt_manager
-            mqtt_manager = tcp_manager if tcp_manager.is_connected else ws_manager
-            print(f"后台线程：默认MQTT管理器已设置: {mqtt_manager._instance_name}", flush=True)
-            
-        except Exception as e:
-            print(f"MQTT启动失败: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
+            except Exception as e:
+                print(f"处理MQTT消息失败: {e}")
+        
+        # 创建TCP连接（优先使用TCP）
+        print("后台线程：创建TCP MQTT连接...", flush=True)
+        tcp_manager = MQTTManager('tcp')
+        tcp_manager.add_message_callback(on_mqtt_message_received)
+        tcp_manager.connect(tcp_mqtt_config)
+        
+        # 创建WebSocket连接（备用）
+        print("后台线程：创建WebSocket MQTT连接...", flush=True)
+        ws_manager = MQTTManager('websocket')
+        ws_manager.add_message_callback(on_mqtt_message_received)
+        ws_manager.connect(ws_mqtt_config)
+        
+        # 设置默认使用的连接
+        global mqtt_manager
+        mqtt_manager = tcp_manager if tcp_manager.is_connected else ws_manager
+        print(f"后台线程：默认MQTT管理器已设置: {mqtt_manager._instance_name}", flush=True)
+        
+    except Exception as e:
+        print(f"MQTT启动失败: {e}", flush=True)
 
-    mqtt_thread = threading.Thread(target=try_connect_mqtt, daemon=True)
-    mqtt_thread.start()
+# 异步初始化数据库（非阻塞）
+db_init_thread = threading.Thread(target=init_database, daemon=True)
+db_init_thread.start()
+
+# 异步初始化MQTT（非阻塞）
+mqtt_init_thread = threading.Thread(target=init_mqtt, daemon=True)
+mqtt_init_thread.start()
 
 @app.route('/')
 def index():
@@ -377,11 +393,24 @@ def test_auth():
         'all_headers': dict(request.headers)
     })
 
+def init_cache_warmup():
+    """异步初始化缓存预热"""
+    try:
+        from services.redis_cache_service import warmup_cache
+        warmup_cache(app)
+    except Exception as e:
+        print(f"缓存预热失败: {e}")
+
 if __name__ == '__main__':
     # 初始化Redis缓存服务
     from services.redis_cache_service import cache
     cache.init_app(app)
     print("Redis缓存服务初始化完成")
+
+    # 异步启动缓存预热
+    cache_warmup_thread = threading.Thread(target=init_cache_warmup, daemon=True)
+    cache_warmup_thread.start()
+    print("缓存预热线程已启动")
 
     # 初始化WebSocket服务
     from services.websocket_service import socketio

@@ -308,6 +308,143 @@ section h2 {
     color: #90ee90;
 }
 
+.card-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.card-section h2 {
+    color: white;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.card-section .subtitle {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.current-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.card-label {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.card-number {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    transition: all 0.3s;
+}
+
+.card-number.card-highlight {
+    color: #00ff00;
+    text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.btn-small {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+}
+
+.card-section .btn-small {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.card-section .btn-small:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.card-history {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.card-history h3 {
+    margin-bottom: 10px;
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.history-count {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+.card-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.card-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: all 0.3s;
+}
+
+.card-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.card-item.card-new {
+    background: rgba(255, 215, 0, 0.2);
+    border-left: 3px solid #ffd700;
+}
+
+.card-time {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.card-num {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: #87ceeb;
+}
+
+.btn-copy-small {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+    padding: 5px;
+}
+
+.btn-copy-small:hover {
+    opacity: 1;
+}
+
+.log-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
 @media (max-width: 900px) {
     .main-content {
         grid-template-columns: 1fr 1fr;

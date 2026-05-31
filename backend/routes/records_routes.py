@@ -5,6 +5,12 @@ from utils.permission import requires_admin
 from utils.logger import log_operation
 from datetime import datetime, timedelta
 
+try:
+    from app import csrf_exempt
+except ImportError:
+    def csrf_exempt(f):
+        return f
+
 ns_records = Namespace('records', description='积分记录相关操作')
 
 record_model = ns_records.model('ScoreRecord', {
@@ -93,6 +99,7 @@ class RecordList(Resource):
     @ns_records.expect(record_model)
     @ns_records.response(201, '创建成功')
     @ns_records.response(400, '请求参数错误')
+    @csrf_exempt
     @requires_admin
     def post(self):
         """

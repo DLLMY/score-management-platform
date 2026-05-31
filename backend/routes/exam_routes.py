@@ -146,12 +146,26 @@ class ExamDetail(Resource):
         """更新考试"""
         try:
             exam = Exam.query.get_or_404(id)
-            
-            if exam.status != 'draft':
-                return jsonify({'code': -1, 'message': '已发布的考试不能修改'})
-            
             data = request.get_json()
             
+            # 如果要更新状态，检查转换是否有效
+            if 'status' in data:
+                new_status = data['status']
+                if new_status == 'published' and exam.status == 'draft':
+                    exam.status = 'published'
+                elif new_status == 'closed' and exam.status == 'published':
+                    exam.status = 'closed'
+                elif new_status == 'draft' and exam.status == 'draft':
+                    # 草稿变草稿，允许
+                    pass
+                else:
+                    return jsonify({'code': -1, 'message': f'不能从 {exam.status} 转换到 {new_status}'})
+            else:
+                # 普通更新，检查是否是草稿状态
+                if exam.status != 'draft':
+                    return jsonify({'code': -1, 'message': '已发布的考试不能修改'})
+            
+            # 更新其他字段
             if 'name' in data:
                 exam.name = data['name']
             if 'description' in data:

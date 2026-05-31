@@ -2,6 +2,8 @@ class MQTTTestTool {
     constructor() {
         this.client = null;
         this.messageCount = 0;
+        this.cardHistory = [];
+        this.maxCardHistory = 50;
         this.topicsToSubscribe = [
             'phonebox/status',
             'phonebox/log',
@@ -27,6 +29,10 @@ class MQTTTestTool {
         document.getElementById('btnUnlockBFailCard').addEventListener('click', () => this.unlockBFailCard());
         
         document.getElementById('btnManualPublish').addEventListener('click', () => this.manualPublish());
+        
+        document.getElementById('btnCopyCard').addEventListener('click', () => this.copyCurrentCard());
+        document.getElementById('btnClearCard').addEventListener('click', () => this.clearCurrentCard());
+        document.getElementById('btnClearHistory').addEventListener('click', () => this.clearCardHistory());
     }
 
     loadSettings() {
@@ -129,8 +135,10 @@ class MQTTTestTool {
                     if (topic === 'phonebox/status') {
                         this.updateDoorStatus(data.box_id, data.status);
                     }
+                    this.extractCardNumber(msg, data);
                 } catch (e) {
                     console.log('Not JSON message');
+                    this.extractCardNumber(msg, null);
                 }
             });
 
@@ -325,6 +333,140 @@ class MQTTTestTool {
         `;
         this.messageCount = 0;
         this.updateMessageCount();
+    }
+
+    extractCardNumber(msg, data) {
+        let cardNumber = null;
+        
+        if (data) {
+            cardNumber = data.card_id || data.cardId || data.rfid || data.tag || data.uid;
+            if (!cardNumber && data.card) {
+                cardNumber = typeof data.card === 'object' ? (data.card.id || data.card.card_id) : data.card;
+            }
+        }
+        
+        if (!cardNumber) {
+            const patterns = [
+                /card[_\s]?id[:\s]+([a-fA-F0-9]{8,})/i,
+                /card[_\s]?id[:\s]+(\d{8,})/i,
+                /rfid[:\s]+([a-fA-F0-9]{8,})/i,
+                /uid[:\s]+([a-fA-F0-9]{8,})/i,
+                /tag[:\s]+([a-fA-F0-9]{8,})/i,
+                /"card_id"\s*:\s*"([^"]+)"/,
+                /"cardId"\s*:\s*"([^"]+)"/,
+                /'card_id'\s*:\s*'([^']+)'/,
+                /(\d{10,})/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = msg.match(pattern);
+                if (match) {
+                    cardNumber = match[1];
+                    break;
+                }
+            }
+        }
+        
+        if (cardNumber) {
+            this.displayCard(cardNumber.trim());
+        }
+    }
+
+    displayCard(cardNumber) {
+        const currentCardEl = document.getElementById('currentCardNumber');
+        const cardHistoryList = document.getElementById('cardHistoryList');
+        const historyCountEl = document.getElementById('cardHistoryCount');
+        
+        currentCardEl.textContent = cardNumber;
+        currentCardEl.classList.add('card-highlight');
+        setTimeout(() => currentCardEl.classList.remove('card-highlight'), 1500);
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-CN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        const historyItem = {
+            cardNumber: cardNumber,
+            time: timeStr,
+            timestamp: now.getTime()
+        };
+        
+        const existingIndex = this.cardHistory.findIndex(item => item.cardNumber === cardNumber);
+        if (existingIndex !== -1) {
+            this.cardHistory.splice(existingIndex, 1);
+        }
+        
+        this.cardHistory.unshift(historyItem);
+        
+        if (this.cardHistory.length > this.maxCardHistory) {
+            this.cardHistory = this.cardHistory.slice(0, this.maxCardHistory);
+        }
+        
+        historyCountEl.textContent = this.cardHistory.length;
+        
+        cardHistoryList.innerHTML = this.cardHistory.map((item, index) => `
+            <div class="card-item ${index === 0 ? 'card-new' : ''}">
+                <span class="card-time">${item.time}</span>
+                <span class="card-num">${item.cardNumber}</span>
+                <button class="btn-copy-small" onclick="mqttTool.copyCardNumber('${item.cardNumber}')" title="复制">📋</button>
+            </div>
+        `).join('');
+        
+        this.addLog(`💳 检测到刷卡: ${cardNumber}`, 'card');
+    }
+
+    copyCurrentCard() {
+        const cardNumber = document.getElementById('currentCardNumber').textContent;
+        if (cardNumber && cardNumber !== '--') {
+            this.copyToClipboard(cardNumber);
+            this.addLog(`📋 已复制卡号: ${cardNumber}`, 'info');
+        }
+    }
+
+    copyCardNumber(cardNumber) {
+        this.copyToClipboard(cardNumber);
+        this.addLog(`📋 已复制卡号: ${cardNumber}`, 'info');
+    }
+
+    copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(err => {
+                console.error('复制失败:', err);
+                this.fallbackCopy(text);
+            });
+        } else {
+            this.fallbackCopy(text);
+        }
+    }
+
+    fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            console.error('复制失败:', err);
+        }
+        document.body.removeChild(textarea);
+    }
+
+    clearCurrentCard() {
+        document.getElementById('currentCardNumber').textContent = '--';
+        this.addLog('🗑️ 已清除当前卡号', 'info');
+    }
+
+    clearCardHistory() {
+        this.cardHistory = [];
+        document.getElementById('cardHistoryList').innerHTML = '';
+        document.getElementById('cardHistoryCount').textContent = '0';
+        this.addLog('🗑️ 已清空刷卡历史', 'info');
     }
 }
 

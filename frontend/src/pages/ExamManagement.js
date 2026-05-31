@@ -18,16 +18,20 @@ function ExamManagement() {
   const { showToast } = useToast();
   const [exams, setExams] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingExam, setEditingExam] = useState(null);
+  const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [subjectFormData, setSubjectFormData] = useState({ name: '', description: '', color: '#10B981' });
+  const [editingSubject, setEditingSubject] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    subjects: '语文,数学,英语',
+    subjects: [],
     start_time: '',
     end_time: '',
     importance: 'medium',
@@ -38,13 +42,15 @@ function ExamManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [examsRes, classesRes] = await Promise.all([
-        api.exams.getAll(),
+      const [examsRes, classesRes, subjectsRes] = await Promise.all([
+        api.exams.getAll({ skipCache: true }),
         api.classes.getAll(),
+        api.subjects.getAll(),
       ]);
       
       setExams(Array.isArray(examsRes) ? examsRes : examsRes.data || []);
       setClasses(Array.isArray(classesRes) ? classesRes : classesRes.classes || []);
+      setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
     } catch (err) {
       showToast('获取数据失败: ' + err.message, 'error');
     } finally {
@@ -61,7 +67,7 @@ function ExamManagement() {
     setFormData({
       name: '',
       description: '',
-      subjects: '语文,数学,英语',
+      subjects: ['语文', '数学', '英语'],
       start_time: '',
       end_time: '',
       importance: 'medium',
@@ -76,7 +82,7 @@ function ExamManagement() {
     setFormData({
       name: exam.name || '',
       description: exam.description || '',
-      subjects: exam.subjects ? (Array.isArray(exam.subjects) ? exam.subjects.join(',') : exam.subjects) : '',
+      subjects: exam.subjects ? (Array.isArray(exam.subjects) ? exam.subjects : exam.subjects.split(',').map(s => s.trim())) : [],
       start_time: exam.start_time ? new Date(exam.start_time).toISOString().slice(0, 16) : '',
       end_time: exam.end_time ? new Date(exam.end_time).toISOString().slice(0, 16) : '',
       importance: exam.importance || 'medium',
@@ -84,6 +90,54 @@ function ExamManagement() {
       status: exam.status || 'draft',
     });
     setShowModal(true);
+  };
+
+  const handleCreateSubject = () => {
+    setEditingSubject(null);
+    setSubjectFormData({ name: '', description: '', color: '#10B981' });
+    setShowSubjectModal(true);
+  };
+
+  const handleEditSubject = (subject) => {
+    setEditingSubject(subject);
+    setSubjectFormData({
+      name: subject.name || '',
+      description: subject.description || '',
+      color: subject.color || '#10B981',
+    });
+    setShowSubjectModal(true);
+  };
+
+  const handleSaveSubject = async () => {
+    if (!subjectFormData.name) {
+      showToast('请输入科目名称', 'error');
+      return;
+    }
+
+    try {
+      if (editingSubject) {
+        await api.subjects.update(editingSubject.id, subjectFormData);
+        showToast('科目更新成功');
+      } else {
+        await api.subjects.create(subjectFormData);
+        showToast('科目创建成功');
+      }
+      setShowSubjectModal(false);
+      fetchData();
+    } catch (err) {
+      showToast('保存失败: ' + err.message, 'error');
+    }
+  };
+
+  const handleDeleteSubject = async (subject) => {
+    if (!window.confirm(`确定要删除科目 ${subject.name} 吗？`)) return;
+    try {
+      await api.subjects.delete(subject.id);
+      showToast('科目删除成功');
+      fetchData();
+    } catch (err) {
+      showToast('删除失败: ' + err.message, 'error');
+    }
   };
 
   const handleSaveExam = async () => {
@@ -97,10 +151,15 @@ function ExamManagement() {
       return;
     }
 
+    if (!formData.subjects || formData.subjects.length === 0) {
+      showToast('请至少选择一个科目', 'error');
+      return;
+    }
+
     try {
       const data = {
         ...formData,
-        subjects: formData.subjects.split(',').map((s) => s.trim()).filter(Boolean),
+        subjects: formData.subjects,
         start_time: new Date(formData.start_time).toISOString(),
         end_time: new Date(formData.end_time).toISOString(),
       };
@@ -123,7 +182,7 @@ function ExamManagement() {
   const handlePublishExam = async (exam) => {
     if (!window.confirm(`确定要发布考试 ${exam.name} 吗？`)) return;
     try {
-      await api.exams.update(exam.id, { status: 'published' });
+      await api.exams.publish(exam.id);
       showToast('考试发布成功');
       fetchData();
     } catch (err) {
@@ -134,7 +193,7 @@ function ExamManagement() {
   const handleCloseExam = async (exam) => {
     if (!window.confirm(`确定要结束考试 ${exam.name} 吗？`)) return;
     try {
-      await api.exams.update(exam.id, { status: 'closed' });
+      await api.exams.close(exam.id);
       showToast('考试已结束');
       fetchData();
     } catch (err) {
@@ -375,15 +434,50 @@ function ExamManagement() {
             />
           </div>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>考试科目 *</label>
-            <input
-              type='text'
-              value={formData.subjects}
-              onChange={(e) => setFormData((prev) => ({ ...prev, subjects: e.target.value }))}
-              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
-              placeholder='请输入科目，用逗号分隔'
-            />
-            <p className='text-xs text-gray-500 mt-1'>多个科目用英文逗号分隔</p>
+            <div className='flex items-center justify-between mb-1'>
+              <label className='block text-sm font-medium text-gray-700'>考试科目 *</label>
+              <Button variant='secondary' size='sm' onClick={handleCreateSubject}>
+                + 添加科目
+              </Button>
+            </div>
+            <div className='space-y-2'>
+              {subjects.map((subject) => (
+                <label key={subject.id} className='flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer'>
+                  <input
+                    type='checkbox'
+                    checked={formData.subjects.includes(subject.name)}
+                    onChange={(e) => {
+                      const newSubjects = e.target.checked
+                        ? [...formData.subjects, subject.name]
+                        : formData.subjects.filter((s) => s !== subject.name);
+                      setFormData((prev) => ({ ...prev, subjects: newSubjects }));
+                    }}
+                    className='w-4 h-4 text-primary-600 rounded focus:ring-primary-500'
+                  />
+                  <span
+                    className='w-3 h-3 rounded-full'
+                    style={{ backgroundColor: subject.color }}
+                  />
+                  <span className='text-sm text-gray-700'>{subject.name}</span>
+                  {subject.description && (
+                    <span className='text-xs text-gray-400 ml-auto'>{subject.description}</span>
+                  )}
+                  <Button
+                    variant='danger'
+                    size='xs'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSubject(subject);
+                    }}
+                  >
+                    删除
+                  </Button>
+                </label>
+              ))}
+            </div>
+            {subjects.length === 0 && (
+              <p className='text-sm text-gray-500 text-center py-4'>暂无科目，请先添加科目</p>
+            )}
           </div>
           <div className='grid grid-cols-2 gap-4'>
             <div>
@@ -435,6 +529,60 @@ function ExamManagement() {
           <div className='flex space-x-3 pt-4'>
             <Button onClick={handleSaveExam}>保存</Button>
             <Button variant='secondary' onClick={() => setShowModal(false)}>
+              取消
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 科目管理弹窗 */}
+      <Modal
+        isOpen={showSubjectModal}
+        onClose={() => setShowSubjectModal(false)}
+        title={editingSubject ? '编辑科目' : '新建科目'}
+      >
+        <div className='space-y-4'>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>科目名称 *</label>
+            <input
+              type='text'
+              value={subjectFormData.name}
+              onChange={(e) => setSubjectFormData((prev) => ({ ...prev, name: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+              placeholder='请输入科目名称'
+            />
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>科目描述</label>
+            <input
+              type='text'
+              value={subjectFormData.description}
+              onChange={(e) => setSubjectFormData((prev) => ({ ...prev, description: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+              placeholder='请输入科目描述'
+            />
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>颜色标记</label>
+            <div className='flex items-center gap-3'>
+              <input
+                type='color'
+                value={subjectFormData.color}
+                onChange={(e) => setSubjectFormData((prev) => ({ ...prev, color: e.target.value }))}
+                className='w-12 h-10 rounded cursor-pointer'
+              />
+              <input
+                type='text'
+                value={subjectFormData.color}
+                onChange={(e) => setSubjectFormData((prev) => ({ ...prev, color: e.target.value }))}
+                className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+                placeholder='#10B981'
+              />
+            </div>
+          </div>
+          <div className='flex space-x-3 pt-4'>
+            <Button onClick={handleSaveSubject}>保存</Button>
+            <Button variant='secondary' onClick={() => setShowSubjectModal(false)}>
               取消
             </Button>
           </div>
