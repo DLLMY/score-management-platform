@@ -35,6 +35,8 @@ def register_routes(app):
     from routes.notification_config_routes import ns_notification_config
     from routes.firmware_routes import ns_firmware
     from routes.security_routes import ns_security
+    from routes.exam_routes import ns_exam, ns_scores, ns_score_analysis
+    from routes.exam_import_routes import ns_exam_import
 
     api.add_namespace(ns_users)
     api.add_namespace(ns_rules)
@@ -65,5 +67,9 @@ def register_routes(app):
     api.add_namespace(ns_notification_config)
     api.add_namespace(ns_firmware)
     api.add_namespace(ns_security)
+    api.add_namespace(ns_exam)
+    api.add_namespace(ns_scores)
+    api.add_namespace(ns_score_analysis)
+    api.add_namespace(ns_exam_import)
 
     return api

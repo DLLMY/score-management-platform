@@ -788,6 +788,72 @@ const api = {
   dashboard: {
     getData: () => request('/api/dashboard/data'),
   },
+  exams: {
+    getAll: (params = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.class_id) queryParams.append('class_id', params.class_id);
+      const query = queryParams.toString();
+      return request(`/api/exams${query ? '?' + query : ''}`);
+    },
+    getById: (id) => request(`/api/exams/${id}`),
+    create: (data) =>
+      request('/api/exams', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id, data) =>
+      request(`/api/exams/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id) => request(`/api/exams/${id}`, { method: 'DELETE' }),
+  },
+  scores: {
+    getAll: (params = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.exam_id) queryParams.append('exam_id', params.exam_id);
+      const query = queryParams.toString();
+      return request(`/api/scores${query ? '?' + query : ''}`);
+    },
+    getById: (id) => request(`/api/scores/${id}`),
+    create: (data) =>
+      request('/api/scores', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id, data) =>
+      request(`/api/scores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id) => request(`/api/scores/${id}`, { method: 'DELETE' }),
+    importScores: (formData) => {
+      const token = getAccessToken();
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      return fetch(`${API_BASE_URL}/api/scores/import`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error('导入失败');
+        }
+        return response.json();
+      });
+    },
+    confirmAll: (examId) =>
+      request(`/api/scores/${examId}/confirm-all`, {
+        method: 'POST',
+      }),
+  },
+  scoreAnalysis: {
+    getExamAnalysis: (examId) => request(`/api/score-analysis/exam/${examId}`),
+    getClassAnalysis: (classId) => request(`/api/score-analysis/class/${classId}`),
+    getStudentAnalysis: (studentId) => request(`/api/score-analysis/student/${studentId}`),
+  },
   cache: {
     clear: () => cache.clear(),
     clearByUrl: (url) => clearRelatedCache(url),

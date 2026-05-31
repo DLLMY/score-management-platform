@@ -8,7 +8,8 @@ from utils.logger import log_access_denied
 # 角色定义
 ROLES = {
     'admin': '超级管理员',
-    'teacher': '班主任',
+    'teacher': '教师',
+    'head_teacher': '班主任',
     'dashboard': '大屏管理员',
     'viewer': '查看员'
 }
@@ -20,7 +21,20 @@ PERMISSIONS = {
         'view_users', 'edit_users',
         'view_devices', 'manage_devices',
         'view_records', 'create_records',
-        'view_classes', 'view_dashboard'
+        'view_classes', 'view_dashboard',
+        'manage_scores', 'import_scores',
+        'view_exams', 'edit_scores',
+        'view_score_records', 'view_score_analysis'
+    ],
+    'head_teacher': [
+        'view_users', 'edit_users',
+        'view_devices', 'manage_devices',
+        'view_records', 'create_records',
+        'view_classes', 'view_dashboard',
+        'manage_exams', 'manage_scores',
+        'import_scores', 'edit_scores',
+        'view_score_records', 'view_score_analysis',
+        'publish_exams'
     ],
     'dashboard': [
         'view_devices', 'view_dashboard',
@@ -29,7 +43,8 @@ PERMISSIONS = {
     'viewer': [
         'view_users', 'view_devices',
         'view_records', 'view_dashboard',
-        'view_classes'
+        'view_classes', 'view_exams',
+        'view_score_records', 'view_score_analysis'
     ]
 }
 

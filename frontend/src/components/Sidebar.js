@@ -310,6 +310,17 @@ function Sidebar() {
         ],
       },
       {
+        id: 'examManagement',
+        label: '成绩管理',
+        icon: GraduationCap,
+        items: [
+          { path: '/exams', label: '考试管理', icon: ClipboardCheck },
+          { path: '/score-entry', label: '成绩录入', icon: FileKey },
+          { path: '/score-records', label: '成绩档案', icon: BookOpen },
+          { path: '/score-analysis', label: '成绩分析', icon: BarChart3 },
+        ],
+      },
+      {
         id: 'systemMonitor',
         label: '设备与监控',
         icon: Box,

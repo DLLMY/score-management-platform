@@ -374,9 +374,34 @@ class MQTTManager:
             
             if device_id:
                 from app import app
-                from models import DeviceHeartbeat, db
+                from models import Device, DeviceHeartbeat, db
                 
                 with app.app_context():
+                    # 检查Device表中是否存在该设备，不存在则自动创建
+                    device = Device.query.filter_by(device_id=device_id).first()
+                    if not device:
+                        # 自动注册新设备
+                        device = Device(
+                            device_id=device_id,
+                            name=f"设备 {device_id}",
+                            status='online'
+                        )
+                        db.session.add(device)
+                        print(f"[设备注册] 新设备自动注册: {device_id}")
+                    
+                    # 更新设备状态
+                    device.status = 'online'
+                    device.last_heartbeat = datetime.now()
+                    device.wifi_signal = data.get('wifi_signal')
+                    device.uptime = data.get('uptime')
+                    device.box_a_status = data.get('box_a_status')
+                    device.box_b_status = data.get('box_b_status')
+                    device.system_state = data.get('system_state')
+                    device.fw_version = data.get('fw_version')
+                    device.platform = data.get('platform')
+                    device.free_heap = data.get('free_heap')
+                    device.updated_at = datetime.now()
+                    
                     # 更新或创建心跳记录
                     heartbeat = DeviceHeartbeat.query.filter_by(device_id=device_id).first()
                     if heartbeat:

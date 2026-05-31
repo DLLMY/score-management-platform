@@ -72,6 +72,10 @@ const PermissionManagement = createLazyComponent(() => import('./pages/Permissio
 const UserManagement = createLazyComponent(() => import('./pages/UserManagement'));
 const Dashboard = createLazyComponent(() => import('./pages/Dashboard'));
 const FirmwareManagement = createLazyComponent(() => import('./pages/FirmwareManagement'));
+const ExamManagement = createLazyComponent(() => import('./pages/ExamManagement'));
+const ScoreEntry = createLazyComponent(() => import('./pages/ScoreEntry'));
+const ScoreRecords = createLazyComponent(() => import('./pages/ScoreRecords'));
+const ScoreAnalysis = createLazyComponent(() => import('./pages/ScoreAnalysis'));
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
@@ -166,6 +170,10 @@ function App() {
                 <Route path='profile' element={<Profile />} />
                 <Route path='permission' element={<PermissionManagement />} />
                 <Route path='user-management' element={<UserManagement />} />
+                <Route path='exams' element={<ExamManagement />} />
+                <Route path='score-entry' element={<ScoreEntry />} />
+                <Route path='score-records' element={<ScoreRecords />} />
+                <Route path='score-analysis' element={<ScoreAnalysis />} />
               </Route>
             </Routes>
           </BrowserRouter>

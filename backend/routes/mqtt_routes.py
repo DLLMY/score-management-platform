@@ -817,8 +817,10 @@ class MQTTUnlock(Resource):
         请求体：
         - box_id: 箱子ID（A/B，默认A）
         """
-        
         try:
+            data = ns_mqtt.payload
+            box_id = data.get('box_id', 'A')
+            
             topic = f'phonebox/unlock/{box_id}'
             
             # A箱开锁发送空消息（无需验证）

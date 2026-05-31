@@ -1,3 +1,6 @@
+Flask-SocketIO>=5.0
+gevent>=21.0
+greenlet>=1.0
 Flask>=2.0
 Flask-SQLAlchemy>=3.0
 Flask-CORS>=4.0
@@ -21,3 +24,4 @@ isort>=5.12
 bandit>=1.7
 pytest>=7.0
 pytest-cov>=4.0
+semver>=3.0

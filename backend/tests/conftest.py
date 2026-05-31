@@ -12,10 +12,12 @@ from datetime import datetime
 basedir = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, basedir)
 
+
 @pytest.fixture(scope='session')
 def app():
     """创建测试用Flask应用"""
     from flask import Flask
+    from flask_restx import Api
     from models import db
     
     app = Flask(__name__)
@@ -24,18 +26,49 @@ def app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = 'test_secret_key'
     app.config['WTF_CSRF_ENABLED'] = False
+    app.url_map.strict_slashes = False
     
     db.init_app(app)
     
+    # 创建API并注册路由
+    api = Api(app, version='1.0', title='测试API', prefix='/api')
+    
+    from routes.users_routes import ns_users
+    from routes.rules_routes import ns_rules
+    from routes.devices_routes import ns_devices
+    
+    api.add_namespace(ns_users)
+    api.add_namespace(ns_rules)
+    api.add_namespace(ns_devices)
+    
     with app.app_context():
         db.create_all()
+        # 创建测试管理员
+        from models import Admin
+        from utils.security import hash_password
+        
+        existing_admin = Admin.query.filter_by(id=1).first()
+        if not existing_admin:
+            test_admin = Admin(
+                id=1,
+                username='test_admin',
+                password=hash_password('test_password'),
+                role='admin',
+                real_name='测试管理员',
+                phone='13800138000'
+            )
+            db.session.add(test_admin)
+            db.session.commit()
+        
         yield app
         db.drop_all()
+
 
 @pytest.fixture(scope='function')
 def client(app):
     """创建测试客户端"""
     return app.test_client()
+
 
 @pytest.fixture(scope='function')
 def db_session(app):
@@ -46,15 +79,19 @@ def db_session(app):
         yield db.session
         db.session.rollback()
 
+
 @pytest.fixture
 def sample_user(db_session):
     """创建示例用户"""
     from models import User
-    from datetime import datetime
+    import uuid
+    
+    # 使用uuid确保唯一性
+    unique_card_id = 'TEST' + str(uuid.uuid4())[:12]
     
     user = User(
         name='测试用户',
-        card_id='TEST' + str(int(datetime.now().timestamp())),
+        card_id=unique_card_id,
         class_name='测试班级',
         current_score=100
     )
@@ -63,20 +100,30 @@ def sample_user(db_session):
     
     return user
 
+
 @pytest.fixture
 def sample_category(db_session):
     """创建示例分类"""
     from models import ScoreCategory
+    from datetime import datetime
+    
+    # 检查是否已存在同名分类
+    existing = ScoreCategory.query.filter_by(name='测试分类').first()
+    if existing:
+        return existing
     
     category = ScoreCategory(
         name='测试分类',
         description='测试用分类',
-        color='#FF0000'
+        color='#FF0000',
+        is_active=True,
+        created_at=datetime.now()
     )
     db_session.add(category)
     db_session.commit()
     
     return category
+
 
 @pytest.fixture
 def sample_rule(db_session, sample_category):
@@ -95,6 +142,7 @@ def sample_rule(db_session, sample_category):
     
     return rule
 
+
 @pytest.fixture
 def auth_headers():
     """创建认证头"""
@@ -102,6 +150,7 @@ def auth_headers():
         'Content-Type': 'application/json',
         'X-Admin-Id': '1'
     }
+
 
 @pytest.fixture
 def temp_dir():

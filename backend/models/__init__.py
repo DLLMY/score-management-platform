@@ -336,3 +336,43 @@ class DeviceFirmwareUpdate(db.Model):
     completed_at = db.Column(db.DateTime)
     error_message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+class Exam(db.Model):
+    __tablename__ = 'exams'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, index=True)
+    description = db.Column(db.Text)
+    subjects = db.Column(db.JSON, nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False, index=True)
+    end_time = db.Column(db.DateTime, nullable=False, index=True)
+    importance = db.Column(db.String(20), default='medium', index=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class_info.id'), index=True)
+    status = db.Column(db.String(20), default='draft', index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('admin.id'), index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
+
+    class_info = db.relationship('ClassInfo', backref=db.backref('exams', lazy=True))
+    admin = db.relationship('Admin', backref=db.backref('exams', lazy=True))
+
+
+class Score(db.Model):
+    __tablename__ = 'scores'
+
+    id = db.Column(db.Integer, primary_key=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exams.id'), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    subject = db.Column(db.String(50), nullable=False, index=True)
+    score = db.Column(db.Float)
+    full_score = db.Column(db.Float, default=100)
+    rank = db.Column(db.Integer)
+    status = db.Column(db.String(20), default='pending', index=True)
+    entered_by = db.Column(db.Integer, db.ForeignKey('admin.id'), index=True)
+    entered_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
+
+    exam = db.relationship('Exam', backref=db.backref('scores', lazy=True))
+    student = db.relationship('User', backref=db.backref('scores', lazy=True))
+    admin = db.relationship('Admin', backref=db.backref('scores', lazy=True))

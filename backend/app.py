@@ -16,6 +16,9 @@ from models import db
 
 app = Flask(__name__)
 
+# 全局MQTT管理器声明
+mqtt_manager = None
+
 # 配置Flasgger Swagger文档
 app.json_encoder = LazyJSONEncoder
 swagger_template = {
@@ -170,6 +173,14 @@ api = register_routes(app)
 from routes.logs_routes import register_logs_routes
 register_logs_routes(app)
 
+# 注册版本路由
+from routes.version_routes import version_bp
+app.register_blueprint(version_bp)
+
+# 注册迁移路由
+from routes.migration_routes import migration_bp
+app.register_blueprint(migration_bp)
+
 # 为登录和刷新令牌接口添加CSRF豁免
 # 获取所有注册的端点并找到登录和刷新令牌接口
 for rule in app.url_map.iter_rules():
@@ -181,6 +192,12 @@ for rule in app.url_map.iter_rules():
         view_func = app.view_functions[rule.endpoint]
         csrf.exempt(view_func)
         print(f"已为 {rule.rule} 添加CSRF豁免")
+    elif rule.rule.startswith('/api/mqtt/'):
+        view_func = app.view_functions[rule.endpoint]
+        csrf.exempt(view_func)
+        print(f"已为 {rule.rule} 添加CSRF豁免")
+        limiter.exempt(view_func)
+        print(f"已为 {rule.rule} 添加限流豁免")
 
 from services.mqtt_service import connect_mqtt
 
@@ -361,5 +378,17 @@ def test_auth():
     })
 
 if __name__ == '__main__':
-    # 禁用调试模式以避免重复启动问题
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    # 初始化Redis缓存服务
+    from services.redis_cache_service import cache
+    cache.init_app(app)
+    print("Redis缓存服务初始化完成")
+
+    # 初始化WebSocket服务
+    from services.websocket_service import socketio
+    from routes.websocket_routes import init_websocket
+    init_websocket(app)
+    print("WebSocket服务初始化完成")
+
+    # 启动Flask-SocketIO服务器
+    print("启动WebSocket服务器在 port 5000...")
+    socketio.run(app, host='127.0.0.1', port=5000, debug=False, allow_unsafe_werkzeug=True)

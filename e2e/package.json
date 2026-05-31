@@ -1,0 +1,23 @@
+{
+  "name": "score-management-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:api": "playwright test --project=api",
+    "test:ui-runner": "playwright test --project=ui",
+    "test:debug": "playwright test --debug",
+    "test:generate": "playwright codegen",
+    "test:show-report": "playwright show-report",
+    "test:install": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@playwright/test-reporter": "^1.0.0"
+  },
+  "dependencies": {
+    "allure-commandline": "^2.21.0"
+  }
+}
