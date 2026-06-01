@@ -9,6 +9,7 @@ import PageTransition from './components/PageTransition';
 import DevTools from './components/DevTools';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { WebSocketProvider } from './context/WebSocketContext';
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
 import { fetchCsrfToken } from './services/api';
 
@@ -109,18 +110,20 @@ function AppLayout() {
   }, []);
 
   return (
-    <div className='flex min-h-screen bg-gray-50 dark:bg-slate-900'>
-      <Sidebar />
-      <div className='flex-1 flex flex-col bg-white dark:bg-slate-800'>
-        <Header />
-        <main className='flex-1 p-6 bg-gray-50 dark:bg-slate-900'>
-          <PageTransition>
-            <Outlet />
-          </PageTransition>
-        </main>
+    <WebSocketProvider>
+      <div className='flex min-h-screen bg-gray-50 dark:bg-slate-900'>
+        <Sidebar />
+        <div className='flex-1 flex flex-col bg-white dark:bg-slate-800'>
+          <Header />
+          <main className='flex-1 p-6 bg-gray-50 dark:bg-slate-900'>
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
+          </main>
+        </div>
+        <ToastContainer />
       </div>
-      <ToastContainer />
-    </div>
+    </WebSocketProvider>
   );
 }
 

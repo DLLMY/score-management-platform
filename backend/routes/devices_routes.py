@@ -1,7 +1,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from models import db, Device, DeviceHeartbeat, ClassInfo, Admin, AdminClass
-from utils.permission import requires_admin, get_current_admin, get_admin_class_ids
+from utils.permission import requires_admin, requires_permission, get_current_admin, get_admin_class_ids
 from services.mqtt_service import publish_mqtt
 from datetime import datetime
 import json

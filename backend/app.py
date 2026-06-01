@@ -226,10 +226,27 @@ def scheduled_backup():
     except Exception as e:
         print(f"数据库定时备份异常: {e}")
 
+def scheduled_heartbeat_check():
+    """定时检查设备心跳超时"""
+    try:
+        from routes.devices_routes import HeartbeatTimeoutCheck
+        from flask import Flask
+        # 创建一个临时的请求上下文来执行检查
+        with app.app_context():
+            result = HeartbeatTimeoutCheck().get()
+            if result and result.get('total_timeout', 0) > 0:
+                print(f"心跳超时检查发现 {result['total_timeout']} 台设备离线")
+            else:
+                print("心跳超时检查完成，所有设备正常")
+    except Exception as e:
+        print(f"心跳超时检查异常: {e}")
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_backup, 'cron', hour=2, minute=0)
+scheduler.add_job(scheduled_heartbeat_check, 'interval', seconds=30)
 scheduler.start()
 print("定时备份任务已启动，每天凌晨2:00执行")
+print("心跳超时检查任务已启动，每30秒执行一次")
 
 mqtt_started = False
 
