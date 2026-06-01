@@ -58,19 +58,17 @@ def main():
     print()
 
     from app import app
+    from routes.websocket_routes import init_websocket
+    socketio = init_websocket(app)
 
     if args.env == 'production':
-        try:
-            from waitress import serve
-            print('使用 Waitress 生产服务器启动...')
-            print()
-            serve(app, host=host, port=port, threads=4)
-        except ImportError:
-            print('Waitress 未安装，使用 Flask 内置服务器')
-            print()
-            app.run(host=host, port=port, debug=False)
+        print('使用 Flask-SocketIO 服务器启动（支持WebSocket）...')
+        print()
+        socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     else:
-        app.run(host=host, port=port, debug=debug)
+        print('使用 Flask-SocketIO 开发服务器启动...')
+        print()
+        socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
 
 
 if __name__ == '__main__':
