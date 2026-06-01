@@ -9,6 +9,12 @@ import os
 
 # JWT配置
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here'))
+if JWT_SECRET_KEY == 'your_secret_key_here':
+    import sys
+    print("\n" + "="*60)
+    print("⚠️  安全警告: 正在使用默认 JWT_SECRET_KEY!")
+    print("⚠️  请在生产环境中设置 JWT_SECRET_KEY 环境变量")
+    print("="*60 + "\n", file=sys.stderr)
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
@@ -57,6 +63,24 @@ def validate_token(token: str, token_type: str = 'access') -> Optional[Dict]:
     if payload.get('type') == token_type:
         return payload
     return None
+
+SUBACCOUNT_TOKEN_EXPIRES = timedelta(hours=24)
+
+def generate_subaccount_token(subaccount_id: int, username: str, role_type: str, parent_admin_id: int):
+    """为子账号生成JWT令牌"""
+    payload = {
+        'sub': str(subaccount_id),
+        'username': username,
+        'role_type': role_type,
+        'parent_admin_id': parent_admin_id,
+        'type': 'subaccount',
+        'exp': datetime.utcnow() + SUBACCOUNT_TOKEN_EXPIRES
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+    return {
+        'token': token,
+        'expires_in': int(SUBACCOUNT_TOKEN_EXPIRES.total_seconds())
+    }
 
 # ==================== 密码处理 ====================
 

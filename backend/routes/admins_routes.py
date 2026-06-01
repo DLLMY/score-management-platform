@@ -13,6 +13,7 @@ from utils.permission import requires_admin, requires_permission
 from utils.logger import log_operation, log_login_attempt, log_security_event
 from utils.security import hash_password, verify_password, generate_tokens, validate_token, is_strong_password
 from datetime import datetime
+from routes.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
 
 ns_admins = Namespace('admins', description='管理员管理相关操作')
 
@@ -158,7 +159,7 @@ class AdminResource(Resource):
         data = ns_admins.payload
         admin.username = data.get('username', admin.username)
         if data.get('password'):
-            admin.password = data.get('password')
+            admin.password = hash_password(data.get('password'))
         admin.role = data.get('role', admin.role)
         admin.real_name = data.get('real_name', admin.real_name)
         admin.phone = data.get('phone', admin.phone)
@@ -207,11 +208,16 @@ class AdminLogin(Resource):
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
+        ip_address = request.remote_addr
+
+        is_allowed, message, retry_after = check_login_rate_limit(username, ip_address)
+        if not is_allowed:
+            return {'success': False, 'message': message, 'retry_after': retry_after}, 429
 
         admin = Admin.query.filter_by(username=username).first()
-        
-        # 使用bcrypt验证密码
+
         if admin and verify_password(password, admin.password):
+            clear_login_attempts(username)
             log_operation(
                 operation_type='login',
                 target_type='admin',
@@ -219,12 +225,10 @@ class AdminLogin(Resource):
                 description=f'管理员登录: {admin.username}',
                 after_data={'username': username}
             )
-            # 记录安全日志
             log_login_attempt(username, success=True)
-            
-            # 生成JWT令牌
+
             tokens = generate_tokens(admin.id, admin.username, admin.role)
-            
+
             return {'success': True, 'message': '登录成功', **tokens, 'admin': {
                 'id': admin.id,
                 'username': admin.username,
@@ -232,13 +236,13 @@ class AdminLogin(Resource):
                 'real_name': admin.real_name
             }}
 
+        record_failed_login(username, ip_address)
         log_operation(
             operation_type='login_failed',
             target_type='admin',
             description=f'登录失败: 用户名={username}',
             after_data={'username': username}
         )
-        # 记录安全日志
         log_login_attempt(username, success=False, reason='用户名或密码错误')
         
         return {'success': False, 'message': '用户名或密码错误'}, 401

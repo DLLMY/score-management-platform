@@ -382,7 +382,9 @@ const api = {
       if (params.search) queryParams.append('search', params.search);
       if (params.class_name) queryParams.append('class_name', params.class_name);
       const query = queryParams.toString();
-      return request(`/api/users${query ? '?' + query : ''}`);
+      const options = {};
+      if (params.skipCache) options.skipCache = true;
+      return request(`/api/users${query ? '?' + query : ''}`, options);
     },
     getById: (id) => request(`/api/users/${id}`),
     create: (data) =>

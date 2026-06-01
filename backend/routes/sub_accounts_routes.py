@@ -2,8 +2,9 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from models import db, SubAccount, PermissionLog
 from utils.permission import requires_admin
-from utils.security import hash_password, verify_password
+from utils.security import hash_password, verify_password, generate_subaccount_token
 from datetime import datetime
+from routes.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
 
 ns_sub_accounts = Namespace('sub-accounts', description='子账号管理相关操作')
 
@@ -236,14 +237,27 @@ class SubAccountLogin(Resource):
         data = ns_sub_accounts.payload
         username = data.get('username')
         password = data.get('password')
-        
+        ip_address = request.remote_addr
+
+        is_allowed, message, retry_after = check_login_rate_limit(username, ip_address)
+        if not is_allowed:
+            return {'success': False, 'message': message, 'retry_after': retry_after}, 429
+
         account = SubAccount.query.filter_by(username=username).first()
         if account and verify_password(password, account.password) and account.is_active:
-            return {'success': True, 'message': '登录成功', 'token': str(account.id), 'account': {
+            clear_login_attempts(username)
+            token_data = generate_subaccount_token(
+                subaccount_id=account.id,
+                username=account.username,
+                role_type=account.role_type,
+                parent_admin_id=account.parent_admin_id
+            )
+            return {'success': True, 'message': '登录成功', 'token': token_data['token'], 'expires_in': token_data['expires_in'], 'account': {
                 'id': account.id,
                 'username': account.username,
                 'role_type': account.role_type,
                 'real_name': account.real_name
             }}
-        
+
+        record_failed_login(username, ip_address)
         return {'success': False, 'message': '用户名或密码错误'}, 401

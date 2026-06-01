@@ -24,6 +24,7 @@ import {
 import api from '../services/api';
 import { Button, Modal, Badge, Select } from '../components';
 import { useToast } from '../context/ToastContext';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import EmptyState from '../components/EmptyState';
 
 // 工具函数
@@ -113,6 +114,9 @@ function DeviceManagement() {
     name: '',
   });
   const [confirmDeleteDeviceId, setConfirmDeleteDeviceId] = useState(null);
+
+  // WebSocket实时更新
+  const { deviceStatuses } = useWebSocketContext();
   const [showOTAModal, setShowOTAModal] = useState(false);
   const [otaForm, setOtaForm] = useState({
     firmware_url: '',
@@ -218,6 +222,21 @@ function DeviceManagement() {
       if (otaInterval) clearInterval(otaInterval);
     };
   }, [autoRefresh, loadDevices, loadClassesAndAdmins, loadOTAStatus]);
+
+  // 监听WebSocket设备状态更新
+  useEffect(() => {
+    if (Object.keys(deviceStatuses).length > 0) {
+      setDevices(prev => {
+        return prev.map(device => {
+          const updatedStatus = deviceStatuses[device.device_id];
+          if (updatedStatus) {
+            return { ...device, ...updatedStatus };
+          }
+          return device;
+        });
+      });
+    }
+  }, [deviceStatuses]);
 
   // 设备管理操作
   const handleAddDevice = useCallback(async () => {

@@ -555,7 +555,7 @@ class DeviceRemoteControl(Resource):
     }))
     @ns_devices.response(200, '成功')
     @ns_devices.response(400, '设备不在线')
-    @requires_admin
+    @requires_permission('manage_devices')
     def post(self, id):
         """
         设备远程控制
@@ -800,12 +800,29 @@ class BatchDeviceControl(Resource):
                 continue
 
             if device.status == 'online':
-                results.append({
-                    'device_id': device_id,
-                    'device_name': device.name,
-                    'success': True,
-                    'message': f'指令已发送: {action}'
-                })
+                if action == 'restart':
+                    restart_topic = 'phonebox/control/restart'
+                    result = publish_mqtt(restart_topic, '{"command": "restart"}')
+                elif action == 'unlock':
+                    unlock_topic_a = 'phonebox/unlock/A'
+                    publish_mqtt(unlock_topic_a, '')
+                    unlock_topic_b = 'phonebox/unlock/B'
+                    result = publish_mqtt(unlock_topic_b, '{"result": "true", "reason": "manual", "current_score": 0}')
+                
+                if result:
+                    results.append({
+                        'device_id': device_id,
+                        'device_name': device.name,
+                        'success': True,
+                        'message': f'指令已发送: {action}'
+                    })
+                else:
+                    results.append({
+                        'device_id': device_id,
+                        'device_name': device.name,
+                        'success': False,
+                        'message': 'MQTT发送失败'
+                    })
             else:
                 results.append({
                     'device_id': device_id,

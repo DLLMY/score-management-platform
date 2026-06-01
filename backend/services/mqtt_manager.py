@@ -426,6 +426,24 @@ class MQTTManager:
                         db.session.add(heartbeat)
                     db.session.commit()
                     print(f"设备心跳更新成功: {device_id}")
+                    
+                    # 通过WebSocket发送设备状态更新
+                    try:
+                        from services.websocket_service import send_device_status
+                        device_data = {
+                            'device_id': device_id,
+                            'status': device.status,
+                            'wifi_signal': device.wifi_signal,
+                            'uptime': device.uptime,
+                            'box_a_status': device.box_a_status,
+                            'box_b_status': device.box_b_status,
+                            'system_state': device.system_state,
+                            'last_heartbeat': device.last_heartbeat.isoformat() if device.last_heartbeat else None
+                        }
+                        send_device_status(device_id, device_data)
+                        print(f"设备状态已通过WebSocket发送: {device_id}")
+                    except Exception as ws_e:
+                        print(f"发送WebSocket消息失败: {ws_e}")
         except Exception as e:
             print(f"处理心跳消息错误: {e}")
 

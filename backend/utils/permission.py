@@ -52,28 +52,29 @@ def requires_admin(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization')
-        admin_id = request.headers.get('X-Admin-Id')
+        admin_id_header = request.headers.get('X-Admin-Id')
 
-        token = None
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.replace('Bearer ', '')
-        elif admin_id:
-            token = admin_id
+        if not auth_header or not auth_header.startswith('Bearer '):
+            log_access_denied(request.path, reason='未提供有效的认证令牌')
+            return {'success': False, 'message': '未提供有效的认证令牌'}, 401
 
-        if not token:
-            log_access_denied(request.path, reason='未提供认证信息')
-            return {'success': False, 'message': '未提供认证信息'}, 401
+        token = auth_header.replace('Bearer ', '')
 
         try:
             payload = validate_token(token, 'access')
-            if payload:
-                admin = Admin.query.filter_by(id=int(payload['sub'])).first()
-            else:
-                admin = Admin.query.filter_by(id=token).first()
+            if not payload:
+                log_access_denied(request.path, reason='无效或过期的认证令牌')
+                return {'success': False, 'message': '无效或过期的认证令牌'}, 401
 
+            token_admin_id = int(payload['sub'])
+            if admin_id_header and int(admin_id_header) != token_admin_id:
+                log_access_denied(request.path, reason='X-Admin-Id与令牌不匹配')
+                return {'success': False, 'message': '请求头中的X-Admin-Id与认证令牌不匹配'}, 401
+
+            admin = Admin.query.filter_by(id=token_admin_id).first()
             if not admin:
-                log_access_denied(request.path, reason='无效的认证令牌')
-                return {'success': False, 'message': '无效的认证令牌'}, 401
+                log_access_denied(request.path, reason='管理员不存在')
+                return {'success': False, 'message': '管理员不存在'}, 401
         except Exception as e:
             log_access_denied(request.path, reason='认证失败')
             return {'success': False, 'message': '认证失败'}, 401
@@ -86,32 +87,30 @@ def requires_permission(permission):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             auth_header = request.headers.get('Authorization')
-            admin_id = request.headers.get('X-Admin-Id')
+            admin_id_header = request.headers.get('X-Admin-Id')
 
-            token = None
-            if auth_header and auth_header.startswith('Bearer '):
-                token = auth_header.replace('Bearer ', '')
-            elif admin_id:
-                token = admin_id
+            if not auth_header or not auth_header.startswith('Bearer '):
+                log_access_denied(request.path, reason='未提供有效的认证令牌')
+                return {'success': False, 'message': '未提供有效的认证令牌'}, 401
 
-            if not token:
-                log_access_denied(request.path, reason='未提供认证信息')
-                return {'success': False, 'message': '未提供认证信息'}, 401
+            token = auth_header.replace('Bearer ', '')
 
             try:
                 payload = validate_token(token, 'access')
-                if payload:
-                    admin = Admin.query.filter_by(id=int(payload['sub'])).first()
-                elif admin_id:
-                    admin = Admin.query.filter_by(id=int(admin_id)).first()
-                else:
-                    admin = None
+                if not payload:
+                    log_access_denied(request.path, reason='无效或过期的认证令牌')
+                    return {'success': False, 'message': '无效或过期的认证令牌'}, 401
 
+                token_admin_id = int(payload['sub'])
+                if admin_id_header and int(admin_id_header) != token_admin_id:
+                    log_access_denied(request.path, reason='X-Admin-Id与令牌不匹配')
+                    return {'success': False, 'message': '请求头中的X-Admin-Id与认证令牌不匹配'}, 401
+
+                admin = Admin.query.filter_by(id=token_admin_id).first()
                 if not admin:
-                    log_access_denied(request.path, reason='无效的认证令牌')
-                    return {'success': False, 'message': '无效的认证令牌'}, 401
+                    log_access_denied(request.path, reason='管理员不存在')
+                    return {'success': False, 'message': '管理员不存在'}, 401
 
-                # 检查权限
                 if not has_permission(admin, permission):
                     log_access_denied(request.path, reason=f'权限不足，需要权限: {permission}')
                     return {'success': False, 'message': '权限不足'}, 403
@@ -128,30 +127,29 @@ def requires_role(allowed_roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             auth_header = request.headers.get('Authorization')
-            admin_id = request.headers.get('X-Admin-Id')
+            admin_id_header = request.headers.get('X-Admin-Id')
 
-            token = None
-            if auth_header and auth_header.startswith('Bearer '):
-                token = auth_header.replace('Bearer ', '')
-            elif admin_id:
-                token = admin_id
+            if not auth_header or not auth_header.startswith('Bearer '):
+                log_access_denied(request.path, reason='未提供有效的认证令牌')
+                return {'success': False, 'message': '未提供有效的认证令牌'}, 401
 
-            if not token:
-                log_access_denied(request.path, reason='未提供认证信息')
-                return {'success': False, 'message': '未提供认证信息'}, 401
+            token = auth_header.replace('Bearer ', '')
 
             try:
                 payload = validate_token(token, 'access')
-                if payload:
-                    admin = Admin.query.filter_by(id=int(payload['sub'])).first()
-                elif admin_id:
-                    admin = Admin.query.filter_by(id=int(admin_id)).first()
-                else:
-                    admin = None
+                if not payload:
+                    log_access_denied(request.path, reason='无效或过期的认证令牌')
+                    return {'success': False, 'message': '无效或过期的认证令牌'}, 401
 
+                token_admin_id = int(payload['sub'])
+                if admin_id_header and int(admin_id_header) != token_admin_id:
+                    log_access_denied(request.path, reason='X-Admin-Id与令牌不匹配')
+                    return {'success': False, 'message': '请求头中的X-Admin-Id与认证令牌不匹配'}, 401
+
+                admin = Admin.query.filter_by(id=token_admin_id).first()
                 if not admin:
-                    log_access_denied(request.path, reason='无效的认证令牌')
-                    return {'success': False, 'message': '无效的认证令牌'}, 401
+                    log_access_denied(request.path, reason='管理员不存在')
+                    return {'success': False, 'message': '管理员不存在'}, 401
 
                 if admin.role not in allowed_roles:
                     log_access_denied(request.path, reason=f'角色{admin.role}不允许访问此资源')

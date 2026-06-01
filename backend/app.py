@@ -120,6 +120,11 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 1800
 }
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_secret_key_here_change_in_production')
+if app.config['SECRET_KEY'] == 'your_secret_key_here_change_in_production':
+    print("\n" + "="*60)
+    print("⚠️  安全警告: 正在使用默认 SECRET_KEY!")
+    print("⚠️  请在生产环境中设置 FLASK_SECRET_KEY 环境变量")
+    print("="*60 + "\n")
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.url_map.strict_slashes = False
 
@@ -127,6 +132,8 @@ app.url_map.strict_slashes = False
 # 注意：对于API应用，使用JWT token进行身份验证，CSRF保护不是必需的
 # 如果你的前端不是浏览器表单，而是通过JS发送请求（携带Authorization头）
 # 那么CSRF保护可以禁用
+# JWT token存储在localStorage/sessionStorage中，通过JavaScript添加到Authorization头
+# 这种方式天然防止CSRF攻击，因为浏览器不会自动发送Authorization头
 app.config['WTF_CSRF_ENABLED'] = False
 app.config['WTF_CSRF_SECRET_KEY'] = os.getenv('CSRF_SECRET_KEY', app.config['SECRET_KEY'])
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600

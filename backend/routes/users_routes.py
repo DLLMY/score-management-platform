@@ -138,6 +138,7 @@ class UserList(Resource):
                 'guardian_relation': u.guardian_relation,
                 'card_id': u.card_id,
                 'current_score': u.current_score,
+                'role': 'student',
                 'created_at': u.created_at.isoformat() if u.created_at else None
             } for u in pagination.items],
             'total': pagination.total,
@@ -222,6 +223,7 @@ class UserList(Resource):
                 'guardian_relation': user.guardian_relation,
                 'card_id': user.card_id,
                 'current_score': user.current_score,
+                'role': 'student',
                 'created_at': user.created_at.isoformat() if user.created_at else None
             }
         }, 201
@@ -254,6 +256,7 @@ class UserResource(Resource):
             'guardian_relation': user.guardian_relation,
             'card_id': user.card_id,
             'current_score': user.current_score,
+            'role': 'student',
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'updated_at': user.updated_at.isoformat() if user.updated_at else None
         }
@@ -328,6 +331,7 @@ class UserResource(Resource):
                 'guardian_relation': user.guardian_relation,
                 'card_id': user.card_id,
                 'current_score': user.current_score,
+                'role': 'student',
                 'created_at': user.created_at.isoformat() if user.created_at else None
             }
         }

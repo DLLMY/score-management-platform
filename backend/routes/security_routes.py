@@ -41,6 +41,68 @@ class RateLimitRecord(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+class LoginAttempt(db.Model):
+    __tablename__ = 'login_attempts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), index=True)
+    ip_address = db.Column(db.String(45), index=True)
+    attempt_count = db.Column(db.Integer, default=1)
+    locked_until = db.Column(db.DateTime, nullable=True)
+    last_attempt_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+def check_login_rate_limit(username, ip_address, max_attempts=5, lockout_minutes=15):
+    """
+    检查登录频率限制
+    返回: (is_allowed, message, retry_after_seconds)
+    """
+    now = datetime.now()
+    record = LoginAttempt.query.filter_by(username=username).first()
+
+    if record and record.locked_until and record.locked_until > now:
+        retry_after = int((record.locked_until - now).total_seconds())
+        return False, '登录失败次数过多，账户已被锁定', retry_after
+
+    if record and record.last_attempt_at:
+        window_start = now - timedelta(minutes=lockout_minutes)
+        if record.last_attempt_at < window_start:
+            record.attempt_count = 1
+            record.locked_until = None
+            db.session.commit()
+
+    return True, None, 0
+
+
+def record_failed_login(username, ip_address, max_attempts=5, lockout_minutes=15):
+    """
+    记录失败的登录尝试
+    """
+    now = datetime.now()
+    record = LoginAttempt.query.filter_by(username=username).first()
+
+    if not record:
+        record = LoginAttempt(username=username, ip_address=ip_address, attempt_count=1, last_attempt_at=now)
+        db.session.add(record)
+    else:
+        record.attempt_count += 1
+        record.last_attempt_at = now
+        record.ip_address = ip_address
+        if record.attempt_count >= max_attempts:
+            record.locked_until = now + timedelta(minutes=lockout_minutes)
+
+    db.session.commit()
+
+
+def clear_login_attempts(username):
+    """
+    清除登录尝试记录（登录成功后调用）
+    """
+    LoginAttempt.query.filter_by(username=username).delete()
+    db.session.commit()
+
+
 def verify_request_signature():
     """
     验证请求签名
