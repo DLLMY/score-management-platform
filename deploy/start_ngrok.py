@@ -12,6 +12,11 @@ import time
 import requests
 import argparse
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+NGROK_DIR = os.path.join(SCRIPT_DIR, 'ngrok')
+NGROK_LOCAL_PATH = os.path.join(NGROK_DIR, 'ngrok.exe')
+NGROK_LOCAL_PATH_ALT = os.path.join(NGROK_DIR, 'ngrok-v3-stable-windows-amd64', 'ngrok.exe')
+
 def print_title(text):
     print(f"\n{'='*60}")
     print(f"  {text}")
@@ -29,8 +34,16 @@ def print_info(message):
 def print_warning(message):
     print(f"⚠️ {message}")
 
-def check_ngrok():
-    """检查ngrok是否已安装"""
+def find_ngrok():
+    """查找ngrok可执行文件"""
+    # 优先使用本地ngrok
+    if os.path.exists(NGROK_LOCAL_PATH):
+        return NGROK_LOCAL_PATH
+    
+    if os.path.exists(NGROK_LOCAL_PATH_ALT):
+        return NGROK_LOCAL_PATH_ALT
+    
+    # 检查系统PATH
     try:
         result = subprocess.run(
             'where ngrok',
@@ -39,16 +52,17 @@ def check_ngrok():
             text=True
         )
         if result.returncode == 0:
-            return True, result.stdout.strip()
-        return False, None
+            return result.stdout.strip().split('\n')[0]
     except:
-        return False, None
+        pass
+    
+    return None
 
-def check_ngrok_auth():
+def check_ngrok_auth(ngrok_path):
     """检查ngrok是否已认证"""
     try:
         result = subprocess.run(
-            'ngrok config check',
+            f'"{ngrok_path}" config check',
             shell=True,
             capture_output=True,
             text=True
@@ -76,9 +90,9 @@ def get_ngrok_tunnels(port=4040):
         pass
     return []
 
-def start_ngrok(port, region='cn', ngrok_port=4040):
+def start_ngrok(ngrok_path, port, region='cn', ngrok_port=4040):
     """启动ngrok隧道"""
-    ngrok_cmd = f'ngrok http {port} --region={region}'
+    ngrok_cmd = f'"{ngrok_path}" http {port} --region={region}'
     
     print_info(f"正在启动ngrok隧道 (端口 {port}, 区域 {region})...")
     
@@ -136,20 +150,22 @@ def main():
     
     print_title("Ngrok 外网穿透启动工具")
     
-    # 检查ngrok
+    # 查找ngrok
     print("\n检查ngrok环境...")
-    ngrok_installed, ngrok_path = check_ngrok()
-    if not ngrok_installed:
+    ngrok_path = find_ngrok()
+    
+    if not ngrok_path:
         print_error("ngrok未安装！")
         print_info("下载地址: https://ngrok.com/download")
+        print_info("或放置到: deploy/ngrok/ngrok-v3-stable-windows-amd64/ngrok.exe")
         print_info("安装后请运行: ngrok config add-authtoken <your-token>")
         input("\n按Enter退出...")
         sys.exit(1)
     
-    print_success(f"ngrok已安装: {ngrok_path}")
+    print_success(f"ngrok已找到: {ngrok_path}")
     
     # 检查认证
-    if not check_ngrok_auth():
+    if not check_ngrok_auth(ngrok_path):
         print_error("ngrok未认证！")
         print_info("请先运行: ngrok config add-authtoken <your-token>")
         print_info("获取token: https://dashboard.ngrok.com/get-started/your-authtoken")
@@ -163,20 +179,20 @@ def main():
     
     if args.backend_only:
         print_title(f"启动后端ngrok隧道 (端口 {args.backend_port})")
-        start_ngrok(args.backend_port, args.region, 4040)
+        start_ngrok(ngrok_path, args.backend_port, args.region, 4040)
     elif args.frontend_only:
         print_title(f"启动前端ngrok隧道 (端口 {args.frontend_port})")
-        start_ngrok(args.frontend_port, args.region, 4041)
+        start_ngrok(ngrok_path, args.frontend_port, args.region, 4041)
     else:
         # 启动后端ngrok
         print_title(f"启动后端ngrok隧道 (端口 {args.backend_port})")
-        start_ngrok(args.backend_port, args.region, 4040)
+        start_ngrok(ngrok_path, args.backend_port, args.region, 4040)
         
         time.sleep(2)
         
         # 启动前端ngrok
         print_title(f"启动前端ngrok隧道 (端口 {args.frontend_port})")
-        start_ngrok(args.frontend_port, args.region, 4041)
+        start_ngrok(ngrok_path, args.frontend_port, args.region, 4041)
     
     # 显示结果
     print_title("外网访问信息")
