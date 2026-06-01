@@ -6,9 +6,8 @@ WebSocket路由配置
 
 from flask import Blueprint, request, jsonify
 from services.websocket_service import (
-    socketio,
     send_notification, send_device_status, send_score_update,
-    send_alert, broadcast_system_message
+    send_alert, broadcast_system_message, socketio
 )
 from utils.permission import requires_admin
 from models import db, User, Device
@@ -68,7 +67,3 @@ def broadcast_message():
 
     broadcast_system_message(event_type, message, data.get('data'))
     return jsonify({'success': True})
-
-def init_websocket(app):
-    socketio.init_app(app)
-    return socketio

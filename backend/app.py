@@ -437,9 +437,10 @@ if __name__ == '__main__':
     print("缓存预热线程已启动")
 
     # 初始化WebSocket服务
-    from services.websocket_service import socketio
-    from routes.websocket_routes import init_websocket
-    init_websocket(app)
+    from flask_socketio import SocketIO
+    from services.websocket_service import register_handlers
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    register_handlers(socketio)
     print("WebSocket服务初始化完成")
 
     # 启动Flask-SocketIO服务器

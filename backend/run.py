@@ -58,8 +58,12 @@ def main():
     print()
 
     from app import app
-    from routes.websocket_routes import init_websocket
-    socketio = init_websocket(app)
+    from flask_socketio import SocketIO
+    
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    
+    from services.websocket_service import register_handlers
+    register_handlers(socketio)
 
     if args.env == 'production':
         print('使用 Flask-SocketIO 服务器启动（支持WebSocket）...')
