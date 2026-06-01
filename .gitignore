@@ -54,18 +54,23 @@ test_mqtt.py
 
 
 # ================ 部署相关 ================
-# ngrok 配置和二进制文件
+# ngrok 配置和二进制文件（需要authtoken，不放入仓库）
 deploy/ngrok/ngrok.yml
 deploy/ngrok/*.log
 deploy/ngrok/ngrok.exe
 
+# Redis 服务器（可放入仓库，方便离线部署）
+# redis/  # 取消注释以忽略Redis目录
+
 # 服务管理器日志
 deploy/service_manager.log
 
-# 压缩包
+# 压缩包（除了Redis和ngrok的安装包）
 *.zip
 *.rar
 *.7z
+!redis/*.zip
+!deploy/ngrok/*.zip
 
 # PM2 进程文件（已删除 auto_deploy，保留以防万一）
 .pm2/

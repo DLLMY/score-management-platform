@@ -286,7 +286,19 @@ with app.app_context():
     print_success("端口清理完成")
     
     # 步骤7: 启动服务
-    print_step(7, 7, "启动服务")
+    print_step(7, 8, "启动服务")
+    
+    # 检查并启动本地Redis
+    redis_dir = os.path.join(project_dir, 'redis')
+    redis_exe = os.path.join(redis_dir, 'redis-server.exe')
+    if os.path.exists(redis_exe):
+        print("检测到本地Redis，启动Redis服务...")
+        redis_cmd = f'cd /d "{redis_dir}" && redis-server.exe redis.windows.conf'
+        subprocess.Popen(f'start "Redis服务" cmd /k "{redis_cmd}"', shell=True)
+        time.sleep(2)
+        print_success("Redis服务已启动")
+    else:
+        print_warning("未检测到本地Redis，将使用内存缓存")
     
     print(f"启动后端服务 (端口 {flask_port})...")
     backend_cmd = f'cd /d "{backend_dir}" && py run.py --env development'
