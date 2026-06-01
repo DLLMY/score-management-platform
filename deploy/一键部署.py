@@ -70,6 +70,49 @@ def create_file(file_path, content, overwrite=False):
         print(f"错误: {e}")
         return False
 
+def check_redis_status():
+    """检查Redis服务状态"""
+    try:
+        result = subprocess.run(
+            'sc query redis',
+            shell=True,
+            capture_output=True,
+            text=True,
+            encoding='utf-8'
+        )
+        if 'RUNNING' in result.stdout:
+            return True, "Redis服务正在运行"
+        elif 'STOPPED' in result.stdout:
+            return False, "Redis服务已停止"
+        else:
+            return False, "Redis服务未安装或未找到"
+    except Exception as e:
+        return False, f"检查Redis状态失败: {e}"
+
+def check_ngrok_status():
+    """检查ngrok是否可用"""
+    try:
+        result = subprocess.run(
+            'where ngrok',
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+        return result.returncode == 0, result.stdout.strip() if result.returncode == 0 else None
+    except:
+        return False, None
+
+def start_ngrok(port, region="cn"):
+    """启动ngrok隧道"""
+    try:
+        ngrok_cmd = f'ngrok http {port} --region={region}'
+        subprocess.Popen(f'start "Ngrok隧道 - 端口{port}" cmd /k "{ngrok_cmd}"', shell=True)
+        time.sleep(3)
+        return True
+    except Exception as e:
+        print_error(f"启动ngrok失败: {e}")
+        return False
+
 def main():
     print_title("学生积分管理平台 - 智能一键部署系统")
     
@@ -83,6 +126,34 @@ def main():
     print_info(f"后端目录: {backend_dir}")
     print_info(f"前端目录: {frontend_dir}")
     
+    # 检查Redis状态
+    print("\n检查Redis服务状态...")
+    redis_running, redis_msg = check_redis_status()
+    if redis_running:
+        print_success(redis_msg)
+    else:
+        print_warning(redis_msg)
+        print_info("将尝试启动Redis服务...")
+        try:
+            subprocess.run('net start redis', shell=True, capture_output=True)
+            time.sleep(2)
+            redis_running, redis_msg = check_redis_status()
+            if redis_running:
+                print_success("Redis服务启动成功")
+            else:
+                print_warning("Redis服务启动失败，将使用内存缓存")
+        except Exception as e:
+            print_warning(f"启动Redis服务失败: {e}")
+    
+    # 检查ngrok
+    print("\n检查ngrok...")
+    ngrok_available, ngrok_path = check_ngrok_status()
+    if ngrok_available:
+        print_success(f"ngrok已安装: {ngrok_path}")
+    else:
+        print_warning("ngrok未安装，外网穿透功能不可用")
+        print_info("下载地址: https://ngrok.com/download")
+    
     # 用户配置输入
     print_title("配置信息输入")
     db_path = get_user_input(
@@ -92,6 +163,14 @@ def main():
     
     flask_port = get_user_input("请输入后端服务端口", default="5000")
     frontend_port = get_user_input("请输入前端服务端口", default="3000")
+    
+    # 询问是否启动ngrok
+    use_ngrok = False
+    if ngrok_available:
+        ngrok_choice = get_user_input("是否启动ngrok外网穿透? (y/n)", default="n").lower()
+        use_ngrok = ngrok_choice == 'y' or ngrok_choice == 'yes'
+        if use_ngrok:
+            ngrok_region = get_user_input("请输入ngrok区域 (cn/us/eu/au/ap)", default="cn")
     
     admin_username = get_user_input("请输入管理员用户名", default="admin")
     admin_password = getpass.getpass("请输入管理员密码 (不显示): ")
@@ -298,7 +377,12 @@ with app.app_context():
         time.sleep(2)
         print_success("Redis服务已启动")
     else:
-        print_warning("未检测到本地Redis，将使用内存缓存")
+        # 再次检查系统Redis服务
+        redis_running, _ = check_redis_status()
+        if redis_running:
+            print_success("系统Redis服务正在运行")
+        else:
+            print_warning("未检测到Redis服务，将使用内存缓存")
     
     print(f"启动后端服务 (端口 {flask_port})...")
     backend_cmd = f'cd /d "{backend_dir}" && py run.py --env development'
@@ -314,6 +398,24 @@ with app.app_context():
     print("等待前端服务启动...")
     time.sleep(3)
     
+    # 启动ngrok（如果用户选择）
+    ngrok_backend_url = None
+    ngrok_frontend_url = None
+    if use_ngrok:
+        print("\n启动ngrok外网穿透...")
+        print(f"启动后端ngrok隧道 (端口 {flask_port})...")
+        if start_ngrok(flask_port, ngrok_region):
+            print_success("后端ngrok隧道已启动")
+            print_info("请访问 http://127.0.0.1:4040 查看ngrok管理界面获取外网地址")
+        
+        print(f"启动前端ngrok隧道 (端口 {frontend_port})...")
+        if start_ngrok(frontend_port, ngrok_region):
+            print_success("前端ngrok隧道已启动")
+            print_info("请访问 http://127.0.0.1:4041 查看ngrok管理界面获取外网地址")
+        
+        print_warning("注意: ngrok免费版每次启动会生成随机外网地址")
+        print_info("ngrok管理界面: http://127.0.0.1:4040 (后端) / http://127.0.0.1:4041 (前端)")
+    
     # 部署完成
     print_title("🎉 部署完成！")
     print("\n" + "="*60)
@@ -321,6 +423,10 @@ with app.app_context():
     print(f"  📱 前端应用:  http://localhost:{frontend_port}")
     print(f"  🔗 后端API:   http://localhost:{flask_port}")
     print(f"  📚 API文档:   http://localhost:{flask_port}/apidocs")
+    if use_ngrok:
+        print("\n外网访问 (ngrok):")
+        print("  📱 前端外网:  请查看 http://127.0.0.1:4041")
+        print("  🔗 后端外网:  请查看 http://127.0.0.1:4040")
     print("\n登录信息:")
     print(f"  👤 用户名: {admin_username}")
     print(f"  🔑 密码:   {admin_password}")
