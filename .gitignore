@@ -67,6 +67,9 @@ deploy/ngrok/*.log
 # 服务管理器日志
 deploy/service_manager.log
 
+# 部署检查脚本（可上传）
+# deploy/check_deploy.py
+
 # 压缩包（Redis和ngrok的安装包可以上传）
 *.zip
 *.rar

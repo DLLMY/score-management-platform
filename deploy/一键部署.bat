@@ -12,11 +12,12 @@ set "FRONTEND_DIR=%PROJECT_DIR%\frontend"
 set "REDIS_DIR=%PROJECT_DIR%\redis"
 set "NGROK_DIR=%SCRIPT_DIR%ngrok"
 set "DOWNLOAD_SCRIPT=%SCRIPT_DIR%download_deps.py"
+set "CHECK_SCRIPT=%SCRIPT_DIR%check_deploy.py"
 
 cls
 echo ============================================================
 echo           Student Score Management Platform
-echo                    Deploy System v2.0
+echo                    Deploy System v2.1
 echo ============================================================
 echo.
 echo Auto install:
@@ -34,6 +35,18 @@ echo.
 echo Optional:
 echo   - Redis Server (will be auto-downloaded if not found)
 echo ============================================================
+
+echo.
+echo [Pre-Flight Check] Running deployment pre-check...
+py "%CHECK_SCRIPT%"
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Deployment pre-check failed!
+    echo Please fix the issues above before continuing.
+    pause
+    exit /b 1
+)
+echo OK: All pre-flight checks passed
 
 echo.
 echo [Step 1/8] Checking Python environment...
@@ -114,7 +127,8 @@ if not exist ".env" (
         echo Created backend .env from example
     )
 )
-if not exist "instance" mkdir instance
+if not exist "instance" mkdir instance >nul 2>&1
+echo OK: Backend configuration ready
 
 cd /d "%FRONTEND_DIR%"
 if not exist ".env" (
@@ -123,7 +137,7 @@ if not exist ".env" (
         echo Created frontend .env from example
     )
 )
-echo OK: Configuration created
+echo OK: Frontend configuration ready
 
 echo.
 echo [Step 7/8] Cleaning existing services...
@@ -133,6 +147,11 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 ^| findstr LISTENING') 
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :6379 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4040 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
+tasklist /FI "IMAGENAME eq ngrok.exe" 2>NUL | find /I /N "ngrok.exe">NUL
+if "%ERRORLEVEL%"=="0" (
+    taskkill /F /IM ngrok.exe >NUL 2>&1
+    timeout /t 1 /nobreak >nul
+)
 echo OK: Cleanup completed
 
 echo.

@@ -284,7 +284,7 @@ def init_database():
                 print("初始化默认管理员...")
                 default_admin = Admin(
                     username='admin',
-                    password=hash_password('admin123'),
+                    password=hash_password('123456'),
                     role='admin',
                     real_name='系统管理员',
                     phone='13800138000'
