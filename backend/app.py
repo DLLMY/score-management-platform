@@ -444,5 +444,8 @@ if __name__ == '__main__':
     print("WebSocket服务初始化完成")
 
     # 启动Flask-SocketIO服务器
-    print("启动WebSocket服务器在 port 5000...")
-    socketio.run(app, host='127.0.0.1', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    # 从环境变量读取端口，支持自定义配置
+    port = int(os.getenv('FLASK_PORT', '5000'))
+    host = os.getenv('FLASK_HOST', '127.0.0.1')
+    print(f"启动WebSocket服务器在 {host}:{port}...")
+    socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)

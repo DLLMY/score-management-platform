@@ -156,9 +156,11 @@ def main():
     
     # 用户配置输入
     print_title("配置信息输入")
+    # 使用相对路径，确保跨电脑部署兼容性
+    default_db_path = os.path.join(backend_dir, 'instance', 'score_management.db')
     db_path = get_user_input(
         "请输入SQLite数据库文件路径",
-        default="C:\\Users\\53527\\Desktop\\自我管理提升\\自我管理提升V2.0\\平台开发\\管理平台设计\\backend\\instance\\score_management.db"
+        default=default_db_path
     )
     
     flask_port = get_user_input("请输入后端服务端口", default="5000")
