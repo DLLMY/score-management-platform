@@ -176,6 +176,9 @@ echo   Username: admin
 echo   Password: admin123
 echo ============================================================
 echo.
+echo Opening frontend in default browser...
+start "" http://localhost:3000
+timeout /t 2 /nobreak >nul
 
 set "NGROK_EXE=%NGROK_DIR%\ngrok.exe"
 if exist "%NGROK_EXE%" (
@@ -218,9 +221,24 @@ if exist "%NGROK_EXE%" (
                 if /i "!START_NGROK!"=="Y" (
                     echo.
                     echo Starting ngrok tunnel...
-                    echo Public URL will be shown in the ngrok window.
                     start "ngrok Tunnel" cmd /k ""%NGROK_EXE%" http 3001"
                     timeout /t 3 /nobreak >nul
+                    echo.
+                    echo Getting public URL...
+                    for /f "tokens=*" %%a in ('curl -s http://localhost:4040/api/tunnels 2^>nul ^| findstr /i "https://"') do (
+                        set "PUBLIC_URL=%%a"
+                        goto :found_url
+                    )
+                    :found_url
+                    if not "!PUBLIC_URL!"=="" (
+                        echo ============================================================
+                        echo ngrok Public URL:
+                        echo   !PUBLIC_URL!
+                        echo ============================================================
+                        echo You can access the system from anywhere using this URL.
+                    ) else (
+                        echo INFO: ngrok URL not available yet, check the ngrok window for the public URL.
+                    )
                 )
             ) else (
                 echo.
@@ -234,9 +252,24 @@ if exist "%NGROK_EXE%" (
     ) else if "!NGROK_CHOICE!"=="3" (
         echo.
         echo Starting ngrok tunnel...
-        echo Public URL will be shown in the ngrok window.
         start "ngrok Tunnel" cmd /k ""%NGROK_EXE%" http 3001"
         timeout /t 3 /nobreak >nul
+        echo.
+        echo Getting public URL...
+        for /f "tokens=*" %%a in ('curl -s http://localhost:4040/api/tunnels 2^>nul ^| findstr /i "https://"') do (
+            set "PUBLIC_URL=%%a"
+            goto :found_url2
+        )
+        :found_url2
+        if not "!PUBLIC_URL!"=="" (
+            echo ============================================================
+            echo ngrok Public URL:
+            echo   !PUBLIC_URL!
+            echo ============================================================
+            echo You can access the system from anywhere using this URL.
+        ) else (
+            echo INFO: ngrok URL not available yet, check the ngrok window for the public URL.
+        )
     )
     echo.
 )
