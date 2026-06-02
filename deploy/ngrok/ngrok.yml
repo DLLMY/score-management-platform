@@ -1,7 +1,6 @@
 version: "3"
 
 agent:
-    authtoken: 3EAk45UyuWPNCwHFSlaCvgkscIY_87foeqFSS7brrcGX4kbVz
     connect_url: connect.us.ngrok-agent.com:443
 
 tunnels:
