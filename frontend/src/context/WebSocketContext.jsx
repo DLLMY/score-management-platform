@@ -19,12 +19,10 @@ export const WebSocketProvider = ({ children, url = '' }) => {
     });
 
     socketInstance.on('connect', () => {
-      console.log('WebSocket connected');
       setIsConnected(true);
     });
 
     socketInstance.on('disconnect', () => {
-      console.log('WebSocket disconnected');
       setIsConnected(false);
     });
 

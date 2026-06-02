@@ -10,9 +10,6 @@ export const usePerformance = (name) => {
   const start = useCallback(() => {
     if (!isDev) return;
     startRef.current = performance.now();
-    if (console.time) {
-      console.time(name);
-    }
   }, [name]);
 
   const end = useCallback(() => {
@@ -20,11 +17,7 @@ export const usePerformance = (name) => {
     endRef.current = performance.now();
     const time = endRef.current - startRef.current;
     setDuration(time);
-    if (console.timeEnd) {
-      console.timeEnd(name);
-    }
     if (time > 100) {
-      console.warn(`⚠️ 性能警告: ${name} 耗时 ${time.toFixed(2)}ms`);
     }
     return time;
   }, [name]);

@@ -8,7 +8,6 @@ import {
   Star,
   Search,
   CheckCircle,
-  XCircle,
   AlertCircle,
 } from 'lucide-react';
 import api from '../services/api';
@@ -25,7 +24,6 @@ function ClassAssignment() {
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [availableClasses, setAvailableClasses] = useState([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);

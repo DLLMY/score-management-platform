@@ -31,7 +31,6 @@ function Approvals() {
       setApprovals(data.approvals);
       setPagination((prev) => ({ ...prev, total: data.total }));
     } catch (error) {
-      console.error('加载审批失败:', error);
       showToast('加载审批失败', 'error');
     } finally {
       setLoading(false);

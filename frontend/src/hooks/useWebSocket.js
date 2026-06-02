@@ -33,7 +33,6 @@ export const useWebSocket = (options = {}) => {
       const ws = new WebSocket(getWsUrl());
 
       ws.onopen = () => {
-        console.log('WebSocket connected');
         setIsConnected(true);
         rooms.forEach(room => subscribe(room));
         onConnect?.();
@@ -64,27 +63,23 @@ export const useWebSocket = (options = {}) => {
               break;
           }
         } catch (e) {
-          console.error('Failed to parse WebSocket message:', e);
         }
       };
 
       ws.onclose = () => {
-        console.log('WebSocket disconnected');
         setIsConnected(false);
         onDisconnect?.();
         reconnectTimeoutRef.current = setTimeout(connect, 3000);
       };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      ws.onerror = () => {
       };
 
       wsRef.current = ws;
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     }
-  }, [WS_URL, rooms, onNotification, onDeviceStatus, onScoreUpdate, onAlert, onSystem, onConnect, onDisconnect]);
+  }, [rooms, onNotification, onDeviceStatus, onScoreUpdate, onAlert, onSystem, onConnect, onDisconnect, subscribe]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
