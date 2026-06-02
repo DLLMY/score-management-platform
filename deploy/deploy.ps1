@@ -7,7 +7,7 @@ param(
     [string]$Action = "deploy"
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # 设置路径
 $scriptDir = $PSScriptRoot
@@ -316,6 +316,7 @@ function Configure-Ngrok {
     $ngrokExe = Join-Path $ngrokDir "ngrok.exe"
     
     if (-not (Test-Path $ngrokExe)) {
+        Write-Warn "ngrok not found, skipping ngrok configuration"
         return
     }
     
@@ -380,27 +381,10 @@ function Start-Ngrok($ngrokExe) {
         Start-Sleep -Seconds 2
     }
     
-    # 检查配置文件
     $configPath = Join-Path $ngrokDir "ngrok.yml"
-    if (-not (Test-Path $configPath)) {
-        Write-Warn "ngrok配置文件不存在，创建默认配置..."
-        $configContent = @"
-version: "3"
-agent:
-    connect_url: connect.us.ngrok-agent.com:443
-tunnels:
-    proxy:
-        proto: http
-        addr: 3001
-        host_header: localhost:3001
-"@
-        Set-Content -Path $configPath -Value $configContent -Encoding UTF8
-    }
-    
     Write-Host "Starting ngrok tunnel..."
     Write-Host "Command: $ngrokExe start --config=`"$configPath`" proxy"
     
-    # 使用cmd启动ngrok，这样可以看到错误输出
     $cmdCommand = "cd /d `"$ngrokDir`" && `"$ngrokExe`" start --config=`"$configPath`" proxy"
     Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $cmdCommand -WindowStyle Normal
     
@@ -425,7 +409,6 @@ tunnels:
             }
         }
         catch {
-            # 忽略错误，继续重试
         }
         
         $retryCount++
@@ -474,20 +457,27 @@ Write-Host ""
 Write-Host "Optional:"
 Write-Host "  - Redis Server (will be auto-downloaded if not found)"
 
-$pythonExe = Find-Python
-$null = Find-Node
-Pre-Flight-Check $pythonExe
-Download-Dependencies $pythonExe
-Install-Python-Dependencies $pythonExe
-Install-Node-Dependencies
-Create-Configuration
-Cleanup-Services
-Start-Redis
-Start-Backend $pythonExe
-Start-Frontend
-Start-Proxy
-Show-Deployment-Complete
-Configure-Ngrok
+try {
+    $pythonExe = Find-Python
+    $null = Find-Node
+    Pre-Flight-Check $pythonExe
+    Download-Dependencies $pythonExe
+    Install-Python-Dependencies $pythonExe
+    Install-Node-Dependencies
+    Create-Configuration
+    Cleanup-Services
+    Start-Redis
+    Start-Backend $pythonExe
+    Start-Frontend
+    Start-Proxy
+    Show-Deployment-Complete
+    Configure-Ngrok
+}
+catch {
+    Write-Error "Deployment failed with error: $_"
+    Read-Host "Press Enter to exit..."
+    exit 1
+}
 
 Write-Section "Service windows are open."
 Write-Host "This window will close in 15 seconds..."
