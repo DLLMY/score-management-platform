@@ -5,11 +5,22 @@ module.exports = function(app) {
   // 默认保持 localhost 兼容现有部署
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   
+  // API 代理
   app.use(
     '/api',
     createProxyMiddleware({
       target: API_URL,
       changeOrigin: true,
+    })
+  );
+
+  // WebSocket 代理
+  app.use(
+    '/ws',
+    createProxyMiddleware({
+      target: API_URL,
+      changeOrigin: true,
+      ws: true,
     })
   );
 
