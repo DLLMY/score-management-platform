@@ -173,7 +173,7 @@ echo   Proxy: http://localhost:3001
 echo ============================================================
 echo Login Information:
 echo   Username: admin
-echo   Password: admin123
+echo   Password: 123456
 echo ============================================================
 echo.
 echo Opening frontend in default browser...
