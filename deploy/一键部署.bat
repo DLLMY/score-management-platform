@@ -220,6 +220,14 @@ if exist "%NGROK_EXE%" (
                 
                 if /i "!START_NGROK!"=="Y" (
                     echo.
+                    echo Checking for existing ngrok process...
+                    tasklist /FI "IMAGENAME eq ngrok.exe" 2>NUL | find /I /N "ngrok.exe">NUL
+                    if "%ERRORLEVEL%"=="0" (
+                        echo Stopping existing ngrok process...
+                        taskkill /F /IM ngrok.exe >NUL 2>&1
+                        timeout /t 2 /nobreak >nul
+                    )
+                    
                     echo Starting ngrok tunnel...
                     start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start proxy"
                     timeout /t 3 /nobreak >nul
@@ -251,6 +259,14 @@ if exist "%NGROK_EXE%" (
         )
     ) else if "!NGROK_CHOICE!"=="3" (
         echo.
+        echo Checking for existing ngrok process...
+        tasklist /FI "IMAGENAME eq ngrok.exe" 2>NUL | find /I /N "ngrok.exe">NUL
+        if "%ERRORLEVEL%"=="0" (
+            echo Stopping existing ngrok process...
+            taskkill /F /IM ngrok.exe >NUL 2>&1
+            timeout /t 2 /nobreak >nul
+        )
+        
         echo Starting ngrok tunnel...
         start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start proxy"
         timeout /t 3 /nobreak >nul
