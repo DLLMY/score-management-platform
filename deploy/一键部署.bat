@@ -80,8 +80,8 @@ if not exist "%NGROK_DIR%\ngrok.exe" (
 if /i "%NEED_DOWNLOAD%"=="Y" (
     echo Starting download script...
     py "%DOWNLOAD_SCRIPT%"
-    if %errorlevel% neq 0 (
-        echo WARN: Some dependencies may not have been downloaded properly
+    if !errorlevel! neq 0 (
+        echo WARN: Some dependencies may have failed to download properly
     )
 )
 
@@ -111,20 +111,28 @@ cd /d "%BACKEND_DIR%"
 if not exist ".env" (
     if exist ".env.example" (
         copy ".env.example" ".env" >nul
-        echo Created .env from example
+        echo Created backend .env from example
     )
 )
 if not exist "instance" mkdir instance
+
+cd /d "%FRONTEND_DIR%"
+if not exist ".env" (
+    if exist ".env.example" (
+        copy ".env.example" ".env" >nul
+        echo Created frontend .env from example
+    )
+)
 echo OK: Configuration created
 
 echo.
 echo [Step 7/8] Cleaning existing services...
-echo Killing existing processes...
+echo Killing existing processes on required ports...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :6379 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
-taskkill /F /IM ngrok.exe >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :4040 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 echo OK: Cleanup completed
 
 echo.
@@ -145,7 +153,12 @@ timeout /t 5 /nobreak >nul
 
 echo Starting frontend service...
 start "Frontend Service" cmd /k "cd /d ""%FRONTEND_DIR%"" && npm start"
-timeout /t 3 /nobreak >nul
+timeout /t 10 /nobreak >nul
+
+echo Starting proxy server...
+start "Proxy Server" cmd /k "cd /d ""%FRONTEND_DIR%"" && node proxy-server.js"
+timeout /t 2 /nobreak >nul
+echo OK: Proxy server started
 
 cls
 echo ============================================================
@@ -156,14 +169,80 @@ echo   Frontend: http://localhost:3000
 echo   Backend API: http://localhost:5000
 echo   API Docs: http://localhost:5000/apidocs
 echo   Redis: localhost:6379
-echo ============================================================
-echo Public Access (via ngrok):
-echo   Run: deploy\ngrok\ngrok.exe http 3001
+echo   Proxy: http://localhost:3001
 echo ============================================================
 echo Login Information:
 echo   Username: admin
 echo   Password: admin123
 echo ============================================================
+echo.
+
+set "NGROK_EXE=%NGROK_DIR%\ngrok.exe"
+if exist "%NGROK_EXE%" (
+    echo ============================================================
+    echo ngrok Public Access Setup
+    echo ============================================================
+    echo.
+    echo Do you want to configure ngrok for public access?
+    echo.
+    echo   1. Yes - Configure ngrok authtoken now
+    echo   2. No  - Skip (configure manually later)
+    echo   3. Start ngrok tunnel directly (if already configured)
+    echo.
+    set /p "NGROK_CHOICE=Enter your choice (1/2/3): "
+    
+    if "!NGROK_CHOICE!"=="1" (
+        echo.
+        echo ============================================================
+        echo Please enter your ngrok authtoken
+        echo ============================================================
+        echo.
+        echo Get your authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
+        echo.
+        set /p "AUTHTOKEN=Enter authtoken: "
+        
+        if not "!AUTHTOKEN!"=="" (
+            echo.
+            echo Configuring ngrok authtoken...
+            "%NGROK_EXE%" config add-authtoken !AUTHTOKEN!
+            
+            if !errorlevel! equ 0 (
+                echo.
+                echo ============================================================
+                echo Authtoken configured successfully!
+                echo ============================================================
+                echo.
+                echo Do you want to start ngrok tunnel now?
+                set /p "START_NGROK=Start tunnel? (Y/N): "
+                
+                if /i "!START_NGROK!"=="Y" (
+                    echo.
+                    echo Starting ngrok tunnel...
+                    echo Public URL will be shown in the ngrok window.
+                    start "ngrok Tunnel" cmd /k ""%NGROK_EXE%" http 3001"
+                    timeout /t 3 /nobreak >nul
+                )
+            ) else (
+                echo.
+                echo ERROR: Failed to configure authtoken.
+                echo Please check your token and try again.
+            )
+        ) else (
+            echo.
+            echo No authtoken entered. Skipping ngrok configuration.
+        )
+    ) else if "!NGROK_CHOICE!"=="3" (
+        echo.
+        echo Starting ngrok tunnel...
+        echo Public URL will be shown in the ngrok window.
+        start "ngrok Tunnel" cmd /k ""%NGROK_EXE%" http 3001"
+        timeout /t 3 /nobreak >nul
+    )
+    echo.
+)
+
+echo ============================================================
 echo Service windows are open.
 echo This window will close in 15 seconds...
+echo ============================================================
 timeout /t 15 /nobreak >nul

@@ -65,6 +65,7 @@ def validate_token(token: str, token_type: str = 'access') -> Optional[Dict]:
     return None
 
 SUBACCOUNT_TOKEN_EXPIRES = timedelta(hours=24)
+STUDENT_TOKEN_EXPIRES = timedelta(hours=12)
 
 def generate_subaccount_token(subaccount_id: int, username: str, role_type: str, parent_admin_id: int):
     """为子账号生成JWT令牌"""
@@ -80,6 +81,21 @@ def generate_subaccount_token(subaccount_id: int, username: str, role_type: str,
     return {
         'token': token,
         'expires_in': int(SUBACCOUNT_TOKEN_EXPIRES.total_seconds())
+    }
+
+def generate_student_token(user_id: int, username: str, card_id: str):
+    """为学生生成JWT令牌"""
+    payload = {
+        'sub': str(user_id),
+        'username': username,
+        'card_id': card_id,
+        'type': 'student',
+        'exp': datetime.utcnow() + STUDENT_TOKEN_EXPIRES
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+    return {
+        'token': token,
+        'expires_in': int(STUDENT_TOKEN_EXPIRES.total_seconds())
     }
 
 # ==================== 密码处理 ====================

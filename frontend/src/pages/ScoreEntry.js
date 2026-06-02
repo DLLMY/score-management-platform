@@ -406,7 +406,7 @@ function ScoreEntry() {
 
   const exportTemplate = async () => {
     try {
-      const baseUrl = 'http://localhost:5000/api/scores/template/download';
+      const baseUrl = '/api/scores/template/download';
       const params = new URLSearchParams();
       if (selectedClass) params.append('class_name', selectedClass);
       if (selectedExam) params.append('exam_id', selectedExam);

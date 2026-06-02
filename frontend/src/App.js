@@ -78,6 +78,7 @@ const ExamManagement = createLazyComponent(() => import('./pages/ExamManagement'
 const ScoreEntry = createLazyComponent(() => import('./pages/ScoreEntry'));
 const ScoreRecords = createLazyComponent(() => import('./pages/ScoreRecords'));
 const ScoreAnalysis = createLazyComponent(() => import('./pages/ScoreAnalysis'));
+const ClassAssignment = createLazyComponent(() => import('./pages/ClassAssignment'));
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
@@ -184,6 +185,7 @@ function App() {
                 <Route path='profile' element={<Profile />} />
                 <Route path='permission' element={<PermissionManagement />} />
                 <Route path='user-management' element={<UserManagement />} />
+                <Route path='class-assignment' element={<ClassAssignment />} />
                 <Route path='exams' element={<ExamManagement />} />
                 <Route path='score-entry' element={<ScoreEntry />} />
                 <Route path='score-records' element={<ScoreRecords />} />

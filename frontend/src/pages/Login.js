@@ -35,28 +35,40 @@ function Login() {
     setLoading(true);
 
     try {
-      const result = await api.admins.login({ username, password });
+      const result = await api.auth.login({ username, password });
 
-      const adminData = result.admin || result;
-      localStorage.setItem('admin', JSON.stringify(adminData));
+      if (result.success) {
+        const userData = result.user;
+        
+        if (userData.role_type === 'admin') {
+          localStorage.setItem('admin', JSON.stringify(userData));
+        } else {
+          localStorage.setItem('subaccount', JSON.stringify(userData));
+        }
 
-      if (result.access_token) {
-        localStorage.setItem('access_token', result.access_token);
-      }
-      if (result.refresh_token) {
-        localStorage.setItem('refresh_token', result.refresh_token);
-      }
+        if (result.access_token) {
+          localStorage.setItem('access_token', result.access_token);
+        }
+        if (result.refresh_token) {
+          localStorage.setItem('refresh_token', result.refresh_token);
+        }
+        if (result.token) {
+          localStorage.setItem('access_token', result.token);
+        }
 
-      await fetchCsrfToken();
+        await fetchCsrfToken();
 
-      const role = adminData.role;
-      if (role === 'dashboard') {
-        navigate('/dashboard');
+        const role = userData.role;
+        if (role === 'dashboard') {
+          navigate('/dashboard');
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/');
+        throw new Error(result.message || '登录失败');
       }
     } catch (err) {
-      setError(err.error || '登录失败，请检查用户名和密码');
+      setError(err.error || err.message || '登录失败，请检查用户名和密码');
     } finally {
       setLoading(false);
     }

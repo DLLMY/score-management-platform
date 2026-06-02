@@ -318,12 +318,12 @@ with app.app_context():
     if existing_admin:
         print(f"管理员 {admin_username} 已存在")
     else:
-        from werkzeug.security import generate_password_hash
+        from utils.security import hash_password
         admin = Admin(
             username='{admin_username}',
-            password=generate_password_hash('{admin_password}'),
-            name='系统管理员',
-            email='admin@example.com'
+            password=hash_password('{admin_password}'),
+            real_name='系统管理员',
+            phone='13800138000'
         )
         from app import db
         db.session.add(admin)

@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 
 const WebSocketContext = createContext(null);
 
-export const WebSocketProvider = ({ children, url = 'http://localhost:5000' }) => {
+export const WebSocketProvider = ({ children, url = '' }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastNotification, setLastNotification] = useState(null);

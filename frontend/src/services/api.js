@@ -497,6 +497,15 @@ const api = {
       return request(`/api/records/statistics?${query}`);
     },
   },
+  auth: {
+    login: (data) =>
+      request('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        skipAuth: true,
+      }),
+    getCsrfToken: () => request('/api/admins/csrf-token'),
+  },
   admins: {
     login: (data) =>
       request('/api/admins/login', {
@@ -803,12 +812,12 @@ const api = {
   },
   adminClasses: {
     assign: (adminId, classId, isPrimary = false) =>
-      request(`/api/admins/${adminId}/assign-class`, {
+      request(`/api/admin-classes/${adminId}/assign-class`, {
         method: 'POST',
         body: JSON.stringify({ class_id: classId, is_primary: isPrimary }),
       }),
     remove: (adminId, classId) =>
-      request(`/api/admins/${adminId}/remove-class/${classId}`, {
+      request(`/api/admin-classes/${adminId}/remove-class/${classId}`, {
         method: 'POST',
       }),
     getByAdmin: (adminId) => request(`/api/admin-classes/${adminId}`),

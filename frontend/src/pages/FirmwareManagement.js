@@ -163,7 +163,7 @@ function FirmwareManagement() {
   };
 
   const handleDownload = (version) => {
-    window.open(`http://localhost:5000/api/firmware/download/${version.id}`, '_blank');
+    window.open(`/api/firmware/download/${version.id}`, '_blank');
   };
 
   const openUploadModal = () => {

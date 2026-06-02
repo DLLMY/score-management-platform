@@ -449,7 +449,7 @@ function UserList() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:5000/api/users/import-file', {
+      const response = await fetch('/api/users/import-file', {
         method: 'POST',
         body: formData,
       });

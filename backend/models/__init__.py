@@ -1,7 +1,18 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import bcrypt
 
 db = SQLAlchemy()
+
+def is_bcrypt_hash(password: str) -> bool:
+    """检查密码是否已经是bcrypt哈希"""
+    return password is not None and len(password) >= 60 and password.startswith('$2b$')
+
+def hash_password(password: str) -> str:
+    """将明文密码转换为bcrypt哈希"""
+    if is_bcrypt_hash(password):
+        return password
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -169,13 +180,25 @@ class Approval(db.Model):
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    _password = db.Column('password', db.String(200), nullable=False)
     role = db.Column(db.String(20), default='admin')
     real_name = db.Column(db.String(50))
     phone = db.Column(db.String(20))
     class_name = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+    
+    @property
+    def password(self):
+        return self._password
+    
+    @password.setter
+    def password(self, value):
+        """设置密码时自动进行哈希处理"""
+        if value and not is_bcrypt_hash(value):
+            self._password = bcrypt.hashpw(value.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        else:
+            self._password = value
 
 class ProcessedMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -263,7 +286,7 @@ class SubAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     parent_admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False, index=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
+    _password = db.Column('password', db.String(200), nullable=False)
     real_name = db.Column(db.String(50))
     phone = db.Column(db.String(20))
     role_type = db.Column(db.String(30), default='dashboard_viewer', index=True)
@@ -273,6 +296,18 @@ class SubAccount(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
     parent_admin = db.relationship('Admin', backref=db.backref('sub_accounts', lazy=True))
+    
+    @property
+    def password(self):
+        return self._password
+    
+    @password.setter
+    def password(self, value):
+        """设置密码时自动进行哈希处理"""
+        if value and not is_bcrypt_hash(value):
+            self._password = bcrypt.hashpw(value.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        else:
+            self._password = value
 
 class RolePermission(db.Model):
     id = db.Column(db.Integer, primary_key=True)

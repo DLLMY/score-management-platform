@@ -347,6 +347,7 @@ function Sidebar() {
         items: [
           { path: '/settings', label: '系统设置', icon: Sliders },
           { path: '/user-management', label: '用户管理', icon: UserCheck },
+          { path: '/class-assignment', label: '班级分配', icon: GraduationCap },
           { path: '/permission', label: '权限管理', icon: Shield },
         ],
       },

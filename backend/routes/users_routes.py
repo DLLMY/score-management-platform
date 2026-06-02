@@ -5,6 +5,7 @@ from flask_limiter.util import get_remote_address
 from models import db, User, ClassInfo, AdminClass
 from utils.permission import requires_admin, get_current_admin, get_admin_class_ids
 from utils.logger import log_operation
+from utils.security import generate_student_token, verify_password
 from services.cache_service import cache_service, cached
 from datetime import datetime
 import io
@@ -14,6 +15,12 @@ import json
 limiter = Limiter(get_remote_address)
 
 ns_users = Namespace('users', description='学生管理相关操作')
+
+# 学生登录模型
+login_model = ns_users.model('StudentLogin', {
+    'username': fields.String(required=True, description='用户名'),
+    'password': fields.String(required=True, description='密码')
+})
 
 user_model = ns_users.model('User', {
     'id': fields.Integer(readOnly=True, description='学生ID'),

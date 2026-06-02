@@ -98,6 +98,13 @@ class AdminAssignClass(Resource):
             )
             db.session.add(link)
         
+        # 如果设置为主要班级，将其他班级的 is_primary 设置为 False
+        if is_primary:
+            AdminClass.query.filter(
+                AdminClass.admin_id == admin_id,
+                AdminClass.class_info_id != class_id
+            ).update({'is_primary': False})
+        
         db.session.commit()
         return {'success': True, 'message': '班级分配成功'}
 

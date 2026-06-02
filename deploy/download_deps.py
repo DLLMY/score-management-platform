@@ -169,7 +169,6 @@ def download_ngrok():
                 with open(config_path, 'w', encoding='utf-8') as f:
                     f.write("""version: "3"
 agent:
-    authtoken: "3EAk45UyuWPNCwHFSlaCvgkscIY_87foeqFSS7brrcGX4kbVz"
     connect_url: connect.us.ngrok-agent.com:443
 tunnels:
     frontend:
@@ -178,6 +177,7 @@ tunnels:
         host_header: "*"
         pooling_enabled: true
 """)
+                print_info("ngrok配置文件已创建，请运行 'ngrok config add-authtoken <your_token>' 添加您的authtoken")
             
             if os.path.exists(os.path.join(ngrok_dir, 'ngrok.exe')):
                 print_success("ngrok下载并解压完成")
