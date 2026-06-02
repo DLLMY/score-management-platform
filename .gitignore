@@ -1,10 +1,10 @@
 # ================ 数据库和数据文件 ================
-# SQLite 数据库
-backend/instance/
-*.db
-*.db-journal
+# SQLite 数据库（私有仓库可上传，方便部署）
+# backend/instance/
+# *.db
+# *.db-journal
 
-# 备份文件
+# 备份文件（运行时生成，不上传）
 backend/backups/
 
 # 测试数据和临时导入文件
@@ -12,29 +12,28 @@ backend/backups/
 
 
 # ================ 前端相关 ================
-# 依赖目录
+# 依赖目录（不上传，通过npm install安装）
 frontend/node_modules/
 
-# 环境变量
+# 环境变量（敏感信息不上传）
 frontend/.env
 frontend/.env.local
 frontend/.env.development.local
 frontend/.env.test.local
 frontend/.env.production.local
 
-# 构建产物
+# 构建产物（不上传，通过npm run build生成）
 frontend/build/
 
 # 测试覆盖率报告
 frontend/coverage/
 
-# npm 锁文件（可选：如果团队使用相同 Node.js 版本可以保留）
-# frontend/package-lock.json  # 已移除，确保 CI 构建一致性
+# npm 锁文件
 frontend/yarn.lock
 
 
 # ================ 后端相关 ================
-# 环境变量
+# 环境变量（敏感信息不上传，但.env.example可以上传）
 backend/.env
 
 # Python 缓存
@@ -43,7 +42,7 @@ __pycache__/
 *.pyo
 *.pyd
 
-# 虚拟环境
+# 虚拟环境（不上传，通过requirements.txt安装）
 .venv/
 venv/
 env/
@@ -54,25 +53,27 @@ test_mqtt.py
 
 
 # ================ 部署相关 ================
-# ngrok 配置和二进制文件（需要authtoken，不放入仓库）
+# ngrok 配置（包含authtoken，不上传，请使用 ngrok.yml.example 作为模板）
 deploy/ngrok/ngrok.yml
 deploy/ngrok/*.log
-deploy/ngrok/ngrok.exe
 
-# Redis 服务器（可放入仓库，方便离线部署）
-# redis/  # 取消注释以忽略Redis目录
+# ngrok 可执行文件（可上传，方便离线部署）
+# deploy/ngrok/ngrok.exe
+
+# Redis 服务器（上传到仓库，方便离线部署）
+# redis/  # 已取消忽略，允许上传
 
 # 服务管理器日志
 deploy/service_manager.log
 
-# 压缩包（除了Redis和ngrok的安装包）
+# 压缩包（Redis和ngrok的安装包可以上传）
 *.zip
 *.rar
 *.7z
 !redis/*.zip
 !deploy/ngrok/*.zip
 
-# PM2 进程文件（已删除 auto_deploy，保留以防万一）
+# PM2 进程文件
 .pm2/
 logs/
 pm2.config.json

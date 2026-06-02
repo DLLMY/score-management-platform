@@ -1,12 +1,28 @@
 # ngrok配置模板
-# 复制此文件为 ngrok.yml 并填写你的配置
-# ngrok.yml 已加入 .gitignore，不会被提交到仓库
+# 使用说明：
+# 1. 复制此文件为 ngrok.yml
+# 2. 将 authtoken 替换为你的 ngrok authtoken（从 https://dashboard.ngrok.com/get-started/your-authtoken 获取）
+# 3. 运行一键部署脚本时，ngrok 将使用此配置启动
 
-tunnels:
-    web:
-        proto: http
-        addr: 3000
 version: "3"
+
 agent:
     authtoken: "your_ngrok_authtoken_here"
     connect_url: connect.us.ngrok-agent.com:443
+
+tunnels:
+    proxy:
+        proto: http
+        addr: 3001
+        host_header: localhost:3001
+        pooling_enabled: true
+        websocket: true
+
+# 配置说明：
+# - proxy: 隧道名称，一键部署脚本使用此名称启动
+# - addr: 代理服务器端口（3001）
+# - host_header: 主机头，确保正确路由
+# - websocket: 启用 WebSocket 支持
+# 
+# 架构说明：
+#   外网用户 → ngrok → proxy-server(3001) → frontend(3000)/backend(5000)
