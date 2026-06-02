@@ -26,6 +26,13 @@ export const useWebSocket = (options = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
 
+  const subscribeRef = useRef(null);
+  subscribeRef.current = (room) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: 'subscribe', room }));
+    }
+  };
+
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
@@ -34,7 +41,7 @@ export const useWebSocket = (options = {}) => {
 
       ws.onopen = () => {
         setIsConnected(true);
-        rooms.forEach(room => subscribe(room));
+        rooms.forEach(room => subscribeRef.current(room));
         onConnect?.();
       };
 
@@ -79,7 +86,7 @@ export const useWebSocket = (options = {}) => {
     } catch (error) {
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     }
-  }, [rooms, onNotification, onDeviceStatus, onScoreUpdate, onAlert, onSystem, onConnect, onDisconnect, subscribe]);
+  }, [rooms, onNotification, onDeviceStatus, onScoreUpdate, onAlert, onSystem, onConnect, onDisconnect]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
