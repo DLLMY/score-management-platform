@@ -145,7 +145,13 @@ const refreshToken = async () => {
   }
 
   isRefreshing = true;
-  const refreshToken = getRefreshToken();
+  const currentRefreshToken = getRefreshToken();
+
+  if (!currentRefreshToken) {
+    clearAuthData();
+    isRefreshing = false;
+    throw new Error('无刷新令牌，请重新登录');
+  }
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/admins/refresh-token`, {
@@ -153,11 +159,12 @@ const refreshToken = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify({ refresh_token: currentRefreshToken }),
     });
 
     if (!response.ok) {
-      throw new Error('刷新令牌失败');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || '刷新令牌失败');
     }
 
     const data = await response.json();
@@ -254,34 +261,41 @@ const request = async (url, options = {}, retryCount = 0) => {
         // 处理401未授权错误 - token过期
         // 跳过登录请求的令牌刷新，避免登录失败时重定向
         if (response.status === 401 && retryCount < 1 && !url.includes('/login')) {
-          // 尝试刷新token并重试请求
-          const newToken = await refreshToken();
-          if (newToken) {
-            // 更新headers中的token
-            headers['Authorization'] = `Bearer ${newToken}`;
-            // 重试原始请求
-            const retryResponse = await fetchWithTimeout(fullUrl, {
-              ...options,
-              headers,
-            });
+          try {
+            // 尝试刷新token并重试请求
+            const newToken = await refreshToken();
+            if (newToken) {
+              // 更新headers中的token
+              headers['Authorization'] = `Bearer ${newToken}`;
+              // 重试原始请求
+              const retryResponse = await fetchWithTimeout(fullUrl, {
+                ...options,
+                headers,
+              });
 
-            if (!retryResponse.ok) {
-              const error = await retryResponse.json().catch(() => ({}));
-              const errorMsg = getErrorMessage(retryResponse.status, error);
-              const apiError = new Error(errorMsg);
-              apiError.status = retryResponse.status;
-              throw apiError;
+              if (!retryResponse.ok) {
+                const error = await retryResponse.json().catch(() => ({}));
+                const errorMsg = getErrorMessage(retryResponse.status, error);
+                const apiError = new Error(errorMsg);
+                apiError.status = retryResponse.status;
+                throw apiError;
+              }
+
+              const data = await retryResponse.json();
+
+              if (method === 'GET') {
+                cache.set(cacheKey, { data, timestamp: Date.now() });
+              } else {
+                clearRelatedCache(url);
+              }
+
+              return data;
             }
-
-            const data = await retryResponse.json();
-
-            if (method === 'GET') {
-              cache.set(cacheKey, { data, timestamp: Date.now() });
-            } else {
-              clearRelatedCache(url);
-            }
-
-            return data;
+          } catch (refreshError) {
+            // Token刷新失败，清除认证数据并重定向到登录页面
+            clearAuthData();
+            window.location.href = '/login';
+            return;
           }
         }
 
