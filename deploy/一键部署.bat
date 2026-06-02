@@ -38,15 +38,38 @@ echo ============================================================
 
 echo.
 echo [Pre-Flight Check] Running deployment pre-check...
-py "%CHECK_SCRIPT%"
+echo.
+
+if not exist "%CHECK_SCRIPT%" (
+    echo [WARN] Pre-check script not found, skipping...
+    goto :skip_check
+)
+
+py --version >nul 2>&1
 if %errorlevel% neq 0 (
+    echo [ERROR] Python not found! Please install Python 3.10+
     echo.
-    echo ERROR: Deployment pre-check failed!
-    echo Please fix the issues above before continuing.
     pause
     exit /b 1
 )
-echo OK: All pre-flight checks passed
+
+py "%CHECK_SCRIPT%"
+if %errorlevel% neq 0 (
+    echo.
+    echo ============================================================
+    echo [ERROR] Deployment pre-check failed!
+    echo ============================================================
+    echo.
+    echo Please fix the issues above before continuing.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [OK] All pre-flight checks passed
+
+:skip_check
 
 echo.
 echo [Step 1/8] Checking Python environment...

@@ -12,26 +12,26 @@ import platform
 
 def print_step(current, total, message):
     """打印步骤信息"""
-    print(f"\033[1;34m[{current}/{total}]\033[0m {message}")
+    print(f"[{current}/{total}] {message}")
 
 def print_success(message):
     """打印成功信息"""
-    print(f"\033[1;32m✓ {message}\033[0m")
+    print(f"[OK] {message}")
 
 def print_error(message):
     """打印错误信息"""
-    print(f"\033[1;31m✗ {message}\033[0m")
+    print(f"[ERROR] {message}")
 
 def print_warning(message):
     """打印警告信息"""
-    print(f"\033[1;33m⚠ {message}\033[0m")
+    print(f"[WARN] {message}")
 
 def check_python_version():
     """检查Python版本"""
     try:
         version = sys.version_info
         if version >= (3, 10):
-            print_success(f"Python版本: {version.major}.{version.minor}.{version.micro} ✓")
+            print_success(f"Python版本: {version.major}.{version.minor}.{version.micro}")
             return True
         else:
             print_error(f"Python版本: {version.major}.{version.minor}.{version.micro} (需要3.10+)")
@@ -43,13 +43,13 @@ def check_python_version():
 def check_node_version():
     """检查Node.js版本"""
     try:
-        result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+        result = subprocess.run(['node', '--version'], capture_output=True, text=True, shell=True)
         if result.returncode == 0:
             version = result.stdout.strip()
             # 提取版本号数字部分
             version_num = version.lstrip('v').split('.')[0]
             if int(version_num) >= 16:
-                print_success(f"Node.js版本: {version} ✓")
+                print_success(f"Node.js版本: {version}")
                 return True
             else:
                 print_error(f"Node.js版本: {version} (需要16+)")
@@ -64,9 +64,9 @@ def check_node_version():
 def check_npm():
     """检查npm是否可用"""
     try:
-        result = subprocess.run(['npm', '--version'], capture_output=True, text=True)
+        result = subprocess.run(['npm', '--version'], capture_output=True, text=True, shell=True)
         if result.returncode == 0:
-            print_success(f"npm版本: {result.stdout.strip()} ✓")
+            print_success(f"npm版本: {result.stdout.strip()}")
             return True
         else:
             print_error("npm不可用")
@@ -78,9 +78,9 @@ def check_npm():
 def check_git():
     """检查git是否可用"""
     try:
-        result = subprocess.run(['git', '--version'], capture_output=True, text=True)
+        result = subprocess.run(['git', '--version'], capture_output=True, text=True, shell=True)
         if result.returncode == 0:
-            print_success(f"Git版本: {result.stdout.strip()} ✓")
+            print_success(f"Git版本: {result.stdout.strip()}")
             return True
         else:
             print_warning("Git不可用（建议安装以支持版本控制）")
@@ -92,9 +92,9 @@ def check_git():
 def check_curl():
     """检查curl是否可用"""
     try:
-        result = subprocess.run(['curl', '--version'], capture_output=True, text=True)
+        result = subprocess.run(['curl', '--version'], capture_output=True, text=True, shell=True)
         if result.returncode == 0:
-            print_success("curl可用 ✓")
+            print_success("curl可用")
             return True
         else:
             print_warning("curl不可用（ngrok URL获取可能受影响）")
@@ -165,7 +165,7 @@ def check_redis():
     redis_exe = os.path.join(project_dir, 'redis', 'redis-server.exe')
     
     if os.path.exists(redis_exe):
-        print_success("Redis已存在 ✓")
+        print_success("Redis已存在")
         return True
     else:
         print_warning("Redis未找到（部署时会自动下载）")
@@ -173,7 +173,11 @@ def check_redis():
 
 def main():
     """主函数"""
-    os.system('cls' if platform.system() == 'Windows' else 'clear')
+    # Windows下清屏
+    if platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
     
     print("="*60)
     print("      学生积分管理平台 - 部署前检查")
@@ -208,14 +212,14 @@ def main():
     failed = total_checks - passed
     
     if failed == 0:
-        print(f"\033[1;32m✓ 所有检查通过！\033[0m")
+        print("[OK] 所有检查通过！")
         print(f"\n已通过: {passed}/{total_checks}")
         print("\n可以运行一键部署脚本开始部署:")
         print("  cd deploy")
         print("  一键部署.bat")
         return 0
     else:
-        print(f"\033[1;31m✗ 有 {failed} 项检查未通过\033[0m")
+        print(f"[ERROR] 有 {failed} 项检查未通过")
         print(f"已通过: {passed}/{total_checks}")
         print("\n请先修复以下问题:")
         for i, (step_num, check_name, _) in enumerate(checks):
