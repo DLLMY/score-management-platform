@@ -1,0 +1,10 @@
+version: "3"
+agent:
+    connect_url: connect.us.ngrok-agent.com:443
+tunnels:
+    proxy:
+        proto: http
+        addr: 3001
+        host_header: localhost:3001
+        pooling_enabled: true
+        websocket: true

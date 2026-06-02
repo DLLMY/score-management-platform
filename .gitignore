@@ -53,12 +53,13 @@ test_mqtt.py
 
 
 # ================ 部署相关 ================
-# ngrok 配置（包含authtoken，不上传，请使用 ngrok.yml.example 作为模板）
-deploy/ngrok/ngrok.yml
+# ngrok 日志文件（运行时生成）
 deploy/ngrok/*.log
 
-# ngrok 可执行文件（可上传，方便离线部署）
+# ngrok 可执行文件和配置（可上传，方便离线部署）
+# authtoken 通过 "ngrok config add-authtoken" 命令配置，不存储在 ngrok.yml 中
 # deploy/ngrok/ngrok.exe
+# deploy/ngrok/ngrok.yml
 
 # Redis 服务器（上传到仓库，方便离线部署）
 # redis/  # 已取消忽略，允许上传

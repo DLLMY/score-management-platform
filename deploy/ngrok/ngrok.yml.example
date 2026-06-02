@@ -1,13 +1,14 @@
-# ngrok配置模板
+# ngrok配置文件
+# 
 # 使用说明：
-# 1. 复制此文件为 ngrok.yml
-# 2. 将 authtoken 替换为你的 ngrok authtoken（从 https://dashboard.ngrok.com/get-started/your-authtoken 获取）
-# 3. 运行一键部署脚本时，ngrok 将使用此配置启动
+# 1. authtoken 不存储在此文件中，通过命令行配置
+# 2. 运行一键部署脚本时，选择 "Configure ngrok authtoken" 选项
+# 3. 或手动运行: ngrok config add-authtoken <your-authtoken>
+# 4. 从 https://dashboard.ngrok.com/get-started/your-authtoken 获取authtoken
 
 version: "3"
 
 agent:
-    authtoken: "your_ngrok_authtoken_here"
     connect_url: connect.us.ngrok-agent.com:443
 
 tunnels:
