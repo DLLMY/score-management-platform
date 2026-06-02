@@ -37,6 +37,35 @@ echo   - Redis Server (will be auto-downloaded if not found)
 echo ============================================================
 
 echo.
+echo [Step 0] Detecting Python environment...
+
+set "PYTHON_EXE="
+set "PY_FOUND=0"
+
+:: 尝试查找Python
+for %%p in (python py "C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe" "C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python313\python.exe") do (
+    if "!PY_FOUND!"=="0" (
+        %%p --version >nul 2>&1
+        if !errorlevel! equ 0 (
+            set "PYTHON_EXE=%%p"
+            set "PY_FOUND=1"
+        )
+    )
+)
+
+if "!PY_FOUND!"=="0" (
+    echo [ERROR] Python not found!
+    echo Please install Python 3.10+ from https://www.python.org/downloads/
+    echo.
+    pause
+    exit /b 1
+)
+
+for /f "tokens=2" %%a in ('!PYTHON_EXE! --version 2^>^&1') do set "PY_VER=%%a"
+echo [OK] Found Python: !PYTHON_EXE!
+echo [OK] Python version: !PY_VER!
+
+echo.
 echo [Pre-Flight Check] Running deployment pre-check...
 echo.
 
@@ -45,16 +74,8 @@ if not exist "%CHECK_SCRIPT%" (
     goto :skip_check
 )
 
-py --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Python not found! Please install Python 3.10+
-    echo.
-    pause
-    exit /b 1
-)
-
-py "%CHECK_SCRIPT%"
-if %errorlevel% neq 0 (
+!PYTHON_EXE! "%CHECK_SCRIPT%"
+if !errorlevel! neq 0 (
     echo.
     echo ============================================================
     echo [ERROR] Deployment pre-check failed!
@@ -72,19 +93,7 @@ echo [OK] All pre-flight checks passed
 :skip_check
 
 echo.
-echo [Step 1/8] Checking Python environment...
-py --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Python not found!
-    echo Please install Python 3.10+ and add to PATH
-    timeout /t 10 /nobreak >nul
-    exit /b 1
-)
-for /f "tokens=2" %%a in ('py --version 2^>^&1') do set "PY_VER=%%a"
-echo OK: Python %PY_VER% installed
-
-echo.
-echo [Step 2/8] Checking Node.js environment...
+echo [Step 1/8] Checking Node.js environment...
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Node.js not found!
@@ -96,7 +105,7 @@ for /f "tokens=1" %%a in ('node --version 2^>^&1') do set "NODE_VER=%%a"
 echo OK: Node.js %NODE_VER% installed
 
 echo.
-echo [Step 3/8] Checking and downloading dependencies...
+echo [Step 2/8] Checking and downloading dependencies...
 set "NEED_DOWNLOAD=N"
 
 if not exist "%REDIS_DIR%\redis-server.exe" (
@@ -115,24 +124,24 @@ if not exist "%NGROK_DIR%\ngrok.exe" (
 
 if /i "%NEED_DOWNLOAD%"=="Y" (
     echo Starting download script...
-    py "%DOWNLOAD_SCRIPT%"
+    !PYTHON_EXE! "%DOWNLOAD_SCRIPT%"
     if !errorlevel! neq 0 (
         echo WARN: Some dependencies may have failed to download properly
     )
 )
 
 echo.
-echo [Step 4/8] Installing Python dependencies...
+echo [Step 3/8] Installing Python dependencies...
 cd /d "%BACKEND_DIR%"
-py -m pip install -r requirements.txt --quiet
-if %errorlevel% equ 0 (
+!PYTHON_EXE! -m pip install -r requirements.txt --quiet
+if !errorlevel! equ 0 (
     echo OK: Python dependencies installed
 ) else (
     echo WARN: Some Python dependencies may have failed to install
 )
 
 echo.
-echo [Step 5/8] Installing Node.js dependencies...
+echo [Step 4/8] Installing Node.js dependencies...
 cd /d "%FRONTEND_DIR%"
 call npm install --legacy-peer-deps --quiet
 if %errorlevel% equ 0 (
@@ -142,7 +151,7 @@ if %errorlevel% equ 0 (
 )
 
 echo.
-echo [Step 6/8] Creating configuration...
+echo [Step 5/8] Creating configuration...
 cd /d "%BACKEND_DIR%"
 if not exist ".env" (
     if exist ".env.example" (
@@ -163,7 +172,7 @@ if not exist ".env" (
 echo OK: Frontend configuration ready
 
 echo.
-echo [Step 7/8] Cleaning existing services...
+echo [Step 6/8] Cleaning existing services...
 echo Killing existing processes on required ports...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
@@ -178,7 +187,7 @@ if "%ERRORLEVEL%"=="0" (
 echo OK: Cleanup completed
 
 echo.
-echo [Step 8/8] Starting services...
+echo [Step 7/8] Starting services...
 
 if exist "%REDIS_DIR%\redis-server.exe" (
     echo Starting Redis server...
@@ -190,7 +199,7 @@ if exist "%REDIS_DIR%\redis-server.exe" (
 )
 
 echo Starting backend service...
-start "Backend Service" cmd /k "cd /d ""%BACKEND_DIR%"" && py run.py --env development"
+start "Backend Service" cmd /k "cd /d ""%BACKEND_DIR%"" && !PYTHON_EXE! run.py --env development"
 timeout /t 5 /nobreak >nul
 
 echo Starting frontend service...
