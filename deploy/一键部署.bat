@@ -203,21 +203,25 @@ if exist "%NGROK_EXE%" (
         echo Get your authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken
         echo.
         set /p "AUTHTOKEN=Enter authtoken: "
-        
+
         if not "!AUTHTOKEN!"=="" (
             echo.
             echo Configuring ngrok authtoken...
             "%NGROK_EXE%" config add-authtoken !AUTHTOKEN!
-            
+
             if !errorlevel! equ 0 (
                 echo.
+                echo Configuring ngrok proxy tunnel...
+                "%NGROK_EXE%" config add-tunnel proxy --proto http --addr 3001 --host-header localhost:3001
+
+                echo.
                 echo ============================================================
-                echo Authtoken configured successfully!
+                echo Authtoken and tunnel configured successfully!
                 echo ============================================================
                 echo.
                 echo Do you want to start ngrok tunnel now?
                 set /p "START_NGROK=Start tunnel? (Y/N): "
-                
+
                 if /i "!START_NGROK!"=="Y" (
                     echo.
                     echo Checking for existing ngrok process...
