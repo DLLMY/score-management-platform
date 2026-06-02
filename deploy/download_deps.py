@@ -171,13 +171,12 @@ def download_ngrok():
 agent:
     connect_url: connect.us.ngrok-agent.com:443
 tunnels:
-    frontend:
+    proxy:
         proto: http
         addr: 3001
-        host_header: "*"
-        pooling_enabled: true
+        host_header: localhost:3001
 """)
-                print_info("ngrok配置文件已创建，请运行 'ngrok config add-authtoken <your_token>' 添加您的authtoken")
+                print_info("ngrok配置文件已创建")
             
             if os.path.exists(os.path.join(ngrok_dir, 'ngrok.exe')):
                 print_success("ngrok下载并解压完成")

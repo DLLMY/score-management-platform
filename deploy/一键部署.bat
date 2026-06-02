@@ -193,7 +193,7 @@ if exist "%NGROK_EXE%" (
     echo   3. Start ngrok tunnel directly (if already configured)
     echo.
     set /p "NGROK_CHOICE=Enter your choice (1/2/3): "
-    
+
     if "!NGROK_CHOICE!"=="1" (
         echo.
         echo ============================================================
@@ -231,9 +231,9 @@ if exist "%NGROK_EXE%" (
                         taskkill /F /IM ngrok.exe >NUL 2>&1
                         timeout /t 2 /nobreak >nul
                     )
-                    
+
                     echo Starting ngrok tunnel...
-                    start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start proxy"
+                    start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start --config=%NGROK_DIR%\ngrok.yml proxy"
                     timeout /t 3 /nobreak >nul
                     echo.
                     echo Getting public URL...
@@ -273,9 +273,9 @@ if exist "%NGROK_EXE%" (
             taskkill /F /IM ngrok.exe >NUL 2>&1
             timeout /t 2 /nobreak >nul
         )
-        
+
         echo Starting ngrok tunnel...
-        start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start proxy"
+        start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start --config=%NGROK_DIR%\ngrok.yml proxy"
         timeout /t 3 /nobreak >nul
         echo.
         echo Getting public URL...
