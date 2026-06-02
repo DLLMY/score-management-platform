@@ -156,7 +156,7 @@ start "Frontend Service" cmd /k "cd /d ""%FRONTEND_DIR%"" && npm start"
 timeout /t 10 /nobreak >nul
 
 echo Starting proxy server...
-start "Proxy Server" cmd /k "cd /d ""%FRONTEND_DIR%"" && node proxy-server.js"
+start "Proxy Server" cmd /k "cd /d ""%FRONTEND_DIR%"" && set BACKEND_URL=http://localhost:5000&& set FRONTEND_URL=http://localhost:3000&& node proxy-server.js"
 timeout /t 2 /nobreak >nul
 echo OK: Proxy server started
 

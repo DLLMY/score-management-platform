@@ -5,8 +5,10 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const BACKEND_URL = 'http://localhost:5000';
-const FRONTEND_URL = 'http://localhost:3000';
+// 从环境变量读取后端和前端地址，支持自定义配置
+// 默认保持 localhost 兼容现有部署
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use('/api', createProxyMiddleware({
   target: BACKEND_URL,

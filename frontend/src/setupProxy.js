@@ -1,10 +1,14 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function(app) {
+  // 从环境变量读取 API 地址，支持自定义配置
+  // 默认保持 localhost 兼容现有部署
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:5000',
+      target: API_URL,
       changeOrigin: true,
     })
   );
