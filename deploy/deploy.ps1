@@ -380,32 +380,61 @@ function Start-Ngrok($ngrokExe) {
         Start-Sleep -Seconds 2
     }
     
+    # 检查配置文件
+    $configPath = Join-Path $ngrokDir "ngrok.yml"
+    if (-not (Test-Path $configPath)) {
+        Write-Warn "ngrok配置文件不存在，创建默认配置..."
+        $configContent = @"
+version: "3"
+agent:
+    connect_url: connect.us.ngrok-agent.com:443
+tunnels:
+    proxy:
+        proto: http
+        addr: 3001
+        host_header: localhost:3001
+"@
+        Set-Content -Path $configPath -Value $configContent -Encoding UTF8
+    }
+    
     Write-Host "Starting ngrok tunnel..."
-    Start-Process -FilePath $ngrokExe -ArgumentList "start --config=$ngrokDir\ngrok.yml proxy" -WorkingDirectory $ngrokDir -WindowStyle Normal
-    Start-Sleep -Seconds 3
+    Write-Host "Command: $ngrokExe start --config=`"$configPath`" proxy"
+    
+    # 使用cmd启动ngrok，这样可以看到错误输出
+    $cmdCommand = "cd /d `"$ngrokDir`" && `"$ngrokExe`" start --config=`"$configPath`" proxy"
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $cmdCommand -WindowStyle Normal
+    
+    Start-Sleep -Seconds 5
     
     Write-Host ""
     Write-Host "Getting public URL..."
-    try {
-        $response = Invoke-RestMethod "http://localhost:4040/api/tunnels" -ErrorAction SilentlyContinue
-        if ($response) {
-            $publicUrl = $response.tunnels | Where-Object { $_.proto -eq "https" } | Select-Object -ExpandProperty public_url -First 1
-            if ($publicUrl) {
-                Write-Section "ngrok Public URL:"
-                Write-Color "  $publicUrl" $green
-                Write-Host "You can access the system from anywhere using this URL."
-            }
-            else {
-                Write-Warn "ngrok URL not available yet, check the ngrok window for the public URL."
+    $retryCount = 0
+    $maxRetries = 5
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            $response = Invoke-RestMethod "http://localhost:4040/api/tunnels" -ErrorAction SilentlyContinue -TimeoutSec 2
+            if ($response) {
+                $publicUrl = $response.tunnels | Where-Object { $_.proto -eq "https" } | Select-Object -ExpandProperty public_url -First 1
+                if ($publicUrl) {
+                    Write-Section "ngrok Public URL:"
+                    Write-Color "  $publicUrl" $green
+                    Write-Host "You can access the system from anywhere using this URL."
+                    return
+                }
             }
         }
-        else {
-            Write-Warn "ngrok URL not available yet, check the ngrok window for the public URL."
+        catch {
+            # 忽略错误，继续重试
         }
+        
+        $retryCount++
+        Start-Sleep -Seconds 2
     }
-    catch {
-        Write-Warn "ngrok URL not available yet, check the ngrok window for the public URL."
-    }
+    
+    Write-Warn "ngrok URL not available after $maxRetries attempts."
+    Write-Warn "Please check the ngrok window for errors or configure authtoken manually."
+    Write-Warn "Get authtoken from: https://dashboard.ngrok.com/get-started/your-authtoken"
 }
 
 function Show-Deployment-Complete {
