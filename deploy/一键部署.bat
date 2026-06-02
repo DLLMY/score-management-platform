@@ -221,7 +221,7 @@ if exist "%NGROK_EXE%" (
                 if /i "!START_NGROK!"=="Y" (
                     echo.
                     echo Starting ngrok tunnel...
-                    start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start proxy"
+                    start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start --config=%NGROK_DIR%\ngrok.yml proxy"
                     timeout /t 3 /nobreak >nul
                     echo.
                     echo Getting public URL...
@@ -252,7 +252,7 @@ if exist "%NGROK_EXE%" (
     ) else if "!NGROK_CHOICE!"=="3" (
         echo.
         echo Starting ngrok tunnel...
-        start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start proxy"
+        start "ngrok Tunnel" cmd /k "cd /d ""%NGROK_DIR%"" && ""%NGROK_EXE%"" start --config=%NGROK_DIR%\ngrok.yml proxy"
         timeout /t 3 /nobreak >nul
         echo.
         echo Getting public URL...
