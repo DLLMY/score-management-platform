@@ -247,15 +247,18 @@ if exist "%NGROK_EXE%" (
                     ) else (
                         echo INFO: ngrok URL not available yet, check the ngrok window for the public URL.
                     )
+                    goto :ngrok_end
                 )
             ) else (
                 echo.
                 echo ERROR: Failed to configure authtoken.
                 echo Please check your token and try again.
+                goto :ngrok_end
             )
         ) else (
             echo.
             echo No authtoken entered. Skipping ngrok configuration.
+            goto :ngrok_end
         )
     ) else if "!NGROK_CHOICE!"=="3" (
         echo.
@@ -287,6 +290,7 @@ if exist "%NGROK_EXE%" (
             echo INFO: ngrok URL not available yet, check the ngrok window for the public URL.
         )
     )
+    :ngrok_end
     echo.
 )
 
