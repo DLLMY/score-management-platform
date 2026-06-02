@@ -46,15 +46,15 @@ function Write-Step([string]$Message) {
 }
 
 function Write-OK([string]$Message) {
-    Write-Color "  ✓ $Message" $green
+    Write-Color "  OK: $Message" $green
 }
 
 function Write-Error([string]$Message) {
-    Write-Color "  ✗ $Message" $red
+    Write-Color "  ERROR: $Message" $red
 }
 
 function Write-Warn([string]$Message) {
-    Write-Color "  ⚠ $Message" $yellow
+    Write-Color "  WARN: $Message" $yellow
 }
 
 function Test-Command([string]$Command) {
@@ -93,6 +93,7 @@ function Find-Python {
     
     Write-Error "Python not found!"
     Write-Host "Please install Python 3.10+ from https://www.python.org/downloads/"
+    Read-Host "Press Enter to exit..."
     exit 1
 }
 
@@ -107,6 +108,7 @@ function Find-Node {
     
     Write-Error "Node.js not found!"
     Write-Host "Please install Node.js 16+ and add to PATH"
+    Read-Host "Press Enter to exit..."
     exit 1
 }
 
