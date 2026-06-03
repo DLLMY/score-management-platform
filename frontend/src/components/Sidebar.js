@@ -318,6 +318,7 @@ function Sidebar() {
           { path: '/score-entry', label: '成绩录入', icon: FileKey },
           { path: '/score-records', label: '成绩档案', icon: BookOpen },
           { path: '/score-analysis', label: '成绩分析', icon: BarChart3 },
+          { path: '/algorithm-analysis', label: '算法分析', icon: Sparkles },
         ],
       },
       {

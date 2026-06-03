@@ -7,9 +7,11 @@ import ToastContainer from './components/ToastContainer';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageTransition from './components/PageTransition';
 import DevTools from './components/DevTools';
+import { GlobalLoading, GlobalErrorBoundary, NetworkStatusIndicator } from './components/GlobalStateComponents';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { GlobalStateProvider } from './context/GlobalStateContext';
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
 import { fetchCsrfToken } from './services/api';
 
@@ -79,6 +81,7 @@ const ScoreEntry = createLazyComponent(() => import('./pages/ScoreEntry'));
 const ScoreRecords = createLazyComponent(() => import('./pages/ScoreRecords'));
 const ScoreAnalysis = createLazyComponent(() => import('./pages/ScoreAnalysis'));
 const ClassAssignment = createLazyComponent(() => import('./pages/ClassAssignment'));
+const AlgorithmAnalysis = createLazyComponent(() => import('./pages/AlgorithmAnalysis'));
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
   const location = useLocation();
@@ -144,58 +147,64 @@ function GlobalToastProvider({ children }) {
 function App() {
   return (
     <ThemeProvider>
-      <GlobalToastProvider>
-        <ErrorBoundary fallback={<RouteError />}>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <Routes>
-              <Route path='/login' element={<Login />} />
-              <Route
-                path='/dashboard'
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Dashboard />} />
-              </Route>
-              <Route path='/' element={<AppLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path='users' element={<UserList />} />
-                <Route path='users/:id' element={<UserDetail />} />
-                <Route path='rules' element={<RuleList />} />
-                <Route path='rank-rules' element={<RankRuleList />} />
-                <Route path='categories' element={<CategoryList />} />
-                <Route path='time-rules' element={<TimeRuleList />} />
-                <Route path='devices' element={<DeviceManagement />} />
-                <Route path='device-monitor' element={<Navigate to='/devices' replace />} />
-                <Route path='firmware' element={<FirmwareManagement />} />
-                <Route path='analysis' element={<Analysis />} />
-                <Route path='mqtt' element={<MQTTDebug />} />
-                <Route path='operation-logs' element={<OperationLogs />} />
-                <Route path='notifications' element={<Notifications />} />
-                <Route path='approvals' element={<Approvals />} />
-                <Route path='settings' element={<Settings />} />
-                <Route path='help' element={<HelpCenter />} />
-                <Route path='profile' element={<Profile />} />
-                <Route path='permission' element={<PermissionManagement />} />
-                <Route path='user-management' element={<UserManagement />} />
-                <Route path='class-assignment' element={<ClassAssignment />} />
-                <Route path='exams' element={<ExamManagement />} />
-                <Route path='score-entry' element={<ScoreEntry />} />
-                <Route path='score-records' element={<ScoreRecords />} />
-                <Route path='score-analysis' element={<ScoreAnalysis />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-          <DevTools />
-        </ErrorBoundary>
-      </GlobalToastProvider>
+      <GlobalStateProvider>
+        <GlobalToastProvider>
+          <ErrorBoundary fallback={<RouteError />}>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <Routes>
+                <Route path='/login' element={<Login />} />
+                <Route
+                  path='/dashboard'
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Dashboard />} />
+                </Route>
+                <Route path='/' element={<AppLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path='users' element={<UserList />} />
+                  <Route path='users/:id' element={<UserDetail />} />
+                  <Route path='rules' element={<RuleList />} />
+                  <Route path='rank-rules' element={<RankRuleList />} />
+                  <Route path='categories' element={<CategoryList />} />
+                  <Route path='time-rules' element={<TimeRuleList />} />
+                  <Route path='devices' element={<DeviceManagement />} />
+                  <Route path='device-monitor' element={<Navigate to='/devices' replace />} />
+                  <Route path='firmware' element={<FirmwareManagement />} />
+                  <Route path='analysis' element={<Analysis />} />
+                  <Route path='mqtt' element={<MQTTDebug />} />
+                  <Route path='operation-logs' element={<OperationLogs />} />
+                  <Route path='notifications' element={<Notifications />} />
+                  <Route path='approvals' element={<Approvals />} />
+                  <Route path='settings' element={<Settings />} />
+                  <Route path='help' element={<HelpCenter />} />
+                  <Route path='profile' element={<Profile />} />
+                  <Route path='permission' element={<PermissionManagement />} />
+                  <Route path='user-management' element={<UserManagement />} />
+                  <Route path='class-assignment' element={<ClassAssignment />} />
+                  <Route path='exams' element={<ExamManagement />} />
+                  <Route path='score-entry' element={<ScoreEntry />} />
+                  <Route path='score-records' element={<ScoreRecords />} />
+                  <Route path='score-analysis' element={<ScoreAnalysis />} />
+                  <Route path='algorithm-analysis' element={<AlgorithmAnalysis />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+            <DevTools />
+            <GlobalLoading />
+            <GlobalErrorBoundary />
+            <NetworkStatusIndicator />
+          </ErrorBoundary>
+        </GlobalToastProvider>
+      </GlobalStateProvider>
     </ThemeProvider>
   );
 }

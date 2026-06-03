@@ -1,4 +1,5 @@
 const API_BASE_URL = '';
+const isDev = process.env.NODE_ENV === 'development';
 
 const getCurrentAdmin = () => {
   const admin = localStorage.getItem('admin');
@@ -208,6 +209,7 @@ const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
 };
 
 const request = async (url, options = {}, retryCount = 0) => {
+  const startTime = performance.now();
   const admin = getCurrentAdmin();
   const accessToken = getAccessToken();
   const method = options.method || 'GET';
@@ -345,6 +347,11 @@ const request = async (url, options = {}, retryCount = 0) => {
       }
 
       const data = await response.json();
+
+      const responseTime = performance.now() - startTime;
+      if (isDev) {
+        console.log(`[API] ${method} ${url} - ${responseTime.toFixed(2)}ms`);
+      }
 
       if (method === 'GET') {
         cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -693,7 +700,43 @@ const api = {
         method: 'DELETE',
       }),
   },
-  approvals: {
+  algorithm: {
+    // 统计分析
+    getStatistics: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/algorithm/statistics${query ? '?' + query : ''}`);
+    },
+    
+    // 学生分群
+    getClusters: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/algorithm/cluster${query ? '?' + query : ''}`);
+    },
+    recalculateClusters: () => request('/api/algorithm/cluster', { method: 'POST' }),
+    getClusterByUser: (userId) => request(`/api/algorithm/cluster/${userId}`),
+    
+    // 综合评分
+    getCompositeScores: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/algorithm/composite-score${query ? '?' + query : ''}`);
+    },
+    recalculateCompositeScores: () => request('/api/algorithm/composite-score', { method: 'POST' }),
+    getCompositeScoreByUser: (userId) => request(`/api/algorithm/composite-score/${userId}`),
+    
+    // 风险预警
+    getWarnings: (params = {}) => {
+      const query = new URLSearchParams(params).toString();
+      return request(`/api/algorithm/warning${query ? '?' + query : ''}`);
+    },
+    runWarningEvaluation: () => request('/api/algorithm/warning', { method: 'POST' }),
+    resolveWarning: (id) => request(`/api/algorithm/warning/${id}/resolve`, { method: 'POST' }),
+    getWarningConfig: () => request('/api/algorithm/warning/config'),
+    updateWarningConfig: (data) => request('/api/algorithm/warning/config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  },
+  exams: {
     getAll: (params) => {
       const query = new URLSearchParams(params).toString();
       return request(`/api/approvals?${query}`);
