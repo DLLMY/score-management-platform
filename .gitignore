@@ -1,8 +1,10 @@
 # ================ 数据库和数据文件 ================
-# SQLite 数据库（私有仓库可上传，方便部署）
-# backend/instance/
-# *.db
-# *.db-journal
+# SQLite 数据库（含真实业务数据，禁止入库！仅用于本地开发）
+backend/instance/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # 备份文件（运行时生成，不上传）
 backend/backups/
@@ -47,9 +49,12 @@ __pycache__/
 venv/
 env/
 
-# 测试文件
-test_*.py
-test_mqtt.py
+# 测试文件（仅忽略根目录临时测试脚本）
+/test_*.py
+/test_mqtt.py
+
+# pytest 缓存
+.pytest_cache/
 
 
 # ================ 部署相关 ================
@@ -70,17 +75,27 @@ deploy/service_manager.log
 # 部署检查脚本（可上传）
 # deploy/check_deploy.py
 
-# 压缩包（Redis和ngrok的安装包可以上传）
+# 压缩包（一律忽略，避免仓库体积膨胀；部署时另行分发）
 *.zip
 *.rar
 *.7z
-!redis/*.zip
-!deploy/ngrok/*.zip
+
+# 二进制可执行文件与安装包（禁止入库，避免仓库体积膨胀；部署时另行分发）
+*.exe
+*.msi
+*.dll
+*.so
+*.dylib
 
 # PM2 进程文件
 .pm2/
-logs/
 pm2.config.json
+
+# 后端日志归档（仅忽略归档和临时文件，保留当前日志）
+backend/logs/*.log.*
+backend/logs/*.json.*
+backend/logs/.__*.lock
+backend/logs/*.json
 
 
 # ================ 系统和 IDE ================
@@ -132,3 +147,20 @@ Icon
 npm-debug.log*
 yarn-error.log
 lerna-debug.log*
+
+# ===== 2026-08-06 增补 =====
+# 构建产物
+frontend/dist/
+# 历史备份目录（不入库）
+_cleanup_backup_20260803/
+backup_scripts_20260731/
+# 覆盖率/临时产物
+.coverage
+*.coverage
+# Windows 保留设备名伪影文件（git 无法索引，忽略）
+nul
+# 临时诊断脚本与截图（用完即清，不入库）
+frontend/probe/
+# 本地训练模型（运行资产，体积大，不入库；部署时单独提供）
+backend/models/bert/
+backend/models/trained/

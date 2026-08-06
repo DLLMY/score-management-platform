@@ -6,66 +6,79 @@ from utils.security import hash_password, verify_password, generate_subaccount_t
 from datetime import datetime
 from routes.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
 
-ns_sub_accounts = Namespace('sub-accounts', description='子账号管理相关操作')
+ns_sub_accounts = Namespace("sub-accounts", description="子账号管理相关操作")
+
 
 def log_permission_action(action, target_id=None, description=None):
     """记录权限操作日志"""
     try:
-        admin_id = request.headers.get('X-Admin-Id')
+        admin_id = request.headers.get("X-Admin-Id")
         log = PermissionLog(
             operator_id=admin_id,
-            operator_type='admin',
+            operator_type="admin",
             action=action,
-            target_type='sub_account',
+            target_type="sub_account",
             target_id=target_id,
             description=description,
             ip_address=request.remote_addr if request else None,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         db.session.add(log)
         db.session.commit()
     except Exception:
         pass
 
-sub_account_model = ns_sub_accounts.model('SubAccount', {
-    'id': fields.Integer(readOnly=True, description='子账号ID'),
-    'parent_admin_id': fields.Integer(required=True, description='父管理员ID'),
-    'username': fields.String(required=True, description='用户名'),
-    'password': fields.String(description='密码'),
-    'real_name': fields.String(description='真实姓名'),
-    'phone': fields.String(description='联系电话'),
-    'role_type': fields.String(description='角色类型'),
-    'permissions': fields.String(description='权限列表'),
-    'is_active': fields.Boolean(description='是否启用')
-})
 
-sub_account_response = ns_sub_accounts.model('SubAccountResponse', {
-    'id': fields.Integer(description='子账号ID'),
-    'username': fields.String(description='用户名'),
-    'real_name': fields.String(description='真实姓名'),
-    'phone': fields.String(description='联系电话'),
-    'role_type': fields.String(description='角色类型'),
-    'permissions': fields.String(description='权限列表'),
-    'is_active': fields.Boolean(description='是否启用'),
-    'created_at': fields.String(description='创建时间'),
-    'updated_at': fields.String(description='更新时间')
-})
+sub_account_model = ns_sub_accounts.model(
+    "SubAccount",
+    {
+        "id": fields.Integer(readOnly=True, description="子账号ID"),
+        "parent_admin_id": fields.Integer(required=True, description="父管理员ID"),
+        "username": fields.String(required=True, description="用户名"),
+        "password": fields.String(description="密码"),
+        "real_name": fields.String(description="真实姓名"),
+        "phone": fields.String(description="联系电话"),
+        "role_type": fields.String(description="角色类型"),
+        "permissions": fields.String(description="权限列表"),
+        "is_active": fields.Boolean(description="是否启用"),
+    },
+)
 
-sub_account_list_response = ns_sub_accounts.model('SubAccountListResponse', {
-    'sub_accounts': fields.List(fields.Nested(sub_account_response), description='子账号列表')
-})
+sub_account_response = ns_sub_accounts.model(
+    "SubAccountResponse",
+    {
+        "id": fields.Integer(description="子账号ID"),
+        "username": fields.String(description="用户名"),
+        "real_name": fields.String(description="真实姓名"),
+        "phone": fields.String(description="联系电话"),
+        "role_type": fields.String(description="角色类型"),
+        "permissions": fields.String(description="权限列表"),
+        "is_active": fields.Boolean(description="是否启用"),
+        "created_at": fields.String(description="创建时间"),
+        "updated_at": fields.String(description="更新时间"),
+    },
+)
 
-sub_account_login_response = ns_sub_accounts.model('SubAccountLoginResponse', {
-    'success': fields.Boolean(description='登录是否成功'),
-    'message': fields.String(description='登录消息'),
-    'token': fields.String(description='登录令牌'),
-    'account': fields.Nested(sub_account_response, description='账号信息')
-})
+sub_account_list_response = ns_sub_accounts.model(
+    "SubAccountListResponse",
+    {"sub_accounts": fields.List(fields.Nested(sub_account_response), description="子账号列表")},
+)
 
-@ns_sub_accounts.route('/')
+sub_account_login_response = ns_sub_accounts.model(
+    "SubAccountLoginResponse",
+    {
+        "success": fields.Boolean(description="登录是否成功"),
+        "message": fields.String(description="登录消息"),
+        "token": fields.String(description="登录令牌"),
+        "account": fields.Nested(sub_account_response, description="账号信息"),
+    },
+)
+
+
+@ns_sub_accounts.route("/")
 class SubAccountList(Resource):
-    @ns_sub_accounts.doc('list_sub_accounts', description='获取子账号列表', security='Bearer')
-    @ns_sub_accounts.response(200, '成功', sub_account_list_response)
+    @ns_sub_accounts.doc("list_sub_accounts", description="获取子账号列表", security="Bearer")
+    @ns_sub_accounts.response(200, "成功", sub_account_list_response)
     @requires_admin
     def get(self):
         """
@@ -75,23 +88,26 @@ class SubAccountList(Resource):
         """
         accounts = SubAccount.query.all()
         return {
-            'sub_accounts': [{
-                'id': a.id,
-                'parent_admin_id': a.parent_admin_id,
-                'username': a.username,
-                'real_name': a.real_name,
-                'phone': a.phone,
-                'role_type': a.role_type,
-                'permissions': a.permissions,
-                'is_active': a.is_active,
-                'created_at': a.created_at.isoformat() if a.created_at else None
-            } for a in accounts]
+            "sub_accounts": [
+                {
+                    "id": a.id,
+                    "parent_admin_id": a.parent_admin_id,
+                    "username": a.username,
+                    "real_name": a.real_name,
+                    "phone": a.phone,
+                    "role_type": a.role_type,
+                    "permissions": a.permissions,
+                    "is_active": a.is_active,
+                    "created_at": a.created_at.isoformat() if a.created_at else None,
+                }
+                for a in accounts
+            ]
         }
 
-    @ns_sub_accounts.doc('create_sub_account', description='创建子账号', security='Bearer')
+    @ns_sub_accounts.doc("create_sub_account", description="创建子账号", security="Bearer")
     @ns_sub_accounts.expect(sub_account_model)
-    @ns_sub_accounts.response(201, '创建成功')
-    @ns_sub_accounts.response(400, '请求参数错误')
+    @ns_sub_accounts.response(201, "创建成功")
+    @ns_sub_accounts.response(400, "请求参数错误")
     @requires_admin
     def post(self):
         """
@@ -110,34 +126,35 @@ class SubAccountList(Resource):
         - is_active: 是否启用（可选，默认True）
         """
         data = ns_sub_accounts.payload
-        password = data.get('password')
+        password = data.get("password")
         if not password:
-            return {'success': False, 'message': '请提供密码'}, 400
-        
+            return {"success": False, "message": "请提供密码"}, 400
+
         account = SubAccount(
-            parent_admin_id=data.get('parent_admin_id'),
-            username=data.get('username'),
+            parent_admin_id=data.get("parent_admin_id"),
+            username=data.get("username"),
             password=hash_password(password),
-            real_name=data.get('real_name'),
-            phone=data.get('phone'),
-            role_type=data.get('role_type', 'dashboard_viewer'),
-            permissions=data.get('permissions', ''),
-            is_active=data.get('is_active', True)
+            real_name=data.get("real_name"),
+            phone=data.get("phone"),
+            role_type=data.get("role_type", "dashboard_viewer"),
+            permissions=data.get("permissions", ""),
+            is_active=data.get("is_active", True),
         )
         db.session.add(account)
         db.session.commit()
-        
-        # 记录权限日志
-        log_permission_action('create', account.id, f'创建子账号: {account.username}')
-        
-        return {'success': True, 'message': '子账号创建成功', 'account_id': account.id}, 201
 
-@ns_sub_accounts.route('/<int:id>')
-@ns_sub_accounts.param('id', '子账号ID')
+        # 记录权限日志
+        log_permission_action("create", account.id, f"创建子账号: {account.username}")
+
+        return {"success": True, "message": "子账号创建成功", "account_id": account.id}, 201
+
+
+@ns_sub_accounts.route("/<int:id>")
+@ns_sub_accounts.param("id", "子账号ID")
 class SubAccountResource(Resource):
-    @ns_sub_accounts.doc('get_sub_account', description='获取子账号详情', security='Bearer')
-    @ns_sub_accounts.response(200, '成功')
-    @ns_sub_accounts.response(404, '子账号不存在')
+    @ns_sub_accounts.doc("get_sub_account", description="获取子账号详情", security="Bearer")
+    @ns_sub_accounts.response(200, "成功")
+    @ns_sub_accounts.response(404, "子账号不存在")
     @requires_admin
     def get(self, id):
         """
@@ -150,22 +167,22 @@ class SubAccountResource(Resource):
         """
         account = SubAccount.query.get_or_404(id)
         return {
-            'id': account.id,
-            'parent_admin_id': account.parent_admin_id,
-            'username': account.username,
-            'real_name': account.real_name,
-            'phone': account.phone,
-            'role_type': account.role_type,
-            'permissions': account.permissions,
-            'is_active': account.is_active,
-            'created_at': account.created_at.isoformat() if account.created_at else None,
-            'updated_at': account.updated_at.isoformat() if account.updated_at else None
+            "id": account.id,
+            "parent_admin_id": account.parent_admin_id,
+            "username": account.username,
+            "real_name": account.real_name,
+            "phone": account.phone,
+            "role_type": account.role_type,
+            "permissions": account.permissions,
+            "is_active": account.is_active,
+            "created_at": account.created_at.isoformat() if account.created_at else None,
+            "updated_at": account.updated_at.isoformat() if account.updated_at else None,
         }
 
-    @ns_sub_accounts.doc('update_sub_account', description='更新子账号', security='Bearer')
+    @ns_sub_accounts.doc("update_sub_account", description="更新子账号", security="Bearer")
     @ns_sub_accounts.expect(sub_account_model)
-    @ns_sub_accounts.response(200, '更新成功')
-    @ns_sub_accounts.response(404, '子账号不存在')
+    @ns_sub_accounts.response(200, "更新成功")
+    @ns_sub_accounts.response(404, "子账号不存在")
     @requires_admin
     def put(self, id):
         """
@@ -179,25 +196,25 @@ class SubAccountResource(Resource):
         """
         account = SubAccount.query.get_or_404(id)
         data = ns_sub_accounts.payload
-        account.username = data.get('username', account.username)
-        if data.get('password'):
-            account.password = hash_password(data.get('password'))
-        account.real_name = data.get('real_name', account.real_name)
-        account.phone = data.get('phone', account.phone)
-        account.role_type = data.get('role_type', account.role_type)
-        account.permissions = data.get('permissions', account.permissions)
-        account.is_active = data.get('is_active', account.is_active)
+        account.username = data.get("username", account.username)
+        if data.get("password"):
+            account.password = hash_password(data.get("password"))
+        account.real_name = data.get("real_name", account.real_name)
+        account.phone = data.get("phone", account.phone)
+        account.role_type = data.get("role_type", account.role_type)
+        account.permissions = data.get("permissions", account.permissions)
+        account.is_active = data.get("is_active", account.is_active)
         account.updated_at = datetime.now()
         db.session.commit()
-        
-        # 记录权限日志
-        log_permission_action('update', account.id, f'更新子账号: {account.username}')
-        
-        return {'success': True, 'message': '子账号更新成功'}
 
-    @ns_sub_accounts.doc('delete_sub_account', description='删除子账号', security='Bearer')
-    @ns_sub_accounts.response(200, '删除成功')
-    @ns_sub_accounts.response(404, '子账号不存在')
+        # 记录权限日志
+        log_permission_action("update", account.id, f"更新子账号: {account.username}")
+
+        return {"success": True, "message": "子账号更新成功"}
+
+    @ns_sub_accounts.doc("delete_sub_account", description="删除子账号", security="Bearer")
+    @ns_sub_accounts.response(200, "删除成功")
+    @ns_sub_accounts.response(404, "子账号不存在")
     @requires_admin
     def delete(self, id):
         """
@@ -212,18 +229,19 @@ class SubAccountResource(Resource):
         username = account.username
         db.session.delete(account)
         db.session.commit()
-        
-        # 记录权限日志
-        log_permission_action('delete', id, f'删除子账号: {username}')
-        
-        return {'success': True, 'message': '子账号删除成功'}
 
-@ns_sub_accounts.route('/login')
+        # 记录权限日志
+        log_permission_action("delete", id, f"删除子账号: {username}")
+
+        return {"success": True, "message": "子账号删除成功"}
+
+
+@ns_sub_accounts.route("/login")
 class SubAccountLogin(Resource):
-    @ns_sub_accounts.doc('sub_account_login', description='子账号登录')
+    @ns_sub_accounts.doc("sub_account_login", description="子账号登录")
     @ns_sub_accounts.expect(sub_account_model)
-    @ns_sub_accounts.response(200, '登录成功', sub_account_login_response)
-    @ns_sub_accounts.response(401, '用户名或密码错误')
+    @ns_sub_accounts.response(200, "登录成功", sub_account_login_response)
+    @ns_sub_accounts.response(401, "用户名或密码错误")
     def post(self):
         """
         子账号登录
@@ -235,13 +253,13 @@ class SubAccountLogin(Resource):
         - password: 密码（必填）
         """
         data = ns_sub_accounts.payload
-        username = data.get('username')
-        password = data.get('password')
+        username = data.get("username")
+        password = data.get("password")
         ip_address = request.remote_addr
 
         is_allowed, message, retry_after = check_login_rate_limit(username, ip_address)
         if not is_allowed:
-            return {'success': False, 'message': message, 'retry_after': retry_after}, 429
+            return {"success": False, "message": message, "retry_after": retry_after}, 429
 
         account = SubAccount.query.filter_by(username=username).first()
         if account and verify_password(password, account.password) and account.is_active:
@@ -250,14 +268,20 @@ class SubAccountLogin(Resource):
                 subaccount_id=account.id,
                 username=account.username,
                 role_type=account.role_type,
-                parent_admin_id=account.parent_admin_id
+                parent_admin_id=account.parent_admin_id,
             )
-            return {'success': True, 'message': '登录成功', 'token': token_data['token'], 'expires_in': token_data['expires_in'], 'account': {
-                'id': account.id,
-                'username': account.username,
-                'role_type': account.role_type,
-                'real_name': account.real_name
-            }}
+            return {
+                "success": True,
+                "message": "登录成功",
+                "token": token_data["token"],
+                "expires_in": token_data["expires_in"],
+                "account": {
+                    "id": account.id,
+                    "username": account.username,
+                    "role_type": account.role_type,
+                    "real_name": account.real_name,
+                },
+            }
 
         record_failed_login(username, ip_address)
-        return {'success': False, 'message': '用户名或密码错误'}, 401
+        return {"success": False, "message": "用户名或密码错误"}, 401

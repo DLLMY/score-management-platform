@@ -1,0 +1,93 @@
+name: CI
+
+# 前后端自动回归（P2 改进项）。
+# 触发：push / pull_request 到 main；也可手动运行（workflow_dispatch）。
+#
+# ⚠️ 本地资产依赖说明：
+#   - 后端 NLP/算法模块需要本地训练的 BERT 模型（backend/models/bert 目录），
+#     该目录属运行资产、未随代码仓库分发。因此 CI 的 backend job 只跑
+#     「不依赖模型」的契约/业务测试子集；全量契约遍历
+#     （tests/test_api_envelope.py::test_all_get_endpoints_return_envelope）
+#     与全量 pytest 需在具备模型的本地环境执行。
+#   - 前端 e2e（Playwright）需要真实后端 + 模型，CI 中不自动执行；
+#     本地运行：先起后端 `python run.py ...`，再 `npm run test:e2e`。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  backend-tests:
+    name: 后端 pytest（契约 + 业务子集）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-timeout
+
+      - name: 跑契约 shape 快照（不依赖模型）
+        run: |
+          python -m pytest tests/test_api_envelope.py::TestAPIEnvelope::test_known_list_endpoints_data_shape \
+            -p no:locust --timeout=300 -q
+
+      - name: RBAC 一致性校验（check-only，漂移即失败）
+        run: |
+          python scripts/verify_rbac_consistency.py --check-only
+
+      - name: 跑 MQTT 消息链路测试
+        run: |
+          python -m pytest tests/test_mqtt_message_processor.py tests/test_mqtt_client.py \
+            -p no:locust --timeout=300 -q
+
+      - name: 跑核心业务路由测试
+        run: |
+          python -m pytest tests/test_rules_routes.py tests/test_users_routes.py \
+            tests/test_export_routes.py tests/test_notify_history_routes.py \
+            -p no:locust --timeout=300 -q
+
+  frontend-checks:
+    name: 前端 build + lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 生产构建
+        run: npm run build
+
+      - name: 前端单测（vitest，jsdom）
+        run: npm test
+
+      - name: ESLint 检查
+        run: npm run lint
+
+  # 前端 e2e 冒烟（需要真实后端 + 本地模型，本地执行）：
+  #   1) 后端：python run.py --env development --host 127.0.0.1 --port 5000
+  #   2) 前端：cd frontend && npm run test:e2e -- --project=chrome smoke.spec.ts

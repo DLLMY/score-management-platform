@@ -1,11 +1,27 @@
+# ============================================================
+# DEPRECATED: 此文件注册的命名空间为 legacy 版本。
+# 当前运行时（run.py → app/__init__.py → api_versioning.py）
+# 使用的是 api/ 目录下的现代命名空间，此处的 register_routes()
+# 仅在 app.py（已不再使用）中被调用。
+#
+# 请勿在此添加新路由！新路由应添加到 api/ 目录并通过
+# app/api_versioning.py::register_v1_routes() 注册。
+#
+# 保留此文件仅用于向后兼容的独立引用。
+# ============================================================
 from flask_restx import Api
 
+
 def register_routes(app):
-    api = Api(app, version='1.0', title='积分管理平台 API',
-              description='积分管理平台的 RESTful API 文档。',
-              doc='/api/docs/',
-              prefix='/api')
-    
+    api = Api(
+        app,
+        version="1.0",
+        title="积分管理平台 API",
+        description="积分管理平台的 RESTful API 文档。",
+        doc="/api/docs/",
+        prefix="/api",
+    )
+
     from routes.users_routes import ns_users
     from routes.rules_routes import ns_rules
     from routes.records_routes import ns_records
@@ -39,6 +55,116 @@ def register_routes(app):
     from routes.exam_routes import ns_exam, ns_scores, ns_score_analysis
     from routes.exam_import_routes import ns_exam_import
     from routes.subject_routes import ns_subjects
+
+    # 从 api/ 目录添加缺失的路由模块
+    try:
+        from api.scores.class_periods_routes import ns_class_periods
+        api.add_namespace(ns_class_periods)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_class_periods: {e}")
+
+    try:
+        from api.scores.categories_routes import ns_score_categories
+        api.add_namespace(ns_score_categories)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_score_categories: {e}")
+
+    try:
+        from api.academics.course_schedule_routes import ns_course_schedule
+        api.add_namespace(ns_course_schedule)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_course_schedule: {e}")
+
+    try:
+        from api.scores.notify_template_routes import ns_notify_template
+        api.add_namespace(ns_notify_template)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_notify_template: {e}")
+
+    try:
+        from api.class_management.seating_routes import ns_seating
+        api.add_namespace(ns_seating)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_seating: {e}")
+
+    try:
+        from api.class_management.activity_routes import ns_activity
+        api.add_namespace(ns_activity)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_activity: {e}")
+
+    try:
+        from api.class_management.duty_routes import ns_duty
+        api.add_namespace(ns_duty)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_duty: {e}")
+
+    try:
+        from api.class_management.committee_routes import ns_committee
+        api.add_namespace(ns_committee)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_committee: {e}")
+
+    try:
+        from api.class_management.parent_routes import ns_parent
+        api.add_namespace(ns_parent)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_parent: {e}")
+
+    try:
+        from api.class_management.homework_routes import ns_homework
+        api.add_namespace(ns_homework)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_homework: {e}")
+
+    try:
+        from api.class_management.attendance_routes import ns_attendance
+        api.add_namespace(ns_attendance)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_attendance: {e}")
+
+    try:
+        from api.class_management.study_group_routes import ns_study_group
+        api.add_namespace(ns_study_group, path="/study-group")
+    except Exception as e:
+        print(f"Warning: Failed to import ns_study_group: {e}")
+
+    try:
+        from api.class_management.mental_health_routes import ns_mental_health
+        api.add_namespace(ns_mental_health, path="/mental-health")
+    except Exception as e:
+        print(f"Warning: Failed to import ns_mental_health: {e}")
+
+    try:
+        from api.class_management.culture_routes import ns_culture
+        api.add_namespace(ns_culture)
+    except Exception as e:
+        print(f"Warning: Failed to import ns_culture: {e}")
+
+    try:
+        from api.class_management.study_guide_routes import ns_study_guide
+        api.add_namespace(ns_study_guide, path="/study-guide")
+    except Exception as e:
+        print(f"Warning: Failed to import ns_study_guide: {e}")
+
+    try:
+        from api.phonebox.phonebox_policy_routes import ns_phonebox_policy
+        api.add_namespace(ns_phonebox_policy, path="/phonebox-policy")
+    except Exception as e:
+        print(f"Warning: Failed to import ns_phonebox_policy: {e}")
+
+    try:
+        from api.devices.device_group_routes import ns_device_group
+        api.add_namespace(ns_device_group, path="/device-group")
+    except Exception as e:
+        print(f"Warning: Failed to import ns_device_group: {e}")
+
+    # 添加管理员通知路由
+    try:
+        from api.system.admin_notifications_routes import ns_admin_notifications
+        api.add_namespace(ns_admin_notifications, path="/admin-notifications")
+    except Exception as e:
+        print(f"Warning: Failed to import ns_admin_notifications: {e}")
 
     api.add_namespace(ns_users)
     api.add_namespace(ns_rules)

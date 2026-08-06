@@ -9,43 +9,48 @@ from sqlalchemy import text
 import os
 import shutil
 import psutil
-import time
-import threading
 
-ns_system = Namespace('system', description='系统管理相关操作')
+ns_system = Namespace("system", description="系统管理相关操作")
 
-system_config_model = ns_system.model('SystemConfig', {
-    'id': fields.Integer(readOnly=True, description='配置ID'),
-    'system_name': fields.String(description='系统名称'),
-    'system_logo': fields.String(description='系统Logo'),
-    'default_score': fields.Integer(description='默认积分'),
-    'min_score': fields.Integer(description='最低积分'),
-    'max_score': fields.Integer(description='最高积分'),
-    'enable_notifications': fields.Boolean(description='启用通知'),
-    'notification_sound': fields.Boolean(description='通知声音'),
-    'auto_save': fields.Boolean(description='自动保存'),
-    'theme': fields.String(description='主题'),
-    'language': fields.String(description='语言')
-})
+system_config_model = ns_system.model(
+    "SystemConfig",
+    {
+        "id": fields.Integer(readOnly=True, description="配置ID"),
+        "system_name": fields.String(description="系统名称"),
+        "system_logo": fields.String(description="系统Logo"),
+        "default_score": fields.Integer(description="默认积分"),
+        "min_score": fields.Integer(description="最低积分"),
+        "max_score": fields.Integer(description="最高积分"),
+        "enable_notifications": fields.Boolean(description="启用通知"),
+        "notification_sound": fields.Boolean(description="通知声音"),
+        "auto_save": fields.Boolean(description="自动保存"),
+        "theme": fields.String(description="主题"),
+        "language": fields.String(description="语言"),
+    },
+)
 
-backup_restore_model = ns_system.model('BackupRestore', {
-    'filename': fields.String(required=True, description='备份文件名')
-})
+backup_restore_model = ns_system.model(
+    "BackupRestore", {"filename": fields.String(required=True, description="备份文件名")}
+)
 
-backup_info_model = ns_system.model('BackupInfo', {
-    'filename': fields.String(description='文件名'),
-    'size': fields.Integer(description='文件大小（字节）'),
-    'created_at': fields.String(description='创建时间')
-})
+backup_info_model = ns_system.model(
+    "BackupInfo",
+    {
+        "filename": fields.String(description="文件名"),
+        "size": fields.Integer(description="文件大小（字节）"),
+        "created_at": fields.String(description="创建时间"),
+    },
+)
 
-@ns_system.route('/config')
+
+@ns_system.route("/config")
 class SystemConfigResource(Resource):
-    @ns_system.doc('get_system_config', description='获取系统配置')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("get_system_config", description="获取系统配置")
+    @ns_system.response(200, "成功")
     def get(self):
         """
         获取系统配置
-        
+
         获取当前系统的配置信息。
         """
         config = SystemConfig.query.first()
@@ -54,30 +59,30 @@ class SystemConfigResource(Resource):
             db.session.add(config)
             db.session.commit()
         return {
-            'id': config.id,
-            'system_name': config.system_name,
-            'system_logo': config.system_logo,
-            'default_score': config.default_score,
-            'min_score': config.min_score,
-            'max_score': config.max_score,
-            'enable_notifications': config.enable_notifications,
-            'notification_sound': config.notification_sound,
-            'auto_save': config.auto_save,
-            'theme': config.theme,
-            'language': config.language,
-            'updated_at': config.updated_at.isoformat() if config.updated_at else None
+            "id": config.id,
+            "system_name": config.system_name,
+            "system_logo": config.system_logo,
+            "default_score": config.default_score,
+            "min_score": config.min_score,
+            "max_score": config.max_score,
+            "enable_notifications": config.enable_notifications,
+            "notification_sound": config.notification_sound,
+            "auto_save": config.auto_save,
+            "theme": config.theme,
+            "language": config.language,
+            "updated_at": config.updated_at.isoformat() if config.updated_at else None,
         }
 
-    @ns_system.doc('update_system_config', description='更新系统配置', security='Bearer')
+    @ns_system.doc("update_system_config", description="更新系统配置", security="Bearer")
     @ns_system.expect(system_config_model)
-    @ns_system.response(200, '更新成功')
+    @ns_system.response(200, "更新成功")
     @requires_admin
     def put(self):
         """
         更新系统配置
-        
+
         更新系统配置信息，需要管理员权限。
-        
+
         请求体：
         - system_name: 系统名称
         - system_logo: 系统Logo
@@ -93,276 +98,271 @@ class SystemConfigResource(Resource):
         config = SystemConfig.query.first()
         if not config:
             config = SystemConfig()
-        
+
         data = ns_system.payload
-        config.system_name = data.get('system_name', config.system_name)
-        config.system_logo = data.get('system_logo', config.system_logo)
-        config.default_score = data.get('default_score', config.default_score)
-        config.min_score = data.get('min_score', config.min_score)
-        config.max_score = data.get('max_score', config.max_score)
-        config.enable_notifications = data.get('enable_notifications', config.enable_notifications)
-        config.notification_sound = data.get('notification_sound', config.notification_sound)
-        config.auto_save = data.get('auto_save', config.auto_save)
-        config.theme = data.get('theme', config.theme)
-        config.language = data.get('language', config.language)
+        config.system_name = data.get("system_name", config.system_name)
+        config.system_logo = data.get("system_logo", config.system_logo)
+        config.default_score = data.get("default_score", config.default_score)
+        config.min_score = data.get("min_score", config.min_score)
+        config.max_score = data.get("max_score", config.max_score)
+        config.enable_notifications = data.get("enable_notifications", config.enable_notifications)
+        config.notification_sound = data.get("notification_sound", config.notification_sound)
+        config.auto_save = data.get("auto_save", config.auto_save)
+        config.theme = data.get("theme", config.theme)
+        config.language = data.get("language", config.language)
         config.updated_at = datetime.now()
-        
+
         db.session.add(config)
         db.session.commit()
-        return {'success': True, 'message': '系统配置更新成功'}
+        return {"success": True, "message": "系统配置更新成功"}
 
-@ns_system.route('/backup')
+
+@ns_system.route("/backup")
 class SystemBackup(Resource):
-    @ns_system.doc('backup_database', description='备份数据库', security='Bearer')
-    @ns_system.response(200, '备份成功')
-    @ns_system.response(404, '数据库文件不存在')
-    @ns_system.response(500, '备份失败')
+    @ns_system.doc("backup_database", description="备份数据库", security="Bearer")
+    @ns_system.response(200, "备份成功")
+    @ns_system.response(404, "数据库文件不存在")
+    @ns_system.response(500, "备份失败")
     @requires_admin
     def post(self):
         """
         备份数据库
-        
+
         创建数据库的完整备份。备份文件保存在backups目录下，
         最多保留10个备份文件，超出后自动删除最旧的备份。
         """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
-            backup_dir = os.path.join(basedir, '..', 'backups')
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_path = os.path.join(backup_dir, f'score_management_{timestamp}.db')
-            source_path = os.path.join(basedir, '..', 'instance', 'score_management.db')
-            
+            backup_dir = os.path.join(basedir, "..", "backups")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(backup_dir, f"score_management_{timestamp}.db")
+            source_path = os.path.join(basedir, "..", "instance", "score_management.db")
+
             os.makedirs(backup_dir, exist_ok=True)
-            
+
             if os.path.exists(source_path):
                 shutil.copy2(source_path, backup_path)
-                
-                backups = sorted([f for f in os.listdir(backup_dir) if f.startswith('score_management_')])
+
+                backups = sorted([f for f in os.listdir(backup_dir) if f.startswith("score_management_")])
                 if len(backups) > 10:
                     oldest = backups[0]
                     os.remove(os.path.join(backup_dir, oldest))
-                
-                return {'success': True, 'message': '数据库备份成功', 'filename': f'score_management_{timestamp}.db'}
-            else:
-                return {'success': False, 'message': '数据库文件不存在'}, 404
-        except Exception as e:
-            return {'success': False, 'message': f'备份失败: {str(e)}'}, 500
 
-@ns_system.route('/backups')
+                return {"success": True, "message": "数据库备份成功", "filename": f"score_management_{timestamp}.db"}
+            else:
+                return {"success": False, "message": "数据库文件不存在"}, 404
+        except Exception as e:
+            return {"success": False, "message": f"备份失败: {str(e)}"}, 500
+
+
+@ns_system.route("/backups")
 class SystemBackupsList(Resource):
-    @ns_system.doc('list_backups', description='获取备份列表', security='Bearer')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("list_backups", description="获取备份列表", security="Bearer")
+    @ns_system.response(200, "成功")
     @requires_admin
     def get(self):
         """
         获取备份列表
-        
+
         获取所有可用数据库备份文件的列表。
         """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
-            backup_dir = os.path.join(basedir, '..', 'backups')
-            
+            backup_dir = os.path.join(basedir, "..", "backups")
+
             if not os.path.exists(backup_dir):
                 return []
-            
+
             backups = []
             for filename in sorted(os.listdir(backup_dir)):
-                if filename.startswith('score_management_') and filename.endswith('.db'):
+                if filename.startswith("score_management_") and filename.endswith(".db"):
                     filepath = os.path.join(backup_dir, filename)
                     stat = os.stat(filepath)
-                    backups.append({
-                        'filename': filename,
-                        'size': stat.st_size,
-                        'created_at': datetime.fromtimestamp(stat.st_ctime).isoformat()
-                    })
-            
-            return sorted(backups, key=lambda x: x['created_at'], reverse=True)
-        except Exception as e:
-            return {'success': False, 'message': f'获取备份列表失败: {str(e)}'}, 500
+                    backups.append(
+                        {
+                            "filename": filename,
+                            "size": stat.st_size,
+                            "created_at": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                        }
+                    )
 
-@ns_system.route('/restore')
+            return sorted(backups, key=lambda x: x["created_at"], reverse=True)
+        except Exception as e:
+            return {"success": False, "message": f"获取备份列表失败: {str(e)}"}, 500
+
+
+@ns_system.route("/restore")
 class SystemRestore(Resource):
-    @ns_system.doc('restore_database', description='恢复数据库', security='Bearer')
+    @ns_system.doc("restore_database", description="恢复数据库", security="Bearer")
     @ns_system.expect(backup_restore_model)
-    @ns_system.response(200, '恢复成功')
-    @ns_system.response(400, '请提供备份文件名')
-    @ns_system.response(404, '备份文件不存在')
-    @ns_system.response(500, '恢复失败')
+    @ns_system.response(200, "恢复成功")
+    @ns_system.response(400, "请提供备份文件名")
+    @ns_system.response(404, "备份文件不存在")
+    @ns_system.response(500, "恢复失败")
     @requires_admin
     def post(self):
         """
         恢复数据库
-        
+
         从备份文件恢复数据库，需要管理员权限。
         警告：此操作会覆盖当前的数据库内容。
-        
+
         请求体：
         - filename: 备份文件名（必填）
         """
         try:
             data = ns_system.payload
-            filename = data.get('filename')
-            
-            if not filename:
-                return {'success': False, 'message': '请提供备份文件名'}, 400
-            
-            basedir = os.path.abspath(os.path.dirname(__file__))
-            backup_dir = os.path.join(basedir, '..', 'backups')
-            backup_path = os.path.join(backup_dir, filename)
-            target_path = os.path.join(basedir, '..', 'instance', 'score_management.db')
-            
-            if not os.path.exists(backup_path):
-                return {'success': False, 'message': '备份文件不存在'}, 404
-            
-            shutil.copy2(backup_path, target_path)
-            return {'success': True, 'message': '数据库恢复成功'}
-        except Exception as e:
-            return {'success': False, 'message': f'恢复失败: {str(e)}'}, 500
+            filename = data.get("filename")
 
-@ns_system.route('/clear-cache')
+            if not filename:
+                return {"success": False, "message": "请提供备份文件名"}, 400
+
+            basedir = os.path.abspath(os.path.dirname(__file__))
+            backup_dir = os.path.join(basedir, "..", "backups")
+            backup_path = os.path.join(backup_dir, filename)
+            target_path = os.path.join(basedir, "..", "instance", "score_management.db")
+
+            if not os.path.exists(backup_path):
+                return {"success": False, "message": "备份文件不存在"}, 404
+
+            shutil.copy2(backup_path, target_path)
+            return {"success": True, "message": "数据库恢复成功"}
+        except Exception as e:
+            return {"success": False, "message": f"恢复失败: {str(e)}"}, 500
+
+
+@ns_system.route("/clear-cache")
 class SystemClearCache(Resource):
-    @ns_system.doc('clear_cache', description='清理缓存', security='Bearer')
-    @ns_system.response(200, '清理成功')
-    @ns_system.response(500, '清理失败')
+    @ns_system.doc("clear_cache", description="清理缓存", security="Bearer")
+    @ns_system.response(200, "清理成功")
+    @ns_system.response(500, "清理失败")
     @requires_admin
     def post(self):
         """
         清理缓存
-        
+
         清理Python缓存文件（__pycache__），需要管理员权限。
         """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
-            cache_dir = os.path.join(basedir, '..', '__pycache__')
-            
+            cache_dir = os.path.join(basedir, "..", "__pycache__")
+
             if os.path.exists(cache_dir):
                 shutil.rmtree(cache_dir)
-            
-            for root, dirs, files in os.walk(os.path.join(basedir, '..')):
-                for dir in dirs:
-                    if dir == '__pycache__':
-                        shutil.rmtree(os.path.join(root, dir))
-            
-            return {'success': True, 'message': '缓存清理成功'}
-        except Exception as e:
-            return {'success': False, 'message': f'清理失败: {str(e)}'}, 500
 
-@ns_system.route('/cache-stats')
+            for root, dirs, files in os.walk(os.path.join(basedir, "..")):
+                for dir in dirs:
+                    if dir == "__pycache__":
+                        shutil.rmtree(os.path.join(root, dir))
+
+            return {"success": True, "message": "缓存清理成功"}
+        except Exception as e:
+            return {"success": False, "message": f"清理失败: {str(e)}"}, 500
+
+
+@ns_system.route("/cache-stats")
 class SystemCacheStats(Resource):
-    @ns_system.doc('get_cache_stats', description='获取缓存统计信息', security='Bearer')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("get_cache_stats", description="获取缓存统计信息", security="Bearer")
+    @ns_system.response(200, "成功")
     @requires_admin
     def get(self):
         """
         获取缓存统计信息
-        
+
         获取Redis缓存的使用统计信息，包括命中率、操作次数等。
         """
         return cache_service.get_stats()
 
-    @ns_system.doc('flush_cache', description='刷新缓存', security='Bearer')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("flush_cache", description="刷新缓存", security="Bearer")
+    @ns_system.response(200, "成功")
     @requires_admin
     def post(self):
         """
         刷新缓存
-        
+
         清空所有缓存数据，需要管理员权限。
         """
         result = cache_service.flush_all()
-        return {'success': result, 'message': '缓存刷新成功' if result else '缓存刷新失败'}
+        return {"success": result, "message": "缓存刷新成功" if result else "缓存刷新失败"}
 
-@ns_system.route('/csrf-token')
+
+@ns_system.route("/csrf-token")
 class SystemCsrfToken(Resource):
-    @ns_system.doc('get_csrf_token', description='获取CSRF令牌')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("get_csrf_token", description="获取CSRF令牌")
+    @ns_system.response(200, "成功")
     def get(self):
         """
         获取CSRF令牌
-        
+
         获取用于表单提交的CSRF防护令牌。
         """
         csrf_token = generate_csrf()
-        return {'csrf_token': csrf_token}
+        return {"csrf_token": csrf_token}
+
 
 # 性能监控相关端点
 
-@ns_system.route('/health')
+
+@ns_system.route("/health")
 class SystemHealth(Resource):
-    @ns_system.doc('get_system_health', description='获取系统健康状态')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("get_system_health", description="获取系统健康状态")
+    @ns_system.response(200, "成功")
     def get(self):
         """
         获取系统健康状态
-        
+
         返回系统各组件的健康状态，包括数据库、Redis、MQTT等。
         """
-        health_status = {
-            'timestamp': datetime.now().isoformat(),
-            'status': 'healthy',
-            'components': {}
-        }
-        
+        health_status = {"timestamp": datetime.now().isoformat(), "status": "healthy", "components": {}}
+
         # 检查数据库连接
         try:
             with db.engine.connect() as conn:
-                conn.execute(text('SELECT 1'))
-            health_status['components']['database'] = {
-                'status': 'healthy',
-                'message': '数据库连接正常'
-            }
+                conn.execute(text("SELECT 1"))
+            health_status["components"]["database"] = {"status": "healthy", "message": "数据库连接正常"}
         except Exception as e:
-            health_status['status'] = 'unhealthy'
-            health_status['components']['database'] = {
-                'status': 'unhealthy',
-                'message': f'数据库连接失败: {str(e)}'
-            }
-        
+            health_status["status"] = "unhealthy"
+            health_status["components"]["database"] = {"status": "unhealthy", "message": f"数据库连接失败: {str(e)}"}
+
         # 检查Redis缓存
         try:
             redis_stats = cache_service.get_stats()
-            health_status['components']['redis'] = {
-                'status': 'healthy' if redis_stats.get('redis_available') else 'degraded',
-                'message': 'Redis可用' if redis_stats.get('redis_available') else '使用内存缓存',
-                'hit_rate': redis_stats.get('hit_rate', 'N/A'),
-                'operations': redis_stats.get('total_operations', 0)
+            health_status["components"]["redis"] = {
+                "status": "healthy" if redis_stats.get("redis_available") else "degraded",
+                "message": "Redis可用" if redis_stats.get("redis_available") else "使用内存缓存",
+                "hit_rate": redis_stats.get("hit_rate", "N/A"),
+                "operations": redis_stats.get("total_operations", 0),
             }
         except Exception as e:
-            health_status['status'] = 'unhealthy'
-            health_status['components']['redis'] = {
-                'status': 'unhealthy',
-                'message': f'Redis连接失败: {str(e)}'
-            }
-        
+            health_status["status"] = "unhealthy"
+            health_status["components"]["redis"] = {"status": "unhealthy", "message": f"Redis连接失败: {str(e)}"}
+
         # 检查MQTT连接
         try:
             mqtt_connected = False
-            mqtt_message = 'MQTT未连接'
-            if mqtt_manager and hasattr(mqtt_manager, 'is_connected'):
+            mqtt_message = "MQTT未连接"
+            if mqtt_manager and hasattr(mqtt_manager, "is_connected"):
                 mqtt_connected = mqtt_manager.is_connected
-                mqtt_message = 'MQTT连接正常' if mqtt_connected else 'MQTT连接断开'
-            
-            health_status['components']['mqtt'] = {
-                'status': 'healthy' if mqtt_connected else 'degraded',
-                'message': mqtt_message
+                mqtt_message = "MQTT连接正常" if mqtt_connected else "MQTT连接断开"
+
+            health_status["components"]["mqtt"] = {
+                "status": "healthy" if mqtt_connected else "degraded",
+                "message": mqtt_message,
             }
         except Exception as e:
-            health_status['components']['mqtt'] = {
-                'status': 'unknown',
-                'message': f'MQTT状态检查失败: {str(e)}'
-            }
-        
+            health_status["components"]["mqtt"] = {"status": "unknown", "message": f"MQTT状态检查失败: {str(e)}"}
+
         return health_status
 
-@ns_system.route('/performance')
+
+@ns_system.route("/performance")
 class SystemPerformance(Resource):
-    @ns_system.doc('get_system_performance', description='获取系统性能指标')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("get_system_performance", description="获取系统性能指标")
+    @ns_system.response(200, "成功")
     def get(self):
         """
         获取系统性能指标
-        
+
         返回CPU、内存、磁盘等系统资源使用情况。
         """
         try:
@@ -370,74 +370,70 @@ class SystemPerformance(Resource):
             cpu_percent = psutil.cpu_percent(interval=1)
             cpu_count = psutil.cpu_count()
             cpu_freq = psutil.cpu_freq()
-            
+
             # 内存信息
             memory = psutil.virtual_memory()
-            
+
             # 磁盘信息
-            disk = psutil.disk_usage('/')
-            
+            disk = psutil.disk_usage("/")
+
             # 网络信息
             net_io = psutil.net_io_counters()
-            
+
             # 进程信息
             process = psutil.Process()
             process_memory = process.memory_info()
-            
+
             return {
-                'timestamp': datetime.now().isoformat(),
-                'cpu': {
-                    'percent': cpu_percent,
-                    'count': cpu_count,
-                    'frequency': {
-                        'current': cpu_freq.current if cpu_freq else None,
-                        'min': cpu_freq.min if cpu_freq else None,
-                        'max': cpu_freq.max if cpu_freq else None
-                    }
+                "timestamp": datetime.now().isoformat(),
+                "cpu": {
+                    "percent": cpu_percent,
+                    "count": cpu_count,
+                    "frequency": {
+                        "current": cpu_freq.current if cpu_freq else None,
+                        "min": cpu_freq.min if cpu_freq else None,
+                        "max": cpu_freq.max if cpu_freq else None,
+                    },
                 },
-                'memory': {
-                    'total': memory.total,
-                    'available': memory.available,
-                    'used': memory.used,
-                    'percent': memory.percent
+                "memory": {
+                    "total": memory.total,
+                    "available": memory.available,
+                    "used": memory.used,
+                    "percent": memory.percent,
                 },
-                'disk': {
-                    'total': disk.total,
-                    'used': disk.used,
-                    'free': disk.free,
-                    'percent': disk.percent
+                "disk": {"total": disk.total, "used": disk.used, "free": disk.free, "percent": disk.percent},
+                "network": {
+                    "bytes_sent": net_io.bytes_sent,
+                    "bytes_recv": net_io.bytes_recv,
+                    "packets_sent": net_io.packets_sent,
+                    "packets_recv": net_io.packets_recv,
                 },
-                'network': {
-                    'bytes_sent': net_io.bytes_sent,
-                    'bytes_recv': net_io.bytes_recv,
-                    'packets_sent': net_io.packets_sent,
-                    'packets_recv': net_io.packets_recv
+                "process": {
+                    "pid": process.pid,
+                    "memory_rss": process_memory.rss,
+                    "memory_vms": process_memory.vms,
+                    "cpu_percent": process.cpu_percent(),
+                    "threads": process.num_threads(),
                 },
-                'process': {
-                    'pid': process.pid,
-                    'memory_rss': process_memory.rss,
-                    'memory_vms': process_memory.vms,
-                    'cpu_percent': process.cpu_percent(),
-                    'threads': process.num_threads()
-                }
             }
         except Exception as e:
-            return {'success': False, 'message': f'获取性能指标失败: {str(e)}'}, 500
+            return {"success": False, "message": f"获取性能指标失败: {str(e)}"}, 500
 
-@ns_system.route('/stats')
+
+@ns_system.route("/stats")
 class SystemStats(Resource):
-    @ns_system.doc('get_system_stats', description='获取系统统计信息')
-    @ns_system.response(200, '成功')
+    @ns_system.doc("get_system_stats", description="获取系统统计信息")
+    @ns_system.response(200, "成功")
     def get(self):
         """
         获取系统统计信息
-        
+
         返回系统的综合统计数据，包括用户数、积分记录数等。
         """
         try:
             # 获取缓存统计
             cache_stats = cache_service.get_stats()
-            
+
             # 获取数据库统计（使用更安全的方式）
             user_count = 0
             record_count = 0
@@ -445,52 +441,108 @@ class SystemStats(Resource):
             category_count = 0
             device_count = 0
             admin_count = 0
-            
+
             try:
                 with db.engine.connect() as conn:
-                    user_count = conn.execute(text('SELECT COUNT(*) FROM users')).scalar() or 0
+                    user_count = conn.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
             except Exception:
                 user_count = 0
-            
+
             try:
                 with db.engine.connect() as conn:
-                    record_count = conn.execute(text('SELECT COUNT(*) FROM score_records')).scalar() or 0
+                    record_count = conn.execute(text("SELECT COUNT(*) FROM score_records")).scalar() or 0
             except Exception:
                 record_count = 0
-            
+
             try:
                 with db.engine.connect() as conn:
-                    rule_count = conn.execute(text('SELECT COUNT(*) FROM score_rules')).scalar() or 0
+                    rule_count = conn.execute(text("SELECT COUNT(*) FROM score_rules")).scalar() or 0
             except Exception:
                 rule_count = 0
-            
+
             try:
                 with db.engine.connect() as conn:
-                    category_count = conn.execute(text('SELECT COUNT(*) FROM score_categories')).scalar() or 0
+                    category_count = conn.execute(text("SELECT COUNT(*) FROM score_categories")).scalar() or 0
             except Exception:
                 category_count = 0
-            
+
             try:
                 with db.engine.connect() as conn:
-                    device_count = conn.execute(text('SELECT COUNT(*) FROM devices')).scalar() or 0
+                    device_count = conn.execute(text("SELECT COUNT(*) FROM devices")).scalar() or 0
             except Exception:
                 device_count = 0
-            
+
             try:
                 with db.engine.connect() as conn:
-                    admin_count = conn.execute(text('SELECT COUNT(*) FROM admins')).scalar() or 0
+                    admin_count = conn.execute(text("SELECT COUNT(*) FROM admins")).scalar() or 0
             except Exception:
                 admin_count = 0
-            
+
             return {
-                'timestamp': datetime.now().isoformat(),
-                'users': user_count,
-                'records': record_count,
-                'rules': rule_count,
-                'categories': category_count,
-                'devices': device_count,
-                'admins': admin_count,
-                'cache': cache_stats
+                "timestamp": datetime.now().isoformat(),
+                "users": user_count,
+                "records": record_count,
+                "rules": rule_count,
+                "categories": category_count,
+                "devices": device_count,
+                "admins": admin_count,
+                "cache": cache_stats,
             }
         except Exception as e:
-            return {'success': False, 'message': f'获取系统统计失败: {str(e)}'}, 500
+            return {"success": False, "message": f"获取系统统计失败: {str(e)}"}, 500
+
+
+# 前端性能上报相关
+
+frontend_performance_model = ns_system.model(
+    "FrontendPerformance",
+    {
+        "type": fields.String(required=True, description="指标类型(web_vital/api_request/error)"),
+        "name": fields.String(required=True, description="指标名称"),
+        "value": fields.Float(required=True, description="指标值"),
+        "unit": fields.String(description="单位"),
+        "data": fields.Raw(description="附加数据"),
+    },
+)
+
+frontend_performance_batch_model = ns_system.model(
+    "FrontendPerformanceBatch",
+    {
+        "metrics": fields.List(fields.Nested(frontend_performance_model), description="性能指标列表"),
+    },
+)
+
+
+@ns_system.route("/frontend-performance")
+class FrontendPerformance(Resource):
+    @ns_system.doc("submit_frontend_performance", description="上报前端性能指标")
+    @ns_system.expect(frontend_performance_model)
+    @ns_system.response(200, "成功")
+    def post(self):
+        """
+        上报前端性能指标
+        """
+        try:
+            data = ns_system.payload
+            print(f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}')
+            return {"success": True, "message": "性能指标接收成功"}
+        except Exception as e:
+            return {"success": False, "message": f"接收失败: {str(e)}"}, 500
+
+
+@ns_system.route("/frontend-performance/batch")
+class FrontendPerformanceBatch(Resource):
+    @ns_system.doc("submit_frontend_performance_batch", description="批量上报前端性能指标")
+    @ns_system.expect(frontend_performance_batch_model)
+    @ns_system.response(200, "成功")
+    def post(self):
+        """
+        批量上报前端性能指标
+        """
+        try:
+            data = ns_system.payload
+            metrics = data.get("metrics", [])
+            print(f'批量接收前端性能指标: {len(metrics)}条')
+            return {"success": True, "message": f"成功接收{len(metrics)}条指标"}
+        except Exception as e:
+            return {"success": False, "message": f"接收失败: {str(e)}"}, 500

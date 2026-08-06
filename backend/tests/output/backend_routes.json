@@ -1,0 +1,5464 @@
+[
+  {
+    "url": "/api",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_root"
+  },
+  {
+    "url": "/api/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.root"
+  },
+  {
+    "url": "/api/admin-classes/<int:admin_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.admin-classes_admin_classes"
+  },
+  {
+    "url": "/api/admin-classes/<int:admin_id>/assign-class",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admin-classes_admin_assign_class"
+  },
+  {
+    "url": "/api/admin-classes/<int:admin_id>/remove-class/<int:class_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admin-classes_admin_remove_class"
+  },
+  {
+    "url": "/api/admin_notifications/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.admin_notifications_admin_notification_list"
+  },
+  {
+    "url": "/api/admin_notifications/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET"
+    ],
+    "endpoint": "api_default.admin_notifications_admin_notification_resource"
+  },
+  {
+    "url": "/api/admin_notifications/<int:id>/read",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admin_notifications_admin_notification_mark_read"
+  },
+  {
+    "url": "/api/admin_notifications/count",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.admin_notifications_admin_notification_count"
+  },
+  {
+    "url": "/api/admin_notifications/read_all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admin_notifications_admin_notification_mark_all_read"
+  },
+  {
+    "url": "/api/admin_notifications/recent",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.admin_notifications_admin_notification_recent"
+  },
+  {
+    "url": "/api/admins/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.admins_admin_list"
+  },
+  {
+    "url": "/api/admins/<int:admin_id>/assign-class",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admins_admin_assign_class"
+  },
+  {
+    "url": "/api/admins/<int:admin_id>/remove-class/<int:class_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admins_admin_remove_class"
+  },
+  {
+    "url": "/api/admins/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.admins_admin_resource"
+  },
+  {
+    "url": "/api/admins/<int:id>/change-password",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admins_admin_change_password"
+  },
+  {
+    "url": "/api/admins/csrf-token",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.admins_admin_csrf_token"
+  },
+  {
+    "url": "/api/admins/login",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admins_admin_login"
+  },
+  {
+    "url": "/api/admins/refresh-token",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.admins_admin_refresh_token"
+  },
+  {
+    "url": "/api/alerts/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.alerts_alert_list"
+  },
+  {
+    "url": "/api/alerts/<int:alert_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.alerts_alert_resource"
+  },
+  {
+    "url": "/api/alerts/cleanup",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.alerts_alert_cleanup"
+  },
+  {
+    "url": "/api/alerts/read-all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.alerts_alert_read_all"
+  },
+  {
+    "url": "/api/alerts/read/<int:alert_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.alerts_alert_read"
+  },
+  {
+    "url": "/api/alerts/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.alerts_alert_stats"
+  },
+  {
+    "url": "/api/alerts/test",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.alerts_alert_test"
+  },
+  {
+    "url": "/api/algorithm/all",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_algorithm_all"
+  },
+  {
+    "url": "/api/algorithm/anomaly/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_user_anomaly"
+  },
+  {
+    "url": "/api/algorithm/anomaly/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_batch_anomaly"
+  },
+  {
+    "url": "/api/algorithm/anomaly/group/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_group_anomaly"
+  },
+  {
+    "url": "/api/algorithm/anomaly/sudden/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_sudden_change"
+  },
+  {
+    "url": "/api/algorithm/anomaly/trend/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_trend_anomaly"
+  },
+  {
+    "url": "/api/algorithm/cluster",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_cluster"
+  },
+  {
+    "url": "/api/algorithm/cluster/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_cluster_by_user"
+  },
+  {
+    "url": "/api/algorithm/cluster/recalculate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_cluster_recalculate"
+  },
+  {
+    "url": "/api/algorithm/composite-score",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_composite_score"
+  },
+  {
+    "url": "/api/algorithm/composite-score/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_composite_score_by_user"
+  },
+  {
+    "url": "/api/algorithm/composite-score/progress",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_composite_score_progress"
+  },
+  {
+    "url": "/api/algorithm/composite-score/recalculate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_composite_score_recalculate"
+  },
+  {
+    "url": "/api/algorithm/prediction/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_student_prediction"
+  },
+  {
+    "url": "/api/algorithm/prediction/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_batch_prediction"
+  },
+  {
+    "url": "/api/algorithm/prediction/risk",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_risk_students"
+  },
+  {
+    "url": "/api/algorithm/reward/daily-usage/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_reward_daily_usage"
+  },
+  {
+    "url": "/api/algorithm/reward/eligible/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_reward_eligible"
+  },
+  {
+    "url": "/api/algorithm/reward/phone-access",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_reward_phone_access"
+  },
+  {
+    "url": "/api/algorithm/reward/redeem",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_reward_redeem"
+  },
+  {
+    "url": "/api/algorithm/reward/types",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_reward_types"
+  },
+  {
+    "url": "/api/algorithm/risk-predict/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_risk_predict"
+  },
+  {
+    "url": "/api/algorithm/risk-predict/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_batch_risk_predict"
+  },
+  {
+    "url": "/api/algorithm/risk-predict/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_risk_predict_evaluate"
+  },
+  {
+    "url": "/api/algorithm/risk-predict/high-risk",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_high_risk_students"
+  },
+  {
+    "url": "/api/algorithm/risk-predict/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_risk_predict_train"
+  },
+  {
+    "url": "/api/algorithm/rule-engine/apply-by-behavior",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_rule_engine_apply_by_behavior"
+  },
+  {
+    "url": "/api/algorithm/rule-engine/execute",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_rule_engine_execute"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_rule_recommend"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend/combination",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_rule_combination"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_rule_recommend_evaluate"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend/new",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_new_rule_recommend"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend/optimization",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_rule_optimization"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_rule_statistics"
+  },
+  {
+    "url": "/api/algorithm/rule-recommend/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_rule_recommend_train"
+  },
+  {
+    "url": "/api/algorithm/run",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_algorithm_run"
+  },
+  {
+    "url": "/api/algorithm/score-distribution/adjust",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_distribution_adjust"
+  },
+  {
+    "url": "/api/algorithm/score-distribution/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_distribution_stats"
+  },
+  {
+    "url": "/api/algorithm/score-distribution/validate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_distribution_validate"
+  },
+  {
+    "url": "/api/algorithm/score-ecosystem/balance/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_ecosystem_balance"
+  },
+  {
+    "url": "/api/algorithm/score-ecosystem/earn",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_ecosystem_earn"
+  },
+  {
+    "url": "/api/algorithm/score-ecosystem/earning-rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_ecosystem_earning_rules"
+  },
+  {
+    "url": "/api/algorithm/score-ecosystem/spend",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_ecosystem_spend"
+  },
+  {
+    "url": "/api/algorithm/score-ecosystem/spending-rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_ecosystem_spending_rules"
+  },
+  {
+    "url": "/api/algorithm/score-predict/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_predict"
+  },
+  {
+    "url": "/api/algorithm/score-predict/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_batch_score_predict"
+  },
+  {
+    "url": "/api/algorithm/score-predict/distribution",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_distribution"
+  },
+  {
+    "url": "/api/algorithm/score-predict/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_score_predict_evaluate"
+  },
+  {
+    "url": "/api/algorithm/score-predict/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_predict_train"
+  },
+  {
+    "url": "/api/algorithm/score-validator/detect-outliers",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_validator_detect_outliers"
+  },
+  {
+    "url": "/api/algorithm/score-validator/validate-and-correct",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_score_validator_validate_and_correct"
+  },
+  {
+    "url": "/api/algorithm/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.algorithm_statistics"
+  },
+  {
+    "url": "/api/algorithm/warning",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_warning"
+  },
+  {
+    "url": "/api/algorithm/warning/<int:warning_id>/resolve",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_warning_resolve"
+  },
+  {
+    "url": "/api/algorithm/warning/config",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_warning_config"
+  },
+  {
+    "url": "/api/algorithm/warning/evaluate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.algorithm_warning_evaluate"
+  },
+  {
+    "url": "/api/analysis/class-compare",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_class_compare"
+  },
+  {
+    "url": "/api/analysis/class-ranking",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_class_ranking"
+  },
+  {
+    "url": "/api/analysis/class/<string:class_name>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_class_analysis"
+  },
+  {
+    "url": "/api/analysis/dashboard-summary",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_dashboard_summary"
+  },
+  {
+    "url": "/api/analysis/student-ranking",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_student_ranking"
+  },
+  {
+    "url": "/api/analysis/unlock-stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_unlock_stats"
+  },
+  {
+    "url": "/api/analysis/user/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.analysis_user_analysis"
+  },
+  {
+    "url": "/api/api/docs/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.doc"
+  },
+  {
+    "url": "/api/approvals/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.approvals_approval_list"
+  },
+  {
+    "url": "/api/approvals/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.approvals_approval_resource"
+  },
+  {
+    "url": "/api/approvals/<int:id>/approve",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.approvals_approval_approve"
+  },
+  {
+    "url": "/api/approvals/<int:id>/reject",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.approvals_approval_reject"
+  },
+  {
+    "url": "/api/approvals/pending",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.approvals_pending_approvals"
+  },
+  {
+    "url": "/api/auth/login",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.auth_login"
+  },
+  {
+    "url": "/api/auth/logout",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.auth_logout"
+  },
+  {
+    "url": "/api/box/verify",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.box_box_verify"
+  },
+  {
+    "url": "/api/class-periods/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.class-periods_class_period_list"
+  },
+  {
+    "url": "/api/class-periods/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.class-periods_class_period_resource"
+  },
+  {
+    "url": "/api/class-periods/active",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.class-periods_class_period_active_list"
+  },
+  {
+    "url": "/api/class-periods/batch",
+    "methods": [
+      "PUT"
+    ],
+    "endpoint": "api_default.class-periods_class_period_batch"
+  },
+  {
+    "url": "/api/class-periods/reset",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.class-periods_class_period_reset"
+  },
+  {
+    "url": "/api/classes/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.classes_class_list"
+  },
+  {
+    "url": "/api/classes/<class_param>/students",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.classes_class_students"
+  },
+  {
+    "url": "/api/classes/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.classes_class_resource"
+  },
+  {
+    "url": "/api/classes/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.classes_class_export"
+  },
+  {
+    "url": "/api/classes/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.classes_class_import"
+  },
+  {
+    "url": "/api/classes/validate-associations",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.classes_validate_associations"
+  },
+  {
+    "url": "/api/consistency/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.consistency_consistency_check"
+  },
+  {
+    "url": "/api/consistency/fix",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.consistency_consistency_fix"
+  },
+  {
+    "url": "/api/consistency/report",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.consistency_consistency_report"
+  },
+  {
+    "url": "/api/consistency/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.consistency_consistency_status"
+  },
+  {
+    "url": "/api/course-schedules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_list"
+  },
+  {
+    "url": "/api/course-schedules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_resource"
+  },
+  {
+    "url": "/api/course-schedules/check-conflict",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_conflict_check"
+  },
+  {
+    "url": "/api/course-schedules/class/<int:class_info_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_by_class"
+  },
+  {
+    "url": "/api/course-schedules/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_export"
+  },
+  {
+    "url": "/api/course-schedules/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_import"
+  },
+  {
+    "url": "/api/course-schedules/options",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.course-schedules_course_schedule_options"
+  },
+  {
+    "url": "/api/dashboard/data",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.dashboard_dashboard_data"
+  },
+  {
+    "url": "/api/dashboard/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.dashboard_dashboard_stats"
+  },
+  {
+    "url": "/api/device-group/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.device-group_device_group_list"
+  },
+  {
+    "url": "/api/device-group/<int:group_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.device-group_device_group_item"
+  },
+  {
+    "url": "/api/device-group/<int:group_id>/devices",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.device-group_device_group_devices"
+  },
+  {
+    "url": "/api/device-group/<int:group_id>/devices/<int:device_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_default.device-group_device_group_device_item"
+  },
+  {
+    "url": "/api/device-group/device/<int:device_id>/groups",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.device-group_device_groups"
+  },
+  {
+    "url": "/api/device-group/options",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.device-group_device_group_options"
+  },
+  {
+    "url": "/api/device-group/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.device-group_device_group_stats"
+  },
+  {
+    "url": "/api/devices/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.devices_device_list"
+  },
+  {
+    "url": "/api/devices/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.devices_device_resource"
+  },
+  {
+    "url": "/api/devices/<int:id>/alerts",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_alert_history"
+  },
+  {
+    "url": "/api/devices/<int:id>/alerts/<int:alert_id>/resolve",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_resolve_device_alert_alt"
+  },
+  {
+    "url": "/api/devices/<int:id>/bind-admin",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_bind_device_admin"
+  },
+  {
+    "url": "/api/devices/<int:id>/bind-class",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_bind_device_class"
+  },
+  {
+    "url": "/api/devices/<int:id>/heartbeats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_heartbeats"
+  },
+  {
+    "url": "/api/devices/<int:id>/ota-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_device_ota_upgrade"
+  },
+  {
+    "url": "/api/devices/<int:id>/remote-control",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_device_remote_control"
+  },
+  {
+    "url": "/api/devices/<int:id>/resolve-alert/<int:alert_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_resolve_device_alert"
+  },
+  {
+    "url": "/api/devices/<int:id>/settings",
+    "methods": [
+      "PUT"
+    ],
+    "endpoint": "api_default.devices_device_settings"
+  },
+  {
+    "url": "/api/devices/admin/<int:admin_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_devices_by_admin"
+  },
+  {
+    "url": "/api/devices/advanced-stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_advanced_stats"
+  },
+  {
+    "url": "/api/devices/alerts",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_alerts"
+  },
+  {
+    "url": "/api/devices/batch-control",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_batch_device_control"
+  },
+  {
+    "url": "/api/devices/bulk-ota-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_device_bulk_ota_upgrade"
+  },
+  {
+    "url": "/api/devices/class/<int:class_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_devices_by_class"
+  },
+  {
+    "url": "/api/devices/device/<string:device_id>/heartbeats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_heartbeats_by_device_id"
+  },
+  {
+    "url": "/api/devices/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_export"
+  },
+  {
+    "url": "/api/devices/heartbeat-timeout-check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_heartbeat_timeout_check"
+  },
+  {
+    "url": "/api/devices/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_device_import"
+  },
+  {
+    "url": "/api/devices/online",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_online_devices"
+  },
+  {
+    "url": "/api/devices/ota-upgrade-all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.devices_device_ota_upgrade_all"
+  },
+  {
+    "url": "/api/devices/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.devices_device_stats"
+  },
+  {
+    "url": "/api/exam-import/execute",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.exam-import_execute_import"
+  },
+  {
+    "url": "/api/exam-import/history",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.exam-import_import_history"
+  },
+  {
+    "url": "/api/exam-import/preview",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.exam-import_preview_import_data"
+  },
+  {
+    "url": "/api/exam-import/template",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.exam-import_download_template"
+  },
+  {
+    "url": "/api/exam-import/validate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.exam-import_validate_import_file"
+  },
+  {
+    "url": "/api/exams/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.exams_exam_list"
+  },
+  {
+    "url": "/api/exams/<int:exam_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.exams_exam_resource"
+  },
+  {
+    "url": "/api/export/",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.export_export_data"
+  },
+  {
+    "url": "/api/export/categories",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.export_export_categories"
+  },
+  {
+    "url": "/api/export/devices",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.export_export_devices"
+  },
+  {
+    "url": "/api/export/errors",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.export_export_errors"
+  },
+  {
+    "url": "/api/export/records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.export_export_records"
+  },
+  {
+    "url": "/api/export/rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.export_export_rules"
+  },
+  {
+    "url": "/api/export/summary",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.export_export_summary"
+  },
+  {
+    "url": "/api/export/users",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.export_export_users"
+  },
+  {
+    "url": "/api/firmware/<int:firmware_id>/ota-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.firmware_firmware_ota_upgrade"
+  },
+  {
+    "url": "/api/firmware/batch-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.firmware_batch_upgrade"
+  },
+  {
+    "url": "/api/firmware/download/<int:id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.firmware_firmware_download"
+  },
+  {
+    "url": "/api/firmware/latest",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.firmware_firmware_latest"
+  },
+  {
+    "url": "/api/firmware/ota-status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.firmware_ota_status"
+  },
+  {
+    "url": "/api/firmware/ota/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.firmware_ota_check"
+  },
+  {
+    "url": "/api/firmware/ota/report",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.firmware_ota_report"
+  },
+  {
+    "url": "/api/firmware/upgrade-records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.firmware_upgrade_records"
+  },
+  {
+    "url": "/api/firmware/upload",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.firmware_firmware_upload"
+  },
+  {
+    "url": "/api/firmware/versions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.firmware_firmware_versions"
+  },
+  {
+    "url": "/api/firmware/versions/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.firmware_firmware_version_item"
+  },
+  {
+    "url": "/api/import/configs",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.import_import_config_list"
+  },
+  {
+    "url": "/api/import/configs/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.import_import_config_detail"
+  },
+  {
+    "url": "/api/import/configs/default/<string:module_name>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_import_config_default"
+  },
+  {
+    "url": "/api/import/configs/set-default/<int:id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_import_config_set_default"
+  },
+  {
+    "url": "/api/import/module-fields/<string:module_name>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_module_fields"
+  },
+  {
+    "url": "/api/import/template/<string:template_type>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_import_template"
+  },
+  {
+    "url": "/api/import_export/backup/clean_old",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_clean_old_backups"
+  },
+  {
+    "url": "/api/import_export/backup/create",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_create_backup"
+  },
+  {
+    "url": "/api/import_export/backup/delete/<filename>",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_default.import_export_delete_backup"
+  },
+  {
+    "url": "/api/import_export/backup/list",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_list_backups"
+  },
+  {
+    "url": "/api/import_export/backup/restore/<filename>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_restore_backup"
+  },
+  {
+    "url": "/api/import_export/backup/schedule/disable",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_disable_backup_schedule"
+  },
+  {
+    "url": "/api/import_export/backup/schedule/enable",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_enable_backup_schedule"
+  },
+  {
+    "url": "/api/import_export/backup/schedule/set_time",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_set_backup_schedule_time"
+  },
+  {
+    "url": "/api/import_export/backup/schedule/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_get_backup_schedule_status"
+  },
+  {
+    "url": "/api/import_export/backup/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_get_backup_stats"
+  },
+  {
+    "url": "/api/import_export/export/categories",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_export_categories"
+  },
+  {
+    "url": "/api/import_export/export/records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_export_records"
+  },
+  {
+    "url": "/api/import_export/export/rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_export_rules"
+  },
+  {
+    "url": "/api/import_export/export/users",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_export_users"
+  },
+  {
+    "url": "/api/import_export/import/categories",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_import_categories"
+  },
+  {
+    "url": "/api/import_export/import/rules",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_import_rules"
+  },
+  {
+    "url": "/api/import_export/import/users",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.import_export_import_users"
+  },
+  {
+    "url": "/api/import_export/template/category",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_download_category_template"
+  },
+  {
+    "url": "/api/import_export/template/rule",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_download_rule_template"
+  },
+  {
+    "url": "/api/import_export/template/user",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.import_export_download_user_template"
+  },
+  {
+    "url": "/api/mqtt/command",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_command"
+  },
+  {
+    "url": "/api/mqtt/config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_config_resource"
+  },
+  {
+    "url": "/api/mqtt/connect",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_connect"
+  },
+  {
+    "url": "/api/mqtt/disconnect",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_disconnect"
+  },
+  {
+    "url": "/api/mqtt/logs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_logs"
+  },
+  {
+    "url": "/api/mqtt/publish",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_publish"
+  },
+  {
+    "url": "/api/mqtt/recent",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_recent_logs"
+  },
+  {
+    "url": "/api/mqtt/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_status"
+  },
+  {
+    "url": "/api/mqtt/subscribe",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_subscribe"
+  },
+  {
+    "url": "/api/mqtt/unlock",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_unlock"
+  },
+  {
+    "url": "/api/mqtt/unsubscribe",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.mqtt_mqtt_unsubscribe"
+  },
+  {
+    "url": "/api/nlp/analysis/comprehensive",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_analysis_comprehensive"
+  },
+  {
+    "url": "/api/nlp/analysis/errors",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_analysis_errors"
+  },
+  {
+    "url": "/api/nlp/analysis/intent",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_analysis_intent"
+  },
+  {
+    "url": "/api/nlp/analysis/performance",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_analysis_performance"
+  },
+  {
+    "url": "/api/nlp/analysis/reset",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_analysis_reset"
+  },
+  {
+    "url": "/api/nlp/analysis/suggestions",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_analysis_suggestions"
+  },
+  {
+    "url": "/api/nlp/batch-parse",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlpp_batch_parse"
+  },
+  {
+    "url": "/api/nlp/benchmark/intent-classifier",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_benchmark_intent_classifier"
+  },
+  {
+    "url": "/api/nlp/corrections",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_corrections_list"
+  },
+  {
+    "url": "/api/nlp/corrections/<int:correction_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "endpoint": "api_default.nlp_nlp_correction_detail"
+  },
+  {
+    "url": "/api/nlp/execute",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_execute"
+  },
+  {
+    "url": "/api/nlp/feedback/record",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_feedback_record"
+  },
+  {
+    "url": "/api/nlp/model/algorithms",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_algorithms"
+  },
+  {
+    "url": "/api/nlp/model/bias-analysis",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_bias_analysis"
+  },
+  {
+    "url": "/api/nlp/model/dynamic-weighted-predict",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_dynamic_weighted_predict"
+  },
+  {
+    "url": "/api/nlp/model/ensemble-predict",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_ensemble_predict"
+  },
+  {
+    "url": "/api/nlp/model/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_evaluate"
+  },
+  {
+    "url": "/api/nlp/model/evaluate-all",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_evaluate_all"
+  },
+  {
+    "url": "/api/nlp/model/explanation",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_explanation"
+  },
+  {
+    "url": "/api/nlp/model/incremental-train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_incremental_train"
+  },
+  {
+    "url": "/api/nlp/model/online-train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_online_train"
+  },
+  {
+    "url": "/api/nlp/model/predict",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_predict"
+  },
+  {
+    "url": "/api/nlp/model/predict-multi",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_predict_multi"
+  },
+  {
+    "url": "/api/nlp/model/predict-with-explanation",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_predict_with_explanation"
+  },
+  {
+    "url": "/api/nlp/model/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_train"
+  },
+  {
+    "url": "/api/nlp/model/train-all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_train_all"
+  },
+  {
+    "url": "/api/nlp/model/training-history",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_model_training_history"
+  },
+  {
+    "url": "/api/nlp/optimization/auto-tune",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_optimization_auto_tune"
+  },
+  {
+    "url": "/api/nlp/optimization/config",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_optimization_config"
+  },
+  {
+    "url": "/api/nlp/parse",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_parse"
+  },
+  {
+    "url": "/api/nlp/parse/context-aware",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_parse_context_aware"
+  },
+  {
+    "url": "/api/nlp/parse/deep-semantic",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_parse_deep_semantic"
+  },
+  {
+    "url": "/api/nlp/parse/entities",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_parse_entities"
+  },
+  {
+    "url": "/api/nlp/parse/multi-intent",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_parse_multi_intent"
+  },
+  {
+    "url": "/api/nlp/parse/with-analysis",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_parse_with_analysis"
+  },
+  {
+    "url": "/api/nlp/performance/clear-cache",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_performance_clear_cache"
+  },
+  {
+    "url": "/api/nlp/performance/monitor",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_performance_monitor"
+  },
+  {
+    "url": "/api/nlp/performance/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_performance_stats"
+  },
+  {
+    "url": "/api/nlp/performance/warmup",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_performance_warmup"
+  },
+  {
+    "url": "/api/nlp/rules",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_rule_list"
+  },
+  {
+    "url": "/api/nlp/rules/<int:rule_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.nlp_nlp_rule"
+  },
+  {
+    "url": "/api/nlp/rules/<int:rule_id>/usage",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_rule_usage"
+  },
+  {
+    "url": "/api/nlp/rules/batch-import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_rule_batch_import"
+  },
+  {
+    "url": "/api/nlp/rules/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_rule_statistics"
+  },
+  {
+    "url": "/api/nlp/rules/suggest",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.nlp_nlp_rule_suggest"
+  },
+  {
+    "url": "/api/nlp/sentiment",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.nlp_nlp_sentiment"
+  },
+  {
+    "url": "/api/notification-config/",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.notification-config_notification_config"
+  },
+  {
+    "url": "/api/notification-config/test-sms",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.notification-config_test_sms_notification"
+  },
+  {
+    "url": "/api/notification-config/test-wechat",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.notification-config_test_wechat_notification"
+  },
+  {
+    "url": "/api/notifications/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.notifications_notification_list"
+  },
+  {
+    "url": "/api/notifications/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.notifications_notification_resource"
+  },
+  {
+    "url": "/api/notifications/<int:id>/read",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.notifications_notification_mark_read"
+  },
+  {
+    "url": "/api/notifications/send",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.notifications_notification_send"
+  },
+  {
+    "url": "/api/notifications/user/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.notifications_user_notifications"
+  },
+  {
+    "url": "/api/notify_history/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.notify_history_history_list"
+  },
+  {
+    "url": "/api/notify_history/<int:id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.notify_history_history_detail"
+  },
+  {
+    "url": "/api/notify_history/clean",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_default.notify_history_history_clean"
+  },
+  {
+    "url": "/api/notify_history/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.notify_history_history_stats"
+  },
+  {
+    "url": "/api/notify_templates/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.notify_templates_template_list"
+  },
+  {
+    "url": "/api/notify_templates/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.notify_templates_template_detail"
+  },
+  {
+    "url": "/api/notify_templates/<int:id>/use",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.notify_templates_template_use"
+  },
+  {
+    "url": "/api/notify_templates/categories",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.notify_templates_template_categories"
+  },
+  {
+    "url": "/api/operation-logs/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.operation-logs_operation_log_list"
+  },
+  {
+    "url": "/api/operation-logs/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.operation-logs_operation_log_stats"
+  },
+  {
+    "url": "/api/operation-logs/summary",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.operation-logs_operation_log_summary"
+  },
+  {
+    "url": "/api/permission-logs/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.permission-logs_permission_log_list"
+  },
+  {
+    "url": "/api/rank-rules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.rank-rules_rank_rule_list"
+  },
+  {
+    "url": "/api/rank-rules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.rank-rules_rank_rule_resource"
+  },
+  {
+    "url": "/api/rank-rules/get-rank/<int:score>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rank-rules_rank_by_score"
+  },
+  {
+    "url": "/api/rbac/admin-roles/<int:admin_id>",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.rbac_admin_role_list"
+  },
+  {
+    "url": "/api/rbac/admin-roles/<int:admin_id>/<string:role_code>",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "endpoint": "api_default.rbac_admin_role_resource"
+  },
+  {
+    "url": "/api/rbac/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rbac_check_permission"
+  },
+  {
+    "url": "/api/rbac/permissions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.rbac_permission_list"
+  },
+  {
+    "url": "/api/rbac/permissions/<string:code>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.rbac_permission_resource"
+  },
+  {
+    "url": "/api/rbac/role-hierarchy/<string:role_code>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rbac_role_hierarchy_resource"
+  },
+  {
+    "url": "/api/rbac/role-permissions/<string:role_code>",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.rbac_role_permission_list"
+  },
+  {
+    "url": "/api/rbac/role-permissions/<string:role_code>/<string:permission_code>",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "endpoint": "api_default.rbac_role_permission_resource"
+  },
+  {
+    "url": "/api/rbac/roles",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.rbac_role_list"
+  },
+  {
+    "url": "/api/rbac/roles/<string:role_code>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.rbac_role_resource"
+  },
+  {
+    "url": "/api/records/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.records_record_list"
+  },
+  {
+    "url": "/api/records/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET"
+    ],
+    "endpoint": "api_default.records_record_resource"
+  },
+  {
+    "url": "/api/records/batch-entry",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.records_batch_score_entry_resource"
+  },
+  {
+    "url": "/api/records/score-entry",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.records_score_entry_resource"
+  },
+  {
+    "url": "/api/records/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.records_record_statistics"
+  },
+  {
+    "url": "/api/records/user/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.records_record_by_user"
+  },
+  {
+    "url": "/api/remote_notify/broadcast",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.remote_notify_remote_notify_broadcast"
+  },
+  {
+    "url": "/api/remote_notify/score_change",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.remote_notify_score_change_notify"
+  },
+  {
+    "url": "/api/remote_notify/send",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.remote_notify_remote_notify_send"
+  },
+  {
+    "url": "/api/remote_notify/send_to_device/<device_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.remote_notify_remote_notify_send_to_device"
+  },
+  {
+    "url": "/api/remote_notify/test",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.remote_notify_remote_notify_test"
+  },
+  {
+    "url": "/api/rules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.rules_rule_list"
+  },
+  {
+    "url": "/api/rules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.rules_rule_resource"
+  },
+  {
+    "url": "/api/rules/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rules_rule_export"
+  },
+  {
+    "url": "/api/rules/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.rules_rule_import"
+  },
+  {
+    "url": "/api/rules/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rules_rule_statistics"
+  },
+  {
+    "url": "/api/rules/template/download",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rules_rule_template"
+  },
+  {
+    "url": "/api/rules/templates",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.rules_rule_templates"
+  },
+  {
+    "url": "/api/rules/templates/apply",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.rules_apply_rule_template"
+  },
+  {
+    "url": "/api/scheduled_notify/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.scheduled_notify_scheduled_list"
+  },
+  {
+    "url": "/api/scheduled_notify/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.scheduled_notify_scheduled_detail"
+  },
+  {
+    "url": "/api/scheduled_notify/<int:id>/cancel",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.scheduled_notify_scheduled_cancel"
+  },
+  {
+    "url": "/api/scheduled_notify/<int:id>/trigger",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.scheduled_notify_scheduled_trigger"
+  },
+  {
+    "url": "/api/score-analysis/exam/<int:exam_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.score-analysis_exam_score_analysis"
+  },
+  {
+    "url": "/api/score-analysis/rankings/<int:exam_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.score-analysis_exam_rankings"
+  },
+  {
+    "url": "/api/score-categories/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.score-categories_category_list"
+  },
+  {
+    "url": "/api/score-categories/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.score-categories_category_resource"
+  },
+  {
+    "url": "/api/score-categories/<int:id>/rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.score-categories_category_rules"
+  },
+  {
+    "url": "/api/scores/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.scores_score_list"
+  },
+  {
+    "url": "/api/scores/<int:score_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.scores_score_resource"
+  },
+  {
+    "url": "/api/security/audit-logs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.security_security_audit_logs"
+  },
+  {
+    "url": "/api/security/audit-stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.security_security_audit_stats"
+  },
+  {
+    "url": "/api/security/clear-rate-limit",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_default.security_clear_rate_limit"
+  },
+  {
+    "url": "/api/security/rate-limit-status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.security_rate_limit_status"
+  },
+  {
+    "url": "/api/security/suspicious-ips",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.security_suspicious_i_ps"
+  },
+  {
+    "url": "/api/security/verify-token",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.security_verify_token"
+  },
+  {
+    "url": "/api/subjects/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.subjects_subject_list"
+  },
+  {
+    "url": "/api/subjects/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.subjects_subject_resource"
+  },
+  {
+    "url": "/api/subjects/<int:id>/classes",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.subjects_subject_classes"
+  },
+  {
+    "url": "/api/subjects/<int:id>/toggle",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.subjects_subject_toggle"
+  },
+  {
+    "url": "/api/subjects/<int:subject_id>/classes/<int:class_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "endpoint": "api_default.subjects_subject_class_resource"
+  },
+  {
+    "url": "/api/subjects/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.subjects_subject_export"
+  },
+  {
+    "url": "/api/subjects/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.subjects_subject_import"
+  },
+  {
+    "url": "/api/subjects/template",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.subjects_subject_template"
+  },
+  {
+    "url": "/api/swagger.json",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.specs"
+  },
+  {
+    "url": "/api/system/backup",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.system_system_backup"
+  },
+  {
+    "url": "/api/system/backups",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.system_system_backups_list"
+  },
+  {
+    "url": "/api/system/cache-stats",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.system_system_cache_stats"
+  },
+  {
+    "url": "/api/system/clear-cache",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.system_system_clear_cache"
+  },
+  {
+    "url": "/api/system/config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.system_system_config_resource"
+  },
+  {
+    "url": "/api/system/csrf-token",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.system_system_csrf_token"
+  },
+  {
+    "url": "/api/system/frontend-error",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.system_frontend_error"
+  },
+  {
+    "url": "/api/system/frontend-performance",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.system_frontend_performance"
+  },
+  {
+    "url": "/api/system/frontend-performance/batch",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.system_frontend_performance_batch"
+  },
+  {
+    "url": "/api/system/health",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.system_system_health"
+  },
+  {
+    "url": "/api/system/performance",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.system_system_performance"
+  },
+  {
+    "url": "/api/system/restore",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.system_system_restore"
+  },
+  {
+    "url": "/api/system/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.system_system_stats"
+  },
+  {
+    "url": "/api/time-rules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.time-rules_time_rule_list"
+  },
+  {
+    "url": "/api/time-rules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.time-rules_time_rule_resource"
+  },
+  {
+    "url": "/api/time-rules/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.time-rules_time_rule_check"
+  },
+  {
+    "url": "/api/user-management/blacklist",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.user-management_user_blacklist"
+  },
+  {
+    "url": "/api/user-management/blacklist-check/<string:card_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.user-management_blacklist_check"
+  },
+  {
+    "url": "/api/user-management/blacklist/<string:card_id>",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "endpoint": "api_default.user-management_user_blacklist_item"
+  },
+  {
+    "url": "/api/user-management/unlock-limit/<string:card_id>",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.user-management_user_unlock_limit"
+  },
+  {
+    "url": "/api/user-management/user-status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.user-management_user_status_list"
+  },
+  {
+    "url": "/api/user-management/user/<int:user_id>/toggle-active",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.user-management_toggle_user_active"
+  },
+  {
+    "url": "/api/users/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.users_user_list"
+  },
+  {
+    "url": "/api/users/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.users_user_resource"
+  },
+  {
+    "url": "/api/users/batch-delete",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.users_user_batch_delete"
+  },
+  {
+    "url": "/api/users/batch-score",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.users_user_batch_score"
+  },
+  {
+    "url": "/api/users/by-card/<string:cardId>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.users_user_by_card"
+  },
+  {
+    "url": "/api/users/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.users_user_import"
+  },
+  {
+    "url": "/api/users/import-file",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.users_user_import_file"
+  },
+  {
+    "url": "/api/users/template/download",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.users_user_template"
+  },
+  {
+    "url": "/api/v1/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.root"
+  },
+  {
+    "url": "/api/v1/admin-classes/<int:admin_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.admin-classes_admin_classes"
+  },
+  {
+    "url": "/api/v1/admin-classes/<int:admin_id>/assign-class",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admin-classes_admin_assign_class"
+  },
+  {
+    "url": "/api/v1/admin-classes/<int:admin_id>/remove-class/<int:class_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admin-classes_admin_remove_class"
+  },
+  {
+    "url": "/api/v1/admin_notifications/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.admin_notifications_admin_notification_list"
+  },
+  {
+    "url": "/api/v1/admin_notifications/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET"
+    ],
+    "endpoint": "api_v1.admin_notifications_admin_notification_resource"
+  },
+  {
+    "url": "/api/v1/admin_notifications/<int:id>/read",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admin_notifications_admin_notification_mark_read"
+  },
+  {
+    "url": "/api/v1/admin_notifications/count",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.admin_notifications_admin_notification_count"
+  },
+  {
+    "url": "/api/v1/admin_notifications/read_all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admin_notifications_admin_notification_mark_all_read"
+  },
+  {
+    "url": "/api/v1/admin_notifications/recent",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.admin_notifications_admin_notification_recent"
+  },
+  {
+    "url": "/api/v1/admins/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.admins_admin_list"
+  },
+  {
+    "url": "/api/v1/admins/<int:admin_id>/assign-class",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admins_admin_assign_class"
+  },
+  {
+    "url": "/api/v1/admins/<int:admin_id>/remove-class/<int:class_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admins_admin_remove_class"
+  },
+  {
+    "url": "/api/v1/admins/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.admins_admin_resource"
+  },
+  {
+    "url": "/api/v1/admins/<int:id>/change-password",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admins_admin_change_password"
+  },
+  {
+    "url": "/api/v1/admins/csrf-token",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.admins_admin_csrf_token"
+  },
+  {
+    "url": "/api/v1/admins/login",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admins_admin_login"
+  },
+  {
+    "url": "/api/v1/admins/refresh-token",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.admins_admin_refresh_token"
+  },
+  {
+    "url": "/api/v1/alerts/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.alerts_alert_list"
+  },
+  {
+    "url": "/api/v1/alerts/<int:alert_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.alerts_alert_resource"
+  },
+  {
+    "url": "/api/v1/alerts/cleanup",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.alerts_alert_cleanup"
+  },
+  {
+    "url": "/api/v1/alerts/read-all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.alerts_alert_read_all"
+  },
+  {
+    "url": "/api/v1/alerts/read/<int:alert_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.alerts_alert_read"
+  },
+  {
+    "url": "/api/v1/alerts/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.alerts_alert_stats"
+  },
+  {
+    "url": "/api/v1/alerts/test",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.alerts_alert_test"
+  },
+  {
+    "url": "/api/v1/algorithm/all",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_algorithm_all"
+  },
+  {
+    "url": "/api/v1/algorithm/anomaly/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_user_anomaly"
+  },
+  {
+    "url": "/api/v1/algorithm/anomaly/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_batch_anomaly"
+  },
+  {
+    "url": "/api/v1/algorithm/anomaly/group/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_group_anomaly"
+  },
+  {
+    "url": "/api/v1/algorithm/anomaly/sudden/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_sudden_change"
+  },
+  {
+    "url": "/api/v1/algorithm/anomaly/trend/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_trend_anomaly"
+  },
+  {
+    "url": "/api/v1/algorithm/cluster",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_cluster"
+  },
+  {
+    "url": "/api/v1/algorithm/cluster/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_cluster_by_user"
+  },
+  {
+    "url": "/api/v1/algorithm/cluster/recalculate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_cluster_recalculate"
+  },
+  {
+    "url": "/api/v1/algorithm/composite-score",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_composite_score"
+  },
+  {
+    "url": "/api/v1/algorithm/composite-score/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_composite_score_by_user"
+  },
+  {
+    "url": "/api/v1/algorithm/composite-score/progress",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_composite_score_progress"
+  },
+  {
+    "url": "/api/v1/algorithm/composite-score/recalculate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_composite_score_recalculate"
+  },
+  {
+    "url": "/api/v1/algorithm/prediction/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_student_prediction"
+  },
+  {
+    "url": "/api/v1/algorithm/prediction/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_batch_prediction"
+  },
+  {
+    "url": "/api/v1/algorithm/prediction/risk",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_risk_students"
+  },
+  {
+    "url": "/api/v1/algorithm/reward/daily-usage/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_reward_daily_usage"
+  },
+  {
+    "url": "/api/v1/algorithm/reward/eligible/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_reward_eligible"
+  },
+  {
+    "url": "/api/v1/algorithm/reward/phone-access",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_reward_phone_access"
+  },
+  {
+    "url": "/api/v1/algorithm/reward/redeem",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_reward_redeem"
+  },
+  {
+    "url": "/api/v1/algorithm/reward/types",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_reward_types"
+  },
+  {
+    "url": "/api/v1/algorithm/risk-predict/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_risk_predict"
+  },
+  {
+    "url": "/api/v1/algorithm/risk-predict/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_batch_risk_predict"
+  },
+  {
+    "url": "/api/v1/algorithm/risk-predict/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_risk_predict_evaluate"
+  },
+  {
+    "url": "/api/v1/algorithm/risk-predict/high-risk",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_high_risk_students"
+  },
+  {
+    "url": "/api/v1/algorithm/risk-predict/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_risk_predict_train"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-engine/apply-by-behavior",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_rule_engine_apply_by_behavior"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-engine/execute",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_rule_engine_execute"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_rule_recommend"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend/combination",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_rule_combination"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_rule_recommend_evaluate"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend/new",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_new_rule_recommend"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend/optimization",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_rule_optimization"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_rule_statistics"
+  },
+  {
+    "url": "/api/v1/algorithm/rule-recommend/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_rule_recommend_train"
+  },
+  {
+    "url": "/api/v1/algorithm/run",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_algorithm_run"
+  },
+  {
+    "url": "/api/v1/algorithm/score-distribution/adjust",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_distribution_adjust"
+  },
+  {
+    "url": "/api/v1/algorithm/score-distribution/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_distribution_stats"
+  },
+  {
+    "url": "/api/v1/algorithm/score-distribution/validate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_distribution_validate"
+  },
+  {
+    "url": "/api/v1/algorithm/score-ecosystem/balance/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_ecosystem_balance"
+  },
+  {
+    "url": "/api/v1/algorithm/score-ecosystem/earn",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_ecosystem_earn"
+  },
+  {
+    "url": "/api/v1/algorithm/score-ecosystem/earning-rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_ecosystem_earning_rules"
+  },
+  {
+    "url": "/api/v1/algorithm/score-ecosystem/spend",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_ecosystem_spend"
+  },
+  {
+    "url": "/api/v1/algorithm/score-ecosystem/spending-rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_ecosystem_spending_rules"
+  },
+  {
+    "url": "/api/v1/algorithm/score-predict/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_predict"
+  },
+  {
+    "url": "/api/v1/algorithm/score-predict/batch",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_batch_score_predict"
+  },
+  {
+    "url": "/api/v1/algorithm/score-predict/distribution",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_distribution"
+  },
+  {
+    "url": "/api/v1/algorithm/score-predict/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_score_predict_evaluate"
+  },
+  {
+    "url": "/api/v1/algorithm/score-predict/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_predict_train"
+  },
+  {
+    "url": "/api/v1/algorithm/score-validator/detect-outliers",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_validator_detect_outliers"
+  },
+  {
+    "url": "/api/v1/algorithm/score-validator/validate-and-correct",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_score_validator_validate_and_correct"
+  },
+  {
+    "url": "/api/v1/algorithm/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.algorithm_statistics"
+  },
+  {
+    "url": "/api/v1/algorithm/warning",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_warning"
+  },
+  {
+    "url": "/api/v1/algorithm/warning/<int:warning_id>/resolve",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_warning_resolve"
+  },
+  {
+    "url": "/api/v1/algorithm/warning/config",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_warning_config"
+  },
+  {
+    "url": "/api/v1/algorithm/warning/evaluate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.algorithm_warning_evaluate"
+  },
+  {
+    "url": "/api/v1/analysis/class-compare",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_class_compare"
+  },
+  {
+    "url": "/api/v1/analysis/class-ranking",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_class_ranking"
+  },
+  {
+    "url": "/api/v1/analysis/class/<string:class_name>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_class_analysis"
+  },
+  {
+    "url": "/api/v1/analysis/dashboard-summary",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_dashboard_summary"
+  },
+  {
+    "url": "/api/v1/analysis/student-ranking",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_student_ranking"
+  },
+  {
+    "url": "/api/v1/analysis/unlock-stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_unlock_stats"
+  },
+  {
+    "url": "/api/v1/analysis/user/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.analysis_user_analysis"
+  },
+  {
+    "url": "/api/v1/api/v1/docs/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.doc"
+  },
+  {
+    "url": "/api/v1/approvals/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.approvals_approval_list"
+  },
+  {
+    "url": "/api/v1/approvals/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.approvals_approval_resource"
+  },
+  {
+    "url": "/api/v1/approvals/<int:id>/approve",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.approvals_approval_approve"
+  },
+  {
+    "url": "/api/v1/approvals/<int:id>/reject",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.approvals_approval_reject"
+  },
+  {
+    "url": "/api/v1/approvals/pending",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.approvals_pending_approvals"
+  },
+  {
+    "url": "/api/v1/auth/login",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.auth_login"
+  },
+  {
+    "url": "/api/v1/auth/logout",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.auth_logout"
+  },
+  {
+    "url": "/api/v1/box/verify",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.box_box_verify"
+  },
+  {
+    "url": "/api/v1/class-periods/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.class-periods_class_period_list"
+  },
+  {
+    "url": "/api/v1/class-periods/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.class-periods_class_period_resource"
+  },
+  {
+    "url": "/api/v1/class-periods/active",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.class-periods_class_period_active_list"
+  },
+  {
+    "url": "/api/v1/class-periods/batch",
+    "methods": [
+      "PUT"
+    ],
+    "endpoint": "api_v1.class-periods_class_period_batch"
+  },
+  {
+    "url": "/api/v1/class-periods/reset",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.class-periods_class_period_reset"
+  },
+  {
+    "url": "/api/v1/classes/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.classes_class_list"
+  },
+  {
+    "url": "/api/v1/classes/<class_param>/students",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.classes_class_students"
+  },
+  {
+    "url": "/api/v1/classes/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.classes_class_resource"
+  },
+  {
+    "url": "/api/v1/classes/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.classes_class_export"
+  },
+  {
+    "url": "/api/v1/classes/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.classes_class_import"
+  },
+  {
+    "url": "/api/v1/classes/validate-associations",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.classes_validate_associations"
+  },
+  {
+    "url": "/api/v1/consistency/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.consistency_consistency_check"
+  },
+  {
+    "url": "/api/v1/consistency/fix",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.consistency_consistency_fix"
+  },
+  {
+    "url": "/api/v1/consistency/report",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.consistency_consistency_report"
+  },
+  {
+    "url": "/api/v1/consistency/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.consistency_consistency_status"
+  },
+  {
+    "url": "/api/v1/course-schedules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_list"
+  },
+  {
+    "url": "/api/v1/course-schedules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_resource"
+  },
+  {
+    "url": "/api/v1/course-schedules/check-conflict",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_conflict_check"
+  },
+  {
+    "url": "/api/v1/course-schedules/class/<int:class_info_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_by_class"
+  },
+  {
+    "url": "/api/v1/course-schedules/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_export"
+  },
+  {
+    "url": "/api/v1/course-schedules/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_import"
+  },
+  {
+    "url": "/api/v1/course-schedules/options",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.course-schedules_course_schedule_options"
+  },
+  {
+    "url": "/api/v1/dashboard/data",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.dashboard_dashboard_data"
+  },
+  {
+    "url": "/api/v1/dashboard/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.dashboard_dashboard_stats"
+  },
+  {
+    "url": "/api/v1/device-group/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.device-group_device_group_list"
+  },
+  {
+    "url": "/api/v1/device-group/<int:group_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.device-group_device_group_item"
+  },
+  {
+    "url": "/api/v1/device-group/<int:group_id>/devices",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.device-group_device_group_devices"
+  },
+  {
+    "url": "/api/v1/device-group/<int:group_id>/devices/<int:device_id>",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_v1.device-group_device_group_device_item"
+  },
+  {
+    "url": "/api/v1/device-group/device/<int:device_id>/groups",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.device-group_device_groups"
+  },
+  {
+    "url": "/api/v1/device-group/options",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.device-group_device_group_options"
+  },
+  {
+    "url": "/api/v1/device-group/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.device-group_device_group_stats"
+  },
+  {
+    "url": "/api/v1/devices/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_device_list"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.devices_device_resource"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/alerts",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_alert_history"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/alerts/<int:alert_id>/resolve",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_resolve_device_alert_alt"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/bind-admin",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_bind_device_admin"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/bind-class",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_bind_device_class"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/heartbeats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_heartbeats"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/ota-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_device_ota_upgrade"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/remote-control",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_device_remote_control"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/resolve-alert/<int:alert_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_resolve_device_alert"
+  },
+  {
+    "url": "/api/v1/devices/<int:id>/settings",
+    "methods": [
+      "PUT"
+    ],
+    "endpoint": "api_v1.devices_device_settings"
+  },
+  {
+    "url": "/api/v1/devices/admin/<int:admin_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_devices_by_admin"
+  },
+  {
+    "url": "/api/v1/devices/advanced-stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_advanced_stats"
+  },
+  {
+    "url": "/api/v1/devices/alerts",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_alerts"
+  },
+  {
+    "url": "/api/v1/devices/batch-control",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_batch_device_control"
+  },
+  {
+    "url": "/api/v1/devices/bulk-ota-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_device_bulk_ota_upgrade"
+  },
+  {
+    "url": "/api/v1/devices/class/<int:class_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_devices_by_class"
+  },
+  {
+    "url": "/api/v1/devices/device/<string:device_id>/heartbeats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_heartbeats_by_device_id"
+  },
+  {
+    "url": "/api/v1/devices/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_export"
+  },
+  {
+    "url": "/api/v1/devices/heartbeat-timeout-check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_heartbeat_timeout_check"
+  },
+  {
+    "url": "/api/v1/devices/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_device_import"
+  },
+  {
+    "url": "/api/v1/devices/online",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_online_devices"
+  },
+  {
+    "url": "/api/v1/devices/ota-upgrade-all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.devices_device_ota_upgrade_all"
+  },
+  {
+    "url": "/api/v1/devices/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.devices_device_stats"
+  },
+  {
+    "url": "/api/v1/exam-import/execute",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.exam-import_execute_import"
+  },
+  {
+    "url": "/api/v1/exam-import/history",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.exam-import_import_history"
+  },
+  {
+    "url": "/api/v1/exam-import/preview",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.exam-import_preview_import_data"
+  },
+  {
+    "url": "/api/v1/exam-import/template",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.exam-import_download_template"
+  },
+  {
+    "url": "/api/v1/exam-import/validate",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.exam-import_validate_import_file"
+  },
+  {
+    "url": "/api/v1/exams/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.exams_exam_list"
+  },
+  {
+    "url": "/api/v1/exams/<int:exam_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.exams_exam_resource"
+  },
+  {
+    "url": "/api/v1/export/",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.export_export_data"
+  },
+  {
+    "url": "/api/v1/export/categories",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.export_export_categories"
+  },
+  {
+    "url": "/api/v1/export/devices",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.export_export_devices"
+  },
+  {
+    "url": "/api/v1/export/errors",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.export_export_errors"
+  },
+  {
+    "url": "/api/v1/export/records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.export_export_records"
+  },
+  {
+    "url": "/api/v1/export/rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.export_export_rules"
+  },
+  {
+    "url": "/api/v1/export/summary",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.export_export_summary"
+  },
+  {
+    "url": "/api/v1/export/users",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.export_export_users"
+  },
+  {
+    "url": "/api/v1/firmware/<int:firmware_id>/ota-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.firmware_firmware_ota_upgrade"
+  },
+  {
+    "url": "/api/v1/firmware/batch-upgrade",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.firmware_batch_upgrade"
+  },
+  {
+    "url": "/api/v1/firmware/download/<int:id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.firmware_firmware_download"
+  },
+  {
+    "url": "/api/v1/firmware/latest",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.firmware_firmware_latest"
+  },
+  {
+    "url": "/api/v1/firmware/ota-status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.firmware_ota_status"
+  },
+  {
+    "url": "/api/v1/firmware/ota/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.firmware_ota_check"
+  },
+  {
+    "url": "/api/v1/firmware/ota/report",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.firmware_ota_report"
+  },
+  {
+    "url": "/api/v1/firmware/upgrade-records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.firmware_upgrade_records"
+  },
+  {
+    "url": "/api/v1/firmware/upload",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.firmware_firmware_upload"
+  },
+  {
+    "url": "/api/v1/firmware/versions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.firmware_firmware_versions"
+  },
+  {
+    "url": "/api/v1/firmware/versions/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.firmware_firmware_version_item"
+  },
+  {
+    "url": "/api/v1/import/configs",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.import_import_config_list"
+  },
+  {
+    "url": "/api/v1/import/configs/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.import_import_config_detail"
+  },
+  {
+    "url": "/api/v1/import/configs/default/<string:module_name>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_import_config_default"
+  },
+  {
+    "url": "/api/v1/import/configs/set-default/<int:id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_import_config_set_default"
+  },
+  {
+    "url": "/api/v1/import/module-fields/<string:module_name>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_module_fields"
+  },
+  {
+    "url": "/api/v1/import/template/<string:template_type>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_import_template"
+  },
+  {
+    "url": "/api/v1/import_export/backup/clean_old",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_clean_old_backups"
+  },
+  {
+    "url": "/api/v1/import_export/backup/create",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_create_backup"
+  },
+  {
+    "url": "/api/v1/import_export/backup/delete/<filename>",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_v1.import_export_delete_backup"
+  },
+  {
+    "url": "/api/v1/import_export/backup/list",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_list_backups"
+  },
+  {
+    "url": "/api/v1/import_export/backup/restore/<filename>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_restore_backup"
+  },
+  {
+    "url": "/api/v1/import_export/backup/schedule/disable",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_disable_backup_schedule"
+  },
+  {
+    "url": "/api/v1/import_export/backup/schedule/enable",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_enable_backup_schedule"
+  },
+  {
+    "url": "/api/v1/import_export/backup/schedule/set_time",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_set_backup_schedule_time"
+  },
+  {
+    "url": "/api/v1/import_export/backup/schedule/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_get_backup_schedule_status"
+  },
+  {
+    "url": "/api/v1/import_export/backup/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_get_backup_stats"
+  },
+  {
+    "url": "/api/v1/import_export/export/categories",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_export_categories"
+  },
+  {
+    "url": "/api/v1/import_export/export/records",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_export_records"
+  },
+  {
+    "url": "/api/v1/import_export/export/rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_export_rules"
+  },
+  {
+    "url": "/api/v1/import_export/export/users",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_export_users"
+  },
+  {
+    "url": "/api/v1/import_export/import/categories",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_import_categories"
+  },
+  {
+    "url": "/api/v1/import_export/import/rules",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_import_rules"
+  },
+  {
+    "url": "/api/v1/import_export/import/users",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.import_export_import_users"
+  },
+  {
+    "url": "/api/v1/import_export/template/category",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_download_category_template"
+  },
+  {
+    "url": "/api/v1/import_export/template/rule",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_download_rule_template"
+  },
+  {
+    "url": "/api/v1/import_export/template/user",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.import_export_download_user_template"
+  },
+  {
+    "url": "/api/v1/mqtt/command",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_command"
+  },
+  {
+    "url": "/api/v1/mqtt/config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_config_resource"
+  },
+  {
+    "url": "/api/v1/mqtt/connect",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_connect"
+  },
+  {
+    "url": "/api/v1/mqtt/disconnect",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_disconnect"
+  },
+  {
+    "url": "/api/v1/mqtt/logs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_logs"
+  },
+  {
+    "url": "/api/v1/mqtt/publish",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_publish"
+  },
+  {
+    "url": "/api/v1/mqtt/recent",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_recent_logs"
+  },
+  {
+    "url": "/api/v1/mqtt/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_status"
+  },
+  {
+    "url": "/api/v1/mqtt/subscribe",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_subscribe"
+  },
+  {
+    "url": "/api/v1/mqtt/unlock",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_unlock"
+  },
+  {
+    "url": "/api/v1/mqtt/unsubscribe",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.mqtt_mqtt_unsubscribe"
+  },
+  {
+    "url": "/api/v1/nlp/analysis/comprehensive",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_analysis_comprehensive"
+  },
+  {
+    "url": "/api/v1/nlp/analysis/errors",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_analysis_errors"
+  },
+  {
+    "url": "/api/v1/nlp/analysis/intent",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_analysis_intent"
+  },
+  {
+    "url": "/api/v1/nlp/analysis/performance",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_analysis_performance"
+  },
+  {
+    "url": "/api/v1/nlp/analysis/reset",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_analysis_reset"
+  },
+  {
+    "url": "/api/v1/nlp/analysis/suggestions",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_analysis_suggestions"
+  },
+  {
+    "url": "/api/v1/nlp/batch-parse",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlpp_batch_parse"
+  },
+  {
+    "url": "/api/v1/nlp/benchmark/intent-classifier",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_benchmark_intent_classifier"
+  },
+  {
+    "url": "/api/v1/nlp/corrections",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_corrections_list"
+  },
+  {
+    "url": "/api/v1/nlp/corrections/<int:correction_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "endpoint": "api_v1.nlp_nlp_correction_detail"
+  },
+  {
+    "url": "/api/v1/nlp/execute",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_execute"
+  },
+  {
+    "url": "/api/v1/nlp/feedback/record",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_feedback_record"
+  },
+  {
+    "url": "/api/v1/nlp/model/algorithms",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_algorithms"
+  },
+  {
+    "url": "/api/v1/nlp/model/bias-analysis",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_bias_analysis"
+  },
+  {
+    "url": "/api/v1/nlp/model/dynamic-weighted-predict",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_dynamic_weighted_predict"
+  },
+  {
+    "url": "/api/v1/nlp/model/ensemble-predict",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_ensemble_predict"
+  },
+  {
+    "url": "/api/v1/nlp/model/evaluate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_evaluate"
+  },
+  {
+    "url": "/api/v1/nlp/model/evaluate-all",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_evaluate_all"
+  },
+  {
+    "url": "/api/v1/nlp/model/explanation",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_explanation"
+  },
+  {
+    "url": "/api/v1/nlp/model/incremental-train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_incremental_train"
+  },
+  {
+    "url": "/api/v1/nlp/model/online-train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_online_train"
+  },
+  {
+    "url": "/api/v1/nlp/model/predict",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_predict"
+  },
+  {
+    "url": "/api/v1/nlp/model/predict-multi",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_predict_multi"
+  },
+  {
+    "url": "/api/v1/nlp/model/predict-with-explanation",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_predict_with_explanation"
+  },
+  {
+    "url": "/api/v1/nlp/model/train",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_train"
+  },
+  {
+    "url": "/api/v1/nlp/model/train-all",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_train_all"
+  },
+  {
+    "url": "/api/v1/nlp/model/training-history",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_model_training_history"
+  },
+  {
+    "url": "/api/v1/nlp/optimization/auto-tune",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_optimization_auto_tune"
+  },
+  {
+    "url": "/api/v1/nlp/optimization/config",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_optimization_config"
+  },
+  {
+    "url": "/api/v1/nlp/parse",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_parse"
+  },
+  {
+    "url": "/api/v1/nlp/parse/context-aware",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_parse_context_aware"
+  },
+  {
+    "url": "/api/v1/nlp/parse/deep-semantic",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_parse_deep_semantic"
+  },
+  {
+    "url": "/api/v1/nlp/parse/entities",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_parse_entities"
+  },
+  {
+    "url": "/api/v1/nlp/parse/multi-intent",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_parse_multi_intent"
+  },
+  {
+    "url": "/api/v1/nlp/parse/with-analysis",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_parse_with_analysis"
+  },
+  {
+    "url": "/api/v1/nlp/performance/clear-cache",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_performance_clear_cache"
+  },
+  {
+    "url": "/api/v1/nlp/performance/monitor",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_performance_monitor"
+  },
+  {
+    "url": "/api/v1/nlp/performance/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_performance_stats"
+  },
+  {
+    "url": "/api/v1/nlp/performance/warmup",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_performance_warmup"
+  },
+  {
+    "url": "/api/v1/nlp/rules",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_rule_list"
+  },
+  {
+    "url": "/api/v1/nlp/rules/<int:rule_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.nlp_nlp_rule"
+  },
+  {
+    "url": "/api/v1/nlp/rules/<int:rule_id>/usage",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_rule_usage"
+  },
+  {
+    "url": "/api/v1/nlp/rules/batch-import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_rule_batch_import"
+  },
+  {
+    "url": "/api/v1/nlp/rules/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_rule_statistics"
+  },
+  {
+    "url": "/api/v1/nlp/rules/suggest",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.nlp_nlp_rule_suggest"
+  },
+  {
+    "url": "/api/v1/nlp/sentiment",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.nlp_nlp_sentiment"
+  },
+  {
+    "url": "/api/v1/notification-config/",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.notification-config_notification_config"
+  },
+  {
+    "url": "/api/v1/notification-config/test-sms",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.notification-config_test_sms_notification"
+  },
+  {
+    "url": "/api/v1/notification-config/test-wechat",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.notification-config_test_wechat_notification"
+  },
+  {
+    "url": "/api/v1/notifications/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.notifications_notification_list"
+  },
+  {
+    "url": "/api/v1/notifications/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.notifications_notification_resource"
+  },
+  {
+    "url": "/api/v1/notifications/<int:id>/read",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.notifications_notification_mark_read"
+  },
+  {
+    "url": "/api/v1/notifications/send",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.notifications_notification_send"
+  },
+  {
+    "url": "/api/v1/notifications/user/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.notifications_user_notifications"
+  },
+  {
+    "url": "/api/v1/notify_history/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.notify_history_history_list"
+  },
+  {
+    "url": "/api/v1/notify_history/<int:id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.notify_history_history_detail"
+  },
+  {
+    "url": "/api/v1/notify_history/clean",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_v1.notify_history_history_clean"
+  },
+  {
+    "url": "/api/v1/notify_history/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.notify_history_history_stats"
+  },
+  {
+    "url": "/api/v1/notify_templates/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.notify_templates_template_list"
+  },
+  {
+    "url": "/api/v1/notify_templates/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.notify_templates_template_detail"
+  },
+  {
+    "url": "/api/v1/notify_templates/<int:id>/use",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.notify_templates_template_use"
+  },
+  {
+    "url": "/api/v1/notify_templates/categories",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.notify_templates_template_categories"
+  },
+  {
+    "url": "/api/v1/operation-logs/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.operation-logs_operation_log_list"
+  },
+  {
+    "url": "/api/v1/operation-logs/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.operation-logs_operation_log_stats"
+  },
+  {
+    "url": "/api/v1/operation-logs/summary",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.operation-logs_operation_log_summary"
+  },
+  {
+    "url": "/api/v1/permission-logs/",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.permission-logs_permission_log_list"
+  },
+  {
+    "url": "/api/v1/rank-rules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.rank-rules_rank_rule_list"
+  },
+  {
+    "url": "/api/v1/rank-rules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.rank-rules_rank_rule_resource"
+  },
+  {
+    "url": "/api/v1/rank-rules/get-rank/<int:score>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rank-rules_rank_by_score"
+  },
+  {
+    "url": "/api/v1/rbac/admin-roles/<int:admin_id>",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.rbac_admin_role_list"
+  },
+  {
+    "url": "/api/v1/rbac/admin-roles/<int:admin_id>/<string:role_code>",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "endpoint": "api_v1.rbac_admin_role_resource"
+  },
+  {
+    "url": "/api/v1/rbac/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rbac_check_permission"
+  },
+  {
+    "url": "/api/v1/rbac/permissions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.rbac_permission_list"
+  },
+  {
+    "url": "/api/v1/rbac/permissions/<string:code>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.rbac_permission_resource"
+  },
+  {
+    "url": "/api/v1/rbac/role-hierarchy/<string:role_code>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rbac_role_hierarchy_resource"
+  },
+  {
+    "url": "/api/v1/rbac/role-permissions/<string:role_code>",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.rbac_role_permission_list"
+  },
+  {
+    "url": "/api/v1/rbac/role-permissions/<string:role_code>/<string:permission_code>",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "endpoint": "api_v1.rbac_role_permission_resource"
+  },
+  {
+    "url": "/api/v1/rbac/roles",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.rbac_role_list"
+  },
+  {
+    "url": "/api/v1/rbac/roles/<string:role_code>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.rbac_role_resource"
+  },
+  {
+    "url": "/api/v1/records/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.records_record_list"
+  },
+  {
+    "url": "/api/v1/records/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET"
+    ],
+    "endpoint": "api_v1.records_record_resource"
+  },
+  {
+    "url": "/api/v1/records/batch-entry",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.records_batch_score_entry_resource"
+  },
+  {
+    "url": "/api/v1/records/score-entry",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.records_score_entry_resource"
+  },
+  {
+    "url": "/api/v1/records/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.records_record_statistics"
+  },
+  {
+    "url": "/api/v1/records/user/<int:user_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.records_record_by_user"
+  },
+  {
+    "url": "/api/v1/remote_notify/broadcast",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.remote_notify_remote_notify_broadcast"
+  },
+  {
+    "url": "/api/v1/remote_notify/score_change",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.remote_notify_score_change_notify"
+  },
+  {
+    "url": "/api/v1/remote_notify/send",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.remote_notify_remote_notify_send"
+  },
+  {
+    "url": "/api/v1/remote_notify/send_to_device/<device_id>",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.remote_notify_remote_notify_send_to_device"
+  },
+  {
+    "url": "/api/v1/remote_notify/test",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.remote_notify_remote_notify_test"
+  },
+  {
+    "url": "/api/v1/rules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.rules_rule_list"
+  },
+  {
+    "url": "/api/v1/rules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.rules_rule_resource"
+  },
+  {
+    "url": "/api/v1/rules/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rules_rule_export"
+  },
+  {
+    "url": "/api/v1/rules/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.rules_rule_import"
+  },
+  {
+    "url": "/api/v1/rules/statistics",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rules_rule_statistics"
+  },
+  {
+    "url": "/api/v1/rules/template/download",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rules_rule_template"
+  },
+  {
+    "url": "/api/v1/rules/templates",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.rules_rule_templates"
+  },
+  {
+    "url": "/api/v1/rules/templates/apply",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.rules_apply_rule_template"
+  },
+  {
+    "url": "/api/v1/scheduled_notify/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.scheduled_notify_scheduled_list"
+  },
+  {
+    "url": "/api/v1/scheduled_notify/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.scheduled_notify_scheduled_detail"
+  },
+  {
+    "url": "/api/v1/scheduled_notify/<int:id>/cancel",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.scheduled_notify_scheduled_cancel"
+  },
+  {
+    "url": "/api/v1/scheduled_notify/<int:id>/trigger",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.scheduled_notify_scheduled_trigger"
+  },
+  {
+    "url": "/api/v1/score-analysis/exam/<int:exam_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.score-analysis_exam_score_analysis"
+  },
+  {
+    "url": "/api/v1/score-analysis/rankings/<int:exam_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.score-analysis_exam_rankings"
+  },
+  {
+    "url": "/api/v1/score-categories/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.score-categories_category_list"
+  },
+  {
+    "url": "/api/v1/score-categories/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.score-categories_category_resource"
+  },
+  {
+    "url": "/api/v1/score-categories/<int:id>/rules",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.score-categories_category_rules"
+  },
+  {
+    "url": "/api/v1/scores/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.scores_score_list"
+  },
+  {
+    "url": "/api/v1/scores/<int:score_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.scores_score_resource"
+  },
+  {
+    "url": "/api/v1/security/audit-logs",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.security_security_audit_logs"
+  },
+  {
+    "url": "/api/v1/security/audit-stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.security_security_audit_stats"
+  },
+  {
+    "url": "/api/v1/security/clear-rate-limit",
+    "methods": [
+      "DELETE"
+    ],
+    "endpoint": "api_v1.security_clear_rate_limit"
+  },
+  {
+    "url": "/api/v1/security/rate-limit-status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.security_rate_limit_status"
+  },
+  {
+    "url": "/api/v1/security/suspicious-ips",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.security_suspicious_i_ps"
+  },
+  {
+    "url": "/api/v1/security/verify-token",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.security_verify_token"
+  },
+  {
+    "url": "/api/v1/subjects/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.subjects_subject_list"
+  },
+  {
+    "url": "/api/v1/subjects/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.subjects_subject_resource"
+  },
+  {
+    "url": "/api/v1/subjects/<int:id>/classes",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.subjects_subject_classes"
+  },
+  {
+    "url": "/api/v1/subjects/<int:id>/toggle",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.subjects_subject_toggle"
+  },
+  {
+    "url": "/api/v1/subjects/<int:subject_id>/classes/<int:class_id>",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "endpoint": "api_v1.subjects_subject_class_resource"
+  },
+  {
+    "url": "/api/v1/subjects/export",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.subjects_subject_export"
+  },
+  {
+    "url": "/api/v1/subjects/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.subjects_subject_import"
+  },
+  {
+    "url": "/api/v1/subjects/template",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.subjects_subject_template"
+  },
+  {
+    "url": "/api/v1/swagger.json",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.specs"
+  },
+  {
+    "url": "/api/v1/system/backup",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.system_system_backup"
+  },
+  {
+    "url": "/api/v1/system/backups",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.system_system_backups_list"
+  },
+  {
+    "url": "/api/v1/system/cache-stats",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.system_system_cache_stats"
+  },
+  {
+    "url": "/api/v1/system/clear-cache",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.system_system_clear_cache"
+  },
+  {
+    "url": "/api/v1/system/config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.system_system_config_resource"
+  },
+  {
+    "url": "/api/v1/system/csrf-token",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.system_system_csrf_token"
+  },
+  {
+    "url": "/api/v1/system/frontend-error",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.system_frontend_error"
+  },
+  {
+    "url": "/api/v1/system/frontend-performance",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.system_frontend_performance"
+  },
+  {
+    "url": "/api/v1/system/frontend-performance/batch",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.system_frontend_performance_batch"
+  },
+  {
+    "url": "/api/v1/system/health",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.system_system_health"
+  },
+  {
+    "url": "/api/v1/system/performance",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.system_system_performance"
+  },
+  {
+    "url": "/api/v1/system/restore",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.system_system_restore"
+  },
+  {
+    "url": "/api/v1/system/stats",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.system_system_stats"
+  },
+  {
+    "url": "/api/v1/time-rules/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.time-rules_time_rule_list"
+  },
+  {
+    "url": "/api/v1/time-rules/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.time-rules_time_rule_resource"
+  },
+  {
+    "url": "/api/v1/time-rules/check",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.time-rules_time_rule_check"
+  },
+  {
+    "url": "/api/v1/user-management/blacklist",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.user-management_user_blacklist"
+  },
+  {
+    "url": "/api/v1/user-management/blacklist-check/<string:card_id>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.user-management_blacklist_check"
+  },
+  {
+    "url": "/api/v1/user-management/blacklist/<string:card_id>",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "endpoint": "api_v1.user-management_user_blacklist_item"
+  },
+  {
+    "url": "/api/v1/user-management/unlock-limit/<string:card_id>",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.user-management_user_unlock_limit"
+  },
+  {
+    "url": "/api/v1/user-management/user-status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.user-management_user_status_list"
+  },
+  {
+    "url": "/api/v1/user-management/user/<int:user_id>/toggle-active",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.user-management_toggle_user_active"
+  },
+  {
+    "url": "/api/v1/users/",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.users_user_list"
+  },
+  {
+    "url": "/api/v1/users/<int:id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.users_user_resource"
+  },
+  {
+    "url": "/api/v1/users/batch-delete",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.users_user_batch_delete"
+  },
+  {
+    "url": "/api/v1/users/batch-score",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.users_user_batch_score"
+  },
+  {
+    "url": "/api/v1/users/by-card/<string:cardId>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.users_user_by_card"
+  },
+  {
+    "url": "/api/v1/users/import",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.users_user_import"
+  },
+  {
+    "url": "/api/v1/users/import-file",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.users_user_import_file"
+  },
+  {
+    "url": "/api/v1/users/template/download",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.users_user_template"
+  },
+  {
+    "url": "/api/v1/wol/devices",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_v1.wol_wol_device_list"
+  },
+  {
+    "url": "/api/v1/wol/devices/<int:device_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_v1.wol_wol_device_resource"
+  },
+  {
+    "url": "/api/v1/wol/status/<mac_address>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.wol_device_status"
+  },
+  {
+    "url": "/api/v1/wol/validate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_v1.wol_validate_mac"
+  },
+  {
+    "url": "/api/v1/wol/wake",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.wol_wake_on_lan"
+  },
+  {
+    "url": "/api/v1/wol/wake/batch",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_v1.wol_wake_on_lan_batch"
+  },
+  {
+    "url": "/api/versions",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "list_versions"
+  },
+  {
+    "url": "/api/wol/devices",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "endpoint": "api_default.wol_wol_device_list"
+  },
+  {
+    "url": "/api/wol/devices/<int:device_id>",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "endpoint": "api_default.wol_wol_device_resource"
+  },
+  {
+    "url": "/api/wol/status/<mac_address>",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.wol_device_status"
+  },
+  {
+    "url": "/api/wol/validate",
+    "methods": [
+      "GET"
+    ],
+    "endpoint": "api_default.wol_validate_mac"
+  },
+  {
+    "url": "/api/wol/wake",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.wol_wake_on_lan"
+  },
+  {
+    "url": "/api/wol/wake/batch",
+    "methods": [
+      "POST"
+    ],
+    "endpoint": "api_default.wol_wake_on_lan_batch"
+  }
+]

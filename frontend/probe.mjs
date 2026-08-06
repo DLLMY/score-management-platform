@@ -1,0 +1,18 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', args: ['--no-sandbox','--disable-dev-shm-usage'] });
+const page = await browser.newPage();
+const errors = [];
+page.on('console', m => { if (m.type()==='error') errors.push('CONSOLE_ERR: '+m.text()); });
+page.on('pageerror', e => errors.push('PAGE_ERR: '+e.message));
+await page.goto('http://127.0.0.1:3000/', { waitUntil: 'networkidle', timeout: 30000 }).catch(e=>errors.push('GOTO_FAIL: '+e.message));
+await page.waitForTimeout(2500);
+const title = await page.title().catch(()=>'(no title)');
+const bodyLen = (await page.content()).length;
+const hasRoot = await page.$('#root') ? 'yes' : 'no';
+const rootHtml = await page.$eval('#root', el=>el.innerHTML.slice(0,400)).catch(()=>'(eval fail)');
+console.log('TITLE:', title);
+console.log('BODY_LEN:', bodyLen);
+console.log('#root present:', hasRoot);
+console.log('#root innerHTML (first 400):', JSON.stringify(rootHtml));
+console.log('ERRORS:', errors.length ? errors.join('\n') : '(none)');
+await browser.close();

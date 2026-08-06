@@ -15,6 +15,7 @@ import {
 import Button from './Button';
 import Modal from './Modal';
 import { useToast } from '../context/ToastContext';
+import { getAuthHeaders } from '../services/api';
 
 function ImportExportPanel({ type }) {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -59,6 +60,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch(`/api/import_export/import/${type}s`, {
         method: 'POST',
         credentials: 'include',
+        headers: getAuthHeaders(),
         body: formData,
       });
 
@@ -83,6 +85,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch(`/api/import_export/export/${type}s?format=${format}`, {
         method: 'GET',
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -119,6 +122,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch(`/api/import_export/template/${type}`, {
         method: 'GET',
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -147,6 +151,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch('/api/import_export/backup/list', {
         method: 'GET',
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
       const result = await response.json();
       if (result.success) {
@@ -164,6 +169,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch('/api/import_export/backup/create', {
         method: 'POST',
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
       const result = await response.json();
       if (result.success) {
@@ -185,6 +191,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch(`/api/import_export/backup/restore/${selectedBackup.filename}`, {
         method: 'POST',
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
       const result = await response.json();
       if (result.success) {
@@ -207,6 +214,7 @@ function ImportExportPanel({ type }) {
       const response = await fetch(`/api/import_export/backup/delete/${filename}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
       const result = await response.json();
       if (result.success) {

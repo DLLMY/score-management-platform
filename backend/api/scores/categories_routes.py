@@ -1,0 +1,169 @@
+from flask_restx import Namespace, Resource, fields
+from models import db, ScoreCategory, ScoreRule
+from utils.permission import requires_permission
+from utils.response import APIResponse
+from datetime import datetime
+
+try:
+    from app import csrf_exempt
+except ImportError:
+
+    def csrf_exempt(f):
+        return f
+
+
+ns_score_categories = Namespace("score-categories", description="积分规则分类管理")
+
+category_model = ns_score_categories.model(
+    "Category",
+    {
+        "name": fields.String(required=True, description="分类名称"),
+        "description": fields.String(description="分类描述"),
+        "color": fields.String(description="分类颜色"),
+        "is_active": fields.Boolean(description="是否启用"),
+    },
+)
+
+
+@ns_score_categories.route("/")
+class CategoryList(Resource):
+
+    @ns_score_categories.doc("list_score_categories", security="Bearer")
+    @requires_permission("rule.view")
+    def get(self):
+        categories = ScoreCategory.query.all()
+        result = []  # noqa: F841
+        for cat in categories:
+            rule_count = ScoreRule.query.filter_by(category_id=cat.id, is_active=True).count()
+            result.append(
+                {
+                    "id": cat.id,
+                    "name": cat.name,
+                    "description": cat.description,
+                    "color": cat.color,
+                    "is_active": cat.is_active,
+                    "rule_count": rule_count,
+                    "created_at": cat.created_at.isoformat() if cat.created_at else None,
+                }
+            )
+        return APIResponse.success(data={"categories": result})
+
+    @ns_score_categories.doc("create_score_category")
+    @ns_score_categories.expect(category_model)
+    @requires_permission("rule.manage")
+    def post(self):
+        data = ns_score_categories.payload
+
+        if ScoreCategory.query.filter_by(name=data.get("name")).first():
+            return APIResponse.error(message="分类名称已存在", status_code=400)
+
+        category = ScoreCategory(
+            name=data.get("name"),
+            description=data.get("description"),
+            color=data.get("color", "#3B82F6"),
+            is_active=data.get("is_active", True),
+        )
+        db.session.add(category)
+        db.session.commit()
+
+        return (
+            APIResponse.success(
+                data={
+                    "category": {
+                        "id": category.id,
+                        "name": category.name,
+                        "description": category.description,
+                        "color": category.color,
+                        "is_active": category.is_active,
+                    }
+                },
+                message="分类创建成功",
+            ),
+            201,
+        )
+
+
+@ns_score_categories.route("/<int:id>")
+class CategoryResource(Resource):
+
+    @ns_score_categories.doc("get_score_category", security="Bearer")
+    @requires_permission("rule.view")
+    def get(self, id):
+        category = ScoreCategory.query.get_or_404(id)
+        rule_count = ScoreRule.query.filter_by(category_id=id, is_active=True).count()
+
+        return {
+            "success": True,
+            "category": {
+                "id": category.id,
+                "name": category.name,
+                "description": category.description,
+                "color": category.color,
+                "is_active": category.is_active,
+                "rule_count": rule_count,
+                "created_at": category.created_at.isoformat() if category.created_at else None,
+            },
+        }
+
+    @ns_score_categories.doc("update_score_category")
+    @ns_score_categories.expect(category_model)
+    @requires_permission("rule.manage")
+    def put(self, id):
+        category = ScoreCategory.query.get_or_404(id)
+        data = ns_score_categories.payload
+
+        existing = ScoreCategory.query.filter(ScoreCategory.name == data.get("name"), ScoreCategory.id != id).first()
+        if existing:
+            return APIResponse.error(message="分类名称已存在", status_code=400)
+
+        category.name = data.get("name", category.name)
+        category.description = data.get("description", category.description)
+        category.color = data.get("color", category.color)
+        if "is_active" in data:
+            category.is_active = data["is_active"]
+        category.updated_at = datetime.now()
+
+        db.session.commit()
+
+        return APIResponse.success(message="分类更新成功")
+
+    @ns_score_categories.doc("delete_score_category")
+    @requires_permission("rule.manage")
+    def delete(self, id):
+        category = ScoreCategory.query.get_or_404(id)
+
+        rule_count = ScoreRule.query.filter_by(category_id=id).count()
+        if rule_count > 0:
+            return APIResponse.error(message=f"该分类下还有{rule_count}条规则，无法删除", status_code=400)
+
+        db.session.delete(category)
+        db.session.commit()
+
+        return APIResponse.success(message="分类删除成功")
+
+
+@ns_score_categories.route("/<int:id>/rules")
+class CategoryRules(Resource):
+
+    @ns_score_categories.doc("get_score_category_rules")
+    def get(self, id):
+        category = ScoreCategory.query.get_or_404(id)
+
+        rules = ScoreRule.query.filter_by(category_id=id).all()
+
+        return {
+            "success": True,
+            "category_name": category.name,
+            "rules": [
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "description": r.description,
+                    "score": r.score,
+                    "is_active": r.is_active,
+                    "daily_limit": r.daily_limit,
+                    "min_interval": r.min_interval,
+                }
+                for r in rules
+            ],
+        }

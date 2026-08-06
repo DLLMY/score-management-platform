@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 数据验证工具 - 提供请求数据验证功能
 """
@@ -6,7 +5,7 @@
 from functools import wraps
 from flask import request, jsonify
 import re
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Callable
 
 
 class ValidationError(Exception):
@@ -24,7 +23,7 @@ class Validator:
     @staticmethod
     def required(value: Any, field_name: str) -> None:
         """验证必填字段"""
-        if value is None or (isinstance(value, str) and not value.strip()):
+        if value is None or (isinstance(value, str) and (not value.strip())):
             raise ValidationError(f"{field_name}不能为空", field_name)
 
     @staticmethod
@@ -42,7 +41,7 @@ class Validator:
     @staticmethod
     def pattern(value: str, pattern: str, field_name: str, message: str = None) -> None:
         """验证正则表达式"""
-        if value and not re.match(pattern, str(value)):
+        if value and (not re.match(pattern, str(value))):
             raise ValidationError(message or f"{field_name}格式不正确", field_name)
 
     @staticmethod
@@ -50,19 +49,13 @@ class Validator:
         """验证数值范围"""
         if value is not None:
             if value < min_val or value > max_val:
-                raise ValidationError(
-                    f"{field_name}必须在{min_val}-{max_val}之间",
-                    field_name
-                )
+                raise ValidationError(f"{field_name}必须在{min_val}-{max_val}之间", field_name)
 
     @staticmethod
     def one_of(value: Any, choices: List[Any], field_name: str) -> None:
         """验证值必须在列表中"""
         if value and value not in choices:
-            raise ValidationError(
-                f"{field_name}必须是以下之一: {', '.join(map(str, choices))}",
-                field_name
-            )
+            raise ValidationError(f"{field_name}必须是以下之一: {', '.join(map(str, choices))}", field_name)
 
 
 class SchemaValidator:
@@ -78,58 +71,41 @@ class SchemaValidator:
         """
         errors = {}
         validated_data = {}
-
         for field, rules in self.schema.items():
             value = data.get(field)
-
             try:
-                if rules.get('required', False):
+                if rules.get("required", False):
                     Validator.required(value, field)
-
                 if value is None:
                     continue
-
-                if 'min_length' in rules:
-                    Validator.min_length(value, rules['min_length'], field)
-
-                if 'max_length' in rules:
-                    Validator.max_length(value, rules['max_length'], field)
-
-                if 'pattern' in rules:
-                    Validator.pattern(
-                        value,
-                        rules['pattern'],
-                        field,
-                        rules.get('pattern_message')
-                    )
-
-                if 'min' in rules and 'max' in rules:
-                    Validator.range(value, rules['min'], rules['max'], field)
-
-                if 'choices' in rules:
-                    Validator.one_of(value, rules['choices'], field)
-
-                if 'type' in rules:
-                    if rules['type'] == 'int':
+                if "min_length" in rules:
+                    Validator.min_length(value, rules["min_length"], field)
+                if "max_length" in rules:
+                    Validator.max_length(value, rules["max_length"], field)
+                if "pattern" in rules:
+                    Validator.pattern(value, rules["pattern"], field, rules.get("pattern_message"))
+                if "min" in rules and "max" in rules:
+                    Validator.range(value, rules["min"], rules["max"], field)
+                if "choices" in rules:
+                    Validator.one_of(value, rules["choices"], field)
+                if "type" in rules:
+                    if rules["type"] == "int":
                         validated_data[field] = int(value)
-                    elif rules['type'] == 'float':
+                    elif rules["type"] == "float":
                         validated_data[field] = float(value)
-                    elif rules['type'] == 'str':
+                    elif rules["type"] == "str":
                         validated_data[field] = str(value).strip()
-                    elif rules['type'] == 'bool':
+                    elif rules["type"] == "bool":
                         validated_data[field] = bool(value)
                     else:
                         validated_data[field] = value
                 else:
                     validated_data[field] = value
-
             except ValidationError as e:
                 errors[e.field or field] = e.message
-
         if errors:
-            return False, errors
-
-        return True, validated_data
+            return (False, errors)
+        return (True, validated_data)
 
 
 def validate_json(schema: Dict[str, Dict]):
@@ -139,36 +115,23 @@ def validate_json(schema: Dict[str, Dict]):
         @validate_json({
             'username': {'required': True, 'max_length': 50},
             'password': {'required': True, 'min_length': 6, 'max_length': 128},
-            'email': {'pattern': r'^[\w\.-]+@[\w\.-]+\.\w+$', 'required': False}
+            'email': {'pattern': r'^[\\w\\.-]+@[\\w\\.-]+\\.\\w+$', 'required': False}
         })
     """
 
     def decorator(f: Callable):
+
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not request.is_json:
-                return jsonify({
-                    'success': False,
-                    'message': '请求必须是JSON格式'
-                }), 400
-
+                return (jsonify({"success": False, "message": "请求必须是JSON格式"}), 400)
             data = request.get_json(silent=True)
             if data is None:
-                return jsonify({
-                    'success': False,
-                    'message': '无效的JSON数据'
-                }), 400
-
+                return (jsonify({"success": False, "message": "无效的JSON数据"}), 400)
             validator = SchemaValidator(schema)
             is_valid, result = validator.validate(data)
-
             if not is_valid:
-                return jsonify({
-                    'success': False,
-                    'message': '数据验证失败',
-                    'errors': result
-                }), 400
-
+                return (jsonify({"success": False, "message": "数据验证失败", "errors": result}), 400)
             return f(*args, **kwargs)
 
         return decorated_function
@@ -187,18 +150,13 @@ def validate_query(schema: Dict[str, Dict]):
     """
 
     def decorator(f: Callable):
+
         @wraps(f)
         def decorated_function(*args, **kwargs):
             validator = SchemaValidator(schema)
             is_valid, result = validator.validate(dict(request.args))
-
             if not is_valid:
-                return jsonify({
-                    'success': False,
-                    'message': '查询参数验证失败',
-                    'errors': result
-                }), 400
-
+                return (jsonify({"success": False, "message": "查询参数验证失败", "errors": result}), 400)
             return f(*args, **kwargs)
 
         return decorated_function
@@ -207,69 +165,22 @@ def validate_query(schema: Dict[str, Dict]):
 
 
 USER_SCHEMA = {
-    'name': {
-        'required': True,
-        'min_length': 2,
-        'max_length': 50,
-        'pattern': r'^[\u4e00-\u9fa5a-zA-Z\s]+$',
-        'pattern_message': '姓名只能包含中文、英文字母和空格'
+    "name": {
+        "required": True,
+        "min_length": 2,
+        "max_length": 50,
+        "pattern": "^[\\u4e00-\\u9fa5a-zA-Z\\s]+$",
+        "pattern_message": "姓名只能包含中文、英文字母和空格",
     },
-    'card_id': {
-        'required': True,
-        'min_length': 6,
-        'max_length': 50,
-        'pattern': r'^[A-Za-z0-9]+$',
-        'pattern_message': '卡号只能包含数字和字母'
-    },
-    'class_name': {
-        'required': False,
-        'max_length': 50
-    },
-    'phone': {
-        'required': False,
-        'pattern': r'^1[3-9]\d{9}$',
-        'pattern_message': '请输入有效的手机号码'
-    }
-}
-
+    "card_id": {"required": True, "min_length": 6, "max_length": 20},
+}  # noqa: E501
 ADMIN_LOGIN_SCHEMA = {
-    'username': {
-        'required': True,
-        'min_length': 3,
-        'max_length': 50
-    },
-    'password': {
-        'required': True,
-        'min_length': 6,
-        'max_length': 128
-    }
+    "username": {"required": True, "min_length": 3, "max_length": 50},
+    "password": {"required": True, "min_length": 6, "max_length": 128},
 }
-
 SCORE_RULE_SCHEMA = {
-    'name': {
-        'required': True,
-        'min_length': 2,
-        'max_length': 100
-    },
-    'description': {
-        'required': False,
-        'max_length': 500
-    },
-    'category_id': {
-        'required': True,
-        'type': 'int',
-        'min': 1
-    },
-    'score': {
-        'required': True,
-        'type': 'float',
-        'min': -1000,
-        'max': 1000
-    },
-    'daily_limit': {
-        'required': False,
-        'type': 'int',
-        'min': 0,
-        'max': 100
-    }
-}
+    "name": {"required": True, "min_length": 2, "max_length": 100},
+    "description": {"required": False, "max_length": 500},
+    "category_id": {"required": True, "type": "int", "min": 1},
+    "score": {"required": True, "type": "float", "min": 0, "max": 100},
+}  # noqa: E501

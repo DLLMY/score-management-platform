@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "colors": {
+    "primary": "#3498db",
+    "success": "#27ae60",
+    "warning": "#f39c12",
+    "danger": "#e74c3c",
+    "info": "#3498db",
+    "background": "#ecf0f1",
+    "text_primary": "#2c3e50",
+    "text_secondary": "#7f8c8d",
+    "score_positive": "#27ae60",
+    "score_negative": "#e74c3c"
+  },
+  "fonts": {
+    "title": "微软雅黑",
+    "body": "微软雅黑",
+    "code": "Consolas"
+  },
+  "animation": {
+    "scroll_speed": 40,
+    "transition_duration": 200
+  },
+  "window": {
+    "score_width": 300,
+    "score_height": 400,
+    "banner_height": 70
+  }
+}

@@ -32,3 +32,35 @@ click>=8.0
 itsdangerous>=2.0
 Jinja2>=3.0
 MarkupSafe>=2.0
+
+# ================ 运行期实际依赖（此前缺失，导致 pip install 后无法启动） ================
+flask-socketio>=5.3
+celery>=5.3
+dependency-injector>=4.41
+prometheus-client>=0.19
+concurrent-log-handler>=0.9.25
+
+# 数据处理 / 报表导出
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+openpyxl>=3.0
+xlsxwriter>=3.0
+xlrd>=2.0
+xlwt>=1.3
+reportlab>=4.0
+
+# 中文 NLP / 机器学习（按需启用；torch/transformers 体积较大）
+jieba>=0.42
+pypinyin>=0.49
+scikit-learn>=1.3
+xgboost>=2.0
+lightgbm>=4.0
+catboost>=1.2
+shap>=0.43
+gensim>=4.3
+# 注意：torch / transformers 体积大，生产部署建议用 CPU 版：
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install transformers
+torch>=2.0
+transformers>=4.30

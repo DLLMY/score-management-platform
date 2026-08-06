@@ -1,0 +1,4081 @@
+{
+  "matched_count": 148,
+  "only_in_backend_count": 801,
+  "only_in_frontend_count": 217,
+  "only_in_frontend": [
+    {
+      "method": "DELETE",
+      "url": "/api/activity/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/activity/{param}/register"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/admin_notifications/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/admins/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/approvals/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/class-periods/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/classes/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/committee/members/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/course-schedules/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/culture/records/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/device-group/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/device-group/{param}/devices"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/devices/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/duty/groups/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/exams/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/firmware/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/homework/assignments/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/import/configs/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/nlp/corrections/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/nlp/rules/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/notifications/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/notify_history/clean{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/notify_templates/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/parent/contacts/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rank-rules/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/roles/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rules/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/scheduled_notify/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/score-categories/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/scores/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/seating/charts/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/study-group/groups/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/study-group/groups/{param}/members"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/study-guide/guides/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/study-guide/plans/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/subjects/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/subjects/{param}/classes/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/time-rules/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/users/{param}"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/wol/devices/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/activity?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/activity/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin-classes/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin_notifications/count{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admins/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/group/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/sudden/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/trend/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/cluster{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/composite-score{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/prediction/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/reward/daily-usage/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/reward/eligible/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/risk-predict/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-distribution/statistics{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-ecosystem/balance/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-predict/distribution{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-predict/{param}?days={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/statistics{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/warning{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/class/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/user/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/approvals/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/attendance/leaves?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/attendance/records?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/attendance/stats?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/class-periods/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/classes/{param}/students"
+    },
+    {
+      "method": "GET",
+      "url": "/api/committee/members?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/check-conflict{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/culture/records?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/by-device/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/ungrouped-devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/{param}/devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/alerts{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/{param}/heartbeats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/duty/groups?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/exams/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/firmware"
+    },
+    {
+      "method": "GET",
+      "url": "/api/homework/assignments?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/homework/assignments/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/configs/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/configs{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/mental-health/alerts?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/mental-health/records?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/corrections{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/model/training-history{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/rules/{param}/usage"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/rules{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notifications/unread"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notify_history/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notify_templates/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/parent/contacts?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/parent/logs?parent_id={param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rank-rules/get-rank/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/records/user/{param}{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/roles"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rules{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/scheduled_notify/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-analysis/class/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-analysis/exam/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-analysis/student/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/scores{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/seating/charts?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/seating/charts/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/study-group/groups?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/study-group/groups/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/study-guide/guides?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/study-guide/plans?{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/{param}/classes"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/{param}/toggle"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/time-rules/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users/by-card/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users/{param}"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users{param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/activity"
+    },
+    {
+      "method": "POST",
+      "url": "/api/activity/{param}/register"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin-classes/{param}/assign-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin-classes/{param}/remove-class/{param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin_notifications/read_all{param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin_notifications/{param}/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admins/{param}/change-password"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/score-distribution/adjust{param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/warning/{param}/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/approvals/{param}/approve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/approvals/{param}/reject"
+    },
+    {
+      "method": "POST",
+      "url": "/api/attendance/batch"
+    },
+    {
+      "method": "POST",
+      "url": "/api/attendance/leaves"
+    },
+    {
+      "method": "POST",
+      "url": "/api/attendance/leaves/{param}/approve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/attendance/records"
+    },
+    {
+      "method": "POST",
+      "url": "/api/committee/members"
+    },
+    {
+      "method": "POST",
+      "url": "/api/culture/records"
+    },
+    {
+      "method": "POST",
+      "url": "/api/device-group/{param}/devices"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/{param}/alerts/{param}/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/{param}/bind-admin"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/{param}/bind-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/{param}/ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/{param}/remote-control"
+    },
+    {
+      "method": "POST",
+      "url": "/api/duty/assignments"
+    },
+    {
+      "method": "POST",
+      "url": "/api/duty/assignments/{param}/complete"
+    },
+    {
+      "method": "POST",
+      "url": "/api/duty/groups"
+    },
+    {
+      "method": "POST",
+      "url": "/api/exams/{param}/close"
+    },
+    {
+      "method": "POST",
+      "url": "/api/exams/{param}/publish"
+    },
+    {
+      "method": "POST",
+      "url": "/api/exams/{param}/scores"
+    },
+    {
+      "method": "POST",
+      "url": "/api/firmware/{param}/ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/homework/assignments"
+    },
+    {
+      "method": "POST",
+      "url": "/api/homework/assignments/{param}/check"
+    },
+    {
+      "method": "POST",
+      "url": "/api/homework/assignments/{param}/submit"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import/configs/{param}/set-default"
+    },
+    {
+      "method": "POST",
+      "url": "/api/mental-health/alerts/{param}/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/mental-health/records"
+    },
+    {
+      "method": "POST",
+      "url": "/api/mqtt/logs?limit={param}&_={param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/mqtt/status?_={param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notifications/read-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notifications/{param}/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notify_templates/{param}/use"
+    },
+    {
+      "method": "POST",
+      "url": "/api/parent/contacts"
+    },
+    {
+      "method": "POST",
+      "url": "/api/parent/logs"
+    },
+    {
+      "method": "POST",
+      "url": "/api/parent/logs/{param}/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/remote_notify/send_to_device/{param}"
+    },
+    {
+      "method": "POST",
+      "url": "/api/roles"
+    },
+    {
+      "method": "POST",
+      "url": "/api/scheduled_notify/{param}/cancel"
+    },
+    {
+      "method": "POST",
+      "url": "/api/scheduled_notify/{param}/trigger"
+    },
+    {
+      "method": "POST",
+      "url": "/api/scores/confirm-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/scores/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/seating/charts"
+    },
+    {
+      "method": "POST",
+      "url": "/api/seating/charts/{param}/auto-arrange"
+    },
+    {
+      "method": "POST",
+      "url": "/api/study-group/groups"
+    },
+    {
+      "method": "POST",
+      "url": "/api/study-group/groups/{param}/members"
+    },
+    {
+      "method": "POST",
+      "url": "/api/study-group/groups/{param}/score"
+    },
+    {
+      "method": "POST",
+      "url": "/api/study-guide/guides"
+    },
+    {
+      "method": "POST",
+      "url": "/api/study-guide/plans"
+    },
+    {
+      "method": "POST",
+      "url": "/api/subjects/order"
+    },
+    {
+      "method": "POST",
+      "url": "/api/subjects/{param}/classes"
+    },
+    {
+      "method": "POST",
+      "url": "/api/time-rules/check"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/activity/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/admins/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/algorithm/warning/config"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/class-periods/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/classes/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/committee/members/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/course-schedules/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/culture/records/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/device-group/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/devices/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/devices/{param}/settings"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/exams/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/firmware/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/homework/assignments/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/import/configs/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/nlp/corrections/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/nlp/rules/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/notify_templates/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/parent/contacts/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rank-rules/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/roles/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rules/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/scheduled_notify/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/score-categories/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/scores/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/seating/charts/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/seating/charts/{param}/seats"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/study-group/groups/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/study-guide/guides/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/study-guide/plans/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/study-guide/plans/{param}/progress"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/subjects/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/subjects/{param}/classes/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/time-rules/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/users/{param}"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/wol/devices/{param}"
+    }
+  ],
+  "only_in_backend": [
+    {
+      "method": "DELETE",
+      "url": "/api/admin_notifications/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/admins/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/alerts/<int:alert_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/approvals/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/class-periods/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/classes/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/course-schedules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/device-group/<int:group_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/device-group/<int:group_id>/devices/<int:device_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/devices/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/exams/<int:exam_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/firmware/versions/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/import/configs/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/import_export/backup/delete/<filename>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/nlp/corrections/<int:correction_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/nlp/rules/<int:rule_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/notifications/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/notify_history/clean"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/notify_templates/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rank-rules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rbac/admin-roles/<int:admin_id>/<string:role_code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rbac/permissions/<string:code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rbac/role-permissions/<string:role_code>/<string:permission_code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rbac/roles/<string:role_code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/records/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/rules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/scheduled_notify/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/score-categories/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/scores/<int:score_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/security/clear-rate-limit"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/subjects/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/subjects/<int:subject_id>/classes/<int:class_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/time-rules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/user-management/blacklist/<string:card_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/users/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/admin_notifications/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/admins/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/alerts/<int:alert_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/approvals/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/class-periods/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/classes/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/course-schedules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/device-group/<int:group_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/device-group/<int:group_id>/devices/<int:device_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/devices/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/exams/<int:exam_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/firmware/versions/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/import/configs/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/import_export/backup/delete/<filename>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/nlp/corrections/<int:correction_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/nlp/rules/<int:rule_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/notifications/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/notify_history/clean"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/notify_templates/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/rank-rules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/rbac/admin-roles/<int:admin_id>/<string:role_code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/rbac/permissions/<string:code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/rbac/role-permissions/<string:role_code>/<string:permission_code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/rbac/roles/<string:role_code>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/records/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/rules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/scheduled_notify/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/score-categories/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/scores/<int:score_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/security/clear-rate-limit"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/subjects/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/subjects/<int:subject_id>/classes/<int:class_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/time-rules/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/user-management/blacklist/<string:card_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/users/<int:id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/v1/wol/devices/<int:device_id>"
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/wol/devices/<int:device_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin-classes/<int:admin_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin_notifications/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin_notifications/count"
+    },
+    {
+      "method": "GET",
+      "url": "/api/admins/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/alerts/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/alerts/<int:alert_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/alerts/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/group/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/sudden/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/anomaly/trend/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/cluster"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/cluster/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/composite-score"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/composite-score/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/prediction/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/reward/daily-usage/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/reward/eligible/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/risk-predict/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-distribution/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-ecosystem/balance/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-predict/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/score-predict/distribution"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/algorithm/warning"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/class-compare"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/class-ranking"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/class/<string:class_name>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/dashboard-summary"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/student-ranking"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/unlock-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/analysis/user/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/api/docs/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/approvals/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/approvals/pending"
+    },
+    {
+      "method": "GET",
+      "url": "/api/class-periods/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/classes/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/classes/<class_param>/students"
+    },
+    {
+      "method": "GET",
+      "url": "/api/classes/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/classes/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/classes/validate-associations"
+    },
+    {
+      "method": "GET",
+      "url": "/api/consistency/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/consistency/report"
+    },
+    {
+      "method": "GET",
+      "url": "/api/consistency/status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/check-conflict"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/class/<int:class_info_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/course-schedules/options"
+    },
+    {
+      "method": "GET",
+      "url": "/api/dashboard/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/<int:group_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/<int:group_id>/devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/device/<int:device_id>/groups"
+    },
+    {
+      "method": "GET",
+      "url": "/api/device-group/options"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/<int:id>/alerts"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/<int:id>/heartbeats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/admin/<int:admin_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/alerts"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/class/<int:class_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/device/<string:device_id>/heartbeats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/heartbeat-timeout-check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/devices/online"
+    },
+    {
+      "method": "GET",
+      "url": "/api/exam-import/history"
+    },
+    {
+      "method": "GET",
+      "url": "/api/exam-import/template"
+    },
+    {
+      "method": "GET",
+      "url": "/api/exams/<int:exam_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/export/categories"
+    },
+    {
+      "method": "GET",
+      "url": "/api/export/devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/export/records"
+    },
+    {
+      "method": "GET",
+      "url": "/api/export/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/export/summary"
+    },
+    {
+      "method": "GET",
+      "url": "/api/export/users"
+    },
+    {
+      "method": "GET",
+      "url": "/api/firmware/download/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/firmware/latest"
+    },
+    {
+      "method": "GET",
+      "url": "/api/firmware/ota/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/firmware/versions/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/configs"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/configs/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/configs/default/<string:module_name>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/module-fields/<string:module_name>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import/template/<string:template_type>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/backup/list"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/backup/schedule/status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/backup/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/export/categories"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/export/records"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/export/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/export/users"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/template/category"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/template/rule"
+    },
+    {
+      "method": "GET",
+      "url": "/api/import_export/template/user"
+    },
+    {
+      "method": "GET",
+      "url": "/api/mqtt/logs"
+    },
+    {
+      "method": "GET",
+      "url": "/api/mqtt/recent"
+    },
+    {
+      "method": "GET",
+      "url": "/api/mqtt/status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/analysis/errors"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/corrections"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/model/bias-analysis"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/model/explanation"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/model/training-history"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/performance/monitor"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/performance/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/rules/<int:rule_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/nlp/rules/<int:rule_id>/usage"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notification-config/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notifications/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notifications/user/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notify_history/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/notify_templates/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rank-rules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rank-rules/get-rank/<int:score>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/admin-roles/<int:admin_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/permissions"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/permissions/<string:code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/role-hierarchy/<string:role_code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/role-permissions/<string:role_code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/roles"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rbac/roles/<string:role_code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/records/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/records/score-entry"
+    },
+    {
+      "method": "GET",
+      "url": "/api/records/user/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rules/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rules/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rules/template/download"
+    },
+    {
+      "method": "GET",
+      "url": "/api/rules/templates"
+    },
+    {
+      "method": "GET",
+      "url": "/api/scheduled_notify/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-analysis/exam/<int:exam_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-analysis/rankings/<int:exam_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-categories/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/score-categories/<int:id>/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/scores/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/scores/<int:score_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/security/audit-logs"
+    },
+    {
+      "method": "GET",
+      "url": "/api/security/audit-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/security/rate-limit-status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/security/suspicious-ips"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/<int:id>/classes"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/<int:id>/toggle"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/subjects/template"
+    },
+    {
+      "method": "GET",
+      "url": "/api/swagger.json"
+    },
+    {
+      "method": "GET",
+      "url": "/api/system/cache-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/system/csrf-token"
+    },
+    {
+      "method": "GET",
+      "url": "/api/system/health"
+    },
+    {
+      "method": "GET",
+      "url": "/api/system/performance"
+    },
+    {
+      "method": "GET",
+      "url": "/api/system/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/time-rules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/time-rules/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/user-management/blacklist"
+    },
+    {
+      "method": "GET",
+      "url": "/api/user-management/blacklist-check/<string:card_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/user-management/unlock-limit/<string:card_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/user-management/user-status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users/by-card/<string:cardId>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/users/template/download"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admin-classes/<int:admin_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admin_notifications/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admin_notifications/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admin_notifications/count"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admin_notifications/recent"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admins/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admins/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/admins/csrf-token"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/alerts/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/alerts/<int:alert_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/alerts/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/all"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/anomaly/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/anomaly/batch"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/anomaly/group/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/anomaly/sudden/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/anomaly/trend/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/cluster"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/cluster/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/composite-score"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/composite-score/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/composite-score/progress"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/prediction/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/prediction/batch"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/prediction/risk"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/reward/daily-usage/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/reward/eligible/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/reward/types"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/risk-predict/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/risk-predict/batch"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/risk-predict/evaluate"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/risk-predict/high-risk"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/rule-recommend"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/rule-recommend/combination"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/rule-recommend/evaluate"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/rule-recommend/new"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/rule-recommend/optimization"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/rule-recommend/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-distribution/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-ecosystem/balance/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-ecosystem/earning-rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-ecosystem/spending-rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-predict/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-predict/batch"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-predict/distribution"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/score-predict/evaluate"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/warning"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/algorithm/warning/config"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/class-compare"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/class-ranking"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/class/<string:class_name>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/dashboard-summary"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/student-ranking"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/unlock-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/analysis/user/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/api/v1/docs/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/approvals/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/approvals/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/approvals/pending"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/class-periods/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/class-periods/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/class-periods/active"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/classes/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/classes/<class_param>/students"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/classes/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/classes/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/classes/validate-associations"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/consistency/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/consistency/report"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/consistency/status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/course-schedules/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/course-schedules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/course-schedules/check-conflict"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/course-schedules/class/<int:class_info_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/course-schedules/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/course-schedules/options"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/dashboard/data"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/dashboard/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/device-group/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/device-group/<int:group_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/device-group/<int:group_id>/devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/device-group/device/<int:device_id>/groups"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/device-group/options"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/device-group/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/<int:id>/alerts"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/<int:id>/heartbeats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/admin/<int:admin_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/advanced-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/alerts"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/class/<int:class_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/device/<string:device_id>/heartbeats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/heartbeat-timeout-check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/online"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/devices/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/exam-import/history"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/exam-import/template"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/exams/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/exams/<int:exam_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/export/categories"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/export/devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/export/records"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/export/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/export/summary"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/export/users"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/download/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/latest"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/ota-status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/ota/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/upgrade-records"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/versions"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/firmware/versions/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import/configs"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import/configs/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import/configs/default/<string:module_name>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import/module-fields/<string:module_name>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import/template/<string:template_type>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/backup/list"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/backup/schedule/status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/backup/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/export/categories"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/export/records"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/export/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/export/users"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/template/category"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/template/rule"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/import_export/template/user"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/mqtt/config"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/mqtt/logs"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/mqtt/recent"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/mqtt/status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/analysis/comprehensive"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/analysis/errors"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/analysis/intent"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/analysis/performance"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/analysis/suggestions"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/corrections"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/model/algorithms"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/model/bias-analysis"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/model/evaluate"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/model/evaluate-all"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/model/explanation"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/model/training-history"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/optimization/config"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/performance/monitor"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/performance/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/rules/<int:rule_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/rules/<int:rule_id>/usage"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/rules/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/nlp/rules/suggest"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notification-config/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notifications/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notifications/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notifications/user/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notify_history/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notify_history/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notify_history/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notify_templates/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notify_templates/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/notify_templates/categories"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/operation-logs/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/operation-logs/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/operation-logs/summary"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/permission-logs/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rank-rules/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rank-rules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rank-rules/get-rank/<int:score>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/admin-roles/<int:admin_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/permissions"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/permissions/<string:code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/role-hierarchy/<string:role_code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/role-permissions/<string:role_code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/roles"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rbac/roles/<string:role_code>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/records/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/records/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/records/score-entry"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/records/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/records/user/<int:user_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rules/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rules/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rules/statistics"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rules/template/download"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/rules/templates"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/scheduled_notify/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/scheduled_notify/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/score-analysis/exam/<int:exam_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/score-analysis/rankings/<int:exam_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/score-categories/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/score-categories/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/score-categories/<int:id>/rules"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/scores/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/scores/<int:score_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/security/audit-logs"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/security/audit-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/security/rate-limit-status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/security/suspicious-ips"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/subjects/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/subjects/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/subjects/<int:id>/classes"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/subjects/<int:id>/toggle"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/subjects/export"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/subjects/template"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/swagger.json"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/backups"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/cache-stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/config"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/csrf-token"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/health"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/performance"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/system/stats"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/time-rules/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/time-rules/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/time-rules/check"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/user-management/blacklist"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/user-management/blacklist-check/<string:card_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/user-management/unlock-limit/<string:card_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/user-management/user-status"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/users/"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/users/<int:id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/users/by-card/<string:cardId>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/users/template/download"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/wol/devices"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/wol/devices/<int:device_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/wol/status/<mac_address>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/wol/validate"
+    },
+    {
+      "method": "GET",
+      "url": "/api/versions"
+    },
+    {
+      "method": "GET",
+      "url": "/api/wol/devices/<int:device_id>"
+    },
+    {
+      "method": "GET",
+      "url": "/api/wol/status/<mac_address>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin-classes/<int:admin_id>/assign-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin-classes/<int:admin_id>/remove-class/<int:class_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin_notifications/<int:id>/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin_notifications/read_all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admins/<int:admin_id>/assign-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admins/<int:admin_id>/remove-class/<int:class_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admins/<int:id>/change-password"
+    },
+    {
+      "method": "POST",
+      "url": "/api/admins/refresh-token"
+    },
+    {
+      "method": "POST",
+      "url": "/api/alerts/cleanup"
+    },
+    {
+      "method": "POST",
+      "url": "/api/alerts/read-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/alerts/read/<int:alert_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/alerts/test"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/cluster"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/composite-score"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/score-distribution/adjust"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/warning"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/warning/<int:warning_id>/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/algorithm/warning/config"
+    },
+    {
+      "method": "POST",
+      "url": "/api/approvals/<int:id>/approve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/approvals/<int:id>/reject"
+    },
+    {
+      "method": "POST",
+      "url": "/api/auth/logout"
+    },
+    {
+      "method": "POST",
+      "url": "/api/classes/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/classes/validate-associations"
+    },
+    {
+      "method": "POST",
+      "url": "/api/consistency/fix"
+    },
+    {
+      "method": "POST",
+      "url": "/api/course-schedules/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/device-group/<int:group_id>/devices"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/<int:id>/alerts/<int:alert_id>/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/<int:id>/bind-admin"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/<int:id>/bind-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/<int:id>/ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/<int:id>/remote-control"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/<int:id>/resolve-alert/<int:alert_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/batch-control"
+    },
+    {
+      "method": "POST",
+      "url": "/api/devices/ota-upgrade-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/exam-import/execute"
+    },
+    {
+      "method": "POST",
+      "url": "/api/exam-import/preview"
+    },
+    {
+      "method": "POST",
+      "url": "/api/exam-import/validate"
+    },
+    {
+      "method": "POST",
+      "url": "/api/export/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/export/errors"
+    },
+    {
+      "method": "POST",
+      "url": "/api/firmware/<int:firmware_id>/ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/firmware/batch-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/firmware/ota/report"
+    },
+    {
+      "method": "POST",
+      "url": "/api/firmware/versions"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import/configs/set-default/<int:id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/backup/clean_old"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/backup/create"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/backup/restore/<filename>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/backup/schedule/disable"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/backup/schedule/enable"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/backup/schedule/set_time"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/import/categories"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/import/rules"
+    },
+    {
+      "method": "POST",
+      "url": "/api/import_export/import/users"
+    },
+    {
+      "method": "POST",
+      "url": "/api/mqtt/command"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/model/dynamic-weighted-predict"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/model/ensemble-predict"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/model/incremental-train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/model/online-train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/model/predict-multi"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/model/predict-with-explanation"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/parse/context-aware"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/parse/deep-semantic"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/parse/entities"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/parse/multi-intent"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/parse/with-analysis"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/performance/clear-cache"
+    },
+    {
+      "method": "POST",
+      "url": "/api/nlp/performance/warmup"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notification-config/test-sms"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notification-config/test-wechat"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notifications/<int:id>/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notifications/send"
+    },
+    {
+      "method": "POST",
+      "url": "/api/notify_templates/<int:id>/use"
+    },
+    {
+      "method": "POST",
+      "url": "/api/rbac/admin-roles/<int:admin_id>/<string:role_code>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/rbac/permissions"
+    },
+    {
+      "method": "POST",
+      "url": "/api/rbac/role-permissions/<string:role_code>/<string:permission_code>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/rbac/roles"
+    },
+    {
+      "method": "POST",
+      "url": "/api/records/batch-entry"
+    },
+    {
+      "method": "POST",
+      "url": "/api/records/score-entry"
+    },
+    {
+      "method": "POST",
+      "url": "/api/remote_notify/send_to_device/<device_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/rules/templates/apply"
+    },
+    {
+      "method": "POST",
+      "url": "/api/scheduled_notify/<int:id>/cancel"
+    },
+    {
+      "method": "POST",
+      "url": "/api/scheduled_notify/<int:id>/trigger"
+    },
+    {
+      "method": "POST",
+      "url": "/api/security/verify-token"
+    },
+    {
+      "method": "POST",
+      "url": "/api/subjects/<int:id>/classes"
+    },
+    {
+      "method": "POST",
+      "url": "/api/subjects/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/system/cache-stats"
+    },
+    {
+      "method": "POST",
+      "url": "/api/system/frontend-error"
+    },
+    {
+      "method": "POST",
+      "url": "/api/system/frontend-performance"
+    },
+    {
+      "method": "POST",
+      "url": "/api/system/frontend-performance/batch"
+    },
+    {
+      "method": "POST",
+      "url": "/api/user-management/blacklist/<string:card_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/user-management/user/<int:user_id>/toggle-active"
+    },
+    {
+      "method": "POST",
+      "url": "/api/users/import-file"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admin-classes/<int:admin_id>/assign-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admin-classes/<int:admin_id>/remove-class/<int:class_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admin_notifications/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admin_notifications/<int:id>/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admin_notifications/read_all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admins/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admins/<int:admin_id>/assign-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admins/<int:admin_id>/remove-class/<int:class_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admins/<int:id>/change-password"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admins/login"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/admins/refresh-token"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/alerts/cleanup"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/alerts/read-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/alerts/read/<int:alert_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/alerts/test"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/cluster"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/cluster/recalculate"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/composite-score"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/composite-score/recalculate"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/reward/phone-access"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/reward/redeem"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/risk-predict/train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/rule-engine/apply-by-behavior"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/rule-engine/execute"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/rule-recommend/train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/run"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-distribution/adjust"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-distribution/validate"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-ecosystem/earn"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-ecosystem/spend"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-predict/train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-validator/detect-outliers"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/score-validator/validate-and-correct"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/warning"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/warning/<int:warning_id>/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/warning/config"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/algorithm/warning/evaluate"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/approvals/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/approvals/<int:id>/approve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/approvals/<int:id>/reject"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/box/verify"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/class-periods/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/class-periods/reset"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/classes/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/classes/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/classes/validate-associations"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/consistency/fix"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/course-schedules/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/course-schedules/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/device-group/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/device-group/<int:group_id>/devices"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/<int:id>/alerts/<int:alert_id>/resolve"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/<int:id>/bind-admin"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/<int:id>/bind-class"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/<int:id>/ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/<int:id>/remote-control"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/<int:id>/resolve-alert/<int:alert_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/batch-control"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/bulk-ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/devices/ota-upgrade-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/exam-import/execute"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/exam-import/preview"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/exam-import/validate"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/exams/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/export/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/export/errors"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/firmware/<int:firmware_id>/ota-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/firmware/batch-upgrade"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/firmware/ota/report"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/firmware/upload"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/firmware/versions"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import/configs"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import/configs/set-default/<int:id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/backup/clean_old"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/backup/create"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/backup/restore/<filename>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/backup/schedule/disable"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/backup/schedule/enable"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/backup/schedule/set_time"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/import/categories"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/import/rules"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/import_export/import/users"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/command"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/connect"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/disconnect"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/publish"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/subscribe"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/unlock"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/mqtt/unsubscribe"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/analysis/reset"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/batch-parse"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/benchmark/intent-classifier"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/execute"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/feedback/record"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/dynamic-weighted-predict"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/ensemble-predict"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/incremental-train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/online-train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/predict"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/predict-multi"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/predict-with-explanation"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/train"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/model/train-all"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/optimization/auto-tune"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/optimization/config"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/parse"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/parse/context-aware"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/parse/deep-semantic"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/parse/entities"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/parse/multi-intent"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/parse/with-analysis"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/performance/clear-cache"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/performance/warmup"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/rules"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/rules/batch-import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/nlp/sentiment"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notification-config/test-sms"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notification-config/test-wechat"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notifications/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notifications/<int:id>/read"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notifications/send"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notify_templates/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/notify_templates/<int:id>/use"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rank-rules/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rbac/admin-roles/<int:admin_id>/<string:role_code>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rbac/permissions"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rbac/role-permissions/<string:role_code>/<string:permission_code>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rbac/roles"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/records/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/records/batch-entry"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/records/score-entry"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/remote_notify/broadcast"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/remote_notify/score_change"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/remote_notify/send"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/remote_notify/send_to_device/<device_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/remote_notify/test"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rules/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rules/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/rules/templates/apply"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/scheduled_notify/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/scheduled_notify/<int:id>/cancel"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/scheduled_notify/<int:id>/trigger"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/score-categories/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/scores/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/security/verify-token"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/subjects/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/subjects/<int:id>/classes"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/subjects/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/backup"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/cache-stats"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/clear-cache"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/frontend-error"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/frontend-performance"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/frontend-performance/batch"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/system/restore"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/time-rules/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/user-management/blacklist/<string:card_id>"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/user-management/user/<int:user_id>/toggle-active"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/users/"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/users/batch-delete"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/users/batch-score"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/users/import"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/users/import-file"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/wol/devices"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/wol/wake"
+    },
+    {
+      "method": "POST",
+      "url": "/api/v1/wol/wake/batch"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/admins/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/alerts/<int:alert_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/approvals/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/class-periods/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/classes/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/course-schedules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/device-group/<int:group_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/devices/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/devices/<int:id>/settings"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/exams/<int:exam_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/firmware/versions/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/import/configs/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/nlp/corrections/<int:correction_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/nlp/rules/<int:rule_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/notification-config/"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/notifications/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/notify_templates/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rank-rules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rbac/admin-roles/<int:admin_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rbac/permissions/<string:code>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rbac/role-permissions/<string:role_code>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rbac/roles/<string:role_code>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/rules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/scheduled_notify/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/score-categories/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/scores/<int:score_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/subjects/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/subjects/<int:subject_id>/classes/<int:class_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/time-rules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/user-management/unlock-limit/<string:card_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/users/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/admins/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/alerts/<int:alert_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/approvals/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/class-periods/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/class-periods/batch"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/classes/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/course-schedules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/device-group/<int:group_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/devices/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/devices/<int:id>/settings"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/exams/<int:exam_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/firmware/versions/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/import/configs/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/mqtt/config"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/nlp/corrections/<int:correction_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/nlp/rules/<int:rule_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/notification-config/"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/notifications/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/notify_templates/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/rank-rules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/rbac/admin-roles/<int:admin_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/rbac/permissions/<string:code>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/rbac/role-permissions/<string:role_code>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/rbac/roles/<string:role_code>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/rules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/scheduled_notify/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/score-categories/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/scores/<int:score_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/subjects/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/subjects/<int:subject_id>/classes/<int:class_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/system/config"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/time-rules/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/user-management/unlock-limit/<string:card_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/users/<int:id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/v1/wol/devices/<int:device_id>"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/wol/devices/<int:device_id>"
+    }
+  ]
+}

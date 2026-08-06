@@ -96,15 +96,6 @@ cp .env.example .env
 
 ### 3. 安装依赖
 
-**方式一：使用部署脚本（推荐，Windows）**
-
-```bash
-cd deploy
-install_dependencies.bat
-```
-
-**方式二：手动安装**
-
 ```bash
 # 后端
 cd backend
@@ -117,24 +108,22 @@ npm install
 
 ### 4. 启动项目
 
-**方式一：使用一键启动脚本（推荐，Windows）**
+**后端**（终端 1）：
 
 ```bash
-cd deploy
-start.bat
+cd backend
+python run.py --env development
+# 调试模式：python run.py --env development --debug
 ```
 
-**方式二：手动启动**
+**前端**（终端 2）：
 
 ```bash
-# 终端1 - 启动后端
-cd backend
-python app.py
-
-# 终端2 - 启动前端
 cd frontend
 npm start
 ```
+
+> 📖 完整的启动流程（开发/测试/生产）请参考 [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md)
 
 ### 5. 访问系统
 
@@ -149,7 +138,7 @@ npm start
 
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
-| 管理员 | admin | admin123 |
+| 管理员 | admin | 123456 |
 
 ## 🔄 CI/CD 流水线
 
@@ -215,10 +204,11 @@ class-manger-integral/
 │   ├── tests/              # 测试用例
 │   ├── instance/           # 数据库文件 (gitignore)
 │   ├── backups/            # 备份文件 (gitignore)
-│   ├── app.py              # 主应用入口
+│   ├── app.py              # 应用工厂（create_app）
+│   ├── run.py              # 统一启动脚本（开发/生产）
+│   ├── wsgi.py             # WSGI 入口（Waitress/Gunicorn）
 │   ├── requirements.txt    # Python依赖
-│   ├── .env.example        # 环境变量模板
-│   └── run.py              # 统一启动脚本
+│   └── .env.example        # 环境变量模板
 │
 ├── frontend/               # 前端代码
 │   ├── public/             # 静态资源
@@ -237,20 +227,20 @@ class-manger-integral/
 │   └── .env.example        # 环境变量模板
 │
 ├── deploy/                 # 部署相关
-│   ├── start.bat           # 一键启动
-│   ├── start_manual.bat    # 手动启动
-│   ├── stop.bat            # 停止服务
-│   ├── check_services.bat  # 服务状态检查
-│   ├── install_dependencies.bat
+│   ├── start_server.bat    # 服务器模式启动（生产环境）
+│   ├── stop_all.bat        # 停止所有服务
+│   ├── server_deploy.ps1   # PowerShell 部署脚本
 │   ├── service_manager.py  # 服务管理器
-│   ├── verify_deployment.bat
-│   ├── windows-service.ps1 # Windows服务管理
-│   ├── deploy-production.ps1 # 生产部署脚本
+│   ├── 一键部署.py          # Python 一键部署脚本
 │   ├── ngrok/              # ngrok配置
+│   ├── redis/              # Redis 配置
 │   ├── README.md           # 部署说明
 │   ├── QUICK_REFERENCE.md  # 快速参考
 │   ├── DEPLOYMENT_GUIDE.md # 完整指南
-│   └── CICD_GUIDE.md       # CI/CD指南
+│   ├── ENV_CONFIG.md       # 环境变量配置
+│   ├── CONFIG_GUIDE.md     # 配置指南
+│   ├── RELEASE_GUIDE.md    # 发布流程指南
+│   └── BRANCH_STRATEGY.md  # 分支策略指南
 │
 ├── docs/                   # 文档
 ├── mqtt-test-tool/         # MQTT测试工具
@@ -311,13 +301,16 @@ chore: 构建/工具相关
 cd backend
 
 # 开发模式启动
-python app.py
+python run.py --env development
 
-# 生产模式启动
-python run.py
+# 生产模式启动（Waitress）
+waitress-serve --host=0.0.0.0 --port=5000 wsgi:application
 
 # 运行测试
 python -m pytest tests/ -v
+
+# 前后端联合测试
+python scripts/joint_test_v2.py
 ```
 
 ### 前端开发
@@ -343,42 +336,46 @@ npm test
 
 ## 🚀 部署说明
 
-### 快速部署（Windows）
+### 快速部署（Windows 服务器模式）
 
 ```bash
 cd deploy
 
-# 1. 安装依赖
-install_dependencies.bat
+# 启动服务（后台运行，生产模式）
+start_server.bat
 
-# 2. 验证部署包
-verify_deployment.bat
-
-# 3. 启动服务
-start.bat
-```
-
-### Windows 服务管理
-
-```powershell
-# 查看状态
-.\deploy\windows-service.ps1 -Action status
-
-# 启动服务
-.\deploy\windows-service.ps1 -Action start
-
-# 停止服务
-.\deploy\windows-service.ps1 -Action stop
-
-# 重启服务
-.\deploy\windows-service.ps1 -Action restart
+# 停止所有服务
+stop_all.bat
 ```
 
 ### 生产环境部署
 
+**方式一：Waitress（Windows 推荐）**
+
+```bash
+cd backend
+pip install waitress
+waitress-serve --host=0.0.0.0 --port=5000 wsgi:application
+```
+
+**方式二：Gunicorn（Linux/Docker）**
+
+```bash
+cd backend
+pip install gunicorn
+gunicorn --config gunicorn_config.py wsgi:application
+```
+
+**方式三：Docker Compose**
+
+```bash
+docker-compose up -d
+```
+
 详细部署说明请参考:
+- [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) - 启动流程指南
 - [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md) - 完整部署指南
-- [deploy/CICD_GUIDE.md](deploy/CICD_GUIDE.md) - CI/CD 配置指南
+- [deploy/ENV_CONFIG.md](deploy/ENV_CONFIG.md) - 环境变量配置
 
 ## 📚 API文档
 

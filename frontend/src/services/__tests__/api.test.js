@@ -41,38 +41,43 @@ describe('API Service', () => {
   });
 
   it('should set admin header when admin is logged in', async () => {
-    localStorage.setItem('admin', JSON.stringify({ id: 1, username: 'test' }));
+    // 当前实现从 localStorage['access_token'] 取 Bearer token（非旧 X-Admin-Id）
+    localStorage.setItem('access_token', 'test-token');
 
+    // api.ts 会读 response.headers.get('ETag')，mock 需提供 headers
     mockFetch.mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: { get: () => null },
       json: () => Promise.resolve({ data: [] }),
     });
 
-    await api.users.getAll();
+    await api.users.getAll({ skipCache: true });
 
     expect(mockFetch).toHaveBeenCalled();
     const options = mockFetch.mock.calls[0][1];
-    expect(options.headers['X-Admin-Id']).toBe('1');
+    expect(options.headers['Authorization']).toBe('Bearer test-token');
   });
 
   it('should handle network errors', async () => {
-    // 清除缓存
-    api.cache.clear();
-
+    // 用 POST 端点：GET 会命中 api.ts 内存缓存导致 fetch 不被调用
     mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(api.users.getAll()).rejects.toThrow('网络连接失败，请检查网络或服务器是否可用');
+    await expect(
+      api.users.create({ name: '测试', card_id: '12345678' })
+    ).rejects.toThrow('网络连接失败，请检查网络或服务器是否可用');
   });
 
   it('should handle HTTP errors', async () => {
-    // 清除缓存
-    api.cache.clear();
-
     mockFetch.mockResolvedValue({
       ok: false,
+      status: 500,
+      headers: { get: () => null },
       json: () => Promise.resolve({ message: '请求失败' }),
     });
 
-    await expect(api.users.getAll()).rejects.toThrow('请求失败');
+    await expect(
+      api.users.create({ name: '测试', card_id: '12345678' })
+    ).rejects.toThrow('请求失败');
   });
 });

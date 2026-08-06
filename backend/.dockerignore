@@ -1,0 +1,66 @@
+# 后端 .dockerignore
+# 排除不需要复制到Docker镜像的文件
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# 虚拟环境
+venv/
+env/
+.venv/
+ENV/
+
+# 测试和覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 日志和临时文件
+logs/
+*.log
+*.tmp
+*.bak
+
+# 数据库文件（生产环境应使用外部数据库）
+instance/*.db
+instance/*.db-shm
+instance/*.db-wal
+instance/flask_session/
+
+# 持久化数据
+mqtt_persistence/
+
+# Git
+.git/
+.gitignore
+
+# 文档
+doc/
+*.md
+!README.md
+
+# 部署脚本
+deploy/
+
+# 配置文件（生产环境使用环境变量）
+.env
+.env.local
+.env.*.local
+config/.env.*

@@ -4,16 +4,11 @@
   "private": true,
   "description": "学生积分管理平台 - 前端应用",
   "dependencies": {
-    "@testing-library/jest-dom": "^5.16.4",
-    "@testing-library/react": "^13.3.0",
-    "@testing-library/user-event": "^13.5.0",
-    "express": "^5.2.1",
-    "http-proxy-middleware": "^2.0.9",
+    "antd": "^5.29.3",
     "lucide-react": "^1.17.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.1",
     "recharts": "^2.10.3",
     "socket.io-client": "^4.6.0",
     "tailwindcss": "^3.3.3",
@@ -21,13 +16,18 @@
     "zustand": "^4.4.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "lint": "eslint src --ext .js,.jsx",
-    "lint:fix": "eslint src --ext .js,.jsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx}\""
+    "start": "vite",
+    "dev:vite": "vite --port 3000 --strictPort",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "preview": "vite preview",
+    "test:e2e": "playwright test --project=chrome",
+    "test:e2e:all": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
   },
   "eslintConfig": {
     "extends": [
@@ -53,17 +53,24 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.3",
+    "@types/jest": "^30.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.0",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^8.0.0",
+    "eslint-config-react-app": "^7.0.1",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.0.0",
     "eslint-plugin-react-hooks": "^4.0.0",
+    "jsdom": "^30.0.1",
+    "postcss": "^8.4.0",
     "prettier": "^2.8.0",
-    "typescript": "^4.9.5"
-  },
-  "proxy": "http://localhost:5000",
-  "allowedHosts": [
-    "localhost",
-    ".ngrok-free.dev"
-  ]
+    "typescript": "^4.9.5",
+    "vite": "^5.4.11",
+    "vitest": "^4.1.10"
+  }
 }

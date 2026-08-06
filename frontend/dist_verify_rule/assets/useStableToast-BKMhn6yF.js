@@ -1,0 +1,1 @@
+import{r as t}from"./vendor-Bn_OfATL.js";import{f as u}from"./index-CpcDgHf0.js";function T(){const{showToast:s}=u(),o=t.useRef(s);return t.useEffect(()=>{o.current=s},[s]),{showToast:t.useCallback((a,e,r)=>{o.current(a,e,r)},[])}}export{T as u};
