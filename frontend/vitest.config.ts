@@ -18,10 +18,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{js,jsx,ts,tsx}'],
-    // Windows + 中文路径下 forks pool 启动 worker 常超时，改用 threads pool
-    pool: 'threads',
-    poolOptions: {
-      threads: { singleThread: true },
-    },
+    // Windows + 中文路径下 forks pool 启动 worker 常超时 → 本地用 threads；
+    // CI（Linux）threads pool 报 webidl.markAsUncloneable → CI 用默认 forks。
+    pool: process.env.CI ? 'forks' : 'threads',
   },
 });
