@@ -125,6 +125,18 @@ npm start
 
 > 📖 完整的启动流程（开发/测试/生产）请参考 [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md)
 
+### ⚠️ 模型资产（NLP/算法功能运行必需）
+
+`backend/models/` 下的本地训练模型**不入库**（体积大，已通过 `.gitignore` 排除），
+`git clone` 后需从原环境单独拷贝到 `backend/models/` 下，否则 NLP 与算法分析接口会加载失败：
+
+| 目录 | 内容 | 用途 |
+|------|------|------|
+| `backend/models/bert/` | BERT 模型（约 393MB，含 `pytorch_model.bin` 等） | NLP 语义分析 |
+| `backend/models/trained/` | 训练好的模型（约 169MB，`*.pkl`） | NLP 文本分类 |
+
+> 缺失模型不影响登录、积分、设备、班级等核心功能；但 `/api/nlp/*` 与算法分析相关接口不可用。
+
 ### 5. 访问系统
 
 | 服务 | 地址 |
