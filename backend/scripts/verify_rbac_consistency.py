@@ -104,6 +104,13 @@ def main():
     conn.execute("PRAGMA foreign_keys = ON")
     cur = conn.cursor()
 
+    db_perm_count = cur.execute("SELECT COUNT(*) FROM permissions").fetchone()[0]
+    if db_perm_count == 0:
+        # 全新/CI 环境：DB 存在但未 seed RBAC（权限目录为空），校验无意义，跳过
+        print("[提示] 权限目录为空（RBAC 未初始化/CI 环境），跳过校验")
+        conn.close()
+        sys.exit(0)
+
     db_perms = {r[0] for r in cur.execute("SELECT code FROM permissions")}
     db_roles = {r[0] for r in cur.execute("SELECT role_code FROM role_permission")}
     db_map_roles = {r[0] for r in cur.execute("SELECT DISTINCT role_code FROM role_permission_mappings")}

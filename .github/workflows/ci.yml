@@ -69,10 +69,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 安装 Node 20
+      - name: 安装 Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # vitest 4 依赖 node >= 22（webidl.util.markAsUncloneable），与本地 node 22 一致
+          node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
