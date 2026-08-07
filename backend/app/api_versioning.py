@@ -238,5 +238,15 @@ def register_v1_routes(api, app):
     api.add_namespace(ns_reports)
     api.add_namespace(ns_rank_board)
 
+    # 系统运维蓝图（migration / version）：补注册，修复此前生产环境 404
+    try:
+        from api.system.migration_routes import migration_bp
+        from api.system.version_routes import version_bp
+
+        app.register_blueprint(migration_bp)
+        app.register_blueprint(version_bp)
+    except Exception:
+        pass
+
 
 api_version_manager.register_version("v1", register_v1_routes)

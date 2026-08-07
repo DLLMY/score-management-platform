@@ -21,17 +21,6 @@ def get_api_version():
     )
 
 
-@version_bp.route("/api/versions")
-def list_versions():
-    versions_info = {}
-    for version in version_manager.get_versions():
-        versions_info[version] = {
-            "endpoints": version_manager.get_endpoints(version),
-            "status": "current" if version == "v2" else "deprecated",
-        }
-    return APIResponse.success(data={"versions": versions_info})
-
-
 @version_bp.route("/api/v1/compatibility")
 def v1_compatibility():
     return APIResponse.success(

@@ -497,6 +497,23 @@ const fetchWithTimeout = async (
   }
 };
 
+/**
+ * 从统一响应信封 {success, code, data} 中取出业务数据。
+ * 逻辑与历史三处内联实现保持一致，抽出为单一函数以避免重复并集中维护：
+ *   - skipDataExtract：原样返回
+ *   - success/data 均存在：返回 data
+ *   - 其他：原样返回（调用方自行处理 success=false 等业务状态）
+ */
+const unwrapEnvelope = (rawData: any, skipDataExtract?: boolean): any => {
+  if (skipDataExtract) {
+    return rawData;
+  }
+  if (rawData && rawData.success !== undefined && rawData.data !== undefined) {
+    return rawData.data;
+  }
+  return rawData;
+};
+
 const executeRequest = async (url: string, options: RequestOptions, retryCount: number, cacheKey: string, abortController: AbortController): Promise<unknown> => {
   const startTime = performance.now();
   const method = options.method || 'GET';
@@ -610,14 +627,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
           }
 
           const rawData = await retryResponse.json();
-          let data;
-          if (options.skipDataExtract) {
-            data = rawData;
-          } else if (rawData.success !== undefined && rawData.data !== undefined) {
-            data = rawData.data;
-          } else {
-            data = rawData;
-          }
+          const data = unwrapEnvelope(rawData, options.skipDataExtract);
 
           if (method === 'GET') {
             cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -677,14 +687,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
             }
 
             const rawData = await retryResponse.json();
-            let data;
-            if (options.skipDataExtract) {
-              data = rawData;
-            } else if (rawData.success !== undefined && rawData.data !== undefined) {
-              data = rawData.data;
-            } else {
-              data = rawData;
-            }
+            const data = unwrapEnvelope(rawData, options.skipDataExtract);
 
             if (method === 'GET') {
               cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -716,14 +719,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
 
     const rawData = await response.json();
 
-    let data;
-    if (options.skipDataExtract) {
-      data = rawData;
-    } else if (rawData.success !== undefined && rawData.data !== undefined) {
-      data = rawData.data;
-    } else {
-      data = rawData;
-    }
+    const data = unwrapEnvelope(rawData, options.skipDataExtract);
 
     if (method === 'GET') {
       extractAndCacheEtag(cacheKey, response);

@@ -51,6 +51,19 @@ function StudentPortal() {
     }
   }, []);
 
+  const loadMyRank = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.student.getMyRank();
+      setMyRank(res);
+    } catch (err: any) {
+      setError(err?.message || '加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const loadScore = useCallback(async (page = 1) => {
     setLoading(true);
     setError('');
@@ -142,19 +155,6 @@ function StudentPortal() {
       setLoading(false);
     }
   };
-
-  const loadMyRank = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api.student.getMyRank();
-      setMyRank(res);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   return (
     <div className='min-h-screen bg-gray-50 dark:bg-slate-900'>

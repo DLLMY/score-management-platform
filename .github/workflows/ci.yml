@@ -51,7 +51,7 @@ jobs:
 
       - name: 跑 MQTT 消息链路测试
         run: |
-          python -m pytest tests/test_mqtt_message_processor.py tests/test_mqtt_client.py \
+          python -m pytest tests/test_mqtt_message_service.py tests/test_mqtt_service.py \
             -p no:locust --timeout=300 -q
 
       - name: 跑核心业务路由测试

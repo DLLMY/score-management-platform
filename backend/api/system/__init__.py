@@ -12,8 +12,6 @@ __all__ = [
     "ns_system",
     "ns_admins",
     "ns_security",
-    "version_bp",
-    "migration_bp",
     "ns_notification_config",
     "ns_admin_notifications",
     "create_admin_notification",
