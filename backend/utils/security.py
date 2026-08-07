@@ -438,6 +438,7 @@ __all__ = [
     "generate_tokens",
     "decode_token",
     "validate_token",
+    "generate_student_token",
     # 密码处理
     "hash_password",
     "verify_password",

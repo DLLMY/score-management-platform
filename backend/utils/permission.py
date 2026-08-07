@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import request, g
-from models import Admin, AdminClass, ClassInfo, Device, AdminRole, RolePermissionMapping, RoleHierarchy
+from models import Admin, AdminClass, ClassInfo, Device, AdminRole, RolePermissionMapping, RoleHierarchy, User
 from utils.security import validate_token
 from utils.logger import log_access_denied
 
@@ -350,3 +350,40 @@ def can_access_device(admin, device_id):
         return True
 
     return False
+
+
+def requires_student(f):
+    """学生自助端鉴权装饰器。
+
+    校验 type=student 的 JWT（generate_student_token 签发），与 Admin 体系完全隔离：
+    即使学生令牌误发到 Admin 端点，requires_permission 中的 validate_token(token, "access")
+    也会因 type 不匹配而拒绝。鉴权通过后将学生对象挂在 g.current_student。
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            log_access_denied(request.path, reason="未提供有效的学生认证令牌")
+            return {"success": False, "message": "未提供有效的认证令牌"}, 401
+
+        token = auth_header.replace("Bearer ", "")
+        payload = validate_token(token, "student")
+        if not payload:
+            log_access_denied(request.path, reason="无效或过期的学号令牌")
+            return {"success": False, "message": "无效或过期的认证令牌"}, 401
+
+        try:
+            user_id = int(payload["sub"])
+        except (KeyError, ValueError, TypeError):
+            return {"success": False, "message": "令牌格式错误"}, 401
+
+        user = User.query.filter_by(id=user_id, is_active=True).first()
+        if not user:
+            log_access_denied(request.path, reason="学生不存在或已停用")
+            return {"success": False, "message": "学生不存在或已停用"}, 401
+
+        g.current_student = user
+        return f(*args, **kwargs)
+
+    return decorated_function

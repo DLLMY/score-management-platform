@@ -66,8 +66,6 @@ class DIContainer(containers.DeclarativeContainer):
 
     system_config_service = providers.Singleton("services.system_config_service.SystemConfigService")
 
-    score_rule_service = providers.Singleton("services.score_rule_service.ScoreRuleService")
-
 
 def init_container(app):
     container = DIContainer()

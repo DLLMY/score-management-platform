@@ -59,6 +59,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_activity_detail",
+        "tags": [
+          "activity"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -80,17 +91,6 @@
         "tags": [
           "activity"
         ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_activity_detail",
-        "tags": [
-          "activity"
-        ]
       }
     },
     "/activity/{activity_id}/register": {
@@ -102,13 +102,13 @@
           "type": "integer"
         }
       ],
-      "delete": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "delete_activity_register",
+        "operationId": "post_activity_register",
         "parameters": [
           {
             "name": "payload",
@@ -123,13 +123,13 @@
           "activity"
         ]
       },
-      "post": {
+      "delete": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "post_activity_register",
+        "operationId": "delete_activity_register",
         "parameters": [
           {
             "name": "payload",
@@ -625,6 +625,27 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "管理员不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取单个管理员详细信息",
+        "description": "获取单个管理员信息\n根据管理员ID获取详细信息。需要管理员权限。",
+        "operationId": "get_admin",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "admins"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -668,27 +689,6 @@
         "summary": "删除管理员",
         "description": "删除管理员\n删除指定的管理员账户。需要超级管理员权限。",
         "operationId": "delete_admin",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "admins"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "管理员不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取单个管理员详细信息",
-        "description": "获取单个管理员信息\n根据管理员ID获取详细信息。需要管理员权限。",
-        "operationId": "get_admin",
         "security": [
           {
             "Bearer": []
@@ -884,6 +884,27 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "告警不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取单个告警",
+        "description": "获取单个告警\n根据ID获取告警详情。",
+        "operationId": "get_alert",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "alerts"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -917,27 +938,6 @@
         "summary": "删除告警",
         "description": "删除告警\n删除指定的告警记录。",
         "operationId": "delete_alert",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "alerts"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "告警不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取单个告警",
-        "description": "获取单个告警\n根据ID获取告警详情。",
-        "operationId": "get_alert",
         "security": [
           {
             "Bearer": []
@@ -2585,6 +2585,18 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取单个审批详情。非管理员用户只能查看关联班级的审批。",
+        "operationId": "get_approval",
+        "tags": [
+          "approvals"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -2615,18 +2627,6 @@
         },
         "summary": "删除审批记录。非管理员用户只能删除关联班级的审批。",
         "operationId": "delete_approval",
-        "tags": [
-          "approvals"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "获取单个审批详情。非管理员用户只能查看关联班级的审批。",
-        "operationId": "get_approval",
         "tags": [
           "approvals"
         ]
@@ -3059,6 +3059,24 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "节次不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/ClassPeriodResponse"
+            }
+          }
+        },
+        "description": "获取课程节次详情",
+        "operationId": "get_class_period",
+        "tags": [
+          "class-periods"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -3105,24 +3123,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "class-periods"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "节次不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/ClassPeriodResponse"
-            }
-          }
-        },
-        "description": "获取课程节次详情",
-        "operationId": "get_class_period",
         "tags": [
           "class-periods"
         ]
@@ -3250,6 +3250,23 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "班级不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/ClassResponse"
+            }
+          }
+        },
+        "operationId": "get_class",
+        "tags": [
+          "classes"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -3281,23 +3298,6 @@
           }
         },
         "operationId": "delete_class",
-        "tags": [
-          "classes"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "班级不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/ClassResponse"
-            }
-          }
-        },
-        "operationId": "get_class",
         "tags": [
           "classes"
         ]
@@ -3612,6 +3612,25 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "课程不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/CourseScheduleResponse"
+            }
+          }
+        },
+        "summary": "获取课程详情。需要课表查看权限。",
+        "description": "获取课程详情",
+        "operationId": "get_course_schedule",
+        "tags": [
+          "course-schedules"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -3660,25 +3679,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "course-schedules"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "课程不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/CourseScheduleResponse"
-            }
-          }
-        },
-        "summary": "获取课程详情。需要课表查看权限。",
-        "description": "获取课程详情",
-        "operationId": "get_course_schedule",
         "tags": [
           "course-schedules"
         ]
@@ -3747,6 +3747,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_culture_detail",
+        "tags": [
+          "culture"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -3765,17 +3776,6 @@
           }
         },
         "operationId": "delete_culture_detail",
-        "tags": [
-          "culture"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_culture_detail",
         "tags": [
           "culture"
         ]
@@ -3963,6 +3963,30 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "分组不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/DeviceGroupDetail"
+            }
+          }
+        },
+        "summary": "获取设备分组详情",
+        "description": "获取设备分组详情",
+        "operationId": "get_device_group",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "device-group"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -4012,30 +4036,6 @@
         "summary": "删除设备分组",
         "description": "删除设备分组",
         "operationId": "delete_device_group",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "device-group"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "分组不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/DeviceGroupDetail"
-            }
-          }
-        },
-        "summary": "获取设备分组详情",
-        "description": "获取设备分组详情",
-        "operationId": "get_device_group",
         "security": [
           {
             "Bearer": []
@@ -4569,6 +4569,22 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "设备不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取单个设备详情",
+        "description": "获取单个设备详情\n根据设备ID获取设备的详细信息。",
+        "operationId": "get_device",
+        "tags": [
+          "devices"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -4617,22 +4633,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "devices"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "设备不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取单个设备详情",
-        "description": "获取单个设备详情\n根据设备ID获取设备的详细信息。",
-        "operationId": "get_device",
         "tags": [
           "devices"
         ]
@@ -5367,6 +5367,18 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "获取考试详情",
+        "operationId": "get_exam",
+        "tags": [
+          "exams"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -5397,18 +5409,6 @@
         },
         "description": "删除考试",
         "operationId": "delete_exam",
-        "tags": [
-          "exams"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "description": "获取考试详情",
-        "operationId": "get_exam",
         "tags": [
           "exams"
         ]
@@ -5941,6 +5941,22 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "Not found"
+          },
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "Get firmware version detail",
+        "description": "Get firmware version detail",
+        "operationId": "get_firmware_version",
+        "tags": [
+          "firmware"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -5976,22 +5992,6 @@
         "summary": "Delete firmware version",
         "description": "Delete firmware version\nOnly allows deleting inactive versions.",
         "operationId": "delete_firmware_version",
-        "tags": [
-          "firmware"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "Not found"
-          },
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "Get firmware version detail",
-        "description": "Get firmware version detail",
-        "operationId": "get_firmware_version",
         "tags": [
           "firmware"
         ]
@@ -6092,6 +6092,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_homework_detail",
+        "tags": [
+          "homework"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -6120,17 +6131,6 @@
           }
         },
         "operationId": "delete_homework_detail",
-        "tags": [
-          "homework"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_homework_detail",
         "tags": [
           "homework"
         ]
@@ -6291,6 +6291,19 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取单个导入配置",
+        "description": "获取导入配置详情",
+        "operationId": "get_import_config",
+        "tags": [
+          "import"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -6323,19 +6336,6 @@
         "summary": "删除导入配置",
         "description": "删除导入配置",
         "operationId": "delete_import_config",
-        "tags": [
-          "import"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "获取单个导入配置",
-        "description": "获取导入配置详情",
-        "operationId": "get_import_config",
         "tags": [
           "import"
         ]
@@ -6887,6 +6887,18 @@
       }
     },
     "/mqtt/config": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "Get MQTT config",
+        "operationId": "get_mqtt_config",
+        "tags": [
+          "mqtt"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -6910,18 +6922,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "mqtt"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "description": "Get MQTT config",
-        "operationId": "get_mqtt_config",
         "tags": [
           "mqtt"
         ]
@@ -7912,6 +7912,18 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "获取单个规则",
+        "operationId": "nlp_get_rule",
+        "tags": [
+          "nlp"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -7932,18 +7944,6 @@
         },
         "description": "删除评分规则",
         "operationId": "nlp_delete_rule",
-        "tags": [
-          "nlp"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "description": "获取单个规则",
-        "operationId": "nlp_get_rule",
         "tags": [
           "nlp"
         ]
@@ -8010,6 +8010,19 @@
       }
     },
     "/notification-config/": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取通知配置",
+        "description": "获取通知配置\n返回当前的微信和短信通知配置。",
+        "operationId": "get_notification_config",
+        "tags": [
+          "notification-config"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8029,19 +8042,6 @@
             }
           }
         ],
-        "tags": [
-          "notification-config"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取通知配置",
-        "description": "获取通知配置\n返回当前的微信和短信通知配置。",
-        "operationId": "get_notification_config",
         "tags": [
           "notification-config"
         ]
@@ -8127,6 +8127,20 @@
         ]
       }
     },
+    "/notifications/batch": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "群发通知（按学生列表 user_ids 或班级 class_id）",
+        "operationId": "batch_send_notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/notifications/send": {
       "post": {
         "responses": {
@@ -8172,6 +8186,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_notification",
+        "tags": [
+          "notifications"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8200,17 +8225,6 @@
           }
         },
         "operationId": "delete_notification",
-        "tags": [
-          "notifications"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_notification",
         "tags": [
           "notifications"
         ]
@@ -8425,6 +8439,30 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/TemplateResponse"
+            }
+          }
+        },
+        "summary": "获取单个模板详情",
+        "operationId": "get_template",
+        "parameters": [
+          {
+            "name": "X-Fields",
+            "in": "header",
+            "type": "string",
+            "format": "mask",
+            "description": "An optional fields mask"
+          }
+        ],
+        "tags": [
+          "notify_templates"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8465,30 +8503,6 @@
         },
         "summary": "删除模板（软删除）",
         "operationId": "delete_template_detail",
-        "tags": [
-          "notify_templates"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/TemplateResponse"
-            }
-          }
-        },
-        "summary": "获取单个模板详情",
-        "operationId": "get_template",
-        "parameters": [
-          {
-            "name": "X-Fields",
-            "in": "header",
-            "type": "string",
-            "format": "mask",
-            "description": "An optional fields mask"
-          }
-        ],
         "tags": [
           "notify_templates"
         ]
@@ -8590,6 +8604,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_parent_contact_detail",
+        "tags": [
+          "parent"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8608,17 +8633,6 @@
           }
         },
         "operationId": "delete_parent_contact_detail",
-        "tags": [
-          "parent"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_parent_contact_detail",
         "tags": [
           "parent"
         ]
@@ -8683,6 +8697,21 @@
       }
     },
     "/phonebox-policy": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/PhoneBoxPolicyResponse"
+            }
+          }
+        },
+        "description": "获取手机箱开箱策略（班主任取本班，admin 可指定班级）",
+        "operationId": "get_phonebox_policy",
+        "tags": [
+          "phonebox-policy"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8709,21 +8738,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "phonebox-policy"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/PhoneBoxPolicyResponse"
-            }
-          }
-        },
-        "description": "获取手机箱开箱策略（班主任取本班，admin 可指定班级）",
-        "operationId": "get_phonebox_policy",
         "tags": [
           "phonebox-policy"
         ]
@@ -8859,6 +8873,22 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_rank_rule",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rank-rules"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8890,21 +8920,79 @@
         "tags": [
           "rank-rules"
         ]
-      },
+      }
+    },
+    "/rank/class": {
       "get": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "get_rank_rule",
-        "security": [
+        "description": "班级积分排行榜",
+        "operationId": "rank_class",
+        "parameters": [
           {
-            "Bearer": []
+            "in": "query",
+            "description": "返回数量限制",
+            "name": "limit",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "排序方向(desc/asc)",
+            "name": "order",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "排序字段(total_score/avg_score/unlock_count)",
+            "name": "sort_by",
+            "type": "string"
           }
         ],
         "tags": [
-          "rank-rules"
+          "rank"
+        ]
+      }
+    },
+    "/rank/student": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "学生积分排行榜（按班级或全校）",
+        "operationId": "rank_student",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "返回数量限制",
+            "name": "limit",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "排序方向(desc/asc)",
+            "name": "order",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "排序字段(score/unlock_count)",
+            "name": "sort_by",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "班级名称(可选，不填则全校)",
+            "name": "class_name",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "rank"
         ]
       }
     },
@@ -8918,6 +9006,24 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取管理员的所有角色",
+        "description": "获取管理员的角色",
+        "operationId": "get_admin_roles",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -8945,24 +9051,6 @@
         "tags": [
           "rbac"
         ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取管理员的所有角色",
-        "description": "获取管理员的角色",
-        "operationId": "get_admin_roles",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
       }
     },
     "/rbac/admin-roles/{admin_id}/{role_code}": {
@@ -8982,27 +9070,6 @@
           "type": "integer"
         }
       ],
-      "delete": {
-        "responses": {
-          "404": {
-            "description": "关联不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "移除管理员的单个角色",
-        "description": "移除管理员的角色",
-        "operationId": "remove_admin_role",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
-      },
       "post": {
         "responses": {
           "404": {
@@ -9015,6 +9082,27 @@
         "summary": "为管理员添加单个角色",
         "description": "为管理员添加角色",
         "operationId": "add_admin_role",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "delete": {
+        "responses": {
+          "404": {
+            "description": "关联不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "移除管理员的单个角色",
+        "description": "移除管理员的角色",
+        "operationId": "remove_admin_role",
         "security": [
           {
             "Bearer": []
@@ -9134,6 +9222,27 @@
           "type": "string"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "权限不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取权限详情",
+        "description": "获取权限详情",
+        "operationId": "get_permission",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -9188,27 +9297,6 @@
         "tags": [
           "rbac"
         ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "权限不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取权限详情",
-        "description": "获取权限详情",
-        "operationId": "get_permission",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
       }
     },
     "/rbac/role-hierarchy/{role_code}": {
@@ -9250,6 +9338,24 @@
           "type": "string"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取角色的所有权限",
+        "description": "获取角色的权限",
+        "operationId": "get_role_permissions",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -9277,24 +9383,6 @@
         "tags": [
           "rbac"
         ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取角色的所有权限",
-        "description": "获取角色的权限",
-        "operationId": "get_role_permissions",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
       }
     },
     "/rbac/role-permissions/{role_code}/{permission_code}": {
@@ -9314,27 +9402,6 @@
           "type": "string"
         }
       ],
-      "delete": {
-        "responses": {
-          "404": {
-            "description": "关联不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "移除角色的单个权限",
-        "description": "移除角色的权限",
-        "operationId": "remove_role_permission",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
-      },
       "post": {
         "responses": {
           "404": {
@@ -9347,6 +9414,27 @@
         "summary": "为角色添加单个权限",
         "description": "为角色添加权限",
         "operationId": "add_role_permission",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "delete": {
+        "responses": {
+          "404": {
+            "description": "关联不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "移除角色的单个权限",
+        "description": "移除角色的权限",
+        "operationId": "remove_role_permission",
         "security": [
           {
             "Bearer": []
@@ -9421,6 +9509,27 @@
           "type": "string"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "角色不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取角色详情",
+        "description": "获取角色详情（含权限）",
+        "operationId": "get_role_with_permissions",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -9467,27 +9576,6 @@
         "summary": "删除角色",
         "description": "删除角色",
         "operationId": "delete_role",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "角色不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取角色详情",
-        "description": "获取角色详情（含权限）",
-        "operationId": "get_role_with_permissions",
         "security": [
           {
             "Bearer": []
@@ -9967,6 +10055,33 @@
         ]
       }
     },
+    "/reports/class-semester": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "class_semester_report",
+        "parameters": [
+          {
+            "description": "班级ID（必填）",
+            "name": "class_id",
+            "type": "string",
+            "in": "query"
+          },
+          {
+            "description": "导出格式: excel（默认）或 csv",
+            "name": "format",
+            "type": "string",
+            "in": "query"
+          }
+        ],
+        "tags": [
+          "reports"
+        ]
+      }
+    },
     "/role-permissions/": {
       "get": {
         "responses": {
@@ -10083,6 +10198,27 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "角色不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取角色详情",
+        "description": "获取角色详情\n根据角色ID获取角色的详细信息。",
+        "operationId": "get_role",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "roles"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -10126,27 +10262,6 @@
         "summary": "删除角色",
         "description": "删除角色\n删除指定角色，需要管理员权限。",
         "operationId": "delete_role",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "roles"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "角色不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取角色详情",
-        "description": "获取角色详情\n根据角色ID获取角色的详细信息。",
-        "operationId": "get_role",
         "security": [
           {
             "Bearer": []
@@ -10365,6 +10480,25 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "规则不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/ScoreRule"
+            }
+          }
+        },
+        "summary": "获取单个规则详情",
+        "description": "获取单个规则详情\n根据规则ID获取规则的详细信息。需要规则查看权限。",
+        "operationId": "get_rule",
+        "tags": [
+          "rules"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -10416,25 +10550,6 @@
         "tags": [
           "rules"
         ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "规则不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/ScoreRule"
-            }
-          }
-        },
-        "summary": "获取单个规则详情",
-        "description": "获取单个规则详情\n根据规则ID获取规则的详细信息。需要规则查看权限。",
-        "operationId": "get_rule",
-        "tags": [
-          "rules"
-        ]
       }
     },
     "/scheduled_notify/": {
@@ -10483,6 +10598,18 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取单个定时通知详情",
+        "operationId": "get_scheduled",
+        "tags": [
+          "scheduled_notify"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -10513,18 +10640,6 @@
         },
         "summary": "删除定时通知",
         "operationId": "delete_scheduled_detail",
-        "tags": [
-          "scheduled_notify"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "获取单个定时通知详情",
-        "operationId": "get_scheduled",
         "tags": [
           "scheduled_notify"
         ]
@@ -10717,6 +10832,22 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_score_category",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "score-categories"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -10745,22 +10876,6 @@
           }
         },
         "operationId": "delete_score_category",
-        "tags": [
-          "score-categories"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_score_category",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
         "tags": [
           "score-categories"
         ]
@@ -10823,6 +10938,20 @@
         ]
       }
     },
+    "/scores/batch": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "批量录入成绩（支持 student_id 或 card_id 识别学生）",
+        "operationId": "batch_create_scores",
+        "tags": [
+          "scores"
+        ]
+      }
+    },
     "/scores/confirm-all": {
       "post": {
         "responses": {
@@ -10847,6 +10976,18 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "description": "获取成绩详情",
+        "operationId": "get_score",
+        "tags": [
+          "scores"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -10877,18 +11018,6 @@
         },
         "description": "删除成绩",
         "operationId": "delete_score",
-        "tags": [
-          "scores"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "description": "获取成绩详情",
-        "operationId": "get_score",
         "tags": [
           "scores"
         ]
@@ -10951,6 +11080,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_seating_chart_detail",
+        "tags": [
+          "seating"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -10969,17 +11109,6 @@
           }
         },
         "operationId": "delete_seating_chart_detail",
-        "tags": [
-          "seating"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_seating_chart_detail",
         "tags": [
           "seating"
         ]
@@ -11180,6 +11309,158 @@
         ]
       }
     },
+    "/student/leaves": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "列出当前学生提交的全部请假申请，按开始日期倒序。",
+        "description": "获取当前学生的请假申请",
+        "operationId": "student_list_leaves",
+        "tags": [
+          "student"
+        ]
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "提交一条请假申请（student_id 自动绑定当前登录学生）。",
+        "operationId": "post_student_leaves",
+        "parameters": [
+          {
+            "name": "payload",
+            "required": true,
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/StudentLeaveApply"
+            }
+          }
+        ],
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/login": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "学生登录接口。",
+        "description": "学生登录（卡号+姓名双因子）\n请求体：\n- card_id: 学号/卡号（必填）\n- name: 姓名（必填，作为第二因子防止误用他人卡号）\n\n返回：\n- data.access_token: 学生 JWT\n- data.expires_in: 过期秒数\n- data.student: 学生基本信息",
+        "operationId": "student_login",
+        "parameters": [
+          {
+            "name": "payload",
+            "required": true,
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/StudentLoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/me": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取当前登录学生基本信息。",
+        "description": "获取当前登录学生信息",
+        "operationId": "student_me",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/notifications": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取当前学生收到的通知，按时间倒序分页返回。",
+        "description": "获取当前学生的通知（分页）",
+        "operationId": "student_notifications",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/phonebox/unlock": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "依据本班手机箱策略判定是否允许开箱；允许则下发 MQTT 开箱指令（最佳努力）。",
+        "description": "学生自助申请手机箱开箱\n判定来源：services.phonebox_policy.evaluate（班主任按班级配置）。\n- allow_override / allow_window -> 允许，下发 phonebox/unlock/A 与 /B\n- block   -> 班主任已关闭本班自助开箱\n- defer   -> 本班未配置策略，需由老师远程开箱",
+        "operationId": "student_phonebox_unlock",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/rank": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "返回当前学生所在班级的积分排行榜，并标出本人名次。",
+        "description": "获取当前学生所在班级的积分排名（含本人名次）\n复用 analysis_service.get_student_ranking 按班级聚合；名次由列表下标+1 计。",
+        "operationId": "student_rank",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/records": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取当前学生的积分流水，按时间倒序分页返回。",
+        "description": "获取当前学生积分流水（分页）",
+        "operationId": "student_records",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/student/score": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取当前学生的当前积分。",
+        "description": "获取当前学生积分",
+        "operationId": "student_score",
+        "tags": [
+          "student"
+        ]
+      }
+    },
     "/study-group/groups": {
       "get": {
         "responses": {
@@ -11237,6 +11518,17 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "operationId": "get_study_group_detail",
+        "tags": [
+          "study_group"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -11258,17 +11550,6 @@
         "tags": [
           "study_group"
         ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "operationId": "get_study_group_detail",
-        "tags": [
-          "study_group"
-        ]
       }
     },
     "/study-group/groups/{group_id}/members": {
@@ -11280,13 +11561,13 @@
           "type": "integer"
         }
       ],
-      "delete": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "delete_group_members",
+        "operationId": "post_group_members",
         "parameters": [
           {
             "name": "payload",
@@ -11301,13 +11582,13 @@
           "study_group"
         ]
       },
-      "post": {
+      "delete": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "post_group_members",
+        "operationId": "delete_group_members",
         "parameters": [
           {
             "name": "payload",
@@ -11630,6 +11911,27 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "子账号不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取子账号详情",
+        "description": "获取子账号详情\n根据ID获取子账号的详细信息。\n\n参数：\n- id: 子账号ID（路径参数）",
+        "operationId": "get_sub_account",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "sub-accounts"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -11673,27 +11975,6 @@
         "summary": "删除子账号",
         "description": "删除子账号\n删除指定的子账号，需要管理员权限。\n\n参数：\n- id: 子账号ID（路径参数）",
         "operationId": "delete_sub_account",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "sub-accounts"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "子账号不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取子账号详情",
-        "description": "获取子账号详情\n根据ID获取子账号的详细信息。\n\n参数：\n- id: 子账号ID（路径参数）",
-        "operationId": "get_sub_account",
         "security": [
           {
             "Bearer": []
@@ -11815,6 +12096,25 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "科目不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/SubjectResponse"
+            }
+          }
+        },
+        "summary": "获取科目详情",
+        "description": "获取科目详情",
+        "operationId": "get_subject",
+        "tags": [
+          "subjects"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -11853,25 +12153,6 @@
         "summary": "删除科目（先级联清理关联数据，再删除科目本身）",
         "description": "删除科目",
         "operationId": "delete_subject",
-        "tags": [
-          "subjects"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "科目不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/SubjectResponse"
-            }
-          }
-        },
-        "summary": "获取科目详情",
-        "description": "获取科目详情",
-        "operationId": "get_subject",
         "tags": [
           "subjects"
         ]
@@ -12125,6 +12406,24 @@
       }
     },
     "/system/config": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "获取系统配置",
+        "description": "Get system config\n获取当前系统的配置信息。",
+        "operationId": "get_system_config",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "system"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -12144,24 +12443,6 @@
             }
           }
         ],
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "system"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        },
-        "summary": "获取系统配置",
-        "description": "Get system config\n获取当前系统的配置信息。",
-        "operationId": "get_system_config",
         "security": [
           {
             "Bearer": []
@@ -12438,6 +12719,25 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "规则不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/TimeRuleResponse"
+            }
+          }
+        },
+        "summary": "获取时间规则详情",
+        "description": "获取时间规则详情\n根据ID获取时间规则的详细信息。\n\n参数：\n- id: 规则ID（路径参数）",
+        "operationId": "get_time_rule",
+        "tags": [
+          "time-rules"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -12486,25 +12786,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "time-rules"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "规则不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/TimeRuleResponse"
-            }
-          }
-        },
-        "summary": "获取时间规则详情",
-        "description": "获取时间规则详情\n根据ID获取时间规则的详细信息。\n\n参数：\n- id: 规则ID（路径参数）",
-        "operationId": "get_time_rule",
         "tags": [
           "time-rules"
         ]
@@ -12559,22 +12840,6 @@
           "type": "string"
         }
       ],
-      "delete": {
-        "responses": {
-          "404": {
-            "description": "用户不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "从黑名单移除用户",
-        "description": "从黑名单移除用户\n允许指定用户重新使用开锁功能。",
-        "operationId": "remove_from_blacklist",
-        "tags": [
-          "user-management"
-        ]
-      },
       "post": {
         "responses": {
           "404": {
@@ -12600,6 +12865,22 @@
         "tags": [
           "user-management"
         ]
+      },
+      "delete": {
+        "responses": {
+          "404": {
+            "description": "用户不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "从黑名单移除用户",
+        "description": "从黑名单移除用户\n允许指定用户重新使用开锁功能。",
+        "operationId": "remove_from_blacklist",
+        "tags": [
+          "user-management"
+        ]
       }
     },
     "/user-management/unlock-limit/{card_id}": {
@@ -12612,6 +12893,24 @@
           "type": "string"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取用户的开锁限制信息",
+        "description": "获取用户开锁限制",
+        "operationId": "get_unlock_limit",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "user-management"
+        ]
+      },
       "put": {
         "responses": {
           "400": {
@@ -12635,24 +12934,6 @@
             "schema": {
               "$ref": "#/definitions/UnlockLimitRequest"
             }
-          }
-        ],
-        "tags": [
-          "user-management"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取用户的开锁限制信息",
-        "description": "获取用户开锁限制",
-        "operationId": "get_unlock_limit",
-        "security": [
-          {
-            "Bearer": []
           }
         ],
         "tags": [
@@ -12975,6 +13256,25 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "404": {
+            "description": "学生不存在"
+          },
+          "200": {
+            "description": "成功",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        },
+        "summary": "获取单个学生详细信息",
+        "description": "获取单个学生信息\n根据学生ID获取详细信息。\n非管理员用户只能查看关联班级的学生。",
+        "operationId": "get_user",
+        "tags": [
+          "users"
+        ]
+      },
       "put": {
         "responses": {
           "404": {
@@ -13023,25 +13323,6 @@
             "Bearer": []
           }
         ],
-        "tags": [
-          "users"
-        ]
-      },
-      "get": {
-        "responses": {
-          "404": {
-            "description": "学生不存在"
-          },
-          "200": {
-            "description": "成功",
-            "schema": {
-              "$ref": "#/definitions/User"
-            }
-          }
-        },
-        "summary": "获取单个学生详细信息",
-        "description": "获取单个学生信息\n根据学生ID获取详细信息。\n非管理员用户只能查看关联班级的学生。",
-        "operationId": "get_user",
         "tags": [
           "users"
         ]
@@ -13117,6 +13398,30 @@
           "type": "integer"
         }
       ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/WOLDevice"
+            }
+          }
+        },
+        "summary": "Get a single WOL device by ID",
+        "operationId": "get_wol_device_resource",
+        "parameters": [
+          {
+            "name": "X-Fields",
+            "in": "header",
+            "type": "string",
+            "format": "mask",
+            "description": "An optional fields mask"
+          }
+        ],
+        "tags": [
+          "wol"
+        ]
+      },
       "put": {
         "responses": {
           "200": {
@@ -13157,30 +13462,6 @@
         },
         "summary": "Delete a WOL device (soft delete)",
         "operationId": "delete_wol_device_resource",
-        "tags": [
-          "wol"
-        ]
-      },
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/WOLDevice"
-            }
-          }
-        },
-        "summary": "Get a single WOL device by ID",
-        "operationId": "get_wol_device_resource",
-        "parameters": [
-          {
-            "name": "X-Fields",
-            "in": "header",
-            "type": "string",
-            "format": "mask",
-            "description": "An optional fields mask"
-          }
-        ],
         "tags": [
           "wol"
         ]
@@ -13550,6 +13831,18 @@
     {
       "name": "role-permissions",
       "description": "角色权限定义相关操作"
+    },
+    {
+      "name": "student",
+      "description": "学生自助端接口"
+    },
+    {
+      "name": "reports",
+      "description": "报表导出"
+    },
+    {
+      "name": "rank",
+      "description": "积分排行榜相关操作"
     }
   ],
   "definitions": {
@@ -17507,6 +17800,48 @@
               "$ref": "#/definitions/SubAccountResponse"
             }
           ]
+        }
+      },
+      "type": "object"
+    },
+    "StudentLoginRequest": {
+      "required": [
+        "card_id",
+        "name"
+      ],
+      "properties": {
+        "card_id": {
+          "type": "string",
+          "description": "学号/卡号"
+        },
+        "name": {
+          "type": "string",
+          "description": "姓名"
+        }
+      },
+      "type": "object"
+    },
+    "StudentLeaveApply": {
+      "required": [
+        "end_date",
+        "start_date"
+      ],
+      "properties": {
+        "leave_type": {
+          "type": "string",
+          "description": "请假类型（如 sick/personal）"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "开始日期 YYYY-MM-DD"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "结束日期 YYYY-MM-DD"
+        },
+        "reason": {
+          "type": "string",
+          "description": "请假事由"
         }
       },
       "type": "object"

@@ -10,9 +10,6 @@ from .mqtt_routes import ns_mqtt
 __all__ = [
     "ns_notifications",
     "ns_alerts",
-    "logs_bp",
     "ns_operation_logs",
     "ns_mqtt",
-    "mqtt_monitor_bp",
-    "ws_bp",
 ]

@@ -1,5 +1,5 @@
 from flask_restx import Namespace, Resource, fields
-from flask import request
+from flask import request, g
 from models import db, Exam, Score, User, get_by_id, cascade_delete_related_records
 from utils.permission import requires_permission
 from utils.response import APIResponse
@@ -203,6 +203,68 @@ class ScoreList(Resource):
         db.session.add(score)
         db.session.commit()
         return APIResponse.success(data=score.to_dict(), message="创建成功")
+
+
+@ns_scores.route("/batch")
+class ScoreBatch(Resource):
+    @ns_scores.doc("batch_create_scores", description="批量录入成绩（支持 student_id 或 card_id 识别学生）")
+    @requires_permission("score.entry")
+    def post(self):
+        data = request.get_json() or {}
+        exam_id = data.get("exam_id")
+        items = data.get("scores")
+        if not exam_id:
+            return APIResponse.bad_request(message="请指定 exam_id")
+        if not isinstance(items, list) or not items:
+            return APIResponse.bad_request(message="scores 必须为非空数组")
+        exam = get_by_id(Exam, exam_id)
+        if not exam:
+            return APIResponse.not_found(message="考试不存在")
+        operator_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        created = 0
+        errors = []
+        for idx, item in enumerate(items):
+            student_id = item.get("student_id")
+            card_id = item.get("card_id")
+            subject = item.get("subject")
+            raw_score = item.get("score")
+            if student_id is None and not card_id:
+                errors.append({"index": idx, "message": "缺少 student_id 或 card_id"})
+                continue
+            if not subject:
+                errors.append({"index": idx, "message": "缺少 subject"})
+                continue
+            try:
+                score_val = float(raw_score) if raw_score is not None else None
+            except (TypeError, ValueError):
+                errors.append({"index": idx, "message": "分数格式非法"})
+                continue
+            student = (
+                User.query.filter_by(id=student_id, is_active=True).first()
+                if student_id is not None
+                else User.query.filter_by(card_id=card_id, is_active=True).first()
+            )
+            if not student:
+                errors.append({"index": idx, "message": "学生不存在"})
+                continue
+            score = Score(
+                exam_id=exam_id,
+                student_id=student.id,
+                subject=subject,
+                score=score_val,
+                full_score=item.get("full_score", 100),
+                status=item.get("status", "pending"),
+                remark=item.get("remark"),
+                entered_by=operator_id,
+            )
+            db.session.add(score)
+            created += 1
+        if created:
+            db.session.commit()
+        return APIResponse.success(
+            data={"created": created, "errors": errors, "total": len(items)},
+            message=f"成功录入 {created} 条，{len(errors)} 条失败",
+        )
 
 
 @ns_scores.route("/<int:score_id>")

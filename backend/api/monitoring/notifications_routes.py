@@ -1,7 +1,7 @@
-from flask import request
+from flask import request, g
 from flask_restx import Namespace, Resource, fields
-from models import db, Notification
-from utils.permission import requires_permission
+from models import db, Notification, User
+from utils.permission import requires_permission, has_permission
 from datetime import datetime
 
 from utils.response import APIResponse
@@ -159,6 +159,66 @@ class NotificationSend(Resource):
         db.session.commit()
 
         return APIResponse.success(data={"notification_id": notification.id}, message="通知发送成功")
+
+
+@ns_notifications.route("/batch")
+class NotificationBatch(Resource):
+    @ns_notifications.doc("batch_send_notifications", description="群发通知（按学生列表 user_ids 或班级 class_id）")
+    @requires_permission("notification.send")
+    def post(self):
+        data = request.get_json() or {}
+        title = data.get("title")
+        content = data.get("content")
+        notify_type = data.get("type", "info")
+        user_ids = data.get("user_ids") or []
+        class_id = data.get("class_id")
+        force_send = bool(data.get("force_send", False))
+        if not title or not content:
+            return APIResponse.bad_request(message="标题和内容不能为空")
+        if not user_ids and not class_id:
+            return APIResponse.bad_request(message="请指定 user_ids 或 class_id")
+
+        # 上课时间全局时段拦截（群发按广播处理）；force_send 需 notification.force_send 权限
+        if force_send and not has_permission(g.current_user, "notification.force_send"):
+            return APIResponse.error(message="无强制发送权限（需 notification.force_send）", status_code=403)
+        from services.class_time_checker import ClassTimeChecker
+
+        blocked, message, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=force_send)
+        if blocked:
+            admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+            ClassTimeChecker.log_notify_audit(
+                "BATCH_NOTIFY", class_id, admin_id, {"title": title},
+                reason_code or "GLOBAL_TIME_RULE", message, force_send=False,
+            )
+            return APIResponse.error(message=f"上课时间，群发通知已暂停: {message}", status_code=403)
+
+        target_ids = list(user_ids) if user_ids else []
+        if class_id:
+            students = User.query.filter_by(class_info_id=class_id, is_active=True).all()
+            target_ids.extend([s.id for s in students])
+        target_ids = [uid for uid in dict.fromkeys(target_ids) if uid]  # 去重保序
+        if not target_ids:
+            return APIResponse.bad_request(message="未找到接收通知的学生")
+
+        sent = 0
+        errors = []
+        for uid in target_ids:
+            try:
+                db.session.add(
+                    Notification(
+                        user_id=uid, title=title, content=content,
+                        type=notify_type, status="sent", sent_at=datetime.now(),
+                    )
+                )
+                sent += 1
+            except Exception as e:  # noqa: BLE001
+                errors.append({"user_id": uid, "message": str(e)})
+        if sent:
+            db.session.commit()
+        return APIResponse.success(
+            data={"sent": sent, "errors": errors, "total": len(target_ids)},
+            message=f"成功发送 {sent} 条，{len(errors)} 条失败",
+        )
 
 
 @ns_notifications.route("/user/<int:user_id>")

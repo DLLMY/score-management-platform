@@ -206,13 +206,6 @@ def register_v1_routes(api, app):
 
     api.add_namespace(ns_phonebox_policy, path="/phonebox-policy")
 
-    # 以下命名空间已在 ns_algorithm 中完整覆盖，不再重复注册
-    # 保留文件仅用于向后兼容的独立引用
-    # try: from api.prediction_routes import ns_prediction; api.add_namespace(ns_prediction)
-    # try: from api.anomaly_routes import ns_anomaly; api.add_namespace(ns_anomaly)
-    # try: from api.risk_routes import ns_risk; api.add_namespace(ns_risk)
-    # try: from api.rule_routes import ns_rule; api.add_namespace(ns_rule)
-    # try: from api.composite_routes import ns_composite; api.add_namespace(ns_composite)
     try:
         from api.system.diagnostics_routes import ns_diagnostics
         api.add_namespace(ns_diagnostics)
@@ -235,6 +228,15 @@ def register_v1_routes(api, app):
         api.add_namespace(ns_role_permissions)
     except Exception:
         pass
+
+    # 学生自助端 / 学期报告导出 / 积分排行榜：补齐生产环境路由（route_init.py 已删除，本函数是唯一注册源）
+    from api.student.student_routes import ns_student
+    from api.reports.report_routes import ns_reports
+    from api.rank.rank_routes import ns_rank as ns_rank_board
+
+    api.add_namespace(ns_student)
+    api.add_namespace(ns_reports)
+    api.add_namespace(ns_rank_board)
 
 
 api_version_manager.register_version("v1", register_v1_routes)

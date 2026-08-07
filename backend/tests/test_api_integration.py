@@ -36,11 +36,6 @@ except ImportError:
     pass
 
 try:
-    from services.mqtt.mqtt_client import MQTTClient
-except ImportError:
-    pass
-
-try:
     from app import service_init
 except ImportError:
     pass
@@ -135,13 +130,6 @@ class TestServiceIntegration:
         assert 'success' in data
         assert data['success'] is False
         assert data['message'] == 'Error'
-
-    def test_mqtt_client_initialization(self):
-        """Test MQTT client can be initialized"""
-        from services.mqtt.mqtt_client import MQTTClient
-
-        client = MQTTClient()
-        assert client is not None
 
     def test_service_init_import(self):
         """Test service_init module can be imported successfully"""

@@ -101,6 +101,9 @@ const FirmwareManagement = createLazyComponent(() => import('./pages/FirmwareMan
 const ExamManagement = createLazyComponent(() => import('./pages/ExamManagement'));
 const ScoreEntry = createLazyComponent(() => import('./pages/ScoreEntry'));
 const ScoreRecords = createLazyComponent(() => import('./pages/ScoreRecords'));
+const TeacherTools = createLazyComponent(() => import('./pages/TeacherTools'));
+const SemesterReport = createLazyComponent(() => import('./pages/SemesterReport'));
+const RankBoard = createLazyComponent(() => import('./pages/RankBoard'));
 const ScoreAnalysis = createLazyComponent(() => import('./pages/ScoreAnalysis'));
 
 const AlgorithmAnalysis = createLazyComponent(() => import('./pages/AlgorithmAnalysis'));
@@ -128,6 +131,8 @@ const CultureBoard = createLazyComponent(() => import('./pages/CultureBoard'));
 const StudyGuide = createLazyComponent(() => import('./pages/StudyGuide'));
 
 const Login = createLazyComponent(() => import('./pages/Login'), true);
+const StudentLogin = createLazyComponent(() => import('./pages/StudentLogin'));
+const StudentPortal = createLazyComponent(() => import('./pages/StudentPortal'));
 
 const preloadConfigs = [
   { route: '/users', component: UserList, priority: 'high' as const, preloadOnHover: true, preloadOnVisit: true },
@@ -172,6 +177,14 @@ function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRouteProps) {
     return <Navigate to='/' replace />;
   }
 
+  return <>{children}</>;
+}
+
+function StudentProtectedRoute({ children }: { children: React.ReactNode }) {
+  const studentStr = localStorage.getItem('student');
+  if (!studentStr) {
+    return <Navigate to='/student/login' replace />;
+  }
   return <>{children}</>;
 }
 
@@ -275,6 +288,15 @@ function App() {
             <PreloadProvider />
             <Routes>
               <Route path='/login' element={<Login />} />
+              <Route path='/student/login' element={<StudentLogin />} />
+              <Route
+                path='/student'
+                element={
+                  <StudentProtectedRoute>
+                    <StudentPortal />
+                  </StudentProtectedRoute>
+                }
+              />
               <Route path='/' element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route index element={<PermissionGuard requiredPermission='score.view'><Dashboard /></PermissionGuard>} />
                 <Route path='dashboard' element={<PermissionGuard requiredPermission='score.view'><Dashboard /></PermissionGuard>} />
@@ -306,6 +328,9 @@ function App() {
                 <Route path='class-compare' element={<PermissionGuard requiredPermission='algorithm.view'><ClassCompare /></PermissionGuard>} />
                 <Route path='exams' element={<PermissionGuard requiredPermission='exam.view'><ExamManagement /></PermissionGuard>} />
                 <Route path='score-entry' element={<PermissionGuard requiredPermission='score.entry'><ScoreEntry /></PermissionGuard>} />
+                <Route path='teacher-tools' element={<PermissionGuard requiredPermission='score.entry'><TeacherTools /></PermissionGuard>} />
+                <Route path='semester-report' element={<PermissionGuard requiredPermission='score.view'><SemesterReport /></PermissionGuard>} />
+                <Route path='rank-board' element={<PermissionGuard requiredPermission='score.view'><RankBoard /></PermissionGuard>} />
                 <Route path='score-records' element={<PermissionGuard requiredPermission='score.view'><ScoreRecords /></PermissionGuard>} />
                 <Route path='score-analysis' element={<PermissionGuard requiredPermission='algorithm.view'><ScoreAnalysis /></PermissionGuard>} />
                 <Route path='algorithm-analysis' element={<PermissionGuard requiredPermission='algorithm.view'><AlgorithmAnalysis /></PermissionGuard>} />

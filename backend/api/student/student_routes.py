@@ -1,0 +1,362 @@
+"""学生自助端接口
+
+提供学生凭卡号(card_id) + 姓名双因子登录，并查询自己的积分与流水。
+与 Admin 体系完全隔离：
+- 登录签发 type=student 的 JWT（utils.security.generate_student_token）
+- 受保护端点使用 utils.permission.requires_student 校验
+- 即使学生令牌误发到 Admin 端点，也会被 requires_permission 的 type=access 校验拒绝
+"""
+from flask_restx import Namespace, Resource, fields
+from flask import request, g
+from datetime import datetime
+from models import User, ScoreRecord, Notification, LeaveApplication
+from utils.security import generate_student_token, validate_card_id
+from utils.permission import requires_student
+from utils.response import APIResponse
+from utils.logger import log_login_attempt
+from utils.datetime_utils import parse_date
+from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from services.attendance_service import attendance_service
+from services import phonebox_policy
+from services.mqtt_service import publish_mqtt
+from services.analysis_service import analysis_service
+
+ns_student = Namespace("student", description="学生自助端接口")
+
+login_model = ns_student.model(
+    "StudentLoginRequest",
+    {
+        "card_id": fields.String(required=True, description="学号/卡号"),
+        "name": fields.String(required=True, description="姓名"),
+    },
+)
+
+
+def _serialize_student(user: User) -> dict:
+    """将学生对象规整为可 JSON 序列化的字典（班级名优先取关联 ClassInfo）。"""
+    class_info = getattr(user, "class_info", None)
+    class_name = class_info.name if class_info else getattr(user, "class_name", None)
+    return {
+        "id": user.id,
+        "name": user.name,
+        "card_id": user.card_id,
+        "gender": getattr(user, "gender", None),
+        "class_info_id": user.class_info_id,
+        "class_name": class_name,
+        "current_score": user.current_score,
+        "is_active": user.is_active,
+    }
+
+
+@ns_student.route("/login")
+class StudentLogin(Resource):
+    @ns_student.doc("student_login", description="学生登录（卡号+姓名双因子）")
+    @ns_student.expect(login_model)
+    def post(self):
+        """学生登录接口。
+
+        请求体：
+        - card_id: 学号/卡号（必填）
+        - name: 姓名（必填，作为第二因子防止误用他人卡号）
+
+        返回：
+        - data.access_token: 学生 JWT
+        - data.expires_in: 过期秒数
+        - data.student: 学生基本信息
+        """
+        data = request.get_json() or {}
+        card_id = (data.get("card_id") or "").strip()
+        name = (data.get("name") or "").strip()
+        ip_address = request.remote_addr
+
+        if not card_id or not name:
+            return APIResponse.bad_request(message="请提供学号与姓名")
+        if not validate_card_id(card_id):
+            return APIResponse.bad_request(message="学号格式不正确，需为 4-20 位字母或数字")
+
+        is_allowed, message, retry_after = check_login_rate_limit(card_id, ip_address)
+        if not is_allowed:
+            return APIResponse.rate_limit(message=message, retry_after=retry_after)
+
+        user = User.query.filter_by(card_id=card_id, is_active=True).first()
+        if not user or user.name != name:
+            record_failed_login(card_id, ip_address)
+            log_login_attempt(card_id, success=False, reason="学号或姓名不匹配")
+            return APIResponse.unauthorized(message="学号或姓名不匹配")
+
+        clear_login_attempts(card_id)
+        token_data = generate_student_token(user.id, user.name, user.card_id)
+        log_login_attempt(card_id, success=True)
+
+        return APIResponse.success(
+            data={
+                "access_token": token_data["token"],
+                "expires_in": token_data["expires_in"],
+                "student": _serialize_student(user),
+            },
+            message="登录成功",
+        )
+
+
+@ns_student.route("/me")
+class StudentMe(Resource):
+    @ns_student.doc("student_me", description="获取当前登录学生信息")
+    @requires_student
+    def get(self):
+        """获取当前登录学生基本信息。"""
+        return APIResponse.success(data=_serialize_student(g.current_student))
+
+
+@ns_student.route("/score")
+class StudentScore(Resource):
+    @ns_student.doc("student_score", description="获取当前学生积分")
+    @requires_student
+    def get(self):
+        """获取当前学生的当前积分。"""
+        student = g.current_student
+        return APIResponse.success(
+            data={
+                "current_score": student.current_score,
+                "name": student.name,
+                "card_id": student.card_id,
+            }
+        )
+
+
+@ns_student.route("/records")
+class StudentRecords(Resource):
+    @ns_student.doc("student_records", description="获取当前学生积分流水（分页）")
+    @requires_student
+    def get(self):
+        """获取当前学生的积分流水，按时间倒序分页返回。"""
+        student = g.current_student
+        page = request.args.get("page", 1, type=int)
+        page_size = min(max(request.args.get("page_size", 20, type=int), 1), 100)
+
+        query = ScoreRecord.query.filter_by(user_id=student.id)
+        total = query.count()
+        items = (
+            query.order_by(ScoreRecord.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+
+        data = [
+            {
+                "id": r.id,
+                "score_change": r.score_change,
+                "description": r.description,
+                "operator": r.operator,
+                "rule_id": r.rule_id,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in items
+        ]
+
+        return APIResponse.success(APIResponse.pagination(data, page, page_size, total))
+
+
+def _serialize_notification(n: Notification) -> dict:
+    return {
+        "id": n.id,
+        "user_id": n.user_id,
+        "title": n.title,
+        "content": n.content,
+        "type": n.type,
+        "status": n.status,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+    }
+
+
+def _serialize_leave(leave: LeaveApplication) -> dict:
+    return {
+        "id": leave.id,
+        "student_id": leave.student_id,
+        "leave_type": leave.leave_type,
+        "start_date": leave.start_date.isoformat() if leave.start_date else None,
+        "end_date": leave.end_date.isoformat() if leave.end_date else None,
+        "reason": leave.reason,
+        "status": leave.status,
+        "approved_at": leave.approved_at.isoformat() if leave.approved_at else None,
+        "created_at": leave.created_at.isoformat() if leave.created_at else None,
+    }
+
+
+leave_apply_model = ns_student.model(
+    "StudentLeaveApply",
+    {
+        "leave_type": fields.String(required=False, description="请假类型（如 sick/personal）"),
+        "start_date": fields.String(required=True, description="开始日期 YYYY-MM-DD"),
+        "end_date": fields.String(required=True, description="结束日期 YYYY-MM-DD"),
+        "reason": fields.String(required=False, description="请假事由"),
+    },
+)
+
+
+@ns_student.route("/notifications")
+class StudentNotifications(Resource):
+    @ns_student.doc("student_notifications", description="获取当前学生的通知（分页）")
+    @requires_student
+    def get(self):
+        """获取当前学生收到的通知，按时间倒序分页返回。"""
+        student = g.current_student
+        page = request.args.get("page", 1, type=int)
+        page_size = min(max(request.args.get("page_size", 20, type=int), 1), 100)
+
+        query = Notification.query.filter_by(user_id=student.id)
+        total = query.count()
+        items = (
+            query.order_by(Notification.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        data = [_serialize_notification(n) for n in items]
+        return APIResponse.success(APIResponse.pagination(data, page, page_size, total))
+
+
+@ns_student.route("/leaves")
+class StudentLeaves(Resource):
+    @ns_student.doc("student_list_leaves", description="获取当前学生的请假申请")
+    @requires_student
+    def get(self):
+        """列出当前学生提交的全部请假申请，按开始日期倒序。"""
+        student = g.current_student
+        leaves = (
+            LeaveApplication.query.filter_by(student_id=student.id)
+            .order_by(LeaveApplication.start_date.desc())
+            .all()
+        )
+        return APIResponse.success(data=[_serialize_leave(lv) for lv in leaves])
+
+    @ns_student.expect(leave_apply_model)
+    @requires_student
+    def post(self):
+        """提交一条请假申请（student_id 自动绑定当前登录学生）。"""
+        student = g.current_student
+        data = request.get_json() or {}
+        start_raw = (data.get("start_date") or "").strip()
+        end_raw = (data.get("end_date") or "").strip()
+
+        if not start_raw or not end_raw:
+            return APIResponse.bad_request(message="请填写开始日期与结束日期")
+        try:
+            start_date = parse_date(start_raw)
+            end_date = parse_date(end_raw)
+        except (ValueError, TypeError):
+            return APIResponse.bad_request(message="日期格式应为 YYYY-MM-DD")
+        # parse_date 对无法解析的输入返回 None（而非抛异常），需显式拦截
+        if start_date is None or end_date is None:
+            return APIResponse.bad_request(message="日期格式应为 YYYY-MM-DD")
+
+        if start_date > end_date:
+            return APIResponse.bad_request(message="结束日期不能早于开始日期")
+
+        payload = {
+            "student_id": student.id,
+            "leave_type": data.get("leave_type") or "personal",
+            "start_date": start_raw,
+            "end_date": end_raw,
+            "reason": data.get("reason"),
+        }
+        try:
+            result, _ = attendance_service.apply_leave(payload)
+        except Exception as e:  # 防御：服务层意外异常不泄露内部信息
+            return APIResponse.error(message="提交失败，请稍后重试", status_code=400)
+        leave = LeaveApplication.query.get(result["data"]["id"])
+        return APIResponse.success(
+            data=_serialize_leave(leave) if leave else result["data"],
+            message="请假申请已提交，等待审批",
+            status_code=201,
+        )
+
+
+@ns_student.route("/phonebox/unlock")
+class StudentPhoneboxUnlock(Resource):
+    @ns_student.doc("student_phonebox_unlock", description="学生自助申请手机箱开箱")
+    @requires_student
+    def post(self):
+        """依据本班手机箱策略判定是否允许开箱；允许则下发 MQTT 开箱指令（最佳努力）。
+
+        判定来源：services.phonebox_policy.evaluate（班主任按班级配置）。
+        - allow_override / allow_window -> 允许，下发 phonebox/unlock/A 与 /B
+        - block   -> 班主任已关闭本班自助开箱
+        - defer   -> 本班未配置策略，需由老师远程开箱
+        """
+        student = g.current_student
+        class_info_id = getattr(student, "class_info_id", None)
+        evaluation = phonebox_policy.evaluate(class_info_id)
+        decision = evaluation.get("decision")
+
+        allowed = decision in (
+            phonebox_policy.POLICY_ALLOW_OVERRIDE,
+            phonebox_policy.POLICY_ALLOW_WINDOW,
+        )
+        dispatched = False
+        if allowed:
+            for box in ("A", "B"):
+                try:
+                    publish_mqtt(f"phonebox/unlock/{box}", "")
+                    dispatched = True
+                except Exception:
+                    # MQTT 不可用时不阻断请求，仅标记未下发
+                    pass
+
+        return APIResponse.success(
+            data={
+                "allowed": allowed,
+                "decision": decision,
+                "reason": evaluation.get("reason"),
+                "override_until": evaluation.get("override_until"),
+                "dispatched": dispatched,
+            },
+            message=(
+                "开箱指令已下发" if allowed
+                else ("班主任已关闭本班自助开箱" if decision == phonebox_policy.POLICY_BLOCK
+                      else "本班暂未开放自助开箱，请联系老师")
+            ),
+            status_code=200 if allowed else 403,
+        )
+
+
+@ns_student.route("/rank")
+class StudentRank(Resource):
+    @ns_student.doc("student_rank", description="获取当前学生所在班级的积分排名（含本人名次）")
+    @requires_student
+    def get(self):
+        """返回当前学生所在班级的积分排行榜，并标出本人名次。
+
+        复用 analysis_service.get_student_ranking 按班级聚合；名次由列表下标+1 计。
+        """
+        student = g.current_student
+        class_info = getattr(student, "class_info", None)
+        class_name = class_info.name if class_info else getattr(student, "class_name", None)
+        if not class_name:
+            return APIResponse.success(
+                data={
+                    "class_name": None,
+                    "my_rank": None,
+                    "my_score": student.current_score,
+                    "total_students": 1,
+                    "ranking": [],
+                }
+            )
+        result = analysis_service.get_student_ranking(
+            class_name=class_name, sort_by="score", order="desc", limit=50
+        )
+        ranking = result.get("ranking", [])
+        my_rank = None
+        for idx, item in enumerate(ranking, 1):
+            if item.get("user_id") == student.id:
+                my_rank = idx
+                break
+        return APIResponse.success(
+            data={
+                "class_name": class_name,
+                "my_rank": my_rank,
+                "my_score": student.current_score,
+                "total_students": result.get("total_students"),
+                "ranking": ranking,
+            }
+        )

@@ -215,7 +215,7 @@ const getCsrfToken = (): string | null => {
 
 export const getAuthHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
   const headers: Record<string, string> = { ...extra };
-  const accessToken = localStorage.getItem('access_token');
+  const accessToken = getBearerToken();
   if (accessToken && !headers['Authorization']) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
@@ -246,11 +246,22 @@ const fetchCsrfToken = async (): Promise<string | null> => {
   return null;
 };
 
+const getBearerToken = (): string | null => {
+  // 优先管理员令牌，否则回退到学生自助端令牌，实现两类登录态互不污染
+  return localStorage.getItem('access_token') || localStorage.getItem('student_token');
+};
+
+const clearStudentAuth = (): void => {
+  localStorage.removeItem('student_token');
+  localStorage.removeItem('student');
+};
+
 const clearAuthData = (): void => {
   localStorage.removeItem('admin');
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('subaccount');
+  clearStudentAuth();
 };
 
 const cache = new Map<string, CachedData>();
@@ -505,7 +516,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const accessToken = localStorage.getItem('access_token');
+      const accessToken = getBearerToken();
       if (accessToken && !headers['Authorization']) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
@@ -554,6 +565,16 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
         const adminStr = localStorage.getItem('admin');
         const storedRefreshToken = localStorage.getItem('refresh_token');
         if (!adminStr && !storedRefreshToken) {
+          const studentStr = localStorage.getItem('student');
+          if (studentStr) {
+            clearStudentAuth();
+            const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
+            apiError.status = 401;
+            setTimeout(() => {
+              window.location.replace('/student/login');
+            }, 50);
+            throw apiError;
+          }
           clearAuthData();
           const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
           apiError.status = 401;
@@ -607,15 +628,23 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
           }
 
           return data;
-        } catch (refreshError) {
+      } catch (refreshError) {
+        const studentStr = localStorage.getItem('student');
+        if (studentStr) {
+          clearStudentAuth();
+          setTimeout(() => {
+            window.location.href = '/student/login';
+          }, 100);
+        } else {
           clearAuthData();
           setTimeout(() => {
             window.location.href = '/login';
           }, 100);
-          const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
-          apiError.status = 401;
-          throw apiError;
         }
+        const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
+        apiError.status = 401;
+        throw apiError;
+      }
       }
 
       const error = await response.json().catch(() => ({}));
@@ -1014,6 +1043,104 @@ export interface ScoreRecordItem {
   created_at: string;
   admin_id?: number;
   operator?: string;
+}
+
+/** 学生自助端登录后返回的学生信息 */
+export interface StudentInfo {
+  id: number;
+  name: string;
+  card_id: string;
+  gender?: string | null;
+  class_info_id?: number | null;
+  class_name?: string | null;
+  current_score: number;
+  is_active: boolean;
+}
+
+/** 学生收到的通知 */
+export interface NotificationItem {
+  id: number;
+  title: string | null;
+  content: string | null;
+  type: string | null;
+  status: string | null;
+  created_at: string | null;
+}
+
+/** 学生请假申请 */
+export interface LeaveItem {
+  id: number;
+  student_id: number;
+  leave_type: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  reason: string | null;
+  status: string | null;
+  approved_at: string | null;
+  created_at: string | null;
+}
+
+/** 手机箱自助开箱申请结果 */
+export interface PhoneboxUnlockResult {
+  allowed: boolean;
+  decision: string;
+  reason: string | null;
+  override_until: string | null;
+  dispatched: boolean;
+}
+
+/** 学生积分排行榜单项 */
+export interface StudentRankItem {
+  user_id: number;
+  name: string;
+  class_name: string | null;
+  current_score: number;
+  unlock_count_30d: number;
+  daily_unlock_limit: number;
+  remaining_unlock: number;
+}
+
+/** 班级积分排行榜单项 */
+export interface ClassRankItem {
+  class_name: string;
+  student_count: number;
+  total_score: number;
+  avg_score: number;
+  unlock_count_30d: number;
+  unlock_cost_30d: number;
+}
+
+/** 学生自助端：本人班级排名结果 */
+export interface MyRankResult {
+  class_name: string | null;
+  my_rank: number | null;
+  my_score: number;
+  total_students: number;
+  ranking: StudentRankItem[];
+}
+
+/** 教师效率：批量录分单项 */
+export interface BatchScoreItem {
+  student_id?: number;
+  card_id?: string;
+  subject: string;
+  score: number | string;
+  full_score?: number;
+  remark?: string;
+}
+
+/** 教师效率：批量录分结果 */
+export interface BatchScoreResult {
+  created: number;
+  errors: Array<{ index: number; message: string }>;
+  total: number;
+}
+
+/** 教师效率：群发通知结果 */
+export interface BatchNotifyResult {
+  sent: number;
+  errors: Array<{ user_id: number; message: string }>;
+  total: number;
 }
 
 interface Role {
@@ -1532,6 +1659,7 @@ export interface Api {
     markAllAsRead: () => Promise<void>;
     create: (data: Partial<Notification>) => Promise<Notification>;
     delete: (id: number) => Promise<void>;
+    batchSend: (data: { user_ids?: number[]; class_id?: number; title: string; content: string; type?: string; force_send?: boolean }) => Promise<BatchNotifyResult>;
   };
   classes: {
     getAll: (params?: { page?: number; page_size?: number; keyword?: string; skipCache?: boolean }) => Promise<ClassListResponse>;
@@ -1563,6 +1691,10 @@ export interface Api {
     importScores: (formData: FormData) => Promise<unknown>;
     exportScores: (examId?: number, format?: 'json' | 'excel') => void;
     confirmAll: (examId: string) => Promise<void>;
+    batchCreate: (data: { exam_id: number; scores: BatchScoreItem[] }) => Promise<BatchScoreResult>;
+  };
+  reports: {
+    exportClassSemester: (classId: number, format?: 'excel' | 'csv') => Promise<void>;
   };
   remoteNotify: {
     send: (data: { text: string; volume?: number; speak?: boolean; popup?: boolean; timeout_sec?: number; urgent?: boolean; force_send?: boolean }) => Promise<unknown>;
@@ -1883,6 +2015,34 @@ export interface Api {
     updatePlan: (id: number, data: ImprovementPlanCreateInput) => Promise<ImprovementPlan>;
     deletePlan: (id: number) => Promise<void>;
     updatePlanProgress: (planId: number, progress: number) => Promise<void>;
+  };
+  student: {
+    login: (data: { card_id: string; name: string }) => Promise<{ access_token: string; expires_in: number; student: StudentInfo }>;
+    getMe: () => Promise<StudentInfo>;
+    getScore: () => Promise<{ current_score: number; name: string; card_id: string }>;
+    getRecords: (params?: { page?: number; page_size?: number }) => Promise<{
+      data: ScoreRecordItem[];
+      pagination: { page: number; page_size: number; total: number; pages: number };
+    }>;
+    getNotifications: (params?: { page?: number; page_size?: number }) => Promise<{
+      data: NotificationItem[];
+      pagination: { page: number; page_size: number; total: number; pages: number };
+    }>;
+    getLeaves: () => Promise<LeaveItem[]>;
+    applyLeave: (data: { leave_type?: string; start_date: string; end_date: string; reason?: string }) => Promise<LeaveItem>;
+    requestPhoneboxUnlock: () => Promise<PhoneboxUnlockResult>;
+    getMyRank: () => Promise<MyRankResult>;
+  };
+  rank: {
+    getStudentRanking: (params?: { class_name?: string; sort_by?: string; order?: string; limit?: number }) => Promise<{
+      ranking: StudentRankItem[];
+      total_students: number;
+      class_name: string;
+    }>;
+    getClassRanking: (params?: { sort_by?: string; order?: string; limit?: number }) => Promise<{
+      ranking: ClassRankItem[];
+      total_classes: number;
+    }>;
   };
 }
 
@@ -3216,6 +3376,10 @@ const api: Api = {
       body: JSON.stringify(data),
     }) as Promise<Notification>,
     delete: (id) => request(`/api/notifications/${id}`, { method: 'DELETE' }) as Promise<void>,
+    batchSend: (data) => request('/api/notifications/batch', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }) as Promise<BatchNotifyResult>,
   },
   classes: {
     getAll: async (params?: { page?: number; page_size?: number; keyword?: string; skipCache?: boolean }) => {
@@ -3304,6 +3468,35 @@ const api: Api = {
       method: 'POST',
       body: JSON.stringify({ exam_id: examId }),
     }) as Promise<void>,
+    batchCreate: (data) => request('/api/scores/batch', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }) as Promise<BatchScoreResult>,
+  },
+  reports: {
+    exportClassSemester: (classId: number, format: 'excel' | 'csv' = 'excel') => {
+      const params = new URLSearchParams();
+      params.append('class_id', classId.toString());
+      params.append('format', format);
+      const token = getBearerToken();
+      return fetch(`${API_BASE_URL}/api/reports/class-semester?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `班级学期报告_${classId}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        });
+    },
   },
   remoteNotify: {
     send: (data) => request('/api/remote_notify/send', {
@@ -4163,6 +4356,71 @@ const api: Api = {
       method: 'PUT',
       body: JSON.stringify({ progress }),
     }) as Promise<void>,
+  },
+  student: {
+    login: (data: { card_id: string; name: string }) =>
+      request('/api/student/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        skipAuth: true,
+      }) as Promise<{ access_token: string; expires_in: number; student: StudentInfo }>,
+    getMe: () => request('/api/student/me') as Promise<StudentInfo>,
+    getScore: () => request('/api/student/score') as Promise<{ current_score: number; name: string; card_id: string }>,
+    getRecords: (params: { page?: number; page_size?: number } = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+      const query = queryParams.toString();
+      return request(`/api/student/records${query ? '?' + query : ''}`) as Promise<{
+        data: ScoreRecordItem[];
+        pagination: { page: number; page_size: number; total: number; pages: number };
+      }>;
+    },
+    getNotifications: (params: { page?: number; page_size?: number } = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+      const query = queryParams.toString();
+      return request(`/api/student/notifications${query ? '?' + query : ''}`) as Promise<{
+        data: NotificationItem[];
+        pagination: { page: number; page_size: number; total: number; pages: number };
+      }>;
+    },
+    getLeaves: () => request('/api/student/leaves') as Promise<LeaveItem[]>,
+    applyLeave: (data: { leave_type?: string; start_date: string; end_date: string; reason?: string }) =>
+      request('/api/student/leaves', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<LeaveItem>,
+    requestPhoneboxUnlock: () =>
+      request('/api/student/phonebox/unlock', { method: 'POST' }) as Promise<PhoneboxUnlockResult>,
+    getMyRank: () => request('/api/student/rank') as Promise<MyRankResult>,
+  },
+  rank: {
+    getStudentRanking: (params: { class_name?: string; sort_by?: string; order?: string; limit?: number } = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.class_name) queryParams.append('class_name', params.class_name);
+      if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+      if (params.order) queryParams.append('order', params.order);
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      const query = queryParams.toString();
+      return request(`/api/rank/student${query ? '?' + query : ''}`) as Promise<{
+        ranking: StudentRankItem[];
+        total_students: number;
+        class_name: string;
+      }>;
+    },
+    getClassRanking: (params: { sort_by?: string; order?: string; limit?: number } = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+      if (params.order) queryParams.append('order', params.order);
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      const query = queryParams.toString();
+      return request(`/api/rank/class${query ? '?' + query : ''}`) as Promise<{
+        ranking: ClassRankItem[];
+        total_classes: number;
+      }>;
+    },
   },
   cache: {
     clearByUrl: (url: string) => deleteCacheByPattern(url),
