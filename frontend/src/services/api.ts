@@ -2338,6 +2338,114 @@ const TREND_MAP: Record<string, 'up' | 'down' | 'stable'> = {
   insufficient_data: 'stable',
 };
 
+/**
+ * 单用户预测接口的返回结构与前端 PredictionResult / ScorePredictResult /
+ * RiskPredictResult / AnomalyResult 不一致（后端用 predicted_scores 数组、
+ * overall_risk_level、anomalies[] 等不同命名），且原先直接 `as` 断言无兜底，
+ * 一旦被调用会读到 undefined。这里补一组单对象 normalize，与 batch 的兜底逻辑对齐。
+ */
+const toNumSafe = (v: unknown, fallback = 0): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+
+const normalizeUserPrediction = (raw?: any): PredictionResult => {
+  const list = Array.isArray(raw?.predicted_scores) ? raw!.predicted_scores! : [];
+  const predicted_score =
+    list.length > 0 ? toNumSafe(list[list.length - 1]) : toNumSafe(raw?.current_score);
+  const trendKey = typeof raw?.trend === 'string' ? raw.trend : 'stable';
+  return {
+    name: typeof raw?.user_id === 'number' || typeof raw?.user_id === 'string' ? String(raw.user_id) : '未知学生',
+    current_score: toNumSafe(raw?.current_score),
+    predicted_score,
+    trend: TREND_MAP[trendKey] ?? 'stable',
+    confidence: toNumSafe(raw?.confidence),
+  };
+};
+
+const normalizeUserScorePredict = (raw?: any): ScorePredictResult => {
+  const features = raw?.features ?? {};
+  return {
+    name: raw?.name ?? '未知学生',
+    subject: raw?.class_name ?? '',
+    current_score: toNumSafe(features?.current_score),
+    predicted_score: toNumSafe(raw?.predicted_score),
+    trend: 'stable',
+    confidence: toNumSafe(raw?.confidence),
+  };
+};
+
+const normalizeUserRiskPredict = (raw?: any): RiskPredictResult => {
+  const factors = Array.isArray(raw?.risk_factors) ? raw!.risk_factors! : [];
+  const contributing_factors = factors
+    .map((f: any) => (f && (f.name || f.description)) || '')
+    .filter((s: string) => !!s);
+  const recommended_actions = Array.isArray(raw?.recommended_actions)
+    ? raw!.recommended_actions!
+    : Array.isArray(raw?.intervention_suggestions)
+    ? raw!.intervention_suggestions!
+    : [];
+  const sev = (raw?.overall_risk_level ?? 'low') as 'high' | 'medium' | 'low';
+  return {
+    name: raw?.name ?? '未知学生',
+    risk_level: sev === 'high' || sev === 'medium' ? sev : 'low',
+    risk_score: toNumSafe(raw?.overall_risk_score),
+    contributing_factors,
+    recommended_actions,
+  };
+};
+
+const normalizeUserAnomaly = (raw?: any): AnomalyResult => {
+  const list = Array.isArray(raw?.anomalies) ? raw!.anomalies! : [];
+  const a = list[0] ?? {};
+  const sevRaw = (a?.severity ?? 'low') as string;
+  const severity: 'high' | 'medium' | 'low' =
+    sevRaw === 'high' || sevRaw === 'medium' || sevRaw === 'low' ? sevRaw : 'low';
+  return {
+    name: a?.name ?? '未知学生',
+    anomaly_type: a?.type || a?.anomaly_type_label || '异常',
+    severity,
+    description: a?.details ?? '',
+    score_change: toNumSafe(a?.score_change),
+    detected_at: a?.date ?? '',
+  };
+};
+
+const normalizeSuddenChange = (raw?: any): AnomalyResult => {
+  const list = Array.isArray(raw) ? raw : [];
+  const item = list[0] ?? {};
+  return {
+    name: '',
+    anomaly_type: 'sudden_change',
+    severity: 'medium',
+    description: item?.rule_name ?? '',
+    score_change: toNumSafe(item?.score_change),
+    detected_at: item?.date ?? '',
+  };
+};
+
+const normalizeTrendAnomaly = (raw?: any): AnomalyResult => {
+  const has = !!raw?.has_anomaly;
+  return {
+    name: '',
+    anomaly_type: 'trend_anomaly',
+    severity: has ? 'high' : 'low',
+    description: raw?.description ?? '',
+    score_change: toNumSafe(raw?.total_change),
+    detected_at: '',
+  };
+};
+
+const normalizeGroupAnomaly = (raw?: any): AnomalyResult => {
+  const has = !!raw?.has_anomaly;
+  return {
+    name: '',
+    anomaly_type: 'group_anomaly',
+    severity: has ? 'high' : 'low',
+    description: raw?.description ?? '',
+    score_change: 0,
+    detected_at: '',
+  };
+};
+
 const normalizeBatchPrediction = (raw?: RawBatchPrediction | null): BatchPredictionData => {
   const list = Array.isArray(raw?.predictions) ? raw!.predictions! : [];
   const toNum = (v: unknown, fallback = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
@@ -3136,8 +3244,10 @@ const api: Api = {
     }) as Promise<SystemConfig>,
   },
   algorithm: {
-    getPrediction: (userId: number, days = 7) =>
-      request(`/api/algorithm/prediction/${userId}?days=${days}`) as Promise<PredictionResult>,
+    getPrediction: async (userId: number, days = 7) => {
+      const raw = (await request(`/api/algorithm/prediction/${userId}?days=${days}`)) as any;
+      return normalizeUserPrediction(raw);
+    },
     getBatchPrediction: async (className?: string, days = 7) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
@@ -3149,8 +3259,10 @@ const api: Api = {
     getRiskStudents: (days = 7) =>
       request(`/api/algorithm/prediction/risk?days=${days}`) as Promise<RiskStudent[]>,
 
-    getUserAnomaly: (userId: number, days = 30) =>
-      request(`/api/algorithm/anomaly/${userId}?days=${days}`) as Promise<AnomalyResult>,
+    getUserAnomaly: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/anomaly/${userId}?days=${days}`)) as any;
+      return normalizeUserAnomaly(raw);
+    },
     getBatchAnomaly: async (className?: string, days = 30) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
@@ -3160,12 +3272,18 @@ const api: Api = {
       const raw = (await request(`/api/algorithm/anomaly/batch?${params.toString()}`)) as RawBatchAnomaly;
       return normalizeBatchAnomaly(raw);
     },
-    getSuddenChange: (userId: number, days = 30) =>
-      request(`/api/algorithm/anomaly/sudden/${userId}?days=${days}`) as Promise<AnomalyResult>,
-    getTrendAnomaly: (userId: number, days = 30) =>
-      request(`/api/algorithm/anomaly/trend/${userId}?days=${days}`) as Promise<AnomalyResult>,
-    getGroupAnomaly: (userId: number, days = 30) =>
-      request(`/api/algorithm/anomaly/group/${userId}?days=${days}`) as Promise<AnomalyResult>,
+    getSuddenChange: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/anomaly/sudden/${userId}?days=${days}`)) as any;
+      return normalizeSuddenChange(raw);
+    },
+    getTrendAnomaly: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/anomaly/trend/${userId}?days=${days}`)) as any;
+      return normalizeTrendAnomaly(raw);
+    },
+    getGroupAnomaly: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/anomaly/group/${userId}?days=${days}`)) as any;
+      return normalizeGroupAnomaly(raw);
+    },
 
     getRuleRecommend: async (className?: string, days = 30) => {
       const params = new URLSearchParams();
@@ -3199,8 +3317,10 @@ const api: Api = {
     evaluateRuleRecommendModel: (days = 30) =>
       request(`/api/algorithm/rule-recommend/evaluate?days=${days}`) as Promise<ModelEvaluationResult>,
     
-    getScorePredict: (userId: number, days = 30) =>
-      request(`/api/algorithm/score-predict/${userId}?days=${days}`) as Promise<ScorePredictResult>,
+    getScorePredict: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/score-predict/${userId}?days=${days}`)) as any;
+      return normalizeUserScorePredict(raw);
+    },
     getBatchScorePredict: async (className?: string, days = 30) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
@@ -3221,8 +3341,10 @@ const api: Api = {
     evaluateScorePredictModel: (days = 30) =>
       request(`/api/algorithm/score-predict/evaluate?days=${days}`) as Promise<ModelEvaluationResult>,
 
-    getRiskPredict: (userId: number, days = 30) =>
-      request(`/api/algorithm/risk-predict/${userId}?days=${days}`) as Promise<RiskPredictResult>,
+    getRiskPredict: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/risk-predict/${userId}?days=${days}`)) as any;
+      return normalizeUserRiskPredict(raw);
+    },
     getBatchRiskPredict: async (className?: string, days = 30) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
