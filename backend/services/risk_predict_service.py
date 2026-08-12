@@ -1,3 +1,5 @@
+import json
+import os
 from datetime import datetime, timedelta
 
 from models import User, ScoreRecord, get_by_id
@@ -32,6 +34,51 @@ class RiskPredictService:
         "attendance": {"name": "出勤风险", "description": "出勤率偏低"},
         "comprehensive": {"name": "综合风险", "description": "多维度综合评估"},
     }
+
+    # 综合风险类型默认权重（未被 train_risk_model 训练覆盖时回退使用）
+    DEFAULT_WEIGHTS = {"academic": 0.4, "behavior": 0.35, "attendance": 0.25}
+
+    @staticmethod
+    def _model_config_path():
+        """返回训练模型配置落盘路径（位于 backend/instance，已被 gitignore 忽略）。"""
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base, "instance", "risk_model_config.json")
+
+    @staticmethod
+    def _load_model_config():
+        """读取已训练模型配置；不存在或解析失败时返回空字典。"""
+        path = RiskPredictService._model_config_path()
+        try:
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:  # noqa: BLE001
+            pass
+        return {}
+
+    @staticmethod
+    def _save_model_config(config):
+        """持久化训练模型配置（best-effort，写入失败不影响主流程）。"""
+        path = RiskPredictService._model_config_path()
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _resolve_weights():
+        """返回综合风险权重：优先用训练得到的，否则回退默认。"""
+        cfg = RiskPredictService._load_model_config()
+        weights = cfg.get("risk_type_weights")
+        if not isinstance(weights, dict) or not all(
+            k in weights for k in RiskPredictService.DEFAULT_WEIGHTS
+        ):
+            return dict(RiskPredictService.DEFAULT_WEIGHTS)
+        if sum(float(v) for v in weights.values()) <= 0:
+            return dict(RiskPredictService.DEFAULT_WEIGHTS)
+        return {k: float(weights[k]) for k in RiskPredictService.DEFAULT_WEIGHTS}
 
     @staticmethod
     def get_risk_features(user_id, days=30):
@@ -226,15 +273,20 @@ class RiskPredictService:
             return None, 0, 0, 0, 0
 
     @staticmethod
-    def detect_academic_risk(features):
+    def detect_score_risk(features):
         """
-        检测学业风险
+        检测积分（成绩）下降趋势风险
+
+        注：历史上命名为 detect_academic_risk，本平台为积分管理系统，
+        实际评估的是 score_trend / class_percentile / score_decline_rate
+        等积分维度，故重命名为 detect_score_risk。风险类型键仍沿用
+        RISK_TYPES["academic"] 以保持 API 契约稳定。
 
         Args:
             features: 风险特征
 
         Returns:
-            dict: 学业风险检测结果
+            dict: 积分风险检测结果
         """
         risk_score = 0.0
         factors = []
@@ -517,15 +569,15 @@ class RiskPredictService:
             return {"user_id": user_id, "error": "学生不存在"}
 
         # 检测各类型风险
-        academic_risk = RiskPredictService.detect_academic_risk(features)
+        academic_risk = RiskPredictService.detect_score_risk(features)
         behavior_risk = RiskPredictService.detect_behavior_risk(features)
         attendance_risk = RiskPredictService.detect_attendance_risk(features)
 
         # 综合风险评估
         risk_types = [academic_risk, behavior_risk, attendance_risk]
 
-        # 计算综合风险评分（加权）
-        weights = {"academic": 0.4, "behavior": 0.35, "attendance": 0.25}
+        # 计算综合风险评分（加权），权重来自训练结果，未训练时回退默认
+        weights = RiskPredictService._resolve_weights()
         overall_score = sum(r["risk_score"] * weights[r["type"]] for r in risk_types)
 
         # 确定综合风险级别
@@ -768,6 +820,17 @@ class RiskPredictService:
         total_weight = sum(weights.values())
         if total_weight > 0:
             weights = {k: round(v / total_weight, 2) for k, v in weights.items()}
+
+        # 持久化训练结果，使权重重启后仍可被 predict_risk 使用
+        RiskPredictService._save_model_config(
+            {
+                "risk_type_weights": weights,
+                "optimal_thresholds": optimal_thresholds,
+                "trained_at": datetime.utcnow().isoformat(),
+                "training_data_days": days,
+                "valid_students": valid_users,
+            }
+        )
 
         return {
             "status": "success",

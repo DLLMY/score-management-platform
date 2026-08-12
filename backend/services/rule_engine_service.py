@@ -212,7 +212,6 @@ class RuleExecutionEngine:
                         rule_id=rule["id"],
                         score_change=score_change,
                         reason=(f'规则自动应用: {rule["name"]} ' f"(置信度: {confidence:.3f})"),
-                        category=rule.get("category", "auto_apply"),
                     )
                     db.session.add(record)
 

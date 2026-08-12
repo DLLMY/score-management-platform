@@ -96,7 +96,7 @@ class TestRiskPredictService:
         result = RiskPredictService._count_consecutive_no_positive(changes)
         assert result == 0
 
-    def test_detect_academic_risk_high(self):
+    def test_detect_score_risk_high(self):
         """测试检测学业风险-高风险"""
         features = {
             "score_trend_30d": -2.0,
@@ -105,14 +105,14 @@ class TestRiskPredictService:
             "score_decline_rate": -0.2,
         }
 
-        result = RiskPredictService.detect_academic_risk(features)
+        result = RiskPredictService.detect_score_risk(features)
 
         assert result["type"] == "academic"
         assert result["risk_level"] == "high"
         assert result["risk_score"] >= 0.7
         assert len(result["factors"]) >= 3
 
-    def test_detect_academic_risk_medium(self):
+    def test_detect_score_risk_medium(self):
         """测试检测学业风险-中风险"""
         features = {
             "score_trend_30d": -1.0,
@@ -121,13 +121,13 @@ class TestRiskPredictService:
             "score_decline_rate": 0.0,
         }
 
-        result = RiskPredictService.detect_academic_risk(features)
+        result = RiskPredictService.detect_score_risk(features)
 
         assert result["type"] == "academic"
         assert result["risk_level"] == "medium"
         assert 0.4 <= result["risk_score"] < 0.7
 
-    def test_detect_academic_risk_low(self):
+    def test_detect_score_risk_low(self):
         """测试检测学业风险-低风险"""
         features = {
             "score_trend_30d": 1.0,
@@ -136,7 +136,7 @@ class TestRiskPredictService:
             "score_decline_rate": 0.1,
         }
 
-        result = RiskPredictService.detect_academic_risk(features)
+        result = RiskPredictService.detect_score_risk(features)
 
         assert result["type"] == "academic"
         assert result["risk_level"] == "low"

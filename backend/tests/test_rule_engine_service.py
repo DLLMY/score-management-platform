@@ -233,7 +233,7 @@ class TestRuleExecutionEngine:
                 ]
             }
             with patch.object(engine.matcher, '_load_rule', return_value={'id': 1, 'name': '禁用规则',
-                'score_change': 5, 'priority': 'P2', 'enabled': False}):
+                'score': 5, 'priority': 'P2', 'is_active': False}):
                 result = engine.execute_rules(model_output, {'user_id': 1})
                 assert result['success']
                 assert len(result['applied_rules']) == 0
