@@ -229,11 +229,13 @@ class RuleExecutionEngine:
                         }
                     )
 
+                new_score = user.current_score
+
             return {
                 "success": True,
                 "applied_rules": applied_rules,
                 "total_score_change": total_score_change,
-                "new_score": user.current_score,
+                "new_score": new_score,
                 "message": f"成功应用{len(applied_rules)}条规则",
             }
 
