@@ -193,9 +193,17 @@ class NLPParserService:
         positive_count = behavior_result["positive_count"]
         negative_count = behavior_result["negative_count"]
 
-        if "扣分" in text or "扣" in text:
+        if "扣分" in text:
             return "deduct"
-        if "加分" in text or "加" in text:
+        if "加分" in text:
+            return "add"
+        # 单字「扣/加」仅在后接数字（如「扣5分」「加3分」）时判定，
+        # 避免「加强管理」「扣工资」等含单字但非加减分意图的文本误判
+        import re
+
+        if re.search(r"扣\s*\d", text):
+            return "deduct"
+        if re.search(r"加\s*\d", text):
             return "add"
 
         if negative_count > positive_count:

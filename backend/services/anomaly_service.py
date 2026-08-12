@@ -271,7 +271,7 @@ class AnomalyService:
                     "name": ANOMALY_TYPES["sudden_change"]["name"],
                     "date": anomaly["date"],
                     "details": anomaly["description"],
-                    "severity": "high" if anomaly.get("z_score", 0) > 80 else "medium",
+                    "severity": "high" if anomaly.get("z_score", 0) > 3 else "medium",
                 }
             )  # noqa: E501
         trend_anomaly = AnomalyService.detect_trend_anomaly(user_id, days)

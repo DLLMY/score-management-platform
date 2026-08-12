@@ -201,10 +201,10 @@ class RuleExecutionEngine:
             with db_session_scope():
                 for rule_item in resolved_rules:
                     rule = rule_item["rule"]
-                    if not rule.get("enabled", True):
+                    if not rule.get("is_active", True):
                         continue
 
-                    score_change = rule.get("score_change", 0)
+                    score_change = rule.get("score", 0)
                     confidence = rule_item.get("confidence", 0)
 
                     record = ScoreRecord(
@@ -260,7 +260,7 @@ class RuleExecutionEngine:
         """基于行为类型生成规则推荐"""
         recommendations = []
 
-        rules = ScoreRule.query.filter(ScoreRule.rule_type == behavior_type, ScoreRule.enabled).all()
+        rules = ScoreRule.query.filter(ScoreRule.rule_type == behavior_type, ScoreRule.is_active).all()
 
         for rule in rules:
             recommendations.append(

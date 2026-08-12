@@ -480,8 +480,10 @@ class ScorePredictService:
             result = ScorePredictService.predict_exam_score(user.id, days)  # noqa: F841
             if "predicted_score" in result:
                 predictions.append(result["predicted_score"])
-                # 使用当前积分作为实际值的代理（实际应用中应使用真实考试成绩）
-                actual_scores.append(user.current_score * 0.8 + 20)
+                # 注意：系统无真实考试成绩标签。此处以用户当前积分作为真实值锚点，
+                # 仅用于评估预测公式相对原始积分的偏离（公式自洽性），
+                # 不能代表对真实学业成绩的预测准确性。
+                actual_scores.append(user.current_score)
 
         if len(predictions) < 2:
             return {
@@ -521,8 +523,9 @@ class ScorePredictService:
 
         return {
             "status": "success",
-            "message": "模型评估完成",
+            "message": "模型自洽性评估完成（基于积分代理，非真实考试成绩，指标不能代表真实预测准确性）",
             "metrics": {
+                "proxy_based": True,
                 "evaluation_data_days": days,
                 "total_students": len(users),
                 "evaluated_students": len(predictions),

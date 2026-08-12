@@ -24,16 +24,18 @@ class ScoreDistributionController:
 
         sorted_scores = sorted(raw_scores, reverse=True)
 
-        targets = {
-            "excellent": max(1, int(n * 0.10)),
-            "good": max(1, int(n * 0.30)),
-            "medium": max(1, int(n * 0.40)),
-            "low": max(1, int(n * 0.20)),
-        }
+        # 按目标比例确定各档在降序排序中的分界索引（不再强制每档至少 1 人），
+        # 避免小班级各档人数累加超过 n 导致 cutoff 全部塌缩到最高分。
+        n_exc = int(round(n * 0.10))
+        n_good = int(round(n * 0.30))
+        n_med = int(round(n * 0.40))
+        idx_exc = max(0, min(n_exc, n - 1))
+        idx_good = max(idx_exc, min(idx_exc + n_good, n - 1))
+        idx_med = max(idx_good, min(idx_good + n_med, n - 1))
 
-        excellent_cutoff = sorted_scores[min(targets["excellent"] - 1, n - 1)]
-        good_cutoff = sorted_scores[min(targets["good"] - 1, n - 1)]
-        medium_cutoff = sorted_scores[min(targets["medium"] - 1, n - 1)]
+        excellent_cutoff = sorted_scores[idx_exc]
+        good_cutoff = sorted_scores[idx_good]
+        medium_cutoff = sorted_scores[idx_med]
 
         adjusted_scores = []
         for score in raw_scores:
@@ -57,8 +59,8 @@ class ScoreDistributionController:
             return {"valid": False, "error": "无数据"}
 
         excellent = sum(1 for s in scores if s >= 90)
-        good = sum(1 for s in scores if s >= 80)
-        medium = sum(1 for s in scores if s >= 70)
+        good = sum(1 for s in scores if 80 <= s < 90)
+        medium = sum(1 for s in scores if 70 <= s < 80)
         low = sum(1 for s in scores if s < 70)
 
         ratios = {
@@ -122,8 +124,8 @@ class ScoreDistributionController:
 
         n = len(scores)
         excellent = sum(1 for s in scores if s >= 90)
-        good = sum(1 for s in scores if s >= 80)
-        medium = sum(1 for s in scores if s >= 70)
+        good = sum(1 for s in scores if 80 <= s < 90)
+        medium = sum(1 for s in scores if 70 <= s < 80)
         low = sum(1 for s in scores if s < 70)
 
         avg_score = sum(scores) / n

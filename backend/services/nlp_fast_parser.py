@@ -43,7 +43,7 @@ class FastNLPParser:
         }
 
         self._name_patterns = [
-            re.compile(r"(?:给|为|对|把)([\u4e00-\u9fa5]{2,4})(?:的)?"),
+            re.compile(r"(?:给|为|对|把)([\u4e00-\u9fa5]{2,4}?)(?:的)?"),
             re.compile(r"(?:查询|查看|显示|看看|展示)([\u4e00-\u9fa5]{2,4})的"),
             re.compile(r"([\u4e00-\u9fa5]{2,4})(?:迟到|早退|旷课|上课|作业|做好事|帮助|发言|回答|值日|打扫)"),
             re.compile(r"([\u4e00-\u9fa5]{2,4})(?:加|扣)(?:[\d分])"),
@@ -141,6 +141,13 @@ class FastNLPParser:
         intent_keywords = set()
         for keywords in self._quick_intent_keywords.values():
             intent_keywords.update(keywords)
+
+        # 单字动词兜底剥离（如「给张三加5分」捕获到「张三加」时，剔除末尾单字动词）
+        single_char_verbs = {"加", "扣", "减"}
+        if name and name[-1:] in single_char_verbs:
+            candidate = name[:-1]
+            if len(candidate) >= 2:
+                return candidate
 
         for kw in intent_keywords:
             if kw in name and len(kw) > 1:

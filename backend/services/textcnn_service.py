@@ -29,6 +29,7 @@ class TextCNNClassifier:
         self.filter_biases = {}
         self.fc_weights = None
         self.fc_bias = None
+        self._trained = False
         self._build_vocab()
         self._initialize_weights()
 
@@ -167,6 +168,7 @@ class TextCNNClassifier:
         self.fc_weights = np.array(model_data["fc_weights"])
         self.fc_bias = np.array(model_data["fc_bias"])
         self.vocab_size = len(self.vocab)
+        self._trained = True
 
     def train(self, texts, labels, epochs=10, learning_rate=0.01):
         """训练模型"""
@@ -220,6 +222,7 @@ class TextCNNClassifier:
                 predictions = np.argmax(all_logits, axis=1)
                 accuracy = np.mean(predictions == y)
                 print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}")
+        self._trained = True
 
 
 class IntentMatcher:
@@ -361,9 +364,18 @@ class IntentMatcher:
         if rule_confidence > 0.5:
             final_intent = rule_intent
             final_confidence = rule_confidence * 0.7 + cnn_confidence * 0.3
+        elif rule_confidence > 0:
+            # 规则弱匹配：信任规则意图，但置信度不超过规则本身，不盲信 CNN 随机输出
+            final_intent = rule_intent
+            final_confidence = rule_confidence
         else:
-            final_intent = cnn_intent
-            final_confidence = cnn_confidence * 0.7 + rule_confidence * 0.3
+            # 规则完全无法匹配：CNN 未经训练时为随机结果，不可信，诚实返回无法确定
+            if getattr(self.cnn, "_trained", False):
+                final_intent = cnn_intent
+                final_confidence = cnn_confidence * 0.5
+            else:
+                final_intent = "other"
+                final_confidence = 0.0
         return {
             "intent": final_intent,
             "confidence": final_confidence,

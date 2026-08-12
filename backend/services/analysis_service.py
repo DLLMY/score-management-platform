@@ -172,6 +172,7 @@ class AnalysisService:
             unlock_count = (
                 ScoreRecord.query.join(User)
                 .filter(
+                    User.class_name == stat.class_name,
                     ScoreRecord.description.like("%开锁%"),
                     ScoreRecord.created_at >= last_30_days,
                 )
@@ -190,6 +191,7 @@ class AnalysisService:
                             r.score_change
                             for r in ScoreRecord.query.join(User)
                             .filter(
+                                User.class_name == stat.class_name,
                                 ScoreRecord.description.like("%开锁%"),
                                 ScoreRecord.created_at >= last_30_days,
                             )

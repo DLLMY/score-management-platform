@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from models import ScoreRecord, ScoreRule, ScoreCategory, User
 import numpy as np
+import re
 
 
 class RuleRecommendationService:
@@ -689,9 +690,22 @@ class RuleRecommendationService:
             category_stats[category]["record_count"] += 1
             category_stats[category]["user_count"] += 1
 
-        # 计算覆盖度
-        covered_categories = existing_categories & set(category_stats.keys())
-        coverage_rate = len(covered_categories) / len(category_stats) if category_stats else 0
+        # 计算覆盖度：原实现中 existing_categories（ScoreCategory 对象集合）与
+        # category_stats（字符串集合）类型不匹配，交集恒为空，导致 coverage_rate 恒为 0。
+        # 改为统计描述命中任一现有规则关键词的记录比例作为覆盖度估计。
+        rule_keywords = set()
+        for r in existing_rules:
+            for field in (r.name, r.description):
+                if field:
+                    for term in re.findall(r"[\u4e00-\u9fa5]{2,}", field):
+                        rule_keywords.add(term)
+        covered = 0
+        for rec in records:
+            desc = getattr(rec, "description", None) or ""
+            if any(kw in desc for kw in rule_keywords):
+                covered += 1
+        coverage_rate = round(covered / len(records), 4) if records else 0.0
+        covered_categories = set()  # 兼容下方 metrics 引用
 
         # 计算规则有效性
         effectiveness_scores = []
@@ -711,7 +725,7 @@ class RuleRecommendationService:
                 "evaluation_data_days": days,
                 "total_records": len(records),
                 "total_categories": len(category_stats),
-                "covered_categories": len(covered_categories),
+                "covered_records": covered,
                 "coverage_rate": round(coverage_rate, 4),
                 "avg_effectiveness": round(avg_effectiveness, 4),
                 "total_recommendations": recommendations["summary"]["total_recommendations"],

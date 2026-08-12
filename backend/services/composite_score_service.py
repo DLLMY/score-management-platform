@@ -207,6 +207,7 @@ class CompositeScoreService:
                     "behavior_score": d["behavior"],
                     "academic_score": round(d["academic"], 2),
                     "unlock_count": d["unlock_count"],
+                    "social_score": round(float(d["compliance_norm"] * 100), 2),
                     "composite_score": composite_score,
                 }
             )
@@ -232,6 +233,7 @@ class CompositeScoreService:
                     behavior_score=r["behavior_score"],
                     academic_score=r["academic_score"],
                     composite_score=r["composite_score"],
+                    social_score=r["social_score"],
                     weights={
                         "behavior": float(weights[0]),
                         "academic": float(weights[1]),

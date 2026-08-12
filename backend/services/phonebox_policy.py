@@ -151,13 +151,6 @@ def evaluate(class_info_id, check_time=None):
     if policy is None:
         return {"decision": POLICY_DEFER, "reason": "no_policy"}
 
-    if not policy.allow_self_unlock:
-        return {
-            "decision": POLICY_BLOCK,
-            "reason": "teacher_disabled",
-            "policy_id": policy.id,
-        }
-
     now = check_time or datetime.now()
 
     if policy.override_until and policy.override_until > now:
@@ -166,6 +159,13 @@ def evaluate(class_info_id, check_time=None):
             "reason": "override",
             "policy_id": policy.id,
             "override_until": policy.override_until.isoformat(),
+        }
+
+    if not policy.allow_self_unlock:
+        return {
+            "decision": POLICY_BLOCK,
+            "reason": "teacher_disabled",
+            "policy_id": policy.id,
         }
 
     if _now_in_windows(policy.unlock_windows, now):
