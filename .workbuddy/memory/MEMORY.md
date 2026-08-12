@@ -34,6 +34,7 @@
 - 契约回归 `tests/test_api_envelope.py`：遍历无参 GET /api，5xx/未捕获异常判失败（200 无信封仅告警）。改端点后必跑。
 - OpenAPI 校验 `scripts/verify_openapi_contract.py --update/--strict`；快照 api-docs/openapi.json（451 路径）。
 - 不主动 git commit（用户约定）；CI 见下方待办。
+- **Git push 需代理**：本机直连 GitHub 不通（DNS 可解析 github.com→20.205.243.166，但 TCP 443 `Could not connect to server`/`Connection was reset`），6 个常见代理端口（7890/7891/1080/8080/10808/8118）默认全无响应。push 前须用户在本地开代理（Clash 7890 / v2rayN 10808-10809 / SSR 1080），再用 `git -c http.proxy=http://127.0.0.1:<port> push origin main` 重推；**勿写 git 全局代理配置**。提交可离线完成，安全落盘。
 
 ## 代码健康（评估发现并修复，2026-08-07）
 - ✅ **CI 红已修**：`ci.yml` MQTT 测试改为实际存在的 `test_mqtt_message_service.py`/`test_mqtt_service.py`。

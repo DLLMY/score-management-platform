@@ -516,12 +516,12 @@ function DeviceManagement() {
     }
   }, [newDevice, showToast, closeAddModal, loadDevices]);
 
-  const handleDeleteDevice = useCallback(async (deviceId: string) => {
+  const handleDeleteDevice = useCallback(async (id: number) => {
     if (!window.confirm(`确定要删除这个设备吗？此操作无法撤销。`)) return;
 
     try {
-      await api.devices.delete(deviceId);
-      setDevices((prev) => prev.filter((d) => d.device_id !== deviceId));
+      await api.devices.delete(id);
+      setDevices((prev) => prev.filter((d) => d.id !== id));
       setStats((prev) => ({
         ...prev,
         total: Math.max(0, (prev.total || 0) - 1),
@@ -936,7 +936,7 @@ function DeviceManagement() {
                               <PermissionButton permission='device.edit' variant='secondary' size='sm' onClick={() => openSettingsModal(device)}>
                                 <Edit2 className='w-4 h-4' />
                               </PermissionButton>
-                              <PermissionButton permission='device.edit' variant='danger' size='sm' onClick={() => handleDeleteDevice(device.device_id)}>
+                              <PermissionButton permission='device.edit' variant='danger' size='sm' onClick={() => handleDeleteDevice(device.id)}>
                                 <Trash2 className='w-4 h-4' />
                               </PermissionButton>
                             </div>
