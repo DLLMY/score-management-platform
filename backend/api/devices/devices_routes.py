@@ -548,7 +548,7 @@ class BindDeviceClass(Resource):
         data = request.get_json()
         class_id = data.get("class_id")
 
-        if admin.role != "admin":
+        if admin.role not in ("admin", "super_admin"):
             class_ids = get_admin_class_ids(admin.id)
             if class_id and class_id not in class_ids:
                 return APIResponse.forbidden(message="无权绑定到该班级")
