@@ -355,6 +355,7 @@ class CompositeScoreService:
         return {
             "user_id": composite.user_id,
             "composite_score": composite.composite_score,
+            "social_score": composite.social_score,
             "ranking": rank,
             "weights": {
                 "behavior": w.get("behavior", 0),
