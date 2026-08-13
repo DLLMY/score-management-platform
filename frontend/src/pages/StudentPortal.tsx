@@ -582,6 +582,86 @@ function StudentPortal() {
               </div>
             )}
 
+            {/* 参与度周趋势（SVG 折线） */}
+            {insights?.participation_trend?.series?.length ? (
+              <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
+                <div className='flex items-center gap-2 font-semibold text-gray-800 dark:text-white mb-3'>
+                  <TrendingUp className='w-4 h-4' /> 参与度周趋势
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      insights.participation_trend.trend === 'up'
+                        ? 'bg-emerald-500 text-white'
+                        : insights.participation_trend.trend === 'down'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-violet-500 text-white'
+                    }`}
+                  >
+                    {insights.participation_trend.trend === 'up'
+                      ? '上升'
+                      : insights.participation_trend.trend === 'down'
+                        ? '下降'
+                        : '平稳'}
+                  </span>
+                </div>
+                {(() => {
+                  const series = insights.participation_trend.series;
+                  const valid = series.filter((p) => p.has_data !== false);
+                  if (!valid.length) {
+                    return <p className='text-sm text-gray-400 py-6 text-center'>暂无参与度趋势数据</p>;
+                  }
+                  const W = 340;
+                  const H = 140;
+                  const PAD = 16;
+                  const min = Math.min(0, ...valid.map((p) => p.engagement_score));
+                  const max = Math.max(100, ...valid.map((p) => p.engagement_score));
+                  const span = Math.max(1, max - min);
+                  const x = (i: number) => PAD + (i * (W - PAD * 2)) / Math.max(1, series.length - 1);
+                  const y = (v: number) => H - PAD - ((v - min) / span) * (H - PAD * 2);
+                  const pts = series.map((p, i) => `${x(i).toFixed(1)},${y(p.engagement_score).toFixed(1)}`);
+                  const color =
+                    insights.participation_trend.trend === 'up'
+                      ? '#10b981'
+                      : insights.participation_trend.trend === 'down'
+                        ? '#ef4444'
+                        : '#8b5cf6';
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} className='w-full h-auto' role='img' aria-label='参与度周趋势'>
+                      {[0, 25, 50, 75, 100].map((g) => (
+                        <g key={g}>
+                          <line
+                            x1={PAD}
+                            x2={W - PAD}
+                            y1={y(g)}
+                            y2={y(g)}
+                            stroke='#e5e7eb'
+                            strokeWidth='1'
+                            strokeDasharray={g === 0 || g === 100 ? '0' : '4 4'}
+                          />
+                          <text x={2} y={y(g) + 3} fontSize='8' fill='#9ca3af'>
+                            {g}
+                          </text>
+                        </g>
+                      ))}
+                      <polygon
+                        points={`${PAD},${y(min)} ${pts.join(' ')} ${x(series.length - 1)},${y(min)}`}
+                        fill={color}
+                        opacity='0.12'
+                      />
+                      <polyline points={pts.join(' ')} fill='none' stroke={color} strokeWidth='2.5' strokeLinejoin='round' strokeLinecap='round' />
+                      {series.map((p, i) => (
+                        <circle key={i} cx={x(i)} cy={y(p.engagement_score)} r={p.has_data === false ? 2.5 : 3.5} fill={color} />
+                      ))}
+                      {series.map((p, i) => (
+                        <text key={`l${i}`} x={x(i)} y={H - 2} fontSize='8' fill='#9ca3af' textAnchor='middle'>
+                          {p.week_label || `W${p.week_index + 1}`}
+                        </text>
+                      ))}
+                    </svg>
+                  );
+                })()}
+              </div>
+            ) : null}
+
             {/* 风险预警卡片 */}
             <div
               className={`rounded-2xl p-4 shadow ${

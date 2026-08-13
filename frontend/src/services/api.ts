@@ -1141,11 +1141,26 @@ export interface StudentScoreTrendPoint {
   week_index: number;
   score_change: number;
 }
+export interface StudentParticipationTrendPoint {
+  week_index: number;
+  week_label?: string;
+  week_end?: string;
+  engagement_score: number;
+  level?: 'low' | 'medium' | 'high';
+  has_data?: boolean;
+}
+export interface StudentParticipationTrend {
+  user_id: number;
+  weeks: number;
+  trend: 'up' | 'down' | 'stable';
+  series: StudentParticipationTrendPoint[];
+}
 export interface StudentInsight {
   student: StudentInfo;
   engagement: StudentEngagementInsight;
   risk: StudentRiskInsight;
   score_trend: StudentScoreTrendPoint[];
+  participation_trend?: StudentParticipationTrend;
   days: number;
   weeks: number;
 }

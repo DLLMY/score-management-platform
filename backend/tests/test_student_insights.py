@@ -115,3 +115,18 @@ class TestStudentInsights:
         # 风险接口复用 predict_risk 的建议/行动字段（前端展示依赖）
         assert isinstance(data["risk"].get("intervention_suggestions"), list)
         assert isinstance(data["risk"].get("recommended_actions"), list)
+
+    def test_insights_participation_trend(self, app, client):
+        u = self._seed_student(app)
+        self._seed_engagement_data(app, u.id, 1)
+        resp = client.get("/api/student/insights?weeks=4", headers=_student_headers(u))
+        assert resp.status_code == 200
+        data = resp.get_json()["data"]
+        pt = data.get("participation_trend")
+        assert pt is not None
+        assert pt["weeks"] == 4
+        assert len(pt["series"]) == 4
+        assert pt["trend"] in ("up", "down", "stable")
+        for p in pt["series"]:
+            assert isinstance(p["week_index"], int)
+            assert isinstance(p["engagement_score"], (int, float))

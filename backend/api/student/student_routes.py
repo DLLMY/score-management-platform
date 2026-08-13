@@ -17,7 +17,7 @@ from utils.logger import log_login_attempt
 from utils.datetime_utils import parse_date
 from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
 from services.attendance_service import attendance_service
-from services.engagement_service import calculate_engagement
+from services.engagement_service import calculate_engagement, EngagementService
 from services.risk_predict_service import RiskPredictService
 from services import phonebox_policy
 from services.mqtt_service import publish_mqtt
@@ -447,12 +447,19 @@ class StudentInsights(Resource):
         except Exception:  # noqa: BLE001
             score_trend = []
 
+        # 参与度周趋势（复用 weekly_trend，与算法 Tab 同口径）
+        try:
+            participation_trend = EngagementService.weekly_trend(uid, weeks)
+        except Exception:  # noqa: BLE001
+            participation_trend = {"user_id": uid, "weeks": weeks, "trend": "stable", "series": []}
+
         return APIResponse.success(
             data={
                 "student": _serialize_student(student),
                 "engagement": engagement,
                 "risk": risk,
                 "score_trend": score_trend,
+                "participation_trend": participation_trend,
                 "days": days,
                 "weeks": weeks,
             }
