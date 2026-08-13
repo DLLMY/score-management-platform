@@ -418,6 +418,27 @@ class GroupAnomaly(Resource):
             return APIResponse.error(message=str(e))
 
 
+@ns_algorithm.route("/engagement/batch")
+class BatchEngagement(Resource):
+    @ns_algorithm.doc("get_batch_engagement", description="批量计算班级参与度排名")
+    @ns_algorithm.param("class_name", "班级名称(可选)")
+    @ns_algorithm.param("days", "统计天数，默认30")
+    @ns_algorithm.response(200, "成功")
+    @requires_permission("algorithm.view")
+    def get(self):
+        """
+        批量计算某班级（或全部）学生的参与度指数并排名。
+        单生异常被隔离进 failed_students，不影响整体。
+        """
+        class_name = request.args.get("class_name")
+        days = int(request.args.get("days", 30))
+        try:
+            result = EngagementService.batch_rank(class_name, days)  # noqa: F841
+            return APIResponse.success(data=result, message="success")
+        except Exception as e:
+            return APIResponse.error(message=str(e))
+
+
 @ns_algorithm.route("/engagement/<int:user_id>")
 @ns_algorithm.param("user_id", "用户ID")
 class UserEngagement(Resource):
@@ -433,6 +454,25 @@ class UserEngagement(Resource):
         days = int(request.args.get("days", 30))
         try:
             result = EngagementService.calculate_engagement(user_id, days)  # noqa: F841
+            return APIResponse.success(data=result, message="success")
+        except Exception as e:
+            return APIResponse.error(message=str(e))
+
+
+@ns_algorithm.route("/engagement/<int:user_id>/weekly-trend")
+@ns_algorithm.param("user_id", "用户ID")
+class UserEngagementTrend(Resource):
+    @ns_algorithm.doc("get_user_engagement_trend", description="获取学生参与度周趋势")
+    @ns_algorithm.param("weeks", "历史周数，默认8")
+    @ns_algorithm.response(200, "成功")
+    @requires_permission("algorithm.view")
+    def get(self, user_id):
+        """
+        获取学生参与度周趋势（由远及近的时间序列，用于折线图展示）。
+        """
+        weeks = int(request.args.get("weeks", 8))
+        try:
+            result = EngagementService.weekly_trend(user_id, weeks)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))

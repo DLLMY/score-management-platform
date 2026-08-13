@@ -1843,6 +1843,8 @@ export interface Api {
     getScoreAttribution: (userId: number, days?: number) => Promise<ScoreAttributionResult>;
     getEngagement: (userId: number, days?: number) => Promise<EngagementResult>;
     getBatchAttribution: (className?: string, days?: number) => Promise<BatchAttributionResult>;
+    getEngagementRank: (className?: string, days?: number) => Promise<EngagementRankResult>;
+    getEngagementTrend: (userId: number, weeks?: number) => Promise<EngagementTrendResult>;
     getBatchRiskPredict: (className?: string, days?: number) => Promise<BatchRiskPredictData>;
     getHighRiskStudents: (days?: number) => Promise<RiskStudent[]>;
     trainRiskPredictModel: (days?: number) => Promise<ModelTrainingResult>;
@@ -2447,6 +2449,67 @@ const normalizeBatchAttribution = (raw?: any): BatchAttributionResult => ({
       }))
     : [],
 });
+
+const normalizeEngagementRank = (raw?: any): EngagementRankResult => {
+  const normLevel = (lv: any): 'high' | 'medium' | 'low' =>
+    lv === 'high' || lv === 'medium' || lv === 'low' ? lv : 'low';
+  return {
+    class_name: raw?.class_name ?? '',
+    days: toNumSafe(raw?.days) || 30,
+    total: toNumSafe(raw?.total) || 0,
+    with_data: toNumSafe(raw?.with_data) || 0,
+    failed: toNumSafe(raw?.failed) || 0,
+    students: Array.isArray(raw?.students)
+      ? raw.students.map((s: any) => ({
+          user_id: toNumSafe(s?.user_id) || 0,
+          name: s?.name ?? '未知学生',
+          class_name: s?.class_name ?? '',
+          rank: s?.rank ?? null,
+          engagement_score: toNumSafe(s?.engagement_score) || 0,
+          level: normLevel(s?.level),
+          has_data: !!s?.has_data,
+          components: {
+            attendance_rate: s?.components?.attendance_rate ?? null,
+            homework_rate: s?.components?.homework_rate ?? null,
+            activity_rate: s?.components?.activity_rate ?? null,
+            leave_days: toNumSafe(s?.components?.leave_days) || 0,
+          },
+        }))
+      : [],
+    failed_students: Array.isArray(raw?.failed_students)
+      ? raw.failed_students.map((f: any) => ({
+          user_id: toNumSafe(f?.user_id) || 0,
+          name: f?.name ?? '',
+          class_name: f?.class_name ?? '',
+          error: f?.error ?? '',
+        }))
+      : [],
+  };
+};
+
+const normalizeEngagementTrend = (raw?: any): EngagementTrendResult => {
+  const normLevel = (lv: any): 'high' | 'medium' | 'low' =>
+    lv === 'high' || lv === 'medium' || lv === 'low' ? lv : 'low';
+  return {
+    user_id: toNumSafe(raw?.user_id) || 0,
+    weeks: toNumSafe(raw?.weeks) || 8,
+    trend: raw?.trend === 'up' || raw?.trend === 'down' ? raw.trend : 'stable',
+    series: Array.isArray(raw?.series)
+      ? raw.series.map((s: any) => ({
+          week_index: toNumSafe(s?.week_index) || 0,
+          week_label: s?.week_label ?? '',
+          week_end: s?.week_end ?? '',
+          engagement_score: toNumSafe(s?.engagement_score) || 0,
+          level: normLevel(s?.level),
+          has_data: !!s?.has_data,
+          attendance_rate: s?.attendance_rate ?? null,
+          homework_rate: s?.homework_rate ?? null,
+          activity_rate: s?.activity_rate ?? null,
+          leave_days: toNumSafe(s?.leave_days) || 0,
+        }))
+      : [],
+  };
+};
 
 const normalizeUserRiskPredict = (raw?: any): RiskPredictResult => {
   const factors = Array.isArray(raw?.risk_factors) ? raw!.risk_factors! : [];
@@ -3486,6 +3549,17 @@ const api: Api = {
         : `?days=${days}`;
       const raw = (await request(`/api/algorithm/attribution/batch${params}`)) as any;
       return normalizeBatchAttribution(raw);
+    },
+    getEngagementRank: async (className?: string, days = 30) => {
+      const params = className
+        ? `?class_name=${encodeURIComponent(className)}&days=${days}`
+        : `?days=${days}`;
+      const raw = (await request(`/api/algorithm/engagement/batch${params}`)) as any;
+      return normalizeEngagementRank(raw);
+    },
+    getEngagementTrend: async (userId: number, weeks = 8) => {
+      const raw = (await request(`/api/algorithm/engagement/${userId}/weekly-trend?weeks=${weeks}`)) as any;
+      return normalizeEngagementTrend(raw);
     },
     getEngagement: async (userId: number, days = 30) => {
       const raw = (await request(`/api/algorithm/engagement/${userId}?days=${days}`)) as any;

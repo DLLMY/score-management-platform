@@ -11,6 +11,7 @@ import {
   LineChart, Bell, Lightbulb, BookOpen, ShieldCheck,
   ArrowUp, ArrowDown, Minus, Loader2, Brain, Zap, Sparkles, Search, AlertTriangle, UserCircle, Users
 } from 'lucide-react';
+// 注：LineChart 用于参与度分析 Tab 的周趋势折线图标识
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton } from '../components';
@@ -27,6 +28,7 @@ const TABS = [
   { id: 'ruleApplication', label: '智能规则应用', icon: Zap, new: true },
   { id: 'studentProfile', label: '学生画像', icon: UserCircle, new: true },
   { id: 'batchAttribution', label: '班级归因', icon: Users, new: true },
+  { id: 'engagement', label: '参与度分析', icon: LineChart, new: true },
 ];
 
 const SEVERITY_COLORS: Record<string, { bg: string; text: string; light: string }> = {
@@ -50,6 +52,16 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   const [batchAttributionDays, setBatchAttributionDays] = useState<number>(30);
   const [batchAttributionLoading, setBatchAttributionLoading] = useState<boolean>(false);
   const [batchAttributionError, setBatchAttributionError] = useState<string | null>(null);
+
+  // 参与度分析 Tab
+  const [engagementRank, setEngagementRank] = useState<EngagementRankResult | null>(null);
+  const [engagementRankDays, setEngagementRankDays] = useState<number>(30);
+  const [engagementRankLoading, setEngagementRankLoading] = useState<boolean>(false);
+  const [engagementRankError, setEngagementRankError] = useState<string | null>(null);
+  const [engagementTrend, setEngagementTrend] = useState<EngagementTrendResult | null>(null);
+  const [engagementTrendUserId, setEngagementTrendUserId] = useState<number | null>(null);
+  const [engagementTrendWeeks, setEngagementTrendWeeks] = useState<number>(8);
+  const [engagementTrendLoading, setEngagementTrendLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
@@ -399,6 +411,56 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       loadBatchAttribution();
     }
   }, [activeTab, selectedClass, batchAttributionDays, loadBatchAttribution]);
+
+  // 参与度分析：进入 Tab 且已选班级时加载全班排名
+  const loadEngagementRank = useCallback(async () => {
+    if (!selectedClass) {
+      showToast('warning', '请先选择班级');
+      return;
+    }
+    setEngagementRankLoading(true);
+    setEngagementRankError(null);
+    try {
+      const res = await api.algorithm.getEngagementRank(selectedClass, engagementRankDays);
+      setEngagementRank(res);
+    } catch (err) {
+      console.error('参与度排名失败:', err);
+      const msg = err instanceof Error ? err.message : '参与度排名失败';
+      setEngagementRankError(msg);
+      showToast('error', '参与度排名失败');
+    } finally {
+      setEngagementRankLoading(false);
+    }
+  }, [selectedClass, engagementRankDays, showToast]);
+
+  // 个人周趋势
+  const loadEngagementTrend = useCallback(async () => {
+    if (!engagementTrendUserId) return;
+    setEngagementTrendLoading(true);
+    try {
+      const res = await api.algorithm.getEngagementTrend(engagementTrendUserId, engagementTrendWeeks);
+      setEngagementTrend(res);
+    } catch (err) {
+      console.error('参与度周趋势失败:', err);
+      setEngagementTrend(null);
+    } finally {
+      setEngagementTrendLoading(false);
+    }
+  }, [engagementTrendUserId, engagementTrendWeeks]);
+
+  // 进入参与度分析 Tab 且已选班级时，自动加载排名
+  useEffect(() => {
+    if (activeTab === 'engagement' && selectedClass) {
+      loadEngagementRank();
+    }
+  }, [activeTab, selectedClass, engagementRankDays, loadEngagementRank]);
+
+  // 选中学生查看周趋势时加载
+  useEffect(() => {
+    if (activeTab === 'engagement' && engagementTrendUserId) {
+      loadEngagementTrend();
+    }
+  }, [activeTab, engagementTrendUserId, engagementTrendWeeks, loadEngagementTrend]);
 
   // 切换标签页时加载对应数据
   useEffect(() => {
@@ -2113,6 +2175,312 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     );
   };
 
+  // 参与度等级徽章配色
+  const engagementLevelBadge = (level: string) => {
+    if (level === 'high') return 'bg-green-100 dark:bg-green-500/20 text-green-600';
+    if (level === 'medium') return 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600';
+    return 'bg-gray-100 dark:bg-gray-500/20 text-gray-500';
+  };
+
+  const renderEngagement = () => {
+    const data = engagementRank;
+    const students = data?.students || [];
+    const ranked = students.filter((s) => s.has_data);
+    const trend = engagementTrend;
+    const trendStudent = students.find((s) => s.user_id === engagementTrendUserId) || null;
+
+    return (
+      <div className="space-y-6">
+        {/* 控制区 */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 bg-purple-50/60 dark:bg-purple-500/10 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <LineChart className="w-5 h-5 text-purple-500" />
+            <label htmlFor="engagement-class" className="text-sm text-gray-700 dark:text-slate-300 whitespace-nowrap">选择班级:</label>
+            <select
+              id="engagement-class"
+              data-testid="engagement-class-select"
+              value={selectedClass}
+              onChange={(e) => { setSelectedClass(e.target.value); setEngagementTrendUserId(null); setEngagementTrend(null); }}
+              className="px-3 py-1.5 rounded border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[140px]"
+            >
+              <option value="">全部班级</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.name}>{cls.name}</option>
+              ))}
+            </select>
+            {selectedClass && (
+              <button
+                type="button"
+                onClick={() => { setSelectedClass(''); setEngagementTrendUserId(null); setEngagementTrend(null); }}
+                className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
+                title="清除选择"
+              >
+                清除
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="engagement-days" className="text-sm text-gray-700 dark:text-slate-300 whitespace-nowrap">统计天数:</label>
+            <input
+              id="engagement-days"
+              data-testid="engagement-days-input"
+              type="number"
+              min={7}
+              max={180}
+              value={engagementRankDays}
+              onChange={(e) => setEngagementRankDays(Number(e.target.value) || 30)}
+              className="w-20 px-2 py-1 rounded border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white"
+            />
+          </div>
+          <button
+            onClick={() => loadEngagementRank()}
+            disabled={engagementRankLoading || !selectedClass}
+            className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
+          >
+            {engagementRankLoading ? '计算中...' : '生成全班参与度排名'}
+          </button>
+        </div>
+
+        {engagementRankError && (
+          <div className="text-center py-8 text-red-500">{engagementRankError}</div>
+        )}
+
+        {!selectedClass && !engagementRankLoading && (
+          <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+            <LineChart className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+            <p className="text-sm">请先在上方【选择班级】下拉框中选择班级后开始分析</p>
+            <p className="text-xs mt-2 text-gray-400 dark:text-slate-500">（页面顶部"班级"下拉框与此处同效，二选一即可）</p>
+          </div>
+        )}
+
+        {selectedClass && !engagementRankLoading && !engagementRankError && data && (
+          <>
+            {/* 汇总卡片 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">班级人数</div>
+                <div className="text-3xl font-bold text-gray-800 dark:text-white mt-1">{data.total}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">有效参与度</div>
+                <div className="text-3xl font-bold text-green-600 mt-1">{data.with_data}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">高参与度</div>
+                <div className="text-3xl font-bold text-purple-600 mt-1">{ranked.filter((s) => s.level === 'high').length}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">异常隔离</div>
+                <div className="text-3xl font-bold text-red-600 mt-1">{data.failed}</div>
+              </div>
+            </div>
+
+            {/* 排名榜 */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                  全班参与度排名榜
+                </h3>
+              </div>
+              <div className="p-6">
+                {students.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-slate-400">该班级暂无参与度数据</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-slate-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">排名</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">学生</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">参与度</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">等级</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">出勤率</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">作业率</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">活跃度</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">请假(天)</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">周趋势</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {students.map((s, idx) => (
+                          <tr
+                            key={s.user_id ?? idx}
+                            className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                            onClick={() => {
+                              if (s.has_data) {
+                                setEngagementTrendUserId(s.user_id);
+                                const el = document.getElementById('engagement-trend-section');
+                                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }}
+                          >
+                            <td className="py-3 px-4">
+                              <span className={`font-bold ${s.rank && s.rank <= 3 ? 'text-purple-600' : 'text-gray-500'}`}>
+                                {s.rank ? `#${s.rank}` : '—'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-gray-800 dark:text-white">{s.name}</div>
+                              {s.error && <div className="text-xs text-red-500">{s.error}</div>}
+                            </td>
+                            <td className="py-3 px-4">
+                              {s.has_data ? (
+                                <span className={`font-medium ${(s.engagement_score || 0) >= 70 ? 'text-green-600' : (s.engagement_score || 0) >= 45 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                  {(s.engagement_score || 0).toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${engagementLevelBadge(s.level)}`}>
+                                {s.level === 'high' ? '高' : s.level === 'medium' ? '中' : '低'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
+                              {s.components?.attendance_rate != null ? `${(s.components.attendance_rate * 100).toFixed(0)}%` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
+                              {s.components?.homework_rate != null ? `${(s.components.homework_rate * 100).toFixed(0)}%` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">
+                              {s.components?.activity_rate != null ? `${(s.components.activity_rate * 100).toFixed(0)}%` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">{s.components?.leave_days ?? 0}</td>
+                            <td className="py-3 px-4">
+                              <button
+                                type="button"
+                                disabled={!s.has_data}
+                                onClick={(e) => { e.stopPropagation(); setEngagementTrendUserId(s.user_id); }}
+                                className={`text-xs px-2 py-1 rounded ${s.has_data ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                              >
+                                查看
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {engagementRankLoading && (
+          <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+            <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-purple-500" />
+            <p className="text-sm">正在计算全班参与度...</p>
+          </div>
+        )}
+
+        {/* 个人周趋势 */}
+        {selectedClass && engagementTrendUserId && (
+          <div id="engagement-trend-section" className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <LineChart className="w-5 h-5 text-purple-500" />
+                {trendStudent ? `${trendStudent.name} 的参与度周趋势` : '参与度周趋势'}
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-slate-400">近</span>
+                <select
+                  value={engagementTrendWeeks}
+                  onChange={(e) => setEngagementTrendWeeks(Number(e.target.value))}
+                  className="px-2 py-1 rounded border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white text-sm"
+                >
+                  {[4, 6, 8, 12].map((w) => (
+                    <option key={w} value={w}>{w}周</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="p-6">
+              {engagementTrendLoading && (
+                <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+                  <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-purple-500" />
+                  <p className="text-sm">加载周趋势...</p>
+                </div>
+              )}
+              {!engagementTrendLoading && trend && (
+                <EngagementTrendChart trend={trend} />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 参与度周趋势 SVG 折线图
+  const EngagementTrendChart = ({ trend }: { trend: EngagementTrendResult }) => {
+    const series = (trend.series || []).filter((p) => p.has_data);
+    if (series.length === 0) {
+      return <div className="text-center py-8 text-gray-500 dark:text-slate-400">该学生近 {trend.weeks} 周暂无参与度数据</div>;
+    }
+    const W = 720;
+    const H = 240;
+    const padL = 40;
+    const padR = 16;
+    const padT = 16;
+    const padB = 28;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const scores = series.map((p) => p.engagement_score);
+    const maxS = Math.max(100, ...scores);
+    const minS = Math.min(0, ...scores);
+    const span = maxS - minS || 1;
+    const stepX = series.length > 1 ? innerW / (series.length - 1) : 0;
+    const yOf = (v: number) => padT + innerH - ((v - minS) / span) * innerH;
+    const xOf = (i: number) => padL + stepX * i;
+    const pts = series.map((p, i) => `${xOf(i)},${yOf(p.engagement_score)}`).join(' ');
+    const trendColor = trend.trend === 'up' ? '#16a34a' : trend.trend === 'down' ? '#dc2626' : '#8b5cf6';
+    const areaPts = `${padL},${padT + innerH} ${pts} ${xOf(series.length - 1)},${padT + innerH}`;
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm text-gray-600 dark:text-slate-300">
+            趋势：
+            <span className="font-medium" style={{ color: trendColor }}>
+              {trend.trend === 'up' ? '↑ 上升' : trend.trend === 'down' ? '↓ 下降' : '→ 平稳'}
+            </span>
+          </div>
+          <div className="text-xs text-gray-400">共 {series.length} 周有效数据</div>
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+          {/* 网格线 */}
+          {[0, 25, 50, 75, 100].map((g) => {
+            const y = yOf(g);
+            return (
+              <g key={g}>
+                <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#e5e7eb" strokeWidth={1} strokeDasharray="3 3" />
+                <text x={padL - 6} y={y + 4} textAnchor="end" fontSize={10} fill="#9ca3af">{g}</text>
+              </g>
+            );
+          })}
+          {/* 面积 */}
+          <polygon points={areaPts} fill={trendColor} fillOpacity={0.08} />
+          {/* 折线 */}
+          <polyline points={pts} fill="none" stroke={trendColor} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+          {/* 数据点 */}
+          {series.map((p, i) => (
+            <g key={p.week_index}>
+              <circle cx={xOf(i)} cy={yOf(p.engagement_score)} r={3.5} fill={trendColor} />
+              <text x={xOf(i)} y={H - 10} textAnchor="middle" fontSize={9} fill="#9ca3af">
+                {p.week_label.replace(/^\d{4}-/, '')}
+              </text>
+              <text x={xOf(i)} y={yOf(p.engagement_score) - 8} textAnchor="middle" fontSize={9} fill="#4b5563">
+                {p.engagement_score.toFixed(0)}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+    );
+  };
+
   const renderStudentProfile = () => {
     const selectedStudent = students.find((s) => s.id === selectedProfileUserId) || null;
 
@@ -2724,6 +3092,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           {activeTab === 'ruleApplication' && renderRuleApplication()}
           {activeTab === 'studentProfile' && renderStudentProfile()}
           {activeTab === 'batchAttribution' && renderBatchAttribution()}
+          {activeTab === 'engagement' && renderEngagement()}
         </>
       )}
 

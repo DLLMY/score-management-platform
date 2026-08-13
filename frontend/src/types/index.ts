@@ -889,6 +889,52 @@ export interface BatchAttributionResult {
   failed_students: Array<{ user_id: number; name: string; class_name?: string; error: string }>;
 }
 
+export interface EngagementStudentRank {
+  user_id: number;
+  name: string;
+  class_name?: string;
+  rank: number | null;
+  engagement_score: number;
+  level: 'high' | 'medium' | 'low';
+  has_data: boolean;
+  components?: {
+    attendance_rate: number | null;
+    homework_rate: number | null;
+    activity_rate: number | null;
+    leave_days: number;
+  };
+}
+
+export interface EngagementRankResult {
+  class_name: string;
+  days: number;
+  total: number;
+  with_data: number;
+  failed: number;
+  students: EngagementStudentRank[];
+  failed_students: Array<{ user_id: number; name: string; class_name?: string; error: string }>;
+}
+
+export interface EngagementTrendPoint {
+  week_index: number;
+  week_label: string;
+  week_end: string;
+  engagement_score: number;
+  level: 'high' | 'medium' | 'low';
+  has_data: boolean;
+  attendance_rate: number | null;
+  homework_rate: number | null;
+  activity_rate: number | null;
+  leave_days: number;
+}
+
+export interface EngagementTrendResult {
+  user_id: number;
+  weeks: number;
+  trend: 'up' | 'down' | 'stable';
+  series: EngagementTrendPoint[];
+}
+
 export interface ModelTrainingResult {
   status: string;
   message: string;

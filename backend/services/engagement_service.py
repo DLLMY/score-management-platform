@@ -6,6 +6,7 @@ from models import (
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
+    User,
 )
 
 
@@ -64,7 +65,7 @@ def _count_leave_days(user_id, cutoff, now):
     return total
 
 
-def calculate_engagement(user_id, days=30):
+def calculate_engagement(user_id, days=30, end_date=None):
     """计算单个学生的参与度指数（0-100）。
 
     综合四个维度：
@@ -77,10 +78,18 @@ def calculate_engagement(user_id, days=30):
       - 任意维度无数据则记为 None，最终仅对「有数据」维度按权重重归一化；
       - 全维度无数据返回 has_data=False、score=0、level=low；
       - 所有数值均转原生 float/int，避免 numpy 类型导致 JSON 序列化失败。
+
+    Args:
+        user_id:  学生用户 ID
+        days:     历史窗口天数（默认 30）
+        end_date: 窗口结束日（date/datetime，默认今天）；用于历史回看（如周趋势）
     """
     user_id = int(user_id)
     days = int(days)
-    now = datetime.now().date()
+    if end_date is not None:
+        now = end_date.date() if isinstance(end_date, datetime) else end_date
+    else:
+        now = datetime.now().date()
     cutoff = now - timedelta(days=days)
     cutoff_dt = datetime.combine(cutoff, datetime.min.time())
 
@@ -218,7 +227,161 @@ def calculate_engagement(user_id, days=30):
     }
 
 
+def weekly_trend(user_id, weeks=8):
+    """计算单个学生的参与度周趋势。
+
+    固定「今天」作为时间锚点，按周切片（每周一个 7 天窗口）循环调用
+    calculate_engagement(end_date=该周结束日)，生成由远及近的时间序列。
+
+    Returns:
+        dict: {
+            user_id, weeks, trend(上升up/下降down/平稳stable),
+            series: [{week_index, week_label, week_end, engagement_score, level,
+                      has_data, attendance_rate, homework_rate, activity_rate, leave_days}],
+        }
+    """
+    user_id = int(user_id)
+    weeks = max(int(weeks), 1)
+    today = datetime.now().date()
+    series = []
+    for i in range(weeks - 1, -1, -1):
+        week_end = today - timedelta(days=7 * i)
+        res = calculate_engagement(user_id, days=7, end_date=week_end)
+        iso = week_end.isocalendar()
+        week_label = "%d-W%02d" % (iso[0], iso[1])
+        comp = res.get("components", {}) or {}
+        series.append(
+            {
+                "week_index": int(weeks - 1 - i),
+                "week_label": week_label,
+                "week_end": week_end.isoformat(),
+                "engagement_score": float(res["engagement_score"]),
+                "level": res["level"],
+                "has_data": bool(res["has_data"]),
+                "attendance_rate": (
+                    float(comp["attendance_rate"])
+                    if comp.get("attendance_rate") is not None
+                    else None
+                ),
+                "homework_rate": (
+                    float(comp["homework_rate"])
+                    if comp.get("homework_rate") is not None
+                    else None
+                ),
+                "activity_rate": (
+                    float(comp["activity_rate"])
+                    if comp.get("activity_rate") is not None
+                    else None
+                ),
+                "leave_days": int(comp.get("leave_days", 0)),
+            }
+        )
+
+    valid = [s for s in series if s["has_data"]]
+    trend = "stable"
+    if len(valid) >= 2:
+        delta = valid[-1]["engagement_score"] - valid[0]["engagement_score"]
+        if delta > 3:
+            trend = "up"
+        elif delta < -3:
+            trend = "down"
+
+    return {
+        "user_id": int(user_id),
+        "weeks": int(weeks),
+        "trend": trend,
+        "series": series,
+    }
+
+
+def batch_rank(class_name=None, days=30):
+    """批量计算某班级（或全部）学生的参与度指数并排名。
+
+    设计要点同 AttributionService.batch_analyze：单名学生异常（DB 查询失败等）
+    被隔离进 failed_students，不影响其余学生与整体响应；所有数值均转原生类型，
+    避免 numpy 类型导致 Flask JSON 序列化失败。
+
+    Returns:
+        dict: {
+            class_name, days, total, with_data, failed,
+            students: [排序后{user_id,name,class_name,rank,engagement_score,level,has_data,components}],
+            failed_students: [隔离的单生异常 {user_id,name,class_name,error}],
+        }
+    """
+    days = max(int(days), 1)
+    query = User.query
+    if class_name:
+        query = query.filter(User.class_name == class_name)
+    users = query.all()
+    total = len(users)
+    students = []
+    failed_students = []
+
+    for u in users:
+        try:
+            res = calculate_engagement(u.id, days)
+            students.append(
+                {
+                    "user_id": int(u.id),
+                    "name": u.name,
+                    "class_name": getattr(u, "class_name", "") or "",
+                    "engagement_score": float(res["engagement_score"]),
+                    "level": res["level"],
+                    "has_data": bool(res["has_data"]),
+                    "components": {
+                        "attendance_rate": (
+                            round(float(res["components"]["attendance_rate"]), 3)
+                            if res["components"].get("attendance_rate") is not None
+                            else None
+                        ),
+                        "homework_rate": (
+                            round(float(res["components"]["homework_rate"]), 3)
+                            if res["components"].get("homework_rate") is not None
+                            else None
+                        ),
+                        "activity_rate": (
+                            round(float(res["components"]["activity_rate"]), 3)
+                            if res["components"].get("activity_rate") is not None
+                            else None
+                        ),
+                        "leave_days": int(res["components"].get("leave_days", 0)),
+                    },
+                }
+            )
+        except Exception as exc:
+            failed_students.append(
+                {
+                    "user_id": int(u.id),
+                    "name": u.name,
+                    "class_name": getattr(u, "class_name", "") or "",
+                    "error": str(exc),
+                }
+            )
+
+    # 有数据优先；同档按分数降序；无数据排最后
+    students.sort(key=lambda r: (not r["has_data"], -r["engagement_score"]))
+    rank = 0
+    for r in students:
+        if r["has_data"]:
+            rank += 1
+            r["rank"] = int(rank)
+        else:
+            r["rank"] = None
+
+    return {
+        "class_name": class_name or "全部",
+        "days": int(days),
+        "total": int(total),
+        "with_data": int(sum(1 for r in students if r["has_data"])),
+        "failed": int(len(failed_students)),
+        "students": students,
+        "failed_students": failed_students,
+    }
+
+
 class EngagementService:
     """学生参与度指数服务（与 AnomalyService / RiskPredictService 保持一致的类接口）。"""
 
     calculate_engagement = staticmethod(calculate_engagement)
+    weekly_trend = staticmethod(weekly_trend)
+    batch_rank = staticmethod(batch_rank)
