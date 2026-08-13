@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 RATE_LIMIT = {
     "frontend_performance": {"limit": 60, "window": 60},
-    "frontend_performance_batch": {"limit": 10, "window": 60},
+    # batch：前端默认 5s flush 一次（12 次/分钟），10 次/分钟会必然触发 429 导致性能数据丢失；
+    # 放宽到 60 次/分钟（多标签页也有余量），前端另有 429 退避兜底
+    "frontend_performance_batch": {"limit": 60, "window": 60},
     "frontend_error": {"limit": 30, "window": 60},
 }
 
@@ -735,7 +737,7 @@ class FrontendPerformanceBatch(Resource):
         批量上报前端性能指标
 
         接收多个前端性能指标数据，减少请求次数。
-        限流：10次/分钟，单次最多100条
+        限流：60次/分钟，单次最多100条
         """
         try:
             data = ns_system.payload

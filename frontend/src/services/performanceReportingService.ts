@@ -36,8 +36,11 @@ class PerformanceReportingService {
   private errorQueue: ErrorReport[] = [];
   private isFlushing = false;
   private flushInterval: number | null = null;
+  // 收到 429 后暂停上报（避免持续打限流 + 日志刷屏），期间新指标保留在队列
+  private rateLimitedUntil: number | null = null;
   private readonly MAX_QUEUE_SIZE = 50;
   private readonly FLUSH_INTERVAL_MS = 5000;
+  private readonly RATE_LIMIT_BACKOFF_MS = 60000;
   private readonly isDev = config.app.isDevelopment;
 
   constructor() {
@@ -86,7 +89,9 @@ class PerformanceReportingService {
   }
 
   private getCurrentPage(): string {
-    const path = window.location.pathname;
+    // HashRouter：路径在 hash 中（#/devices），pathname 恒为 '/' —— 须从 hash 解析
+    const hash = window.location.hash.replace(/^#/, '') || '/';
+    const path = hash.split('?')[0];
     if (path.startsWith('/dashboard')) return 'dashboard';
     if (path.startsWith('/users')) return 'users';
     if (path.startsWith('/rules')) return 'rules';
@@ -122,10 +127,7 @@ class PerformanceReportingService {
     if (this.queue.length >= this.MAX_QUEUE_SIZE) {
       this.flush();
     }
-
-    if (this.isDev) {
-      console.debug('[Performance] Reported:', fullMetric);
-    }
+    // 注：不打印每条指标（高频轮询下会刷屏）；flush 结果在 flush() 中按需 debug 输出
   }
 
   reportError(error: Omit<ErrorReport, 'timestamp' | 'user_agent'>): void {
@@ -166,6 +168,10 @@ class PerformanceReportingService {
     if (this.isFlushing || this.queue.length === 0) {
       return;
     }
+    // 429 退避窗口内：保留队列但不请求，避免持续打限流
+    if (this.rateLimitedUntil && Date.now() < this.rateLimitedUntil) {
+      return;
+    }
 
     this.isFlushing = true;
 
@@ -190,14 +196,18 @@ class PerformanceReportingService {
         }).catch(() => null);
       }
 
-      if (this.isDev) {
-        const status = resp ? resp.status : 'network';
-        if (resp && resp.ok) {
-          console.debug('[Performance] Flushed:', metricsToSend.length, 'metrics');
-        } else {
-          // 仅 debug 级输出，避免控制台红色错误干扰用户
-          console.debug(`[Performance] Flushed status: ${status} (${metricsToSend.length} metrics, silently ignored)`);
+      if (resp && resp.status === 429) {
+        // 触发限流：暂停上报 60s（性能数据非关键，丢弃本批不再重试，避免队列堆积死循环）
+        this.rateLimitedUntil = Date.now() + this.RATE_LIMIT_BACKOFF_MS;
+        if (this.isDev) {
+          console.debug(`[Performance] 429 限流，暂停上报 ${this.RATE_LIMIT_BACKOFF_MS / 1000}s`);
         }
+        return;
+      }
+
+      if (this.isDev && (!resp || !resp.ok)) {
+        // 仅失败（网络/5xx）时 debug 输出；成功静默，避免高频轮询刷屏
+        console.debug(`[Performance] Flush 失败: ${resp ? resp.status : 'network'} (${metricsToSend.length} metrics, silently ignored)`);
       }
     } catch {
       // 完全静默：任何异常都不抛到控制台
