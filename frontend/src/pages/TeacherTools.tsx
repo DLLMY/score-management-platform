@@ -6,7 +6,7 @@ import { useStableToast } from '../hooks/useStableToast';
 import api from '../services/api';
 import type { User } from '../types';
 
-const { Upload, Send, CheckCircle, Users, TrendingUp, ArrowRight } = LucideIcons;
+const { Upload, Send, CheckCircle, Users, TrendingUp, ArrowRight, AlertTriangle } = LucideIcons;
 
 interface ExamOption {
   id: number;
@@ -44,6 +44,34 @@ const TeacherTools: React.FC = () => {
   const [notifyContent, setNotifyContent] = useState('');
   const [notifySubmitting, setNotifySubmitting] = useState(false);
   const [notifyResult, setNotifyResult] = useState<{ sent: number; errors: Array<{ user_id: number; message: string }>; total: number } | null>(null);
+
+  // 班级风险名单
+  const [riskClass, setRiskClass] = useState<string>('');
+  const [riskData, setRiskData] = useState<{
+    summary: { high_risk_count: number; medium_risk_count: number; low_risk_count: number };
+    risks: Array<{ name: string; risk_level: 'high' | 'medium' | 'low'; risk_score: number }>;
+  } | null>(null);
+  const [riskLoading, setRiskLoading] = useState(false);
+
+  const loadRiskList = useCallback(
+    async (className: string) => {
+      if (!className) {
+        setRiskData(null);
+        return;
+      }
+      setRiskLoading(true);
+      try {
+        const res = await api.algorithm.getBatchRiskPredict(className);
+        setRiskData(res || null);
+      } catch (e) {
+        showToast('error', '加载风险名单失败: ' + (e as Error).message);
+        setRiskData(null);
+      } finally {
+        setRiskLoading(false);
+      }
+    },
+    [showToast]
+  );
 
   const loadMeta = useCallback(async () => {
     try {
@@ -206,6 +234,88 @@ const TeacherTools: React.FC = () => {
             <ArrowRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
           </button>
         </div>
+      </Card>
+
+      {/* 班级风险名单 */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="w-5 h-5 text-red-500" />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">班级风险名单</h2>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+          <div className="flex-1">
+            <label className={labelCls}>班级</label>
+            <select
+              className={inputCls}
+              value={riskClass}
+              onChange={(e) => {
+                setRiskClass(e.target.value);
+                if (e.target.value) loadRiskList(e.target.value);
+                else setRiskData(null);
+              }}
+            >
+              <option value="">请选择班级</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button
+            onClick={() => riskClass && loadRiskList(riskClass)}
+            disabled={!riskClass || riskLoading}
+          >
+            {riskLoading ? '评估中...' : '评估风险'}
+          </Button>
+        </div>
+
+        {riskLoading ? (
+          <LoadingSpinner />
+        ) : !riskData ? (
+          <p className="text-sm text-gray-400 py-4 text-center">选择班级后查看该班中高风险学生名单</p>
+        ) : (
+          <div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="rounded-lg bg-red-50 dark:bg-red-500/10 p-4">
+                <div className="text-xs text-gray-500 dark:text-slate-400">高风险</div>
+                <div className="text-2xl font-bold text-red-600">{riskData.summary.high_risk_count}</div>
+              </div>
+              <div className="rounded-lg bg-yellow-50 dark:bg-yellow-500/10 p-4">
+                <div className="text-xs text-gray-500 dark:text-slate-400">中风险</div>
+                <div className="text-2xl font-bold text-yellow-600">{riskData.summary.medium_risk_count}</div>
+              </div>
+            </div>
+            {riskData.risks.filter((r) => r.risk_level === 'high' || r.risk_level === 'medium').length === 0 ? (
+              <p className="text-sm text-emerald-600 dark:text-emerald-400 py-3 text-center">
+                该班暂无中高风险学生，整体表现良好
+              </p>
+            ) : (
+              <ul className="divide-y divide-gray-100 dark:divide-slate-700">
+                {riskData.risks
+                  .filter((r) => r.risk_level === 'high' || r.risk_level === 'medium')
+                  .map((r, idx) => (
+                    <li key={idx} className="py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            r.risk_level === 'high' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`}
+                        />
+                        <span className="text-sm text-gray-800 dark:text-gray-100 truncate">{r.name}</span>
+                      </div>
+                      <span className="text-sm font-medium flex-shrink-0">
+                        <span className={r.risk_level === 'high' ? 'text-red-600' : 'text-yellow-600'}>
+                          {r.risk_level === 'high' ? '高风险' : '中风险'}
+                        </span>
+                        <span className="text-gray-400 text-xs ml-2">分 {r.risk_score}</span>
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* 批量录分 */}

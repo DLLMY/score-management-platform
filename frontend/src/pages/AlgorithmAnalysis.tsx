@@ -51,7 +51,8 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   // 选中的 Tab 自动滚动进可视区，避免「学生画像」等靠右标签被 overflow 裁掉
   useEffect(() => {
     const el = tabNavRef.current?.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
-    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    // 可选调用：jsdom/部分环境无 scrollIntoView，避免整页崩溃
+    el?.scrollIntoView?.({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [activeTab]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [batchAttribution, setBatchAttribution] = useState<BatchAttributionResult | null>(null);
