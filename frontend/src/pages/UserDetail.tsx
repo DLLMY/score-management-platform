@@ -309,8 +309,8 @@ function UserDetail() {
               </PermissionButton>
             </div>
             <div className='text-center py-6'>
-              <div className={`text-5xl font-bold ${getScoreColor(user.current_score || 0)} mb-2`}>
-                {user.current_score}
+              <div className={`text-5xl font-bold ${user.current_score != null ? getScoreColor(user.current_score) : 'text-gray-400'} mb-2`}>
+                {user.current_score != null ? user.current_score : '--'}
               </div>
               <p className='text-gray-500'>分</p>
             </div>
@@ -334,7 +334,7 @@ function UserDetail() {
               <div className='flex items-center gap-3'>
                 <History className='w-5 h-5 text-primary-600' />
                 <h3 className='font-semibold text-gray-800'>积分变动记录</h3>
-                <span className='text-sm text-gray-500'>({records.length} 条记录)</span>
+                <span className='text-sm text-gray-500'>({recordsError ? '--' : records.length} 条记录)</span>
               </div>
             </div>
             <div className='card-body'>

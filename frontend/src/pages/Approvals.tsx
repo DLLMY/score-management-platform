@@ -94,7 +94,8 @@ function Approvals() {
         setShowDetailModal(false);
         showToast('success', '审批通过');
       } catch (error) {
-        showToast('error', '操作失败');
+        console.error('审批操作失败:', error);
+        showToast('error', '操作失败: ' + ((error as Error).message || ''));
       } finally {
         setActionLoading(false);
       }
@@ -112,7 +113,8 @@ function Approvals() {
         setShowDetailModal(false);
         showToast('success', '已拒绝');
       } catch (error) {
-        showToast('error', '操作失败');
+        console.error('审批操作失败:', error);
+        showToast('error', '操作失败: ' + ((error as Error).message || ''));
       } finally {
         setActionLoading(false);
       }

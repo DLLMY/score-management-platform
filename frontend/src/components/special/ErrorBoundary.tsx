@@ -65,6 +65,7 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
         });
       }
     } catch {
+      // 上报失败不再抛错，避免掩盖原始错误
     }
   };
 

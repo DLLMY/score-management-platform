@@ -418,6 +418,8 @@ class NLPRuleManagementService:
             "accuracy": training.accuracy,
             "f1_score": training.f1_score,
             "status": training.status,
+            # 前端按 training_status 读取；保留 status 兼容（历史前端字段不匹配导致永远显示"进行中"）
+            "training_status": training.status,
             "error_message": training.error_message,
             "trained_at": (training.trained_at.isoformat() if training.trained_at else None),
             "created_at": (training.created_at.isoformat() if training.created_at else None),

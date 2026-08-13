@@ -329,7 +329,7 @@ const CourseSchedulePage: React.FC = () => {
       if (res) {
         setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
       }
-    }).catch(console.error);
+    }).catch(console.error); // 导入配置列表加载失败静默：仅影响弹窗下拉选项，主功能不受影响
   }, [openImportModal]);
 
   const closeImportModalWithReset = useCallback(() => {

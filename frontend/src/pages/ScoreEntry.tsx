@@ -650,7 +650,7 @@ const ScoreEntry: React.FC = () => {
       });
     });
 
-    return Math.round((filled / total) * 100);
+    return total > 0 ? Math.round((filled / total) * 100) : 0;
   }, [students, visibleSubjects, scores]);
 
   const filteredStudents = useMemo((): User[] => {

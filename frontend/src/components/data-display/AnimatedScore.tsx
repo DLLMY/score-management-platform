@@ -7,13 +7,18 @@ interface AnimatedScoreProps {
 }
 
 function AnimatedScore({ score, value, className = '' }: AnimatedScoreProps) {
-  const resolvedScore = value ?? score ?? 0;
-  const [displayScore, setDisplayScore] = useState<number>(resolvedScore);
-  const previousScore = useRef<number>(resolvedScore);
+  const resolvedScore = value ?? score;
+  const [displayScore, setDisplayScore] = useState<number | null>(resolvedScore ?? null);
+  const previousScore = useRef<number | null>(resolvedScore ?? null);
 
   useEffect(() => {
+    if (resolvedScore == null) {
+      setDisplayScore(null);
+      previousScore.current = null;
+      return;
+    }
     if (previousScore.current !== resolvedScore) {
-      const startScore = previousScore.current;
+      const startScore = previousScore.current ?? resolvedScore;
       const endScore = resolvedScore;
       const duration = 400;
       const startTime = Date.now();
@@ -40,13 +45,16 @@ function AnimatedScore({ score, value, className = '' }: AnimatedScoreProps) {
   }, [resolvedScore]);
 
   const getScoreColor = (): string => {
+    if (displayScore == null) return 'text-gray-400';
     if (displayScore >= 80) return 'text-green-600';
     if (displayScore >= 60) return 'text-blue-600';
     return 'text-red-600';
   };
 
   return (
-    <span className={`text-lg font-bold ${getScoreColor()} ${className}`}>{displayScore}</span>
+    <span className={`text-lg font-bold ${getScoreColor()} ${className}`}>
+      {displayScore == null ? '--' : displayScore}
+    </span>
   );
 }
 

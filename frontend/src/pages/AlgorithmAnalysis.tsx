@@ -557,6 +557,16 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   };
 
   const renderStatistics = () => {
+    if (loadWarn) {
+      // 加载失败 ≠ 无数据：区分展示，避免引导用户"去导入数据"
+      return (
+        <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+          <BarChart3 className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <p>统计数据加载失败</p>
+          <p className="text-sm mt-1">请稍后重试，或检查后端服务是否可用</p>
+        </div>
+      );
+    }
     if (!statistics) {
       return (
         <div className="text-center py-12 text-gray-500 dark:text-slate-400">
@@ -572,7 +582,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
             <div className="text-sm text-gray-500 dark:text-slate-400">学生总数</div>
-            <div className="text-3xl font-bold text-gray-800 dark:text-white mt-1">{statistics.student_count || 0}</div>
+            <div className="text-3xl font-bold text-gray-800 dark:text-white mt-1">{statistics.student_count != null ? statistics.student_count : '—'}</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
             <div className="text-sm text-gray-500 dark:text-slate-400">平均行为积分</div>
@@ -713,6 +723,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                     const current = typeof item.current_score === 'number' ? item.current_score : 0;
                     const predicted = typeof item.predicted_score === 'number' ? item.predicted_score : current;
                     const trend = item.trend || 'stable';
+                    const hasTrend = !!item.trend; // 趋势缺失显示 '--'，不冒充"稳定"
                     const confidence = typeof item.confidence === 'number' ? item.confidence : 0;
                     return (
                       <tr key={`${item.user_id ?? item.name ?? ''}-${item.name ?? ''}`} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
@@ -725,7 +736,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(trend)}`}>
                             {getTrendIcon(trend)}
-                            {trend === 'up' ? '上升' : trend === 'down' ? '下降' : '稳定'}
+                            {hasTrend ? (trend === 'up' ? '上升' : trend === 'down' ? '下降' : '稳定') : '--'}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -2565,6 +2576,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const pred = typeof predicted === 'number' ? predicted : cur;
       const conf = typeof confidence === 'number' ? confidence : 0;
       const t = trend || 'stable';
+      const hasTrend = !!trend; // 趋势缺失显示 '--'，不冒充"稳定"
       return (
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-3">
@@ -2580,7 +2592,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           </div>
           <div className="flex items-center justify-between mt-3 text-xs text-gray-400">
             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium ${getTrendColor(t)}`}>
-              {t === 'up' ? '上升' : t === 'down' ? '下降' : '稳定'}
+              {hasTrend ? (t === 'up' ? '上升' : t === 'down' ? '下降' : '稳定') : '--'}
             </span>
             <span>置信度 {(conf * 100).toFixed(0)}%</span>
           </div>
@@ -2619,14 +2631,18 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     };
 
     const renderAnomalyCard = (label: string, a?: AnomalyResult) => {
-      const noAnomaly = !a || (!a.description && a.score_change === 0 && a.severity === 'low');
+      // 数据缺失（接口未返回该维度）≠ 无异常：显示"数据缺失"而非 fail-open 的绿色"正常"
+      const missing = !a;
+      const noAnomaly = !missing && !a.description && a.score_change === 0 && a.severity === 'low';
       const sev = a?.severity || 'low';
       const sevStyle = SEVERITY_COLORS[sev] || SEVERITY_COLORS.low;
       return (
         <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-800 dark:text-white">{label}</span>
-            {noAnomaly ? (
+            {missing ? (
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400">数据缺失</span>
+            ) : noAnomaly ? (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-600 dark:bg-green-500/10">正常</span>
             ) : (
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sevStyle.light} ${sevStyle.text}`}>
@@ -2634,7 +2650,9 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               </span>
             )}
           </div>
-          {noAnomaly ? (
+          {missing ? (
+            <p className="text-sm text-gray-400">该维度暂无检测数据</p>
+          ) : noAnomaly ? (
             <p className="text-sm text-gray-400">未检测到异常</p>
           ) : (
             <div className="space-y-1">

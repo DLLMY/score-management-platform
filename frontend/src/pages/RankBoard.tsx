@@ -207,7 +207,7 @@ function RankBoard() {
                       <td>{s.class_name}</td>
                       <td className='text-amber-500 font-semibold'>{s.current_score}</td>
                       <td>
-                        {s.remaining_unlock}/{s.daily_unlock_limit}
+                        {s.daily_unlock_limit ? `${s.remaining_unlock}/${s.daily_unlock_limit}` : '--'}
                       </td>
                     </tr>
                   ))}

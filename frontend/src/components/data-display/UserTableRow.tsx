@@ -51,7 +51,7 @@ const UserTableRow = memo<UserTableRowProps>(
           </span>
         </td>
         <td className="px-4 py-3">
-          <AnimatedScore value={user.score || 0} />
+          <AnimatedScore value={user.score != null ? user.score : undefined} />
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">

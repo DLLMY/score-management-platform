@@ -535,7 +535,7 @@ function ScoreAnalysis(): React.ReactElement {
                 </div>
               </div>
             </div>
-            <p className='text-xs text-gray-500 mt-2'>{clusters?.students?.length || 0}名学生已分群</p>
+            <p className='text-xs text-gray-500 mt-2'>{clusters && clusters.students ? `${clusters.students.length}名学生已分群` : '—'}</p>
           </div>
         </Card>
 
@@ -621,7 +621,7 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>参考人数</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.total_students || 0}
+                        {examAnalysis.overall.total_students != null ? examAnalysis.overall.total_students : '--'}
                       </div>
                     </div>
                   </div>
@@ -636,7 +636,7 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>平均成绩</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.overall_average || 0}
+                        {examAnalysis.overall.overall_average != null ? examAnalysis.overall.overall_average : '--'}
                       </div>
                     </div>
                   </div>
@@ -651,7 +651,7 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>优秀率</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.excellent_rate || 0}%
+                        {examAnalysis.overall.excellent_rate != null ? `${examAnalysis.overall.excellent_rate}%` : '--'}
                       </div>
                     </div>
                   </div>
@@ -666,7 +666,7 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>及格率</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.pass_rate || 0}%
+                        {examAnalysis.overall.pass_rate != null ? `${examAnalysis.overall.pass_rate}%` : '--'}
                       </div>
                     </div>
                   </div>
@@ -738,25 +738,25 @@ function ScoreAnalysis(): React.ReactElement {
                               {subject}
                             </span>
                             <div>
-                              <div className='text-[10px] text-gray-500'>参考 {data.count || 0} 人</div>
+                              <div className='text-[10px] text-gray-500'>参考 {data.count != null ? data.count : '--'} 人</div>
                             </div>
                           </div>
                           <div className='flex items-center gap-4'>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>平均分</div>
-                              <div className='text-sm font-bold text-gray-900'>{data.average?.toFixed(1) || 0}</div>
+                              <div className='text-sm font-bold text-gray-900'>{data.average != null ? data.average.toFixed(1) : '--'}</div>
                             </div>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>最高分</div>
-                              <div className='text-sm font-bold text-green-600'>{data.max || 0}</div>
+                              <div className='text-sm font-bold text-green-600'>{data.max != null ? data.max : '--'}</div>
                             </div>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>最低分</div>
-                              <div className='text-sm font-bold text-red-600'>{data.min || 0}</div>
+                              <div className='text-sm font-bold text-red-600'>{data.min != null ? data.min : '--'}</div>
                             </div>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>及格率</div>
-                              <div className='text-sm font-bold text-purple-600'>{data.pass_rate || 0}%</div>
+                              <div className='text-sm font-bold text-purple-600'>{data.pass_rate != null ? `${data.pass_rate}%` : '--'}</div>
                             </div>
                           </div>
                         </div>

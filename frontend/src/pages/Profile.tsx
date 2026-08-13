@@ -61,16 +61,17 @@ function Profile() {
 
   const adminId: number = Number(localStorage.getItem('adminId')) || 1;
 
+  // 初始值全部置空，避免硬编码伪造个人信息；接口加载后填充，缺失字段渲染为 '--'
   const [userInfo, setUserInfo] = useState<UserInfo>({
-    name: '管理员',
-    username: 'admin',
-    email: 'admin@school.com',
-    phone: '13800138000',
-    role: '系统管理员',
-    department: '信息中心',
-    joinedAt: '2024-09-01',
-    lastLogin: '2026-05-19 10:30',
-    permissions: ['学生管理', '积分规则', '数据分析', '系统设置'],
+    name: '',
+    username: '',
+    email: '',
+    phone: '',
+    role: '',
+    department: '',
+    joinedAt: '',
+    lastLogin: '',
+    permissions: [],
   });
 
   const [editForm, setEditForm] = useState<EditForm>({
@@ -100,14 +101,16 @@ function Profile() {
       const data: AdminData = await api.admins.getById(adminId);
       setUserInfo((prev: UserInfo) => ({
         ...prev,
-        name: data.real_name || data.username,
-        username: data.username,
+        name: data.real_name || data.username || '',
+        username: data.username || '',
         phone: data.phone || '',
-        department: data.class_name || '信息中心',
-        role: data.role || '系统管理员',
+        email: data.email || '',
+        department: data.class_name || '',
+        role: data.role || '',
         joinedAt: data.created_at
           ? new Date(data.created_at).toLocaleDateString('zh-CN')
-          : prev.joinedAt,
+          : '',
+        // lastLogin：后端无 Profile 专用登录时间字段，保持空（渲染为"暂无记录"），不伪造
       }));
       setLoadError(false);
       setEditForm({
@@ -331,7 +334,7 @@ function Profile() {
                 <label className='block text-sm font-medium text-gray-500 mb-1'>姓名</label>
                 <div className='flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl'>
                   <User className='w-5 h-5 text-gray-400' />
-                  <span className='font-medium text-gray-800'>{userInfo.name}</span>
+                  <span className='font-medium text-gray-800'>{userInfo.name || '--'}</span>
                 </div>
               </div>
               <div>
@@ -345,7 +348,7 @@ function Profile() {
                 <label className='block text-sm font-medium text-gray-500 mb-1'>部门</label>
                 <div className='flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl'>
                   <Globe className='w-5 h-5 text-gray-400' />
-                  <span className='font-medium text-gray-800'>{userInfo.department}</span>
+                  <span className='font-medium text-gray-800'>{userInfo.department || '--'}</span>
                 </div>
               </div>
             </div>
@@ -353,14 +356,14 @@ function Profile() {
               <div>
                 <label className='block text-sm font-medium text-gray-500 mb-1'>角色</label>
                 <span className='inline-flex items-center px-3 py-1.5 bg-primary-100 text-primary-700 rounded-lg text-sm font-medium'>
-                  {userInfo.role}
+                  {userInfo.role || '--'}
                 </span>
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-500 mb-1'>入职时间</label>
                 <div className='flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl'>
                   <Calendar className='w-5 h-5 text-gray-400' />
-                  <span className='font-medium text-gray-800'>{userInfo.joinedAt}</span>
+                  <span className='font-medium text-gray-800'>{userInfo.joinedAt || '--'}</span>
                 </div>
               </div>
             </div>
@@ -393,7 +396,7 @@ function Profile() {
                 </div>
                 <div className='text-left'>
                   <p className='font-medium text-gray-800'>绑定邮箱</p>
-                  <p className='text-sm text-gray-500'>{userInfo.email}</p>
+                  <p className='text-sm text-gray-500'>{userInfo.email || '未绑定'}</p>
                 </div>
               </div>
               <Check className='w-5 h-5 text-green-500' />
@@ -411,7 +414,7 @@ function Profile() {
               {userInfo.phone ? <Check className='w-5 h-5 text-green-500' /> : null}
             </button>
             <div className='p-4 bg-red-50 border border-red-200 rounded-xl'>
-              <p className='text-sm text-red-700'>上次登录: {userInfo.lastLogin}</p>
+              <p className='text-sm text-red-700'>上次登录: {userInfo.lastLogin || '暂无记录'}</p>
             </div>
           </div>
         </Card>

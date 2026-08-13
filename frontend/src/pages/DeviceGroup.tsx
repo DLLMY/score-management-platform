@@ -462,13 +462,13 @@ function DeviceGroupPage() {
                   <div className='flex items-center justify-between text-sm'>
                     <div className='flex items-center space-x-4'>
                       <span className='text-gray-500'>
-                        设备: <span className='font-medium text-gray-700'>{groupStat?.total_devices || 0}</span>
+                        设备: <span className='font-medium text-gray-700'>{groupStat ? (groupStat.total_devices || 0) : '--'}</span>
                       </span>
                       <span className='text-green-600'>
-                        在线: <span className='font-medium'>{groupStat?.online_devices || 0}</span>
+                        在线: <span className='font-medium'>{groupStat ? (groupStat.online_devices || 0) : '--'}</span>
                       </span>
                       <span className='text-red-600'>
-                        离线: <span className='font-medium'>{groupStat?.offline_devices || 0}</span>
+                        离线: <span className='font-medium'>{groupStat ? (groupStat.offline_devices || 0) : '--'}</span>
                       </span>
                     </div>
                   </div>
@@ -746,7 +746,9 @@ function DeviceGroupPage() {
               >
                 <div className='flex items-center'>
                   <div className={`w-2 h-2 rounded-full mr-3 ${
-                    mapping.device?.status === 'online' ? 'bg-green-500' : 'bg-red-500'
+                    mapping.device?.is_online ? 'bg-green-500'
+                    : mapping.device && mapping.device.is_online === false ? 'bg-red-500'
+                    : 'bg-gray-400'
                   }`} />
                   <div>
                     <p className='font-medium text-gray-800'>
@@ -822,7 +824,9 @@ function DeviceGroupPage() {
                       className='w-4 h-4 text-blue-600 rounded mr-3'
                     />
                     <div className={`w-2 h-2 rounded-full mr-3 ${
-                      device.status === 'online' ? 'bg-green-500' : 'bg-red-500'
+                      device.is_online ? 'bg-green-500'
+                      : device.is_online === false ? 'bg-red-500'
+                      : 'bg-gray-400'
                     }`} />
                     <div>
                       <p className='font-medium text-gray-800'>{device.name}</p>

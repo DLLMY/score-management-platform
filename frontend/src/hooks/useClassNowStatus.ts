@@ -88,6 +88,9 @@ export function useClassNowStatus(
     };
   }, [fetchStatus, enabled, intervalMs]);
 
+  // 注意：status 缺失（首次加载中/拉取失败）时 blocked=false。
+  // 这是刻意行为——UI 仅"不显示拦截提示"（徽章同时置灰为"上课状态未知"），
+  // 真正的下发拦截由后端 ClassTimeChecker 兜底，前端无法绕过。
   const blocked = (() => {
     if (!status) return false;
     if (status.is_during_class_time) return true;

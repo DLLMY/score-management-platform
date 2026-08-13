@@ -348,23 +348,29 @@ function MentalHealth() {
                           </td>
                           <td className="px-5 py-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
-                              {getMoodIcon(record.mood_level || 3)}
+                              {record.mood_level != null ? (
+                                getMoodIcon(record.mood_level)
+                              ) : (
+                                <span className="w-5 h-5 text-slate-400 dark:text-slate-500">--</span>
+                              )}
                               <span className="text-sm text-slate-600 dark:text-slate-300">
-                                {getMoodLabel(record.mood_level || 3)}
+                                {record.mood_level != null ? getMoodLabel(record.mood_level) : '--'}
                               </span>
                             </div>
                           </td>
                           <td className="px-5 py-4 text-center">
                             <span
                               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                (record.stress_level || 3) >= 4
+                                record.stress_level == null
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                  : record.stress_level >= 4
                                   ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                                  : (record.stress_level || 3) >= 3
+                                  : record.stress_level >= 3
                                   ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
                                   : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                               }`}
                             >
-                              {getStressLabel(record.stress_level || 3)}
+                              {record.stress_level != null ? getStressLabel(record.stress_level) : '--'}
                             </span>
                           </td>
                           <td className="px-5 py-4 text-center">

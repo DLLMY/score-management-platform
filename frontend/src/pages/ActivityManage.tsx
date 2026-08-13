@@ -346,7 +346,7 @@ function ActivityManage() {
                     )}
                     <div className='flex items-center gap-2'>
                       <Users className='w-4 h-4' />
-                      <span>已报名 {activity.registration_count || 0} 人</span>
+                      <span>已报名 {activity.registration_count != null ? activity.registration_count : '--'} 人</span>
                     </div>
                   </div>
 

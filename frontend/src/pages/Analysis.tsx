@@ -113,7 +113,7 @@ function Analysis() {
   const fetchAlgorithmData = useCallback(async () => {
     try {
       const [statsRes, clusterRes, warningRes] = await Promise.all([
-        api.algorithm.getStatistics().catch(() => null),
+        api.algorithm.getStatistics().catch(() => null), // 算法子模块加载失败不影响主面板，置 null 由各区块空态兜底
         api.algorithm.getClusters().catch(() => null),
         api.algorithm.getWarnings().catch(() => null),
       ]);
@@ -676,9 +676,9 @@ function Analysis() {
                                   )}
                                 </div>
                                 <span
-                                  className={`text-base font-bold ${getScoreColor(user.current_score || 0)} flex items-center gap-0.5`}
+                                  className={`text-base font-bold ${user.current_score != null ? getScoreColor(user.current_score) : 'text-gray-400'} flex items-center gap-0.5`}
                                 >
-                                  {user.current_score}
+                                  {user.current_score != null ? user.current_score : '--'}
                                   <span className='text-[9px] text-gray-500'>分</span>
                                 </span>
                               </div>

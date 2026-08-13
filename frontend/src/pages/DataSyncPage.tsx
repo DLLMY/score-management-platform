@@ -181,7 +181,7 @@ const DataSyncPage: React.FC = () => {
                   style={{ width: stats.users.link_rate || '0%' }}
                 />
               </div>
-              <div className="text-xs text-gray-400 mt-1">{stats.users.link_rate || '0%'}</div>
+              <div className="text-xs text-gray-400 mt-1">{stats.users.link_rate ? stats.users.link_rate : '--'}</div>
             </div>
           </div>
 
@@ -204,7 +204,7 @@ const DataSyncPage: React.FC = () => {
                   style={{ width: stats.admins.link_rate || '0%' }}
                 />
               </div>
-              <div className="text-xs text-gray-400 mt-1">{stats.admins.link_rate || '0%'}</div>
+              <div className="text-xs text-gray-400 mt-1">{stats.admins.link_rate ? stats.admins.link_rate : '--'}</div>
             </div>
           </div>
 

@@ -370,7 +370,7 @@ function SubjectManagementPage() {
   // Calculate statistics
   const totalSubjects = subjects.length;
   const activeSubjects = subjects.filter(s => s.is_active).length;
-  const totalClassCount = subjects.reduce((sum, s) => sum + (s.class_count || 0), 0);
+  const totalClassCount = subjects.reduce((sum, s) => sum + (s.class_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
@@ -609,7 +609,7 @@ function SubjectManagementPage() {
                         )}
                         <span className='flex items-center gap-1'>
                           <Layers className='w-4 h-4' />
-                          {subject.class_count || 0}班
+                          {subject.class_count != null ? subject.class_count : '--'}班
                         </span>
                       </div>
                       <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>

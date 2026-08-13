@@ -224,7 +224,7 @@ function ClassManagementPage() {
       if (res) {
         setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
       }
-    }).catch(console.error);
+    }).catch(console.error); // 配置列表加载失败静默（主功能不受影响），仅记录日志
   }, []);
 
   const closeImportModal = useCallback(() => {
@@ -441,7 +441,7 @@ function ClassManagementPage() {
   }, [teachers, searchTeacherTerm]);
 
   const totalStudents = useMemo(() => {
-    return classes.reduce((sum, cls) => sum + (cls.student_count || 0), 0);
+    return classes.reduce((sum, cls) => sum + (cls.student_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
   }, [classes]);
 
   const classesWithTeacher = useMemo(() => {
@@ -657,7 +657,7 @@ function ClassManagementPage() {
                       </td>
                       <td className='px-5 py-4 text-center'>
                         <span className='inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold'>
-                          {cls.student_count || 0}
+                          {cls.student_count != null ? cls.student_count : '--'}
                         </span>
                       </td>
                       <td className='px-5 py-4 text-center'>
@@ -994,7 +994,7 @@ function ClassManagementPage() {
                         </div>
                         <div className='flex items-center gap-2'>
                           <span className='text-xs text-slate-500 dark:text-slate-400'>
-                            管理{teacher.class_count || 0}个班级
+                            管理{teacher.class_count != null ? teacher.class_count : '--'}个班级
                           </span>
                           <UserPlus className='w-5 h-5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity' />
                         </div>

@@ -259,6 +259,11 @@ function RuleList() {
   const handleExport = useCallback(async () => {
     try {
       const data = await api.rules.export();
+      const list = Array.isArray(data) ? data : ((data as { rules?: unknown[] })?.rules || []);
+      if (list.length === 0) {
+        showToast('warning', '暂无规则数据可导出');
+        return;
+      }
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

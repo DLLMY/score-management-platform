@@ -232,7 +232,7 @@ function PermissionManagement() {
         const result = await api.admins.create(adminFormData);
         showToast('success', '管理员创建成功');
         const newAdmin: Admin = {
-          id: (result as { admin_id?: number }).admin_id || 0,
+          id: (result as { admin_id?: number }).admin_id || 0, // 前端临时 id，仅供列表渲染定位，服务端返回后覆盖
           username: adminFormData.username,
           name: adminFormData.real_name,
           real_name: adminFormData.real_name,
@@ -241,7 +241,7 @@ function PermissionManagement() {
           phone: adminFormData.phone,
           class_name: adminFormData.class_name,
           is_active: true,
-          created_at: new Date().toISOString(),
+          created_at: new Date().toISOString(), // 乐观更新占位时间，服务端创建后以返回时间为准
         };
         setAdmins((prev) => [newAdmin, ...prev]);
       }

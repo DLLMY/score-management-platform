@@ -315,7 +315,7 @@ function HomeworkCheck() {
                       </td>
                       <td className="px-5 py-4 text-center">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold">
-                          {assignment.submitted_count || 0}/{assignment.total_students || 0}
+                          {assignment.total_students ? `${assignment.submitted_count || 0}/${assignment.total_students}` : '--'}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-center">

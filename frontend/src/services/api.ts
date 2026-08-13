@@ -503,13 +503,23 @@ const fetchWithTimeout = async (
 /**
  * 从统一响应信封 {success, code, data} 中取出业务数据。
  * 逻辑与历史三处内联实现保持一致，抽出为单一函数以避免重复并集中维护：
- *   - skipDataExtract：原样返回
+ *   - skipDataExtract：原样返回（调用方自行判断 success）
+ *   - success === false（HTTP 2xx 但业务失败）：抛 ApiError，避免调用方把失败当成功
  *   - success/data 均存在：返回 data
- *   - 其他：原样返回（调用方自行处理 success=false 等业务状态）
+ *   - 其他：原样返回
+ * 注：部分接口（如导入）返回 200 + success:false + data 错误明细，此类调用方
+ * 应使用 skipDataExtract: true 拿到完整信封自行处理；默认路径按业务失败抛错。
  */
 const unwrapEnvelope = (rawData: any, skipDataExtract?: boolean): any => {
   if (skipDataExtract) {
     return rawData;
+  }
+  if (rawData && rawData.success === false) {
+    const apiError = new Error((rawData as { message?: string }).message || '操作失败') as ApiError;
+    apiError.status = 200;
+    apiError.type = 'business';
+    apiError.errorData = rawData;
+    throw apiError;
   }
   if (rawData && rawData.success !== undefined && rawData.data !== undefined) {
     return rawData.data;
@@ -3347,7 +3357,10 @@ const api: Api = {
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
         body: JSON.stringify({ errors, module })
-      }).then(response => response.blob()).then(blob => {
+      }).then(response => {
+        if (!response.ok) throw new Error(`导出错误明细失败(${response.status})`);
+        return response.blob();
+      }).then(blob => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -3356,6 +3369,9 @@ const api: Api = {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+      }).catch(err => {
+        // 避免 unhandled rejection；调用方为"导出错误数据"按钮，失败时给出可观测日志
+        console.error('导出错误明细失败:', err);
       });
     },
   },

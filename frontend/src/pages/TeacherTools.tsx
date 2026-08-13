@@ -158,7 +158,13 @@ const TeacherTools: React.FC = () => {
     try {
       const res = await api.scores.batchCreate({ exam_id: Number(scoreExam), scores });
       setScoreResult(res);
-      showToast('success', `成功录入 ${res.created} 条`);
+      // 部分失败时不再伪装全部成功
+      const failedCount = (res.errors || []).length;
+      if (failedCount > 0) {
+        showToast('warning', `成功录入 ${res.created} 条，失败 ${failedCount} 条（详见下方明细）`);
+      } else {
+        showToast('success', `成功录入 ${res.created} 条`);
+      }
     } catch (e) {
       showToast('error', '批量录分失败: ' + (e as Error).message);
     } finally {
@@ -183,7 +189,13 @@ const TeacherTools: React.FC = () => {
         content: notifyContent,
       });
       setNotifyResult(res);
-      showToast('success', `成功发送 ${res.sent} 条`);
+      // 部分失败时不再伪装全部成功
+      const failedCount = (res.errors || []).length;
+      if (failedCount > 0) {
+        showToast('warning', `成功发送 ${res.sent} 条，失败 ${failedCount} 条（详见下方明细）`);
+      } else {
+        showToast('success', `成功发送 ${res.sent} 条`);
+      }
     } catch (e) {
       showToast('error', '群发失败: ' + (e as Error).message);
     } finally {

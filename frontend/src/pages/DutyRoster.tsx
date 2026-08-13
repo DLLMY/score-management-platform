@@ -162,7 +162,7 @@ function DutyRosterPage() {
       await api.duty.markComplete(assignmentId);
       showToast('success', '任务已标记完成');
       setAssignments(prev =>
-        prev.map(a => a.id === assignmentId ? { ...a, is_completed: true, completed_at: new Date().toISOString() } : a)
+        prev.map(a => a.id === assignmentId ? { ...a, is_completed: true, completed_at: new Date().toISOString() } : a) // 乐观更新占位，服务端完成时间为准
       );
     } catch (error) {
       console.error('标记完成失败:', error);

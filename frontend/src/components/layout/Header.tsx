@@ -77,6 +77,7 @@ function Header() {
       setNotifications(result);
     } catch (error) {
       if ((error as { status?: number }).status !== 401) {
+        // 轮询失败静默降级（保留旧列表，30s 后自动重试），不打扰用户；仅记录日志
         console.error('Failed to fetch notifications:', error);
       }
     }
@@ -98,6 +99,7 @@ function Header() {
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
     } catch (error) {
+      // 标记已读失败：红点保持未读（真实状态），不伪装成功；记录日志供排查
       console.error('Failed to mark notification as read:', error);
     }
   }, []);

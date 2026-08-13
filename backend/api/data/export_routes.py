@@ -5,6 +5,7 @@ from models import User, ScoreRule, Device, ScoreRecord, ScoreCategory
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from services.export_service import export_service
+from services.heartbeat_service import is_device_online
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 
@@ -103,7 +104,7 @@ class ExportData(Resource):
                         "device_id": d.device_id,
                         "name": d.name,
                         "status": d.status,
-                        "is_online": d.status == "online",
+                        "is_online": is_device_online(d),
                         "wifi_signal": d.wifi_signal,
                         "class_name": d.class_info.name if d.class_info else None,
                         "admin_name": d.admin.real_name if d.admin else None,
@@ -294,7 +295,7 @@ class ExportDevices(Resource):
                 "device_id": d.device_id,
                 "name": d.name,
                 "status": d.status,
-                "is_online": d.status == "online",
+                "is_online": is_device_online(d),
                 "wifi_signal": d.wifi_signal,
                 "class_name": d.class_info.name if d.class_info else None,
                 "admin_name": d.admin.real_name if d.admin else None,

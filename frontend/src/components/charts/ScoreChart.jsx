@@ -40,7 +40,7 @@ const ScoreChart = ({ data, title = '积分趋势', showLegend = true }) => {
   };
 
   const calculateTrend = () => {
-    if (data.length < 2) return { value: 0, isUp: true };
+    if (data.length < 2) return { value: 0, isUp: null };
     const first = data[0]?.score || 0;
     const last = data[data.length - 1]?.score || 0;
     const change = last - first;
@@ -55,15 +55,21 @@ const ScoreChart = ({ data, title = '积分趋势', showLegend = true }) => {
       <div className='flex items-center justify-between mb-6'>
         <h3 className='text-lg font-semibold text-white'>{title}</h3>
         <div className='flex items-center gap-2'>
-          {trend.isUp ? (
-            <TrendingUp className='w-5 h-5 text-green-400' />
+          {trend.isUp === null ? (
+            <span className='text-sm font-medium text-slate-400'>--</span>
           ) : (
-            <TrendingDown className='w-5 h-5 text-red-400' />
+            <>
+              {trend.isUp ? (
+                <TrendingUp className='w-5 h-5 text-green-400' />
+              ) : (
+                <TrendingDown className='w-5 h-5 text-red-400' />
+              )}
+              <span className={`text-sm font-medium ${trend.isUp ? 'text-green-400' : 'text-red-400'}`}>
+                {trend.isUp ? '+' : ''}
+                {trend.value}%
+              </span>
+            </>
           )}
-          <span className={`text-sm font-medium ${trend.isUp ? 'text-green-400' : 'text-red-400'}`}>
-            {trend.isUp ? '+' : ''}
-            {trend.value}%
-          </span>
         </div>
       </div>
 

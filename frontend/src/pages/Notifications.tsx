@@ -76,7 +76,8 @@ function Notifications() {
         setNotifications((prev: AdminNotification[]) => prev.map((n: AdminNotification) => (n.id === id ? { ...n, is_read: true } : n)));
         showToast('success', '已标记为已读');
       } catch (error) {
-        showToast('error', '操作失败');
+        console.error('标记已读失败:', error);
+        showToast('error', '操作失败: ' + ((error as Error).message || ''));
       }
     },
     [showToast]
@@ -88,7 +89,8 @@ function Notifications() {
       setNotifications((prev: AdminNotification[]) => prev.map((n: AdminNotification) => ({ ...n, is_read: true })));
       showToast('success', result.message || '全部已读');
     } catch (error) {
-      showToast('error', '操作失败');
+      console.error('全部已读失败:', error);
+      showToast('error', '操作失败: ' + ((error as Error).message || ''));
     }
   }, [adminId, showToast]);
 
@@ -100,7 +102,8 @@ function Notifications() {
         setNotifications((prev: AdminNotification[]) => prev.filter((n: AdminNotification) => n.id !== id));
         showToast('success', '删除成功');
       } catch (error) {
-        showToast('error', '删除失败');
+        console.error('删除通知失败:', error);
+        showToast('error', '删除失败: ' + ((error as Error).message || ''));
       }
     },
     [showToast]
@@ -113,10 +116,14 @@ function Notifications() {
         const result = await api.adminNotifications.create({ ...sendForm, admin_id: adminId });
         setShowSendModal(false);
         setSendForm({ title: '', message: '', type: 'info', priority: 'medium' });
-        setNotifications((prev: AdminNotification[]) => [result.notification, ...prev]);
+        // 后端返回 data: {notification}; 防御性校验，缺失时不插入假条目
+        if (result && result.notification) {
+          setNotifications((prev: AdminNotification[]) => [result.notification, ...prev]);
+        }
         showToast('success', '通知发送成功');
       } catch (error) {
-        showToast('error', '发送失败');
+        console.error('发送通知失败:', error);
+        showToast('error', '发送失败: ' + ((error as Error).message || ''));
       }
     },
     [sendForm, adminId, showToast]

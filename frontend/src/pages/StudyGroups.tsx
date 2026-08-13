@@ -219,7 +219,7 @@ function StudyGroups() {
   );
 
   const totalGroups = groups.length;
-  const totalMembers = groups.reduce((sum, g) => sum + (g.member_count || 0), 0);
+  const totalMembers = groups.reduce((sum, g) => sum + (g.member_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
   const totalScore = groups.reduce((sum, g) => sum + g.score, 0);
   const activeGroups = groups.filter((g) => g.is_active).length;
 
@@ -361,7 +361,7 @@ function StudyGroups() {
                         <div>
                           <h3 className="font-bold text-slate-800 dark:text-slate-100">{group.name}</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {group.class_name || `班级 #${group.class_id}`} · {group.member_count || 0} 名成员
+                            {group.class_name || `班级 #${group.class_id}`} · {group.member_count != null ? group.member_count : '--'} 名成员
                           </p>
                         </div>
                       </div>
@@ -448,7 +448,7 @@ function StudyGroups() {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                              成员管理 ({group.members?.length || 0})
+                              成员管理 ({group.members ? group.members.length : '--'})
                             </h4>
                             <button
                               onClick={() => setShowAddMember(!showAddMember)}

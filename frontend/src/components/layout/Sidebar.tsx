@@ -247,6 +247,7 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         const admin = JSON.parse(adminStr);
         usePermissionStore.getState().loadPermissions(admin.id);
       } catch {
+        // 权限加载失败静默：PermissionGuard 会兜底渲染受限视图
       }
     }
   }, [isLoading]);

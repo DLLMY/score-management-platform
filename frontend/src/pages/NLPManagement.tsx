@@ -305,7 +305,8 @@ const NLPScoringManagement = () => {
         );
       }
     } catch (error) {
-      showToast('error', '解析失败，请稍后重试');
+      console.error('解析失败:', error);
+      showToast('error', '解析失败: ' + ((error as Error).message || '请稍后重试'));
     } finally {
       setIsParsing(false);
     }
@@ -337,7 +338,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '评分失败');
+      console.error('评分失败:', error);
+      showToast('error', '评分失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [parseResult, inputText, selectedRuleId, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -376,7 +378,8 @@ const NLPScoringManagement = () => {
           showToast('error', '应用失败');
         }
       } catch (error) {
-        showToast('error', '应用相似规则失败');
+        console.error('应用相似规则失败:', error);
+        showToast('error', '应用相似规则失败: ' + ((error as Error).message || '请稍后重试'));
       }
     },
     [inputText, showToast]
@@ -410,7 +413,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '评分失败');
+      console.error('评分失败:', error);
+      showToast('error', '评分失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [parseResult, inputText, manualCorrection, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -465,7 +469,8 @@ const NLPScoringManagement = () => {
         setTrainingHistory(response.items);
       }
     } catch (error) {
-      showToast('error', '获取训练历史失败');
+      console.error('获取训练历史失败:', error);
+      showToast('error', '获取训练历史失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [showToast]);
 
@@ -492,7 +497,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '创建规则失败');
+      console.error('创建规则失败:', error);
+      showToast('error', '创建规则失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [newRule, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -522,7 +528,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '更新规则失败');
+      console.error('更新规则失败:', error);
+      showToast('error', '更新规则失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [editingRule, newRule, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -538,7 +545,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '删除规则失败');
+      console.error('删除规则失败:', error);
+      showToast('error', '删除规则失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -560,7 +568,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '模型训练失败');
+      console.error('模型训练失败:', error);
+      showToast('error', '模型训练失败: ' + ((error as Error).message || '请稍后重试'));
     } finally {
       setIsTraining(false);
     }
@@ -580,7 +589,8 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      showToast('error', '模型训练失败');
+      console.error('模型训练失败:', error);
+      showToast('error', '模型训练失败: ' + ((error as Error).message || '请稍后重试'));
     } finally {
       setIsTraining(false);
     }
@@ -1015,7 +1025,7 @@ const NLPScoringManagement = () => {
                         </div>
                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 ml-7">
                           <span>使用次数: {rule.usage_count}</span>
-                          <span>准确率: {(rule.accuracy_rate * 100).toFixed(1)}%</span>
+                          <span>准确率: {rule.accuracy_rate != null ? `${(rule.accuracy_rate * 100).toFixed(1)}%` : '--'}</span>
                         </div>
                       </div>
                     ))}
@@ -1289,7 +1299,7 @@ const NLPScoringManagement = () => {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{rule.usage_count}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {(rule.accuracy_rate * 100).toFixed(1)}%
+                          {rule.accuracy_rate != null ? `${(rule.accuracy_rate * 100).toFixed(1)}%` : '--'}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2">
@@ -1440,25 +1450,25 @@ const NLPScoringManagement = () => {
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-600 mb-1">准确率</p>
                   <p className="text-2xl font-bold text-blue-700">
-                    {(modelEvaluation.accuracy_rate * 100).toFixed(1)}%
+                    {modelEvaluation.accuracy_rate != null ? `${(modelEvaluation.accuracy_rate * 100).toFixed(1)}%` : '--'}
                   </p>
                 </div>
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-green-600 mb-1">精确率</p>
                   <p className="text-2xl font-bold text-green-700">
-                    {(modelEvaluation.precision * 100).toFixed(1)}%
+                    {modelEvaluation.precision != null ? `${(modelEvaluation.precision * 100).toFixed(1)}%` : '--'}
                   </p>
                 </div>
                 <div className="p-4 bg-yellow-50 rounded-lg">
                   <p className="text-sm text-yellow-600 mb-1">召回率</p>
                   <p className="text-2xl font-bold text-yellow-700">
-                    {(modelEvaluation.recall * 100).toFixed(1)}%
+                    {modelEvaluation.recall != null ? `${(modelEvaluation.recall * 100).toFixed(1)}%` : '--'}
                   </p>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <p className="text-sm text-purple-600 mb-1">F1分数</p>
                   <p className="text-2xl font-bold text-purple-700">
-                    {(modelEvaluation.f1_score * 100).toFixed(1)}%
+                    {modelEvaluation.f1_score != null ? `${(modelEvaluation.f1_score * 100).toFixed(1)}%` : '--'}
                   </p>
                 </div>
               </div>
@@ -1544,16 +1554,20 @@ const NLPScoringManagement = () => {
                       )}
                       <span className={`px-2 py-1 rounded text-xs ${
                         record.training_status === 'completed' ? 'bg-green-100 text-green-600' :
-                        'bg-yellow-100 text-yellow-600'
+                        record.training_status === 'failed' ? 'bg-red-100 text-red-600' :
+                        record.training_status ? 'bg-yellow-100 text-yellow-600' :
+                        'bg-gray-100 text-gray-500'
                       }`}>
-                        {record.training_status === 'completed' ? '已完成' : '进行中'}
+                        {record.training_status === 'completed' ? '已完成' :
+                         record.training_status === 'failed' ? '失败' :
+                         record.training_status ? '进行中' : '未知'}
                       </span>
                     </div>
                   </div>
                   <div className="flex gap-4 text-sm text-gray-600">
-                    <span>数据量: {record.training_data_count}</span>
-                    <span>准确率: {record.accuracy_before ? `${(record.accuracy_before * 100).toFixed(1)}% → ${(record.accuracy_after * 100).toFixed(1)}%` : 'N/A'}</span>
-                    <span>F1: {record.f1_score ? (record.f1_score * 100).toFixed(1) + '%' : 'N/A'}</span>
+                    <span>数据量: {record.training_data_size ?? '--'}</span>
+                    <span>准确率: {record.accuracy != null ? `${(record.accuracy * 100).toFixed(1)}%` : 'N/A'}</span>
+                    <span>F1: {record.f1_score != null ? (record.f1_score * 100).toFixed(1) + '%' : 'N/A'}</span>
                   </div>
                 </div>
               ))}
@@ -1711,29 +1725,31 @@ const NLPScoringManagement = () => {
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <p className="text-sm text-gray-500 mb-1">意图识别准确率</p>
                   <p className={`text-2xl font-bold ${
-                    (intentAnalysis?.summary?.accuracy || 0) >= 0.9 ? 'text-green-600' : 'text-yellow-600'
+                    intentAnalysis?.summary?.accuracy == null ? 'text-gray-400'
+                    : intentAnalysis.summary.accuracy >= 0.9 ? 'text-green-600' : 'text-yellow-600'
                   }`}>
-                    {((intentAnalysis?.summary?.accuracy || 0) * 100).toFixed(1)}%
+                    {intentAnalysis?.summary?.accuracy != null ? `${(intentAnalysis.summary.accuracy * 100).toFixed(1)}%` : '--'}
                   </p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <p className="text-sm text-gray-500 mb-1">缓存命中率</p>
                   <p className={`text-2xl font-bold ${
-                    (performanceAnalysis?.summary?.cache_hit_rate || 0) >= 0.6 ? 'text-green-600' : 'text-yellow-600'
+                    performanceAnalysis?.summary?.cache_hit_rate == null ? 'text-gray-400'
+                    : performanceAnalysis.summary.cache_hit_rate >= 0.6 ? 'text-green-600' : 'text-yellow-600'
                   }`}>
-                    {((performanceAnalysis?.summary?.cache_hit_rate || 0) * 100).toFixed(1)}%
+                    {performanceAnalysis?.summary?.cache_hit_rate != null ? `${(performanceAnalysis.summary.cache_hit_rate * 100).toFixed(1)}%` : '--'}
                   </p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <p className="text-sm text-gray-500 mb-1">总请求数</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {performanceAnalysis?.summary?.total_requests || 0}
+                    {performanceAnalysis?.summary?.total_requests ?? '--'}
                   </p>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <p className="text-sm text-gray-500 mb-1">平均响应时间</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    {(performanceAnalysis?.summary?.avg_processing_time || 0).toFixed(2)}ms
+                    {performanceAnalysis?.summary?.avg_processing_time != null ? `${performanceAnalysis.summary.avg_processing_time.toFixed(2)}ms` : '--'}
                   </p>
                 </div>
               </div>
@@ -1787,15 +1803,16 @@ const NLPScoringManagement = () => {
                           {intent === 'add' ? '加分' : intent === 'deduct' ? '扣分' : intent === 'query' ? '查询' : intent === 'reset' ? '重置' : '未知'}
                         </span>
                         <span className="text-sm text-gray-500">
-                          准确率: {(stats.accuracy * 100).toFixed(1)}% ({stats.correct}/{stats.total})
+                          准确率: {stats.accuracy != null ? `${(stats.accuracy * 100).toFixed(1)}%` : '--'} ({stats.correct ?? '--'}/{stats.total ?? '--'})
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
-                            stats.accuracy >= 0.9 ? 'bg-green-500' : stats.accuracy >= 0.7 ? 'bg-yellow-500' : 'bg-red-500'
+                            stats.accuracy == null ? 'bg-gray-300'
+                            : stats.accuracy >= 0.9 ? 'bg-green-500' : stats.accuracy >= 0.7 ? 'bg-yellow-500' : 'bg-red-500'
                           }`}
-                          style={{ width: `${stats.accuracy * 100}%` }}
+                          style={{ width: stats.accuracy != null ? `${Math.min(stats.accuracy * 100, 100)}%` : '0%' }}
                         />
                       </div>
                     </div>

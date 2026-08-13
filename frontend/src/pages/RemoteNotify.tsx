@@ -721,7 +721,12 @@ function RemoteNotify() {
                   <div key={item.id} className='flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 group'>
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2'>
-                        <span className={`w-2 h-2 rounded-full ${item.status === 'pending' ? 'bg-green-500' : item.status === 'sent' ? 'bg-gray-500' : 'bg-red-500'}`}></span>
+                        <span className={`w-2 h-2 rounded-full ${
+                          item.status === 'sent' ? 'bg-green-500'
+                          : item.status === 'pending' ? 'bg-yellow-500'
+                          : item.status === 'failed' ? 'bg-red-500'
+                          : 'bg-gray-400'
+                        }`}></span>
                         <span className='text-sm text-gray-700 dark:text-slate-300 truncate'>{item.text}</span>
                       </div>
                       <div className='flex items-center gap-2 mt-1'>
@@ -1496,8 +1501,16 @@ function RemoteNotify() {
                           </span>
                         </td>
                         <td className='px-4 py-3'>
-                          <span className={`px-2 py-1 rounded text-xs ${item.status === 'sent' ? 'bg-green-100 dark:bg-green-500/20 text-green-600' : 'bg-red-100 dark:bg-red-500/20 text-red-600'}`}>
-                            {item.status === 'sent' ? '成功' : '失败'}
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            item.status === 'sent'
+                              ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
+                              : item.status === 'pending'
+                              ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600'
+                              : item.status === 'failed'
+                              ? 'bg-red-100 dark:bg-red-500/20 text-red-600'
+                              : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
+                          }`}>
+                            {item.status === 'sent' ? '成功' : item.status === 'pending' ? '待发送' : item.status === 'failed' ? '失败' : '未知'}
                           </span>
                         </td>
                         <td className='px-4 py-3'>

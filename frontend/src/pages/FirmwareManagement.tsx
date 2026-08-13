@@ -9,7 +9,7 @@ import {
   Clock,
   Activity,
 } from 'lucide-react';
-import api, { Firmware, FirmwareRecord, OTAStatus } from '../services/api';
+import api, { Firmware, FirmwareRecord, OTAStatus, getAuthHeaders } from '../services/api';
 import { useForm, useModal, useConfirmDialog } from '../hooks';
 import { Button, Modal, Badge, PermissionButton } from '../components';
 import { useStableToast } from '../hooks/useStableToast';
@@ -177,8 +177,28 @@ function FirmwareManagement() {
     }
   };
 
-  const handleDownload = (version: Firmware): void => {
-    window.open(`/api/firmware/download/${version.id}`, '_blank');
+  // 下载：fetch + blob（带鉴权头）。此前 window.open 不带 token 会 401 打开错误页，且失败无反馈
+  const handleDownload = async (version: Firmware): Promise<void> => {
+    try {
+      const response = await fetch(`/api/firmware/download/${version.id}`, {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) throw new Error(`下载失败(${response.status})`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${version.version || 'firmware'}.bin`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      showToast('success', '下载开始');
+    } catch (err) {
+      console.error('固件下载失败:', err);
+      showToast('error', '下载失败: ' + ((err as Error).message || ''));
+    }
   };
 
   if (isLoading) {
@@ -224,7 +244,7 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>升级成功</p>
-              <p className='text-2xl font-bold'>{otaStatus?.summary?.completed_count || 0}</p>
+              <p className='text-2xl font-bold'>{otaStatus ? (otaStatus.summary?.completed_count || 0) : '--'}</p>
             </div>
           </div>
         </div>
@@ -235,7 +255,7 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>进行中</p>
-              <p className='text-2xl font-bold'>{otaStatus?.summary?.in_progress_count || 0}</p>
+              <p className='text-2xl font-bold'>{otaStatus ? (otaStatus.summary?.in_progress_count || 0) : '--'}</p>
             </div>
           </div>
         </div>
@@ -246,7 +266,7 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>升级失败</p>
-              <p className='text-2xl font-bold'>{otaStatus?.summary?.failed_count || 0}</p>
+              <p className='text-2xl font-bold'>{otaStatus ? (otaStatus.summary?.failed_count || 0) : '--'}</p>
             </div>
           </div>
         </div>

@@ -355,23 +355,23 @@ function Dashboard(): React.ReactElement {
 
   const REFRESH_INTERVAL = 600000;
 
-  const fetchUsers = useCallback(async (): Promise<User[]> => {
+  const fetchUsers = useCallback(async (): Promise<User[] | null> => {
     try {
       const usersData = await api.users.getAll({ per_page: 100 });
       return Array.isArray(usersData) ? usersData : ((usersData as { users?: User[] })?.users || []);
     } catch (e) {
       console.error('获取用户数据失败:', e);
-      return [];
+      return null; // 失败返回 null，调用方保留旧数据而非用空数组覆盖
     }
   }, []);
 
-  const fetchRecords = useCallback(async (): Promise<unknown[]> => {
+  const fetchRecords = useCallback(async (): Promise<unknown[] | null> => {
     try {
       const recordsData = await api.records.getAll({ per_page: 20 });
       return Array.isArray(recordsData) ? recordsData : ((recordsData as { records?: unknown[] })?.records || []);
     } catch (e) {
       console.error('获取记录数据失败:', e);
-      return [];
+      return null; // 失败返回 null，调用方保留旧数据而非用空数组覆盖
     }
   }, []);
 
@@ -438,7 +438,8 @@ function Dashboard(): React.ReactElement {
     if (!devices || !Array.isArray(devices)) {
       return 0;
     }
-    return devices.filter((d) => d.is_online || d.status === 'online').length;
+    // is_online 由后端按 last_heartbeat 时效判定（单点真理），不再叠加陈旧的 status 字段
+    return devices.filter((d) => d.is_online).length;
   }, []);
 
   const fetchHighPriorityData = useCallback(async (): Promise<void> => {
@@ -449,8 +450,10 @@ function Dashboard(): React.ReactElement {
           fetchDevices(),
         ]);
 
-        const sortedUsers = [...usersList].sort((a, b) => (b.score || 0) - (a.score || 0));
-        dispatch({ type: 'SET_USERS', payload: sortedUsers });
+        const sortedUsers = usersList !== null ? [...usersList].sort((a, b) => (b.score || 0) - (a.score || 0)) : null;
+        if (sortedUsers !== null) {
+          dispatch({ type: 'SET_USERS', payload: sortedUsers });
+        }
 
         if (deviceList !== null) {
           dispatch({ type: 'SET_DEVICES', payload: deviceList });
@@ -472,9 +475,9 @@ function Dashboard(): React.ReactElement {
           dispatch({
             type: 'SET_STATISTICS',
             payload: {
-              totalUsers: usersList.length,
+              totalUsers: (usersList ?? []).length,
               totalRecords: 0,
-              totalScore: usersList.reduce((sum, u) => sum + (u.score || 0), 0),
+              totalScore: (usersList ?? []).reduce((sum, u) => sum + (u.score || 0), 0),
               onlineDevices: deviceList !== null ? getOnlineCount(deviceList) : 0,
             },
           });
@@ -499,7 +502,9 @@ function Dashboard(): React.ReactElement {
           fetchNotifications(),
         ]);
 
-        dispatch({ type: 'SET_RECORDS', payload: recordsList });
+        if (recordsList !== null) {
+          dispatch({ type: 'SET_RECORDS', payload: recordsList });
+        }
 
         if (notificationsList !== null) {
           dispatch({ type: 'SET_NOTIFICATIONS', payload: notificationsList });
@@ -804,7 +809,8 @@ function Dashboard(): React.ReactElement {
   });
 
   const DeviceCard = memo(({ device }: { device: Device }) => {
-    const isOnline = device.is_online || device.status === 'online';
+    // is_online 由后端按 last_heartbeat 时效判定（单点真理），不叠加陈旧的 status 字段
+    const isOnline = !!device.is_online;
     const [isHovered, setIsHovered] = useState(false);
 
     return (

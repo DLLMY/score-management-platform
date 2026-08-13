@@ -189,7 +189,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
                 <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>一键临时放行</h2>
               </div>
               {policy?.override_active ? (
-                <Badge variant='success'>放行中（至 {policy.override_until?.slice(11, 16)}）</Badge>
+                <Badge variant='success'>{policy.override_until ? `放行中（至 ${policy.override_until.slice(11, 16)}）` : '放行中'}</Badge>
               ) : (
                 <Badge variant='default'>未放行</Badge>
               )}

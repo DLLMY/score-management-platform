@@ -12,7 +12,7 @@ import {
   ChevronDown,
   User as UserIcon,
 } from 'lucide-react';
-import api, { RankRule } from '../services/api';
+import api, { RankRule, getAuthHeaders } from '../services/api';
 import { User } from '../types';
 import {
   Button,
@@ -758,9 +758,25 @@ function UserList() {
     );
   }, [selectedUsersArray, showToast, wrapAsync, addOperation]);
 
-  const handleExport = useCallback(() => {
-    api.export.users();
-  }, []);
+  // 导出：fetch + blob 下载（带鉴权头），失败明确提示；此前仅调用 api.export.users() 返回 URL 字符串，点击无任何反应
+  const handleExport = useCallback(async () => {
+    try {
+      const res = await fetch(api.export.users(), { headers: getAuthHeaders(), credentials: 'include' });
+      if (!res.ok) throw new Error(`导出失败(${res.status})`);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_${Date.now()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      showToast('success', '导出成功');
+    } catch (e) {
+      showToast('error', '导出失败: ' + ((e as Error).message || '未知错误'));
+    }
+  }, [showToast]);
 
   const handleToggleUserSelection = useCallback((userId: number) => {
     dispatch({ type: 'TOGGLE_USER_SELECTION', payload: userId });

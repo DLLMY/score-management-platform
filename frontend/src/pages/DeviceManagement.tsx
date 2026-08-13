@@ -166,6 +166,8 @@ function DeviceManagement() {
     offline: 0,
     today_heartbeats: 0,
   });
+  // 首次加载失败标记：统计卡显示 '--' 而非假 0（区分"加载失败"与"确实无设备"）
+  const [statsError, setStatsError] = useState<boolean>(false);
   const [advancedStats, setAdvancedStats] = useState<AdvancedStats | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -317,10 +319,14 @@ function DeviceManagement() {
         });
         setAlerts((alertsData as { alerts: Alert[] }).alerts || []);
         setLastUpdateTime(new Date());
+        setStatsError(false);
       } catch (error) {
         // 轮询失败静默（保留旧数据，下轮自动重试）；仅用户手动刷新失败才提示，避免 10s 连弹 toast
         if (manualRefresh) {
           showToast('error', '加载设备失败');
+        } else {
+          // 首次/后台加载失败：标记统计卡为"加载失败"（显示 --），不显示假 0
+          setStatsError(true);
         }
       } finally {
         if (manualRefresh) {
@@ -749,13 +755,13 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-blue-100 text-sm'>设备总数</p>
-              <p className='text-3xl font-bold mt-1'>{statsDisplay.total}</p>
+              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : statsDisplay.total}</p>
             </div>
             <Server className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-blue-200'>
-              <span>在线率: {advancedStats.online_rate}%</span>
+              <span>在线率: {advancedStats.online_rate != null ? `${advancedStats.online_rate}%` : '--'}</span>
             </div>
           )}
         </div>
@@ -764,14 +770,14 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-green-100 text-sm'>在线设备</p>
-              <p className='text-3xl font-bold mt-1'>{statsDisplay.online}</p>
+              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : statsDisplay.online}</p>
             </div>
             <Wifi className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-green-200'>
               <Activity className='w-4 h-4' />
-              <span>平均信号: {advancedStats.avg_signal_strength} dBm</span>
+              <span>平均信号: {advancedStats.avg_signal_strength != null ? `${advancedStats.avg_signal_strength} dBm` : '--'}</span>
             </div>
           )}
         </div>
@@ -780,13 +786,13 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-red-100 text-sm'>离线设备</p>
-              <p className='text-3xl font-bold mt-1'>{statsDisplay.offline}</p>
+              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : statsDisplay.offline}</p>
             </div>
             <WifiOff className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-red-200'>
-              <span>故障: {advancedStats.error_devices}</span>
+              <span>故障: {advancedStats.error_devices != null ? advancedStats.error_devices : '--'}</span>
             </div>
           )}
         </div>
@@ -795,13 +801,13 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-yellow-100 text-sm'>未处理告警</p>
-              <p className='text-3xl font-bold mt-1'>{alerts.length}</p>
+              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : alerts.length}</p>
             </div>
             <AlertTriangle className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-yellow-200'>
-              <span>严重: {advancedStats.critical_alerts}</span>
+              <span>严重: {advancedStats.critical_alerts != null ? advancedStats.critical_alerts : '--'}</span>
             </div>
           )}
         </div>
@@ -913,13 +919,13 @@ function DeviceManagement() {
                           </td>
                           <td className='px-4 py-3 text-sm'>{formatUptime(device.uptime)}</td>
                           <td className='px-4 py-3'>
-                            <Badge variant={device.box_a_status === 'opened' ? 'warning' : 'success'}>
-                              {device.box_a_status === 'opened' ? '打开' : '关闭'}
+                            <Badge variant={device.box_a_status === 'opened' ? 'warning' : device.box_a_status === 'closed' ? 'success' : 'default'}>
+                              {device.box_a_status === 'opened' ? '打开' : device.box_a_status === 'closed' ? '关闭' : '未知'}
                             </Badge>
                           </td>
                           <td className='px-4 py-3'>
-                            <Badge variant={device.box_b_status === 'opened' ? 'warning' : 'success'}>
-                              {device.box_b_status === 'opened' ? '打开' : '关闭'}
+                            <Badge variant={device.box_b_status === 'opened' ? 'warning' : device.box_b_status === 'closed' ? 'success' : 'default'}>
+                              {device.box_b_status === 'opened' ? '打开' : device.box_b_status === 'closed' ? '关闭' : '未知'}
                             </Badge>
                           </td>
                           <td className='px-4 py-3 text-sm'>{getSystemStateText(device.system_state)}</td>
@@ -1023,8 +1029,8 @@ function DeviceManagement() {
                       </div>
                       <div className='mt-3 flex items-center justify-between text-sm'>
                         <div className='flex items-center gap-4 text-gray-500'>
-                          <span>A箱: {device.box_a_status === 'opened' ? '打开' : '关闭'}</span>
-                          <span>B箱: {device.box_b_status === 'opened' ? '打开' : '关闭'}</span>
+                          <span>A箱: {device.box_a_status === 'opened' ? '打开' : device.box_a_status === 'closed' ? '关闭' : '未知'}</span>
+                          <span>B箱: {device.box_b_status === 'opened' ? '打开' : device.box_b_status === 'closed' ? '关闭' : '未知'}</span>
                         </div>
                         <div className='flex items-center gap-2'>
                           <Button variant='secondary' size='sm' onClick={() => openControlModal(device)} disabled={!device.is_online}>
@@ -1170,14 +1176,14 @@ function DeviceManagement() {
               </div>
               <div>
                 <p className='text-sm text-gray-500'>A箱状态</p>
-                <Badge variant={selectedDevice.box_a_status === 'opened' ? 'warning' : 'success'}>
-                  {selectedDevice.box_a_status === 'opened' ? '打开' : '关闭'}
+                <Badge variant={selectedDevice.box_a_status === 'opened' ? 'warning' : selectedDevice.box_a_status === 'closed' ? 'success' : 'default'}>
+                  {selectedDevice.box_a_status === 'opened' ? '打开' : selectedDevice.box_a_status === 'closed' ? '关闭' : '未知'}
                 </Badge>
               </div>
               <div>
                 <p className='text-sm text-gray-500'>B箱状态</p>
-                <Badge variant={selectedDevice.box_b_status === 'opened' ? 'warning' : 'success'}>
-                  {selectedDevice.box_b_status === 'opened' ? '打开' : '关闭'}
+                <Badge variant={selectedDevice.box_b_status === 'opened' ? 'warning' : selectedDevice.box_b_status === 'closed' ? 'success' : 'default'}>
+                  {selectedDevice.box_b_status === 'opened' ? '打开' : selectedDevice.box_b_status === 'closed' ? '关闭' : '未知'}
                 </Badge>
               </div>
             </div>
@@ -1191,8 +1197,8 @@ function DeviceManagement() {
                   heartbeats.map((h) => (
                     <div key={h.id} className='flex items-center justify-between text-sm p-2 bg-gray-50 rounded'>
                       <span>{new Date(h.timestamp).toLocaleString('zh-CN')}</span>
-                      <Badge variant={h.status === 'online' ? 'success' : 'danger'}>
-                        {h.status}
+                      <Badge variant={h.status === 'online' ? 'success' : h.status === 'offline' ? 'danger' : 'default'}>
+                        {h.status === 'online' ? '在线' : h.status === 'offline' ? '离线' : (h.status || '未知')}
                       </Badge>
                     </div>
                   ))

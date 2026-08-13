@@ -119,10 +119,10 @@ export function MultiRadarChart({ data, title }) {
  */
 export function CompositeScoreRadar({ scores, title }) {
   const data = [
-    { dimension: '行为表现', score: scores.behavior || 0 },
-    { dimension: '学业成绩', score: scores.academic || 0 },
-    { dimension: '纪律合规', score: scores.compliance || 0 },
-    { dimension: '综合评分', score: scores.composite || 0 },
+    { dimension: '行为表现', score: scores.behavior != null ? scores.behavior : null },
+    { dimension: '学业成绩', score: scores.academic != null ? scores.academic : null },
+    { dimension: '纪律合规', score: scores.compliance != null ? scores.compliance : null },
+    { dimension: '综合评分', score: scores.composite != null ? scores.composite : null },
   ];
 
   return (
@@ -150,7 +150,7 @@ export function CompositeScoreRadar({ scores, title }) {
               borderRadius: '8px',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             }}
-            formatter={(value) => [`${value}分`, '得分']}
+            formatter={(value) => [value != null ? `${value}分` : '--', '得分']}
           />
           <Radar
             name="综合评分"
