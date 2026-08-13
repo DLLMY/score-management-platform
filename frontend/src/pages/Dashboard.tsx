@@ -850,7 +850,7 @@ function Dashboard(): React.ReactElement {
         <div className='flex items-center gap-4'>
           <div className='flex items-center gap-2 text-sm text-gray-500'>
             <Clock className='w-4 h-4' />
-            <span>{formatDateFull(state.lastUpdateTime || new Date())}</span>
+            <span>{state.lastUpdateTime ? formatDateFull(state.lastUpdateTime) : '—'}</span>
             <span className='font-mono font-semibold text-gray-700'>{formatTime(currentTimeRef.current)}</span>
           </div>
           <div

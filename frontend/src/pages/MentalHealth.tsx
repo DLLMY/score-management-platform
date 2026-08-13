@@ -173,9 +173,9 @@ function MentalHealth() {
     return '低';
   };
 
-  const avgMood = records.length > 0 ? (records.reduce((sum, r) => sum + (r.mood_level || 0), 0) / records.length).toFixed(1) : '0.0';
-  const avgStress = records.length > 0 ? (records.reduce((sum, r) => sum + (r.stress_level || 0), 0) / records.length).toFixed(1) : '0.0';
-  const avgSleep = records.length > 0 ? (records.reduce((sum, r) => sum + (r.sleep_hours || 0), 0) / records.length).toFixed(1) : '0.0';
+  const avgMood = records.length > 0 ? (records.reduce((sum, r) => sum + (r.mood_level || 0), 0) / records.length).toFixed(1) : '—';
+  const avgStress = records.length > 0 ? (records.reduce((sum, r) => sum + (r.stress_level || 0), 0) / records.length).toFixed(1) : '—';
+  const avgSleep = records.length > 0 ? (records.reduce((sum, r) => sum + (r.sleep_hours || 0), 0) / records.length).toFixed(1) : '—';
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">

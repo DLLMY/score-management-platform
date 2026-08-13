@@ -385,7 +385,7 @@ const ScoreRecords: React.FC = () => {
       });
     });
 
-    const avgScore = count > 0 ? (totalScore / count).toFixed(2) : '0';
+    const avgScore = count > 0 ? (totalScore / count).toFixed(2) : '—';
 
     const subjectStats: Record<string, { avg: string; max: number; min: number; count: number }> = {};
     Object.entries(subjectScores).forEach(([subject, scores]) => {

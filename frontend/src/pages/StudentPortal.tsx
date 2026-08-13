@@ -225,7 +225,7 @@ function StudentPortal() {
               <div className='flex items-center gap-2 text-white/80 text-sm'>
                 <Award className='w-4 h-4' /> 当前积分
               </div>
-              <div className='text-4xl font-bold mt-2'>{loading ? '...' : score ?? 0}</div>
+              <div className='text-4xl font-bold mt-2'>{loading ? '...' : score ?? '—'}</div>
               {records.length > 0 && (
                 <div className='text-white/70 text-xs mt-1'>
                   本页流水合计 {totalChange >= 0 ? '+' : ''}
@@ -461,7 +461,7 @@ function StudentPortal() {
                 <span className='text-lg font-normal ml-2'>/ {myRank?.total_students ?? '—'}</span>
               </div>
               <div className='text-white/70 text-xs mt-1'>
-                {myRank?.class_name || '未分班'} · 当前积分 {myRank?.my_score ?? 0}
+                {myRank?.class_name || '未分班'} · 当前积分 {myRank?.my_score ?? '—'}
               </div>
             </div>
 

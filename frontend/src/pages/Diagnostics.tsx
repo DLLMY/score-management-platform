@@ -549,7 +549,7 @@ export const DiagnosticsPage: React.FC = () => {
               status: healthData?.components?.database?.status as HealthStatusType || 'unknown',
               message: healthData?.components?.database?.message,
             },
-            { name: '连接池', status: 'healthy', message: '正常' },
+            { name: '连接池', status: 'unknown' as HealthStatusType, message: '未检测（暂无连接池监控数据）' },
           ]}
         />
         <HealthCard
@@ -601,29 +601,29 @@ export const DiagnosticsPage: React.FC = () => {
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
         <MetricCard
           title='总请求数'
-          value={performanceData?.total_requests || 0}
-          unit='次'
+          value={performanceData ? performanceData.total_requests : '—'}
+          unit={performanceData ? '次' : undefined}
           icon={Zap}
           color='blue'
         />
         <MetricCard
           title='平均响应时间'
-          value={(performanceData?.avg_duration || 0).toFixed(3)}
-          unit='s'
+          value={performanceData ? (performanceData.avg_duration || 0).toFixed(3) : '—'}
+          unit={performanceData ? 's' : undefined}
           icon={Clock}
           color='green'
         />
         <MetricCard
           title='慢请求数'
-          value={performanceData?.slow_request_count || 0}
-          unit='个'
+          value={performanceData ? performanceData.slow_request_count : '—'}
+          unit={performanceData ? '个' : undefined}
           icon={AlertTriangle}
           color='orange'
         />
         <MetricCard
           title='总处理时间'
-          value={(performanceData?.total_time || 0).toFixed(2)}
-          unit='s'
+          value={performanceData ? (performanceData.total_time || 0).toFixed(2) : '—'}
+          unit={performanceData ? 's' : undefined}
           icon={Activity}
           color='purple'
         />

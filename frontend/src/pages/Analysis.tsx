@@ -66,7 +66,7 @@ interface WeeklyDataItem {
 
 interface BasicStat {
   label: string;
-  value: number;
+  value: number | null;
   icon: typeof Users;
   bgColor: string;
   textColor: string;
@@ -188,14 +188,15 @@ function Analysis() {
     [usersWithCluster]
   );
 
-  // 使用 useMemo 优化统计计算
+  // 使用 useMemo 优化统计计算（无学生时统计值置 null，避免 0 冒充真实值）
   const { minScore, maxScore, avgScore, stdDev, needAttention, excellentCount } = useMemo(() => {
     const scores = filteredUsers.map((u) => u.current_score || 0);
-    const min = scores.length > 0 ? Math.min(...scores) : 0;
-    const max = scores.length > 0 ? Math.max(...scores) : 0;
-    const avg = scores.length > 0 ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length) : 0;
-    const variance = scores.length > 0 ? scores.reduce((sum, s) => sum + Math.pow(s - avg, 2), 0) / scores.length : 0;
-    const std = Math.round(Math.sqrt(variance));
+    const has = scores.length > 0;
+    const min = has ? Math.min(...scores) : null;
+    const max = has ? Math.max(...scores) : null;
+    const avg = has ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length) : null;
+    const variance = has ? scores.reduce((sum, s) => sum + Math.pow(s - avg as number, 2), 0) / scores.length : 0;
+    const std = has ? Math.round(Math.sqrt(variance)) : null;
     const need = filteredUsers.filter((u) => (u.current_score || 0) < 60);
     const excellent = filteredUsers.filter((u) => (u.current_score || 0) >= 90).length;
     return { minScore: min, maxScore: max, avgScore: avg, stdDev: std, needAttention: need, excellentCount: excellent };
@@ -232,16 +233,8 @@ function Analysis() {
     { name: '80-100', count: filteredUsers.filter((u) => (u.current_score || 0) >= 80).length, color: '#22c55e' },
   ], [filteredUsers]);
 
-  const weeklyData: WeeklyDataItem[] = [
-    { week: '第1周', avg: 72, count: 120 },
-    { week: '第2周', avg: 75, count: 125 },
-    { week: '第3周', avg: 78, count: 118 },
-    { week: '第4周', avg: 74, count: 122 },
-    { week: '第5周', avg: 80, count: 128 },
-    { week: '第6周', avg: 79, count: 130 },
-    { week: '第7周', avg: 82, count: 126 },
-    { week: '第8周', avg: 85, count: 132 },
-  ];
+  // 积分趋势：当前无真实周级数据源，置空并在图表区显示诚实空态（此前为硬编码假数据，已移除）
+  const weeklyData: WeeklyDataItem[] = [];
 
   // 使用 useMemo 优化基础统计数据
   const basicStats: BasicStat[] = useMemo(() => [
@@ -397,7 +390,7 @@ function Analysis() {
                   <div className='flex items-start justify-between'>
                     <div>
                       <p className='text-[10px] text-gray-500 mb-0.5'>{stat.label}</p>
-                      <p className='text-xl font-bold text-gray-800'>{stat.value}</p>
+                      <p className='text-xl font-bold text-gray-800'>{stat.value !== null ? stat.value : '—'}</p>
                     </div>
                     <div className={`${stat.bgColor} ${stat.textColor} stats-icon`} style={{ width: '2rem', height: '2rem', borderRadius: '0.375rem' }}>
                       <Icon className='w-4 h-4' />
@@ -698,21 +691,29 @@ function Analysis() {
                   </div>
                 </div>
                 <div className='card-body' style={{ padding: '0.75rem 1rem' }}>
-                  <ResponsiveContainer width='100%' height={220}>
-                    <AreaChart data={weeklyData}>
-                      <CartesianGrid strokeDasharray='3 3' stroke='#f1f5f9' />
-                      <XAxis dataKey='week' tick={{ fontSize: 9, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} />
-                      <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} domain={[60, 100]} />
-                      <Tooltip formatter={(value: unknown) => [`${value}分`, '平均分']} contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '11px' }} />
-                      <defs>
-                        <linearGradient id='colorAvg' x1='0' y1='0' x2='0' y2='1'>
-                          <stop offset='5%' stopColor='#22c55e' stopOpacity={0.3} />
-                          <stop offset='95%' stopColor='#22c55e' stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <Area type='monotone' dataKey='avg' stroke='#22c55e' strokeWidth={2} fillOpacity={1} fill='url(#colorAvg)' />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {weeklyData.length > 0 ? (
+                    <ResponsiveContainer width='100%' height={220}>
+                      <AreaChart data={weeklyData}>
+                        <CartesianGrid strokeDasharray='3 3' stroke='#f1f5f9' />
+                        <XAxis dataKey='week' tick={{ fontSize: 9, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} />
+                        <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} domain={[60, 100]} />
+                        <Tooltip formatter={(value: unknown) => [`${value}分`, '平均分']} contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '11px' }} />
+                        <defs>
+                          <linearGradient id='colorAvg' x1='0' y1='0' x2='0' y2='1'>
+                            <stop offset='5%' stopColor='#22c55e' stopOpacity={0.3} />
+                            <stop offset='95%' stopColor='#22c55e' stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <Area type='monotone' dataKey='avg' stroke='#22c55e' strokeWidth={2} fillOpacity={1} fill='url(#colorAvg)' />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className='flex flex-col items-center justify-center h-[220px] text-gray-400'>
+                      <TrendingUp className='w-6 h-6 mb-2 text-gray-300' />
+                      <p className='text-xs'>暂无趋势数据</p>
+                      <p className='text-[10px] mt-1'>需连续多周积分记录后生成周均趋势</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -729,23 +730,36 @@ function Analysis() {
                   </div>
                 </div>
                 <div className='card-body' style={{ padding: '0.75rem 1rem' }}>
-                  {statistics ? (
+                  {statistics ? (() => {
+                    const corr = statistics.correlation;
+                    const hasCorr = corr !== null && corr !== undefined && !Number.isNaN(corr);
+                    if (!hasCorr) {
+                      // correlation 无有效值（如仅有积分无成绩记录）→ 诚实显示"暂无"，不误判负相关
+                      return (
+                        <div className='flex flex-col items-center justify-center h-[160px] text-center'>
+                          <Sparkles className='w-8 h-8 text-gray-300 mb-2' />
+                          <p className='text-[10px] text-gray-500'>暂无关联数据</p>
+                          <p className='text-[10px] text-gray-400 mt-1'>需同时存在积分与成绩记录</p>
+                        </div>
+                      );
+                    }
+                    return (
                     <div className='flex flex-col items-center justify-center h-[160px]'>
                       <div className={`text-4xl font-bold ${
-                        (statistics.correlation ?? 0) > 0.5 ? 'text-green-600' :
-                        (statistics.correlation ?? 0) > 0 ? 'text-yellow-600' :
+                        corr > 0.5 ? 'text-green-600' :
+                        corr > 0 ? 'text-yellow-600' :
                         'text-red-600'
                       }`}>
-                        {statistics.correlation?.toFixed(2) || '—'}
+                        {corr.toFixed(2)}
                       </div>
                       <p className='text-[10px] text-gray-500 mt-2'>Pearson相关系数</p>
                       <div className='mt-3 flex items-center gap-2'>
-                        {(statistics.correlation ?? 0) > 0.5 ? (
+                        {corr > 0.5 ? (
                           <>
                             <TrendingUp className='w-4 h-4 text-green-500' />
                             <span className='text-xs text-green-600 font-medium'>强正相关</span>
                           </>
-                        ) : (statistics.correlation ?? 0) > 0 ? (
+                        ) : corr > 0 ? (
                           <>
                             <TrendingUp className='w-4 h-4 text-yellow-500' />
                             <span className='text-xs text-yellow-600 font-medium'>弱正相关</span>
@@ -760,14 +774,15 @@ function Analysis() {
                       <div className='mt-3 p-2.5 bg-gray-50 dark:bg-slate-700/50 rounded-lg w-full'>
                         <p className='text-[10px] text-gray-500 text-center'>
                           积分与成绩呈{
-                            (statistics.correlation ?? 0) > 0.5 ? '强正向关联' :
-                            (statistics.correlation ?? 0) > 0 ? '一定正向关联' :
+                            corr > 0.5 ? '强正向关联' :
+                            corr > 0 ? '一定正向关联' :
                             '负向关联'
                           }
                         </p>
                       </div>
                     </div>
-                  ) : (
+                    );
+                  })() : (
                     <div className='flex flex-col items-center justify-center h-[160px] text-center'>
                       <TrendingUp className='w-8 h-8 text-gray-300 mb-2' />
                       <p className='text-[10px] text-gray-500'>暂无相关数据</p>

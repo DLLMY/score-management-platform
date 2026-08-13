@@ -91,8 +91,10 @@ function AttendanceManage() {
       setStats(data);
     } catch (error) {
       console.error('获取考勤统计失败:', error);
+      setStats(null);
+      showToast('error', '获取考勤统计失败，请稍后重试');
     }
-  }, []);
+  }, [showToast]);
 
   const fetchLeaves = useCallback(async () => {
     try {
@@ -333,7 +335,7 @@ function AttendanceManage() {
               </div>
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">出勤</p>
-                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats?.present ?? 0}</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats ? stats.present : '—'}</p>
               </div>
             </div>
           </div>
@@ -345,7 +347,7 @@ function AttendanceManage() {
               </div>
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">缺勤</p>
-                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats?.absent ?? 0}</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats ? stats.absent : '—'}</p>
               </div>
             </div>
           </div>
@@ -357,7 +359,7 @@ function AttendanceManage() {
               </div>
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">迟到</p>
-                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats?.late ?? 0}</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats ? stats.late : '—'}</p>
               </div>
             </div>
           </div>
@@ -369,7 +371,7 @@ function AttendanceManage() {
               </div>
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">请假</p>
-                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats?.leave ?? 0}</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats ? stats.leave : '—'}</p>
               </div>
             </div>
           </div>
@@ -382,7 +384,7 @@ function AttendanceManage() {
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">出勤率</p>
                 <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                  {stats ? (stats.attendance_rate * 100).toFixed(1) : '0.0'}%
+                  {stats ? (stats.attendance_rate * 100).toFixed(1) : '—'}%
                 </p>
               </div>
             </div>

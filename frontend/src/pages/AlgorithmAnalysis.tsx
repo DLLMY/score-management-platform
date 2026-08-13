@@ -568,15 +568,15 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
             <div className="text-sm text-gray-500 dark:text-slate-400">平均行为积分</div>
-            <div className="text-3xl font-bold text-blue-600 mt-1">{statistics.avg_behavior_score?.toFixed(1) || '0.0'}</div>
+            <div className="text-3xl font-bold text-blue-600 mt-1">{statistics.avg_behavior_score != null ? statistics.avg_behavior_score.toFixed(1) : '—'}</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
             <div className="text-sm text-gray-500 dark:text-slate-400">平均学业成绩</div>
-            <div className="text-3xl font-bold text-green-600 mt-1">{statistics.avg_academic_score?.toFixed(1) || '0.0'}</div>
+            <div className="text-3xl font-bold text-green-600 mt-1">{statistics.avg_academic_score != null ? statistics.avg_academic_score.toFixed(1) : '—'}</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
             <div className="text-sm text-gray-500 dark:text-slate-400">积分-成绩相关性</div>
-            <div className="text-3xl font-bold text-purple-600 mt-1">{statistics.correlation?.toFixed(2) || '0.00'}</div>
+            <div className="text-3xl font-bold text-purple-600 mt-1">{statistics.correlation != null ? statistics.correlation.toFixed(2) : '—'}</div>
           </div>
         </div>
       </div>
@@ -1004,7 +1004,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               <BookOpen className="w-4 h-4 text-blue-500" />
               当前平均分
             </div>
-            <div className="text-3xl font-bold text-blue-600">{(summary.avg_current_score || 0).toFixed(1)}</div>
+            <div className="text-3xl font-bold text-blue-600">{(summary.avg_current_score ?? null) != null ? summary.avg_current_score.toFixed(1) : '—'}</div>
             <div className="text-xs text-gray-400 mt-1">现有成绩</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
@@ -1012,7 +1012,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               <TrendingUp className="w-4 h-4 text-green-500" />
               平均分预测
             </div>
-            <div className="text-3xl font-bold text-green-600">{(summary.avg_predicted_score || 0).toFixed(1)}</div>
+            <div className="text-3xl font-bold text-green-600">{(summary.avg_predicted_score ?? null) != null ? summary.avg_predicted_score.toFixed(1) : '—'}</div>
             <div className="text-xs text-gray-400 mt-1">预计考试分数</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
@@ -1241,7 +1241,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                         }`} />
                         <div>
                           <div className="font-medium text-gray-800 dark:text-white">{student.name}</div>
-                          <div className="text-sm text-gray-500 dark:text-slate-400">风险评分: {(student.risk_score ?? 0).toFixed(1)}</div>
+                          <div className="text-sm text-gray-500 dark:text-slate-400">风险评分: {student.risk_score != null ? student.risk_score.toFixed(1) : '—'}</div>
                         </div>
                       </div>
                       <div className="text-right">

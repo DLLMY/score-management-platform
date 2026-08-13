@@ -343,8 +343,8 @@ function ScoreAnalysis(): React.ReactElement {
     );
   }, [compositeScores]);
   
-  // 行为-学业相关性系数（模拟数据）
-  const behaviorAcademicCorrelation = 0.68;
+  // 行为-学业相关性：无真实计算数据源，置空避免伪造数值（此前为硬编码模拟数据 0.68，已移除）
+  const behaviorAcademicCorrelation: number | null = null;
 
   return (
     <div className='p-5 space-y-5'>
@@ -815,6 +815,12 @@ function ScoreAnalysis(): React.ReactElement {
                 </div>
                 <div className='p-3'>
                   <div className='flex items-center justify-center h-16'>
+                    {behaviorAcademicCorrelation === null ? (
+                      <div className='text-center'>
+                        <div className='text-sm text-gray-400'>暂无相关数据</div>
+                        <div className='text-[10px] text-gray-400 mt-0.5'>需同时存在行为积分与成绩记录</div>
+                      </div>
+                    ) : (
                     <div className='text-center'>
                       <div className={`text-2xl font-bold ${
                         Math.abs(behaviorAcademicCorrelation) >= 0.7 ? 'text-green-600' :
@@ -828,6 +834,7 @@ function ScoreAnalysis(): React.ReactElement {
                         {behaviorAcademicCorrelation > 0 ? '正相关' : behaviorAcademicCorrelation < 0 ? '负相关' : '无明显相关'}
                       </div>
                     </div>
+                    )}
                   </div>
                   <div className='mt-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-1.5'>
                     <div className='flex items-center gap-1.5'>

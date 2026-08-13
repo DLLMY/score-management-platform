@@ -104,17 +104,8 @@ function Profile() {
     { id: 'activity', label: '登录记录', icon: Calendar },
   ];
 
-  const loginHistory: LoginHistoryRecord[] = [
-    {
-      time: '2026-05-19 10:30',
-      ip: '192.168.1.100',
-      device: 'Chrome on Windows',
-      status: 'success',
-    },
-    { time: '2026-05-18 14:20', ip: '192.168.1.101', device: 'Safari on Mac', status: 'success' },
-    { time: '2026-05-17 09:15', ip: '10.0.0.50', device: 'Mobile Safari', status: 'success' },
-    { time: '2026-05-16 16:45', ip: '192.168.1.102', device: 'Firefox on Linux', status: 'failed' },
-  ];
+  // 登录记录：当前无 Profile 专用登录历史接口，置空避免伪造（此前为硬编码虚构记录，已移除）
+  const loginHistory: LoginHistoryRecord[] = [];
 
   const loadAdminInfo = useCallback(async (): Promise<void> => {
     try {
@@ -434,30 +425,38 @@ function Profile() {
       {activeTab === 'activity' && (
         <Card title='登录记录'>
           <div className='space-y-3'>
-            {loginHistory.map((record: LoginHistoryRecord, index: number) => (
-              <div
-                key={index}
-                className='flex items-center justify-between p-4 bg-gray-50 rounded-xl'
-              >
-                <div className='flex items-center gap-4'>
-                  <div
-                    className={`w-2 h-2 rounded-full ${record.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
-                  />
-                  <div>
-                    <p className='font-medium text-gray-800'>{record.time}</p>
-                    <p className='text-sm text-gray-500'>{record.ip}</p>
+            {loginHistory.length === 0 ? (
+              <div className='text-center py-8 text-gray-400'>
+                <Calendar className='w-8 h-8 mx-auto mb-2 text-gray-300' />
+                <p className='text-sm'>暂无登录记录</p>
+                <p className='text-xs mt-1'>安全事件可在「系统日志」中查看</p>
+              </div>
+            ) : (
+              loginHistory.map((record: LoginHistoryRecord, index: number) => (
+                <div
+                  key={index}
+                  className='flex items-center justify-between p-4 bg-gray-50 rounded-xl'
+                >
+                  <div className='flex items-center gap-4'>
+                    <div
+                      className={`w-2 h-2 rounded-full ${record.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+                    />
+                    <div>
+                      <p className='font-medium text-gray-800'>{record.time}</p>
+                      <p className='text-sm text-gray-500'>{record.ip}</p>
+                    </div>
+                  </div>
+                  <div className='text-right'>
+                    <p className='text-sm text-gray-600'>{record.device}</p>
+                    <p
+                      className={`text-xs ${record.status === 'success' ? 'text-green-600' : 'text-red-600'}`}
+                    >
+                      {record.status === 'success' ? '成功' : '失败'}
+                    </p>
                   </div>
                 </div>
-                <div className='text-right'>
-                  <p className='text-sm text-gray-600'>{record.device}</p>
-                  <p
-                    className={`text-xs ${record.status === 'success' ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {record.status === 'success' ? '成功' : '失败'}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
       )}
