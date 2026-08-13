@@ -267,6 +267,7 @@ class ScheduledTrigger(Resource):
             db.session.commit()
             return APIResponse.success(message="通知已发送")
         except Exception as e:
+            db.session.rollback()  # 失败回滚，避免脏 session 污染后续请求
             return APIResponse.error(message=f"发送失败: {str(e)}")
 
 
@@ -376,5 +377,6 @@ def process_scheduled_notifications():
             )
             db.session.add(history)
         except Exception:
+            db.session.rollback()  # 单条失败回滚，避免脏 session 影响下一条与最终 commit
             notify.status = "failed"
     db.session.commit()

@@ -32,13 +32,6 @@ class DashboardStats(Resource):
                 "positive_ratio": data.get("positive_ratio", 0) if isinstance(data, dict) else 0,
             }
             return APIResponse.success(data=stats)
-        except Exception:
-            return APIResponse.success(
-                data={
-                    "total_students": 0,
-                    "total_subjects": 0,
-                    "total_score_records": 0,
-                    "today_records": 0,
-                    "positive_ratio": 0,
-                }
-            )
+        except Exception as e:  # noqa: BLE001
+            # 诚实失败：不伪装成"全 0"的假统计（用户会误信为真实数据）
+            return APIResponse.error(message="仪表盘统计数据加载失败: %s" % e)

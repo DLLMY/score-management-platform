@@ -284,6 +284,7 @@ class TemplateUse(Resource):
                 "topics": topics,
             }
         except Exception as e:
+            db.session.rollback()  # 失败回滚，避免脏 session 污染后续请求
             return APIResponse.error(message=f"发送失败: {str(e)}")
 
 

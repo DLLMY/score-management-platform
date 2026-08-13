@@ -507,22 +507,28 @@ function StudentPortal() {
                 <div className='text-4xl font-bold'>
                   {growthLoading
                     ? '...'
-                    : insights?.engagement?.has_data
-                      ? insights.engagement.engagement_score
-                      : '—'}
+                    : insights?.engagement?.error
+                      ? '!'
+                      : insights?.engagement?.has_data
+                        ? insights.engagement.engagement_score
+                        : '—'}
                 </div>
                 <span className='text-white/80 text-sm mb-1'>
-                  {insights?.engagement?.level === 'high'
-                    ? '高参与'
-                    : insights?.engagement?.level === 'medium'
-                      ? '中参与'
-                      : insights?.engagement?.level === 'low'
-                        ? '低参与'
-                        : '暂无数据'}
+                  {insights?.engagement?.error
+                    ? '加载失败'
+                    : insights?.engagement?.level === 'high'
+                      ? '高参与'
+                      : insights?.engagement?.level === 'medium'
+                        ? '中参与'
+                        : insights?.engagement?.level === 'low'
+                          ? '低参与'
+                          : '暂无数据'}
                 </span>
               </div>
               <div className='text-white/70 text-xs mt-1'>
-                {insights?.engagement?.description || '综合出勤、作业提交与积分活跃度评估'}
+                {insights?.engagement?.error
+                  ? '参与度计算失败，请稍后刷新重试'
+                  : insights?.engagement?.description || '综合出勤、作业提交与积分活跃度评估'}
               </div>
             </div>
 
@@ -583,7 +589,15 @@ function StudentPortal() {
             )}
 
             {/* 参与度周趋势（SVG 折线） */}
-            {insights?.participation_trend?.series?.length ? (
+            {insights?.participation_trend?.error ? (
+              <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
+                <div className='flex items-center gap-2 font-semibold text-gray-800 dark:text-white mb-1'>
+                  <TrendingUp className='w-4 h-4' /> 参与度周趋势
+                  <span className='text-xs px-2 py-0.5 rounded-full font-medium bg-gray-400 text-white'>加载失败</span>
+                </div>
+                <p className='text-xs text-gray-500 dark:text-slate-400'>趋势计算失败，请稍后刷新重试</p>
+              </div>
+            ) : insights?.participation_trend?.series?.length ? (
               <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
                 <div className='flex items-center gap-2 font-semibold text-gray-800 dark:text-white mb-3'>
                   <TrendingUp className='w-4 h-4' /> 参与度周趋势
@@ -665,15 +679,22 @@ function StudentPortal() {
             {/* 风险预警卡片 */}
             <div
               className={`rounded-2xl p-4 shadow ${
-                insights?.risk?.overall_risk_level === 'high'
-                  ? 'bg-red-50 dark:bg-red-500/10'
-                  : insights?.risk?.overall_risk_level === 'medium'
-                    ? 'bg-amber-50 dark:bg-amber-500/10'
-                    : 'bg-emerald-50 dark:bg-emerald-500/10'
+                insights?.risk?.error
+                  ? 'bg-gray-50 dark:bg-slate-800'
+                  : insights?.risk?.overall_risk_level === 'high'
+                    ? 'bg-red-50 dark:bg-red-500/10'
+                    : insights?.risk?.overall_risk_level === 'medium'
+                      ? 'bg-amber-50 dark:bg-amber-500/10'
+                      : 'bg-emerald-50 dark:bg-emerald-500/10'
               }`}
             >
               <div className='flex items-center gap-2 font-semibold mb-2 text-gray-800 dark:text-white'>
                 <ShieldAlert className='w-4 h-4' /> 风险预警
+                {insights?.risk?.error ? (
+                  <span className='text-xs px-2 py-0.5 rounded-full font-medium bg-gray-400 text-white'>
+                    加载失败
+                  </span>
+                ) : (
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     insights?.risk?.overall_risk_level === 'high'
@@ -689,8 +710,11 @@ function StudentPortal() {
                       ? '中风险'
                       : '低风险'}
                 </span>
+                )}
               </div>
-              {insights?.risk?.intervention_suggestions?.length ? (
+              {insights?.risk?.error ? (
+                <p className='text-xs text-gray-500 dark:text-slate-400'>风险评估失败，请稍后刷新重试</p>
+              ) : insights?.risk?.intervention_suggestions?.length ? (
                 <ul className='space-y-1'>
                   {insights.risk.intervention_suggestions.slice(0, 3).map((s, i) => (
                     <li key={i} className='text-xs text-gray-600 dark:text-slate-300 flex items-start gap-1.5'>
