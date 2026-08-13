@@ -989,8 +989,8 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               <Award className="w-4 h-4 text-purple-500" />
               涉及科目
             </div>
-            <div className="text-3xl font-bold text-purple-600">{summary.subjects?.length || 0}</div>
-            <div className="text-xs text-gray-400 mt-1">{summary.subjects?.join(', ') || '-'}</div>
+            <div className="text-3xl font-bold text-purple-600">{summary.subjects && summary.subjects.length > 0 ? summary.subjects.length : '综合'}</div>
+            <div className="text-xs text-gray-400 mt-1">{summary.subjects && summary.subjects.length > 0 ? summary.subjects.join(', ') : '综合评分'}</div>
           </div>
         </div>
 
@@ -1782,7 +1782,8 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               ) : (
                 <div className="text-center py-8 text-gray-500 dark:text-slate-400">
                   <Target className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>暂无数据</p>
+                  <p>暂无评分分布数据</p>
+                  <p className="text-xs mt-1 text-gray-400 dark:text-slate-500">需学生已有积分/成绩记录；可在右侧「规则应用控制」选择学生执行规则，或点击「调整分布」生成</p>
                 </div>
               )}
             </div>
