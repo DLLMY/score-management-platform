@@ -10,7 +10,7 @@ import {
   TrendingUp, Award, CheckCircle,
   TrendingDown, Activity, AlertCircle,
   LineChart, Bell, Lightbulb, BookOpen, ShieldCheck,
-  ArrowUp, ArrowDown, Minus, Loader2, Brain, Zap, Sparkles, Search, AlertTriangle, UserCircle, Users
+  ArrowUp, ArrowDown, Minus, Loader2, Brain, Zap, Sparkles, Search, AlertTriangle, UserCircle, Users, Download
 } from 'lucide-react';
 // 注：LineChart 用于参与度分析 Tab 的周趋势折线图标识
 import api from '../services/api';
@@ -58,6 +58,9 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   const [batchAttributionDays, setBatchAttributionDays] = useState<number>(30);
   const [batchAttributionLoading, setBatchAttributionLoading] = useState<boolean>(false);
   const [batchAttributionError, setBatchAttributionError] = useState<string | null>(null);
+
+  // 算法结果导出 Excel（正在导出的 tab，null=无）
+  const [exporting, setExporting] = useState<'engagement' | 'attribution' | 'risk' | null>(null);
 
   // 参与度分析 Tab
   const [engagementRank, setEngagementRank] = useState<EngagementRankResult | null>(null);
@@ -392,6 +395,27 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setBatchAttributionLoading(false);
     }
   }, [selectedClass, batchAttributionDays, showToast]);
+
+  // 算法结果导出 Excel（参与度/归因/风险）
+  const handleExport = useCallback(
+    async (tab: 'engagement' | 'attribution' | 'risk', days: number) => {
+      if (!selectedClass && tab !== 'risk') {
+        showToast('warning', '请先选择班级');
+        return;
+      }
+      setExporting(tab);
+      try {
+        await api.algorithm.exportExcel(tab, selectedClass || undefined, days);
+        showToast('success', '导出成功');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '导出失败';
+        showToast('error', msg);
+      } finally {
+        setExporting(null);
+      }
+    },
+    [selectedClass, showToast]
+  );
 
   // 初始化加载基础数据
   useEffect(() => {
@@ -1132,6 +1156,18 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     
     return (
       <div className="space-y-6">
+        {/* 导出 */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500 dark:text-slate-400">基于多维度综合评估（积分趋势 / 行为 / 出勤）</p>
+          <button
+            onClick={() => handleExport('risk', 30)}
+            disabled={exporting !== null}
+            className="px-4 py-2 rounded-lg border border-red-400 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4" />
+            {exporting === 'risk' ? '导出中...' : '导出 Excel'}
+          </button>
+        </div>
         {/* 风险统计 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
@@ -2058,6 +2094,14 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           >
             {batchAttributionLoading ? '归因中...' : '生成全班成绩波动归因'}
           </button>
+          <button
+            onClick={() => handleExport('attribution', batchAttributionDays)}
+            disabled={exporting !== null || !selectedClass}
+            className="px-4 py-2 rounded-lg border border-purple-500 text-purple-600 dark:text-purple-400 text-sm font-medium hover:bg-purple-50 dark:hover:bg-purple-500/10 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4" />
+            {exporting === 'attribution' ? '导出中...' : '导出 Excel'}
+          </button>
         </div>
 
         {batchAttributionError && (
@@ -2245,6 +2289,14 @@ export default function AlgorithmAnalysis(): React.ReactElement {
             className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
           >
             {engagementRankLoading ? '计算中...' : '生成全班参与度排名'}
+          </button>
+          <button
+            onClick={() => handleExport('engagement', engagementRankDays)}
+            disabled={exporting !== null || !selectedClass}
+            className="px-4 py-2 rounded-lg border border-purple-500 text-purple-600 dark:text-purple-400 text-sm font-medium hover:bg-purple-50 dark:hover:bg-purple-500/10 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4" />
+            {exporting === 'engagement' ? '导出中...' : '导出 Excel'}
           </button>
         </div>
 

@@ -1,7 +1,10 @@
+from io import BytesIO
+
 from flask_restx import Namespace, Resource
-from flask import request
+from flask import request, send_file
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.excel_utils import ExcelUtils
 from services.algorithm_service import AlgorithmService
 from services.cluster_service import ClusterService
 from services.composite_score_service import CompositeScoreService
@@ -1244,3 +1247,115 @@ class WarningEvaluate(Resource):
             return APIResponse.success(data=result, message="预警评估完成")
         except Exception as e:
             return APIResponse.error(message=str(e))
+
+
+ALGORITHM_EXPORT_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _build_export_rows(tab, class_name, days):
+    """组装算法导出的 (sheet名, 表头, 行数据)。
+
+    支持的 tab: engagement(参与度排名) / attribution(班级归因) / risk(风险评估)。
+    非法 tab 抛 ValueError；各数据维度空结果返回空行（sheet 仍导出，仅表头）。
+    """
+    if tab == "engagement":
+        res = EngagementService.batch_rank(class_name, days)
+        headers = ["排名", "姓名", "班级", "参与度", "等级", "出勤率", "作业率", "活跃度", "请假天数"]
+        rows = []
+        for s in res.get("students", []):
+            comp = s.get("components", {}) or {}
+            rows.append(
+                [
+                    s.get("rank"),
+                    s.get("name"),
+                    s.get("class_name") or "",
+                    s.get("engagement_score"),
+                    s.get("level"),
+                    comp.get("attendance_rate") if comp.get("attendance_rate") is not None else "",
+                    comp.get("homework_rate") if comp.get("homework_rate") is not None else "",
+                    comp.get("activity_rate") if comp.get("activity_rate") is not None else "",
+                    comp.get("leave_days", 0),
+                ]
+            )
+        return "参与度排名", headers, rows
+
+    if tab == "attribution":
+        res = AttributionService.batch_analyze(class_name, days)
+        headers = ["姓名", "班级", "成绩变化", "主要因子", "置信度", "状态"]
+        rows = []
+        for s in res.get("students", []):
+            if not s.get("has_data"):
+                rows.append([s.get("name"), s.get("class_name") or "", "", "", "", "无数据"])
+                continue
+            factors = s.get("factors", [])
+            top = factors[0].get("name") if factors else ""
+            rows.append(
+                [
+                    s.get("name"),
+                    s.get("class_name") or "",
+                    s.get("total_change"),
+                    top,
+                    s.get("confidence"),
+                    s.get("summary", ""),
+                ]
+            )
+        return "班级归因", headers, rows
+
+    if tab == "risk":
+        res = RiskPredictService.predict_batch(class_name, days)
+        headers = ["姓名", "班级", "总体风险", "风险分", "风险因素"]
+        rows = []
+        for r in res.get("results", []):
+            factors = "、".join(
+                f.get("description", "") for f in (r.get("risk_factors") or [])[:3]
+            )
+            rows.append(
+                [
+                    r.get("name"),
+                    r.get("class_name") or "",
+                    r.get("overall_risk_level"),
+                    r.get("overall_risk_score"),
+                    factors,
+                ]
+            )
+        return "风险评估", headers, rows
+
+    raise ValueError("不支持的导出类型: %s" % tab)
+
+
+@ns_algorithm.route("/export")
+class AlgorithmExport(Resource):
+    @ns_algorithm.doc("get_algorithm_export", description="导出算法分析结果为 Excel（参与度/归因/风险）")
+    @ns_algorithm.param("tab", "导出类型: engagement(参与度排名) / attribution(班级归因) / risk(风险评估)")
+    @ns_algorithm.param("class_name", "班级名称(可选，为空导出全部)")
+    @ns_algorithm.param("days", "统计天数，默认30")
+    @ns_algorithm.response(200, "Excel 文件流")
+    @requires_permission("algorithm.view")
+    def get(self):
+        """按 tab 导出对应算法分析结果为 xlsx。
+
+        - engagement: 参与度排名榜（排名/参与度/等级/出勤/作业/活跃/请假）
+        - attribution: 班级成绩波动归因（成绩变化/主要因子/置信度/状态）
+        - risk: 风险评估（总体风险/风险分/风险因素）
+        """
+        tab = (request.args.get("tab") or "engagement").lower()
+        class_name = request.args.get("class_name") or None
+        try:
+            days = int(request.args.get("days", 30))
+        except (TypeError, ValueError):
+            days = 30
+        try:
+            sheet_name, headers, rows = _build_export_rows(tab, class_name, days)
+        except ValueError as e:
+            return APIResponse.bad_request(message=str(e))
+        content = ExcelUtils.export_to_excel(
+            [{"name": sheet_name, "headers": headers, "data": rows}]
+        )
+        safe = (class_name or "全部").replace("/", "_")
+        filename = f"{safe}_{sheet_name}.xlsx"
+        return send_file(
+            BytesIO(content),
+            mimetype=ALGORITHM_EXPORT_MIME,
+            as_attachment=True,
+            download_name=filename,
+        )

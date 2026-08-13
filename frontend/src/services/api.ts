@@ -1879,6 +1879,7 @@ export interface Api {
     getEngagement: (userId: number, days?: number) => Promise<EngagementResult>;
     getBatchAttribution: (className?: string, days?: number) => Promise<BatchAttributionResult>;
     getEngagementRank: (className?: string, days?: number) => Promise<EngagementRankResult>;
+    exportExcel: (tab: 'engagement' | 'attribution' | 'risk', className?: string, days?: number) => Promise<void>;
     getEngagementTrend: (userId: number, weeks?: number) => Promise<EngagementTrendResult>;
     getBatchRiskPredict: (className?: string, days?: number) => Promise<BatchRiskPredictData>;
     getHighRiskStudents: (days?: number) => Promise<RiskStudent[]>;
@@ -3600,6 +3601,30 @@ const api: Api = {
     getEngagement: async (userId: number, days = 30) => {
       const raw = (await request(`/api/algorithm/engagement/${userId}?days=${days}`)) as any;
       return normalizeUserEngagement(raw);
+    },
+    exportExcel: (tab: 'engagement' | 'attribution' | 'risk', className?: string, days = 30) => {
+      const params = new URLSearchParams();
+      params.append('tab', tab);
+      if (className) params.append('class_name', className);
+      params.append('days', String(days));
+      const token = getBearerToken();
+      return fetch(`${API_BASE_URL}/api/algorithm/export?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `算法${tab}_${className || '全部'}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        });
     },
     getBatchRiskPredict: async (className?: string, days = 30) => {
       const params = new URLSearchParams();
