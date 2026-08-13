@@ -9,7 +9,7 @@ import {
   TrendingUp, Award, CheckCircle,
   TrendingDown, Activity, AlertCircle,
   LineChart, Bell, Lightbulb, BookOpen, ShieldCheck,
-  ArrowUp, ArrowDown, Minus, Loader2, Brain, Zap, Sparkles, Search, AlertTriangle, UserCircle
+  ArrowUp, ArrowDown, Minus, Loader2, Brain, Zap, Sparkles, Search, AlertTriangle, UserCircle, Users
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
@@ -26,6 +26,7 @@ const TABS = [
   { id: 'modelManager', label: '模型管理', icon: Brain, new: true },
   { id: 'ruleApplication', label: '智能规则应用', icon: Zap, new: true },
   { id: 'studentProfile', label: '学生画像', icon: UserCircle, new: true },
+  { id: 'batchAttribution', label: '班级归因', icon: Users, new: true },
 ];
 
 const SEVERITY_COLORS: Record<string, { bg: string; text: string; light: string }> = {
@@ -45,6 +46,10 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [activeTab]);
   const [selectedClass, setSelectedClass] = useState<string>('');
+  const [batchAttribution, setBatchAttribution] = useState<BatchAttributionResult | null>(null);
+  const [batchAttributionDays, setBatchAttributionDays] = useState<number>(30);
+  const [batchAttributionLoading, setBatchAttributionLoading] = useState<boolean>(false);
+  const [batchAttributionError, setBatchAttributionError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
@@ -349,6 +354,27 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     }
   }, [predictionDays, recommendDays, anomalyDays, showToast]);
 
+  // 批量成绩波动归因：按班级一次性跑全班归因，单生异常由后端隔离
+  const loadBatchAttribution = useCallback(async () => {
+    if (!selectedClass) {
+      showToast('warning', '请先选择班级');
+      return;
+    }
+    setBatchAttributionLoading(true);
+    setBatchAttributionError(null);
+    try {
+      const res = await api.algorithm.getBatchAttribution(selectedClass, batchAttributionDays);
+      setBatchAttribution(res);
+    } catch (err) {
+      console.error('批量归因失败:', err);
+      const msg = err instanceof Error ? err.message : '批量归因失败';
+      setBatchAttributionError(msg);
+      showToast('error', '批量归因失败');
+    } finally {
+      setBatchAttributionLoading(false);
+    }
+  }, [selectedClass, batchAttributionDays, showToast]);
+
   // 初始化加载基础数据
   useEffect(() => {
     const loadBaseData = async () => {
@@ -366,6 +392,13 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       loadStudents();
     }
   }, [activeTab, loadStudents]);
+
+  // 进入班级归因 Tab 且已选班级时，自动批量归因
+  useEffect(() => {
+    if (activeTab === 'batchAttribution' && selectedClass) {
+      loadBatchAttribution();
+    }
+  }, [activeTab, selectedClass, batchAttributionDays, loadBatchAttribution]);
 
   // 切换标签页时加载对应数据
   useEffect(() => {
@@ -1886,6 +1919,164 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     );
   };
 
+  const renderBatchAttribution = () => {
+    const data = batchAttribution;
+    const students = data?.students || [];
+    const failed = data?.failed_students || [];
+    const topFactors = (s: BatchAttributionStudent) =>
+      (s.factors || [])
+        .slice(0, 2)
+        .map((f) => `${f.name}${f.contribution >= 0 ? '+' : ''}${f.contribution.toFixed(1)}`)
+        .join('、') || '—';
+
+    return (
+      <div className="space-y-6">
+        {/* 控制区 */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 bg-purple-50/60 dark:bg-purple-500/10 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-purple-500" />
+            <span className="text-sm text-gray-700 dark:text-slate-300">当前班级:</span>
+            <span className="font-medium text-gray-800 dark:text-white">{selectedClass || '全部班级'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700 dark:text-slate-300">归因窗口(天):</span>
+            <input
+              type="number"
+              min={7}
+              max={180}
+              value={batchAttributionDays}
+              onChange={(e) => setBatchAttributionDays(Number(e.target.value) || 30)}
+              className="w-20 px-2 py-1 rounded border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white"
+            />
+          </div>
+          <button
+            onClick={() => loadBatchAttribution()}
+            disabled={batchAttributionLoading || !selectedClass}
+            className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
+          >
+            {batchAttributionLoading ? '归因中...' : '生成全班成绩波动归因'}
+          </button>
+        </div>
+
+        {batchAttributionError && (
+          <div className="text-center py-8 text-red-500">{batchAttributionError}</div>
+        )}
+
+        {!selectedClass && !batchAttributionLoading && (
+          <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+            <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+            <p className="text-sm">请先在上方选择班级</p>
+          </div>
+        )}
+
+        {selectedClass && !batchAttributionLoading && !batchAttributionError && data && (
+          <>
+            {/* 汇总卡片 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">班级人数</div>
+                <div className="text-3xl font-bold text-gray-800 dark:text-white mt-1">{data.total}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">有效归因</div>
+                <div className="text-3xl font-bold text-green-600 mt-1">{data.with_data}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">缺数据</div>
+                <div className="text-3xl font-bold text-gray-600 mt-1">{data.analyzed - data.with_data}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                <div className="text-sm text-gray-500 dark:text-slate-400">异常隔离</div>
+                <div className="text-3xl font-bold text-red-600 mt-1">{data.failed}</div>
+              </div>
+            </div>
+
+            {/* 表格 */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                  全班成绩波动归因
+                </h3>
+              </div>
+              <div className="p-6">
+                {students.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-slate-400">该班级暂无归因数据</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-slate-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">学生</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">成绩变化</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">主要归因</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">置信度</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400">状态</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {students.map((s, idx) => (
+                          <tr key={s.user_id ?? idx} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-gray-800 dark:text-white">{s.name}</div>
+                              {s.error && <div className="text-xs text-red-500">{s.error}</div>}
+                            </td>
+                            <td className="py-3 px-4">
+                              {s.has_data ? (
+                                <span className={`font-medium ${(s.total_change || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {(s.total_change || 0) >= 0 ? '+' : ''}{(s.total_change || 0).toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-slate-300">{s.has_data ? topFactors(s) : '数据不足'}</td>
+                            <td className="py-3 px-4">
+                              {s.has_data ? (
+                                <div className="w-20 bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${Math.min(100, (s.confidence || 0) * 100)}%` }} />
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.has_data ? 'bg-green-100 dark:bg-green-500/20 text-green-600' : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'}`}>
+                                {s.has_data ? '已归因' : '缺数据'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {failed.length > 0 && (
+                  <div className="mt-4 p-4 bg-red-50/50 dark:bg-red-500/5 rounded-lg border border-red-200/50 dark:border-red-500/20">
+                    <div className="text-sm font-medium text-red-600 mb-2">异常隔离（{failed.length} 人，不影响其余结果）</div>
+                    <div className="space-y-1 text-sm text-gray-600 dark:text-slate-300">
+                      {failed.map((f) => (
+                        <div key={f.user_id}>{f.name}：{f.error}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {batchAttributionLoading && (
+          <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+            <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-purple-500" />
+            <p className="text-sm">正在批量归因...</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderStudentProfile = () => {
     const selectedStudent = students.find((s) => s.id === selectedProfileUserId) || null;
 
@@ -2491,6 +2682,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           {activeTab === 'modelManager' && renderModelManager()}
           {activeTab === 'ruleApplication' && renderRuleApplication()}
           {activeTab === 'studentProfile' && renderStudentProfile()}
+          {activeTab === 'batchAttribution' && renderBatchAttribution()}
         </>
       )}
 

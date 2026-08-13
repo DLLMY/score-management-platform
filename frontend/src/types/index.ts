@@ -864,6 +864,31 @@ export interface ScoreAttributionResult {
   summary: string;
 }
 
+export interface BatchAttributionStudent {
+  user_id?: number;
+  name: string;
+  class_name?: string;
+  has_data: boolean;
+  total_change: number;
+  score_before: number;
+  score_after: number;
+  confidence: number;
+  factors: ScoreAttributionFactor[];
+  summary: string;
+  error?: string;
+}
+
+export interface BatchAttributionResult {
+  class_name: string;
+  days: number;
+  total: number;
+  analyzed: number;
+  with_data: number;
+  failed: number;
+  students: BatchAttributionStudent[];
+  failed_students: Array<{ user_id: number; name: string; class_name?: string; error: string }>;
+}
+
 export interface ModelTrainingResult {
   status: string;
   message: string;

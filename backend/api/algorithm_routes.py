@@ -591,6 +591,27 @@ class ScorePredict(Resource):
             return APIResponse.error(message=str(e))
 
 
+@ns_algorithm.route("/attribution/batch")
+class BatchScoreAttribution(Resource):
+    @ns_algorithm.doc("get_batch_score_attribution", description="批量成绩波动归因分析")
+    @ns_algorithm.param("class_name", "班级名称(可选)")
+    @ns_algorithm.param("days", "统计天数，默认30")
+    @ns_algorithm.response(200, "成功")
+    @requires_permission("algorithm.view")
+    def get(self):
+        """
+        批量分析某班级全部学生的成绩波动归因（近期 vs 前期：
+        学业成绩/行为积分/出勤/作业完成）。单生异常被隔离，不影响整体。
+        """
+        class_name = request.args.get("class_name")
+        days = int(request.args.get("days", 30))
+        try:
+            result = AttributionService.batch_analyze(class_name, days)  # noqa: F841
+            return APIResponse.success(data=result, message="success")
+        except Exception as e:
+            return APIResponse.error(message=str(e))
+
+
 @ns_algorithm.route("/attribution/<int:user_id>")
 @ns_algorithm.param("user_id", "用户ID")
 class ScoreAttribution(Resource):

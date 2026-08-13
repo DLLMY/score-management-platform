@@ -222,6 +222,58 @@ class AttributionService:
         return result
 
     @staticmethod
+    def batch_analyze(class_name: str, days: int = 30) -> Dict:
+        """批量分析某班级全部学生的成绩波动归因。
+
+        Args:
+            class_name: 班级名称（对应 User.class_name）；为空则直接返回空结果
+            days:       每个对比窗口天数（透传给 analyze_score_attribution）
+
+        Returns:
+            dict: {
+                class_name, days, total, analyzed, with_data, failed,
+                students:   [单生归因结果（含 has_data/factors 等，原生类型）],
+                failed_students: [隔离捕获的单生异常 {user_id,name,class_name,error}],
+            }
+        设计要点：单名学生异常（DB 查询失败等）被隔离进 failed_students，
+        不影响其余学生与整体响应；所有数值均走 float()/int() 转原生类型，
+        避免 numpy 类型导致 Flask JSON 序列化失败。
+        """
+        days = max(int(days), 1)
+        users = User.query.filter(User.class_name == class_name).all() if class_name else []
+        total = len(users)
+        students: List[Dict] = []
+        failed_students: List[Dict] = []
+        with_data = 0
+
+        for u in users:
+            try:
+                res = AttributionService.analyze_score_attribution(u.id, days)
+                if res.get("has_data"):
+                    with_data += 1
+                students.append(res)
+            except Exception as exc:  # 单生异常隔离，保证全班其余结果可用
+                failed_students.append(
+                    {
+                        "user_id": int(u.id),
+                        "name": u.name,
+                        "class_name": getattr(u, "class_name", "") or "",
+                        "error": str(exc),
+                    }
+                )
+
+        return {
+            "class_name": class_name or "",
+            "days": int(days),
+            "total": int(total),
+            "analyzed": int(len(students)),
+            "with_data": int(with_data),
+            "failed": int(len(failed_students)),
+            "students": students,
+            "failed_students": failed_students,
+        }
+
+    @staticmethod
     def _score_windows(user_id, prior_start, prior_end, recent_start, now):
         """返回 (前期均分, 近期均分, (前期考试数, 近期考试数))。无成绩返回 (None, None, counts)。"""
         before_rows = (
