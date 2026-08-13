@@ -654,6 +654,7 @@ class RiskPredictService:
         users = query.all()
 
         results = []
+        failed_students = []
         summary = {
             "total_students": len(users),
             "high_risk": 0,
@@ -665,7 +666,19 @@ class RiskPredictService:
         total_score = 0.0
 
         for user in users:
-            result = RiskPredictService.predict_risk(user.id, days)  # noqa: F841
+            try:
+                result = RiskPredictService.predict_risk(user.id, days)
+            except Exception as e:  # noqa: BLE001
+                # 单生异常隔离：失败学生不影响其余学生与整体响应
+                failed_students.append(
+                    {
+                        "user_id": int(user.id),
+                        "name": user.name,
+                        "class_name": getattr(user, "class_name", "") or "",
+                        "error": str(e),
+                    }
+                )
+                continue
             results.append(result)
 
             if "overall_risk_score" in result:
@@ -689,6 +702,8 @@ class RiskPredictService:
             "period_days": days,
             "summary": summary,
             "results": results,
+            "failed": len(failed_students),
+            "failed_students": failed_students,
         }
 
     @staticmethod

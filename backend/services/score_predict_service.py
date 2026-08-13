@@ -255,6 +255,7 @@ class ScorePredictService:
         users = query.all()
 
         predictions = []
+        failed_students = []
         summary = {
             "total_students": len(users),
             "avg_predicted_score": 0.0,
@@ -266,7 +267,19 @@ class ScorePredictService:
         total_score = 0.0
 
         for user in users:
-            result = ScorePredictService.predict_exam_score(user.id, days)  # noqa: F841
+            try:
+                result = ScorePredictService.predict_exam_score(user.id, days)
+            except Exception as e:  # noqa: BLE001
+                # 单生异常隔离：失败学生不影响其余学生与整体响应
+                failed_students.append(
+                    {
+                        "user_id": int(user.id),
+                        "name": user.name,
+                        "class_name": getattr(user, "class_name", "") or "",
+                        "error": str(e),
+                    }
+                )
+                continue
             predictions.append(result)
 
             if "predicted_score" in result:
@@ -289,6 +302,8 @@ class ScorePredictService:
             "period_days": days,
             "summary": summary,
             "predictions": predictions,
+            "failed": len(failed_students),
+            "failed_students": failed_students,
         }
 
     @staticmethod

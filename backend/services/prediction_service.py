@@ -166,9 +166,24 @@ class PredictionService:
             "total_students": len(users),
             "predictions": [],
             "summary": {"rising_count": 0, "stable_count": 0, "falling_count": 0},
+            "failed": 0,
+            "failed_students": [],
         }
         for user in users:
-            prediction = PredictionService.predict_future_scores(user.id, days)
+            try:
+                prediction = PredictionService.predict_future_scores(user.id, days)
+            except Exception as e:  # noqa: BLE001
+                # 单生异常隔离：失败学生不影响其余学生与整体响应
+                results["failed"] += 1
+                results["failed_students"].append(
+                    {
+                        "user_id": int(user.id),
+                        "name": user.name,
+                        "class_name": getattr(user, "class_name", "") or "",
+                        "error": str(e),
+                    }
+                )
+                continue
             results["predictions"].append(
                 {"user_id": user.id, "name": user.name, "class_name": user.class_name, "prediction": prediction}
             )
