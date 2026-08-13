@@ -815,6 +815,13 @@ class BatchScoreEntryResource(Resource):
             pass
 
         status_code = 200 if results else 400
+        if not results:
+            # 全部失败：返回业务失败（success:False），避免前端只读 body.success 误判成功
+            return APIResponse.error(
+                message=f"批量录入全部失败，共{len(errors)}条",
+                data={"results": results, "errors": errors},
+                status_code=status_code,
+            )
         return (
             APIResponse.success(
                 data={"results": results, "errors": errors},

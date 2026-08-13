@@ -46,9 +46,11 @@ test.describe('页面修复实跑验证', () => {
     '/#/course-schedule',
     '/#/approvals',
     '/#/rules',
+    '/#/class-compare',
+    '/#/operation-logs',
   ];
 
-  test('管理员端：登录后遍历 24 个改动页面，无 5xx/无 console error/无白屏', async ({ page }) => {
+  test('管理员端：登录后遍历 26 个改动页面，无 5xx/无 console error/无白屏', async ({ page }) => {
     const errors: string[] = [];
     const rateLimited: string[] = [];
     page.on('console', (msg) => {

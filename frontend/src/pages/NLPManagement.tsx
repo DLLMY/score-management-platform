@@ -1837,16 +1837,16 @@ const NLPScoringManagement = () => {
                       {performanceAnalysis?.components && Object.entries(performanceAnalysis.components).map(([name, stats]: [string, any]) => (
                         <tr key={name} className="border-b border-gray-100">
                           <td className="px-4 py-3 text-sm font-medium text-gray-800">{name}</td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-600">{stats.calls}</td>
+                          <td className="px-4 py-3 text-sm text-right text-gray-600">{stats.calls ?? '--'}</td>
                           <td className={`px-4 py-3 text-sm text-right ${
-                            stats.avg_time > 0.1 ? 'text-red-600' : 'text-gray-600'
+                            stats.avg_time != null && stats.avg_time > 0.1 ? 'text-red-600' : 'text-gray-600'
                           }`}>
-                            {(stats.avg_time * 1000).toFixed(2)}ms
+                            {stats.avg_time != null ? `${(stats.avg_time * 1000).toFixed(2)}ms` : '--'}
                           </td>
                           <td className={`px-4 py-3 text-sm text-right ${
-                            stats.error_rate > 0.05 ? 'text-red-600' : 'text-gray-600'
+                            stats.error_rate != null && stats.error_rate > 0.05 ? 'text-red-600' : 'text-gray-600'
                           }`}>
-                            {(stats.error_rate * 100).toFixed(2)}%
+                            {stats.error_rate != null ? `${(stats.error_rate * 100).toFixed(2)}%` : '--'}
                           </td>
                         </tr>
                       ))}

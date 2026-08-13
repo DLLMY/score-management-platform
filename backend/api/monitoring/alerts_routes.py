@@ -169,6 +169,8 @@ class AlertReadAll(Resource):
         将所有未读告警标记为已读状态。
         """
         count = alert_service.mark_all_as_read()
+        if count is None:
+            return APIResponse.error(message="标记所有告警已读失败", status_code=500)
         return APIResponse.success(data={"count": count}, message=f"已标记 {count} 条告警为已读")
 
 
@@ -183,6 +185,8 @@ class AlertStats(Resource):
         获取告警的统计数据，包括总数、未读数、按级别统计等。
         """
         stats = alert_service.get_alert_stats()
+        if stats is None:
+            return APIResponse.error(message="获取告警统计失败", status_code=500)
         return APIResponse.success(data={"stats": stats})
 
 
@@ -199,6 +203,8 @@ class AlertCleanup(Resource):
         args = ns_alerts.parser().add_argument("days", type=int, default=7, location="args")
         args = args.parse_args()
         count = alert_service.delete_old_alerts(days=args["days"])
+        if count is None:
+            return APIResponse.error(message="清理过期告警失败", status_code=500)
         return APIResponse.success(data={"deleted_count": count}, message=f"已删除 {count} 条过期告警")
 
 

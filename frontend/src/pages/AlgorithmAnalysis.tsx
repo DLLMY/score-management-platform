@@ -1790,53 +1790,53 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               </PermissionButton>
             </div>
             <div className="p-6">
-              {stats?.success && stats.data ? (
+              {stats && (stats as { success?: boolean }).success ? (
                 <>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="bg-green-50 dark:bg-green-500/10 rounded-lg p-4">
                       <div className="text-sm text-gray-500 dark:text-slate-400">学生总数</div>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.data.total_students}</div>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.total_students}</div>
                     </div>
                     <div className="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-4">
                       <div className="text-sm text-gray-500 dark:text-slate-400">平均分</div>
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.data.statistics?.avg || 0}</div>
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.statistics?.avg || 0}</div>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600 dark:text-slate-400">90分以上 (目标10%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.data.counts?.excellent || 0}人 ({((stats.data.distribution?.excellent || 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-gray-800 dark:text-white">{stats.counts?.excellent || 0}人 ({((stats.distribution?.excellent || 0) * 100).toFixed(1)}%)</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${Math.min((stats.data.distribution?.excellent || 0) * 100, 100)}%` }}></div>
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.excellent || 0) * 100, 100)}%` }}></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600 dark:text-slate-400">80分以上 (目标30%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.data.counts?.good || 0}人 ({((stats.data.distribution?.good || 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-gray-800 dark:text-white">{stats.counts?.good || 0}人 ({((stats.distribution?.good || 0) * 100).toFixed(1)}%)</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min((stats.data.distribution?.good || 0) * 100, 100)}%` }}></div>
+                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.good || 0) * 100, 100)}%` }}></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600 dark:text-slate-400">70分以上 (目标40%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.data.counts?.medium || 0}人 ({((stats.data.distribution?.medium || 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-gray-800 dark:text-white">{stats.counts?.medium || 0}人 ({((stats.distribution?.medium || 0) * 100).toFixed(1)}%)</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${Math.min((stats.data.distribution?.medium || 0) * 100, 100)}%` }}></div>
+                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.medium || 0) * 100, 100)}%` }}></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600 dark:text-slate-400">70分以下 (目标20%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.data.counts?.low || 0}人 ({((stats.data.distribution?.low || 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-gray-800 dark:text-white">{stats.counts?.low || 0}人 ({((stats.distribution?.low || 0) * 100).toFixed(1)}%)</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min((stats.data.distribution?.low || 0) * 100, 100)}%` }}></div>
+                        <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.low || 0) * 100, 100)}%` }}></div>
                       </div>
                     </div>
                   </div>

@@ -202,8 +202,10 @@ function Notifications() {
     };
   }, []);
 
-  const formatTime = useCallback((dateString: string) => {
+  const formatTime = useCallback((dateString: string | null | undefined) => {
+    if (!dateString) return '--';
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '--';
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);

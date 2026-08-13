@@ -462,7 +462,7 @@ function Approvals() {
             </div>
             <div>
               <label className='text-xs font-medium text-gray-500'>申请时间</label>
-              <p className='text-gray-700 mt-1'>{new Date(selectedApproval.created_at).toLocaleString('zh-CN')}</p>
+              <p className='text-gray-700 mt-1'>{selectedApproval.created_at ? new Date(selectedApproval.created_at).toLocaleString('zh-CN') : '--'}</p>
             </div>
             {selectedApproval.approve_time && (
               <div>

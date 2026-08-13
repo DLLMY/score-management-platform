@@ -8,6 +8,9 @@ from services.mqtt_service import publish_mqtt
 from services.class_time_checker import ClassTimeChecker
 from utils.response import APIResponse
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _resolve_class_from_device(device_id):
     if not device_id:
@@ -16,8 +19,9 @@ def _resolve_class_from_device(device_id):
         dev = Device.query.filter_by(device_id=str(device_id)).first()
         if dev and dev.class_info_id:
             return dev.class_info_id
-    except Exception:
-        pass
+    except Exception as e:
+        # 反查失败会导致上课时间拦截按"无班级"放行，须留痕
+        logger.warning(f"设备班级反查失败(device_id={device_id}): {e}")
     return None
 
 

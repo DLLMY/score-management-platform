@@ -215,6 +215,13 @@ class NotificationBatch(Resource):
                 errors.append({"user_id": uid, "message": str(e)})
         if sent:
             db.session.commit()
+        if not sent:
+            # 全部失败：返回业务失败（success:False），避免前端误判"成功发送 0 条"
+            return APIResponse.error(
+                message=f"群发通知全部失败，共{len(errors)}条",
+                data={"sent": 0, "errors": errors, "total": len(target_ids)},
+                status_code=400,
+            )
         return APIResponse.success(
             data={"sent": sent, "errors": errors, "total": len(target_ids)},
             message=f"成功发送 {sent} 条，{len(errors)} 条失败",

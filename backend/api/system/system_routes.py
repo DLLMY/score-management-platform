@@ -814,16 +814,17 @@ class SystemStats(Resource):
             admin_count = 0
 
             # 合并数据库查询，减少连接开销
+            # 注意：实际表名为单数（user/score_record/score_rule/score_category/device/admin）
             try:
                 with db.engine.connect() as conn:
                     results = conn.execute(text("""
                         SELECT
-                            (SELECT COUNT(*) FROM users) as user_count,
-                            (SELECT COUNT(*) FROM score_records) as record_count,
-                            (SELECT COUNT(*) FROM score_rules) as rule_count,
-                            (SELECT COUNT(*) FROM score_categories) as category_count,
-                            (SELECT COUNT(*) FROM devices) as device_count,
-                            (SELECT COUNT(*) FROM admins) as admin_count
+                            (SELECT COUNT(*) FROM user) as user_count,
+                            (SELECT COUNT(*) FROM score_record) as record_count,
+                            (SELECT COUNT(*) FROM score_rule) as rule_count,
+                            (SELECT COUNT(*) FROM score_category) as category_count,
+                            (SELECT COUNT(*) FROM device) as device_count,
+                            (SELECT COUNT(*) FROM admin) as admin_count
                     """)).first()
 
                     if results:
@@ -836,20 +837,21 @@ class SystemStats(Resource):
             except Exception as e:
                 logger.warning(f"批量统计查询失败，降级为单表查询: {e}")
 
-                tables = ["users", "score_records", "score_rules", "score_categories", "devices", "admins"]
+                tables = ["user", "score_record", "score_rule", "score_category", "device", "admin"]
                 counts = {}
 
+                # 单表降级：任一表失败视为整体不可信——绝不返回部分 0 冒充全量真实值
                 try:
                     with db.engine.connect() as conn:
                         for table in tables:
                             try:
                                 if table not in (
-                                    "users",
-                                    "score_records",
-                                    "score_rules",
-                                    "score_categories",
-                                    "devices",
-                                    "admins",
+                                    "user",
+                                    "score_record",
+                                    "score_rule",
+                                    "score_category",
+                                    "device",
+                                    "admin",
                                 ):
                                     continue
                                 counts[table] = (
@@ -858,17 +860,22 @@ class SystemStats(Resource):
                                     ).scalar()
                                     or 0
                                 )
-                            except Exception:
-                                counts[table] = 0
+                            except Exception as e2:
+                                logger.error(f"系统统计单表 {table} 计数查询失败: {e2}")
+                                return APIResponse.error(
+                                    message=f"系统统计查询失败（{table}），数据不完整", status_code=500
+                                )
+                except Exception as e2:
+                    logger.error(f"系统统计单表降级查询整体失败: {e2}")
+                    # DB 不可用：返回失败而非伪造全 0（防止前端误信"0 用户 0 记录"为真实值）
+                    return APIResponse.error(message="数据库不可用，无法获取系统统计", status_code=500)
 
-                    user_count = counts.get("users", 0)
-                    record_count = counts.get("score_records", 0)
-                    rule_count = counts.get("score_rules", 0)
-                    category_count = counts.get("score_categories", 0)
-                    device_count = counts.get("devices", 0)
-                    admin_count = counts.get("admins", 0)
-                except Exception:
-                    pass
+                user_count = counts.get("users", 0)
+                record_count = counts.get("score_records", 0)
+                rule_count = counts.get("score_rules", 0)
+                category_count = counts.get("score_categories", 0)
+                device_count = counts.get("devices", 0)
+                admin_count = counts.get("admins", 0)
 
             return {
                 "timestamp": datetime.now().isoformat(),

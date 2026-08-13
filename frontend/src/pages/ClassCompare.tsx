@@ -74,11 +74,12 @@ function ClassCompare() {
 
     setIsLoading(true);
     try {
-      const data = await api.analysis.getClassCompare(selectedClasses, period);
-      if (data.success) {
-        setCompareData(data.data as ClassCompareData[]);
-      } else {
-        showToast('error', data.message || '获取对比数据失败');
+      // 后端返回 success(data=[...])，request 已剥信封 → 直接消费数组（此前误期待信封致整页永不渲染）
+      const result = await api.analysis.getClassCompare(selectedClasses, period);
+      const list = Array.isArray(result) ? (result as ClassCompareData[]) : [];
+      setCompareData(list);
+      if (list.length === 0) {
+        showToast('info', '所选班级暂无对比数据');
       }
     } catch (err: unknown) {
       showToast('error', '获取对比数据失败: ' + (err as Error).message);

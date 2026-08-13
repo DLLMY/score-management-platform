@@ -69,7 +69,7 @@ const OperationLogs: React.FC = () => {
       setLogs(data.data || []);
       setPagination((prev) => ({
         ...prev,
-        total: data.total,
+        total: data.total || 0,
       }));
     } catch (error) {
       console.error('加载操作日志失败:', error);

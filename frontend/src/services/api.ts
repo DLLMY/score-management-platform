@@ -308,6 +308,20 @@ const cacheDependencyMap: Record<string, string[]> = {
   '/api/duty': ['/api/duty/groups', '/api/duty/assignments'],
   '/api/committee': ['/api/committee/members'],
   '/api/records': ['/api/records'],
+  // 写子路径 + 读集合路径组合（缺条目会致编辑/删除后 refetch 命中旧缓存显示旧数据）
+  '/api/notify_templates': ['/api/notify_templates'],
+  '/api/scheduled_notify': ['/api/scheduled_notify'],
+  '/api/study-group': ['/api/study-group'],
+  '/api/seating/charts': ['/api/seating/charts'],
+  '/api/parent/contacts': ['/api/parent/contacts'],
+  '/api/parent/logs': ['/api/parent/logs'],
+  '/api/homework/assignments': ['/api/homework/assignments'],
+  '/api/mental-health/records': ['/api/mental-health/records'],
+  '/api/activity': ['/api/activity'],
+  '/api/culture/records': ['/api/culture/records'],
+  '/api/wol/devices': ['/api/wol/devices'],
+  '/api/firmware': ['/api/firmware'],
+  '/api/phonebox-policy': ['/api/phonebox-policy'],
 };
 
 const clearRelatedCache = async (url: string): Promise<void> => {
@@ -646,7 +660,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
             cache.set(cacheKey, { data, timestamp: Date.now() });
             setCache(cacheKey, data, getCacheTTL(url));
           } else {
-            clearRelatedCache(url);
+            await clearRelatedCache(url);
             invalidateRequestCache(url);
           }
 
@@ -1621,7 +1635,7 @@ export interface Api {
   analysis: {
     getUserAnalysis: (userId: number) => Promise<unknown>;
     getClassAnalysis: (className: string) => Promise<unknown>;
-    getClassCompare: (classNames: string[], period: '7d' | '30d' | '90d') => Promise<{ success: boolean; data: unknown; message?: string }>;
+    getClassCompare: (classNames: string[], period: '7d' | '30d' | '90d') => Promise<unknown[]>;
   };
   timeRules: {
     getAll: () => Promise<TimeRule[]>;
@@ -1919,7 +1933,8 @@ export interface Api {
     applyRuleByBehavior: (userId: number, behaviorType: string, context?: unknown) => Promise<unknown>;
     
     // 评分分布控制
-    getScoreDistributionStats: (className?: string) => Promise<{ data: unknown }>;
+    // 注意：后端返回 success(data={...})，request 剥信封后直接返回内层对象（含 success 字段）
+    getScoreDistributionStats: (className?: string) => Promise<unknown>;
     adjustScoreDistribution: (className?: string) => Promise<{ data: unknown }>;
     validateScoreDistribution: (scores: number[]) => Promise<{ data: unknown }>;
     detectOutliers: (scores: number[]) => Promise<{ data: unknown }>;
@@ -3380,7 +3395,8 @@ const api: Api = {
     getClassAnalysis: (className) => request(`/api/analysis/class/${className}`) as Promise<unknown>,
     getClassCompare: (classNames: string[], period: '7d' | '30d' | '90d') => {
       const url = `/api/analysis/class-compare?class_names=${classNames.join(',')}&period=${period}`;
-      return request(url) as Promise<{ success: boolean; data: unknown; message?: string }>;
+      // 后端返回 APIResponse.success(data=[...])，request 默认剥信封 → 直接返回数组
+      return request(url) as Promise<unknown[]>;
     },
   },
   timeRules: {
@@ -3689,7 +3705,7 @@ const api: Api = {
     getScoreDistributionStats: (className?: string) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
-      return request(`/api/algorithm/score-distribution/statistics${params.toString() ? '?' + params.toString() : ''}`) as Promise<{ data: unknown }>;
+      return request(`/api/algorithm/score-distribution/statistics${params.toString() ? '?' + params.toString() : ''}`) as Promise<unknown>;
     },
     adjustScoreDistribution: (className?: string) => {
       const params = new URLSearchParams();
@@ -3905,7 +3921,7 @@ const api: Api = {
     importScores: (formData) => request('/api/scores/import', {
       method: 'POST',
       body: formData,
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // 注意：勿手动设 Content-Type——FormData 需浏览器自动附带 boundary，手动指定会丢 boundary 致 Flask 解析失败
     }) as Promise<unknown>,
     exportScores: (examId?: number, format?: 'json' | 'excel') => {
       let url = '/api/scores/export';

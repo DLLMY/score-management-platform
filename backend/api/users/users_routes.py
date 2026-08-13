@@ -19,9 +19,12 @@ from services.class_time_checker import ClassTimeChecker
 from datetime import datetime
 import io
 import csv
+import logging
 from pypinyin import lazy_pinyin
 import io
 from flask_restx import Namespace, Resource, fields
+
+logger = logging.getLogger(__name__)
 
 limiter = Limiter(get_remote_address)
 ns_users = Namespace("users", description="学生管理相关操作")
@@ -392,8 +395,9 @@ class UserList(Resource):
 
             search_engine = get_search_engine()
             search_engine.add_to_index(user.id, user.name, user.card_id, user.phone, user.class_name)
-        except Exception:
-            pass
+        except Exception as e:
+            # 索引更新失败：新数据搜不到（索引与 DB 不一致），须留痕
+            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}")
         log_operation(
             operation_type="create",
             target_type="user",
@@ -508,10 +512,13 @@ class UserResource(Resource):
         db.session.commit()
         # 更新FTS搜索索引
         try:
+            from utils.fulltext_search import get_search_engine  # 函数内 import（与 create 分支一致，缺失会 NameError）
+
             search_engine = get_search_engine()
             search_engine.add_to_index(user.id, user.name, user.card_id, user.phone, user.class_name)
-        except Exception:
-            pass
+        except Exception as e:
+            # 索引更新失败：改动后搜不到（索引与 DB 不一致），须留痕
+            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}")
         log_operation(
             operation_type="update",
             target_type="user",
@@ -571,10 +578,13 @@ class UserResource(Resource):
         db.session.commit()
         # 从FTS搜索索引移除
         try:
+            from utils.fulltext_search import get_search_engine  # 函数内 import（缺失会 NameError）
+
             search_engine = get_search_engine()
             search_engine.remove_from_index(id)
-        except Exception:
-            pass
+        except Exception as e:
+            # 索引移除失败：已删除用户仍可被搜到（索引残留），须留痕
+            logger.warning(f"FTS索引移除失败(user_id={id}): {e}")
         log_operation(
             operation_type="delete",
             target_type="user",

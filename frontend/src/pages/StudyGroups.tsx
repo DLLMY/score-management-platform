@@ -220,7 +220,7 @@ function StudyGroups() {
 
   const totalGroups = groups.length;
   const totalMembers = groups.reduce((sum, g) => sum + (g.member_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
-  const totalScore = groups.reduce((sum, g) => sum + g.score, 0);
+  const totalScore = groups.reduce((sum, g) => sum + (g.score || 0), 0);
   const activeGroups = groups.filter((g) => g.is_active).length;
 
   return (

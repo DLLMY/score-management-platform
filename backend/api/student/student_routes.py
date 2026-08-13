@@ -433,14 +433,14 @@ class StudentInsights(Resource):
         try:
             engagement = calculate_engagement(uid, days)
         except Exception as e:  # noqa: BLE001
-            # 诚实失败：带 error 标记，前端识别后显示"加载失败"而非伪装"低参与度"
-            engagement = {"has_data": False, "engagement_score": 0, "level": "low", "error": "参与度计算失败: %s" % e}
+            # 诚实失败：error 标记 + 数值置 None（前端即使忽略 error，也不会误读为"低参与度 0 分"）
+            engagement = {"has_data": False, "engagement_score": None, "level": None, "error": "参与度计算失败: %s" % e}
 
         # 风险
         try:
             risk = RiskPredictService.predict_risk(uid, days)
         except Exception as e:  # noqa: BLE001
-            risk = {"overall_risk_level": "low", "overall_risk_score": 0.0, "error": "风险评估失败: %s" % e}
+            risk = {"overall_risk_level": None, "overall_risk_score": None, "error": "风险评估失败: %s" % e}
 
         # 积分趋势
         try:
@@ -452,7 +452,7 @@ class StudentInsights(Resource):
         try:
             participation_trend = EngagementService.weekly_trend(uid, weeks)
         except Exception as e:  # noqa: BLE001
-            participation_trend = {"user_id": uid, "weeks": weeks, "trend": "stable", "series": [], "error": "参与度周趋势计算失败: %s" % e}
+            participation_trend = {"user_id": uid, "weeks": weeks, "trend": None, "series": [], "error": "参与度周趋势计算失败: %s" % e}
 
         return APIResponse.success(
             data={

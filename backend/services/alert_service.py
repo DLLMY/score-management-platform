@@ -196,8 +196,8 @@ class AlertService:
                 db.session.rollback()
         return False
 
-    def mark_all_as_read(self) -> int:
-        """标记所有告警为已读"""
+    def mark_all_as_read(self):
+        """标记所有告警为已读；失败返回 None（调用方据此返回业务失败，而非伪装"已标记 0 条"）"""
         try:
             count = Alert.query.filter(Alert.is_read == False).update({"is_read": True, "read_at": datetime.now()})  # noqa: E712, E501
             db.session.commit()
@@ -205,7 +205,7 @@ class AlertService:
         except Exception as e:
             log_error(f"标记所有告警已读失败: {e}")
             db.session.rollback()
-            return 0
+            return None
 
     def delete_alert(self, alert_id: int) -> bool:
         """删除告警"""
@@ -220,8 +220,8 @@ class AlertService:
                 db.session.rollback()
         return False
 
-    def delete_old_alerts(self, days: int = 7) -> int:
-        """删除指定天数之前的告警"""
+    def delete_old_alerts(self, days: int = 7):
+        """删除指定天数之前的告警；失败返回 None（调用方据此返回业务失败，而非伪装"已删除 0 条"）"""
         cutoff_date = datetime.now() - timedelta(days=days)
         try:
             count = Alert.query.filter(Alert.created_at < cutoff_date).delete()
@@ -231,10 +231,10 @@ class AlertService:
         except Exception as e:
             log_error(f"删除过期告警失败: {e}")
             db.session.rollback()
-            return 0
+            return None
 
-    def get_alert_stats(self) -> Dict[str, Any]:
-        """获取告警统计信息"""
+    def get_alert_stats(self):
+        """获取告警统计信息；失败返回 None（调用方据此返回业务失败，而非空统计冒充成功）"""
         try:
             # 总告警数
             total = Alert.query.count()
@@ -255,7 +255,8 @@ class AlertService:
             return {"total": total, "unread": unread, "by_severity": severity_stats, "today_count": today_count}
         except Exception as e:
             log_error(f"获取告警统计失败: {e}")
-            return {}
+            db.session.rollback()
+            return None
 
     def trigger_device_offline_alert(self, device_id: str, device_name: str):
         """触发设备离线告警"""
