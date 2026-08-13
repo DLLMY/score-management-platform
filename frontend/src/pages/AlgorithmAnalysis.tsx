@@ -102,6 +102,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     trend?: AnomalyResult;
     group?: AnomalyResult;
     attribution?: ScoreAttributionResult;
+    engagement?: EngagementResult;
   } | null>(null);
 
   // 使用 useMemo 优化过滤逻辑
@@ -326,7 +327,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     setProfileLoading(true);
     setProfileError(null);
     try {
-      const [prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution] = await Promise.all([
+      const [prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution, engagement] = await Promise.all([
         api.algorithm.getPrediction(userId, predictionDays),
         api.algorithm.getScorePredict(userId, recommendDays),
         api.algorithm.getRiskPredict(userId, recommendDays),
@@ -335,8 +336,9 @@ export default function AlgorithmAnalysis(): React.ReactElement {
         api.algorithm.getTrendAnomaly(userId, anomalyDays),
         api.algorithm.getGroupAnomaly(userId, anomalyDays),
         api.algorithm.getScoreAttribution(userId, recommendDays),
+        api.algorithm.getEngagement(userId, anomalyDays),
       ]);
-      setStudentProfile({ prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution });
+      setStudentProfile({ prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution, engagement });
     } catch (err) {
       console.error('加载学生画像失败:', err);
       const msg = err instanceof Error ? err.message : '加载学生画像失败';
@@ -2125,6 +2127,61 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                 </div>
               ) : (
                 <p className="text-sm text-gray-400">暂无风险评估数据</p>
+              )}
+            </div>
+
+            {/* 参与度指数 */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+              <h4 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+                <Activity className="w-5 h-5 text-emerald-500" />
+                参与度指数
+              </h4>
+              {studentProfile.engagement ? (() => {
+                const eng = studentProfile.engagement!;
+                if (!eng.has_data) {
+                  return <p className="text-sm text-gray-400">{eng.description || '暂无参与度数据'}</p>;
+                }
+                const comps: Array<{ label: string; rate: number | null }> = [
+                  { label: '出勤率', rate: eng.components.attendance_rate },
+                  { label: '作业提交率', rate: eng.components.homework_rate },
+                  { label: '积分活跃度', rate: eng.components.activity_rate },
+                ];
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        eng.level === 'high' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                        eng.level === 'medium' ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-500/10' :
+                        'bg-blue-50 text-blue-600 dark:bg-blue-500/10'
+                      }`}>
+                        {eng.level === 'high' ? '高参与度' : eng.level === 'medium' ? '中参与度' : '低参与度'}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-slate-400">参与度分 {eng.engagement_score.toFixed(1)}</span>
+                      {eng.components.leave_days > 0 && (
+                        <span className="text-xs text-gray-400">近 {eng.days} 天请假 {eng.components.leave_days} 天</span>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {comps.filter((c) => c.rate !== null).map((c) => {
+                        const pct = Math.max(2, Math.min(100, Math.round((c.rate as number) * 100)));
+                        return (
+                          <div key={c.label}>
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-gray-600 dark:text-slate-300">{c.label}</span>
+                              <span className="font-medium text-gray-600 dark:text-slate-300">{Math.round((c.rate as number) * 100)}%</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+                              <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {eng.description && <p className="text-xs text-gray-400">{eng.description}</p>}
+                  </div>
+                );
+              })() : (
+                <p className="text-sm text-gray-400">暂无参与度数据</p>
               )}
             </div>
 

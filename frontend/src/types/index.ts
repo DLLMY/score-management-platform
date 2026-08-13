@@ -800,6 +800,29 @@ export interface RiskSubRisk {
   factors: string[];
 }
 
+export interface EngagementFactor {
+  name: string;
+  value: number;
+  weight: number;
+  contribution: number;
+}
+
+export interface EngagementResult {
+  user_id: number;
+  days: number;
+  engagement_score: number;
+  level: 'high' | 'medium' | 'low';
+  factors: EngagementFactor[];
+  components: {
+    attendance_rate: number | null;
+    homework_rate: number | null;
+    activity_rate: number;
+    leave_days: number;
+  };
+  description: string;
+  has_data: boolean;
+}
+
 export interface RiskPredictResult {
   name: string;
   risk_level: 'high' | 'medium' | 'low';

@@ -12,6 +12,7 @@ from services.rule_recommendation_service import RuleRecommendationService
 from services.score_predict_service import ScorePredictService
 from services.risk_predict_service import RiskPredictService
 from services.attribution_service import AttributionService
+from services.engagement_service import EngagementService
 from services.rule_engine_service import RuleExecutionEngine
 from services.score_distribution_service import ScoreDistributionController, ScoreValidator
 from services.score_ecosystem_service import ScoreEcosystem
@@ -412,6 +413,26 @@ class GroupAnomaly(Resource):
         days = int(request.args.get("days", 30))
         try:
             result = AnomalyService.detect_group_anomaly(user_id, days)  # noqa: F841
+            return APIResponse.success(data=result, message="success")
+        except Exception as e:
+            return APIResponse.error(message=str(e))
+
+
+@ns_algorithm.route("/engagement/<int:user_id>")
+@ns_algorithm.param("user_id", "用户ID")
+class UserEngagement(Resource):
+    @ns_algorithm.doc("get_user_engagement", description="获取学生参与度指数")
+    @ns_algorithm.param("days", "历史天数，默认30")
+    @ns_algorithm.response(200, "成功")
+    @requires_permission("algorithm.view")
+    def get(self, user_id):
+        """
+        获取学生参与度指数（0-100）
+        综合出勤率、作业提交率、积分活跃度与请假天数评估。
+        """
+        days = int(request.args.get("days", 30))
+        try:
+            result = EngagementService.calculate_engagement(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))
