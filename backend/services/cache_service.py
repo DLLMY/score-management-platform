@@ -213,13 +213,15 @@ class CacheService:
         if self.redis_client:
             try:
                 self.redis_client.flushall()
+                self.memory_cache = {}
+                self.memory_tags = {}
                 return True
             except Exception as e:
                 self.stats["redis_errors"] += 1
                 print(f"Redis flushall失败: {e}")
-                self.memory_cache = {}
-                self.memory_tags = {}
-                return True
+                # 诚实失败：不清内存缓存（保持 Redis+内存一致，都是旧值），
+                # 返回 False 让调用方提示"缓存刷新失败"，而非谎报成功。
+                return False
         self.memory_cache = {}
         self.memory_tags = {}
         return True

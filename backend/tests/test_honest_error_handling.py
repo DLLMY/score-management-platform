@@ -86,3 +86,43 @@ class TestHonestErrorHandling:
         data = resp.get_json()['data']
         assert data['participation_trend'].get('error')
         assert '参与度周趋势计算失败' in data['participation_trend']['error']
+
+
+class TestRiskAttendanceHonest:
+    def test_attendance_stats_exception_returns_all_none(self, app):
+        """_get_attendance_stats 异常 → 全 None（rate=None 触发代理回退），不再伪装缺勤 0。"""
+        from services.risk_predict_service import RiskPredictService
+        from datetime import date
+        from unittest import mock
+        from models import Attendance
+
+        with mock.patch.object(Attendance, 'query', spec=['filter']) as mq:
+            mq.filter.side_effect = RuntimeError("db down")
+            result = RiskPredictService._get_attendance_stats(1, date(2026, 1, 1), date(2026, 1, 31))
+        assert result == (None, None, None, None, None)
+
+    def test_predict_risk_attendance_exception_falls_back(self, app, client):
+        """考勤读取异常 → predict_risk 仍返回（走代理回退），attendance_rate 为 None 不谎报 0。"""
+        from unittest import mock
+        from datetime import date
+        from models import db, User, ClassInfo
+        from utils.security import generate_student_token
+
+        with app.app_context():
+            db.session.add(ClassInfo(id=99, name="测试班99"))
+            u = User(
+                id=5001, name="风险测试", card_id="CARD_5001",
+                class_info_id=99, class_name="测试班99",
+                current_score=80,
+            )
+            db.session.add(u)
+            db.session.commit()
+
+        from services.risk_predict_service import RiskPredictService
+        from models import Attendance
+        with mock.patch.object(Attendance, 'query', spec=['filter']) as mq:
+            mq.filter.side_effect = RuntimeError("db down")
+            result = RiskPredictService.predict_risk(5001, 30)
+        assert result["overall_risk_level"] in ("high", "medium", "low")
+        assert result["features"]["attendance_rate"] is None
+        assert result["features"]["attendance_absent_count"] is None

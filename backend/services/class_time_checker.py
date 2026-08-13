@@ -239,6 +239,7 @@ class ClassTimeChecker:
             db.session.add(rec)
             db.session.commit()
         except Exception as e:
+            db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
             print(f"[NotifyAudit] 写入失败: {e}")
 
     @staticmethod

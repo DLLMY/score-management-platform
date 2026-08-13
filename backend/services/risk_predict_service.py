@@ -270,7 +270,9 @@ class RiskPredictService:
 
             return rate, absent, late, total, leave_days
         except Exception:  # noqa: BLE001
-            return None, 0, 0, 0, 0
+            # 诚实失败：全 None 传导，调用方（detect_attendance_risk）见 attendance_rate=None
+            # 走代理回退，不把缺勤/迟到伪装成 0（避免系统故障被读作"表现正常"）。
+            return None, None, None, None, None
 
     @staticmethod
     def detect_score_risk(features):

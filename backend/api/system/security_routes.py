@@ -158,6 +158,7 @@ def log_security_event(event_type, severity="info", user_id=None, user_type="unk
         db.session.add(audit)
         db.session.commit()
     except Exception:
+        db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
         pass
 
 

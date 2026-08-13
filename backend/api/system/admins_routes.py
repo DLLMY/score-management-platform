@@ -55,6 +55,7 @@ def log_permission_action(action, target_type, target_id=None, description=None)
         db.session.add(log)
         db.session.commit()
     except Exception:
+        db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
         pass
 
 
