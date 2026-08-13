@@ -2353,17 +2353,24 @@ const normalizeUserPrediction = (raw?: any): PredictionResult => {
   const predicted_score =
     list.length > 0 ? toNumSafe(list[list.length - 1]) : toNumSafe(raw?.current_score);
   const trendKey = typeof raw?.trend === 'string' ? raw.trend : 'stable';
+  const ci = raw?.confidence_interval;
+  const confidence_interval: [number, number] | undefined =
+    Array.isArray(ci) && ci.length === 2 ? ([toNumSafe(ci[0]), toNumSafe(ci[1])] as [number, number]) : undefined;
   return {
     name: typeof raw?.user_id === 'number' || typeof raw?.user_id === 'string' ? String(raw.user_id) : '未知学生',
     current_score: toNumSafe(raw?.current_score),
     predicted_score,
     trend: TREND_MAP[trendKey] ?? 'stable',
     confidence: toNumSafe(raw?.confidence),
+    confidence_interval,
   };
 };
 
 const normalizeUserScorePredict = (raw?: any): ScorePredictResult => {
   const features = raw?.features ?? {};
+  const ci = raw?.confidence_interval;
+  const confidence_interval: [number, number] | undefined =
+    Array.isArray(ci) && ci.length === 2 ? ([toNumSafe(ci[0]), toNumSafe(ci[1])] as [number, number]) : undefined;
   return {
     name: raw?.name ?? '未知学生',
     subject: raw?.class_name ?? '',
@@ -2371,6 +2378,7 @@ const normalizeUserScorePredict = (raw?: any): ScorePredictResult => {
     predicted_score: toNumSafe(raw?.predicted_score),
     trend: 'stable',
     confidence: toNumSafe(raw?.confidence),
+    confidence_interval,
   };
 };
 

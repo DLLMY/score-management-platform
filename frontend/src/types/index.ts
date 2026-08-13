@@ -722,6 +722,7 @@ export interface PredictionResult {
   predicted_score: number;
   trend: 'up' | 'down' | 'stable';
   confidence: number;
+  confidence_interval?: [number, number];
 }
 
 export interface BatchPredictionData {
@@ -779,6 +780,7 @@ export interface ScorePredictResult {
   predicted_score: number;
   trend: 'up' | 'down' | 'stable';
   confidence: number;
+  confidence_interval?: [number, number];
 }
 
 export interface BatchScorePredictData {

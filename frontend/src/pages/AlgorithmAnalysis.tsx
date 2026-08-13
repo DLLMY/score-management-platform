@@ -1887,6 +1887,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       predicted: number | undefined,
       trend: string | undefined,
       confidence: number | undefined,
+      interval?: [number, number],
     ) => {
       const cur = typeof current === 'number' ? current : 0;
       const pred = typeof predicted === 'number' ? predicted : cur;
@@ -1911,6 +1912,36 @@ export default function AlgorithmAnalysis(): React.ReactElement {
             </span>
             <span>置信度 {(conf * 100).toFixed(0)}%</span>
           </div>
+          {interval && interval.length === 2 && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-[11px] text-gray-400 mb-1">
+                <span>95% 预测区间</span>
+                <span>{interval[0].toFixed(1)} ~ {interval[1].toFixed(1)}</span>
+              </div>
+              <div className="relative h-2 rounded-full bg-gray-100 dark:bg-slate-700">
+                {(() => {
+                  const lo = Math.min(interval[0], interval[1], pred);
+                  const hi = Math.max(interval[0], interval[1], pred);
+                  const span = hi - lo || 1;
+                  const bandL = ((Math.min(interval[0], interval[1]) - lo) / span) * 100;
+                  const bandW = (Math.abs(interval[1] - interval[0]) / span) * 100;
+                  const dotL = ((pred - lo) / span) * 100;
+                  return (
+                    <>
+                      <div
+                        className="absolute top-0 h-2 rounded-full bg-blue-200 dark:bg-blue-500/30"
+                        style={{ left: `${bandL}%`, width: `${bandW}%` }}
+                      />
+                      <div
+                        className="absolute -top-0.5 h-3 w-3 rounded-full bg-blue-500 border-2 border-white dark:border-slate-800"
+                        style={{ left: `calc(${dotL}% - 6px)` }}
+                      />
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       );
     };
@@ -2007,8 +2038,8 @@ export default function AlgorithmAnalysis(): React.ReactElement {
 
             {/* 积分预测 + 成绩预测 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderScoreCard('积分预测', <TrendingUp className="w-4 h-4 text-blue-500" />, studentProfile.prediction?.current_score, studentProfile.prediction?.predicted_score, studentProfile.prediction?.trend, studentProfile.prediction?.confidence)}
-              {renderScoreCard('成绩预测', <BookOpen className="w-4 h-4 text-indigo-500" />, studentProfile.scorePredict?.current_score, studentProfile.scorePredict?.predicted_score, studentProfile.scorePredict?.trend, studentProfile.scorePredict?.confidence)}
+              {renderScoreCard('积分预测', <TrendingUp className="w-4 h-4 text-blue-500" />, studentProfile.prediction?.current_score, studentProfile.prediction?.predicted_score, studentProfile.prediction?.trend, studentProfile.prediction?.confidence, studentProfile.prediction?.confidence_interval)}
+              {renderScoreCard('成绩预测', <BookOpen className="w-4 h-4 text-indigo-500" />, studentProfile.scorePredict?.current_score, studentProfile.scorePredict?.predicted_score, studentProfile.scorePredict?.trend, studentProfile.scorePredict?.confidence, studentProfile.scorePredict?.confidence_interval)}
             </div>
 
             {/* 风险评估 */}
