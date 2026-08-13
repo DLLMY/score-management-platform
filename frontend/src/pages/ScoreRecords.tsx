@@ -409,6 +409,10 @@ const ScoreRecords: React.FC = () => {
     if (!studentDetail) {
       throw new Error('请先选择学生');
     }
+    // 学生无任何成绩：拦截空表导出（此前仅校验 studentDetail，空成绩表照常导出并提示成功）
+    if (Object.keys(examScores).length === 0) {
+      throw new Error('该学生暂无考试成绩，无可导出数据');
+    }
 
     const html = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office'

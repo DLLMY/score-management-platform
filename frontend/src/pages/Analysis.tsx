@@ -304,6 +304,11 @@ function Analysis() {
   };
 
   const handleExport = () => {
+    // 无数据不导出空壳报告（此前直接下载空 JSON，用户无感知）
+    if (filteredUsers.length === 0 && !statistics) {
+      window.alert('暂无数据可导出，请先加载学生数据');
+      return;
+    }
     const exportData = {
       exportTime: new Date().toISOString(),
       filterClass: selectedClass || '全部班级',

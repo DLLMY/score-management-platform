@@ -247,8 +247,19 @@ class ScheduledTrigger(Resource):
             )
 
         try:
+            # publish 结果校验：MQTT 断连时返回 False。此前忽略返回值 →
+            # 失败也提示"通知已发送"+ 标 sent（假状态）。任一 topic 失败即诚实报错。
+            publish_results = []
             for topic in topics:
-                publish_mqtt(topic, json.dumps(message))
+                try:
+                    ok = publish_mqtt(topic, json.dumps(message))
+                except Exception as e:  # noqa: BLE001
+                    ok = False
+                publish_results.append((topic, bool(ok)))
+            if not all(ok for _, ok in publish_results):
+                db.session.rollback()
+                failed_topics = [t for t, ok in publish_results if not ok]
+                return APIResponse.error(message=f"MQTT发布失败（设备未连接），未标记已发送: {failed_topics}")
             notify.last_sent_at = datetime.now()
             if notify.repeat_type == "once":
                 notify.status = "sent"
@@ -355,8 +366,21 @@ def process_scheduled_notifications():
                 )
                 continue  # 保持 pending，待非上课时段重试
 
+            # publish 结果校验：MQTT 断连时 publish_mqtt 返回 False。
+            # 此前忽略返回值 → 失败也标 sent + NotifyHistory=sent（假状态）。
+            # 任一 topic 失败：不更新 last_sent_at/status，保持 pending 待下轮重试。
+            publish_results = []
             for topic in topics:
-                publish_mqtt(topic, json.dumps(message))
+                try:
+                    ok = publish_mqtt(topic, json.dumps(message))
+                except Exception as e:  # noqa: BLE001
+                    ok = False
+                publish_results.append((topic, bool(ok)))
+            if not all(ok for _, ok in publish_results):
+                failed_topics = [t for t, ok in publish_results if not ok]
+                print(f"定时通知(id={notify.id}) MQTT发布失败，保持pending待重试: {failed_topics}")
+                continue
+
             notify.last_sent_at = datetime.now()
             if notify.repeat_type == "once":
                 notify.status = "sent"

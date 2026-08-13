@@ -152,6 +152,21 @@ def init_scheduler(app):
     scheduler = BackgroundScheduler()
     scheduler.add_job(scheduled_backup, "cron", hour=2, minute=0)
     scheduler.add_job(scheduled_heartbeat_check, "interval", seconds=30)
+
+    # 补接审批超时提醒 + 定时通知任务（此前 tasks/scheduler.py 的 init_scheduler 从未被
+    # 加载 → 用户配置的定时通知/审批超时提醒功能实际从不自动执行，仅手动 trigger 可用）。
+    # 复用 tasks/scheduler 已有实现（已带 app_context + try/except），仅注册两个新任务，
+    # 不引入其备份/心跳（避免与上面重复执行）。
+    try:
+        from tasks.scheduler import scheduled_approval_timeout_check, scheduled_notify_check
+
+        scheduler.add_job(lambda: scheduled_approval_timeout_check(app), "interval", minutes=5)
+        scheduler.add_job(lambda: scheduled_notify_check(app), "interval", seconds=10)
+        print("审批超时检查任务已启动，每5分钟执行一次")
+        print("定时通知检查任务已启动，每10秒执行一次")
+    except Exception as e:  # noqa: BLE001
+        print(f"审批超时/定时通知任务注册失败（不影响其他定时任务）: {e}")
+
     scheduler.start()
     # 设为守护线程：测试等场景下即使未显式 shutdown，也不会因非守护线程阻塞
     # pytest 进程退出（此前表现为“用例跑完后卡死”）。生产环境主进程常驻，不受影响。

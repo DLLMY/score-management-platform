@@ -202,6 +202,11 @@ function ScoreAnalysis(): React.ReactElement {
   };
 
   const handleExport = (): void => {
+    // 无数据不导出空壳报告（此前直接下载空 JSON，用户无感知）
+    if (!examAnalysis && !classAnalysis && !algorithmData) {
+      showToast('error', '暂无数据可导出，请先加载考试/班级分析');
+      return;
+    }
     const exportData = {
       exportTime: new Date().toISOString(),
       selectedExam,

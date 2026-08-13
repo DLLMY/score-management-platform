@@ -410,6 +410,8 @@ export const DiagnosticsPage: React.FC = () => {
         credentials: 'include',
         headers: getAuthHeaders(),
       });
+      // 5xx/错误信封：不检查 response.ok 会把错误数据渲染成"系统严重问题"
+      if (!response.ok) throw new Error('HTTP ' + response.status);
       // 剥 APIResponse 信封: {success, code, message, data:{...}} → 真实数据
       const envelope = await response.json();
       const data: HealthData = envelope?.data ?? envelope;
@@ -427,6 +429,7 @@ export const DiagnosticsPage: React.FC = () => {
         credentials: 'include',
         headers: getAuthHeaders(),
       });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
       const envelope = await response.json();
       const data: PerformanceData = envelope?.data ?? envelope;
       setPerformanceData(data);
@@ -443,6 +446,7 @@ export const DiagnosticsPage: React.FC = () => {
         credentials: 'include',
         headers: getAuthHeaders(),
       });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
       const envelope = await response.json();
       const data: ErrorData = envelope?.data ?? envelope;
       setErrorData(data);
@@ -459,6 +463,7 @@ export const DiagnosticsPage: React.FC = () => {
         credentials: 'include',
         headers: getAuthHeaders(),
       });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
       const envelope = await response.json();
       const data: SystemData = envelope?.data ?? envelope;
       setSystemData(data);

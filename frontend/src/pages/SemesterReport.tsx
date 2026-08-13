@@ -52,6 +52,11 @@ const SemesterReport: React.FC = () => {
       message.warning('请先选择班级');
       return;
     }
+    // 已知班级无学生（studentCount === 0）：拦截空报表导出（此前仍提示"已开始下载"）
+    if (studentCount === 0) {
+      message.warning('该班级暂无学生，无可导出数据');
+      return;
+    }
     setExporting(format);
     setError(null);
     try {
