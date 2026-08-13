@@ -164,3 +164,8 @@ frontend/probe/
 # 本地训练模型（运行资产，体积大，不入库；部署时单独提供）
 backend/models/bert/
 backend/models/trained/
+
+# 代码健康清理归档（孤儿调试脚本/截图/DB备份，保留本地不删）
+backend/scripts/archive/
+# 防止 backend 根散落调试截图
+backend/*.png
