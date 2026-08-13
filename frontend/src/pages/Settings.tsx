@@ -1,20 +1,5 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import {
-  Settings as SettingsIcon,
-  Bell,
-  Shield,
-  Palette,
-  Database,
-  Save,
-  RefreshCw,
-  Check,
-  AlertCircle,
-  Download,
-  Upload,
-  Trash2,
-  FileText,
-  Loader2,
-} from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Shield, Palette, Database, Save, RefreshCw, Check, AlertCircle, Download, Upload, Trash2, FileText, Loader2, AlertTriangle } from 'lucide-react';
 import api, { SystemConfig, BackupInfo } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, FormSkeleton, Skeleton } from '../components';
@@ -62,6 +47,7 @@ function Settings() {
 
   const [saved, setSaved] = useState<boolean>(false);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState<LoadingState>({
     backup: false,
     restore: false,
@@ -78,6 +64,7 @@ function Settings() {
   const loadConfig = useCallback(async (): Promise<void> => {
     try {
       const data: SystemConfig = await api.system.getConfig();
+      setLoadError(false);
       setSettings({
         systemName: data.system_name || '积分管理平台',
         systemLogo: data.system_logo || '',
@@ -92,6 +79,7 @@ function Settings() {
       });
     } catch (error) {
       console.error('加载配置失败:', error);
+      setLoadError(true);
     } finally {
       setLoading((prev: LoadingState) => ({ ...prev, config: false }));
     }
@@ -102,8 +90,10 @@ function Settings() {
     try {
       const data: BackupInfo[] = await api.system.listBackups();
       setBackups(data);
+      setLoadError(false);
     } catch (error) {
       console.error('获取备份列表失败:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -249,6 +239,12 @@ function Settings() {
 
   return (
     <div className='min-h-screen bg-slate-50'>
+      {loadError && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>系统配置加载失败，当前展示可能不完整，请刷新重试</p>
+        </div>
+      )}
       <div className='max-w-4xl mx-auto px-4 py-6'>
         <header className='mb-6'>
           <div className='flex items-center gap-3'>

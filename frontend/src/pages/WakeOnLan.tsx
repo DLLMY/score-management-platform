@@ -10,6 +10,8 @@ export default function WakeOnLan() {
   const [selectedDevice, setSelectedDevice] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // 设备列表加载失败标记（诚实显示，不再 fallback 假设备）
+  const [loadError, setLoadError] = useState(false);
   const [wakeResult, setWakeResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDevice, setNewDevice] = useState({ name: '', mac_address: '' });
@@ -21,16 +23,15 @@ export default function WakeOnLan() {
   // Load devices from database on mount
   const loadDevices = async () => {
     setIsRefreshing(true);
+    setLoadError(false);
     try {
       const result = await api.wakeOnLan.getDevices();
-      setDevices(result);
+      setDevices(result || []);
     } catch (error) {
       console.error('Failed to load devices:', error);
-      // Fallback to default devices if API fails
-      setDevices([
-        { id: 1, name: '办公室电脑', mac_address: '00:1A:2B:3C:4D:5E' },
-        { id: 2, name: '服务器', mac_address: '00:1A:2B:3C:4D:6F' },
-      ]);
+      // 诚实显示：加载失败不伪造默认设备
+      setDevices([]);
+      setLoadError(true);
     } finally {
       setIsRefreshing(false);
     }
@@ -283,6 +284,19 @@ export default function WakeOnLan() {
       )}
 
       {/* Device List */}
+      {loadError ? (
+        <div className="p-6 bg-red-50 border border-red-200 rounded-lg text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-2" />
+          <p className="text-red-700 font-medium">设备列表加载失败</p>
+          <p className="text-sm text-red-500 mt-1">请点击右上角 Refresh 重试</p>
+        </div>
+      ) : devices.length === 0 ? (
+        <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg text-center">
+          <Power className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-600 font-medium">暂无远程开机设备</p>
+          <p className="text-sm text-gray-400 mt-1">点击 Add Device 添加目标电脑</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {devices.map((device) => (
           <div
@@ -343,6 +357,7 @@ export default function WakeOnLan() {
           </div>
         ))}
       </div>
+      )}
 
       {/* Instructions */}
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">

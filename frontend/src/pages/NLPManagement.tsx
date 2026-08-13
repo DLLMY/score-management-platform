@@ -215,6 +215,7 @@ const NLPScoringManagement = () => {
   const [importJsonText, setImportJsonText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [algorithms, setAlgorithms] = useState<MLAlgorithm[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<string>('');
   const [useCrossValidation, setUseCrossValidation] = useState(false);
   const [trainingResult, setTrainingResult] = useState<MLTrainingResult | null>(null);
@@ -608,9 +609,11 @@ const NLPScoringManagement = () => {
       const response = await api.nlp.getAlgorithms();
       if (response) {
         setAlgorithms(response as unknown as MLAlgorithm[]);
+        setLoadError(false);
       }
     } catch (error) {
       console.error('获取算法列表失败', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -732,8 +735,10 @@ const NLPScoringManagement = () => {
       if (perfRes.code === 0) setPerformanceAnalysis(perfRes.data);
       if (suggestionsRes.code === 0) setOptimizationSuggestions(suggestionsRes.data);
       if (configRes.code === 0) setOptimizerConfig(configRes.data);
+      setLoadError(false);
     } catch (error) {
       console.error('获取分析数据失败:', error);
+      setLoadError(true);
     } finally {
       setIsLoadingAnalysis(false);
     }
@@ -864,6 +869,12 @@ const NLPScoringManagement = () => {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className='flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>算法/分析数据加载失败，部分功能可能不可用，请刷新重试</p>
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">

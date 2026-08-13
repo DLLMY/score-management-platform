@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
-import { Plus, Edit2, Trash2, Clock, AlertCircle, CheckCircle, Save, X, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, AlertCircle, CheckCircle, Save, X, Search, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useForm, useModal } from '../hooks';
 import { useStableToast } from '../hooks/useStableToast';
@@ -59,6 +59,7 @@ const TimeRuleList: React.FC = () => {
   const { showToast } = useStableToast();
   const [rules, setRules] = useState<TimeRule[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<TimeRule | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -106,8 +107,10 @@ const TimeRuleList: React.FC = () => {
     try {
       const response = await api.timeRules.getAll();
       setRules(response);
+      setLoadError(false);
     } catch (error: unknown) {
       console.error('获取时间规则失败:', error);
+      setLoadError(true);
     }
     setLoading(false);
   }, []);
@@ -219,6 +222,12 @@ const TimeRuleList: React.FC = () => {
 
   return (
     <div className='space-y-6'>
+      {loadError && (
+        <div className='flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>时间规则加载失败，当前列表可能不完整，请刷新重试</p>
+        </div>
+      )}
       <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
         <div className='flex items-center gap-3'>
           <div className='p-3 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-xl'>

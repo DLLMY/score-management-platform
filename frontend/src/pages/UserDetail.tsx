@@ -1,21 +1,6 @@
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  User as UserIcon,
-  Phone,
-  BookOpen,
-  CreditCard,
-  Award,
-  History,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  RefreshCw,
-  X,
-  Plus,
-  Minus,
-} from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus, AlertTriangle } from 'lucide-react';
 import api, { ScoreRecordItem } from '../services/api';
 import { User } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
@@ -38,6 +23,7 @@ function UserDetail() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [records, setRecords] = useState<ScoreRecordItem[]>([]);
+  const [recordsError, setRecordsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showScoreModal, setShowScoreModal] = useState<boolean>(false);
@@ -60,8 +46,10 @@ function UserDetail() {
     try {
       const data = await api.records.getByUser(Number(id));
       setRecords(data.reverse());
+      setRecordsError(false);
     } catch (err: unknown) {
       console.error('获取记录失败:', err);
+      setRecordsError(true);
     }
   }, [id]);
 
@@ -350,7 +338,12 @@ function UserDetail() {
               </div>
             </div>
             <div className='card-body'>
-              {records.length === 0 ? (
+              {recordsError ? (
+                <div className='flex items-center gap-2 p-4 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+                  <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+                  <p className='text-sm text-amber-700 dark:text-amber-300'>积分记录加载失败，请返回重试</p>
+                </div>
+              ) : records.length === 0 ? (
                 <EmptyState
                   icon='file'
                   title='暂无积分变动记录'

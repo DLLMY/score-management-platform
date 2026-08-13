@@ -14,6 +14,7 @@ import {
   XCircle,
   RefreshCw,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import api from '../services/api';
 import { useForm, useModal, useConfirmDialog } from '../hooks';
@@ -101,6 +102,8 @@ function DeviceGroupPage() {
   const [groupDevices, setGroupDevices] = useState<DeviceInGroup[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  // 数据加载失败标记（分组/统计/设备任一失败置位）
+  const [loadError, setLoadError] = useState<boolean>(false);
   
   // Selected devices for adding to group
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
@@ -144,8 +147,10 @@ function DeviceGroupPage() {
     try {
       const data = await api.deviceGroup.getAll();
       setGroups(data || []);
+      setLoadError(false);
     } catch (error) {
       console.error('获取分组列表失败:', error);
+      setLoadError(true);
     }
   }, []);
   
@@ -153,8 +158,10 @@ function DeviceGroupPage() {
     try {
       const data = await api.deviceGroup.getStats();
       setStats(Array.isArray(data) ? data : []);
+      setLoadError(false);
     } catch (error) {
       console.error('获取分组统计失败:', error);
+      setLoadError(true);
     }
   }, []);
   
@@ -163,8 +170,10 @@ function DeviceGroupPage() {
       const data = await api.deviceGroup.getById(groupId);
       setSelectedGroup(data);
       setGroupDevices(data.devices || []);
+      setLoadError(false);
     } catch (error) {
       console.error('获取分组设备失败:', error);
+      setLoadError(true);
     }
   }, []);
   
@@ -172,8 +181,10 @@ function DeviceGroupPage() {
     try {
       const data = await api.devices.getAll();
       setDevices(data.devices || []);
+      setLoadError(false);
     } catch (error) {
       console.error('获取设备列表失败:', error);
+      setLoadError(true);
     }
   }, []);
   
@@ -323,6 +334,14 @@ function DeviceGroupPage() {
   
   return (
     <div className='space-y-6'>
+      {loadError && (
+        <div className='flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            分组/设备数据加载失败，当前列表可能不完整，请刷新重试
+          </p>
+        </div>
+      )}
       {/* Header */}
       <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
         <div>

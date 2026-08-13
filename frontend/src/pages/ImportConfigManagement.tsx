@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Modal, Form, Input, Select, Switch, Tag } from 'antd';
-import { Plus, Edit2, Trash2, CheckCircle, XCircle, Settings, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, CheckCircle, XCircle, Settings, FileText, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import type { ImportConfig, FieldMapping, ValidationRule } from '../services/api';
@@ -116,6 +116,7 @@ const defaultMappings: Record<string, FieldMappingUI[]> = {
 const ImportConfigManagement: React.FC = () => {
   const [configs, setConfigs] = useState<ImportConfig[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ImportConfig | null>(null);
   const [form] = Form.useForm();
@@ -134,9 +135,11 @@ const ImportConfigManagement: React.FC = () => {
       const response = await api.importConfig.list();
       if (response) {
         setConfigs(response);
+        setLoadError(false);
       }
     } catch (error) {
       console.error('获取导入配置失败:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -342,6 +345,12 @@ const ImportConfigManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 p-4 md:p-6">
+      {loadError && (
+        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">导入配置加载失败，当前列表可能不完整，请刷新重试</p>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
@@ -390,7 +399,7 @@ const ImportConfigManagement: React.FC = () => {
         onOk={handleSubmit}
         onCancel={() => setShowModal(false)}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <div className="grid grid-cols-2 gap-4">

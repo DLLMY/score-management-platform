@@ -123,6 +123,8 @@ function RemoteNotify() {
   // 模板相关状态
   const [templates, setTemplates] = useState<NotifyTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<NotifyTemplate | null>(null);
+  // 数据加载失败标记（模板/定时/历史任一失败置位，页面显示警示条而非空态误导）
+  const [loadError, setLoadError] = useState(false);
 
   // 班级实时上课状态（用于下发前的拦截提示；scope 必须对应后端判定口径）
   const nowDeviceId = mode === 'device' ? form.device_id : mode === 'score_change' ? scoreForm.device_id : undefined;
@@ -242,8 +244,10 @@ function RemoteNotify() {
     try {
       const data = await api.notifyTemplates.getAll();
       setTemplates(data);
+      setLoadError(false);
     } catch (error) {
       console.error('加载模板失败:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -251,8 +255,10 @@ function RemoteNotify() {
     try {
       const data = await api.scheduledNotify.getAll();
       setScheduledNotifications(data);
+      setLoadError(false);
     } catch (error) {
       console.error('加载定时通知失败:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -269,8 +275,10 @@ function RemoteNotify() {
       const result = await api.notifyHistory.getAll(params);
       setHistoryData(result.data);
       setHistoryTotal(result.total);
+      setLoadError(false);
     } catch (error) {
       console.error('加载历史记录失败:', error);
+      setLoadError(true);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -280,8 +288,10 @@ function RemoteNotify() {
     try {
       const stats = await api.notifyHistory.getStats();
       setHistoryStats(stats);
+      setLoadError(false);
     } catch (error) {
       console.error('加载统计数据失败:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -557,6 +567,14 @@ function RemoteNotify() {
 
   return (
     <div className='max-w-6xl mx-auto'>
+      {loadError && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            部分数据加载失败（模板/定时通知/历史记录），当前列表可能不完整，请刷新重试
+          </p>
+        </div>
+      )}
       <div className='flex items-center justify-between mb-6'>
         <div>
           <h1 className='text-2xl font-bold text-gray-800 dark:text-white'>远程通知</h1>

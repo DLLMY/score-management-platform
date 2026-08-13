@@ -1,23 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useForm, useModal, useConfirmDialog } from '../hooks';
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  Download,
-  Upload,
-  AlertCircle,
-  X,
-  RefreshCw,
-  FileJson,
-  FileSpreadsheet,
-  Sliders,
-  Info,
-  Filter,
-  LayoutTemplate,
-  Check,
-} from 'lucide-react';
+import { Plus, Edit2, Trash2, Download, Upload, AlertCircle, X, RefreshCw, FileJson, FileSpreadsheet, Sliders, Info, Filter, LayoutTemplate, Check, AlertTriangle } from 'lucide-react';
 import api, { request } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { validateForm } from '../utils/validation';
@@ -89,6 +73,7 @@ interface RuleTemplate {
 function RuleList() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -156,8 +141,10 @@ function RuleList() {
     try {
       const data = await api.scoreCategories.getAll();
       setCategories(data);
+      setLoadError(false);
     } catch (err) {
       console.error('获取分类失败:', err);
+      setLoadError(true);
     }
   }, []);
 
@@ -200,9 +187,11 @@ function RuleList() {
       }) as { success?: boolean; templates?: unknown[] };
       if (data.success) {
         setTemplates(data.templates || []);
+        setLoadError(false);
       }
     } catch (err) {
       console.error('获取规则模板失败:', err);
+      setLoadError(true);
     }
   }, []);
 
@@ -433,6 +422,12 @@ function RuleList() {
 
   return (
     <div className='max-w-7xl mx-auto'>
+      {loadError && !error && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>分类/模板数据加载失败，部分功能可能不可用，请刷新重试</p>
+        </div>
+      )}
       <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-7'>
         <div className='flex items-center gap-4'>
           <div className='w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/30'>

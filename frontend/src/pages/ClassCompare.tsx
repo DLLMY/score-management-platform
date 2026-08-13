@@ -11,17 +11,7 @@ import {
   Line,
   Legend,
 } from 'recharts';
-import {
-  Users,
-  Award,
-  TrendingDown,
-  Activity,
-  LockOpen,
-  BarChart3,
-  RefreshCw,
-  CheckCircle,
-  Circle,
-} from 'lucide-react';
+import { Users, Award, TrendingDown, Activity, LockOpen, BarChart3, RefreshCw, CheckCircle, Circle, AlertTriangle } from 'lucide-react';
 import api, { ClassInfo } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton } from '../components';
@@ -60,6 +50,7 @@ function ClassCompare() {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [compareData, setCompareData] = useState<ClassCompareData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const { showToast } = useStableToast();
 
   const fetchClasses = useCallback(async () => {
@@ -67,9 +58,11 @@ function ClassCompare() {
       const result = await api.classes.getAll();
       if (result.classes) {
         setClasses(result.classes);
+        setLoadError(false);
       }
     } catch (err: unknown) {
       console.error('获取班级列表失败:', err);
+      setLoadError(true);
     }
   }, []);
 
@@ -144,6 +137,12 @@ function ClassCompare() {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>班级列表加载失败，请刷新重试</p>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">班级对比分析</h1>

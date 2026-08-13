@@ -1,19 +1,5 @@
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent } from 'react';
-import {
-  User,
-  Mail,
-  Phone,
-  Shield,
-  Globe,
-  Calendar,
-  Edit2,
-  Save,
-  Check,
-  ChevronRight,
-  Key,
-  RefreshCw,
-  LucideIcon,
-} from 'lucide-react';
+import { User, Mail, Phone, Shield, Globe, Calendar, Edit2, Save, Check, ChevronRight, Key, RefreshCw, LucideIcon, AlertTriangle } from 'lucide-react';
 import { Card, Modal, PermissionButton, Skeleton } from '../components';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
@@ -70,6 +56,7 @@ function Profile() {
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('profile');
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
 
   const adminId: number = Number(localStorage.getItem('adminId')) || 1;
@@ -122,6 +109,7 @@ function Profile() {
           ? new Date(data.created_at).toLocaleDateString('zh-CN')
           : prev.joinedAt,
       }));
+      setLoadError(false);
       setEditForm({
         real_name: data.real_name || '',
         phone: data.phone || '',
@@ -129,6 +117,7 @@ function Profile() {
       });
     } catch (error) {
       console.error('加载管理员信息失败:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -260,6 +249,12 @@ function Profile() {
 
   return (
     <div className='max-w-4xl mx-auto'>
+      {loadError && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>个人信息加载失败，当前展示可能不完整，请刷新重试</p>
+        </div>
+      )}
       <div className='flex items-center gap-4 mb-7'>
         <div className='w-12 h-12 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/30'>
           <User className='w-6 h-6 text-white' />

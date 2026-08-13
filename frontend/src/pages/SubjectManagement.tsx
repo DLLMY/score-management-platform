@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Edit2, Trash2, BookOpen, X, Check, GraduationCap, Layers, Palette, Link2, Users, Minus, School, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, BookOpen, X, Check, GraduationCap, Layers, Palette, Link2, Users, Minus, School, ToggleLeft, ToggleRight, RefreshCw, AlertTriangle } from 'lucide-react';
 import api, { Subject, SubjectClassLink, ClassInfo, getAuthHeaders } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, SearchFilter } from '../components';
@@ -48,6 +48,8 @@ function SubjectManagementPage() {
   const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  // 数据加载失败标记（科目/教师/班级/关联任一失败置位）
+  const [loadError, setLoadError] = useState<boolean>(false);
   const { showToast } = useStableToast();
   const showToastRef = useRef(showToast);
   
@@ -129,8 +131,10 @@ function SubjectManagementPage() {
       const data = await api.subjects.getAll({ include_inactive: includeInactive, skipCache }) as Subject[];
       const subjectArray = Array.isArray(data) ? data : [];
       setSubjects(subjectArray);
+      setLoadError(false);
     } catch (error) {
       console.error('获取科目列表失败:', error);
+      setLoadError(true);
       showToastRef.current('error', '获取科目列表失败');
     } finally {
       setIsLoading(false);
@@ -168,8 +172,10 @@ function SubjectManagementPage() {
         real_name: a.real_name || a.username,
         username: a.username,
       })));
+      setLoadError(false);
     } catch (error) {
       console.error('获取教师列表失败:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -178,8 +184,10 @@ function SubjectManagementPage() {
       const data = await api.classes.getAll();
       const classList = (data as { classes?: ClassInfo[] }).classes || data || [];
       setAllClasses(Array.isArray(classList) ? classList : []);
+      setLoadError(false);
     } catch (error) {
       console.error('获取班级列表失败:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -187,8 +195,10 @@ function SubjectManagementPage() {
     try {
       const result = await api.subjects.getClasses(subjectId);
       setSubjectClasses(result.classes || []);
+      setLoadError(false);
     } catch (error) {
       console.error('获取科目关联班级失败:', error);
+      setLoadError(true);
       setSubjectClasses([]);
     }
   }, []);
@@ -364,6 +374,14 @@ function SubjectManagementPage() {
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
+      {loadError && (
+        <div className='px-6 py-3 bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200 dark:border-amber-500/30 flex items-center gap-2'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            科目/教师/班级数据加载失败，当前数据可能不完整，请刷新重试
+          </p>
+        </div>
+      )}
       {/* Header */}
       <div className='px-6 py-5 border-b border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm'>
         <div className='flex items-center justify-between'>
