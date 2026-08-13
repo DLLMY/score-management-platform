@@ -808,6 +808,28 @@ export interface BatchRiskPredictData {
   risks: RiskPredictResult[];
 }
 
+export interface ScoreAttributionFactor {
+  key: string;
+  name: string;
+  contribution: number;
+  direction: 'positive' | 'negative' | 'neutral';
+  delta: number;
+  detail: string;
+}
+
+export interface ScoreAttributionResult {
+  user_id?: number;
+  name: string;
+  class_name?: string;
+  has_data: boolean;
+  total_change: number;
+  score_before: number;
+  score_after: number;
+  confidence: number;
+  factors: ScoreAttributionFactor[];
+  summary: string;
+}
+
 export interface ModelTrainingResult {
   status: string;
   message: string;

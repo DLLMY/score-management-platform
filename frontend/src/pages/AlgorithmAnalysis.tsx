@@ -14,7 +14,7 @@ import {
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton } from '../components';
-import { AlgorithmStatistics, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, RiskStudent, ModelEvaluationResult, PredictionResult, ScorePredictResult, RiskPredictResult, AnomalyResult } from '../types';
+import { AlgorithmStatistics, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, RiskStudent, ModelEvaluationResult, PredictionResult, ScorePredictResult, RiskPredictResult, AnomalyResult, ScoreAttributionResult } from '../types';
 
 const TABS = [
   { id: 'statistics', label: '统计分析', icon: BarChart3 },
@@ -94,6 +94,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     sudden?: AnomalyResult;
     trend?: AnomalyResult;
     group?: AnomalyResult;
+    attribution?: ScoreAttributionResult;
   } | null>(null);
 
   // 使用 useMemo 优化过滤逻辑
@@ -318,7 +319,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     setProfileLoading(true);
     setProfileError(null);
     try {
-      const [prediction, scorePredict, riskPredict, anomaly, sudden, trend, group] = await Promise.all([
+      const [prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution] = await Promise.all([
         api.algorithm.getPrediction(userId, predictionDays),
         api.algorithm.getScorePredict(userId, recommendDays),
         api.algorithm.getRiskPredict(userId, recommendDays),
@@ -326,8 +327,9 @@ export default function AlgorithmAnalysis(): React.ReactElement {
         api.algorithm.getSuddenChange(userId, anomalyDays),
         api.algorithm.getTrendAnomaly(userId, anomalyDays),
         api.algorithm.getGroupAnomaly(userId, anomalyDays),
+        api.algorithm.getScoreAttribution(userId, recommendDays),
       ]);
-      setStudentProfile({ prediction, scorePredict, riskPredict, anomaly, sudden, trend, group });
+      setStudentProfile({ prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution });
     } catch (err) {
       console.error('加载学生画像失败:', err);
       const msg = err instanceof Error ? err.message : '加载学生画像失败';
@@ -2066,6 +2068,62 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                 {renderAnomalyCard('群体偏离', studentProfile.group)}
               </div>
             </div>
+
+            {/* 成绩波动归因 */}
+            {(() => {
+              const attr = studentProfile.attribution;
+              if (!attr || !attr.has_data) {
+                return (
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2 mb-2">
+                      <LineChart className="w-5 h-5 text-purple-500" />
+                      成绩波动归因
+                    </h4>
+                    <p className="text-sm text-gray-400">{attr?.summary || '暂无归因数据'}</p>
+                  </div>
+                );
+              }
+              const maxAbs = Math.max(1, ...attr.factors.map((f) => Math.abs(f.contribution)));
+              return (
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+                  <h4 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2 mb-4">
+                    <LineChart className="w-5 h-5 text-purple-500" />
+                    成绩波动归因
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">{attr.summary}</p>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm mt-2">
+                    <span className="text-gray-500 dark:text-slate-400">
+                      前期 <b className="text-gray-800 dark:text-white">{attr.score_before.toFixed(1)}</b>
+                      {' → '}近期 <b className="text-gray-800 dark:text-white">{attr.score_after.toFixed(1)}</b>
+                    </span>
+                    <span className={`font-medium ${attr.total_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      净变化 {attr.total_change >= 0 ? '+' : ''}{attr.total_change.toFixed(1)}
+                    </span>
+                    <span className="text-gray-400">置信度 {(attr.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="space-y-3 mt-4">
+                    {attr.factors.map((f) => {
+                      const widthPct = Math.min(100, (Math.abs(f.contribution) / maxAbs) * 100);
+                      const color = f.direction === 'positive' ? 'bg-green-500' : f.direction === 'negative' ? 'bg-red-500' : 'bg-gray-400';
+                      return (
+                        <div key={f.key}>
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="font-medium text-gray-700 dark:text-slate-300">{f.name}</span>
+                            <span className={`font-medium ${f.direction === 'positive' ? 'text-green-600' : f.direction === 'negative' ? 'text-red-600' : 'text-gray-500'}`}>
+                              {f.contribution >= 0 ? '+' : ''}{f.contribution.toFixed(1)} 分
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                            <div className={`${color} h-2 rounded-full`} style={{ width: `${widthPct}%` }} />
+                          </div>
+                          {f.detail && <p className="text-xs text-gray-400 mt-1">{f.detail}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

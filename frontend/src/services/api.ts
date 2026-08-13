@@ -4,7 +4,7 @@ import { coalesceRequest, invalidateRequestCache } from '../utils/requestCoalesc
 import { performanceMonitor } from '../utils/performanceMonitor';
 import { errorMonitor } from '../utils/errorMonitor';
 import { performanceReportingService } from '../services/performanceReportingService';
-import { Admin, Device, DevicePaginatedResponse, User, UserCreateInput, UserUpdateInput, UserPaginatedResponse, Notification, AlgorithmStatistics, ClusterData, WarningData, AlgorithmData, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, ModelTrainingResult, ModelEvaluationResult, RiskStudent, PredictionResult, AnomalyResult, ScorePredictResult, RiskPredictResult, ExamAnalysis, ClassAnalysis, StudentScoreAnalysis, SeatingChart, SeatingChartCreateInput, DutyGroup, DutyGroupCreateInput, DutyAssignment, CommitteeCreateInput, ClassCommittee, ParentContact, ParentContactCreateInput, ContactLog, HomeworkAssignment, HomeworkCreateInput, Attendance, AttendanceRecordInput, AttendanceStats, LeaveApplyInput, LeaveApplication, StudyGroup, StudyGroupCreateInput, MentalHealthRecord, MentalHealthRecordCreateInput, MentalHealthAlert, Activity, ActivityCreateInput, CultureRecord, CultureCreateInput, StudyGuide, StudyGuideCreateInput, ImprovementPlan, ImprovementPlanCreateInput } from '../types';
+import { Admin, Device, DevicePaginatedResponse, User, UserCreateInput, UserUpdateInput, UserPaginatedResponse, Notification, AlgorithmStatistics, ClusterData, WarningData, AlgorithmData, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, ModelTrainingResult, ModelEvaluationResult, RiskStudent, PredictionResult, AnomalyResult, ScorePredictResult, RiskPredictResult, ScoreAttributionResult, ExamAnalysis, ClassAnalysis, StudentScoreAnalysis, SeatingChart, SeatingChartCreateInput, DutyGroup, DutyGroupCreateInput, DutyAssignment, CommitteeCreateInput, ClassCommittee, ParentContact, ParentContactCreateInput, ContactLog, HomeworkAssignment, HomeworkCreateInput, Attendance, AttendanceRecordInput, AttendanceStats, LeaveApplyInput, LeaveApplication, StudyGroup, StudyGroupCreateInput, MentalHealthRecord, MentalHealthRecordCreateInput, MentalHealthAlert, Activity, ActivityCreateInput, CultureRecord, CultureCreateInput, StudyGuide, StudyGuideCreateInput, ImprovementPlan, ImprovementPlanCreateInput } from '../types';
 import { config, getApiUrl, getCacheTtlByUrl } from '../config';
 
 // 从统一配置模块读取API基础路径
@@ -1840,6 +1840,7 @@ export interface Api {
 
     // 风险预警系统增强
     getRiskPredict: (userId: number, days?: number) => Promise<RiskPredictResult>;
+    getScoreAttribution: (userId: number, days?: number) => Promise<ScoreAttributionResult>;
     getBatchRiskPredict: (className?: string, days?: number) => Promise<BatchRiskPredictData>;
     getHighRiskStudents: (days?: number) => Promise<RiskStudent[]>;
     trainRiskPredictModel: (days?: number) => Promise<ModelTrainingResult>;
@@ -2372,6 +2373,28 @@ const normalizeUserScorePredict = (raw?: any): ScorePredictResult => {
     confidence: toNumSafe(raw?.confidence),
   };
 };
+
+const normalizeScoreAttribution = (raw?: any): ScoreAttributionResult => ({
+  user_id: raw?.user_id,
+  name: raw?.name ?? '',
+  class_name: raw?.class_name ?? '',
+  has_data: !!raw?.has_data,
+  total_change: toNumSafe(raw?.total_change),
+  score_before: toNumSafe(raw?.score_before),
+  score_after: toNumSafe(raw?.score_after),
+  confidence: toNumSafe(raw?.confidence),
+  factors: Array.isArray(raw?.factors)
+    ? raw.factors.map((f: any) => ({
+        key: f?.key ?? '',
+        name: f?.name ?? '',
+        contribution: toNumSafe(f?.contribution),
+        direction: f?.direction === 'positive' || f?.direction === 'negative' ? f.direction : 'neutral',
+        delta: toNumSafe(f?.delta),
+        detail: f?.detail ?? '',
+      }))
+    : [],
+  summary: raw?.summary ?? '',
+});
 
 const normalizeUserRiskPredict = (raw?: any): RiskPredictResult => {
   const factors = Array.isArray(raw?.risk_factors) ? raw!.risk_factors! : [];
@@ -3344,6 +3367,10 @@ const api: Api = {
     getRiskPredict: async (userId: number, days = 30) => {
       const raw = (await request(`/api/algorithm/risk-predict/${userId}?days=${days}`)) as any;
       return normalizeUserRiskPredict(raw);
+    },
+    getScoreAttribution: async (userId: number, days = 30) => {
+      const raw = (await request(`/api/algorithm/attribution/${userId}?days=${days}`)) as any;
+      return normalizeScoreAttribution(raw);
     },
     getBatchRiskPredict: async (className?: string, days = 30) => {
       const params = new URLSearchParams();

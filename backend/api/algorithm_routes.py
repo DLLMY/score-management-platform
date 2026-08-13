@@ -11,6 +11,7 @@ from services.anomaly_service import AnomalyService
 from services.rule_recommendation_service import RuleRecommendationService
 from services.score_predict_service import ScorePredictService
 from services.risk_predict_service import RiskPredictService
+from services.attribution_service import AttributionService
 from services.rule_engine_service import RuleExecutionEngine
 from services.score_distribution_service import ScoreDistributionController, ScoreValidator
 from services.score_ecosystem_service import ScoreEcosystem
@@ -564,6 +565,25 @@ class ScorePredict(Resource):
         days = int(request.args.get("days", 30))
         try:
             result = ScorePredictService.predict_exam_score(user_id, days)  # noqa: F841
+            return APIResponse.success(data=result, message="success")
+        except Exception as e:
+            return APIResponse.error(message=str(e))
+
+
+@ns_algorithm.route("/attribution/<int:user_id>")
+@ns_algorithm.param("user_id", "用户ID")
+class ScoreAttribution(Resource):
+    @ns_algorithm.doc("get_score_attribution", description="成绩波动归因分析")
+    @ns_algorithm.param("days", "统计天数，默认30")
+    @ns_algorithm.response(200, "成功")
+    @requires_permission("algorithm.view")
+    def get(self, user_id):
+        """
+        分析学生成绩波动归因（近期 vs 前期：学业成绩/行为积分/出勤/作业完成）
+        """
+        days = int(request.args.get("days", 30))
+        try:
+            result = AttributionService.analyze_score_attribution(user_id, days)
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))
