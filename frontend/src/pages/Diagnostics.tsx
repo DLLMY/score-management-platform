@@ -416,7 +416,7 @@ export const DiagnosticsPage: React.FC = () => {
       setHealthData(data);
       setLoadError(false);
     } catch (error) {
-      console.error('Failed to fetch health data:', error);
+      console.warn('Failed to fetch health data:', error);
       setLoadError(true);
     }
   }, []);
@@ -432,7 +432,7 @@ export const DiagnosticsPage: React.FC = () => {
       setPerformanceData(data);
       setLoadError(false);
     } catch (error) {
-      console.error('Failed to fetch performance data:', error);
+      console.warn('Failed to fetch performance data:', error);
       setLoadError(true);
     }
   }, []);
@@ -448,7 +448,7 @@ export const DiagnosticsPage: React.FC = () => {
       setErrorData(data);
       setLoadError(false);
     } catch (error) {
-      console.error('Failed to fetch error data:', error);
+      console.warn('Failed to fetch error data:', error);
       setLoadError(true);
     }
   }, []);
@@ -464,7 +464,7 @@ export const DiagnosticsPage: React.FC = () => {
       setSystemData(data);
       setLoadError(false);
     } catch (error) {
-      console.error('Failed to fetch system data:', error);
+      console.warn('Failed to fetch system data:', error);
       setLoadError(true);
     }
   }, []);

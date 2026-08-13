@@ -366,7 +366,10 @@ const getErrorMessage = (status: number, errorData: unknown): string => {
 };
 
 const handleApiError = (error: Error, url: string, method: string): ErrorInfo => {
-  console.error(`API Error [${method}] ${url}:`, error);
+  // API 错误是业务常态（超时/4xx/网络），用 warn 记录而非 error——
+  // 避免 errorMonitor 的 console.error 钩子把每个轮询周期失败都当作
+  // 前端错误上报（真实故障已由 errorMonitor.reportApiError 单独上报）。
+  console.warn(`API Error [${method}] ${url}:`, error);
 
   const errorInfo: ErrorInfo = {
     message: error.message,

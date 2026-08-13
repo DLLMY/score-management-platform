@@ -318,7 +318,10 @@ function DeviceManagement() {
         setAlerts((alertsData as { alerts: Alert[] }).alerts || []);
         setLastUpdateTime(new Date());
       } catch (error) {
-        showToast('error', '加载设备失败');
+        // 轮询失败静默（保留旧数据，下轮自动重试）；仅用户手动刷新失败才提示，避免 10s 连弹 toast
+        if (manualRefresh) {
+          showToast('error', '加载设备失败');
+        }
       } finally {
         if (manualRefresh) {
           setIsRefreshing(false);
@@ -463,7 +466,8 @@ function DeviceManagement() {
         setShowOTAProgressModal(false);
       }
     } catch (error) {
-      console.error('获取OTA状态失败:', error);
+      // OTA 状态是 5s 轮询，失败属预期内（后端瞬时不可达），warn 记录避免刷屏
+      console.warn('获取OTA状态失败:', error);
     }
   }, [showOTAProgressModal]);
 

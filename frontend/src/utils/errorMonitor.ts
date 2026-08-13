@@ -22,6 +22,10 @@ class ErrorMonitor {
     'ResizeObserver loop completed with undelivered notifications',
     'Script error.',
   ]);
+  // 同错误去重节流：轮询/重试场景同一错误会高频重复（如后端重启窗口期
+  // /api/devices 超时每 10s 一次），30s 窗口内同 key 只上报一次，避免刷屏。
+  private dedupeWindowMs = 30000;
+  private recentlyReported: Map<string, number> = new Map();
 
   constructor() {
     this.isDev = isDevelopment;
@@ -141,6 +145,41 @@ class ErrorMonitor {
     return this.ignoredErrors.has(message) || this.ignoredErrors.has(String(message).trim());
   }
 
+  /**
+   * 去重节流：同一错误（type+url+method+status+message 摘要）在 dedupeWindowMs 内
+   * 已上报过则跳过（静默，不重复打印/上报），避免轮询风暴刷屏。
+   */
+  private isDuplicated(data: {
+    type: string;
+    message: string;
+    url?: string;
+    method?: string;
+    status?: number;
+  }): boolean {
+    const now = Date.now();
+    const key = [
+      data.type,
+      data.url || '',
+      data.method || '',
+      data.status ?? '',
+      String(data.message).slice(0, 80),
+    ].join('|');
+    const last = this.recentlyReported.get(key);
+    if (last !== undefined && now - last < this.dedupeWindowMs) {
+      return true;
+    }
+    // 定期清理过期 key，避免 Map 无限增长
+    if (this.recentlyReported.size > 200) {
+      for (const [k, ts] of this.recentlyReported) {
+        if (now - ts >= this.dedupeWindowMs) {
+          this.recentlyReported.delete(k);
+        }
+      }
+    }
+    this.recentlyReported.set(key, now);
+    return false;
+  }
+
   reportError(errorData: {
     type: string;
     message: string;
@@ -161,6 +200,11 @@ class ErrorMonitor {
       if (this.isDev) {
         this.originalConsoleError('[ErrorMonitor] 错误上报已达到上限');
       }
+      return;
+    }
+
+    // 同错误 30s 去重：轮询/重试导致的重复错误不再刷屏
+    if (this.isDuplicated(errorData)) {
       return;
     }
 
