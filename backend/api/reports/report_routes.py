@@ -14,6 +14,7 @@ from models import ClassInfo, Exam, Score, User
 from utils.excel_utils import ExcelUtils
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from services.report_summary_service import build_class_summary, summary_to_rows
 
 ns_reports = Namespace("reports", description="报表导出")
 
@@ -86,8 +87,24 @@ class ClassSemesterReport(Resource):
             safe_name = (class_info.name or "班级").replace("/", "_")
             filename = f"{safe_name}_学期报告"
 
+            # 算法摘要（参与度 / 风险 / 归因）：三维各自隔离，失败不影响主表格
+            try:
+                summary = build_class_summary(class_info.name or "", 30)
+                summary_rows = summary_to_rows(summary)
+            except Exception:  # noqa: BLE001 - 摘要只是附加内容，失败不阻塞导出
+                summary_rows = []
+
             if fmt == "csv":
-                content = ExcelUtils.export_to_csv(rows, headers)
+                body = ExcelUtils.export_to_csv(rows, headers)
+                if summary_rows:
+                    meta_text = "\n".join(
+                        "# " + ",".join(str(c) for c in row) for row in summary_rows
+                    )
+                    # BOM 放文件最开头；meta 用无 BOM UTF-8；正文剥离自带 BOM 后拼接
+                    body_text = body.decode("utf-8-sig")
+                    content = ("\ufeff" + meta_text + "\n\n" + body_text).encode("utf-8")
+                else:
+                    content = body
                 return send_file(
                     BytesIO(content),
                     mimetype="text/csv",
@@ -95,7 +112,13 @@ class ClassSemesterReport(Resource):
                     download_name=f"{filename}.csv",
                 )
 
-            sheets = [{"name": "学期报告", "headers": headers, "data": rows}]
+            sheets = [
+                {"name": "学期报告", "headers": headers, "data": rows},
+            ]
+            if summary_rows:
+                sheets.append(
+                    {"name": "算法摘要", "headers": ["项目", "内容"], "data": summary_rows}
+                )
             content = ExcelUtils.export_to_excel(sheets)
             return send_file(
                 BytesIO(content),
