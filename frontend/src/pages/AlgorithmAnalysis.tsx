@@ -1935,12 +1935,45 @@ export default function AlgorithmAnalysis(): React.ReactElement {
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 bg-purple-50/60 dark:bg-purple-500/10 rounded-lg p-4">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-500" />
-            <span className="text-sm text-gray-700 dark:text-slate-300">当前班级:</span>
-            <span className="font-medium text-gray-800 dark:text-white">{selectedClass || '全部班级'}</span>
+            <label
+              htmlFor="batch-attribution-class"
+              className="text-sm text-gray-700 dark:text-slate-300 whitespace-nowrap"
+            >
+              选择班级:
+            </label>
+            <select
+              id="batch-attribution-class"
+              data-testid="batch-attribution-class-select"
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="px-3 py-1.5 rounded border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[140px]"
+            >
+              <option value="">全部班级</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.name}>{cls.name}</option>
+              ))}
+            </select>
+            {selectedClass && (
+              <button
+                type="button"
+                onClick={() => setSelectedClass('')}
+                className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
+                title="清除选择"
+              >
+                清除
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-700 dark:text-slate-300">归因窗口(天):</span>
+            <label
+              htmlFor="batch-attribution-days"
+              className="text-sm text-gray-700 dark:text-slate-300 whitespace-nowrap"
+            >
+              归因窗口(天):
+            </label>
             <input
+              id="batch-attribution-days"
+              data-testid="batch-attribution-days-input"
               type="number"
               min={7}
               max={180}
@@ -1965,7 +1998,10 @@ export default function AlgorithmAnalysis(): React.ReactElement {
         {!selectedClass && !batchAttributionLoading && (
           <div className="text-center py-12 text-gray-500 dark:text-slate-400">
             <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p className="text-sm">请先在上方选择班级</p>
+            <p className="text-sm">请先在上方【选择班级】下拉框中选择班级后开始归因</p>
+            <p className="text-xs mt-2 text-gray-400 dark:text-slate-500">
+              （页面顶部"班级"下拉框与此处同效，二选一即可）
+            </p>
           </div>
         )}
 
@@ -2472,16 +2508,21 @@ export default function AlgorithmAnalysis(): React.ReactElement {
               className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <select
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">全部班级</option>
-            {classes.map((cls) => (
-              <option key={cls.id} value={cls.name}>{cls.name}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-slate-400 hidden sm:inline">班级:</span>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              aria-label="按班级筛选"
+              data-testid="global-class-filter"
+              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">全部班级</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.name}>{cls.name}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={() => {
               if (activeTab === 'prediction') loadPrediction();
