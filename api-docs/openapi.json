@@ -102,13 +102,13 @@
           "type": "integer"
         }
       ],
-      "post": {
+      "delete": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "post_activity_register",
+        "operationId": "delete_activity_register",
         "parameters": [
           {
             "name": "payload",
@@ -123,13 +123,13 @@
           "activity"
         ]
       },
-      "delete": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "delete_activity_register",
+        "operationId": "post_activity_register",
         "parameters": [
           {
             "name": "payload",
@@ -1120,6 +1120,67 @@
         ]
       }
     },
+    "/algorithm/attribution/batch": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "批量分析某班级全部学生的成绩波动归因（近期 vs 前期：",
+        "description": "批量成绩波动归因分析\n学业成绩/行为积分/出勤/作业完成）。单生异常被隔离，不影响整体。",
+        "operationId": "get_batch_score_attribution",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "统计天数，默认30",
+            "name": "days",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "班级名称(可选)",
+            "name": "class_name",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "algorithm"
+        ]
+      }
+    },
+    "/algorithm/attribution/{user_id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "description": "用户ID",
+          "name": "user_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "分析学生成绩波动归因（近期 vs 前期：学业成绩/行为积分/出勤/作业完成）",
+        "description": "成绩波动归因分析",
+        "operationId": "get_score_attribution",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "统计天数，默认30",
+            "name": "days",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "algorithm"
+        ]
+      }
+    },
     "/algorithm/cluster": {
       "get": {
         "responses": {
@@ -1302,6 +1363,134 @@
         "summary": "获取单个学生的综合评分",
         "description": "获取单个学生的综合评分",
         "operationId": "get_composite_score_by_user",
+        "tags": [
+          "algorithm"
+        ]
+      }
+    },
+    "/algorithm/engagement/batch": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "批量计算某班级（或全部）学生的参与度指数并排名。",
+        "description": "批量计算班级参与度排名\n单生异常被隔离进 failed_students，不影响整体。",
+        "operationId": "get_batch_engagement",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "统计天数，默认30",
+            "name": "days",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "班级名称(可选)",
+            "name": "class_name",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "algorithm"
+        ]
+      }
+    },
+    "/algorithm/engagement/{user_id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "description": "用户ID",
+          "name": "user_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取学生参与度指数（0-100）",
+        "description": "获取学生参与度指数\n综合出勤率、作业提交率、积分活跃度与请假天数评估。",
+        "operationId": "get_user_engagement",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "历史天数，默认30",
+            "name": "days",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "algorithm"
+        ]
+      }
+    },
+    "/algorithm/engagement/{user_id}/weekly-trend": {
+      "parameters": [
+        {
+          "in": "path",
+          "description": "用户ID",
+          "name": "user_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "获取学生参与度周趋势（由远及近的时间序列，用于折线图展示）。",
+        "description": "获取学生参与度周趋势",
+        "operationId": "get_user_engagement_trend",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "历史周数，默认8",
+            "name": "weeks",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "algorithm"
+        ]
+      }
+    },
+    "/algorithm/export": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Excel 文件流"
+          }
+        },
+        "summary": "按 tab 导出对应算法分析结果为 xlsx。",
+        "description": "导出算法分析结果为 Excel（参与度/归因/风险）\n- engagement: 参与度排名榜（排名/参与度/等级/出勤/作业/活跃/请假）\n- attribution: 班级成绩波动归因（成绩变化/主要因子/置信度/状态）\n- risk: 风险评估（总体风险/风险分/风险因素）",
+        "operationId": "get_algorithm_export",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "统计天数，默认30",
+            "name": "days",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "班级名称(可选，为空导出全部)",
+            "name": "class_name",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "导出类型: engagement(参与度排名) / attribution(班级归因) / risk(风险评估)",
+            "name": "tab",
+            "type": "string"
+          }
+        ],
         "tags": [
           "algorithm"
         ]
@@ -9070,27 +9259,6 @@
           "type": "integer"
         }
       ],
-      "post": {
-        "responses": {
-          "404": {
-            "description": "管理员或角色不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "为管理员添加单个角色",
-        "description": "为管理员添加角色",
-        "operationId": "add_admin_role",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
-      },
       "delete": {
         "responses": {
           "404": {
@@ -9103,6 +9271,27 @@
         "summary": "移除管理员的单个角色",
         "description": "移除管理员的角色",
         "operationId": "remove_admin_role",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "post": {
+        "responses": {
+          "404": {
+            "description": "管理员或角色不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "为管理员添加单个角色",
+        "description": "为管理员添加角色",
+        "operationId": "add_admin_role",
         "security": [
           {
             "Bearer": []
@@ -9402,27 +9591,6 @@
           "type": "string"
         }
       ],
-      "post": {
-        "responses": {
-          "404": {
-            "description": "角色或权限不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "为角色添加单个权限",
-        "description": "为角色添加权限",
-        "operationId": "add_role_permission",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "rbac"
-        ]
-      },
       "delete": {
         "responses": {
           "404": {
@@ -9435,6 +9603,27 @@
         "summary": "移除角色的单个权限",
         "description": "移除角色的权限",
         "operationId": "remove_role_permission",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "post": {
+        "responses": {
+          "404": {
+            "description": "角色或权限不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "为角色添加单个权限",
+        "description": "为角色添加权限",
+        "operationId": "add_role_permission",
         "security": [
           {
             "Bearer": []
@@ -11309,6 +11498,35 @@
         ]
       }
     },
+    "/student/insights": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "将算法洞察反推到学生自助端：聚合「参与度指数 + 风险预测 + 近周积分趋势」。",
+        "description": "获取当前学生的算法洞察聚合（参与度+风险+积分趋势）\n全部复用既有服务（engagement_service / risk_predict_service），单维异常隔离，\n不影响其余维度返回；所有数值均为原生类型，避免 numpy 类型 JSON 序列化失败。",
+        "operationId": "student_insights",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "积分趋势周数，默认8",
+            "name": "weeks",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "参与度/风险统计天数，默认30",
+            "name": "days",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "student"
+        ]
+      }
+    },
     "/student/leaves": {
       "get": {
         "responses": {
@@ -11561,13 +11779,13 @@
           "type": "integer"
         }
       ],
-      "post": {
+      "delete": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "post_group_members",
+        "operationId": "delete_group_members",
         "parameters": [
           {
             "name": "payload",
@@ -11582,13 +11800,13 @@
           "study_group"
         ]
       },
-      "delete": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
           }
         },
-        "operationId": "delete_group_members",
+        "operationId": "post_group_members",
         "parameters": [
           {
             "name": "payload",
@@ -12840,6 +13058,22 @@
           "type": "string"
         }
       ],
+      "delete": {
+        "responses": {
+          "404": {
+            "description": "用户不存在"
+          },
+          "200": {
+            "description": "成功"
+          }
+        },
+        "summary": "从黑名单移除用户",
+        "description": "从黑名单移除用户\n允许指定用户重新使用开锁功能。",
+        "operationId": "remove_from_blacklist",
+        "tags": [
+          "user-management"
+        ]
+      },
       "post": {
         "responses": {
           "404": {
@@ -12862,22 +13096,6 @@
             }
           }
         ],
-        "tags": [
-          "user-management"
-        ]
-      },
-      "delete": {
-        "responses": {
-          "404": {
-            "description": "用户不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "从黑名单移除用户",
-        "description": "从黑名单移除用户\n允许指定用户重新使用开锁功能。",
-        "operationId": "remove_from_blacklist",
         "tags": [
           "user-management"
         ]
