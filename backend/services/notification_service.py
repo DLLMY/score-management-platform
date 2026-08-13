@@ -1,9 +1,12 @@
+import logging
 import requests
 import json
 from datetime import datetime
 from typing import Optional, Dict, List
 from flask import current_app
 from utils.db_session import db_session_scope
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationService:
@@ -70,6 +73,7 @@ class NotificationService:
                 return {"success": False, "message": result.get("errmsg")}
 
         except Exception as e:
+            logger.error(f"send_wechat_notification failed: {e}")
             return {"success": False, "message": str(e)}
 
     @staticmethod
@@ -89,7 +93,8 @@ class NotificationService:
                 return result["access_token"]
             return None
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"_get_wechat_access_token failed: {e}")
             return None
 
     @staticmethod
@@ -118,6 +123,7 @@ class NotificationService:
                 return {"success": False, "message": "不支持的短信提供商"}
 
         except Exception as e:
+            logger.error(f"notification_service error: {e}")
             return {"success": False, "message": str(e)}
 
     @staticmethod
@@ -177,6 +183,7 @@ class NotificationService:
                 return {"success": False, "message": result.get("Message")}
 
         except Exception as e:
+            logger.error(f"notification_service error: {e}")
             return {"success": False, "message": str(e)}
 
     @staticmethod
@@ -210,6 +217,7 @@ def notify_unlock_success(user_id: int, box: str, device_name: str) -> Dict:
         return NotificationService.send_wechat_notification(user_id, template_id, data)
 
     except Exception as e:
+        logger.error(f"notify_unlock_success failed: {e}")
         return {"success": False, "message": str(e)}
 
 
@@ -246,6 +254,7 @@ def notify_unlock_failure(user_id: int, reason: str, score: int) -> Dict:
         return NotificationService.send_wechat_notification(user_id, template_id, data)
 
     except Exception as e:
+        logger.error(f"notification helper failed: {e}")
         return {"success": False, "message": str(e)}
 
 
@@ -278,6 +287,7 @@ def notify_score_change(user_id: int, change: int, reason: str) -> Dict:
         return NotificationService.send_wechat_notification(user_id, template_id, data)
 
     except Exception as e:
+        logger.error(f"notification_service error: {e}")
         return {"success": False, "message": str(e)}
 
 
@@ -302,4 +312,5 @@ def notify_device_offline(device_id: str, device_name: str, admin_ids: List[int]
         return {"success": True, "results": results}
 
     except Exception as e:
+        logger.error(f"notification_service error: {e}")
         return {"success": False, "message": str(e)}
