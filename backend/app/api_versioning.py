@@ -1,6 +1,10 @@
 from flask import Blueprint, jsonify
 from flask_restx import Api
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class APIVersionManager:
 
@@ -120,9 +124,13 @@ def register_v1_routes(api, app):
     # 文件下载蓝图（普通 Blueprint，需独立注册）
     try:
         from api.data.download_routes import download_bp
-        app.register_blueprint(download_bp)
-    except Exception:
-        pass
+        # 开发模式 debug reloader 会执行两次 create_app → 第二次注册名冲突。
+        # 幂等注册：已注册则跳过（此前 except: pass 吞掉冲突，路由实际已在首次注册成功）
+        if "download" not in app.blueprints:
+            app.register_blueprint(download_bp)
+    except Exception as e:
+        # 注册失败静默 = 路由静默 404（此前 FTS except:pass 吞 NameError 的教训）
+        logger.warning(f"download_bp 注册失败: {e}")
 
     from api.monitoring.notifications_routes import ns_notifications
     from api.monitoring.alerts_routes import ns_alerts
@@ -209,25 +217,25 @@ def register_v1_routes(api, app):
     try:
         from api.system.diagnostics_routes import ns_diagnostics
         api.add_namespace(ns_diagnostics)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"diagnostics 命名空间注册失败: {e}")
 
     # 角色与权限相关命名空间（已迁移至 api.users 包）
     try:
         from api.users.roles_routes import ns_roles
         api.add_namespace(ns_roles)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"roles 命名空间注册失败: {e}")
     try:
         from api.users.sub_accounts_routes import ns_sub_accounts
         api.add_namespace(ns_sub_accounts)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"sub_accounts 命名空间注册失败: {e}")
     try:
         from api.users.role_permissions_routes import ns_role_permissions
         api.add_namespace(ns_role_permissions)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"role_permissions 命名空间注册失败: {e}")
 
     # 学生自助端 / 学期报告导出 / 积分排行榜：补齐生产环境路由（route_init.py 已删除，本函数是唯一注册源）
     from api.student.student_routes import ns_student
@@ -243,10 +251,13 @@ def register_v1_routes(api, app):
         from api.system.migration_routes import migration_bp
         from api.system.version_routes import version_bp
 
-        app.register_blueprint(migration_bp)
-        app.register_blueprint(version_bp)
-    except Exception:
-        pass
+        # 幂等注册（开发模式 reloader 两次 create_app 会重复注册）
+        if "migration" not in app.blueprints:
+            app.register_blueprint(migration_bp)
+        if "version" not in app.blueprints:
+            app.register_blueprint(version_bp)
+    except Exception as e:
+        logger.warning(f"migration/version 蓝图注册失败: {e}")
 
 
 api_version_manager.register_version("v1", register_v1_routes)

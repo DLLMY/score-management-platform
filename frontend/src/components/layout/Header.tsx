@@ -120,6 +120,7 @@ function Header() {
   }, []);
 
   const formatTime = useCallback((dateString: string) => {
+    if (!dateString) return '--';
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();

@@ -810,12 +810,8 @@ class DeviceAlertHistory(Resource):
         获取指定设备的所有告警记录。
         """
         device = Device.query.get_or_404(id)
-        alerts = (
-            DeviceAlert.query.filter_by(device_id=device.device_id)
-            .order_by(DeviceAlert.created_at.desc())
-            .limit(50)
-            .all()
-        )
+        base_query = DeviceAlert.query.filter_by(device_id=device.device_id)
+        alerts = base_query.order_by(DeviceAlert.created_at.desc()).limit(50).all()
 
         return APIResponse.success(
             data={
@@ -831,8 +827,9 @@ class DeviceAlertHistory(Resource):
                     }
                     for a in alerts
                 ],
-                "total": len(alerts),
-                "unresolved_count": DeviceAlert.query.filter_by(device_id=device.device_id, is_resolved=False).count(),
+                # total 用真实 count（此前 len(alerts) 被 limit(50) 截断 → 告警>50 时 total 低估）
+                "total": base_query.count(),
+                "unresolved_count": base_query.filter_by(is_resolved=False).count(),
             }
         )
 

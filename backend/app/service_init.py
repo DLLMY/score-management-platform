@@ -75,9 +75,13 @@ def init_mqtt(app):
                 def on_mqtt_message_received(topic, message):
                     try:
                         with app.app_context():
-                            from api.monitoring.mqtt_routes import handle_mqtt_message
+                            # 注意：handle_mqtt_message 在 services.mqtt_message_service（mqtt_routes 的
+                            # register_mqtt_message_handler 注册的也是这个）；api.monitoring.mqtt_routes 里
+                            # 不存在同名函数——此前 import 错符号导致每条 query/unlock 消息 ImportError 被吞，
+                            # 设备刷卡查询/开锁请求永远得不到响应。
+                            from services.mqtt_message_service import mqtt_message_service
 
-                            handle_mqtt_message(None, topic, message)
+                            mqtt_message_service.handle_mqtt_message(None, topic, message)
                     except Exception as e:
                         print(f"处理MQTT消息失败: {e}")
 

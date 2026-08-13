@@ -1878,7 +1878,7 @@ export interface Api {
     updateOrder: (data: Array<{ id: number; order: number }>) => Promise<void>;
   };
   approvals: {
-    getAll: (params?: ScoreRecordParams) => Promise<Approval[]>;
+    getAll: (params?: ScoreRecordParams) => Promise<{ approvals: Approval[]; pagination: { page: number; per_page: number; total: number; pages: number } }>;
     getById: (id: number) => Promise<Approval>;
     create: (data: Partial<Approval>) => Promise<Approval>;
     approve: (id: number, data: { comment?: string }) => Promise<Approval>;
@@ -4266,7 +4266,7 @@ const api: Api = {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) queryParams.append(key, String(value));
       });
-      return request(`/api/approvals?${queryParams.toString()}`) as Promise<Approval[]>;
+      return request(`/api/approvals?${queryParams.toString()}`) as Promise<{ approvals: Approval[]; pagination: { page: number; per_page: number; total: number; pages: number } }>;
     },
     getById: (id) => request(`/api/approvals/${id}`) as Promise<Approval>,
     create: (data) => request('/api/approvals', {

@@ -599,6 +599,7 @@ function Dashboard(): React.ReactElement {
   }, [clearTimeouts]);
 
   const formatDate = (dateString: string): string => {
+    if (!dateString) return '--';
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();

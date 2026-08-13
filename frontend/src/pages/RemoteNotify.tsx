@@ -731,7 +731,7 @@ function RemoteNotify() {
                       </div>
                       <div className='flex items-center gap-2 mt-1'>
                         <Clock className='w-3 h-3 text-gray-400' />
-                        <span className='text-xs text-gray-500'>{new Date(item.next_send_at || item.scheduled_at).toLocaleString('zh-CN')}</span>
+                        <span className='text-xs text-gray-500'>{(item.next_send_at || item.scheduled_at) ? new Date(item.next_send_at || item.scheduled_at).toLocaleString('zh-CN') : '--'}</span>
                         {item.repeat_type !== 'once' && (
                           <span className='text-xs text-primary-500'>{item.repeat_type === 'daily' ? '每天' : item.repeat_type === 'weekly' ? '每周' : '每月'}</span>
                         )}

@@ -720,11 +720,17 @@ class MQTTMessageService:
         try:
             data = json.loads(message)
         except json.JSONDecodeError:
+            # 畸形负载静默丢弃会让设备业务请求无声消失——留痕
+            import logging
+
+            logging.getLogger(__name__).warning(f"MQTT消息JSON解析失败, topic={topic}, payload前120字={message[:120]}")
             return
 
         if topic == "phonebox/query":
             self.handle_query_message(data)
-        elif topic == "phonebox/unlock":
+        elif topic == "phonebox/unlock" or topic.startswith("phonebox/unlock/"):
+            # 订阅是 phonebox/unlock/+（实际主题 phonebox/unlock/{device_id}），
+            # 此前精确匹配 topic == "phonebox/unlock" 永远不命中 → 开锁请求静默丢弃
             self.handle_unlock_message(data)
         elif topic == "phonebox/heartbeat":
             self.handle_heartbeat_message(data)

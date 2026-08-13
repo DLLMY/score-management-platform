@@ -56,10 +56,11 @@ function Approvals() {
       const params: Record<string, unknown> = { page: pagination.page, per_page: pagination.per_page };
       if (filterStatus) params.status = filterStatus;
       const data = await api.approvals.getAll(params);
-      // API返回格式是 { approvals: [...] }
+      // API返回格式是 { approvals: [...], pagination: { total } }
       const approvalsList = Array.isArray(data) ? data : ((data as { approvals?: Approval[] })?.approvals || []);
       setApprovals(approvalsList);
-      setPagination((prev) => ({ ...prev, total: approvalsList.length }));
+      // total 用后端 pagination.total（此前用当前页长度冒充导致分页栏隐藏无法翻页）
+      setPagination((prev) => ({ ...prev, total: (data as { pagination?: { total?: number } }).pagination?.total ?? approvalsList.length }));
     } catch (error) {
       showToast('error', '加载审批失败');
     } finally {
@@ -288,7 +289,7 @@ function Approvals() {
                       </div>
                       <div className='flex items-center gap-1'>
                         <Clock className='w-3 h-3' />
-                        <span>{new Date(approval.created_at).toLocaleString('zh-CN')}</span>
+                        <span>{approval.created_at ? new Date(approval.created_at).toLocaleString('zh-CN') : '--'}</span>
                       </div>
                     </div>
                   </div>

@@ -77,8 +77,12 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
             logger.warning(f"设备 {device.device_id} ({device.name}) 心跳超时，已创建告警")
 
     if alerts_created > 0:
-        db.session.commit()
-        logger.info(f"已提交 {alerts_created} 条心跳超时告警")
+        try:
+            db.session.commit()
+            logger.info(f"已提交 {alerts_created} 条心跳超时告警")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"心跳超时告警提交失败: {e}")
 
     return {
         "timeout_devices": [
@@ -170,7 +174,9 @@ def get_device_heartbeat_status(device_id: str = None) -> dict:
     return {
         "devices": status_list,
         "total": len(status_list),
-        "online": sum(1 for d in status_list if d["status"] == "online"),
-        "offline": sum(1 for d in status_list if d["status"] == "offline"),
+        # online 按 is_timeout 判定：心跳超时但尚未被 30s 任务标 off 的设备不算在线
+        # （此前按陈旧 status 字段汇总，超时设备仍计入在线 → 在线数虚高）
+        "online": sum(1 for d in status_list if d["status"] == "online" and not d["is_timeout"]),
+        "offline": sum(1 for d in status_list if d["status"] == "offline" or d["is_timeout"]),
         "timeout": sum(1 for d in status_list if d["is_timeout"]),
     }

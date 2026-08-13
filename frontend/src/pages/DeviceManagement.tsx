@@ -1197,7 +1197,7 @@ function DeviceManagement() {
                 ) : (
                   heartbeats.map((h) => (
                     <div key={h.id} className='flex items-center justify-between text-sm p-2 bg-gray-50 rounded'>
-                      <span>{new Date(h.timestamp).toLocaleString('zh-CN')}</span>
+                      <span>{h.timestamp ? new Date(h.timestamp).toLocaleString('zh-CN') : '--'}</span>
                       <Badge variant={h.status === 'online' ? 'success' : h.status === 'offline' ? 'danger' : 'default'}>
                         {h.status === 'online' ? '在线' : h.status === 'offline' ? '离线' : (h.status || '未知')}
                       </Badge>

@@ -2,6 +2,7 @@ from celery_app import celery_app
 from datetime import datetime, timedelta
 from config.config_loader import config_loader
 from utils.db_session import db_session_scope
+from services.redis_cache_service import get_cache_service
 
 
 from models import db
@@ -51,20 +52,22 @@ def sync_device_status():
     """
     print(f"[Scheduled Task] 同步设备状态 - {datetime.now()}")
     try:
+        from app import app as flask_app
         from models import Device
 
-        # 检查离线设备（超过5分钟无心跳）
-        offline_threshold = datetime.now() - timedelta(minutes=5)
-        offline_devices = Device.query.filter(
-            Device.status == "online", Device.last_heartbeat < offline_threshold
-        ).all()
-        # 更新为离线状态
-        for device in offline_devices:
-            device.status = "offline"
-        with db_session_scope():
-            pass
-        print(f"[Scheduled Task] 更新了 {len(offline_devices)} 个设备为离线状态")
-        return {"success": True, "offline_count": len(offline_devices)}
+        with flask_app.app_context():
+            # 检查离线设备（超过5分钟无心跳）
+            offline_threshold = datetime.now() - timedelta(minutes=5)
+            offline_devices = Device.query.filter(
+                Device.status == "online", Device.last_heartbeat < offline_threshold
+            ).all()
+            # 更新为离线状态
+            for device in offline_devices:
+                device.status = "offline"
+            with db_session_scope():
+                pass
+            print(f"[Scheduled Task] 更新了 {len(offline_devices)} 个设备为离线状态")
+            return {"success": True, "offline_count": len(offline_devices)}
     except Exception as e:
         print(f"[Scheduled Task] 同步失败: {e}")
         return {"success": False, "error": str(e)}

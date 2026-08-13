@@ -286,7 +286,7 @@ const OperationLogs: React.FC = () => {
                         </td>
                         <td className='px-6 py-4 whitespace-nowrap'>
                           <span className='text-sm text-gray-500'>
-                            {new Date(log.created_at).toLocaleString('zh-CN')}
+                            {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
                           </span>
                         </td>
                       </tr>

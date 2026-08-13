@@ -436,7 +436,7 @@ function ParentContactPage() {
                                     </span>
                                     <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                       <Calendar className="w-3 h-3" />
-                                      {new Date(log.contact_time).toLocaleString('zh-CN')}
+                                      {log.contact_time ? new Date(log.contact_time).toLocaleString('zh-CN') : '--'}
                                     </span>
                                   </div>
                                   {log.is_resolved ? (

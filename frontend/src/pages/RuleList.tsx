@@ -158,7 +158,7 @@ function RuleList() {
         category_id: selectedCategory ? Number(selectedCategory) : undefined,
         is_active: null,
       });
-      if (Array.isArray(data)) {
+      if (Array.isArray(data)) { // 防御分支：后端异常时兜底，非真实总数
         setRules(data as Rule[]);
         setPagination((prev) => ({
           ...prev,

@@ -228,6 +228,7 @@ class NLPRuleManagementService:
             )
 
             db.session.add(training_record)
+        training_id = training_record.id  # commit 后 id 可用（对象随后被 detach）
 
         match_results = NLPMatchResult.query.all()
         total_count = len(match_results)
@@ -257,20 +258,29 @@ class NLPRuleManagementService:
             recall = self._calculate_recall(match_results)
             f1_score = self._calculate_f1(precision, recall)
 
-            training_record.training_data_size = total_count
-            training_record.accuracy = round(accuracy_after, 4)
-            training_record.f1_score = round(f1_score, 4)
+            training_data_size = total_count
+            accuracy = round(accuracy_after, 4)
+            f1 = round(f1_score, 4)
         else:
-            training_record.training_data_size = 0
-            training_record.accuracy = 0.85
-            training_record.f1_score = 0.0
+            training_data_size = 0
+            accuracy = 0.85
+            f1 = 0.0
 
-        training_record.status = "completed"
-        training_record.trained_at = datetime.now()
+        # 此前直接改 training_record 字段（对象已 detached）→ DB 永远停留 running。
+        # 必须重新查询记录再更新才能落库。
         with db_session_scope():
-            pass
+            rec = db.session.get(NLPModelTraining, training_id)
+            if rec is not None:
+                rec.training_data_size = training_data_size
+                rec.accuracy = accuracy
+                rec.f1_score = f1
+                rec.status = "completed"
+                rec.trained_at = datetime.now()
+            else:
+                # 记录异常消失（不应发生）：仅返回内存数据，不静默
+                rec = training_record
 
-        return self._training_to_dict(training_record)
+        return self._training_to_dict(rec)
 
     def get_training_history(self, page=1, per_page=10):
         """获取模型训练历史"""

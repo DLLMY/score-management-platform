@@ -951,7 +951,7 @@ function PermissionManagement() {
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{log.description}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono'>{log.ip_address}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {new Date(log.created_at).toLocaleString('zh-CN')}
+                        {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
                       </td>
                     </tr>
                   ))}

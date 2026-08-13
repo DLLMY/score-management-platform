@@ -512,7 +512,7 @@ function Settings() {
                             <div className='font-medium text-gray-800'>{backup.filename}</div>
                             <div className='text-xs text-gray-500'>
                               {formatFileSize(backup.size)} -{' '}
-                              {backup.modified ? new Date(backup.modified).toLocaleString() : new Date(backup.created_at).toLocaleString()}
+                              {(backup.modified || backup.created_at) ? new Date(backup.modified || backup.created_at).toLocaleString() : '--'}
                             </div>
                           </div>
                           <PermissionButton

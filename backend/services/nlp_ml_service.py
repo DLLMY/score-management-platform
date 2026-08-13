@@ -1252,6 +1252,7 @@ class NLPMLTrainingService:
             from models import db
 
             db.session.add(training_record)
+        training_id = training_record.id  # commit 后 id 可用（对象随后被 detach）
         model, tuning_info = self._train_model(
             algorithm,
             X_train,
@@ -1268,12 +1269,17 @@ class NLPMLTrainingService:
             self._save_model(algorithm, model, None)
         else:
             self._save_model(algorithm, model, self.vectorizer)
-        training_record.status = "completed"
-        training_record.trained_at = datetime.now()
-        training_record.accuracy = evaluation["accuracy"]
-        training_record.f1_score = evaluation["f1_score"]
+        # 此前直接改 training_record.status（对象已 detached）→ DB 永远停留 running。
+        # 必须重新查询记录再更新才能落库。
         with db_session_scope():
-            pass
+            from models import db, NLPModelTraining
+
+            rec = db.session.get(NLPModelTraining, training_id)
+            if rec is not None:
+                rec.status = "completed"
+                rec.trained_at = datetime.now()
+                rec.accuracy = evaluation["accuracy"]
+                rec.f1_score = evaluation["f1_score"]
         return {
             "success": True,
             "algorithm": algorithm,

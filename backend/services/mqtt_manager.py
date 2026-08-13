@@ -80,6 +80,9 @@ class MQTTManager:
             ("phonebox/unlock/+", 1),
             ("phonebox/ota/status", 1),
             ("phonebox/ota/+/status", 1),
+            ("phonebox/points/query", 1),
+            ("phonebox/points/add", 1),
+            ("phonebox/points/sub", 1),
             ("score/add", 1),
             ("score/undo", 1),
             ("score/rules/query", 1),
@@ -178,7 +181,15 @@ class MQTTManager:
             self._queue_message(topic, message)
 
             # 关键消息（如查询、开锁回复、OTA状态）立即处理
-            if topic == "phonebox/query" or topic.startswith("phonebox/unlock/") or topic.startswith("phonebox/ota/"):
+            # 注意：score/add、score/undo、phonebox/points/* 也必须即时派发——此前它们只进
+            # 队列写 MQTTLog，业务（handle_score_add 等）从不触发，设备积分增减请求被静默丢弃
+            if (
+                topic == "phonebox/query"
+                or topic.startswith("phonebox/unlock/")
+                or topic.startswith("phonebox/ota/")
+                or topic.startswith("score/")
+                or topic.startswith("phonebox/points/")
+            ):
                 self._process_critical_message(topic, message)
 
         except Exception as e:

@@ -407,7 +407,7 @@ function UserList() {
       if (response !== null) {
         const data = response as { users?: User[]; total?: number; pages?: number; page?: number };
         
-        if (Array.isArray(response)) {
+        if (Array.isArray(response)) { // 防御分支：后端异常时兜底，非真实总数
           dispatch({ type: 'SET_USERS', payload: response });
           dispatch({ type: 'SET_PAGINATION', payload: { ...paginationRef.current, total: response.length, pages: Math.ceil(response.length / per_page) } });
         } else {
