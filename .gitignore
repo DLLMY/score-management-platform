@@ -169,3 +169,11 @@ backend/models/trained/
 backend/scripts/archive/
 # 防止 backend 根散落调试截图
 backend/*.png
+
+# Playwright e2e 产物（报告/失败截图/视频）
+frontend/playwright-report/
+frontend/test-results/
+
+# Playwright e2e 产物（报告/失败截图/视频）
+frontend/playwright-report/
+frontend/test-results/
