@@ -212,7 +212,8 @@ class DeviceList(Resource):
                         "device_id": d.device_id,
                         "name": d.name,
                         "status": d.status,
-                        "is_online": d.status == "online",
+                        # is_online 以 last_heartbeat 时效性为准（status 字段可能陈旧，无心跳仍显示 online）
+                        "is_online": is_device_online(d),
                         "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
                         "wifi_signal": d.wifi_signal,
                         "uptime": d.uptime,
@@ -278,7 +279,8 @@ class DeviceResource(Resource):
                 "device_id": device.device_id,
                 "name": device.name,
                 "status": device.status,
-                "is_online": device.status == "online",
+                # is_online 以 last_heartbeat 时效性为准（避免无心跳却显示在线）
+                "is_online": is_device_online(device),
                 "last_heartbeat": device.last_heartbeat.isoformat() if device.last_heartbeat else None,
                 "wifi_signal": device.wifi_signal,
                 "uptime": device.uptime,
@@ -1011,7 +1013,7 @@ class HeartbeatTimeoutCheck(Resource):
         遍历所有设备，检查是否有设备超过心跳间隔未响应。
         返回超时的设备列表，并自动创建告警。
         """
-        from services.heartbeat_service import check_heartbeat_timeout
+        from services.heartbeat_service import check_heartbeat_timeout, is_device_online
 
         result = check_heartbeat_timeout()  # noqa: F841
         return APIResponse.success(data=result)

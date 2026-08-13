@@ -5,6 +5,33 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def is_device_online(device, now=None, default_timeout_seconds: int = 60) -> bool:
+    """判断设备是否在线——以 last_heartbeat 时效性为准（status 字段可能陈旧）。
+
+    判定规则：
+    - 无 last_heartbeat → 离线（设备从未上报心跳）
+    - 距 now 超过 (heartbeat_timeout or default_timeout_seconds) 秒 → 离线（心跳超时）
+    - 否则视 status 字段（在线状态由 update_device_heartbeat 维护）
+
+    Args:
+        device: Device 模型实例
+        now: 当前时间（默认 datetime.now()，便于测试注入）
+        default_timeout_seconds: 当 device.heartbeat_timeout 为空时使用的默认阈值
+
+    Returns:
+        bool: True 在线 / False 离线
+    """
+    if device is None:
+        return False
+    if device.last_heartbeat is None:
+        return False
+    now = now or datetime.now()
+    threshold = device.heartbeat_timeout or default_timeout_seconds
+    if (now - device.last_heartbeat).total_seconds() > threshold:
+        return False
+    return device.status == "online"
+
+
 def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
     """
     检查心跳超时的设备
