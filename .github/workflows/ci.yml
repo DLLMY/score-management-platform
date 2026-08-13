@@ -60,6 +60,17 @@ jobs:
             tests/test_export_routes.py tests/test_notify_history_routes.py \
             -p no:locust --timeout=300 -q
 
+      - name: 跑算法/报表/学生新增测试组（不依赖模型）
+        # 覆盖：参与度批量/周趋势、归因批量、单生异常隔离、composite 权重敏感、
+        # 算法导出、学期报告摘要、学生 insights、anomaly/score_predict/risk_predict/prediction 边界
+        run: |
+          python -m pytest tests/test_algorithm_batch_isolation.py tests/test_algorithm_export.py \
+            tests/test_report_summary.py tests/test_student_insights.py tests/test_engagement_batch_trend.py \
+            tests/test_attribution_batch.py tests/test_anomaly_service.py tests/test_score_predict_service.py \
+            tests/test_risk_predict_service.py tests/test_prediction_service.py \
+            tests/test_composite_score_service.py \
+            -p no:locust --timeout=300 -q
+
   frontend-checks:
     name: 前端 build + lint
     runs-on: ubuntu-latest
