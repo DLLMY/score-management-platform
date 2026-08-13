@@ -1825,7 +1825,7 @@ export interface Api {
     update: (id: number, data: Partial<Device>) => Promise<Device>;
     delete: (id: string | number) => Promise<void>;
     getAlerts: (resolved?: string) => Promise<{ alerts: Alert[] }>;
-    getHeartbeats: (deviceId: string) => Promise<{ data: Heartbeat[] }>;
+    getHeartbeats: (deviceId: string) => Promise<{ heartbeats: Heartbeat[] }>;
     bindClass: (deviceId: string | number, data: { class_id: string | null }) => Promise<void>;
     bindAdmin: (deviceId: string | number, data: { admin_id: string | null }) => Promise<void>;
     remoteControl: (deviceId: string | number, action: string) => Promise<void>;
@@ -4108,7 +4108,7 @@ const api: Api = {
       const query = resolved ? `?resolved=${resolved}` : '';
       return request(`/api/devices/alerts${query}`) as Promise<{ alerts: Alert[] }>;
     },
-    getHeartbeats: (deviceId) => request(`/api/devices/${deviceId}/heartbeats`) as Promise<{ data: Heartbeat[] }>,
+    getHeartbeats: (deviceId) => request(`/api/devices/${deviceId}/heartbeats`) as Promise<{ heartbeats: Heartbeat[] }>,
     bindClass: (deviceId, data) => request(`/api/devices/${deviceId}/bind-class`, {
       method: 'POST',
       body: JSON.stringify(data),

@@ -31,10 +31,9 @@ const DataSyncPage: React.FC = () => {
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await request('/api/consistency/status') as { success: boolean; status?: ConsistencyStats };
-      if (result.success) {
-        setStats(result.status || null);
-      }
+      // request() 剥信封：后端 success(data={"status": ...}) → 直接是 {status}
+      const result = await request('/api/consistency/status') as { status?: ConsistencyStats };
+      setStats(result.status || null);
     } catch (error: unknown) {
       console.error('Failed to fetch status:', error);
     }
@@ -43,13 +42,12 @@ const DataSyncPage: React.FC = () => {
 
   const fetchCheck = useCallback(async () => {
     try {
-      const result = await request('/api/consistency/check') as { success: boolean; issues?: ConsistencyIssue[]; healthy?: boolean; total_issues?: number };
-      if (result.success) {
-        setIssues(result.issues || []);
-        setHealthy(result.healthy ?? true);
-        if (!result.healthy) {
-          showToast('warning', `发现 ${result.total_issues} 个数据一致性问题`);
-        }
+      // request() 剥信封：后端 success(data={issues, healthy, total_issues, ...}) → 直接是内层对象
+      const result = await request('/api/consistency/check') as { issues?: ConsistencyIssue[]; healthy?: boolean; total_issues?: number };
+      setIssues(result.issues || []);
+      setHealthy(result.healthy ?? true);
+      if (!result.healthy) {
+        showToast('warning', `发现 ${result.total_issues} 个数据一致性问题`);
       }
     } catch (error: unknown) {
       showToast('error', '一致性检查失败');
@@ -60,16 +58,13 @@ const DataSyncPage: React.FC = () => {
   const handleFix = useCallback(async () => {
     setFixing(true);
     try {
-      const result = await request('/api/consistency/fix', { method: 'POST' }) as { success: boolean };
-      if (result.success) {
-        showToast('success', '数据修复完成');
-        fetchStatus();
-        fetchCheck();
-      } else {
-        showToast('error', '数据修复失败');
-      }
+      // request() 剥信封：后端 success(data={"stats": ...}) → 直接是内层对象；失败会抛错进 catch
+      await request('/api/consistency/fix', { method: 'POST' });
+      showToast('success', '数据修复完成');
+      fetchStatus();
+      fetchCheck();
     } catch (error: unknown) {
-      showToast('error', '数据修复请求失败');
+      showToast('error', '数据修复请求失败: ' + ((error as Error).message || ''));
     }
     setFixing(false);
   }, [fetchStatus, fetchCheck, showToast]);

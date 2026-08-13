@@ -546,7 +546,8 @@ function DeviceManagement() {
     setSelectedDevice(device);
     try {
       const data = await api.devices.getHeartbeats(device.device_id);
-      setHeartbeats((data as { data: Heartbeat[] }).data || []);
+      // 剥信封后键是 heartbeats（后端 success(data={heartbeats:[...], total, ...})）
+      setHeartbeats((data as { heartbeats: Heartbeat[] }).heartbeats || []);
     } catch {
       setHeartbeats([]);
     }
