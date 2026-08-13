@@ -1115,6 +1115,41 @@ export interface MyRankResult {
   ranking: StudentRankItem[];
 }
 
+/* ===== 学生自助端：算法洞察聚合（我的成长） ===== */
+export interface StudentEngagementInsight {
+  has_data: boolean;
+  engagement_score: number;
+  level: 'low' | 'medium' | 'high';
+  factors?: Array<{ name: string; value: number; weight: number; contribution: number }>;
+  components?: {
+    attendance_rate?: number | null;
+    homework_rate?: number | null;
+    activity_rate?: number | null;
+    leave_days?: number;
+  };
+  description?: string;
+}
+export interface StudentRiskInsight {
+  overall_risk_level?: 'low' | 'medium' | 'high';
+  overall_risk_score?: number;
+  overall_risk_name?: string;
+  risk_factors?: Array<{ factor: string; description: string }>;
+  intervention_suggestions?: string[];
+  recommended_actions?: string[];
+}
+export interface StudentScoreTrendPoint {
+  week_index: number;
+  score_change: number;
+}
+export interface StudentInsight {
+  student: StudentInfo;
+  engagement: StudentEngagementInsight;
+  risk: StudentRiskInsight;
+  score_trend: StudentScoreTrendPoint[];
+  days: number;
+  weeks: number;
+}
+
 /** 教师效率：批量录分单项 */
 export interface BatchScoreItem {
   student_id?: number;
@@ -2033,6 +2068,7 @@ export interface Api {
     applyLeave: (data: { leave_type?: string; start_date: string; end_date: string; reason?: string }) => Promise<LeaveItem>;
     requestPhoneboxUnlock: () => Promise<PhoneboxUnlockResult>;
     getMyRank: () => Promise<MyRankResult>;
+    getInsights: (days?: number, weeks?: number) => Promise<StudentInsight>;
   };
   rank: {
     getStudentRanking: (params?: { class_name?: string; sort_by?: string; order?: string; limit?: number }) => Promise<{
@@ -4733,6 +4769,12 @@ const api: Api = {
     requestPhoneboxUnlock: () =>
       request('/api/student/phonebox/unlock', { method: 'POST' }) as Promise<PhoneboxUnlockResult>,
     getMyRank: () => request('/api/student/rank') as Promise<MyRankResult>,
+    getInsights: (days = 30, weeks = 8) => {
+      const queryParams = new URLSearchParams();
+      queryParams.append('days', String(days));
+      queryParams.append('weeks', String(weeks));
+      return request(`/api/student/insights?${queryParams.toString()}`) as Promise<StudentInsight>;
+    },
   },
   rank: {
     getStudentRanking: (params: { class_name?: string; sort_by?: string; order?: string; limit?: number } = {}) => {

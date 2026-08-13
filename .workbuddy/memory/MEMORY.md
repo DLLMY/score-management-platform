@@ -43,7 +43,7 @@
 - ✅ **前端死代码已删**：`services/api.js` + 4 孤儿页（ClassAssignment.js/MQTTDebug.js/UserManagement.js/ClassTimeSettings.tsx.bak）。确认 api.js 因 vite `resolve.extensions` 优先 .ts 实际由 api.ts 解析（rbacApi.ts 的 `import {request} from './api'` 命中 api.ts 的 request 导出），删除安全。
 - ✅ **utils/ 9 个孤儿已删**：batch_operations/cache_middleware/data_sync_events/db_pool_manager/exception_handler/monitoring_service/performance/swagger_config/initializer（AST 扫描确认活跃+测试零引用）。
 - ✅ **信封拆包 DRY**：api.ts 抽出单一 `unwrapEnvelope(rawData, skipDataExtract)` 替代 3 处内联（行为不变，消除重复并集中维护）；`code` 字段增强判定因担心行为回退暂未加（当前后端业务失败均置 success:false，前端已能识别）。
-- ⏳ **仓库噪音（未处理）**：backend/instance/ 20+ `.db.bak_*` + 损坏库；backend/ 根散落 verify_algo*.py、test_*.py、11 张 PNG → 建议归档 scripts/archive + .gitignore。
+- ✅ **仓库噪音已清理（2026-08-13）**：backend 根散落 24 个孤儿脚本（verify_algo*/verify_risk_batch/test_*/debug_*/probe_*/inspect_*/fix_* + scripts/verify_algo_fix.py）+ 12 张 NLP 调试 PNG + instance/ 21 个备份库（.db.bak_* + *_corrupt.db + *_rebuilt_broken.db + .db.*_bak 变体）全部 `git rm --cached` 移出跟踪并 mv 归档到 `backend/scripts/archive/{,screenshots,db_backups}`（保留本地不删）；`.gitignore` 追加 `backend/scripts/archive/` + `backend/*.png`。`instance/` 现仅正常库。commit c771c6b。
 - ✅ **后期功能端到端验证（2026-08-07 playwright 实跑：临时后端 5001 + 前端 3000 代理 5001）**：学生端登录→5 Tab（积分/通知/请假/手机箱/排名）全渲染、0 控制台错误；TeacherTools（教师效率工具/批量录入成绩）、SemesterReport（班级学期报告导出）均完整渲染无崩溃；后端学生 API 全可用（登录/me/score/records/notifications/leaves/rank + 请假 POST 201 + 手机箱 POST 按策略拦截 + 学生 token 打 admin 端点 401 双 JWT 隔离生效）。验证中发现并修复 StudentPortal TDZ 白屏 bug（见关键坑），该 bug 致**学生端自写完一直不可用**，因无 StudentPortal 组件测试未被 vitest(149)/build/lint 覆盖。
 
 ## 项目规模（2026-08-07）

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components';
 import { useStableToast } from '../hooks/useStableToast';
 import api from '../services/api';
 import type { User } from '../types';
 
-const { Upload, Send, CheckCircle } = LucideIcons;
+const { Upload, Send, CheckCircle, Users, TrendingUp, ArrowRight } = LucideIcons;
 
 interface ExamOption {
   id: number;
@@ -22,6 +23,7 @@ const labelCls = 'block text-sm text-gray-600 dark:text-slate-300 mb-1';
 
 const TeacherTools: React.FC = () => {
   const { showToast } = useStableToast();
+  const navigate = useNavigate();
   const [exams, setExams] = useState<ExamOption[]>([]);
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,6 +168,45 @@ const TeacherTools: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-white">教师效率工具</h1>
+
+      {/* 算法洞察入口 */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-violet-500" />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">算法洞察</h2>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+          一键查看班级成绩波动归因与全班参与度排名，把分析结果直接用于教学行动。
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={() => navigate('/algorithm-analysis?tab=batchAttribution')}
+            className="flex items-center justify-between gap-3 p-4 rounded-xl border border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3">
+              <Users className="w-6 h-6 text-violet-500" />
+              <span>
+                <span className="block text-sm font-semibold text-gray-800 dark:text-white">班级归因一键查看</span>
+                <span className="block text-xs text-gray-500 dark:text-slate-400 mt-0.5">全班成绩波动 · 单生异常隔离</span>
+              </span>
+            </span>
+            <ArrowRight className="w-4 h-4 text-violet-400 flex-shrink-0" />
+          </button>
+          <button
+            onClick={() => navigate('/algorithm-analysis?tab=engagement')}
+            className="flex items-center justify-between gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3">
+              <TrendingUp className="w-6 h-6 text-blue-500" />
+              <span>
+                <span className="block text-sm font-semibold text-gray-800 dark:text-white">参与度排名榜</span>
+                <span className="block text-xs text-gray-500 dark:text-slate-400 mt-0.5">全班参与度指数 · 个人周趋势</span>
+              </span>
+            </span>
+            <ArrowRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
+          </button>
+        </div>
+      </Card>
 
       {/* 批量录分 */}
       <Card className="p-5">

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, RefreshCw, Award, History, Bell, CalendarDays, Smartphone, Send, Trophy } from 'lucide-react';
-import api, { StudentInfo, ScoreRecordItem, NotificationItem, LeaveItem, PhoneboxUnlockResult, MyRankResult } from '../services/api';
+import { LogOut, RefreshCw, Award, History, Bell, CalendarDays, Smartphone, Send, Trophy, TrendingUp, ShieldAlert, Target } from 'lucide-react';
+import api, { StudentInfo, ScoreRecordItem, NotificationItem, LeaveItem, PhoneboxUnlockResult, MyRankResult, StudentInsight } from '../services/api';
 
-type TabKey = 'score' | 'notifications' | 'leaves' | 'phonebox';
+type TabKey = 'score' | 'notifications' | 'leaves' | 'phonebox' | 'rank' | 'growth';
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'score', label: '积分', icon: <Award className='w-4 h-4' /> },
@@ -11,6 +11,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'leaves', label: '请假', icon: <CalendarDays className='w-4 h-4' /> },
   { key: 'phonebox', label: '手机箱', icon: <Smartphone className='w-4 h-4' /> },
   { key: 'rank', label: '排名', icon: <Trophy className='w-4 h-4' /> },
+  { key: 'growth', label: '我的成长', icon: <TrendingUp className='w-4 h-4' /> },
 ];
 
 function StudentPortal() {
@@ -36,6 +37,10 @@ function StudentPortal() {
 
   // 排名
   const [myRank, setMyRank] = useState<MyRankResult | null>(null);
+
+  // 我的成长（算法洞察聚合）
+  const [insights, setInsights] = useState<StudentInsight | null>(null);
+  const [growthLoading, setGrowthLoading] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -109,12 +114,26 @@ function StudentPortal() {
     }
   }, []);
 
+  const loadInsights = useCallback(async () => {
+    setGrowthLoading(true);
+    setError('');
+    try {
+      const res = await api.student.getInsights(30, 8);
+      setInsights(res);
+    } catch (err: any) {
+      setError(err?.message || '加载失败');
+    } finally {
+      setGrowthLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (tab === 'score') loadScore(1);
     else if (tab === 'notifications') loadNotifications();
     else if (tab === 'leaves') loadLeaves();
     else if (tab === 'rank') loadMyRank();
-  }, [tab, loadScore, loadNotifications, loadLeaves, loadMyRank]);
+    else if (tab === 'growth') loadInsights();
+  }, [tab, loadScore, loadNotifications, loadLeaves, loadMyRank, loadInsights]);
 
   const handleLogout = (): void => {
     localStorage.removeItem('student_token');
@@ -472,6 +491,173 @@ function StudentPortal() {
                     </li>
                   ))}
                 </ol>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'growth' && (
+          <div className='space-y-4'>
+            {/* 参与度指数卡片 */}
+            <div className='bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl p-6 text-white shadow-lg'>
+              <div className='flex items-center gap-2 text-white/80 text-sm'>
+                <TrendingUp className='w-4 h-4' /> 我的参与度指数
+              </div>
+              <div className='flex items-end gap-3 mt-2'>
+                <div className='text-4xl font-bold'>
+                  {growthLoading
+                    ? '...'
+                    : insights?.engagement?.has_data
+                      ? insights.engagement.engagement_score
+                      : '—'}
+                </div>
+                <span className='text-white/80 text-sm mb-1'>
+                  {insights?.engagement?.level === 'high'
+                    ? '高参与'
+                    : insights?.engagement?.level === 'medium'
+                      ? '中参与'
+                      : insights?.engagement?.level === 'low'
+                        ? '低参与'
+                        : '暂无数据'}
+                </span>
+              </div>
+              <div className='text-white/70 text-xs mt-1'>
+                {insights?.engagement?.description || '综合出勤、作业提交与积分活跃度评估'}
+              </div>
+            </div>
+
+            {insights?.engagement?.has_data && (
+              <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
+                <div className='text-sm font-semibold text-gray-800 dark:text-white mb-3'>参与度构成</div>
+                <div className='space-y-3'>
+                  {(insights.engagement.components?.attendance_rate != null ||
+                    insights.engagement.components?.homework_rate != null ||
+                    insights.engagement.components?.activity_rate != null) && (
+                    <>
+                      {insights.engagement.components?.attendance_rate != null && (
+                        <div>
+                          <div className='flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1'>
+                            <span>出勤率</span>
+                            <span>{Math.round(insights.engagement.components.attendance_rate * 100)}%</span>
+                          </div>
+                          <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700'>
+                            <div
+                              className='h-2 rounded-full bg-purple-500'
+                              style={{ width: `${Math.min(100, Math.max(0, insights.engagement.components.attendance_rate * 100))}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {insights.engagement.components?.homework_rate != null && (
+                        <div>
+                          <div className='flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1'>
+                            <span>作业提交率</span>
+                            <span>{Math.round(insights.engagement.components.homework_rate * 100)}%</span>
+                          </div>
+                          <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700'>
+                            <div
+                              className='h-2 rounded-full bg-blue-500'
+                              style={{ width: `${Math.min(100, Math.max(0, insights.engagement.components.homework_rate * 100))}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {insights.engagement.components?.activity_rate != null && (
+                        <div>
+                          <div className='flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1'>
+                            <span>积分活跃度</span>
+                            <span>{Math.round(insights.engagement.components.activity_rate * 100)}%</span>
+                          </div>
+                          <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700'>
+                            <div
+                              className='h-2 rounded-full bg-emerald-500'
+                              style={{ width: `${Math.min(100, Math.max(0, insights.engagement.components.activity_rate * 100))}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 风险预警卡片 */}
+            <div
+              className={`rounded-2xl p-4 shadow ${
+                insights?.risk?.overall_risk_level === 'high'
+                  ? 'bg-red-50 dark:bg-red-500/10'
+                  : insights?.risk?.overall_risk_level === 'medium'
+                    ? 'bg-amber-50 dark:bg-amber-500/10'
+                    : 'bg-emerald-50 dark:bg-emerald-500/10'
+              }`}
+            >
+              <div className='flex items-center gap-2 font-semibold mb-2 text-gray-800 dark:text-white'>
+                <ShieldAlert className='w-4 h-4' /> 风险预警
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    insights?.risk?.overall_risk_level === 'high'
+                      ? 'bg-red-500 text-white'
+                      : insights?.risk?.overall_risk_level === 'medium'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-emerald-500 text-white'
+                  }`}
+                >
+                  {insights?.risk?.overall_risk_level === 'high'
+                    ? '高风险'
+                    : insights?.risk?.overall_risk_level === 'medium'
+                      ? '中风险'
+                      : '低风险'}
+                </span>
+              </div>
+              {insights?.risk?.intervention_suggestions?.length ? (
+                <ul className='space-y-1'>
+                  {insights.risk.intervention_suggestions.slice(0, 3).map((s, i) => (
+                    <li key={i} className='text-xs text-gray-600 dark:text-slate-300 flex items-start gap-1.5'>
+                      <span className='text-gray-400'>·</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className='text-xs text-gray-400'>暂无风险因素，表现良好</p>
+              )}
+            </div>
+
+            {/* 近周积分趋势 */}
+            <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
+              <div className='flex items-center gap-2 font-semibold text-gray-800 dark:text-white mb-3'>
+                <Target className='w-4 h-4' /> 近 8 周积分变动
+              </div>
+              {growthLoading ? (
+                <p className='text-sm text-gray-400 py-6 text-center'>加载中...</p>
+              ) : !insights?.score_trend?.length ? (
+                <p className='text-sm text-gray-400 py-6 text-center'>暂无积分趋势数据</p>
+              ) : (
+                <div className='flex items-end justify-between gap-1 h-28 px-1'>
+                  {insights.score_trend.map((pt) => {
+                    const maxAbs = Math.max(
+                      1,
+                      ...insights.score_trend.map((p) => Math.abs(p.score_change || 0))
+                    );
+                    const h = Math.max(4, (Math.abs(pt.score_change || 0) / maxAbs) * 96);
+                    const positive = (pt.score_change || 0) >= 0;
+                    return (
+                      <div key={pt.week_index} className='flex flex-col items-center justify-end flex-1 gap-1'>
+                        <span className='text-[10px] text-gray-400 font-medium'>
+                          {(pt.score_change || 0) >= 0 ? '+' : ''}
+                          {pt.score_change ?? 0}
+                        </span>
+                        <div
+                          className={`w-full max-w-[18px] rounded-t ${positive ? 'bg-emerald-400' : 'bg-red-400'}`}
+                          style={{ height: `${h}px` }}
+                          title={`第${pt.week_index}周 ${pt.score_change ?? 0}`}
+                        />
+                        <span className='text-[10px] text-gray-400'>W{pt.week_index}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

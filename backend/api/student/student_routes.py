@@ -17,6 +17,8 @@ from utils.logger import log_login_attempt
 from utils.datetime_utils import parse_date
 from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
 from services.attendance_service import attendance_service
+from services.engagement_service import calculate_engagement
+from services.risk_predict_service import RiskPredictService
 from services import phonebox_policy
 from services.mqtt_service import publish_mqtt
 from services.analysis_service import analysis_service
@@ -358,5 +360,100 @@ class StudentRank(Resource):
                 "my_score": student.current_score,
                 "total_students": result.get("total_students"),
                 "ranking": ranking,
+            }
+        )
+
+
+def _build_score_trend(user_id, weeks):
+    """近 weeks 周该生积分变动按周分组（内存聚合，规避 SQL 日期边界）。
+
+    直接拉取该生全部 ScoreRecord 后在内存按「今天」为锚点分桶，
+    避免 SQLite 下 DateTime 列与 date 边界比较的不一致。
+    """
+    from datetime import date as _date
+    from collections import defaultdict
+
+    today = datetime.now().date()
+    recs = ScoreRecord.query.filter_by(user_id=user_id).all()
+    week_map = defaultdict(float)
+    for r in recs:
+        ca = r.created_at
+        if ca is None:
+            continue
+        if isinstance(ca, datetime):
+            d = ca.date()
+        elif isinstance(ca, _date):
+            d = ca
+        else:
+            try:
+                d = datetime.strptime(str(ca)[:10], "%Y-%m-%d").date()
+            except Exception:
+                continue
+        diff = (today - d).days
+        if diff < 0 or diff >= weeks * 7:
+            continue
+        wk = weeks - 1 - (diff // 7)
+        try:
+            week_map[wk] += float(r.score_change or 0)
+        except (TypeError, ValueError):
+            continue
+    return [
+        {
+            "week_index": int(i + 1),
+            "score_change": round(float(week_map.get(i, 0.0)), 2),
+        }
+        for i in range(weeks)
+    ]
+
+
+@ns_student.route("/insights")
+class StudentInsights(Resource):
+    @ns_student.doc("student_insights", description="获取当前学生的算法洞察聚合（参与度+风险+积分趋势）")
+    @ns_student.param("days", "参与度/风险统计天数，默认30")
+    @ns_student.param("weeks", "积分趋势周数，默认8")
+    @requires_student
+    def get(self):
+        """将算法洞察反推到学生自助端：聚合「参与度指数 + 风险预测 + 近周积分趋势」。
+
+        全部复用既有服务（engagement_service / risk_predict_service），单维异常隔离，
+        不影响其余维度返回；所有数值均为原生类型，避免 numpy 类型 JSON 序列化失败。
+        """
+        student = g.current_student
+        try:
+            days = int(request.args.get("days", 30))
+        except (TypeError, ValueError):
+            days = 30
+        try:
+            weeks = max(int(request.args.get("weeks", 8)), 1)
+        except (TypeError, ValueError):
+            weeks = 8
+        uid = student.id
+
+        # 参与度
+        try:
+            engagement = calculate_engagement(uid, days)
+        except Exception:  # noqa: BLE001
+            engagement = {"has_data": False, "engagement_score": 0, "level": "low"}
+
+        # 风险
+        try:
+            risk = RiskPredictService.predict_risk(uid, days)
+        except Exception:  # noqa: BLE001
+            risk = {"overall_risk_level": "low", "overall_risk_score": 0.0}
+
+        # 积分趋势
+        try:
+            score_trend = _build_score_trend(uid, weeks)
+        except Exception:  # noqa: BLE001
+            score_trend = []
+
+        return APIResponse.success(
+            data={
+                "student": _serialize_student(student),
+                "engagement": engagement,
+                "risk": risk,
+                "score_trend": score_trend,
+                "days": days,
+                "weeks": weeks,
             }
         )

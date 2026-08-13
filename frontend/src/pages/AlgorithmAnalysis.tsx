@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   BarChart3, Target, RefreshCw,
   TrendingUp, Award, CheckCircle,
@@ -39,7 +40,12 @@ const SEVERITY_COLORS: Record<string, { bg: string; text: string; light: string 
 
 export default function AlgorithmAnalysis(): React.ReactElement {
   const { showToast } = useStableToast();
-  const [activeTab, setActiveTab] = useState<string>('statistics');
+  // 支持 URL 直达：/#/algorithm-analysis?tab=batchAttribution（教师工作台「一键查看」入口用）
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') || '';
+  const [activeTab, setActiveTab] = useState<string>(() =>
+    TABS.some((t) => t.id === urlTab) ? urlTab : 'statistics'
+  );
   const tabNavRef = useRef<HTMLDivElement>(null);
 
   // 选中的 Tab 自动滚动进可视区，避免「学生画像」等靠右标签被 overflow 裁掉
