@@ -208,17 +208,18 @@ class AnomalyService:
                 classmate_totals.append(sum((c["score_change"] for c in classmate_changes)))
         if not classmate_totals:
             return {"has_anomaly": False, "deviation": 0}
-        class_mean = np.mean(classmate_totals)
-        class_std = np.std(classmate_totals) if len(classmate_totals) > 1 else 1
+        class_mean = float(np.mean(classmate_totals))
+        class_std = float(np.std(classmate_totals)) if len(classmate_totals) > 1 else 1.0
         if class_std == 0:
             return {"has_anomaly": False, "deviation": 0}
-        deviation = (user_total - class_mean) / class_std
+        # 转 Python 原生类型：numpy 标量(bool_/float64) Flask 默认 JSON 不可序列化
+        deviation = float((user_total - class_mean) / class_std)
         threshold = ANOMALY_TYPES["group_anomaly"]["threshold"]
-        is_anomaly = abs(deviation) > threshold
+        is_anomaly = bool(abs(deviation) > threshold)
         return {
             "has_anomaly": is_anomaly,
             "deviation": round(deviation, 2),
-            "user_total": round(user_total, 2),
+            "user_total": round(float(user_total), 2),
             "class_mean": round(class_mean, 2),
             "class_std": round(class_std, 2),
             "description": f"该学生积分偏离班级均值{abs(deviation):.1f}个标准差",

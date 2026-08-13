@@ -317,6 +317,71 @@ class TestAnomalyService:
                         assert "has_anomaly" in result
                         assert "deviation" in result
 
+    def test_detect_group_anomaly_serializable(self, app):
+        """回归：群体异常返回必须是 JSON 原生类型(bool/float)。
+
+        曾因 np.mean/np.std 产生 numpy.bool_/float64，Flask 默认 JSON provider
+        无法序列化，导致 /api/algorithm/anomaly/group/<id> 返回 500。
+        本测试刻意构造 len(classmate_totals) > 1 以走 np.std 分支。
+        """
+        import json
+        from datetime import datetime
+
+        with app.app_context():
+            mock_user = MagicMock()
+            mock_user.id = 1
+            mock_user.class_name = "一班"
+            mock_classmate1 = MagicMock()
+            mock_classmate1.id = 2
+            mock_classmate2 = MagicMock()
+            mock_classmate2.id = 3
+
+            def fake_changes(uid, days):
+                sc = {1: 10, 2: 2, 3: 8}.get(uid, 0)
+                return [{"date": datetime.now(), "score_change": sc, "rule_name": None, "category": None}]
+
+            with patch.object(AnomalyService, "get_student_score_changes", side_effect=fake_changes):
+                with patch("services.anomaly_service.get_by_id", return_value=mock_user):
+                    with patch("services.anomaly_service.User.query") as mock_query:
+                        mock_query.filter.return_value.all.return_value = [mock_classmate1, mock_classmate2]
+                        result = AnomalyService.detect_group_anomaly(1)
+
+            serialized = json.dumps(result)  # 必须不抛 TypeError
+            assert isinstance(result["has_anomaly"], bool)
+            assert isinstance(result["deviation"], float)
+            assert isinstance(result["class_mean"], float)
+            assert isinstance(result["class_std"], float)
+
+    def test_detect_all_anomalies_serializable(self, app):
+        """回归：综合异常检测返回可 JSON 序列化，且 summary 布尔为原生类型。"""
+        import json
+        from datetime import datetime
+
+        with app.app_context():
+            mock_user = MagicMock()
+            mock_user.id = 1
+            mock_user.class_name = "一班"
+            mock_classmate1 = MagicMock()
+            mock_classmate1.id = 2
+            mock_classmate2 = MagicMock()
+            mock_classmate2.id = 3
+
+            def fake_changes(uid, days):
+                sc = {1: 10, 2: 2, 3: 8}.get(uid, 0)
+                return [{"date": datetime.now(), "score_change": sc, "rule_name": None, "category": None}]
+
+            with patch.object(AnomalyService, "get_student_score_changes", side_effect=fake_changes):
+                with patch("services.anomaly_service.get_by_id", return_value=mock_user):
+                    with patch("services.anomaly_service.User.query") as mock_query:
+                        mock_query.filter.return_value.all.return_value = [mock_classmate1, mock_classmate2]
+                        with patch("services.anomaly_service.ScoreRecord.query") as mock_score_query:
+                            mock_score_query.filter.return_value.count.return_value = 0
+                            result = AnomalyService.detect_all_anomalies(1)
+
+            json.dumps(result)  # 必须不抛 TypeError
+            assert isinstance(result["has_anomaly"], bool)
+            assert isinstance(result["summary"]["group_anomaly"], bool)
+
     def test_detect_frequency_anomaly_normal(self, app):
         """测试检测频率异常-正常频率"""
         with app.app_context():

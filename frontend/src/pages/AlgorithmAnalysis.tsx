@@ -3,7 +3,7 @@
  * 在原有算法分析基础上，增加预测和异常检测功能
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   BarChart3, Target, RefreshCw,
   TrendingUp, Award, CheckCircle,
@@ -37,6 +37,13 @@ const SEVERITY_COLORS: Record<string, { bg: string; text: string; light: string 
 export default function AlgorithmAnalysis(): React.ReactElement {
   const { showToast } = useStableToast();
   const [activeTab, setActiveTab] = useState<string>('statistics');
+  const tabNavRef = useRef<HTMLDivElement>(null);
+
+  // 选中的 Tab 自动滚动进可视区，避免「学生画像」等靠右标签被 overflow 裁掉
+  useEffect(() => {
+    const el = tabNavRef.current?.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeTab]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -2243,10 +2250,11 @@ export default function AlgorithmAnalysis(): React.ReactElement {
 
       {/* 标签页 */}
       <div className="border-b border-gray-200 dark:border-slate-700">
-        <nav className="flex gap-6 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <nav ref={tabNavRef} className="flex gap-6 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {TABS.map((tab) => (
             <button
               key={tab.id}
+              data-tab={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-1 py-3 border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
