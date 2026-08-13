@@ -26,7 +26,7 @@ const DataSyncPage: React.FC = () => {
   const [issues, setIssues] = useState<ConsistencyIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [fixing, setFixing] = useState(false);
-  const [healthy, setHealthy] = useState(true);
+  const [healthy, setHealthy] = useState<boolean | null>(null);
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -53,6 +53,7 @@ const DataSyncPage: React.FC = () => {
       }
     } catch (error: unknown) {
       showToast('error', '一致性检查失败');
+      setHealthy(null); // 检查失败：不伪装成"良好"或"有问题"，显示未确认
     }
   }, [showToast]);
 
@@ -127,10 +128,18 @@ const DataSyncPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Status Banner */}
-      <div className={`rounded-xl p-4 mb-6 ${healthy ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+      {/* Status Banner（三态：未检测灰 / 良好绿 / 有问题黄） */}
+      <div className={`rounded-xl p-4 mb-6 ${healthy === null ? 'bg-gray-50 border border-gray-200' : healthy ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
         <div className="flex items-center gap-3">
-          {healthy ? (
+          {healthy === null ? (
+            <>
+              <Shield className="w-8 h-8 text-gray-400" />
+              <div>
+                <div className="font-semibold text-gray-500">一致性状态未确认</div>
+                <div className="text-sm text-gray-400">点击「一致性检查」或「刷新状态」获取最新结果</div>
+              </div>
+            </>
+          ) : healthy ? (
             <>
               <CheckCircle className="w-8 h-8 text-green-500" />
               <div>

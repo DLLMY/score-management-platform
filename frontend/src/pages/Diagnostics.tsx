@@ -402,6 +402,7 @@ export const DiagnosticsPage: React.FC = () => {
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<boolean>(false);
 
   const fetchHealthData = useCallback(async (): Promise<void> => {
     try {
@@ -413,8 +414,10 @@ export const DiagnosticsPage: React.FC = () => {
       const envelope = await response.json();
       const data: HealthData = envelope?.data ?? envelope;
       setHealthData(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Failed to fetch health data:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -427,8 +430,10 @@ export const DiagnosticsPage: React.FC = () => {
       const envelope = await response.json();
       const data: PerformanceData = envelope?.data ?? envelope;
       setPerformanceData(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Failed to fetch performance data:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -441,8 +446,10 @@ export const DiagnosticsPage: React.FC = () => {
       const envelope = await response.json();
       const data: ErrorData = envelope?.data ?? envelope;
       setErrorData(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Failed to fetch error data:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -455,8 +462,10 @@ export const DiagnosticsPage: React.FC = () => {
       const envelope = await response.json();
       const data: SystemData = envelope?.data ?? envelope;
       setSystemData(data);
+      setLoadError(false);
     } catch (error) {
       console.error('Failed to fetch system data:', error);
+      setLoadError(true);
     }
   }, []);
 
@@ -491,6 +500,13 @@ export const DiagnosticsPage: React.FC = () => {
           刷新
         </PermissionButton>
       </div>
+
+      {loadError && (
+        <div role='alert' className='flex items-center gap-2 px-4 py-3 mt-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'>
+          <AlertTriangle size={16} className='flex-shrink-0' />
+          部分诊断数据加载失败，下方指标可能不完整，请点击「刷新」重试
+        </div>
+      )}
 
       {/* 整体健康状态 */}
       {healthData && (

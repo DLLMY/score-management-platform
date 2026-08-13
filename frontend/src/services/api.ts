@@ -1646,7 +1646,7 @@ export interface Api {
         conflicting_classroom?: string;
       }>;
     }>;
-    export: (classInfoId?: number, format?: 'json' | 'excel') => void;
+    export: (classInfoId?: number, format?: 'json' | 'excel') => Promise<void>;
     import: (data: FormData, customUrl?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ class_name: string; subject_name: string; action: string; message: string }> }>;
     /** 查询当前时刻的上课状态（用于下发页「班级实时状态」徽章，恒不走缓存）。deviceId 会按设备反查班级 */
     getNow: (classInfoId?: number, deviceId?: string) => Promise<ClassNowStatus>;
@@ -1713,7 +1713,7 @@ export interface Api {
     create: (data: ClassCreateData) => Promise<ClassInfo>;
     update: (id: number, data: ClassCreateData) => Promise<ClassInfo>;
     delete: (id: number) => Promise<void>;
-    export: (keyword?: string, format?: 'json' | 'excel') => void;
+    export: (keyword?: string, format?: 'json' | 'excel') => Promise<void>;
     import: (data: FormData, customUrl?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ name: string; action: string; message: string }> }>;
   };
   adminClasses: {
@@ -3822,7 +3822,25 @@ const api: Api = {
       if (format) queryParams.append('format', format);
       const query = queryParams.toString();
       const url = `/api/classes/export${query ? '?' + query : ''}`;
-      return window.open(url, '_blank');
+      const token = getBearerToken();
+      // fetch blob + 下载（带鉴权、可校验），替代 window.open（无 token、无法感知失败）
+      return fetch(`${API_BASE_URL}${url}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          const dlUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = dlUrl;
+          a.download = `班级列表_${keyword || '全部'}.${format === 'json' ? 'json' : 'xlsx'}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(dlUrl);
+        });
     },
     import: (data: FormData, customUrl?: string) => request(customUrl || '/api/classes/import', {
       method: 'POST',
@@ -4345,7 +4363,25 @@ const api: Api = {
       if (format) queryParams.append('format', format);
       const query = queryParams.toString();
       const url = `/api/course-schedules/export${query ? '?' + query : ''}`;
-      return window.open(url, '_blank');
+      const token = getBearerToken();
+      // 走 fetch blob + 下载（带鉴权头、可校验结果），替代 window.open（无 token、无法感知失败）
+      return fetch(`${API_BASE_URL}${url}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          const dlUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = dlUrl;
+          a.download = `课程表_${classInfoId || '全部'}.${format === 'json' ? 'json' : 'xlsx'}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(dlUrl);
+        });
     },
     import: (data: FormData, customUrl?: string) => request(customUrl || '/api/course-schedules/import', {
       method: 'POST',

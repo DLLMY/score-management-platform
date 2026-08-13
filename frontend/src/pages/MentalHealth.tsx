@@ -43,7 +43,7 @@ const defaultRecordForm: RecordFormData = {
 function MentalHealth() {
   const { showToast } = useStableToast();
   const [records, setRecords] = useState<MentalHealthRecord[]>([]);
-  const [alerts, setAlerts] = useState<MentalHealthAlert[]>([]);
+  const [alerts, setAlerts] = useState<MentalHealthAlert[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -70,8 +70,10 @@ function MentalHealth() {
       setAlerts(data || []);
     } catch (error) {
       console.error('获取预警列表失败:', error);
+      setAlerts(null); // 加载失败：不伪装成"已处理"或"无预警"
+      showToast('error', '获取预警列表失败，请稍后重试');
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchRecords();
@@ -84,8 +86,8 @@ function MentalHealth() {
       (r.notes && r.notes.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const unresolvedAlerts = alerts.filter((a) => !a.is_resolved);
-  const resolvedAlerts = alerts.filter((a) => a.is_resolved);
+  const unresolvedAlerts = (alerts || []).filter((a) => !a.is_resolved);
+  const resolvedAlerts = (alerts || []).filter((a) => a.is_resolved);
 
   const handleOpenForm = useCallback(() => {
     setFormData(defaultRecordForm);
@@ -248,7 +250,7 @@ function MentalHealth() {
               </div>
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">未处理预警</p>
-                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{unresolvedAlerts.length}</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{alerts === null ? '—' : unresolvedAlerts.length}</p>
               </div>
             </div>
           </div>
@@ -289,7 +291,7 @@ function MentalHealth() {
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                预警 ({unresolvedAlerts.length})
+                预警 ({alerts === null ? '—' : unresolvedAlerts.length})
               </button>
             </div>
           </div>
@@ -395,7 +397,13 @@ function MentalHealth() {
                     <AlertTriangle className="w-4 h-4 text-red-500" />
                     未处理预警 ({unresolvedAlerts.length})
                   </h3>
-                  {unresolvedAlerts.length === 0 ? (
+                  {alerts === null ? (
+                    <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl px-5 py-8 text-center">
+                      <AlertTriangle className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500 dark:text-slate-400 font-medium">预警加载失败</p>
+                      <p className="text-xs text-gray-400 mt-1">请刷新或稍后重试</p>
+                    </div>
+                  ) : unresolvedAlerts.length === 0 ? (
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-5 py-8 text-center">
                       <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
                       <p className="text-emerald-700 dark:text-emerald-300 font-medium">所有预警已处理</p>

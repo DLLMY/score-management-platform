@@ -543,21 +543,29 @@ function ScoreAnalysis(): React.ReactElement {
           </div>
         </Card>
 
-        <Card className={`border-l-3 ${riskStudents.length > 0 ? 'border-l-red-500' : 'border-l-green-500'} bg-gradient-to-r ${riskStudents.length > 0 ? 'from-red-50/50' : 'from-green-50/50'} to-transparent`}>
+        <Card className={`border-l-3 ${warnings === null ? 'border-l-gray-300' : riskStudents.length > 0 ? 'border-l-red-500' : 'border-l-green-500'} bg-gradient-to-r ${warnings === null ? 'from-gray-50' : riskStudents.length > 0 ? 'from-red-50/50' : 'from-green-50/50'} to-transparent`}>
           <div className='p-4'>
             <div className='flex items-center gap-3'>
-              <div className={`p-2 rounded-lg ${riskStudents.length > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                <ShieldAlert className={`w-5 h-5 ${riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              <div className={`p-2 rounded-lg ${warnings === null ? 'bg-gray-100' : riskStudents.length > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
+                <ShieldAlert className={`w-5 h-5 ${warnings === null ? 'text-gray-400' : riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`} />
               </div>
               <div>
                 <div className='text-xs text-gray-500'>风险预警学生</div>
-                <div className={`text-xl font-bold ${riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {riskStudents.length}
-                  <span className='text-xs font-normal text-gray-500 ml-1'>人</span>
-                </div>
+                {warnings === null ? (
+                  <div className='text-sm font-bold text-gray-400'>无法获取</div>
+                ) : (
+                  <div className={`text-xl font-bold ${riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {riskStudents.length}
+                    <span className='text-xs font-normal text-gray-500 ml-1'>人</span>
+                  </div>
+                )}
               </div>
             </div>
-            <p className='text-xs text-gray-500 mt-2'>高风险: {riskStudents.filter((s) => s.risk_level === 'high').length}人</p>
+            <p className='text-xs text-gray-500 mt-2'>
+              {warnings === null
+                ? '预警接口加载失败，请稍后重试'
+                : `高风险: ${riskStudents.filter((s) => s.risk_level === 'high').length}人`}
+            </p>
           </div>
         </Card>
       </div>

@@ -18,6 +18,7 @@ import {
   Target,
   Flame,
   Star,
+  AlertTriangle,
   Crown,
   CheckCircle,
   Wifi,
@@ -247,6 +248,7 @@ function Dashboard(): React.ReactElement {
   const [state, dispatch] = useReducer(dataReducer, initialState);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  const [dashboardError, setDashboardError] = useState(false);
   const stateRef = useRef(state);
   const currentTimeRef = useRef(new Date());
 
@@ -453,6 +455,7 @@ function Dashboard(): React.ReactElement {
         }
 
         if (dashboardData) {
+          setDashboardError(false);
           dispatch({
             type: 'SET_STATISTICS',
             payload: {
@@ -463,6 +466,7 @@ function Dashboard(): React.ReactElement {
             },
           });
         } else {
+          setDashboardError(true); // 接口失败：数值可能不完整，显示警示条而非伪装
           dispatch({
             type: 'SET_STATISTICS',
             payload: {
@@ -475,7 +479,10 @@ function Dashboard(): React.ReactElement {
         }
 
         dispatch({ type: 'SET_LOADING', payload: false });
-        dispatch({ type: 'SET_LAST_UPDATE', payload: new Date() });
+        // 仅接口成功才记录"最后更新"，失败时保持 null（显示 —）
+        if (dashboardData) {
+          dispatch({ type: 'SET_LAST_UPDATE', payload: new Date() });
+        }
       } catch (error) {
         console.error('获取高优先级数据失败:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -876,6 +883,13 @@ function Dashboard(): React.ReactElement {
         </div>
       </div>
 
+      {dashboardError && (
+        <div role='alert' className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'>
+          <AlertTriangle className='w-4 h-4 flex-shrink-0' />
+          部分统计数据加载失败，当前数值可能不完整，请点击「刷新」重试
+        </div>
+      )}
+
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4' role="list" aria-label="统计数据卡片">
         <StatCard
           icon={Users}
@@ -1030,7 +1044,7 @@ function Dashboard(): React.ReactElement {
                 </div>
                 <div className='text-center p-4 bg-orange-50/50 rounded-lg'>
                   <div className='text-2xl font-bold text-orange-600'>
-                    {state.algorithmData.warnings?.total_risk_count || 0}
+                    {state.algorithmData.warnings ? state.algorithmData.warnings.total_risk_count : '—'}
                   </div>
                   <div className='text-xs text-gray-500 mt-1'>风险预警</div>
                 </div>
@@ -1038,7 +1052,7 @@ function Dashboard(): React.ReactElement {
             ) : (
               <div className='text-center py-8 text-gray-500'>
                 <Target className='w-12 h-12 mx-auto mb-3 text-gray-300' />
-                <p>算法数据加载中...</p>
+                <p>暂无算法数据（统计接口未返回结果）</p>
               </div>
             )}
           </div>

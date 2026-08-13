@@ -201,9 +201,19 @@ function ClassManagementPage() {
   }, [showToast, fetchClasses, pagination.page, searchInput]);
 
   const [exportFormat, setExportFormat] = useState<'json' | 'excel'>('excel');
-  const handleExport = useCallback(() => {
-    api.classes.export(searchInput || undefined, exportFormat);
-  }, [searchInput, exportFormat]);
+  const [exporting, setExporting] = useState(false);
+  const handleExport = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await api.classes.export(searchInput || undefined, exportFormat);
+      showToast('success', '班级数据导出成功');
+    } catch (e) {
+      showToast('error', '导出失败: ' + ((e as Error).message || '未知错误'));
+    } finally {
+      setExporting(false);
+    }
+  }, [searchInput, exportFormat, showToast, exporting]);
 
   const openImportModal = useCallback(() => {
     setShowImportModal(true);

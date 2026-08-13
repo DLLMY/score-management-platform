@@ -271,11 +271,12 @@ function Analysis() {
     },
     {
       label: '风险预警',
-      value: riskStudents.length,
+      // warnings 为 null（接口失败/未加载）→ 灰 "无法获取"，不伪装成"无预警"
+      value: warnings === null ? '—' : riskStudents.length,
       icon: Shield,
-      bgColor: riskStudents.length > 0 ? 'bg-red-100' : 'bg-green-100',
-      textColor: riskStudents.length > 0 ? 'text-red-600' : 'text-green-600',
-      trend: riskStudents.length > 0 ? '需关注' : '无预警',
+      bgColor: warnings === null ? 'bg-gray-100' : riskStudents.length > 0 ? 'bg-red-100' : 'bg-green-100',
+      textColor: warnings === null ? 'text-gray-500' : riskStudents.length > 0 ? 'text-red-600' : 'text-green-600',
+      trend: warnings === null ? '无法获取' : riskStudents.length > 0 ? '需关注' : '无预警',
       description: '高/中/低风险学生',
     },
   ], [statistics, clusters, correlation, riskStudents]);

@@ -303,10 +303,19 @@ const CourseSchedulePage: React.FC = () => {
   }, [showToast, fetchData, showConfirm]);
 
   const [exportFormat, setExportFormat] = useState<'json' | 'excel'>('excel');
-  const exportSchedule = useCallback(() => {
-    api.courseSchedules.export(selectedClass > 0 ? selectedClass : undefined, exportFormat);
-    showToast('success', '课程表导出成功');
-  }, [selectedClass, exportFormat, showToast]);
+  const [exporting, setExporting] = useState(false);
+  const exportSchedule = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await api.courseSchedules.export(selectedClass > 0 ? selectedClass : undefined, exportFormat);
+      showToast('success', '课程表导出成功');
+    } catch (e) {
+      showToast('error', '导出失败: ' + ((e as Error).message || '未知错误'));
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedClass, exportFormat, showToast, exporting]);
 
   const openImportModalWithData = useCallback(() => {
     openImportModal();

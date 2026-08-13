@@ -39,6 +39,7 @@ interface Pagination {
 const OperationLogs: React.FC = () => {
   const [logs, setLogs] = useState<OperationLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [logError, setLogError] = useState<boolean>(false);
   const [filters, setFilters] = useState<Filters>({
     operation_type: '',
     target_type: '',
@@ -72,6 +73,7 @@ const OperationLogs: React.FC = () => {
       }));
     } catch (error) {
       console.error('加载操作日志失败:', error);
+      setLogError(true);
     } finally {
       setLoading(false);
     }
@@ -218,6 +220,10 @@ const OperationLogs: React.FC = () => {
             <div className='flex flex-col items-center justify-center py-20'>
               <RefreshCw className='w-10 h-10 text-primary-500 animate-spin mb-4' />
               <p className='text-gray-500'>加载中...</p>
+            </div>
+          ) : logError ? (
+            <div role='alert' className='px-4 py-12 text-center'>
+              <p className='text-sm text-amber-600'>日志加载失败，请刷新重试</p>
             </div>
           ) : logs.length === 0 ? (
             <EmptyState
