@@ -204,12 +204,14 @@ class NotificationBatch(Resource):
         errors = []
         for uid in target_ids:
             try:
-                db.session.add(
-                    Notification(
-                        user_id=uid, title=title, content=content,
-                        type=notify_type, status="sent", sent_at=datetime.now(),
+                # 每条独立 savepoint：单条 add/flush 失败仅回滚该条，不影响其他（避免整批 session 进入 failed 状态）
+                with db.session.begin_nested():
+                    db.session.add(
+                        Notification(
+                            user_id=uid, title=title, content=content,
+                            type=notify_type, status="sent", sent_at=datetime.now(),
+                        )
                     )
-                )
                 sent += 1
             except Exception as e:  # noqa: BLE001
                 errors.append({"user_id": uid, "message": str(e)})

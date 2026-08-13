@@ -50,6 +50,10 @@ def log_mqtt_message_async(client, topic, data, qos=1):
             )
         except Exception as e:
             print(f"记录MQTT消息失败: {e}")
+            try:
+                db.session.rollback()  # 防 add/commit 失败遗留 pending 对象
+            except Exception:
+                pass
 
     # 启动后台线程执行日志记录，不阻塞主流程
     thread = threading.Thread(target=log_task, daemon=True)
@@ -75,6 +79,10 @@ def log_operation_detail(operation_type, details, success=True):
             db.session.commit()
     except Exception as e:
         print(f"记录操作日志失败: {e}")
+        try:
+            db.session.rollback()  # 防 add/commit 失败遗留 pending 对象
+        except Exception:
+            pass
 
 
 def get_mqtt_config_from_db():

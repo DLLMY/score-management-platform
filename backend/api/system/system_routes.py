@@ -870,12 +870,13 @@ class SystemStats(Resource):
                     # DB 不可用：返回失败而非伪造全 0（防止前端误信"0 用户 0 记录"为真实值）
                     return APIResponse.error(message="数据库不可用，无法获取系统统计", status_code=500)
 
-                user_count = counts.get("users", 0)
-                record_count = counts.get("score_records", 0)
-                rule_count = counts.get("score_rules", 0)
-                category_count = counts.get("score_categories", 0)
-                device_count = counts.get("devices", 0)
-                admin_count = counts.get("admins", 0)
+                # counts 字典 key 与表名一致（单数）——此前用复数 key 取值致降级分支必全 0
+                user_count = counts.get("user", 0)
+                record_count = counts.get("score_record", 0)
+                rule_count = counts.get("score_rule", 0)
+                category_count = counts.get("score_category", 0)
+                device_count = counts.get("device", 0)
+                admin_count = counts.get("admin", 0)
 
             return {
                 "timestamp": datetime.now().isoformat(),

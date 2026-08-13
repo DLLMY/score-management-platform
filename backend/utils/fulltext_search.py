@@ -14,6 +14,13 @@ from models import User, db
 logger = logging.getLogger(__name__)
 
 
+def _contains_cjk(text: str) -> bool:
+    """判断关键词是否含中日韩字符（FTS5 porter tokenizer 不支持中文分词）"""
+    import re
+
+    return bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]", text or ""))
+
+
 class FullTextSearch:
     """基于SQLite FTS5的全文搜索引擎"""
 
@@ -48,6 +55,8 @@ class FullTextSearch:
                 if result.fetchone():
                     self._fts_enabled = True
                     logger.info("[FullTextSearch] FTS5索引已存在")
+                    # 启动时重建一次索引：历史上因表名错误（users→user）索引从未填充，启动重建保证自愈
+                    self._rebuild_index(conn)
                     return
 
                 # 创建FTS5虚拟表
@@ -72,7 +81,7 @@ class FullTextSearch:
         try:
             # 使用原生SQL查询避免ORM上下文问题
             result = conn.execute(
-                db.text("SELECT id, name, card_id, phone, class_name FROM users WHERE is_active = 1")  # noqa: F841
+                db.text("SELECT id, name, card_id, phone, class_name FROM user WHERE is_active = 1")  # noqa: F841
             )
             rows = result.fetchall()
             count = 0
@@ -154,7 +163,9 @@ class FullTextSearch:
         if cached:
             return cached
 
-        if self._fts_enabled:
+        if self._fts_enabled and not _contains_cjk(keyword):
+            # FTS5 porter tokenizer 仅支持英文词干，对中文（无空格分词）MATCH 永远 0 结果——
+            # 含 CJK 的关键词直接走 LIKE 回退，避免"搜不到"（此前中文搜索恒 0 结果且不回退）
             result = self._fts_search(keyword, page, per_page, class_filter)  # noqa: F841
         else:
             result = self._fallback_search(keyword, page, per_page, class_filter)  # noqa: F841
@@ -170,9 +181,11 @@ class FullTextSearch:
             # 使用FTS5全文搜索
             with db.engine.connect() as conn:
                 # 构建FTS查询
+                # 构建FTS查询（显式列名，避免 SELECT u.* 依赖表列顺序的位置映射）
                 fts_query = """
-                    SELECT u.* FROM user_search_idx fts
-                    JOIN users u ON u.id = fts.rowid
+                    SELECT u.id, u.name, u.gender, u.class_name, u.phone, u.card_id, u.current_score
+                    FROM user_search_idx fts
+                    JOIN user u ON u.id = fts.rowid
                     WHERE user_search_idx MATCH :keyword
                 """
                 params = {"keyword": f"{keyword}*"}
@@ -186,7 +199,7 @@ class FullTextSearch:
                 # 获取总数
                 count_query = """
                     SELECT COUNT(*) FROM user_search_idx fts
-                    JOIN users u ON u.id = fts.rowid
+                    JOIN user u ON u.id = fts.rowid
                     WHERE user_search_idx MATCH :keyword
                 """
                 count_params = {"keyword": f"{keyword}*"}
@@ -209,12 +222,12 @@ class FullTextSearch:
                     users.append(
                         {
                             "id": row[0],
-                            "name": row[2],
-                            "gender": row[3],
-                            "class_name": row[4],
-                            "phone": row[5],
-                            "card_id": row[7],
-                            "current_score": row[8],
+                            "name": row[1],
+                            "gender": row[2],
+                            "class_name": row[3],
+                            "phone": row[4],
+                            "card_id": row[5],
+                            "current_score": row[6],
                         }
                     )
 

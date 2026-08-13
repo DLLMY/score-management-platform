@@ -960,7 +960,8 @@ class DeviceAdvancedStats(Resource):
         offline = Device.query.filter_by(status="offline").count()
         error = Device.query.filter_by(status="error").count()
 
-        avg_signal = db.session.query(func.avg(Device.wifi_signal)).filter(Device.wifi_signal.isnot(None)).scalar() or 0
+        # 无信号数据时保持 None（前端显示 '--'），0 dBm 会被误读为"极强信号"
+        avg_signal = db.session.query(func.avg(Device.wifi_signal)).filter(Device.wifi_signal.isnot(None)).scalar()
 
         alert_count = DeviceAlert.query.filter_by(is_resolved=False).count()
         critical_alerts = DeviceAlert.query.filter_by(is_resolved=False, severity="critical").count()
@@ -989,7 +990,7 @@ class DeviceAdvancedStats(Resource):
             "offline_devices": offline,
             "error_devices": error,
             "online_rate": round(online / total * 100, 1) if total > 0 else 0,
-            "avg_signal_strength": round(avg_signal, 1),
+            "avg_signal_strength": round(avg_signal, 1) if avg_signal is not None else None,
             "signal_distribution": signal_distribution,
             "today_heartbeats": today_heartbeats,
             "unresolved_alerts": alert_count,

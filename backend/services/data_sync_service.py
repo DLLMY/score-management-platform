@@ -63,6 +63,10 @@ class DataSyncService:
             )
         except Exception as e:
             logger.error(f"New class sync failed: {e}")
+            try:
+                db.session.rollback()  # 防中途异常遗留 pending 修改
+            except Exception:
+                pass
         return stats
 
     @staticmethod
@@ -94,6 +98,10 @@ class DataSyncService:
             logger.info(f"Class delete sync: {class_info.name}, unlinked {stats['users_unlinked']} users")
         except Exception as e:
             logger.error(f"Class delete sync failed: {e}")
+            try:
+                db.session.rollback()  # 防中途异常遗留 pending 修改
+            except Exception:
+                pass
         return stats
 
     @staticmethod
