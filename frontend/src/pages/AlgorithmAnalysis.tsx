@@ -74,6 +74,8 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   const [engagementTrendLoading, setEngagementTrendLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // 统计/班级/趋势加载失败警示（不阻断内容区，仅提示数据可能不完整）
+  const [loadWarn, setLoadWarn] = useState<boolean>(false);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   
   // 原有数据
@@ -153,8 +155,10 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const params = selectedClass ? { class_name: selectedClass } : undefined;
       const res = await api.algorithm.getStatistics(params);
       setStatistics(res || null);
+      setLoadWarn(false);
     } catch (err) {
       console.error('加载统计数据失败:', err);
+      setLoadWarn(true);
     }
   }, [selectedClass]);
 
@@ -325,9 +329,11 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const data = await api.classes.getAll() as unknown;
       const classesData = Array.isArray(data) ? data : ((data as { classes?: { id: number; name: string }[] }).classes || []);
       setClasses(classesData);
+      setLoadWarn(false);
     } catch (err) {
       console.error('加载班级列表失败:', err);
       setClasses([]);
+      setLoadWarn(true);
     }
   }, []);
 
@@ -471,9 +477,11 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     try {
       const res = await api.algorithm.getEngagementTrend(engagementTrendUserId, engagementTrendWeeks);
       setEngagementTrend(res);
+      setLoadWarn(false);
     } catch (err) {
       console.error('参与度周趋势失败:', err);
       setEngagementTrend(null);
+      setLoadWarn(true);
     } finally {
       setEngagementTrendLoading(false);
     }
@@ -3129,6 +3137,14 @@ export default function AlgorithmAnalysis(): React.ReactElement {
             <Bell className="w-4 h-4" />
             集成学习算法实现主动风险预警
           </div>
+        </div>
+      )}
+
+      {/* 加载失败警示（不阻断内容） */}
+      {loadWarn && !error && (
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-4 text-amber-700 dark:text-amber-300 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          部分数据加载失败（统计/班级/参与度趋势），当前展示可能不完整，请刷新重试
         </div>
       )}
 

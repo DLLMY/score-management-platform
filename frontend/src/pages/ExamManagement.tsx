@@ -185,7 +185,7 @@ function ExamManagement(): React.ReactElement {
     setDragOverIndex(null);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent, targetIndex: number): void => {
+  const handleDrop = useCallback(async (e: React.DragEvent, targetIndex: number): Promise<void> => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === targetIndex) {
       setDragOverIndex(null);
@@ -205,9 +205,10 @@ function ExamManagement(): React.ReactElement {
         id: subject.id,
         order: idx + 1,
       }));
-      api.subjects.updateOrder(orderData);
+      await api.subjects.updateOrder(orderData);
     } catch (err) {
       console.error('更新科目顺序失败:', err);
+      showToast('error', '科目顺序更新失败，请重试');
     }
 
     setDragOverIndex(null);

@@ -331,6 +331,7 @@ function UserList() {
         setClassList(classesData);
       } catch (error) {
         console.error('Error fetching classes:', error);
+        showToast('error', '班级列表加载失败，筛选器可能不可用');
       }
     };
     fetchClasses();
@@ -438,8 +439,9 @@ function UserList() {
       dispatch({ type: 'SET_RULES', payload: Array.isArray(data) ? data : (data.rules || []) });
     } catch (error) {
       console.error('Error fetching rules:', error);
+      showToast('error', '积分规则加载失败，快捷评分可能不可用');
     }
-  }, []);
+  }, [showToast]);
 
   const fetchRankRules = useCallback(async () => {
     try {
@@ -447,8 +449,9 @@ function UserList() {
       dispatch({ type: 'SET_RANK_RULES', payload: data });
     } catch (error) {
       console.error('Error fetching rank rules:', error);
+      showToast('error', '排名规则加载失败，排名规则可能不可用');
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchUsers();

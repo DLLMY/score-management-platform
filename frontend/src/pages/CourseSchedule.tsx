@@ -66,6 +66,7 @@ const CourseSchedulePage: React.FC = () => {
   }, [showToast]);
   
   const [schedules, setSchedules] = useState<CourseSchedule[]>([]);
+  const [schedulesError, setSchedulesError] = useState(false);
   const [periods, setPeriods] = useState<ClassPeriod[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -188,8 +189,10 @@ const CourseSchedulePage: React.FC = () => {
         selectedClass > 0 ? { class_info_id: selectedClass } : undefined
       );
       setSchedules(scheduleData);
+      setSchedulesError(false);
     } catch (error) {
       console.error('获取课程表失败:', error);
+      setSchedulesError(true);
     }
   }, [selectedClass]);
 
@@ -483,6 +486,12 @@ const CourseSchedulePage: React.FC = () => {
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
+      {schedulesError && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>课程表加载失败，当前课表可能不完整，请刷新重试</p>
+        </div>
+      )}
       {/* Header */}
       <div className='px-6 py-5 border-b border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm'>
         <div className='flex items-center justify-between'>

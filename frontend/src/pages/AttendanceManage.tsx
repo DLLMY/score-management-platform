@@ -1,20 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Calendar,
-  UserCheck,
-  Clock,
-  FileText,
-  Search,
-  Plus,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  X,
-  Check,
-  Filter,
-  ChevronRight,
-  Briefcase,
-} from 'lucide-react';
+import { Calendar, UserCheck, Clock, FileText, Search, Plus, CheckCircle, XCircle, AlertCircle, X, Check, Filter, ChevronRight, Briefcase, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import {
@@ -61,6 +46,7 @@ function AttendanceManage() {
   const { showToast } = useStableToast();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
+  const [leavesError, setLeavesError] = useState(false);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,8 +86,10 @@ function AttendanceManage() {
     try {
       const data = await api.attendance.getLeaves();
       setLeaves(data || []);
+      setLeavesError(false);
     } catch (error) {
       console.error('获取请假列表失败:', error);
+      setLeavesError(true);
     }
   }, []);
 
@@ -408,7 +396,12 @@ function AttendanceManage() {
               </button>
             </div>
             <div className="divide-y divide-amber-50 dark:divide-amber-900/30">
-              {pendingLeaves.length === 0 ? (
+              {leavesError ? (
+                <div className="px-5 py-8 text-center">
+                  <p className="text-amber-600 dark:text-amber-400 font-medium">请假列表加载失败</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">请刷新页面重试</p>
+                </div>
+              ) : pendingLeaves.length === 0 ? (
                 <div className="px-5 py-8 text-center text-slate-500 dark:text-slate-400">
                   暂无待审批的请假申请
                 </div>

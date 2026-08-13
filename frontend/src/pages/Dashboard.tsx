@@ -317,6 +317,7 @@ function Dashboard(): React.ReactElement {
         setClassList(classesData);
       } catch (error) {
         console.error('获取班级列表失败:', error);
+        setDashboardError(true);
       }
     };
     fetchClasses();
@@ -413,6 +414,7 @@ function Dashboard(): React.ReactElement {
       };
     } catch (error) {
       console.error('获取算法数据失败:', error);
+      setDashboardError(true);
       return { statistics: null, clusters: null, warnings: null };
     }
   }, [selectedClass]);
@@ -485,6 +487,7 @@ function Dashboard(): React.ReactElement {
         }
       } catch (error) {
         console.error('获取高优先级数据失败:', error);
+        setDashboardError(true);
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     }, [fetchUsers, fetchDevices, getOnlineCount]);
@@ -503,6 +506,7 @@ function Dashboard(): React.ReactElement {
         }
       } catch (error) {
         console.error('获取中优先级数据失败:', error);
+        setDashboardError(true);
       }
     }, [fetchRecords, fetchNotifications]);
 
@@ -512,6 +516,7 @@ function Dashboard(): React.ReactElement {
         dispatch({ type: 'SET_ALGORITHM_DATA', payload: algorithmData });
       } catch (error) {
         console.error('获取低优先级数据失败:', error);
+        setDashboardError(true);
       }
     }, [fetchAlgorithmData]);
 
@@ -550,6 +555,7 @@ function Dashboard(): React.ReactElement {
           }
         } catch (error) {
           console.error('获取数据失败:', error);
+          setDashboardError(true);
         } finally {
           if (mountedRef.current) {
             dispatch({ type: 'SET_REFRESHING', payload: false });

@@ -100,6 +100,8 @@ function ScoreAnalysis(): React.ReactElement {
   const [selectedExam, setSelectedExam] = useState<string>('');
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
+  // 算法数据加载失败警示
+  const [loadWarn, setLoadWarn] = useState(false);
   const [examAnalysis, setExamAnalysis] = useState<ExamAnalysis | null>(null);
   const [classAnalysis, setClassAnalysis] = useState<unknown>(null);
   const [algorithmData, setAlgorithmData] = useState<AlgorithmData>({
@@ -163,8 +165,14 @@ function ScoreAnalysis(): React.ReactElement {
         compositeScores: compositeRes as unknown as CompositeScoreResult,
         warnings: warningRes as unknown as WarningResult,
       });
+      if (!clusterRes && !compositeRes && !warningRes) {
+        setLoadWarn(true);
+      } else {
+        setLoadWarn(false);
+      }
     } catch (error) {
       console.error('获取算法数据失败:', error);
+      setLoadWarn(true);
     }
   }, [selectedClass]);
 
@@ -348,6 +356,12 @@ function ScoreAnalysis(): React.ReactElement {
 
   return (
     <div className='p-5 space-y-5'>
+      {loadWarn && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>算法分析数据加载失败，相关图表可能不完整，请刷新重试</p>
+        </div>
+      )}
       <div>
         <h1 className='text-xl font-bold text-gray-900'>数据分析</h1>
         <p className='text-sm text-gray-500 mt-1'>学生积分数据统计与分析</p>

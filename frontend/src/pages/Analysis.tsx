@@ -107,6 +107,8 @@ function Analysis() {
   });
 
   const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  // 数据加载失败警示（不阻断内容，提示数据可能不完整）
+  const [loadWarn, setLoadWarn] = useState(false);
 
   const fetchAlgorithmData = useCallback(async () => {
     try {
@@ -121,8 +123,14 @@ function Analysis() {
         clusters: clusterRes || null,
         warnings: warningRes || null,
       });
+      if (!statsRes && !clusterRes && !warningRes) {
+        setLoadWarn(true);
+      } else {
+        setLoadWarn(false);
+      }
     } catch (error) {
       console.error('获取算法数据失败:', error);
+      setLoadWarn(true);
     }
   }, []);
 
@@ -137,8 +145,10 @@ function Analysis() {
     try {
       const data = await api.users.getAll();
       setUsers(data.users || []);
+      setLoadWarn(false);
     } catch (error) {
       console.error('获取用户数据失败:', error);
+      setLoadWarn(true);
     } finally {
       setIsLoading(false);
     }
@@ -149,8 +159,10 @@ function Analysis() {
       const data = await api.classes.getAll() as unknown;
       const classesData = Array.isArray(data) ? data : ((data as { classes?: { id: number; name: string }[] }).classes || []);
       setClassList(classesData);
+      setLoadWarn(false);
     } catch (error) {
       console.error('获取班级列表失败:', error);
+      setLoadWarn(true);
     }
   };
 
@@ -332,6 +344,12 @@ function Analysis() {
 
   return (
     <div className='max-w-7xl mx-auto'>
+      {loadWarn && (
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>部分数据加载失败（用户/班级/算法），当前展示可能不完整，请刷新重试</p>
+        </div>
+      )}
       <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-7'>
         <div className='flex items-center gap-4'>
           <div className='w-12 h-12 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/30'>
