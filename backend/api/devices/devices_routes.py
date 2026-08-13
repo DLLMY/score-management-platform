@@ -11,6 +11,7 @@ from utils.validation import validate_device_id, validate_name
 from utils.response import APIResponse
 from services.mqtt_service import publish_mqtt
 from services.cache_service import cache_service
+from services.heartbeat_service import is_device_online
 from datetime import datetime
 from sqlalchemy import func
 
@@ -1013,7 +1014,7 @@ class HeartbeatTimeoutCheck(Resource):
         遍历所有设备，检查是否有设备超过心跳间隔未响应。
         返回超时的设备列表，并自动创建告警。
         """
-        from services.heartbeat_service import check_heartbeat_timeout, is_device_online
+        from services.heartbeat_service import check_heartbeat_timeout
 
         result = check_heartbeat_timeout()  # noqa: F841
         return APIResponse.success(data=result)
