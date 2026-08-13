@@ -792,12 +792,21 @@ export interface BatchScorePredictData {
   predictions: ScorePredictResult[];
 }
 
+export interface RiskSubRisk {
+  key: 'academic' | 'behavior' | 'attendance';
+  name: string;
+  level: 'high' | 'medium' | 'low';
+  score: number;
+  factors: string[];
+}
+
 export interface RiskPredictResult {
   name: string;
   risk_level: 'high' | 'medium' | 'low';
   risk_score: number;
   contributing_factors: string[];
   recommended_actions: string[];
+  sub_risks?: RiskSubRisk[];
 }
 
 export interface BatchRiskPredictData {

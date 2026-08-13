@@ -4,7 +4,7 @@ import { coalesceRequest, invalidateRequestCache } from '../utils/requestCoalesc
 import { performanceMonitor } from '../utils/performanceMonitor';
 import { errorMonitor } from '../utils/errorMonitor';
 import { performanceReportingService } from '../services/performanceReportingService';
-import { Admin, Device, DevicePaginatedResponse, User, UserCreateInput, UserUpdateInput, UserPaginatedResponse, Notification, AlgorithmStatistics, ClusterData, WarningData, AlgorithmData, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, ModelTrainingResult, ModelEvaluationResult, RiskStudent, PredictionResult, AnomalyResult, ScorePredictResult, RiskPredictResult, ScoreAttributionResult, ExamAnalysis, ClassAnalysis, StudentScoreAnalysis, SeatingChart, SeatingChartCreateInput, DutyGroup, DutyGroupCreateInput, DutyAssignment, CommitteeCreateInput, ClassCommittee, ParentContact, ParentContactCreateInput, ContactLog, HomeworkAssignment, HomeworkCreateInput, Attendance, AttendanceRecordInput, AttendanceStats, LeaveApplyInput, LeaveApplication, StudyGroup, StudyGroupCreateInput, MentalHealthRecord, MentalHealthRecordCreateInput, MentalHealthAlert, Activity, ActivityCreateInput, CultureRecord, CultureCreateInput, StudyGuide, StudyGuideCreateInput, ImprovementPlan, ImprovementPlanCreateInput } from '../types';
+import { Admin, Device, DevicePaginatedResponse, User, UserCreateInput, UserUpdateInput, UserPaginatedResponse, Notification, AlgorithmStatistics, ClusterData, WarningData, AlgorithmData, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, ModelTrainingResult, ModelEvaluationResult, RiskStudent, PredictionResult, AnomalyResult, ScorePredictResult, RiskPredictResult, RiskSubRisk, ScoreAttributionResult, ExamAnalysis, ClassAnalysis, StudentScoreAnalysis, SeatingChart, SeatingChartCreateInput, DutyGroup, DutyGroupCreateInput, DutyAssignment, CommitteeCreateInput, ClassCommittee, ParentContact, ParentContactCreateInput, ContactLog, HomeworkAssignment, HomeworkCreateInput, Attendance, AttendanceRecordInput, AttendanceStats, LeaveApplyInput, LeaveApplication, StudyGroup, StudyGroupCreateInput, MentalHealthRecord, MentalHealthRecordCreateInput, MentalHealthAlert, Activity, ActivityCreateInput, CultureRecord, CultureCreateInput, StudyGuide, StudyGuideCreateInput, ImprovementPlan, ImprovementPlanCreateInput } from '../types';
 import { config, getApiUrl, getCacheTtlByUrl } from '../config';
 
 // 从统一配置模块读取API基础路径
@@ -2415,12 +2415,39 @@ const normalizeUserRiskPredict = (raw?: any): RiskPredictResult => {
     ? raw!.intervention_suggestions!
     : [];
   const sev = (raw?.overall_risk_level ?? 'low') as 'high' | 'medium' | 'low';
+
+  // 多维风险分：后端 risk_details 含 academic/behavior/attendance 三维，按固定顺序映射
+  const SUB_RISK_ORDER: Array<'academic' | 'behavior' | 'attendance'> = [
+    'academic',
+    'behavior',
+    'attendance',
+  ];
+  const details = raw && raw.risk_details && typeof raw.risk_details === 'object' ? raw.risk_details : null;
+  const sub_risks: RiskSubRisk[] = details
+    ? SUB_RISK_ORDER.filter((k) => details[k] && typeof details[k] === 'object').map((k) => {
+        const d = details[k];
+        const lvl = (d.risk_level ?? 'low') as 'high' | 'medium' | 'low';
+        const rawFactors = Array.isArray(d.factors) ? d.factors : [];
+        const factorStrs = rawFactors
+          .map((f: any) => (f && (f.description || f.factor || f.name)) || '')
+          .filter((s: string) => !!s);
+        return {
+          key: k,
+          name: d.name ?? k,
+          level: lvl === 'high' || lvl === 'medium' ? lvl : 'low',
+          score: toNumSafe(d.risk_score),
+          factors: factorStrs,
+        };
+      })
+    : [];
+
   return {
     name: raw?.name ?? '未知学生',
     risk_level: sev === 'high' || sev === 'medium' ? sev : 'low',
     risk_score: toNumSafe(raw?.overall_risk_score),
     contributing_factors,
     recommended_actions,
+    sub_risks,
   };
 };
 

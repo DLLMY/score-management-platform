@@ -2060,6 +2060,41 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                     </span>
                     <span className="text-sm text-gray-500 dark:text-slate-400">风险分 {studentProfile.riskPredict.risk_score.toFixed(1)}</span>
                   </div>
+                  {studentProfile.riskPredict.sub_risks && studentProfile.riskPredict.sub_risks.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">多维风险分</div>
+                      <div className="space-y-2">
+                        {studentProfile.riskPredict.sub_risks.map((s) => {
+                          const barColor =
+                            s.level === 'high'
+                              ? 'bg-red-500'
+                              : s.level === 'medium'
+                              ? 'bg-yellow-500'
+                              : 'bg-blue-500';
+                          const labelColor =
+                            s.level === 'high'
+                              ? 'text-red-600 dark:text-red-400'
+                              : s.level === 'medium'
+                              ? 'text-yellow-600 dark:text-yellow-400'
+                              : 'text-blue-600 dark:text-blue-400';
+                          const pct = Math.max(4, Math.min(100, Math.round(s.score * 100)));
+                          return (
+                            <div key={s.key}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-gray-600 dark:text-slate-300">{s.name}</span>
+                                <span className={`font-medium ${labelColor}`}>
+                                  {s.level === 'high' ? '高' : s.level === 'medium' ? '中' : '低'} · {s.score.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="h-2 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+                                <div className={`h-full ${barColor}`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {studentProfile.riskPredict.contributing_factors.length > 0 && (
                     <div>
                       <div className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">风险因子</div>
