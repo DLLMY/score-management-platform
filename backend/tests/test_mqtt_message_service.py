@@ -630,3 +630,45 @@ class TestMQTTMessageService:
         mock_publish.assert_called_once()
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload['success']
+
+    @patch('services.mqtt_message_service.publish_mqtt')
+    @patch('models.ScoreRule')
+    def test_handle_score_rules_query_success(self, mock_rule, mock_publish):
+        """测试设备查询积分规则：返回启用规则列表"""
+        mock_rule_obj = Mock()
+        mock_rule_obj.id = 1
+        mock_rule_obj.name = "课堂表现加分"
+        mock_rule_obj.description = "积极发言"
+        mock_rule_obj.score = 5
+        mock_rule_obj.category = None
+        mock_rule_obj.daily_limit = 0
+        mock_rule_obj.min_interval = 0
+        mock_rule_obj.score_type = "fixed"
+        mock_rule_obj.start_time = None
+        mock_rule_obj.end_time = None
+        mock_rule.query.filter_by.return_value.order_by.return_value.all.return_value = [mock_rule_obj]
+
+        service = MQTTMessageService()
+        service.handle_score_rules_query({'request_id': 'req_rules_1'})
+
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == 'score/rules/result'
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert payload['success']
+        assert payload['count'] == 1
+        assert payload['rules'][0]['name'] == '课堂表现加分'
+        assert payload['request_id'] == 'req_rules_1'
+
+    @patch('services.mqtt_message_service.publish_mqtt')
+    @patch('models.ScoreRule')
+    def test_handle_score_rules_query_failure(self, mock_rule, mock_publish):
+        """测试设备查询规则查询异常：诚实返回失败而非伪装空列表"""
+        mock_rule.query.filter_by.side_effect = Exception('db error')
+
+        service = MQTTMessageService()
+        service.handle_score_rules_query({'request_id': 'req_rules_2'})
+
+        mock_publish.assert_called_once()
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert not payload['success']
+        assert 'Failed to load' in payload['message']

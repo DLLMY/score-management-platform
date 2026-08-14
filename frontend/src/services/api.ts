@@ -1762,7 +1762,6 @@ export interface Api {
     update: (id: number, data: { score: number }) => Promise<unknown>;
     delete: (id: number) => Promise<void>;
     importScores: (formData: FormData) => Promise<unknown>;
-    exportScores: (examId?: number, format?: 'json' | 'excel') => void;
     confirmAll: (examId: string) => Promise<void>;
     batchCreate: (data: { exam_id: number; scores: BatchScoreItem[] }) => Promise<BatchScoreResult>;
   };
@@ -1836,7 +1835,6 @@ export interface Api {
     getStats: () => Promise<{ total_devices: number; online_devices: number; offline_devices: number; error_devices?: number; today_heartbeats?: number; recent_activity?: unknown[] }>;
     getAdvancedStats: () => Promise<{ total_devices: number; online_devices: number; offline_devices: number; error_devices?: number; online_rate?: number; avg_signal_strength?: number; signal_distribution?: Record<string, number>; today_heartbeats?: number; unresolved_alerts?: number; critical_alerts?: number }>;
     import: (formData: FormData) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>;
-    export: (format?: 'json' | 'excel') => void;
   };
   firmware: {
     getAll: () => Promise<Firmware[]>;
@@ -1858,7 +1856,6 @@ export interface Api {
     update: (id: number, data: Partial<Exam>) => Promise<Exam>;
     delete: (id: number) => Promise<void>;
     import: (data: FormData, url?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>;
-    export: (format: 'json' | 'excel') => void;
     uploadScores: (examId: number, scores: { user_id: number; score: number }[]) => Promise<void>;
     publish: (id: number) => Promise<Exam>;
     close: (id: number) => Promise<Exam>;
@@ -1873,7 +1870,6 @@ export interface Api {
     assignClass: (id: number, data: { class_info_id: number; teacher_id?: number }) => Promise<SubjectClassLink>;
     updateClassTeacher: (subjectId: number, classId: number, data: { teacher_id?: number }) => Promise<SubjectClassLink>;
     removeClass: (subjectId: number, classId: number) => Promise<void>;
-    export: (includeInactive?: boolean, format?: 'json' | 'excel') => void;
     import: (data: FormData, customUrl?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ name: string; action: string; message: string }> }>;
     updateOrder: (data: Array<{ id: number; order: number }>) => Promise<void>;
   };
@@ -3923,14 +3919,6 @@ const api: Api = {
       body: formData,
       // 注意：勿手动设 Content-Type——FormData 需浏览器自动附带 boundary，手动指定会丢 boundary 致 Flask 解析失败
     }) as Promise<unknown>,
-    exportScores: (examId?: number, format?: 'json' | 'excel') => {
-      let url = '/api/scores/export';
-      const params = new URLSearchParams();
-      if (examId) params.append('exam_id', examId.toString());
-      if (format) params.append('format', format);
-      if (params.toString()) url += '?' + params.toString();
-      window.open(url, '_blank');
-    },
     confirmAll: (examId) => request(`/api/scores/confirm-all`, {
       method: 'POST',
       body: JSON.stringify({ exam_id: examId }),
@@ -4142,10 +4130,6 @@ const api: Api = {
       method: 'POST',
       body: formData,
     }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>,
-    export: (format?: 'json' | 'excel') => {
-      const url = `/api/devices/export?format=${format || 'excel'}`;
-      return window.open(url, '_blank');
-    },
   },
   firmware: {
     getAll: async () => {
@@ -4200,10 +4184,6 @@ const api: Api = {
       method: 'POST',
       body: data,
     }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>,
-    export: (format: 'json' | 'excel') => {
-      const url = `/api/exams/export?format=${format}`;
-      return window.open(url, '_blank');
-    },
     uploadScores: (examId, scores) => request(`/api/exams/${examId}/scores`, {
       method: 'POST',
       body: JSON.stringify({ scores }),
@@ -4243,14 +4223,6 @@ const api: Api = {
       body: JSON.stringify(data),
     }) as Promise<SubjectClassLink>,
     removeClass: (subjectId, classId) => request(`/api/subjects/${subjectId}/classes/${classId}`, { method: 'DELETE' }) as Promise<void>,
-    export: (includeInactive?: boolean, format?: 'json' | 'excel') => {
-      const queryParams = new URLSearchParams();
-      if (includeInactive) queryParams.append('include_inactive', 'true');
-      if (format) queryParams.append('format', format);
-      const query = queryParams.toString();
-      const url = `/api/subjects/export${query ? '?' + query : ''}`;
-      return window.open(url, '_blank');
-    },
     import: (data: FormData, customUrl?: string) => request(customUrl || '/api/subjects/import', {
       method: 'POST',
       body: data,

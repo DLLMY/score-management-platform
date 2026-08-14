@@ -668,7 +668,6 @@ class MQTTMessageService:
         undo_code = data.get("undo_code")
         client_id = data.get("client_id")
         reason = data.get("reason", "MQTT undo")
-
         response_topic = f"score/undo/result/{client_id}" if client_id else "score/undo/result"
 
         if not undo_code or not undo_code.startswith("UNDO_"):
@@ -707,6 +706,53 @@ class MQTTMessageService:
             }
         publish_mqtt(response_topic, json.dumps(response))
 
+    def handle_score_rules_query(self, data):
+        """设备查询积分规则：回发当前启用的规则列表（供设备端本地加分/校验参考）。
+
+        此前订阅了 score/rules/query 但无处理分支 → 设备请求静默无响应。
+        """
+        request_id = data.get("request_id") if isinstance(data, dict) else None
+        try:
+            from models import ScoreRule
+
+            rules = (
+                ScoreRule.query.filter_by(is_active=True)
+                .order_by(ScoreRule.category_id, ScoreRule.id)
+                .all()
+            )
+            rule_list = [
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "description": r.description,
+                    "score": r.score,
+                    "category": r.category.name if r.category else None,
+                    "daily_limit": r.daily_limit,
+                    "min_interval": r.min_interval,
+                    "score_type": r.score_type,
+                    "start_time": r.start_time.isoformat() if r.start_time else None,
+                    "end_time": r.end_time.isoformat() if r.end_time else None,
+                }
+                for r in rules
+            ]
+            response = {
+                "success": True,
+                "message": "OK",
+                "count": len(rule_list),
+                "rules": rule_list,
+                "request_id": request_id,
+            }
+        except Exception as e:  # noqa: BLE001
+            # 诚实失败：不伪装"规则为空"
+            response = {
+                "success": False,
+                "message": f"Failed to load score rules: {e}",
+                "count": 0,
+                "rules": [],
+                "request_id": request_id,
+            }
+        publish_mqtt("score/rules/result", json.dumps(response))
+
     def handle_mqtt_message(self, client, topic, message):
         mqtt_logs.append(
             {
@@ -744,6 +790,9 @@ class MQTTMessageService:
             self.handle_score_add(data)
         elif topic == "score/undo":
             self.handle_score_undo(data)
+        elif topic == "score/rules/query":
+            # 设备查询积分规则（此前订阅了 score/rules/query 但无处理分支 → 设备请求无响应）
+            self.handle_score_rules_query(data)
 
 
 mqtt_message_service = MQTTMessageService()

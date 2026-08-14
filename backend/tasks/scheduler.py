@@ -1,35 +1,19 @@
+"""
+定时任务辅助模块（仅提供被复用/引用的函数）。
+
+说明：
+- 备份 + 心跳检查的调度由 app/service_init.py::init_scheduler 统一管理
+  （曾在此重复实现，存在双启动风险，已删除）。
+- 本模块仅保留：
+  1. scheduled_approval_timeout_check / scheduled_notify_check —— 被
+     service_init.init_scheduler 注册（审批超时 5min + 定时通知 10s）；
+  2. shutdown_scheduler —— 被 tests/conftest.py 引用（no-op 兼容，测试
+     实际关闭的是 service_init 启动的调度器，见其 _ACTIVE_SCHEDULERS）。
+"""
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 
 scheduler = None
-
-
-def scheduled_backup():
-    try:
-        from utils.backup_utils import backup_manager
-
-        result = backup_manager.create_backup("full")  # noqa: F841
-        if result["success"]:
-            print(f"数据库定时备份成功: {result['filename']}")
-            backup_manager.clean_old_backups()
-        else:
-            print(f"数据库定时备份失败: {result['message']}")
-    except Exception as e:
-        print(f"数据库定时备份异常: {e}")
-
-
-def scheduled_heartbeat_check(app):
-    try:
-        from services.heartbeat_service import check_heartbeat_timeout
-
-        with app.app_context():
-            result = check_heartbeat_timeout()  # noqa: F841
-            if result and result.get("total_timeout", 0) > 0:
-                print(f"心跳超时检查发现 {result['total_timeout']} 台设备离线")
-            else:
-                print("心跳超时检查完成，所有设备正常")
-    except Exception as e:
-        print(f"心跳超时检查异常: {e}")
 
 
 def scheduled_approval_timeout_check(app):
@@ -83,31 +67,6 @@ def scheduled_notify_check(app):
             process_scheduled_notifications()
     except Exception as e:
         print(f"定时通知检查异常: {e}")
-
-
-def init_scheduler(app):
-    global scheduler
-    if scheduler:
-        return
-
-    scheduler = BackgroundScheduler()
-
-    scheduler.add_job(scheduled_backup, "cron", hour=2, minute=0)
-    scheduler.add_job(lambda: scheduled_heartbeat_check(app), "interval", seconds=30)
-    scheduler.add_job(lambda: scheduled_approval_timeout_check(app), "interval", minutes=5)
-    scheduler.add_job(lambda: scheduled_notify_check(app), "interval", seconds=10)
-
-    scheduler.start()
-    # 设为守护线程：测试等场景下即使未显式 shutdown，也不会阻塞进程退出。
-    try:
-        scheduler._thread.daemon = True
-    except Exception:  # noqa: BLE001
-        pass
-
-    print("定时备份任务已启动，每天凌晨2:00执行")
-    print("心跳超时检查任务已启动，每30秒执行一次")
-    print("审批超时检查任务已启动，每5分钟执行一次")
-    print("定时通知检查任务已启动，每10秒执行一次")
 
 
 def shutdown_scheduler():
