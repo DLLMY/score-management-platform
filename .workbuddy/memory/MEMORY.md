@@ -29,6 +29,9 @@
 - `api.ts` interface→运行时对象复制时 `};` 须改 `},`（否则 esbuild 整前端 build 失败）。
 - DB 还原：先 `cp 库 库.bak_<ts>`；勿拿旧备份当还原点（WAL 覆盖丢未 checkpoint 写入）。
 - **StudentPortal.tsx TDZ 崩溃（已修复）**：`loadMyRank` 的 `useCallback` 若定义在引用它的 `useEffect` **之后**，运行期报 `Cannot access 'loadMyRank' before initialization`（`const` 暂时性死区），被 ErrorBoundary 捕获→**学生端整页白屏**。须保证所有被 useEffect/useCallback 依赖引用的 hook 定义在使用之前。此 bug **仅浏览器运行时暴露**，build/lint/vitest 全不报——**后期前端页面必须用 playwright 实跑验证**（见功能模块状态）。
+- **MQTT 双连接架构（勿回退为单连接）**：`services/mqtt_manager.py` 现为**双 paho 客户端**——控制连接 `self._client` 订阅 `score/#`+`phonebox/query`+`phonebox/unlock/#`+`phonebox/ota/#`+`phonebox/points/#`（QoS1，即时业务派发，绝不被洪流淹没）；遥测连接 `self._telemetry_client` 订阅 `phonebox/#`（QoS0，可容忍丢包），心跳即时推 WS、DB 落库异步入 Celery `tasks.mqtt_tasks.process_phonebox_telemetry`。各自独立 `_on_connect/_on_message/_on_disconnect` + 重连线程。原单连接 + 13 具体 topic 触发 EMQX 订阅上限死链、且被遥测洪流淹没控制消息，已于 2026-08-14 根治。新增控制 topic 加进 `CONTROL_SUBSCRIPTIONS`、新增遥测加进 `TELEMETRY_SUBSCRIPTIONS`，勿混。
+- **控制回包 QoS=1**：`services/mqtt_service.py::publish_mqtt` 默认 qos=1（低频控制/回包/通知），确保设备可靠收包；遥测高频消息不走此函数。
+- **生产 Broker 洪流（真机 MQTT 测试须知）**：生产 EMQX（nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883）有真实设备 ~5000 msg/s 命中 phonebox/#。后端双连接已根治「控制消息被淹没」（控制连接独立，2026-08-14 验证在洪流下稳定收发 A/B/C1/C2 并以 qos1 回包）。但**e2e 测试桩（paho 模拟设备）在洪流窗口下偶发收不到自己回包**（B 的 phonebox/unlock、C2 的 undo_code），属测试设备连接收包 artifact，非后端 bug；后端侧已铁证可靠。干净验证可起本地 Broker（amqtt 在 Windows 上 ConnectionResetError 不稳，建议 Linux）。
 
 ## 测试 / 资产 / 约定
 - 契约回归 `tests/test_api_envelope.py`：遍历无参 GET /api，5xx/未捕获异常判失败（200 无信封仅告警）。改端点后必跑。

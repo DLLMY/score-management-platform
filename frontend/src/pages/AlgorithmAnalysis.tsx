@@ -38,6 +38,41 @@ const SEVERITY_COLORS: Record<string, { bg: string; text: string; light: string 
   low: { bg: 'bg-blue-500', text: 'text-blue-600', light: 'bg-blue-50 dark:bg-blue-500/10' },
 };
 
+/**
+ * 算法分析页可调阈值 / 目标值（集中管理，消除散落魔法数）。
+ *
+ * 说明：
+ * - 评分分布的「分段边界」(90/80/70) 由后端 score_distribution_service 计算，
+ *   此处 scoreDistributionTargets.label 仅作展示对齐；「目标占比」为教学管理目标，
+ *   当前为前端单点维护常量。若需管理员后台可配置，应从后端 SystemConfig 下发
+ *   （key 如 analysis.score_distribution_targets），本常量作为兜底默认值。
+ * - scoreBands / scoreColorThresholds / engagementScoreThresholds / defaultDays
+ *   均为展示与默认时间窗参数，集中在此便于统一调整。
+ */
+type ScoreBand = { label: string; min: number; max?: number; color: string };
+const ANALYSIS_CONFIG = {
+  // 评分分布目标占比（与后端 band key: excellent/good/medium/low 一一对应）
+  scoreDistributionTargets: [
+    { key: 'excellent', label: '90分以上', targetPct: 10, color: 'bg-green-500' },
+    { key: 'good', label: '80分以上', targetPct: 30, color: 'bg-blue-500' },
+    { key: 'medium', label: '70分以上', targetPct: 40, color: 'bg-yellow-500' },
+    { key: 'low', label: '70分以下', targetPct: 20, color: 'bg-red-500' },
+  ] as Array<{ key: 'excellent' | 'good' | 'medium' | 'low'; label: string; targetPct: number; color: string }>,
+  // 成绩分布预测分段（统计分析 Tab）
+  scoreBands: [
+    { label: '不及格', min: 0, max: 60, color: 'bg-red-500' },
+    { label: '及格', min: 60, max: 70, color: 'bg-yellow-500' },
+    { label: '良好', min: 70, max: 80, color: 'bg-blue-500' },
+    { label: '优秀', min: 80, color: 'bg-green-500' },
+  ] as ScoreBand[],
+  // 预测成绩着色阈值
+  scoreColorThresholds: { excellent: 80, good: 60 },
+  // 参与度评分着色阈值
+  engagementScoreThresholds: { high: 70, medium: 45 },
+  // 各算法默认时间窗（天）
+  defaultDays: { prediction: 7, anomaly: 30, recommend: 30 },
+};
+
 export default function AlgorithmAnalysis(): React.ReactElement {
   const { showToast } = useStableToast();
   // 支持 URL 直达：/#/algorithm-analysis?tab=batchAttribution（教师工作台「一键查看」入口用）
@@ -84,11 +119,11 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   // 新增数据：预测
   const [predictionData, setPredictionData] = useState<BatchPredictionData | null>(null);
   const [riskStudents, setRiskStudents] = useState<RiskStudent[]>([]);
-  const [predictionDays, setPredictionDays] = useState<number>(7);
+  const [predictionDays, setPredictionDays] = useState<number>(ANALYSIS_CONFIG.defaultDays.prediction);
   
   // 新增数据：异常检测
   const [anomalyData, setAnomalyData] = useState<BatchAnomalyData | null>(null);
-  const [anomalyDays, setAnomalyDays] = useState<number>(30);
+  const [anomalyDays, setAnomalyDays] = useState<number>(ANALYSIS_CONFIG.defaultDays.anomaly);
   
   // 新增数据：规则推荐
   const [ruleRecommendData, setRuleRecommendData] = useState<RuleRecommendData | null>(null);
@@ -99,7 +134,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   // 新增数据：风险评估
   const [riskPredictData, setRiskPredictData] = useState<BatchRiskPredictData | null>(null);
   
-  const [recommendDays, setRecommendDays] = useState<number>(30);
+  const [recommendDays, setRecommendDays] = useState<number>(ANALYSIS_CONFIG.defaultDays.recommend);
   
   // 新增数据：模型管理
   const [modelTrainingData, setModelTrainingData] = useState<{
@@ -1054,13 +1089,10 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           </div>
           <div className="p-6">
             <div className="space-y-3">
-              {[
-                { range: '0-60', color: 'bg-red-500', label: '不及格', filter: (s: number) => s < 60 },
-                { range: '60-70', color: 'bg-yellow-500', label: '及格', filter: (s: number) => s >= 60 && s < 70 },
-                { range: '70-80', color: 'bg-blue-500', label: '良好', filter: (s: number) => s >= 70 && s < 80 },
-                { range: '80-100', color: 'bg-green-500', label: '优秀', filter: (s: number) => s >= 80 },
-              ].map((item, idx) => {
-                const count = predictions.filter(p => item.filter(p.predicted_score)).length;
+              {ANALYSIS_CONFIG.scoreBands.map((item, idx) => {
+                const count = predictions.filter(
+                  p => (p.predicted_score ?? 0) >= item.min && (item.max === undefined || (p.predicted_score ?? 0) < item.max)
+                ).length;
                 const percent = predictions.length > 0 ? (count / predictions.length) * 100 : 0;
                 return (
                   <div key={idx}>
@@ -1119,8 +1151,8 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                       </td>
                       <td className="py-3 px-4">
                         <span className={`text-xl font-bold ${
-                          predictedNum >= 80 ? 'text-green-600' :
-                          predictedNum >= 60 ? 'text-blue-600' : 'text-red-600'
+                          predictedNum >= ANALYSIS_CONFIG.scoreColorThresholds.excellent ? 'text-green-600' :
+                          predictedNum >= ANALYSIS_CONFIG.scoreColorThresholds.good ? 'text-blue-600' : 'text-red-600'
                         }`}>
                           {predictedNum.toFixed(1)}
                         </span>
@@ -1803,42 +1835,21 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-slate-400">90分以上 (目标10%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.counts?.excellent || 0}人 ({((stats.distribution?.excellent || 0) * 100).toFixed(1)}%)</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.excellent || 0) * 100, 100)}%` }}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-slate-400">80分以上 (目标30%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.counts?.good || 0}人 ({((stats.distribution?.good || 0) * 100).toFixed(1)}%)</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.good || 0) * 100, 100)}%` }}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-slate-400">70分以上 (目标40%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.counts?.medium || 0}人 ({((stats.distribution?.medium || 0) * 100).toFixed(1)}%)</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.medium || 0) * 100, 100)}%` }}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-slate-400">70分以下 (目标20%)</span>
-                        <span className="text-gray-800 dark:text-white">{stats.counts?.low || 0}人 ({((stats.distribution?.low || 0) * 100).toFixed(1)}%)</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min((stats.distribution?.low || 0) * 100, 100)}%` }}></div>
-                      </div>
-                    </div>
+                    {ANALYSIS_CONFIG.scoreDistributionTargets.map((t) => {
+                      const cnt = (stats.counts?.[t.key] as number) || 0;
+                      const pct = ((stats.distribution?.[t.key] as number) || 0) * 100;
+                      return (
+                        <div key={t.key}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600 dark:text-slate-400">{t.label} (目标{t.targetPct}%)</span>
+                            <span className="text-gray-800 dark:text-white">{cnt}人 ({pct.toFixed(1)}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                            <div className={`${t.color} h-2 rounded-full`} style={{ width: `${Math.min(pct, 100)}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               ) : (
@@ -2405,7 +2416,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                             </td>
                             <td className="py-3 px-4">
                               {s.has_data ? (
-                                <span className={`font-medium ${(s.engagement_score || 0) >= 70 ? 'text-green-600' : (s.engagement_score || 0) >= 45 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                <span className={`font-medium ${(s.engagement_score || 0) >= ANALYSIS_CONFIG.engagementScoreThresholds.high ? 'text-green-600' : (s.engagement_score || 0) >= ANALYSIS_CONFIG.engagementScoreThresholds.medium ? 'text-yellow-600' : 'text-red-600'}`}>
                                   {(s.engagement_score || 0).toFixed(1)}
                                 </span>
                               ) : (

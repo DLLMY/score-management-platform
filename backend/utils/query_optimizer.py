@@ -195,9 +195,9 @@ class QueryOptimizer:
         """按日聚合积分变化趋势（兼容旧测试）。"""
         from models import ScoreRecord
         from sqlalchemy import func
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         rows = (
             db.session.query(
                 func.date(ScoreRecord.created_at),

@@ -102,8 +102,13 @@ def reconnect_mqtt():
     return mqtt_manager.connect()
 
 
-def publish_mqtt(topic, payload, qos=0):
-    """发布MQTT消息 - 使用QoS 0以匹配设备端订阅配置（优化版）"""
+def publish_mqtt(topic, payload, qos=1):
+    """发布MQTT消息 - 控制类回包/通知默认 QoS 1，确保设备端可靠收到。
+
+    说明：此前默认 QoS 0（best-effort），在 EMQX 生产 Broker 高负载下设备偶发收不到
+    回包。控制类消息本就低频，统一 QoS 1 对 Broker 压力可忽略，却能根治「请求已处理、
+    设备却没收到回包」的假超时。遥测类高频消息不应走此函数。
+    """
     if isinstance(payload, dict):
         payload = json.dumps(payload)
 

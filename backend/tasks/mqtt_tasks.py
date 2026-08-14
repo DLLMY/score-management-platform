@@ -1,5 +1,6 @@
 from celery_app import celery_app
 import json
+from datetime import datetime
 
 
 @celery_app.task(bind=True, name="tasks.mqtt_tasks.process_message", queue="mqtt")
@@ -64,6 +65,43 @@ def handle_score_message(topic, data):
         mqtt_message_service.handle_points_query(data)
     else:
         print(f"[MQTT Task] 积分消息(未匹配处理): {topic} -> {data}")
+
+
+@celery_app.task(bind=True, name="tasks.mqtt_tasks.process_phonebox_telemetry", queue="mqtt")
+def process_phonebox_telemetry(self, topic, payload):
+    """异步处理 phonebox/# 遥测消息：写 MQTTLog 接收日志（审计）+ 处理心跳落库。
+
+    由 MQTTManager 遥测连接（独立 phonebox/# 订阅）异步派发，确保高频遥测洪流
+    不阻塞控制连接（score/# 等）。心跳的 WebSocket 实时推送由后端线程同步完成，
+    此处仅负责 DB 落库，与同步路径 services/mqtt_message_service.handle_heartbeat_message 一致。
+    """
+    try:
+        from app import app as flask_app
+        from models import db, MQTTLog
+        from services.mqtt_message_service import mqtt_message_service
+
+        with flask_app.app_context():
+            try:
+                db.session.add(
+                    MQTTLog(topic=topic, message=payload, direction="receive", timestamp=datetime.now())
+                )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            try:
+                data = json.loads(payload) if isinstance(payload, str) else payload
+            except Exception:
+                data = None
+            if topic == "phonebox/heartbeat" and isinstance(data, dict):
+                try:
+                    mqtt_message_service.handle_heartbeat_message(data)
+                except Exception as e:
+                    print(f"[MQTT Task] 心跳处理失败: {e}")
+        return {"success": True, "topic": topic}
+    except Exception as e:
+        print(f"[MQTT Task] 遥测处理异常: {e}")
+        self.retry(exc=e, countdown=2, max_retries=3)
+        return {"success": False, "error": str(e)}
 
 
 def handle_command_message(topic, data):

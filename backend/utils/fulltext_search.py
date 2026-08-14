@@ -53,10 +53,12 @@ class FullTextSearch:
                     db.text("SELECT name FROM sqlite_master WHERE type='table' AND name='user_search_idx'")
                 )
                 if result.fetchone():
-                    self._fts_enabled = True
                     logger.info("[FullTextSearch] FTS5索引已存在")
                     # 启动时重建一次索引：历史上因表名错误（users→user）索引从未填充，启动重建保证自愈
-                    self._rebuild_index(conn)
+                    # 重建失败必须回退禁用，否则空/损坏索引被当成"已启用" → search() 返回 0 结果伪装无数据
+                    self._fts_enabled = self._rebuild_index(conn)
+                    if not self._fts_enabled:
+                        logger.warning("[FullTextSearch] FTS5索引重建失败，已回退到 LIKE 搜索")
                     return
 
                 # 创建FTS5虚拟表
@@ -65,18 +67,22 @@ class FullTextSearch:
                     USING fts5(name, card_id, phone, class_name, tokenize='porter')
                 """))
                 conn.commit()
-                self._fts_enabled = True
                 logger.info("[FullTextSearch] FTS5索引创建成功")
 
-                # 填充初始数据
-                self._rebuild_index(conn)
+                # 填充初始数据；重建失败则禁用（语义同上）
+                self._fts_enabled = self._rebuild_index(conn)
 
         except Exception as e:
             logger.warning(f"[FullTextSearch] FTS5初始化失败: {e}")
             self._fts_enabled = False
 
     def _rebuild_index(self, conn):
-        """重建FTS索引（需在应用上下文中调用）"""
+        """重建FTS索引（需在应用上下文中调用）。
+
+        Returns:
+            bool: 重建成功返回 True；失败返回 False（调用方须据此将
+                _fts_enabled 置 False，避免空/损坏索引被当成"已启用"）
+        """
 
         try:
             # 使用原生SQL查询避免ORM上下文问题
@@ -102,8 +108,10 @@ class FullTextSearch:
                 count += 1
             conn.commit()
             logger.info(f"[FullTextSearch] 索引重建完成，共 {count} 条记录")
+            return True
         except Exception as e:
             logger.error(f"[FullTextSearch] 索引重建失败: {e}")
+            return False
 
     def add_to_index(self, user_id, name, card_id, phone, class_name):
         """添加用户到搜索索引"""

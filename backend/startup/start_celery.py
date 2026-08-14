@@ -21,14 +21,19 @@ def print_error(message):
     print(f"[ERROR] {message}")
 
 
-def start_worker(queues="default", concurrency=4):
-    """启动Celery Worker"""
+def start_worker(queues="default,notification,mqtt,export", concurrency=4):
+    """启动Celery Worker
+
+    注意：celery_app 位于 backend/ 根目录，故 cwd 须设为 backend（而非 startup/），
+    且 -A 指向 celery_app（此前误用 -A tasks，tasks 包未定义 app 导致加载失败）。
+    """
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cmd = [
         sys.executable,
         "-m",
         "celery",
         "-A",
-        "tasks",
+        "celery_app",
         "worker",
         "--loglevel=info",
         "-Q",
@@ -40,7 +45,7 @@ def start_worker(queues="default", concurrency=4):
     print_info(f"Starting Celery worker with queues: {queues}")
     print_info(f"Command: {' '.join(cmd)}")
     try:
-        process = subprocess.Popen(cmd, cwd=os.path.dirname(os.path.abspath(__file__)))
+        process = subprocess.Popen(cmd, cwd=backend_dir)
         print_success("Celery worker started successfully")
         return process
     except Exception as e:
@@ -50,11 +55,12 @@ def start_worker(queues="default", concurrency=4):
 
 def start_beat():
     """启动Celery Beat"""
-    cmd = [sys.executable, "-m", "celery", "-A", "tasks", "beat", "--loglevel=info"]
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cmd = [sys.executable, "-m", "celery", "-A", "celery_app", "beat", "--loglevel=info"]
     print_info("Starting Celery Beat")
     print_info(f"Command: {' '.join(cmd)}")
     try:
-        process = subprocess.Popen(cmd, cwd=os.path.dirname(os.path.abspath(__file__)))
+        process = subprocess.Popen(cmd, cwd=backend_dir)
         print_success("Celery Beat started successfully")
         return process
     except Exception as e:
@@ -73,7 +79,7 @@ def main():
     parser.add_argument(
         "-q",
         "--queues",
-        default="default,mqtt,export,notification,email,cleanup,report",
+        default="default,notification,mqtt,export",
         help="Comma-separated list of queues to consume",
     )
     parser.add_argument("-c", "--concurrency", type=int, default=4, help="Number of worker processes")

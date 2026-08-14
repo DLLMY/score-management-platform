@@ -47,6 +47,52 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Celery Worker（消费 notification/mqtt/export/default 队列，此前仅配置未启动 → 定时任务与异步任务永不执行）
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: score-management-celery-worker
+    command: celery -A celery_app worker -Q default,notification,mqtt,export -c 4 --loglevel=info
+    volumes:
+      - backend-data:/app/backend/instance
+      - ./backend/.env:/app/backend/.env
+    environment:
+      - FLASK_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Celery Beat（按 CELERY_BEAT_SCHEDULE 周期触发 archive_operation_logs / clean_api_cache / warmup_cache / daily_summary / health_check / sync_device_status / clean_expired_results）
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: score-management-celery-beat
+    command: celery -A celery_app beat --loglevel=info
+    volumes:
+      - backend-data:/app/backend/instance
+      - ./backend/.env:/app/backend/.env
+    environment:
+      - FLASK_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
   # Frontend (optional - can be served separately or via backend)
   frontend:
     image: nginx:alpine

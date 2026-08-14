@@ -4,7 +4,7 @@ import json
 import logging
 import io
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import request, has_request_context
 from logging.handlers import TimedRotatingFileHandler
 from functools import wraps
@@ -61,7 +61,7 @@ class StructuredLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         # 基础字段
         log_data = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -474,11 +474,11 @@ def log_api_endpoint(category: LogCategory = LogCategory.API):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc).replace(tzinfo=None)
             func_name = func.__name__
             try:
                 result = func(*args, **kwargs)  # noqa: F841
-                duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+                duration = (datetime.now(timezone.utc).replace(tzinfo=None) - start_time).total_seconds() * 1000
                 # 获取响应状态码
                 status_code = getattr(result, "status_code", 200) if result else 200
                 structured_logger.log_api_request(
@@ -489,7 +489,7 @@ def log_api_endpoint(category: LogCategory = LogCategory.API):
                 )
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+                duration = (datetime.now(timezone.utc).replace(tzinfo=None) - start_time).total_seconds() * 1000
                 structured_logger.log_exception(category, f"API异常: {func_name}", e, duration_ms=int(duration))
                 raise
 
@@ -505,7 +505,7 @@ def setup_request_logging(app):
     def before_request():
         if has_request_context():
             request.trace_id = str(uuid.uuid4())
-            request.start_time = datetime.utcnow()
+            request.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
             structured_logger.api(
                 LogLevel.DEBUG,
                 f"请求开始: {request.method} {request.path}",
@@ -518,7 +518,7 @@ def setup_request_logging(app):
     @app.after_request
     def after_request(response):
         if has_request_context() and hasattr(request, "start_time"):
-            duration = (datetime.utcnow() - request.start_time).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc).replace(tzinfo=None) - request.start_time).total_seconds() * 1000
             structured_logger.log_api_request(
                 method=request.method,
                 path=request.path,

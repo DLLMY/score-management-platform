@@ -37,7 +37,11 @@ class MQTTManager:
 
         self._initialized = True
         self._client = None
+        self._telemetry_client = None
         self._state = MQTTConnectionState.DISCONNECTED
+        self._telemetry_state = MQTTConnectionState.DISCONNECTED
+        self._telemetry_subscribed_topics = []
+        self._telemetry_reconnect_thread = None
         self._state_lock = threading.Lock()
         self._config = None
         self._subscribed_topics = []
@@ -72,21 +76,25 @@ class MQTTManager:
             "transport": "tcp",
         }
 
-        self.DEFAULT_SUBSCRIPTIONS = [
-            ("phonebox/status", 1),
-            ("phonebox/log", 1),
+        # 双连接分流（根治 phonebox/# ~5000msg/s 遥测洪流淹没 score/# 控制消息）：
+        # - 控制连接（主 self._client）：只订阅 score/# + phonebox 控制类 topic（QoS1，即时业务派发），
+        #   控制消息走独立 TCP 连接/缓冲区，永不被遥测洪流淹没。
+        # - 遥测连接（self._telemetry_client）：只订阅 phonebox/#（QoS0，可容忍丢包），
+        #   心跳/状态等异步入 Celery，不在请求路径处理。
+        # 注意 EMQX 对单客户端订阅数有上限(~10)，两组订阅均在限额内。
+        self.CONTROL_SUBSCRIPTIONS = [
+            ("score/#", 1),
             ("phonebox/query", 1),
-            ("phonebox/heartbeat", 1),
-            ("phonebox/unlock/+", 1),
-            ("phonebox/ota/status", 1),
-            ("phonebox/ota/+/status", 1),
-            ("phonebox/points/query", 1),
-            ("phonebox/points/add", 1),
-            ("phonebox/points/sub", 1),
-            ("score/add", 1),
-            ("score/undo", 1),
-            ("score/rules/query", 1),
+            ("phonebox/unlock/#", 1),
+            ("phonebox/ota/#", 1),
+            ("phonebox/points/#", 1),
         ]
+        self.TELEMETRY_SUBSCRIPTIONS = [
+            ("phonebox/#", 0),
+        ]
+        # 控制类 topic（遥测连接收到这些时跳过，交由控制连接处理，避免重复业务派发）
+        self._CONTROL_TOPIC_EXACT = ("phonebox/query",)
+        self._CONTROL_TOPIC_PREFIXES = ("score/", "phonebox/unlock/", "phonebox/ota/", "phonebox/points/")
 
     @property
     def state(self):
@@ -136,14 +144,14 @@ class MQTTManager:
             self.load_config_from_db()
         return self._config or self.DEFAULT_CONFIG
 
-    def _on_connect(self, client, userdata, flags, rc):
-        print(f"[MQTTManager] _on_connect 被调用, rc={rc}, flags={flags}")
+    def _on_connect_control(self, client, userdata, flags, rc):
+        print(f"[MQTTManager] 控制连接 _on_connect, rc={rc}, flags={flags}")
         with self._state_lock:
             if rc == 0:
                 self._state = MQTTConnectionState.CONNECTED
                 self._reconnect_delay = 5
                 self._should_reconnect = True
-                print("[MQTTManager] 连接成功!")
+                print("[MQTTManager] 控制连接成功!")
             else:
                 self._state = MQTTConnectionState.ERROR
                 error_messages = {
@@ -153,47 +161,136 @@ class MQTTManager:
                     4: "用户名或密码错误",
                     5: "未授权",
                 }
-                print(f"[MQTTManager] 连接失败, rc={rc}: {error_messages.get(rc, '未知错误')}")
-
+                print(f"[MQTTManager] 控制连接失败, rc={rc}: {error_messages.get(rc, '未知错误')}")
         if self.is_connected:
-            for topic, qos in self.DEFAULT_SUBSCRIPTIONS:
+            self._subscribed_topics = []
+            for topic, qos in self.CONTROL_SUBSCRIPTIONS:
                 client.subscribe(topic, qos=qos)
                 self._subscribed_topics.append(topic)
-            print(f"[MQTTManager] 已订阅主题: {[t[0] for t in self.DEFAULT_SUBSCRIPTIONS]}")
+            print(f"[MQTTManager] 控制连接已订阅: {[t[0] for t in self.CONTROL_SUBSCRIPTIONS]}")
 
-    def _on_disconnect(self, client, userdata, rc):
+    def _on_connect_telemetry(self, client, userdata, flags, rc):
+        print(f"[MQTTManager] 遥测连接 _on_connect, rc={rc}, flags={flags}")
+        with self._state_lock:
+            if rc == 0:
+                self._telemetry_state = MQTTConnectionState.CONNECTED
+                print("[MQTTManager] 遥测连接成功!")
+            else:
+                self._telemetry_state = MQTTConnectionState.ERROR
+                print(f"[MQTTManager] 遥测连接失败, rc={rc}")
+        if self._telemetry_state == MQTTConnectionState.CONNECTED:
+            self._telemetry_subscribed_topics = []
+            for topic, qos in self.TELEMETRY_SUBSCRIPTIONS:
+                client.subscribe(topic, qos=qos)
+                self._telemetry_subscribed_topics.append(topic)
+            print(f"[MQTTManager] 遥测连接已订阅: {[t[0] for t in self.TELEMETRY_SUBSCRIPTIONS]}")
+
+    def _on_disconnect_control(self, client, userdata, rc):
         with self._state_lock:
             self._state = MQTTConnectionState.DISCONNECTED
             self._subscribed_topics = []
-
-        print(f"[MQTTManager] 断开连接, rc={rc}")
-
+        print(f"[MQTTManager] 控制连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
-            print(f"[MQTTManager] 意外断开，将在 {self._reconnect_delay} 秒后尝试重新连接...")
-            self._schedule_reconnect()
+            print(f"[MQTTManager] 控制连接意外断开，准备重连...")
+            self._schedule_reconnect("control")
 
-    def _on_message(self, client, userdata, msg):
+    def _on_disconnect_telemetry(self, client, userdata, rc):
+        with self._state_lock:
+            self._telemetry_state = MQTTConnectionState.DISCONNECTED
+            self._telemetry_subscribed_topics = []
+        print(f"[MQTTManager] 遥测连接断开, rc={rc}")
+        if rc != 0 and self._should_reconnect:
+            print(f"[MQTTManager] 遥测连接意外断开，准备重连...")
+            self._schedule_reconnect("telemetry")
+
+    def _on_message_control(self, client, userdata, msg):
         try:
             message = msg.payload.decode()
             topic = msg.topic
-
-            # 性能优化：异步处理消息
+            # 控制消息写 MQTTLog（审计），并即时派发到业务回调。
             self._queue_message(topic, message)
-
-            # 关键消息（如查询、开锁回复、OTA状态）立即处理
-            # 注意：score/add、score/undo、phonebox/points/* 也必须即时派发——此前它们只进
-            # 队列写 MQTTLog，业务（handle_score_add 等）从不触发，设备积分增减请求被静默丢弃
+            # score/add、score/undo、phonebox/query、phonebox/unlock/、phonebox/ota/、
+            # phonebox/points/* 均只在控制连接订阅，绝不被 phonebox/# 遥测洪流淹没。
             if (
                 topic == "phonebox/query"
+                or topic.startswith("score/")
                 or topic.startswith("phonebox/unlock/")
                 or topic.startswith("phonebox/ota/")
-                or topic.startswith("score/")
                 or topic.startswith("phonebox/points/")
             ):
                 self._process_critical_message(topic, message)
-
         except Exception as e:
-            print(f"[MQTTManager] 处理消息失败: {e}")
+            print(f"[MQTTManager] 处理控制消息失败: {e}")
+
+    def _on_message_telemetry(self, client, userdata, msg):
+        try:
+            message = msg.payload.decode()
+            topic = msg.topic
+            # 控制类 topic 由控制连接处理，遥测连接收到则跳过，避免重复业务派发
+            if topic in self._CONTROL_TOPIC_EXACT or topic.startswith(self._CONTROL_TOPIC_PREFIXES):
+                return
+            self._handle_telemetry(topic, message)
+        except Exception as e:
+            print(f"[MQTTManager] 处理遥测消息失败: {e}")
+
+    def _handle_telemetry(self, topic, message):
+        """遥测消息（phonebox/# 高频）：心跳实时推 WS，DB 落库与审计日志异步入 Celery；
+        Celery 不可用时同步兜底。控制类 topic 已在 _on_message_telemetry 过滤。"""
+        try:
+            data = json.loads(message)
+        except Exception:
+            data = None
+        # 心跳：后端线程直接推 WS（设备状态实时刷新），DB 落库交给 Celery worker
+        if topic == "phonebox/heartbeat" and isinstance(data, dict) and data.get("device_id"):
+            try:
+                from services.websocket_service import send_device_status
+
+                device_data = {
+                    "device_id": data.get("device_id"),
+                    "status": data.get("status"),
+                    "wifi_signal": data.get("wifi_signal"),
+                    "uptime": data.get("uptime"),
+                    "box_a_status": data.get("box_a_status"),
+                    "box_b_status": data.get("box_b_status"),
+                    "system_state": data.get("system_state"),
+                    "last_heartbeat": data.get("timestamp"),
+                }
+                send_device_status(data.get("device_id"), device_data)
+            except Exception as e:
+                print(f"[MQTTManager] 心跳WS推送失败: {e}")
+        # 异步入 Celery（mqtt 队列），失败再同步兜底
+        try:
+            from tasks.mqtt_tasks import process_phonebox_telemetry
+
+            process_phonebox_telemetry.delay(topic, message)
+        except Exception as e:
+            print(f"[MQTTManager] 遥测入Celery失败, 同步兜底: {e}")
+            self._process_telemetry_fallback(topic, message)
+
+    def _process_telemetry_fallback(self, topic, message):
+        """Celery 不可用时的同步兜底：写 MQTTLog 接收日志 + 处理心跳。"""
+        try:
+            data = json.loads(message)
+        except Exception:
+            data = None
+        try:
+            from app import app as flask_app
+            from models import db, MQTTLog
+
+            with flask_app.app_context():
+                try:
+                    db.session.add(
+                        MQTTLog(topic=topic, message=message, direction="receive", timestamp=datetime.now())
+                    )
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                if topic == "phonebox/heartbeat" and isinstance(data, dict):
+                    from services.mqtt_message_service import mqtt_message_service
+
+                    mqtt_message_service.handle_heartbeat_message(data)
+        except Exception as e:
+            print(f"[MQTTManager] 遥测兜底处理失败: {e}")
 
     def _queue_message(self, topic, message):
         """将消息加入队列，批量处理"""
@@ -457,140 +554,132 @@ class MQTTManager:
         with self._state_lock:
             self._state = MQTTConnectionState.ERROR
 
-    def _schedule_reconnect(self):
-        if self._reconnect_thread and self._reconnect_thread.is_alive():
+    def _schedule_reconnect(self, client_type="control"):
+        if client_type == "telemetry":
+            if self._telemetry_reconnect_thread and self._telemetry_reconnect_thread.is_alive():
+                return
+        elif self._reconnect_thread and self._reconnect_thread.is_alive():
             return
 
         self._reconnect_delay = min(self._reconnect_delay * 2, self._max_reconnect_delay)
 
         def delayed_reconnect():
             time.sleep(self._reconnect_delay)
-            if self._should_reconnect and not self.is_connected:
-                print("[MQTTManager] 执行延迟重连...")
-                self.connect()
-
-        self._reconnect_thread = threading.Thread(target=delayed_reconnect, daemon=True)
-        self._reconnect_thread.start()
-
-    def connect(self, config=None):
-        with self._state_lock:
-            if self._state == MQTTConnectionState.CONNECTING:
-                print("[MQTTManager] 连接正在进行中...")
-                return False
-            if self._state == MQTTConnectionState.CONNECTED:
-                print("[MQTTManager] 已经连接")
-                return True
-
-            self._state = MQTTConnectionState.CONNECTING
-
-        if config:
-            self._config = config
-
-        cfg = self._get_config()
-
-        try:
-            if self._client:
-                try:
-                    self._client.loop_stop()
-                except Exception:
-                    pass
-                self._client = None
-
-            broker = cfg.get("broker", self.DEFAULT_CONFIG["broker"])
-            port = cfg.get("port", self.DEFAULT_CONFIG["port"])
-            client_id = cfg.get("client_id", self.DEFAULT_CONFIG["client_id"])
-            username = cfg.get("username", self.DEFAULT_CONFIG["username"])
-            password = cfg.get("password", self.DEFAULT_CONFIG["password"])
-            ssl_enabled = cfg.get("ssl", self.DEFAULT_CONFIG["ssl"])
-            keepalive = cfg.get("keepalive", self.DEFAULT_CONFIG["keepalive"])
-            transport = cfg.get("transport", self.DEFAULT_CONFIG.get("transport", "tcp"))
-
-            client_id = f"{client_id}_{int(time.time())}"
-
-            print(f"[MQTTManager] 创建客户端: {client_id}, transport={transport}")
-
-            # 根据配置选择传输方式
-            if transport == "websockets":
-                self._client = mqtt.Client(client_id=client_id, clean_session=True, transport="websockets")
-                # 设置WebSocket路径
-                ws_path = cfg.get("ws_path", "/mqtt")
-                self._client.ws_set_options(path=ws_path)
-                print(f"[MQTTManager] WebSocket路径: {ws_path}")
+            if not self._should_reconnect:
+                return
+            if client_type == "telemetry":
+                if self._telemetry_state != MQTTConnectionState.CONNECTED:
+                    print("[MQTTManager] 执行遥测连接延迟重连...")
+                    self._connect_telemetry()
             else:
-                self._client = mqtt.Client(client_id=client_id, clean_session=True)
+                if self._state != MQTTConnectionState.CONNECTED:
+                    print("[MQTTManager] 执行控制连接延迟重连...")
+                    self._connect_control()
 
-            self._client.username_pw_set(username, password)
+        t = threading.Thread(target=delayed_reconnect, daemon=True)
+        t.start()
+        if client_type == "telemetry":
+            self._telemetry_reconnect_thread = t
+        else:
+            self._reconnect_thread = t
 
-            if ssl_enabled:
-                print("[MQTTManager] 配置TLS...")
-                self._client.tls_set(
-                    ca_certs=None,
-                    certfile=None,
-                    keyfile=None,
-                    cert_reqs=ssl.CERT_NONE,
-                    tls_version=ssl.PROTOCOL_TLS,
-                    ciphers=None,
-                )
-                self._client.tls_insecure_set(True)
-                print("[MQTTManager] TLS配置完成")
+    def _create_and_connect_client(self, suffix, subscriptions, on_connect, on_message, on_disconnect):
+        """创建 paho 客户端、配置回调、异步连接并等待确认。返回 client（已 loop_start）。"""
+        cfg = self._get_config()
+        broker = cfg.get("broker", self.DEFAULT_CONFIG["broker"])
+        port = cfg.get("port", self.DEFAULT_CONFIG["port"])
+        client_id = cfg.get("client_id", self.DEFAULT_CONFIG["client_id"])
+        username = cfg.get("username", self.DEFAULT_CONFIG["username"])
+        password = cfg.get("password", self.DEFAULT_CONFIG["password"])
+        ssl_enabled = cfg.get("ssl", self.DEFAULT_CONFIG["ssl"])
+        keepalive = cfg.get("keepalive", self.DEFAULT_CONFIG["keepalive"])
+        transport = cfg.get("transport", self.DEFAULT_CONFIG.get("transport", "tcp"))
 
-            self._client.on_connect = self._on_connect
-            self._client.on_disconnect = self._on_disconnect
-            self._client.on_message = self._on_message
-            self._client.on_error = self._on_error
-            self._client.reconnect_delay_set(min_delay=1, max_delay=30)
+        cid = f"{client_id}_{suffix}_{int(time.time())}"
+        if transport == "websockets":
+            client = mqtt.Client(client_id=cid, clean_session=True, transport="websockets")
+            client.ws_set_options(path=cfg.get("ws_path", "/mqtt"))
+        else:
+            client = mqtt.Client(client_id=cid, clean_session=True)
+        client.username_pw_set(username, password)
+        if ssl_enabled:
+            client.tls_set(
+                ca_certs=None,
+                certfile=None,
+                keyfile=None,
+                cert_reqs=ssl.CERT_NONE,
+                tls_version=ssl.PROTOCOL_TLS,
+                ciphers=None,
+            )
+            client.tls_insecure_set(True)
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        client.on_message = on_message
+        client.on_error = self._on_error
+        client.reconnect_delay_set(min_delay=1, max_delay=30)
 
-            print(f"[MQTTManager] 连接到 {broker}:{port}...")
-            print(f"[MQTTManager] ssl={ssl_enabled}, keepalive={keepalive}")
-
-            try:
-                self._client.loop_start()
-                print("[MQTTManager] loop_start() 调用成功")
-            except Exception as e:
-                print(f"[MQTTManager] loop_start() 调用失败: {type(e).__name__}: {e}")
-                with self._state_lock:
-                    self._state = MQTTConnectionState.ERROR
-                return False
-
-            print("[MQTTManager] 准备调用 connect_async()...")
-            try:
-                self._client.connect_async(broker, port, keepalive=keepalive)
-                print("[MQTTManager] connect_async() 调用成功")
-            except Exception as e:
-                print(f"[MQTTManager] connect_async() 调用失败: {type(e).__name__}: {e}")
-                import traceback
-
-                traceback.print_exc()
-                with self._state_lock:
-                    self._state = MQTTConnectionState.ERROR
-                return False
-
-            # 等待连接回调确认
-            timeout = cfg.get("timeout", 15)
-            print(f"[MQTTManager] 等待连接确认... (超时时间={timeout}秒)")
-            for i in range(timeout * 10):
-                time.sleep(0.1)
-                if i % 10 == 0:
-                    print(
-                        f"[MQTTManager] 等待连接... {i//10}秒, 当前状态: {self._state.value if self._state else 'None'}"
-                    )
-                if self.is_connected:
-                    print("[MQTTManager] 检测到已连接!")
-                    return True
-
-            print(f"[MQTTManager] 连接确认超时({timeout}秒)")
-            with self._state_lock:
-                self._state = MQTTConnectionState.ERROR
-            return False
-
+        print(f"[MQTTManager] 创建客户端({suffix}): {cid}, transport={transport}")
+        try:
+            client.loop_start()
+            client.connect_async(broker, port, keepalive=keepalive)
         except Exception as e:
-            print(f"[MQTTManager] 连接异常: {type(e).__name__}: {e}")
+            print(f"[MQTTManager] 客户端({suffix})连接异常: {type(e).__name__}: {e}")
             import traceback
 
             traceback.print_exc()
-            with self._state_lock:
-                self._state = MQTTConnectionState.ERROR
-            return False
+            return None
+
+        timeout = cfg.get("timeout", 15)
+        for i in range(timeout * 10):
+            time.sleep(0.1)
+            if i % 10 == 0:
+                print(f"[MQTTManager] 客户端({suffix})等待连接... {i // 10}秒")
+            st = self._telemetry_state if suffix == "telemetry" else self._state
+            if st == MQTTConnectionState.CONNECTED:
+                print(f"[MQTTManager] 客户端({suffix})已连接!")
+                return client
+        print(f"[MQTTManager] 客户端({suffix})连接确认超时({timeout}秒)")
+        return client
+
+    def _connect_control(self):
+        with self._state_lock:
+            if self._state == MQTTConnectionState.CONNECTED:
+                return True
+            self._state = MQTTConnectionState.CONNECTING
+        self._client = self._create_and_connect_client(
+            "control",
+            self.CONTROL_SUBSCRIPTIONS,
+            self._on_connect_control,
+            self._on_message_control,
+            self._on_disconnect_control,
+        )
+        return self.is_connected
+
+    def _connect_telemetry(self):
+        with self._state_lock:
+            if self._telemetry_state == MQTTConnectionState.CONNECTED:
+                return True
+            self._telemetry_state = MQTTConnectionState.CONNECTING
+        self._telemetry_client = self._create_and_connect_client(
+            "telemetry",
+            self.TELEMETRY_SUBSCRIPTIONS,
+            self._on_connect_telemetry,
+            self._on_message_telemetry,
+            self._on_disconnect_telemetry,
+        )
+        return self._telemetry_state == MQTTConnectionState.CONNECTED
+
+    def connect(self, config=None):
+        if self.is_connected and self._telemetry_state == MQTTConnectionState.CONNECTED:
+            print("[MQTTManager] 双连接均已连接")
+            return True
+        if config:
+            self._config = config
+        # 控制连接（主）：score/# + phonebox 控制类 topic
+        self._connect_control()
+        # 遥测连接：phonebox/# 高频（QoS0，可容忍丢包）
+        self._connect_telemetry()
+        return self.is_connected
 
     def disconnect(self):
         print("[MQTTManager] 断开连接请求")
@@ -598,15 +687,19 @@ class MQTTManager:
 
         with self._state_lock:
             self._state = MQTTConnectionState.DISCONNECTED
+            self._telemetry_state = MQTTConnectionState.DISCONNECTED
             self._subscribed_topics = []
+            self._telemetry_subscribed_topics = []
 
-        if self._client:
-            try:
-                self._client.disconnect()
-                self._client.loop_stop()
-            except Exception as e:
-                print(f"[MQTTManager] 断开连接时出错: {e}")
-            self._client = None
+        for c in (self._client, self._telemetry_client):
+            if c:
+                try:
+                    c.disconnect()
+                    c.loop_stop()
+                except Exception as e:
+                    print(f"[MQTTManager] 断开连接时出错: {e}")
+        self._client = None
+        self._telemetry_client = None
 
     def publish(self, topic, payload, qos=1):
         if not self.is_connected or not self._client:
@@ -684,7 +777,10 @@ class MQTTManager:
         return {
             "connected": self.is_connected,
             "state": self.state.value,
+            "telemetry_connected": self._telemetry_state == MQTTConnectionState.CONNECTED,
+            "telemetry_state": self._telemetry_state.value,
             "subscribed_topics": self.subscribed_topics,
+            "telemetry_subscribed_topics": self._telemetry_subscribed_topics,
             "config": {
                 "broker": self._get_config().get("broker"),
                 "port": self._get_config().get("port"),

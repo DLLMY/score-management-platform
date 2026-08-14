@@ -2,7 +2,7 @@ from utils.security import validate_integer
 from utils.security import validate_gender
 from utils.security import validate_class_name
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from utils.security import (
     generate_tokens, decode_token, validate_token,
     hash_password, verify_password, sanitize_input,
@@ -48,7 +48,7 @@ class TestSecurityUtils:
         expired_payload = {
             'sub': '1',
             'type': 'access',
-            'exp': datetime.utcnow() - timedelta(hours=1)
+            'exp': datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
         }
         expired_token = jwt.encode(expired_payload, JWT_SECRET_KEY, algorithm='HS256')
         payload = decode_token(expired_token)

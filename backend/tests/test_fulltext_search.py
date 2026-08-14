@@ -1,5 +1,5 @@
 from models import db, User, ClassInfo
-from utils.fulltext_search import get_search_engine
+from utils.fulltext_search import get_search_engine, FullTextSearch
 
 
 class TestFullTextSearch:
@@ -60,3 +60,17 @@ class TestFullTextSearch:
             result = engine.search("nonexistentkeywordxyz")
             assert result["total"] == 0
             assert result["users"] == []
+
+    def test_fts_disabled_when_rebuild_fails(self, app):
+        """重建失败必须回退禁用：否则空/损坏索引被当成"已启用" → search 静默返回
+        0 结果伪装无数据（此前 _fts_enabled 在重建前就被置 True，重建失败从不回退）"""
+        self._seed(app)
+        with app.app_context():
+            engine = FullTextSearch(app)
+            # 模拟重建失败（如索引损坏 / DB 连接异常）
+            engine._rebuild_index = lambda conn: False
+            engine.init_app(app)  # 创建/复用 FTS 表后重建索引（此处重建失败）
+            assert not engine._fts_enabled, "重建失败须将 _fts_enabled 置 False"
+            # 真实搜索应回退到 LIKE 仍能命中，而非依赖空 FTS 索引返回 0
+            result = engine.search("搜索生1")
+            assert result["total"] >= 1, "重建失败后须回退 LIKE 仍能搜到用户"
