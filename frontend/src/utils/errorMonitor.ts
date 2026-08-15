@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { performanceReportingService } from '../services/performanceReportingService';
 import { isDevelopment } from '../config/env';
 

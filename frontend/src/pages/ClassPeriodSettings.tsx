@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useCallback, FormEvent, ChangeEvent } from 'react';
 import {
   Plus,
@@ -81,7 +82,7 @@ const ClassPeriodSettings: React.FC = () => {
       setOriginalPeriods(JSON.parse(JSON.stringify(data)));
       setHasChanges(false);
     } catch (error) {
-      console.error('Failed to fetch periods:', error);
+      logger.error('Failed to fetch periods:', error);
       showToast('error', '获取课程节次失败');
     }
     setLoading(false);
@@ -126,7 +127,7 @@ const ClassPeriodSettings: React.FC = () => {
       setHasChanges(true);
       showToast('success', '删除成功');
     } catch (error) {
-      console.error('Failed to delete period:', error);
+      logger.error('Failed to delete period:', error);
       showToast('error', '删除失败');
     }
   };
@@ -157,7 +158,7 @@ const ClassPeriodSettings: React.FC = () => {
       setHasChanges(true);
       showToast('success', editingPeriod ? '修改成功' : '添加成功');
     } catch (error) {
-      console.error('Failed to save period:', error);
+      logger.error('Failed to save period:', error);
       showToast('error', '保存失败');
     }
   };
@@ -169,7 +170,7 @@ const ClassPeriodSettings: React.FC = () => {
       await fetchData();
       showToast('success', '已重置为默认节次');
     } catch (error) {
-      console.error('Failed to reset periods:', error);
+      logger.error('Failed to reset periods:', error);
       showToast('error', '重置失败');
     }
   };
@@ -205,7 +206,7 @@ const ClassPeriodSettings: React.FC = () => {
       setHasChanges(false);
       showToast('success', '排序和状态已保存');
     } catch (error) {
-      console.error('Failed to save order:', error);
+      logger.error('Failed to save order:', error);
       showToast('error', '保存失败');
     }
   };

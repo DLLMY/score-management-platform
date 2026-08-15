@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Phone,
@@ -77,7 +78,7 @@ function ParentContactPage() {
       const data = await api.parent.getAll();
       setContacts(data || []);
     } catch (error) {
-      console.error('获取家长联系人列表失败:', error);
+      logger.error('获取家长联系人列表失败:', error);
       showToast('error', '获取家长联系人列表失败');
     } finally {
       setIsLoading(false);
@@ -92,7 +93,7 @@ function ParentContactPage() {
         return [...filtered, ...(data || [])];
       });
     } catch (error) {
-      console.error('获取联系日志失败:', error);
+      logger.error('获取联系日志失败:', error);
       showToast('error', '获取联系日志失败');
     }
   }, [showToast]);
@@ -166,7 +167,7 @@ function ParentContactPage() {
       setShowContactModal(false);
       fetchContacts();
     } catch (error) {
-      console.error('操作失败:', error);
+      logger.error('操作失败:', error);
       showToast('error', editingContactId ? '更新联系方式失败' : '添加联系方式失败');
     } finally {
       setIsLoading(false);
@@ -183,7 +184,7 @@ function ParentContactPage() {
       setSelectedContact(null);
       fetchContacts();
     } catch (error) {
-      console.error('删除失败:', error);
+      logger.error('删除失败:', error);
       showToast('error', '删除联系方式失败');
     } finally {
       setIsLoading(false);
@@ -212,7 +213,7 @@ function ParentContactPage() {
       setShowLogModal(false);
       setLogForm(defaultLogForm);
     } catch (error) {
-      console.error('添加联系日志失败:', error);
+      logger.error('添加联系日志失败:', error);
       showToast('error', '添加联系日志失败');
     } finally {
       setIsLoading(false);

@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo, useReducer } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { Card, Button, Modal, LoadingSpinner, PermissionButton } from '../components';
@@ -193,7 +195,6 @@ const ScoreEntry: React.FC = () => {
   usePermissions();
   const [state, dispatch] = useReducer(scoreEntryReducer, initialState);
   const tableRef = useRef<HTMLDivElement>(null);
-  const editingInputRef = useRef<HTMLInputElement>(null);
 
   const {
     exams,
@@ -330,7 +331,7 @@ const ScoreEntry: React.FC = () => {
       // 3) CSV 形式的 fallback："语文,数学,英语" -> ['语文','数学','英语']
       return s
         .split(',')
-        .map((t) => t.trim().replace(/^["'\[\]]+|["'\[\]]+$/g, ''))
+        .map((t) => t.trim().replace(/^["'[\]]+|["'[\]]+$/g, ''))
         .filter(Boolean);
     }
     return [];
@@ -346,41 +347,6 @@ const ScoreEntry: React.FC = () => {
     return examSubjects.filter((s) => s === filterSubject);
   }, [examSubjects, filterSubject]);
 
-  const handleScoreChange = (studentId: number, subject: string, value: string): void => {
-    const key = `${studentId}-${subject}`;
-    const score = parseFloat(value);
-    const existingScore = scores[key];
-    const subjectId = existingScore?.subject_id || getSubjectId(subject);
-
-    if (!isNaN(score) && score >= 0 && score <= 100) {
-      dispatch({
-        type: 'UPDATE_SCORE',
-        payload: {
-          key,
-          score: {
-            ...existingScore,
-            student_id: studentId,
-            subject,
-            subject_id: subjectId,
-            score,
-          },
-        },
-      });
-      dispatch({
-        type: 'ADD_PENDING_CHANGE',
-        payload: { key, change: { student_id: studentId, subject, subject_id: subjectId, score } },
-      });
-    } else if (value === '') {
-      dispatch({
-        type: 'UPDATE_SCORE',
-        payload: {
-          key,
-          score: { ...existingScore, student_id: studentId, subject, score: null },
-        },
-      });
-      dispatch({ type: 'REMOVE_PENDING_CHANGE', payload: key });
-    }
-  };
 
   // 单个分数 onBlur 即时入库：用户改完一个分数失焦即 POST/PUT 到后端，
   // 不再依赖「保存全部」按钮批量提交。「保存全部」仍保留，用于批量修改场景。
@@ -390,7 +356,7 @@ const ScoreEntry: React.FC = () => {
     const subjectId = existing?.subject_id || getSubjectId(subject);
     const score = value === '' ? null : parseFloat(value);
     // 防御性校验：与 handleSaveAll 保持一致，避免脏科目名继续污染 scores 表
-    if (typeof subject !== 'string' || /[\[\]"'\\,]/.test(subject) || /\\u[0-9a-f]{4}/i.test(subject)) {
+    if (typeof subject !== 'string' || /[[\]"'\\,]/.test(subject) || /\\u[0-9a-f]{4}/i.test(subject)) {
       showToast('error', `科目名异常，跳过: ${subject}`);
       return;
     }
@@ -422,7 +388,7 @@ const ScoreEntry: React.FC = () => {
       dispatch({ type: 'REMOVE_PENDING_CHANGE', payload: key });
     } catch (e: unknown) {
       const msg = (e && typeof e === 'object' && 'message' in e) ? (e as { message: string }).message : String(e);
-      console.error(`[score-blur-save] failed for ${key}:`, e);
+      logger.error(`[score-blur-save] failed for ${key}:`, e);
       showToast('error', `保存失败: ${msg}`);
     }
   };
@@ -441,10 +407,10 @@ const ScoreEntry: React.FC = () => {
     for (const key of keys) {
       const { student_id, subject, subject_id, score } = pendingChanges[key];
       // 防御性校验：科目名里若含异常字符（来自历史脏数据/解析错位），主动跳过，避免再写入 '["语文"' 这类脏 subject
-      if (typeof subject !== 'string' || /[\[\]"'\\,]/.test(subject) || /\\u[0-9a-f]{4}/i.test(subject)) {
+      if (typeof subject !== 'string' || /[[\]"'\\,]/.test(subject) || /\\u[0-9a-f]{4}/i.test(subject)) {
         failCount++;
         skipReasons.push(`[${student_id}/${subject}] 非法的科目名`);
-        console.error(`[save-skip] bad subject "${subject}" for student ${student_id}`);
+        logger.error(`[save-skip] bad subject "${subject}" for student ${student_id}`);
         continue;
       }
       try {
@@ -463,7 +429,7 @@ const ScoreEntry: React.FC = () => {
         successCount++;
       } catch (err) {
         failCount++;
-        console.error(`保存失败 [${key}]:`, err);
+        logger.error(`保存失败 [${key}]:`, err);
       }
     }
 
@@ -718,7 +684,7 @@ const ScoreEntry: React.FC = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(urlObject);
     } catch (error) {
-      console.error('下载模板失败:', error);
+      logger.error('下载模板失败:', error);
       showToast('error', '下载模板失败: ' + (error as Error).message);
     }
   }, [selectedClass, selectedExam, showToast]);

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Plus, Edit2, Trash2, BookOpen, X, Check, GraduationCap, Layers, Palette, Link2, Users, Minus, School, ToggleLeft, ToggleRight, RefreshCw, AlertTriangle } from 'lucide-react';
 import api, { Subject, SubjectClassLink, ClassInfo, getAuthHeaders } from '../services/api';
@@ -133,7 +134,7 @@ function SubjectManagementPage() {
       setSubjects(subjectArray);
       setLoadError(false);
     } catch (error) {
-      console.error('获取科目列表失败:', error);
+      logger.error('获取科目列表失败:', error);
       setLoadError(true);
       showToastRef.current('error', '获取科目列表失败');
     } finally {
@@ -157,7 +158,7 @@ function SubjectManagementPage() {
         s.id === subject.id ? { ...s, is_active: !s.is_active, class_count: result.class_count } : s
       ));
     } catch (error: unknown) {
-      console.error('切换状态失败:', error);
+      logger.error('切换状态失败:', error);
       showToast('error', (error as Error).message || '切换状态失败');
     }
   }, [showToast]);
@@ -174,7 +175,7 @@ function SubjectManagementPage() {
       })));
       setLoadError(false);
     } catch (error) {
-      console.error('获取教师列表失败:', error);
+      logger.error('获取教师列表失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -186,7 +187,7 @@ function SubjectManagementPage() {
       setAllClasses(Array.isArray(classList) ? classList : []);
       setLoadError(false);
     } catch (error) {
-      console.error('获取班级列表失败:', error);
+      logger.error('获取班级列表失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -197,7 +198,7 @@ function SubjectManagementPage() {
       setSubjectClasses(result.classes || []);
       setLoadError(false);
     } catch (error) {
-      console.error('获取科目关联班级失败:', error);
+      logger.error('获取科目关联班级失败:', error);
       setLoadError(true);
       setSubjectClasses([]);
     }
@@ -225,7 +226,7 @@ function SubjectManagementPage() {
         await fetchSubjectClasses(selectedSubject.id);
       }
     } catch (error: unknown) {
-      console.error('更新教师失败:', error);
+      logger.error('更新教师失败:', error);
       showToast('error', (error as Error).message || '更新教师失败');
     }
   }, [editingTeacherSubjectId, editingTeacherClassId, editingTeacherId, selectedSubject, showToast, fetchSubjectClasses]);
@@ -268,7 +269,7 @@ function SubjectManagementPage() {
       await fetchSubjectClasses(selectedSubject.id);
       fetchSubjects();
     } catch (error: unknown) {
-      console.error('关联班级失败:', error);
+      logger.error('关联班级失败:', error);
       showToast('error', (error as Error).message || '关联班级失败');
     }
   }, [selectedSubject, selectedClassId, selectedTeacherId, showToast, fetchSubjectClasses, fetchSubjects]);
@@ -282,7 +283,7 @@ function SubjectManagementPage() {
       await fetchSubjectClasses(selectedSubject.id);
       fetchSubjects();
     } catch (error: unknown) {
-      console.error('移除关联失败:', error);
+      logger.error('移除关联失败:', error);
       showToast('error', (error as Error).message || '移除关联失败');
     }
   }, [selectedSubject, showToast, fetchSubjectClasses, fetchSubjects]);
@@ -332,7 +333,7 @@ function SubjectManagementPage() {
       closeModal();
       fetchSubjects();
     } catch (error) {
-      console.error('操作失败:', error);
+      logger.error('操作失败:', error);
       showToast('error', data.id ? '更新科目失败' : '创建科目失败');
     }
   }, [showToast, closeModal, fetchSubjects]);
@@ -344,7 +345,7 @@ function SubjectManagementPage() {
       showToast('success', '科目删除成功');
       fetchSubjects(statusFilter !== 'active', true);
     } catch (error) {
-      console.error('删除失败:', error);
+      logger.error('删除失败:', error);
       showToast('error', '删除科目失败');
     }
   }, [showToast, fetchSubjects, statusFilter]);

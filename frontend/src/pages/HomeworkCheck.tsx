@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
@@ -50,7 +51,7 @@ function HomeworkCheck() {
       const data = await api.homework.getAll();
       setAssignments(data || []);
     } catch (error) {
-      console.error('获取作业列表失败:', error);
+      logger.error('获取作业列表失败:', error);
       showToast('error', '获取作业列表失败');
     } finally {
       setIsLoading(false);
@@ -137,7 +138,7 @@ function HomeworkCheck() {
       handleCloseModal();
       fetchAssignments();
     } catch (error) {
-      console.error('操作失败:', error);
+      logger.error('操作失败:', error);
       showToast('error', formData.id ? '更新作业失败' : '创建作业失败');
     }
   }, [formData, showToast, handleCloseModal, fetchAssignments, validateForm]);
@@ -150,7 +151,7 @@ function HomeworkCheck() {
         showToast('success', '作业删除成功');
         fetchAssignments();
       } catch (error) {
-        console.error('删除失败:', error);
+        logger.error('删除失败:', error);
         showToast('error', '删除作业失败');
       }
     },

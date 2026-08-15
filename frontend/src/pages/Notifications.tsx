@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
 import { Bell, Filter, Check, Trash2, RefreshCw, Sparkles, X, Info } from 'lucide-react';
 import { Card, Button, Modal, PermissionButton } from '../components';
@@ -58,7 +59,7 @@ function Notifications() {
         pages: data.pages || 0,
       }));
     } catch (error) {
-      console.error('加载通知失败:', error);
+      logger.error('加载通知失败:', error);
       showToast('error', '加载通知失败');
     } finally {
       setLoading(false);
@@ -76,7 +77,7 @@ function Notifications() {
         setNotifications((prev: AdminNotification[]) => prev.map((n: AdminNotification) => (n.id === id ? { ...n, is_read: true } : n)));
         showToast('success', '已标记为已读');
       } catch (error) {
-        console.error('标记已读失败:', error);
+        logger.error('标记已读失败:', error);
         showToast('error', '操作失败: ' + ((error as Error).message || ''));
       }
     },
@@ -89,7 +90,7 @@ function Notifications() {
       setNotifications((prev: AdminNotification[]) => prev.map((n: AdminNotification) => ({ ...n, is_read: true })));
       showToast('success', result.message || '全部已读');
     } catch (error) {
-      console.error('全部已读失败:', error);
+      logger.error('全部已读失败:', error);
       showToast('error', '操作失败: ' + ((error as Error).message || ''));
     }
   }, [adminId, showToast]);
@@ -102,7 +103,7 @@ function Notifications() {
         setNotifications((prev: AdminNotification[]) => prev.filter((n: AdminNotification) => n.id !== id));
         showToast('success', '删除成功');
       } catch (error) {
-        console.error('删除通知失败:', error);
+        logger.error('删除通知失败:', error);
         showToast('error', '删除失败: ' + ((error as Error).message || ''));
       }
     },
@@ -122,7 +123,7 @@ function Notifications() {
         }
         showToast('success', '通知发送成功');
       } catch (error) {
-        console.error('发送通知失败:', error);
+        logger.error('发送通知失败:', error);
         showToast('error', '发送失败: ' + ((error as Error).message || ''));
       }
     },

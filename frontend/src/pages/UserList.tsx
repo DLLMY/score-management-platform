@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useReducer, useEffect, useMemo, useCallback, useState, FormEvent, useRef } from 'react';
 import {
   Plus,
@@ -330,7 +332,7 @@ function UserList() {
         const classesData = Array.isArray(data) ? data : ((data as { classes?: { id: number; name: string }[] }).classes || []);
         setClassList(classesData);
       } catch (error) {
-        console.error('Error fetching classes:', error);
+        logger.error('Error fetching classes:', error);
         showToast('error', '班级列表加载失败，筛选器可能不可用');
       }
     };
@@ -423,7 +425,7 @@ function UserList() {
     } catch (error) {
       if ((error as { name?: string }).name !== 'AbortError') {
         dispatch({ type: 'SET_ERROR', payload: '加载用户列表失败' });
-        console.error('Error fetching users:', error);
+        logger.error('Error fetching users:', error);
       }
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -438,7 +440,7 @@ function UserList() {
       const data = await api.rules.getAll();
       dispatch({ type: 'SET_RULES', payload: Array.isArray(data) ? data : (data.rules || []) });
     } catch (error) {
-      console.error('Error fetching rules:', error);
+      logger.error('Error fetching rules:', error);
       showToast('error', '积分规则加载失败，快捷评分可能不可用');
     }
   }, [showToast]);
@@ -448,7 +450,7 @@ function UserList() {
       const data = await api.rankRules.getAll();
       dispatch({ type: 'SET_RANK_RULES', payload: data });
     } catch (error) {
-      console.error('Error fetching rank rules:', error);
+      logger.error('Error fetching rank rules:', error);
       showToast('error', '排名规则加载失败，排名规则可能不可用');
     }
   }, [showToast]);
@@ -684,7 +686,7 @@ function UserList() {
         }
       );
     } catch (error) {
-      console.error('Optimistic update failed:', error);
+      logger.error('Optimistic update failed:', error);
     }
   }, [state.quickScoreUser, showToast, addOperation, wrapAsync]);
 

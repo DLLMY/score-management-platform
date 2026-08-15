@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import { useState, useCallback, ReactNode } from 'react';
 import { CheckSquare, X, MoreVertical } from 'lucide-react';
 import Button from './Button';
@@ -45,7 +46,7 @@ function BatchActionBar<T = unknown>({
       await action.handler(selectedItems);
       onClearSelection();
     } catch (error) {
-      console.error('批量操作失败:', error);
+      logger.error('批量操作失败:', error);
     } finally {
       setLoadingActionId(null);
       setShowActionMenu(false);

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * 前端统一配置管理模块
  * ======================
@@ -377,16 +378,16 @@ export const getConfigSummary = (): Record<string, unknown> => {
 export const logConfigSummary = (): void => {
   if (!config.app.isDevelopment) return;
 
-  console.log('='.repeat(60));
-  console.log('前端配置摘要');
-  console.log('='.repeat(60));
-  console.log('应用:', config.app.name, 'v' + config.app.version);
-  console.log('环境:', config.app.environment);
-  console.log('API URL:', getApiUrl());
-  console.log('MQTT URL:', getMqttUrl());
-  console.log('缓存启用:', config.cache.enabled);
-  console.log('开发工具:', config.devTools.enabled);
-  console.log('='.repeat(60));
+  logger.log('='.repeat(60));
+  logger.log('前端配置摘要');
+  logger.log('='.repeat(60));
+  logger.log('应用:', config.app.name, 'v' + config.app.version);
+  logger.log('环境:', config.app.environment);
+  logger.log('API URL:', getApiUrl());
+  logger.log('MQTT URL:', getMqttUrl());
+  logger.log('缓存启用:', config.cache.enabled);
+  logger.log('开发工具:', config.devTools.enabled);
+  logger.log('='.repeat(60));
 };
 
 // 默认导出

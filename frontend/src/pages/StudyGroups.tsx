@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users,
@@ -13,7 +14,6 @@ import {
   Trophy,
   Target,
   Sparkles,
-  ChevronRight,
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
@@ -57,7 +57,7 @@ function StudyGroups() {
       const data = await api.studyGroup.getAll();
       setGroups(data || []);
     } catch (error) {
-      console.error('获取学习小组列表失败:', error);
+      logger.error('获取学习小组列表失败:', error);
       showToast('error', '获取学习小组列表失败');
     } finally {
       setIsLoading(false);
@@ -133,7 +133,7 @@ function StudyGroups() {
       handleCloseModal();
       fetchGroups();
     } catch (error) {
-      console.error('操作失败:', error);
+      logger.error('操作失败:', error);
       showToast('error', formData.id ? '更新小组失败' : '创建小组失败');
     }
   }, [formData, showToast, handleCloseModal, fetchGroups, validateForm]);
@@ -147,7 +147,7 @@ function StudyGroups() {
         fetchGroups();
         if (selectedGroup?.id === id) setSelectedGroup(null);
       } catch (error) {
-        console.error('删除失败:', error);
+        logger.error('删除失败:', error);
         showToast('error', '删除小组失败');
       }
     },
@@ -167,7 +167,7 @@ function StudyGroups() {
           setSelectedGroup(updated);
         }
       } catch (error) {
-        console.error('添加成员失败:', error);
+        logger.error('添加成员失败:', error);
         showToast('error', '添加成员失败');
       }
     },
@@ -186,7 +186,7 @@ function StudyGroups() {
           setSelectedGroup(updated);
         }
       } catch (error) {
-        console.error('移除成员失败:', error);
+        logger.error('移除成员失败:', error);
         showToast('error', '移除成员失败');
       }
     },
@@ -211,7 +211,7 @@ function StudyGroups() {
           setSelectedGroup(updated);
         }
       } catch (error) {
-        console.error('积分调整失败:', error);
+        logger.error('积分调整失败:', error);
         showToast('error', '积分调整失败');
       }
     },

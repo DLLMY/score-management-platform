@@ -106,6 +106,8 @@ describe('StudentPortal Component', () => {
     });
     await waitFor(() => {
       expect(screen.getByText('85')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText(/课堂表现加分/i)).toBeInTheDocument();
     });
   });
@@ -126,6 +128,8 @@ describe('StudentPortal Component', () => {
     // 风险卡片 + 趋势卡
     await waitFor(() => {
       expect(screen.getByText(/风险预警/i)).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText(/近 8 周积分变动/i)).toBeInTheDocument();
     });
   });
@@ -138,6 +142,8 @@ describe('StudentPortal Component', () => {
     fireEvent.click(screen.getByRole('button', { name: '排名' }));
     await waitFor(() => {
       expect(screen.getByText(/我的班级排名/i)).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('#2')).toBeInTheDocument();
     });
   });

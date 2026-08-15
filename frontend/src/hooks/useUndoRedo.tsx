@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useCallback } from 'react';
 import { CheckCircle, XCircle, Undo2, X } from 'lucide-react';
 
@@ -56,7 +57,7 @@ export function useUndoRedo(options: UseUndoRedoOptions = {}) {
         await operation.undo();
         setCurrentPosition(prev => prev - 1);
       } catch (error) {
-        console.error('撤销失败:', error);
+        logger.error('撤销失败:', error);
       }
     }
   }, [currentPosition, history]);
@@ -70,7 +71,7 @@ export function useUndoRedo(options: UseUndoRedoOptions = {}) {
         await operation.redo();
         setCurrentPosition(prev => prev + 1);
       } catch (error) {
-        console.error('重做失败:', error);
+        logger.error('重做失败:', error);
       }
     }
   }, [currentPosition, history]);

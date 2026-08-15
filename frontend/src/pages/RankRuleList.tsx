@@ -102,7 +102,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?:
 
 function RankRuleList() {
   const { showToast } = useStableToast();
-  const { show: showConfirm } = useConfirmDialog();
+  useConfirmDialog();
   const [rankRules, setRankRules] = useState<RankRule[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [editingRule, setEditingRule] = useState<RankRule | null>(null);

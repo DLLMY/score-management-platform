@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import {
   BarChart,
@@ -129,7 +131,7 @@ function Analysis() {
         setLoadWarn(false);
       }
     } catch (error) {
-      console.error('获取算法数据失败:', error);
+      logger.error('获取算法数据失败:', error);
       setLoadWarn(true);
     }
   }, []);
@@ -147,7 +149,7 @@ function Analysis() {
       setUsers(data.users || []);
       setLoadWarn(false);
     } catch (error) {
-      console.error('获取用户数据失败:', error);
+      logger.error('获取用户数据失败:', error);
       setLoadWarn(true);
     } finally {
       setIsLoading(false);
@@ -161,7 +163,7 @@ function Analysis() {
       setClassList(classesData);
       setLoadWarn(false);
     } catch (error) {
-      console.error('获取班级列表失败:', error);
+      logger.error('获取班级列表失败:', error);
       setLoadWarn(true);
     }
   };

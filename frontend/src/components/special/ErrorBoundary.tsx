@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug, Zap } from 'lucide-react';
 import { isDevelopment } from '../../config/env';
@@ -33,7 +34,7 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
     this.setState({ error, errorInfo });
 
     if (isDevelopment) {
-      console.error('Error Boundary caught an error:', error, errorInfo);
+      logger.error('Error Boundary caught an error:', error, errorInfo);
     }
 
     this.props.onError?.(error, errorInfo);

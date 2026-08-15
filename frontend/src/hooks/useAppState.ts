@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface LoadingState {
@@ -82,7 +83,7 @@ const useAppState = () => {
       if (onError) {
         onError(error as Error);
       } else {
-        console.error(`Async operation failed [${id}]:`, error);
+        logger.error(`Async operation failed [${id}]:`, error);
       }
       
       return null;

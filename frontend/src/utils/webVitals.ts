@@ -1,3 +1,5 @@
+import logger from './logger';
+/* eslint-disable no-console */
 import { performanceReportingService } from '../services/performanceReportingService';
 import { config } from '../config';
 
@@ -60,7 +62,7 @@ const reportVital = (name: string, value: number): void => {
     const service = lazyLoadReportingService();
     service.reportWebVital(name, value);
   } catch (e) {
-    console.warn('上报Web Vitals失败:', e);
+    logger.warn('上报Web Vitals失败:', e);
   }
 };
 
@@ -71,7 +73,7 @@ const measureTTFB = (): void => {
       vitals.TTFB = (entry as PerformanceNavigationTiming).responseStart;
       notifyObservers();
       reportVital('TTFB', vitals.TTFB);
-      console.log(`📊 TTFB: ${vitals.TTFB.toFixed(2)}ms`);
+      logger.log(`📊 TTFB: ${vitals.TTFB.toFixed(2)}ms`);
     }
   } catch (e) {}
 };
@@ -84,7 +86,7 @@ const measureFCP = (): void => {
           vitals.FCP = entry.startTime;
           notifyObservers();
           reportVital('FCP', vitals.FCP);
-          console.log(`📊 FCP: ${vitals.FCP.toFixed(2)}ms`);
+          logger.log(`📊 FCP: ${vitals.FCP.toFixed(2)}ms`);
           observer.disconnect();
         }
       }
@@ -101,7 +103,7 @@ const measureLCP = (): (() => void) | undefined => {
       vitals.LCP = lastEntry.startTime;
       notifyObservers();
       reportVital('LCP', vitals.LCP);
-      console.log(`📊 LCP: ${vitals.LCP.toFixed(2)}ms`);
+      logger.log(`📊 LCP: ${vitals.LCP.toFixed(2)}ms`);
     });
     observer.observe({ entryTypes: ['largest-contentful-paint'] });
     return () => observer.disconnect();
@@ -140,7 +142,7 @@ const measureCLS = (): (() => void) | undefined => {
             vitals.CLS = clsValue;
             notifyObservers();
             reportVital('CLS', vitals.CLS);
-            console.log(`📊 CLS: ${vitals.CLS.toFixed(4)}`);
+            logger.log(`📊 CLS: ${vitals.CLS.toFixed(4)}`);
           }
         }
       }
@@ -160,7 +162,7 @@ const measureFID = (): (() => void) | undefined => {
         vitals.FID = inputEntry.processingStart - inputEntry.startTime;
         notifyObservers();
         reportVital('FID', vitals.FID);
-        console.log(`📊 FID: ${vitals.FID.toFixed(2)}ms`);
+        logger.log(`📊 FID: ${vitals.FID.toFixed(2)}ms`);
         observer.disconnect();
       }
     });
@@ -181,7 +183,7 @@ const measureINP = (): (() => void) | undefined => {
         if (duration > inpValue) {
           inpValue = duration;
           reportVital('INP', inpValue);
-          console.log(`📊 INP: ${inpValue.toFixed(2)}ms`);
+          logger.log(`📊 INP: ${inpValue.toFixed(2)}ms`);
         }
       }
     });
@@ -212,7 +214,7 @@ export const initVitalsMonitor = (): (() => void) | undefined => {
       cleanupINP?.();
     };
   } catch (error) {
-    console.warn('初始化Web Vitals监控失败:', error);
+    logger.warn('初始化Web Vitals监控失败:', error);
     return undefined;
   }
 };

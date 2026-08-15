@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Building2, GraduationCap, Users, Search, ChevronLeft, ChevronRight, X, Check, UserCheck, BookOpen, Trash2 as RemoveIcon, UserPlus, AlertTriangle, Download, Upload, FileJson } from 'lucide-react';
 import api, { ClassInfo, ClassListResponse, getAuthHeaders } from '../services/api';
@@ -74,7 +75,7 @@ function ClassManagementPage() {
     },
   });
 
-  const { show: showConfirm, isOpen: confirmDialogOpen, confirm, cancel, options } = useConfirmDialog();
+  const { isOpen: confirmDialogOpen, confirm, cancel, options } = useConfirmDialog();
 
   const [lastOperation, setLastOperation] = useState<{
     type: 'assign' | 'remove';
@@ -111,7 +112,7 @@ function ClassManagementPage() {
       setClasses(data.classes || []);
       setPagination(data.pagination || { page: 1, page_size: 10, total: 0, pages: 1 });
     } catch (error) {
-      console.error('获取班级列表失败:', error);
+      logger.error('获取班级列表失败:', error);
       showToast('error', '获取班级列表失败');
     } finally {
       setIsLoading(false);
@@ -183,7 +184,7 @@ function ClassManagementPage() {
       closeModal();
       fetchClasses(pagination.page, searchInput);
     } catch (error) {
-      console.error('操作失败:', error);
+      logger.error('操作失败:', error);
       showToast('error', data.id ? '更新班级失败' : '创建班级失败');
     }
   }, [showToast, closeModal, fetchClasses, pagination.page, searchInput]);
@@ -195,7 +196,7 @@ function ClassManagementPage() {
       showToast('success', '班级删除成功');
       fetchClasses(pagination.page, searchInput, true);
     } catch (error) {
-      console.error('删除失败:', error);
+      logger.error('删除失败:', error);
       showToast('error', '删除班级失败');
     }
   }, [showToast, fetchClasses, pagination.page, searchInput]);
@@ -224,7 +225,7 @@ function ClassManagementPage() {
       if (res) {
         setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
       }
-    }).catch(console.error); // 配置列表加载失败静默（主功能不受影响），仅记录日志
+    }).catch((e) => logger.error(e)); // 配置列表加载失败静默（主功能不受影响），仅记录日志
   }, []);
 
   const closeImportModal = useCallback(() => {
@@ -298,7 +299,7 @@ function ClassManagementPage() {
         }
       }
     } catch (error: unknown) {
-      console.error('导入失败:', error);
+      logger.error('导入失败:', error);
       showToast('error', '导入失败：' + (error as Error).message);
     } finally {
       setIsImporting(false);
@@ -1240,7 +1241,7 @@ function ClassManagementPage() {
                         window.URL.revokeObjectURL(url);
                         document.body.removeChild(a);
                       } catch (error) {
-                        console.error('下载模板失败:', error);
+                        logger.error('下载模板失败:', error);
                         showToast('error', '下载模板失败');
                       }
                     }}

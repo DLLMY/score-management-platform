@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback } from 'react';
 import {
   Send,
@@ -305,7 +307,7 @@ const NLPScoringManagement = () => {
         );
       }
     } catch (error) {
-      console.error('解析失败:', error);
+      logger.error('解析失败:', error);
       showToast('error', '解析失败: ' + ((error as Error).message || '请稍后重试'));
     } finally {
       setIsParsing(false);
@@ -338,7 +340,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('评分失败:', error);
+      logger.error('评分失败:', error);
       showToast('error', '评分失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [parseResult, inputText, selectedRuleId, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -378,7 +380,7 @@ const NLPScoringManagement = () => {
           showToast('error', '应用失败');
         }
       } catch (error) {
-        console.error('应用相似规则失败:', error);
+        logger.error('应用相似规则失败:', error);
         showToast('error', '应用相似规则失败: ' + ((error as Error).message || '请稍后重试'));
       }
     },
@@ -413,7 +415,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('评分失败:', error);
+      logger.error('评分失败:', error);
       showToast('error', '评分失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [parseResult, inputText, manualCorrection, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -469,7 +471,7 @@ const NLPScoringManagement = () => {
         setTrainingHistory(response.items);
       }
     } catch (error) {
-      console.error('获取训练历史失败:', error);
+      logger.error('获取训练历史失败:', error);
       showToast('error', '获取训练历史失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [showToast]);
@@ -497,7 +499,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('创建规则失败:', error);
+      logger.error('创建规则失败:', error);
       showToast('error', '创建规则失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [newRule, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -528,7 +530,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('更新规则失败:', error);
+      logger.error('更新规则失败:', error);
       showToast('error', '更新规则失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [editingRule, newRule, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -545,7 +547,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('删除规则失败:', error);
+      logger.error('删除规则失败:', error);
       showToast('error', '删除规则失败: ' + ((error as Error).message || '请稍后重试'));
     }
   }, [showToast]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -568,7 +570,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('模型训练失败:', error);
+      logger.error('模型训练失败:', error);
       showToast('error', '模型训练失败: ' + ((error as Error).message || '请稍后重试'));
     } finally {
       setIsTraining(false);
@@ -589,7 +591,7 @@ const NLPScoringManagement = () => {
         showToast('error', '操作失败');
       }
     } catch (error) {
-      console.error('模型训练失败:', error);
+      logger.error('模型训练失败:', error);
       showToast('error', '模型训练失败: ' + ((error as Error).message || '请稍后重试'));
     } finally {
       setIsTraining(false);
@@ -622,7 +624,7 @@ const NLPScoringManagement = () => {
         setLoadError(false);
       }
     } catch (error) {
-      console.error('获取算法列表失败', error);
+      logger.error('获取算法列表失败', error);
       setLoadError(true);
     }
   }, []);
@@ -747,7 +749,7 @@ const NLPScoringManagement = () => {
       if (configRes.code === 0) setOptimizerConfig(configRes.data);
       setLoadError(false);
     } catch (error) {
-      console.error('获取分析数据失败:', error);
+      logger.error('获取分析数据失败:', error);
       setLoadError(true);
     } finally {
       setIsLoadingAnalysis(false);

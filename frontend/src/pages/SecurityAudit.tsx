@@ -12,7 +12,6 @@ import {
   Shield,
   RefreshCw,
   AlertTriangle,
-  CheckCircle,
   XCircle,
   Info,
   Filter,
@@ -44,8 +43,6 @@ interface AuditStats {
   by_type?: Record<string, number>;
   top_ips?: { ip: string; count: number }[];
 }
-
-type SeverityType = 'info' | 'warning' | 'error' | 'critical' | 'debug' | string;
 
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {

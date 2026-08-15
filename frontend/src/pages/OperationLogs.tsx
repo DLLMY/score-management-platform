@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
 import {
   Clock,
@@ -72,7 +73,7 @@ const OperationLogs: React.FC = () => {
         total: data.total || 0,
       }));
     } catch (error) {
-      console.error('加载操作日志失败:', error);
+      logger.error('加载操作日志失败:', error);
       setLogError(true);
     } finally {
       setLoading(false);

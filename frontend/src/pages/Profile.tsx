@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent } from 'react';
 import { User, Mail, Phone, Shield, Globe, Calendar, Edit2, Save, Check, ChevronRight, Key, RefreshCw, LucideIcon, AlertTriangle } from 'lucide-react';
 import { Card, Modal, PermissionButton, Skeleton } from '../components';
@@ -119,7 +120,7 @@ function Profile() {
         class_name: data.class_name || '',
       });
     } catch (error) {
-      console.error('加载管理员信息失败:', error);
+      logger.error('加载管理员信息失败:', error);
       setLoadError(true);
     } finally {
       setLoading(false);

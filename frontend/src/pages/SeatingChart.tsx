@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   LayoutGrid,
@@ -65,7 +66,7 @@ function SeatingChartPage() {
         setSelectedChart(data[0]);
       }
     } catch (error) {
-      console.error('获取座次表列表失败:', error);
+      logger.error('获取座次表列表失败:', error);
       showToast('error', '获取座次表列表失败');
     } finally {
       setIsLoading(false);
@@ -81,7 +82,7 @@ function SeatingChartPage() {
       const data = await api.seating.getById(id);
       setSelectedChart(data);
     } catch (error) {
-      console.error('获取座次表详情失败:', error);
+      logger.error('获取座次表详情失败:', error);
       showToast('error', '获取座次表详情失败');
     }
   }, [showToast]);
@@ -107,7 +108,7 @@ function SeatingChartPage() {
       setSelectedChart(newChart);
       fetchCharts();
     } catch (error) {
-      console.error('创建座次表失败:', error);
+      logger.error('创建座次表失败:', error);
       showToast('error', '创建座次表失败');
     } finally {
       setIsLoading(false);
@@ -125,7 +126,7 @@ function SeatingChartPage() {
       }
       fetchCharts();
     } catch (error) {
-      console.error('删除座次表失败:', error);
+      logger.error('删除座次表失败:', error);
       showToast('error', '删除座次表失败');
     } finally {
       setIsLoading(false);
@@ -144,7 +145,7 @@ function SeatingChartPage() {
       showToast('success', '自动排列完成');
       setSelectedChart(result);
     } catch (error) {
-      console.error('自动排列失败:', error);
+      logger.error('自动排列失败:', error);
       showToast('error', '自动排列失败');
     } finally {
       setIsArranging(false);
@@ -178,7 +179,7 @@ function SeatingChartPage() {
       showToast('success', '座位调整成功');
       fetchChartDetail(selectedChart.id);
     } catch (error) {
-      console.error('调整座位失败:', error);
+      logger.error('调整座位失败:', error);
       showToast('error', '调整座位失败');
     } finally {
       setDraggedSeat(null);

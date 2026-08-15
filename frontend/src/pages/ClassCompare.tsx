@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   BarChart,
@@ -61,7 +62,7 @@ function ClassCompare() {
         setLoadError(false);
       }
     } catch (err: unknown) {
-      console.error('获取班级列表失败:', err);
+      logger.error('获取班级列表失败:', err);
       setLoadError(true);
     }
   }, []);

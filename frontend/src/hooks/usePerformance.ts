@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
@@ -16,7 +17,7 @@ export const usePerformance = (componentName: string) => {
       const duration = endTime - startTime.current;
       
       // 记录性能数据
-      console.log(`[Performance] ${componentName} unmounted after ${duration.toFixed(2)}ms`);
+      logger.log(`[Performance] ${componentName} unmounted after ${duration.toFixed(2)}ms`);
     };
   }, [componentName]);
 
@@ -24,7 +25,7 @@ export const usePerformance = (componentName: string) => {
     renderCount.current++;
     const renderTime = performance.now();
     
-    console.log(`[Performance] ${componentName} rendered (count: ${renderCount.current}) at ${renderTime.toFixed(2)}ms`);
+    logger.log(`[Performance] ${componentName} rendered (count: ${renderCount.current}) at ${renderTime.toFixed(2)}ms`);
   });
 
   return {
@@ -48,7 +49,7 @@ export const monitorPerformance = <T extends (...args: Parameters<T>) => ReturnT
     const result = fn(...args);
     const end = performance.now();
     
-    console.log(`[Performance] ${label} executed in ${(end - start).toFixed(2)}ms`);
+    logger.log(`[Performance] ${label} executed in ${(end - start).toFixed(2)}ms`);
     
     return result;
   }) as T;
@@ -69,7 +70,7 @@ export const monitorAsyncPerformance = <T extends (...args: Parameters<T>) => Pr
     const result = await fn(...args);
     const end = performance.now();
     
-    console.log(`[Performance] ${label} executed in ${(end - start).toFixed(2)}ms`);
+    logger.log(`[Performance] ${label} executed in ${(end - start).toFixed(2)}ms`);
     
     return result;
   }) as T;
@@ -230,7 +231,7 @@ export const useTimer = () => {
     if (startTime) {
       const duration = performance.now() - startTime;
       timers.current.delete(label);
-      console.log(`[Timer] ${label}: ${duration.toFixed(2)}ms`);
+      logger.log(`[Timer] ${label}: ${duration.toFixed(2)}ms`);
       return duration;
     }
     return 0;
@@ -240,7 +241,7 @@ export const useTimer = () => {
     const startTime = timers.current.get(label);
     if (startTime) {
       const duration = performance.now() - startTime;
-      console.log(`[Timer] ${label} lap: ${duration.toFixed(2)}ms`);
+      logger.log(`[Timer] ${label} lap: ${duration.toFixed(2)}ms`);
       return duration;
     }
     return 0;

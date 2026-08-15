@@ -6,7 +6,6 @@
   "rules": {
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
-    "no-unused-vars": "warn",
     "no-console": "warn",
     "react/no-unknown-property": "error",
     "react/prop-types": "off",

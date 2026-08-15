@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * 成绩分析页面组件
  * 提供学生积分数据统计与分析功能
@@ -171,7 +172,7 @@ function ScoreAnalysis(): React.ReactElement {
         setLoadWarn(false);
       }
     } catch (error) {
-      console.error('获取算法数据失败:', error);
+      logger.error('获取算法数据失败:', error);
       setLoadWarn(true);
     }
   }, [selectedClass]);

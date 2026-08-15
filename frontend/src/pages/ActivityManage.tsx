@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
@@ -58,7 +59,7 @@ function ActivityManage() {
       const data = await api.activity.getAll();
       setActivities(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('获取活动列表失败:', error);
+      logger.error('获取活动列表失败:', error);
       showToast('error', '获取活动列表失败');
     } finally {
       setIsLoading(false);
@@ -134,7 +135,7 @@ function ActivityManage() {
       handleCloseModal();
       fetchActivities();
     } catch (error) {
-      console.error('保存活动失败:', error);
+      logger.error('保存活动失败:', error);
       showToast('error', formData.id ? '更新活动失败' : '创建活动失败');
     }
   }, [formData, validateForm, showToast, handleCloseModal, fetchActivities]);
@@ -147,7 +148,7 @@ function ActivityManage() {
         showToast('success', '活动删除成功');
         fetchActivities();
       } catch (error) {
-        console.error('删除活动失败:', error);
+        logger.error('删除活动失败:', error);
         showToast('error', '删除活动失败');
       }
     },
@@ -166,7 +167,7 @@ function ActivityManage() {
         showToast('success', '报名成功');
         fetchActivities();
       } catch (error) {
-        console.error('报名失败:', error);
+        logger.error('报名失败:', error);
         showToast('error', '报名失败');
       }
     },
@@ -186,7 +187,7 @@ function ActivityManage() {
         showToast('success', '取消报名成功');
         fetchActivities();
       } catch (error) {
-        console.error('取消报名失败:', error);
+        logger.error('取消报名失败:', error);
         showToast('error', '取消报名失败');
       }
     },

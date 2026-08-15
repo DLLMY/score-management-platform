@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   ClipboardList,
@@ -77,7 +78,7 @@ function DutyRosterPage() {
       const data = await api.duty.getAll();
       setGroups(data || []);
     } catch (error) {
-      console.error('获取值日组列表失败:', error);
+      logger.error('获取值日组列表失败:', error);
       showToast('error', '获取值日组列表失败');
     } finally {
       setIsLoading(false);
@@ -107,7 +108,7 @@ function DutyRosterPage() {
       setDutyForm(defaultDutyForm);
       fetchGroups();
     } catch (error) {
-      console.error('创建值日组失败:', error);
+      logger.error('创建值日组失败:', error);
       showToast('error', '创建值日组失败');
     } finally {
       setIsLoading(false);
@@ -122,7 +123,7 @@ function DutyRosterPage() {
       showToast('success', '值日组删除成功');
       fetchGroups();
     } catch (error) {
-      console.error('删除值日组失败:', error);
+      logger.error('删除值日组失败:', error);
       showToast('error', '删除值日组失败');
     } finally {
       setIsLoading(false);
@@ -150,7 +151,7 @@ function DutyRosterPage() {
       setShowAssignModal(false);
       setAssignmentForm(defaultAssignmentForm);
     } catch (error) {
-      console.error('分配值日任务失败:', error);
+      logger.error('分配值日任务失败:', error);
       showToast('error', '分配值日任务失败');
     } finally {
       setIsLoading(false);
@@ -165,7 +166,7 @@ function DutyRosterPage() {
         prev.map(a => a.id === assignmentId ? { ...a, is_completed: true, completed_at: new Date().toISOString() } : a) // 乐观更新占位，服务端完成时间为准
       );
     } catch (error) {
-      console.error('标记完成失败:', error);
+      logger.error('标记完成失败:', error);
       showToast('error', '标记完成失败');
     }
   }, [showToast]);

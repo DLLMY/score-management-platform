@@ -88,7 +88,7 @@ describe('AlgorithmAnalysis Component', () => {
     });
     for (const label of TABS) {
       const btn = screen.queryByRole('button', { name: new RegExp(label) });
-      expect(btn, `Tab ${label} 应存在`).toBeTruthy();
+      expect(btn).toBeTruthy();
     }
   });
 
@@ -108,6 +108,8 @@ describe('AlgorithmAnalysis Component', () => {
     await waitFor(() => {
       // 「选择班级」label 与空态引导文案均含该词，用 getAllByText 断言存在
       expect(screen.getAllByText(/选择班级/i).length).toBeGreaterThan(0);
+    });
+    await waitFor(() => {
       expect(screen.getByRole('button', { name: /生成全班成绩波动归因/ })).toBeInTheDocument();
     });
   });

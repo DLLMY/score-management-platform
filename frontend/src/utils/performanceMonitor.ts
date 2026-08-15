@@ -1,3 +1,4 @@
+import logger from './logger';
 interface PerformanceEntry {
   id: string;
   type: 'api' | 'component' | 'render';
@@ -128,7 +129,7 @@ class PerformanceMonitor {
       try {
         listener({ ...this.stats });
       } catch (error) {
-        console.error('Performance monitor listener error:', error);
+        logger.error('Performance monitor listener error:', error);
       }
     });
   }
@@ -150,15 +151,15 @@ class PerformanceMonitor {
 
   logSummary(): void {
     const stats = this.getStats();
-    console.log('[Performance Monitor Summary]');
-    console.log(`  Total Requests: ${stats.totalRequests}`);
-    console.log(`  Average Response Time: ${stats.avgResponseTime.toFixed(2)}ms`);
-    console.log(`  Max Response Time: ${stats.maxResponseTime.toFixed(2)}ms`);
-    console.log(`  Min Response Time: ${stats.minResponseTime.toFixed(2)}ms`);
-    console.log(`  Slow Requests (>${this.slowThreshold}ms): ${stats.slowRequests}`);
-    console.log(`  Errors: ${stats.errors}`);
-    console.log(`  Cache Hits: ${stats.cacheHits}`);
-    console.log(`  Coalesced Requests: ${stats.coalescedRequests}`);
+    logger.log('[Performance Monitor Summary]');
+    logger.log(`  Total Requests: ${stats.totalRequests}`);
+    logger.log(`  Average Response Time: ${stats.avgResponseTime.toFixed(2)}ms`);
+    logger.log(`  Max Response Time: ${stats.maxResponseTime.toFixed(2)}ms`);
+    logger.log(`  Min Response Time: ${stats.minResponseTime.toFixed(2)}ms`);
+    logger.log(`  Slow Requests (>${this.slowThreshold}ms): ${stats.slowRequests}`);
+    logger.log(`  Errors: ${stats.errors}`);
+    logger.log(`  Cache Hits: ${stats.cacheHits}`);
+    logger.log(`  Coalesced Requests: ${stats.coalescedRequests}`);
   }
 
   getSlowThreshold(): number {

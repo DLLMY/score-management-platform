@@ -1,3 +1,4 @@
+import logger from './logger';
 interface BenchmarkResult {
   name: string;
   iterations: number;
@@ -200,9 +201,9 @@ class PerformanceBenchmark {
     this.startTime = performance.now();
     this.results = [];
 
-    console.log('='.repeat(70));
-    console.log('🎯 开始前端性能基准测试');
-    console.log('='.repeat(70));
+    logger.log('='.repeat(70));
+    logger.log('🎯 开始前端性能基准测试');
+    logger.log('='.repeat(70));
 
     await this.runSyncBenchmark('JSON序列化/反序列化', () => {
       const data = { a: 1, b: 'test', c: [1, 2, 3], d: { e: true } };
@@ -224,12 +225,12 @@ class PerformanceBenchmark {
       return str.split(' ').map(s => s.toUpperCase()).join('-');
     }, 1000);
 
-    console.log('\n' + '='.repeat(70));
-    console.log('✅ 前端性能基准测试完成');
-    console.log('='.repeat(70));
+    logger.log('\n' + '='.repeat(70));
+    logger.log('✅ 前端性能基准测试完成');
+    logger.log('='.repeat(70));
 
     const report = this.generateReport();
-    console.log(this.formatReport(report));
+    logger.log(this.formatReport(report));
     return report;
   }
 

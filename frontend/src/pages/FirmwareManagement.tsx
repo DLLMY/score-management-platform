@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import {
   RefreshCw,
@@ -48,7 +49,7 @@ function FirmwareManagement() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // 使用 useConfirmDialog 管理确认对话框
-  const { show: showConfirm } = useConfirmDialog();
+  useConfirmDialog();
 
   // 使用 useForm 管理表单状态
   const {
@@ -87,7 +88,7 @@ function FirmwareManagement() {
         setOtaStatus(statusRes);
         setUpgradeRecords(recordsRes.records || []);
       } catch (error: unknown) {
-        console.error('加载固件数据失败:', error);
+        logger.error('加载固件数据失败:', error);
         showToast('error', '加载固件数据失败');
       } finally {
         setIsLoading(false);
@@ -144,7 +145,7 @@ function FirmwareManagement() {
       closeUploadModal();
       loadData(true);
     } catch (error: unknown) {
-      console.error('上传失败:', error);
+      logger.error('上传失败:', error);
       showToast('error', `上传失败: ${(error as Error).message}`);
     } finally {
       setIsUploading(false);
@@ -159,7 +160,7 @@ function FirmwareManagement() {
       showToast('success', '删除成功');
       loadData(true);
     } catch (error: unknown) {
-      console.error('删除失败:', error);
+      logger.error('删除失败:', error);
       showToast('error', `删除失败: ${(error as Error).message}`);
     }
   };
@@ -172,7 +173,7 @@ function FirmwareManagement() {
       showToast('success', version.is_active ? '已禁用' : '已启用');
       loadData(true);
     } catch (error: unknown) {
-      console.error('更新失败:', error);
+      logger.error('更新失败:', error);
       showToast('error', `更新失败: ${(error as Error).message}`);
     }
   };
@@ -196,7 +197,7 @@ function FirmwareManagement() {
       window.URL.revokeObjectURL(url);
       showToast('success', '下载开始');
     } catch (err) {
-      console.error('固件下载失败:', err);
+      logger.error('固件下载失败:', err);
       showToast('error', '下载失败: ' + ((err as Error).message || ''));
     }
   };

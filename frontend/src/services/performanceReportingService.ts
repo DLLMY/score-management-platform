@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { config, getApiUrl } from '../config';
 
 const API_BASE_URL = getApiUrl();
@@ -145,7 +146,7 @@ class PerformanceReportingService {
     }
 
     if (this.isDev) {
-      console.debug('[Error] Reported:', fullError);
+      logger.debug('[Error] Reported:', fullError);
     }
   }
 
@@ -200,14 +201,14 @@ class PerformanceReportingService {
         // 触发限流：暂停上报 60s（性能数据非关键，丢弃本批不再重试，避免队列堆积死循环）
         this.rateLimitedUntil = Date.now() + this.RATE_LIMIT_BACKOFF_MS;
         if (this.isDev) {
-          console.debug(`[Performance] 429 限流，暂停上报 ${this.RATE_LIMIT_BACKOFF_MS / 1000}s`);
+          logger.debug(`[Performance] 429 限流，暂停上报 ${this.RATE_LIMIT_BACKOFF_MS / 1000}s`);
         }
         return;
       }
 
       if (this.isDev && (!resp || !resp.ok)) {
         // 仅失败（网络/5xx）时 debug 输出；成功静默，避免高频轮询刷屏
-        console.debug(`[Performance] Flush 失败: ${resp ? resp.status : 'network'} (${metricsToSend.length} metrics, silently ignored)`);
+        logger.debug(`[Performance] Flush 失败: ${resp ? resp.status : 'network'} (${metricsToSend.length} metrics, silently ignored)`);
       }
     } catch {
       // 完全静默：任何异常都不抛到控制台
@@ -237,7 +238,7 @@ class PerformanceReportingService {
       }
 
       if (this.isDev) {
-        console.debug(`[Error] Flushed: ${okCount}/${errorsToSend.length} errors (silently handled)`);
+        logger.debug(`[Error] Flushed: ${okCount}/${errorsToSend.length} errors (silently handled)`);
       }
     } catch {
       // 完全静默：任何异常都不抛到控制台

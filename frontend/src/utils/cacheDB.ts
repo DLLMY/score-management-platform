@@ -1,3 +1,4 @@
+import logger from './logger';
 /**
  * IndexedDB缓存工具
  * 用于持久化存储API响应缓存
@@ -75,7 +76,7 @@ export async function setCache(key: string, data: unknown, ttl: number = 60000):
       request.onerror = () => reject(new Error('Failed to set cache'));
     });
   } catch (error) {
-    console.warn('Cache set error:', error);
+    logger.warn('Cache set error:', error);
   }
 }
 
@@ -116,7 +117,7 @@ export async function getCache(key: string): Promise<{ data: unknown; fromCache:
       request.onerror = () => reject(new Error('Failed to get cache'));
     });
   } catch (error) {
-    console.warn('Cache get error:', error);
+    logger.warn('Cache get error:', error);
     return null;
   }
 }
@@ -137,7 +138,7 @@ export async function deleteCache(key: string): Promise<void> {
       request.onerror = () => reject(new Error('Failed to delete cache'));
     });
   } catch (error) {
-    console.warn('Cache delete error:', error);
+    logger.warn('Cache delete error:', error);
   }
 }
 
@@ -157,7 +158,7 @@ export async function clearCache(): Promise<void> {
       request.onerror = () => reject(new Error('Failed to clear cache'));
     });
   } catch (error) {
-    console.warn('Cache clear error:', error);
+    logger.warn('Cache clear error:', error);
   }
 }
 
@@ -189,7 +190,7 @@ export async function deleteCacheByPattern(pattern: string): Promise<void> {
       request.onerror = () => reject(new Error('Failed to delete cache by pattern'));
     });
   } catch (error) {
-    console.warn('Cache delete by pattern error:', error);
+    logger.warn('Cache delete by pattern error:', error);
   }
 }
 
@@ -221,7 +222,7 @@ export async function cleanupExpiredCache(): Promise<void> {
       request.onerror = () => reject(new Error('Failed to cleanup cache'));
     });
   } catch (error) {
-    console.warn('Cache cleanup error:', error);
+    logger.warn('Cache cleanup error:', error);
   }
 }
 
@@ -247,7 +248,7 @@ export async function getCacheStats(): Promise<{ count: number; size: number }> 
       countRequest.onerror = () => reject(new Error('Failed to get cache stats'));
     });
   } catch (error) {
-    console.warn('Cache stats error:', error);
+    logger.warn('Cache stats error:', error);
     return { count: 0, size: 0 };
   }
 }

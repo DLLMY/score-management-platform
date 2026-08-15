@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   RefreshCw,
@@ -473,7 +475,7 @@ function DeviceManagement() {
       }
     } catch (error) {
       // OTA 状态是 5s 轮询，失败属预期内（后端瞬时不可达），warn 记录避免刷屏
-      console.warn('获取OTA状态失败:', error);
+      logger.warn('获取OTA状态失败:', error);
     }
   }, [showOTAProgressModal]);
 

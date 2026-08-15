@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus,
@@ -165,7 +167,7 @@ const CourseSchedulePage: React.FC = () => {
       setClasses(classData.classes || []);
       setSubjects(Array.isArray(subjectData) ? subjectData : []);
     } catch (error) {
-      console.error('获取数据失败:', error);
+      logger.error('获取数据失败:', error);
       showToastRef.current('error', '获取数据失败');
     } finally {
       setIsLoading(false);
@@ -191,7 +193,7 @@ const CourseSchedulePage: React.FC = () => {
       setSchedules(scheduleData);
       setSchedulesError(false);
     } catch (error) {
-      console.error('获取课程表失败:', error);
+      logger.error('获取课程表失败:', error);
       setSchedulesError(true);
     }
   }, [selectedClass]);
@@ -243,7 +245,7 @@ const CourseSchedulePage: React.FC = () => {
       setConflictResult(result);
       return result;
     } catch (error) {
-      console.error('冲突检测失败:', error);
+      logger.error('冲突检测失败:', error);
       return null;
     }
   }, [formData, editingSchedule]);
@@ -287,7 +289,7 @@ const CourseSchedulePage: React.FC = () => {
       });
       fetchData();
     } catch (error: any) {
-      console.error('保存失败:', error);
+      logger.error('保存失败:', error);
       const errorMessage = error.message || (editingSchedule ? '更新失败' : '添加失败');
       showToast('error', errorMessage);
     }
@@ -300,7 +302,7 @@ const CourseSchedulePage: React.FC = () => {
       showToast('success', '删除成功');
       fetchData(true);
     } catch (error) {
-      console.error('删除失败:', error);
+      logger.error('删除失败:', error);
       showToast('error', '删除失败');
     }
   }, [showToast, fetchData, showConfirm]);
@@ -329,7 +331,7 @@ const CourseSchedulePage: React.FC = () => {
       if (res) {
         setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
       }
-    }).catch(console.error); // 导入配置列表加载失败静默：仅影响弹窗下拉选项，主功能不受影响
+    }).catch((e) => logger.error(e)); // 导入配置列表加载失败静默：仅影响弹窗下拉选项，主功能不受影响
   }, [openImportModal]);
 
   const closeImportModalWithReset = useCallback(() => {
@@ -410,7 +412,7 @@ const CourseSchedulePage: React.FC = () => {
         }
       }
     } catch (error: any) {
-      console.error('导入失败:', error);
+      logger.error('导入失败:', error);
       showToast('error', '导入失败：' + error.message);
     } finally {
       setIsImporting(false);
@@ -1024,7 +1026,7 @@ const CourseSchedulePage: React.FC = () => {
                         window.URL.revokeObjectURL(url);
                         document.body.removeChild(a);
                       } catch (error) {
-                        console.error('下载模板失败:', error);
+                        logger.error('下载模板失败:', error);
                         showToast('error', '下载模板失败');
                       }
                     }}

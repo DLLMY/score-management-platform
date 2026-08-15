@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect } from 'react';
 import { Power, Plus, Trash2, Zap, Check, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import api from '../services/api';
@@ -28,7 +29,7 @@ export default function WakeOnLan() {
       const result = await api.wakeOnLan.getDevices();
       setDevices(result || []);
     } catch (error) {
-      console.error('Failed to load devices:', error);
+      logger.error('Failed to load devices:', error);
       // 诚实显示：加载失败不伪造默认设备
       setDevices([]);
       setLoadError(true);

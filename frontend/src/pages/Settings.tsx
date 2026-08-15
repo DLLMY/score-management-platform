@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { Settings as SettingsIcon, Bell, Shield, Palette, Database, Save, RefreshCw, Check, AlertCircle, Download, Upload, Trash2, FileText, Loader2, AlertTriangle } from 'lucide-react';
 import api, { SystemConfig, BackupInfo } from '../services/api';
@@ -78,7 +79,7 @@ function Settings() {
         language: data.language || 'zh-CN',
       });
     } catch (error) {
-      console.error('加载配置失败:', error);
+      logger.error('加载配置失败:', error);
       setLoadError(true);
     } finally {
       setLoading((prev: LoadingState) => ({ ...prev, config: false }));
@@ -92,7 +93,7 @@ function Settings() {
       setBackups(data);
       setLoadError(false);
     } catch (error) {
-      console.error('获取备份列表失败:', error);
+      logger.error('获取备份列表失败:', error);
       setLoadError(true);
     }
   }, []);

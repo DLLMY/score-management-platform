@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebouncedValue } from './useDebouncedValue';
 
@@ -64,7 +65,7 @@ export function useOptimizedFetch<T = unknown>(
         const errorObj = err as Error;
         setError(errorObj);
         onErrorRef.current?.(errorObj);
-        console.error('Fetch failed:', errorObj);
+        logger.error('Fetch failed:', errorObj);
       }
     } finally {
       setLoading(false);

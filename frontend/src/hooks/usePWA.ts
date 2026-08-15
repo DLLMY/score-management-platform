@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useEffect, useState } from 'react';
 
 type PWAStatus = 'unsupported' | 'not_installed' | 'installed' | 'update_available';
@@ -78,7 +79,7 @@ export const usePWA = (): PWAReturnValue => {
         }
       });
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
+      logger.error('Service Worker registration failed:', error);
     }
   };
 

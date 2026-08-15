@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Modal, Form, Input, Select, Switch, Tag } from 'antd';
 import { Plus, Edit2, Trash2, CheckCircle, XCircle, Settings, FileText, AlertTriangle } from 'lucide-react';
@@ -138,7 +139,7 @@ const ImportConfigManagement: React.FC = () => {
         setLoadError(false);
       }
     } catch (error) {
-      console.error('获取导入配置失败:', error);
+      logger.error('获取导入配置失败:', error);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -175,7 +176,7 @@ const ImportConfigManagement: React.FC = () => {
       showToast('success', '删除成功');
       fetchConfigs();
     } catch (error) {
-      console.error('删除配置失败:', error);
+      logger.error('删除配置失败:', error);
       showToast('error', '删除失败');
     }
   };
@@ -186,7 +187,7 @@ const ImportConfigManagement: React.FC = () => {
       showToast('success', '已设为默认配置');
       fetchConfigs();
     } catch (error) {
-      console.error('设置默认配置失败:', error);
+      logger.error('设置默认配置失败:', error);
       showToast('error', '设置失败');
     }
   };
@@ -248,7 +249,7 @@ const ImportConfigManagement: React.FC = () => {
       setShowModal(false);
       fetchConfigs();
     } catch (error) {
-      console.error('提交失败:', error);
+      logger.error('提交失败:', error);
       showToast('error', '提交失败');
     }
   };

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 
 interface UseAutoSaveOptions<T> {
@@ -64,7 +65,7 @@ export function useAutoSave<T>({
           }
         }
       } catch (error) {
-        console.error('读取草稿失败:', error);
+        logger.error('读取草稿失败:', error);
       }
     }
   }, [key]);
@@ -91,7 +92,7 @@ export function useAutoSave<T>({
 
       return parsed.data as T;
     } catch (error) {
-      console.error('加载草稿失败:', error);
+      logger.error('加载草稿失败:', error);
       return null;
     }
   }, [key]);

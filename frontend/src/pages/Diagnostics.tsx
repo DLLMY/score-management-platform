@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * 系统诊断页面组件
  * 提供系统健康检查、性能监控和错误追踪功能
@@ -418,7 +419,7 @@ export const DiagnosticsPage: React.FC = () => {
       setHealthData(data);
       setLoadError(false);
     } catch (error) {
-      console.warn('Failed to fetch health data:', error);
+      logger.warn('Failed to fetch health data:', error);
       setLoadError(true);
     }
   }, []);
@@ -435,7 +436,7 @@ export const DiagnosticsPage: React.FC = () => {
       setPerformanceData(data);
       setLoadError(false);
     } catch (error) {
-      console.warn('Failed to fetch performance data:', error);
+      logger.warn('Failed to fetch performance data:', error);
       setLoadError(true);
     }
   }, []);
@@ -452,7 +453,7 @@ export const DiagnosticsPage: React.FC = () => {
       setErrorData(data);
       setLoadError(false);
     } catch (error) {
-      console.warn('Failed to fetch error data:', error);
+      logger.warn('Failed to fetch error data:', error);
       setLoadError(true);
     }
   }, []);
@@ -469,7 +470,7 @@ export const DiagnosticsPage: React.FC = () => {
       setSystemData(data);
       setLoadError(false);
     } catch (error) {
-      console.warn('Failed to fetch system data:', error);
+      logger.warn('Failed to fetch system data:', error);
       setLoadError(true);
     }
   }, []);

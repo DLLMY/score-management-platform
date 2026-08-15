@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useCallback, useEffect } from 'react';
 import { SearchCondition, SavedSearch } from '../components/data-display/AdvancedSearchFilter';
 
@@ -24,7 +25,7 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}) {
         setSavedSearches(JSON.parse(stored));
       }
     } catch (error) {
-      console.warn('加载保存的搜索失败:', error);
+      logger.warn('加载保存的搜索失败:', error);
     }
   }, [storageKey]);
 
@@ -33,7 +34,7 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}) {
     try {
       localStorage.setItem(storageKey, JSON.stringify(searches));
     } catch (error) {
-      console.warn('保存搜索失败:', error);
+      logger.warn('保存搜索失败:', error);
     }
   }, [storageKey]);
 

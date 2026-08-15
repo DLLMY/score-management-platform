@@ -1,3 +1,4 @@
+import logger from './logger';
 export const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined') return false;
   
@@ -133,7 +134,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     document.execCommand('copy');
     return true;
   } catch (err) {
-    console.error('Failed to copy:', err);
+    logger.error('Failed to copy:', err);
     return false;
   } finally {
     document.body.removeChild(textarea);
@@ -153,7 +154,7 @@ export const shareContent = async ({ title, text, url }: ShareContentOptions): P
       return true;
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        console.error('Share failed:', err);
+        logger.error('Share failed:', err);
       }
       return false;
     }

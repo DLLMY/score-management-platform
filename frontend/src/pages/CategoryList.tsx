@@ -42,7 +42,7 @@ function CategoryList() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useStableToast();
-  const { show: showConfirm } = useConfirmDialog();
+  useConfirmDialog();
 
   const {
     formData,

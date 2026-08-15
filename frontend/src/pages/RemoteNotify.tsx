@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback, useEffect } from 'react';
 import { Send, Radio, Monitor, Bell, Volume2, VolumeX, AlertTriangle, TestTube, CheckCircle, Loader2, Wifi, WifiOff, Bookmark, Clock, History, Palette, Plus, Trash2, Edit2, Calendar, Play, Pause, Filter, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
 import api, { NotifyTemplate, ScheduledNotify, NotifyHistory } from '../services/api';
@@ -246,7 +248,7 @@ function RemoteNotify() {
       setTemplates(data);
       setLoadError(false);
     } catch (error) {
-      console.error('加载模板失败:', error);
+      logger.error('加载模板失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -257,7 +259,7 @@ function RemoteNotify() {
       setScheduledNotifications(data);
       setLoadError(false);
     } catch (error) {
-      console.error('加载定时通知失败:', error);
+      logger.error('加载定时通知失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -277,7 +279,7 @@ function RemoteNotify() {
       setHistoryTotal(result.total);
       setLoadError(false);
     } catch (error) {
-      console.error('加载历史记录失败:', error);
+      logger.error('加载历史记录失败:', error);
       setLoadError(true);
     } finally {
       setIsLoadingHistory(false);
@@ -290,7 +292,7 @@ function RemoteNotify() {
       setHistoryStats(stats);
       setLoadError(false);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      logger.error('加载统计数据失败:', error);
       setLoadError(true);
     }
   }, []);

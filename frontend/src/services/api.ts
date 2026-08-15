@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // 导入持久化缓存工具
 import { getCache, setCache, deleteCacheByPattern } from '../utils/cacheDB';
 import { coalesceRequest, invalidateRequestCache } from '../utils/requestCoalescing';
@@ -105,7 +106,7 @@ const loadEtagCache = (): Map<string, EtagEntry> => {
       return map;
     }
   } catch (error) {
-    console.warn('加载ETag缓存失败:', error);
+    logger.warn('加载ETag缓存失败:', error);
   }
   return new Map<string, EtagEntry>();
 };
@@ -115,7 +116,7 @@ const saveEtagCache = (cache: Map<string, EtagEntry>): void => {
     const obj = Object.fromEntries(cache.entries());
     localStorage.setItem(ETAG_STORAGE_KEY, JSON.stringify(obj));
   } catch (error) {
-    console.warn('保存ETag缓存失败:', error);
+    logger.warn('保存ETag缓存失败:', error);
   }
 };
 
@@ -241,7 +242,7 @@ const fetchCsrfToken = async (): Promise<string | null> => {
       }
     }
   } catch (error) {
-    console.warn('获取CSRF token失败:', error);
+    logger.warn('获取CSRF token失败:', error);
   }
   return null;
 };
@@ -383,7 +384,7 @@ const handleApiError = (error: Error, url: string, method: string): ErrorInfo =>
   // API 错误是业务常态（超时/4xx/网络），用 warn 记录而非 error——
   // 避免 errorMonitor 的 console.error 钩子把每个轮询周期失败都当作
   // 前端错误上报（真实故障已由 errorMonitor.reportApiError 单独上报）。
-  console.warn(`API Error [${method}] ${url}:`, error);
+  logger.warn(`API Error [${method}] ${url}:`, error);
 
   const errorInfo: ErrorInfo = {
     message: error.message,
@@ -590,14 +591,14 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
       const cached = cache.get(cacheKey);
       if (cached) {
         if (isDev) {
-          console.log(`[API] ${method} ${url} - 304 Not Modified (使用缓存)`);
+          logger.log(`[API] ${method} ${url} - 304 Not Modified (使用缓存)`);
         }
         return cached.data;
       }
       const persistentCache = await getCache(cacheKey);
       if (persistentCache) {
         if (isDev) {
-          console.log(`[API] ${method} ${url} - 304 Not Modified (使用持久化缓存)`);
+          logger.log(`[API] ${method} ${url} - 304 Not Modified (使用持久化缓存)`);
         }
         return persistentCache.data;
       }
@@ -741,7 +742,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
     performanceReportingService.reportApiRequest(url, method, responseTime, responseStatus);
     
     if (isDev) {
-      console.log(`[API] ${method} ${url} - ${responseTime.toFixed(2)}ms`);
+      logger.log(`[API] ${method} ${url} - ${responseTime.toFixed(2)}ms`);
     }
 
     const rawData = await response.json();
@@ -762,7 +763,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
   } catch (error) {
     const apiError = error as ApiError;
     if (apiError.type === 'cancelled') {
-      console.debug(`[API] 请求已取消: ${method} ${url}`);
+      logger.debug(`[API] 请求已取消: ${method} ${url}`);
       if (method === 'GET') {
         const cached = cache.get(cacheKey);
         if (cached) {
@@ -3382,7 +3383,7 @@ const api: Api = {
         window.URL.revokeObjectURL(url);
       }).catch(err => {
         // 避免 unhandled rejection；调用方为"导出错误数据"按钮，失败时给出可观测日志
-        console.error('导出错误明细失败:', err);
+        logger.error('导出错误明细失败:', err);
       });
     },
   },

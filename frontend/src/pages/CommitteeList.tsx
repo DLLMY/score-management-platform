@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Award,
@@ -60,7 +61,7 @@ function CommitteeListPage() {
       const data = await api.committee.getAll();
       setCommittee(data || []);
     } catch (error) {
-      console.error('获取班委名单失败:', error);
+      logger.error('获取班委名单失败:', error);
       showToast('error', '获取班委名单失败');
     } finally {
       setIsLoading(false);
@@ -122,7 +123,7 @@ function CommitteeListPage() {
       setShowFormModal(false);
       fetchCommittee();
     } catch (error) {
-      console.error('操作失败:', error);
+      logger.error('操作失败:', error);
       showToast('error', editingId ? '更新班委失败' : '添加班委失败');
     } finally {
       setIsLoading(false);
@@ -137,7 +138,7 @@ function CommitteeListPage() {
       showToast('success', '班委记录删除成功');
       fetchCommittee();
     } catch (error) {
-      console.error('删除失败:', error);
+      logger.error('删除失败:', error);
       showToast('error', '删除班委记录失败');
     } finally {
       setIsLoading(false);

@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { lazy, Suspense, ComponentType, ReactNode } from 'react';
 
 interface LazyComponentProps {
@@ -76,7 +77,7 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error): void {
-    console.error('Lazy component error:', error);
+    logger.error('Lazy component error:', error);
   }
 
   render(): ReactNode {

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, AlertTriangle, CheckCircle, Database, Users, Building2, Shield } from 'lucide-react';
 import { request } from '../services/api';
@@ -35,7 +36,7 @@ const DataSyncPage: React.FC = () => {
       const result = await request('/api/consistency/status') as { status?: ConsistencyStats };
       setStats(result.status || null);
     } catch (error: unknown) {
-      console.error('Failed to fetch status:', error);
+      logger.error('Failed to fetch status:', error);
     }
     setLoading(false);
   }, []);

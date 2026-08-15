@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // -*- coding: utf-8 -*-
 /**
  * 设备分组管理页面
@@ -109,7 +110,7 @@ function DeviceGroupPage() {
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
   
   // 使用 useConfirmDialog 管理确认对话框
-  const { show: showConfirm } = useConfirmDialog();
+  useConfirmDialog();
   
   // 使用 useForm 管理表单状态
   const {
@@ -149,7 +150,7 @@ function DeviceGroupPage() {
       setGroups(data || []);
       setLoadError(false);
     } catch (error) {
-      console.error('获取分组列表失败:', error);
+      logger.error('获取分组列表失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -160,7 +161,7 @@ function DeviceGroupPage() {
       setStats(Array.isArray(data) ? data : []);
       setLoadError(false);
     } catch (error) {
-      console.error('获取分组统计失败:', error);
+      logger.error('获取分组统计失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -172,7 +173,7 @@ function DeviceGroupPage() {
       setGroupDevices(data.devices || []);
       setLoadError(false);
     } catch (error) {
-      console.error('获取分组设备失败:', error);
+      logger.error('获取分组设备失败:', error);
       setLoadError(true);
     }
   }, []);
@@ -183,7 +184,7 @@ function DeviceGroupPage() {
       setDevices(data.devices || []);
       setLoadError(false);
     } catch (error) {
-      console.error('获取设备列表失败:', error);
+      logger.error('获取设备列表失败:', error);
       setLoadError(true);
     }
   }, []);

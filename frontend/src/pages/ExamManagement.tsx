@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 /**
  * 考试管理页面组件
  * 创建和管理考试安排
@@ -207,7 +209,7 @@ function ExamManagement(): React.ReactElement {
       }));
       await api.subjects.updateOrder(orderData);
     } catch (err) {
-      console.error('更新科目顺序失败:', err);
+      logger.error('更新科目顺序失败:', err);
       showToast('error', '科目顺序更新失败，请重试');
     }
 

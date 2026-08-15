@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 /**
  * 仪表盘页面组件
  * 展示系统概览、用户排名、设备状态等核心数据
@@ -316,7 +318,7 @@ function Dashboard(): React.ReactElement {
         const classesData = Array.isArray(data) ? data : ((data as { classes?: { id: number; name: string }[] }).classes || []);
         setClassList(classesData);
       } catch (error) {
-        console.error('获取班级列表失败:', error);
+        logger.error('获取班级列表失败:', error);
         setDashboardError(true);
       }
     };
@@ -360,7 +362,7 @@ function Dashboard(): React.ReactElement {
       const usersData = await api.users.getAll({ per_page: 100 });
       return Array.isArray(usersData) ? usersData : ((usersData as { users?: User[] })?.users || []);
     } catch (e) {
-      console.error('获取用户数据失败:', e);
+      logger.error('获取用户数据失败:', e);
       return null; // 失败返回 null，调用方保留旧数据而非用空数组覆盖
     }
   }, []);
@@ -370,7 +372,7 @@ function Dashboard(): React.ReactElement {
       const recordsData = await api.records.getAll({ per_page: 20 });
       return Array.isArray(recordsData) ? recordsData : ((recordsData as { records?: unknown[] })?.records || []);
     } catch (e) {
-      console.error('获取记录数据失败:', e);
+      logger.error('获取记录数据失败:', e);
       return null; // 失败返回 null，调用方保留旧数据而非用空数组覆盖
     }
   }, []);
@@ -381,7 +383,7 @@ function Dashboard(): React.ReactElement {
       const devices = (deviceData as { devices?: Device[] }).devices || deviceData;
       return Array.isArray(devices) ? devices : [];
     } catch (e) {
-      console.error('获取设备数据失败:', e);
+      logger.error('获取设备数据失败:', e);
       return null;
     }
   }, []);
@@ -393,7 +395,7 @@ function Dashboard(): React.ReactElement {
         ? notificationsData
         : ((notificationsData as { notifications?: Notification[] })?.notifications || []);
     } catch (e) {
-      console.error('获取通知数据失败:', e);
+      logger.error('获取通知数据失败:', e);
       return null;
     }
   }, []);
@@ -413,7 +415,7 @@ function Dashboard(): React.ReactElement {
         warnings: warningRes || null,
       };
     } catch (error) {
-      console.error('获取算法数据失败:', error);
+      logger.error('获取算法数据失败:', error);
       setDashboardError(true);
       return { statistics: null, clusters: null, warnings: null };
     }
@@ -489,7 +491,7 @@ function Dashboard(): React.ReactElement {
           dispatch({ type: 'SET_LAST_UPDATE', payload: new Date() });
         }
       } catch (error) {
-        console.error('获取高优先级数据失败:', error);
+        logger.error('获取高优先级数据失败:', error);
         setDashboardError(true);
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -510,7 +512,7 @@ function Dashboard(): React.ReactElement {
           dispatch({ type: 'SET_NOTIFICATIONS', payload: notificationsList });
         }
       } catch (error) {
-        console.error('获取中优先级数据失败:', error);
+        logger.error('获取中优先级数据失败:', error);
         setDashboardError(true);
       }
     }, [fetchRecords, fetchNotifications]);
@@ -520,7 +522,7 @@ function Dashboard(): React.ReactElement {
         const algorithmData = await fetchAlgorithmData();
         dispatch({ type: 'SET_ALGORITHM_DATA', payload: algorithmData });
       } catch (error) {
-        console.error('获取低优先级数据失败:', error);
+        logger.error('获取低优先级数据失败:', error);
         setDashboardError(true);
       }
     }, [fetchAlgorithmData]);
@@ -559,7 +561,7 @@ function Dashboard(): React.ReactElement {
             timeoutIdsRef.current.push(lowTimeout);
           }
         } catch (error) {
-          console.error('获取数据失败:', error);
+          logger.error('获取数据失败:', error);
           setDashboardError(true);
         } finally {
           if (mountedRef.current) {

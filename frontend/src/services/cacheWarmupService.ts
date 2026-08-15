@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { request } from '../services/api';
 
 interface CacheWarmupConfig {
@@ -61,12 +62,12 @@ class CacheWarmupService {
    */
   async warmup(): Promise<void> {
     if (!this.config.enabled) {
-      console.debug('[CacheWarmup] 缓存预热已禁用');
+      logger.debug('[CacheWarmup] 缓存预热已禁用');
       return;
     }
 
     if (this.isWarmedUp) {
-      console.debug('[CacheWarmup] 缓存已预热，跳过');
+      logger.debug('[CacheWarmup] 缓存已预热，跳过');
       return;
     }
 
@@ -79,11 +80,11 @@ class CacheWarmupService {
     const hasAuthToken =
       typeof localStorage !== 'undefined' && !!localStorage.getItem('access_token');
     if (!hasAuthToken) {
-      console.debug('[CacheWarmup] 未检测到登录令牌，跳过缓存预热');
+      logger.debug('[CacheWarmup] 未检测到登录令牌，跳过缓存预热');
       return;
     }
 
-    console.log('[CacheWarmup] 开始缓存预热...');
+    logger.log('[CacheWarmup] 开始缓存预热...');
     const startTime = performance.now();
 
     this.warmupPromise = this.performWarmup();
@@ -91,10 +92,10 @@ class CacheWarmupService {
     try {
       await this.warmupPromise;
       const duration = performance.now() - startTime;
-      console.log(`[CacheWarmup] 缓存预热完成，耗时: ${duration.toFixed(2)}ms`);
+      logger.log(`[CacheWarmup] 缓存预热完成，耗时: ${duration.toFixed(2)}ms`);
       this.isWarmedUp = true;
     } catch (error) {
-      console.error('[CacheWarmup] 缓存预热失败:', error);
+      logger.error('[CacheWarmup] 缓存预热失败:', error);
     } finally {
       this.warmupPromise = null;
     }
@@ -163,13 +164,13 @@ class CacheWarmupService {
       // 与页面组件的同 URL 请求会被 requestCoalescing 合并为一次带 token 的网络请求。
       await request(endpoint.url, { skipCache: false, skipAuth: false });
       const duration = performance.now() - startTime;
-      console.debug(`[CacheWarmup] 预热成功: ${endpoint.key} (${duration.toFixed(2)}ms)`);
+      logger.debug(`[CacheWarmup] 预热成功: ${endpoint.key} (${duration.toFixed(2)}ms)`);
     } catch (error) {
       const apiError = error as { status?: number };
       if (apiError.status === 401 || apiError.status === 403) {
-        console.debug(`[CacheWarmup] 跳过需要登录的接口: ${endpoint.key}`);
+        logger.debug(`[CacheWarmup] 跳过需要登录的接口: ${endpoint.key}`);
       } else {
-        console.debug(`[CacheWarmup] 预热失败: ${endpoint.key}`, error);
+        logger.debug(`[CacheWarmup] 预热失败: ${endpoint.key}`, error);
       }
     }
   }

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
@@ -77,7 +78,7 @@ function CultureBoard() {
       const data = await api.culture.getAll();
       setRecords(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('获取班级文化记录失败:', error);
+      logger.error('获取班级文化记录失败:', error);
       showToast('error', '获取班级文化记录失败');
     } finally {
       setIsLoading(false);
@@ -167,7 +168,7 @@ function CultureBoard() {
       handleCloseModal();
       fetchRecords();
     } catch (error) {
-      console.error('保存记录失败:', error);
+      logger.error('保存记录失败:', error);
       showToast('error', formData.id ? '更新记录失败' : '创建记录失败');
     }
   }, [formData, validateForm, showToast, handleCloseModal, fetchRecords]);
@@ -180,7 +181,7 @@ function CultureBoard() {
         showToast('success', '记录删除成功');
         fetchRecords();
       } catch (error) {
-        console.error('删除记录失败:', error);
+        logger.error('删除记录失败:', error);
         showToast('error', '删除记录失败');
       }
     },
@@ -207,7 +208,7 @@ function CultureBoard() {
         showToast('success', '排序已更新');
         fetchRecords();
       } catch (error) {
-        console.error('更新排序失败:', error);
+        logger.error('更新排序失败:', error);
         showToast('error', '更新排序失败');
       }
     },

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 // 删除操作修复：404自动刷新列表 v2
 import {
@@ -94,7 +95,7 @@ function StudyGuidePage() {
       const data = await api.studyGuide.getGuides();
       setGuides(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('获取指导文章失败:', error);
+      logger.error('获取指导文章失败:', error);
       showToast('error', '获取指导文章失败');
     }
   }, [showToast]);
@@ -104,7 +105,7 @@ function StudyGuidePage() {
       const data = await api.studyGuide.getPlans();
       setPlans(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('获取改进计划失败:', error);
+      logger.error('获取改进计划失败:', error);
       showToast('error', '获取改进计划失败');
     }
   }, [showToast]);
@@ -188,7 +189,7 @@ function StudyGuidePage() {
       handleCloseGuideModal();
       fetchGuides();
     } catch (error) {
-      console.error('保存指导文章失败:', error);
+      logger.error('保存指导文章失败:', error);
       showToast('error', guideForm.id ? '更新指导文章失败' : '创建指导文章失败');
     }
   }, [guideForm, validateGuideForm, showToast, handleCloseGuideModal, fetchGuides]);
@@ -259,7 +260,7 @@ function StudyGuidePage() {
       handleClosePlanModal();
       fetchPlans();
     } catch (error) {
-      console.error('保存改进计划失败:', error);
+      logger.error('保存改进计划失败:', error);
       showToast('error', editingPlanId ? '更新改进计划失败' : '创建改进计划失败');
     }
   }, [planForm, editingPlanId, validatePlanForm, showToast, handleClosePlanModal, fetchPlans]);
@@ -271,7 +272,7 @@ function StudyGuidePage() {
         showToast('success', '进度更新成功');
         fetchPlans();
       } catch (error) {
-        console.error('更新进度失败:', error);
+        logger.error('更新进度失败:', error);
         showToast('error', '更新进度失败');
       }
     },
@@ -290,7 +291,7 @@ function StudyGuidePage() {
         if (is404) {
           showToast('info', '该文章已被删除');
         } else {
-          console.error('删除指导文章失败:', error);
+          logger.error('删除指导文章失败:', error);
           showToast('error', '删除指导文章失败');
         }
       } finally {
@@ -311,7 +312,7 @@ function StudyGuidePage() {
         if (is404) {
           showToast('info', '该计划已被删除');
         } else {
-          console.error('删除改进计划失败:', error);
+          logger.error('删除改进计划失败:', error);
           showToast('error', '删除改进计划失败');
         }
       } finally {

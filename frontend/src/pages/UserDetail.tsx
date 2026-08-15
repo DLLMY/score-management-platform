@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User as UserIcon, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus, AlertTriangle } from 'lucide-react';
@@ -48,7 +49,7 @@ function UserDetail() {
       setRecords(data.reverse());
       setRecordsError(false);
     } catch (err: unknown) {
-      console.error('获取记录失败:', err);
+      logger.error('获取记录失败:', err);
       setRecordsError(true);
     }
   }, [id]);
@@ -67,7 +68,7 @@ function UserDetail() {
     }
 
     try {
-      const result = await api.records.create({
+      await api.records.create({
         user_id: Number(id),
         score_change: scoreChange.amount,
         description: scoreChange.description || (scoreChange.amount > 0 ? '手动加分' : '手动扣分'),

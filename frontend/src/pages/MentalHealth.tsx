@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Brain,
@@ -13,7 +14,6 @@ import {
   Smile,
   Frown,
   Meh,
-  Sparkles,
   Clock,
 } from 'lucide-react';
 import api from '../services/api';
@@ -57,7 +57,7 @@ function MentalHealth() {
       const data = await api.mentalHealth.getRecords();
       setRecords(data || []);
     } catch (error) {
-      console.error('获取心理健康记录失败:', error);
+      logger.error('获取心理健康记录失败:', error);
       showToast('error', '获取心理健康记录失败');
     } finally {
       setIsLoading(false);
@@ -69,7 +69,7 @@ function MentalHealth() {
       const data = await api.mentalHealth.getAlerts();
       setAlerts(data || []);
     } catch (error) {
-      console.error('获取预警列表失败:', error);
+      logger.error('获取预警列表失败:', error);
       setAlerts(null); // 加载失败：不伪装成"已处理"或"无预警"
       showToast('error', '获取预警列表失败，请稍后重试');
     }
@@ -128,7 +128,7 @@ function MentalHealth() {
       fetchRecords();
       fetchAlerts();
     } catch (error) {
-      console.error('创建记录失败:', error);
+      logger.error('创建记录失败:', error);
       showToast('error', '创建记录失败');
     }
   }, [formData, showToast, handleCloseForm, fetchRecords, fetchAlerts, validateForm]);
@@ -140,7 +140,7 @@ function MentalHealth() {
         showToast('success', '预警已解决');
         fetchAlerts();
       } catch (error) {
-        console.error('解决预警失败:', error);
+        logger.error('解决预警失败:', error);
         showToast('error', '解决预警失败');
       }
     },

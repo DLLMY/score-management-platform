@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
 import { Plus, Edit2, Trash2, Clock, AlertCircle, CheckCircle, Save, X, Search, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
@@ -109,7 +110,7 @@ const TimeRuleList: React.FC = () => {
       setRules(response);
       setLoadError(false);
     } catch (error: unknown) {
-      console.error('获取时间规则失败:', error);
+      logger.error('获取时间规则失败:', error);
       setLoadError(true);
     }
     setLoading(false);

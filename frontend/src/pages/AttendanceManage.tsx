@@ -1,5 +1,6 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, UserCheck, Clock, FileText, Search, Plus, CheckCircle, XCircle, AlertCircle, X, Check, Filter, ChevronRight, Briefcase, AlertTriangle } from 'lucide-react';
+import { Calendar, UserCheck, Clock, FileText, Search, Plus, CheckCircle, XCircle, AlertCircle, X, Check, Filter, Briefcase } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import {
@@ -64,7 +65,7 @@ function AttendanceManage() {
       const data = await api.attendance.getAll();
       setAttendances(data || []);
     } catch (error) {
-      console.error('获取考勤列表失败:', error);
+      logger.error('获取考勤列表失败:', error);
       showToast('error', '获取考勤列表失败');
     } finally {
       setIsLoading(false);
@@ -76,7 +77,7 @@ function AttendanceManage() {
       const data = await api.attendance.getStats(0);
       setStats(data);
     } catch (error) {
-      console.error('获取考勤统计失败:', error);
+      logger.error('获取考勤统计失败:', error);
       setStats(null);
       showToast('error', '获取考勤统计失败，请稍后重试');
     }
@@ -88,7 +89,7 @@ function AttendanceManage() {
       setLeaves(data || []);
       setLeavesError(false);
     } catch (error) {
-      console.error('获取请假列表失败:', error);
+      logger.error('获取请假列表失败:', error);
       setLeavesError(true);
     }
   }, []);
@@ -146,7 +147,7 @@ function AttendanceManage() {
       fetchAttendances();
       fetchStats();
     } catch (error) {
-      console.error('记录失败:', error);
+      logger.error('记录失败:', error);
       showToast('error', '考勤记录失败');
     }
   }, [recordForm, showToast, handleCloseRecordModal, fetchAttendances, fetchStats, validateRecordForm]);
@@ -172,7 +173,7 @@ function AttendanceManage() {
         fetchAttendances();
         fetchStats();
       } catch (error) {
-        console.error('批量记录失败:', error);
+        logger.error('批量记录失败:', error);
         showToast('error', '批量记录失败');
       }
     },
@@ -216,7 +217,7 @@ function AttendanceManage() {
       handleCloseLeaveModal();
       fetchLeaves();
     } catch (error) {
-      console.error('提交失败:', error);
+      logger.error('提交失败:', error);
       showToast('error', '提交请假申请失败');
     }
   }, [leaveForm, showToast, handleCloseLeaveModal, fetchLeaves, validateLeaveForm]);
@@ -228,7 +229,7 @@ function AttendanceManage() {
         showToast('success', approve ? '请假已批准' : '请假已驳回');
         fetchLeaves();
       } catch (error) {
-        console.error('审批失败:', error);
+        logger.error('审批失败:', error);
         showToast('error', '审批操作失败');
       }
     },
@@ -251,19 +252,6 @@ function AttendanceManage() {
     );
   };
 
-  const getLeaveStatusBadge = (status: string) => {
-    const config: Record<string, { bg: string; text: string; label: string }> = {
-      pending: { bg: 'bg-amber-50 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', label: '待审批' },
-      approved: { bg: 'bg-emerald-50 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', label: '已批准' },
-      rejected: { bg: 'bg-red-50 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', label: '已驳回' },
-    };
-    const c = config[status] || config.pending;
-    return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${c.bg} ${c.text}`}>
-        {c.label}
-      </span>
-    );
-  };
 
   const pendingLeaves = leaves.filter((l) => l.status === 'pending');
 

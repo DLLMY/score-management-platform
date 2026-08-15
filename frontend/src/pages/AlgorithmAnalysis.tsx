@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * 智能分析增强页面组件
  * 在原有算法分析基础上，增加预测和异常检测功能
@@ -192,7 +193,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setStatistics(res || null);
       setLoadWarn(false);
     } catch (err) {
-      console.error('加载统计数据失败:', err);
+      logger.error('加载统计数据失败:', err);
       setLoadWarn(true);
     }
   }, [selectedClass]);
@@ -209,7 +210,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const riskRes = await api.algorithm.getRiskStudents(predictionDays);
       setRiskStudents(Array.isArray(riskRes) ? riskRes.slice(0, 10) : []);
     } catch (err) {
-      console.error('加载预测数据失败:', err);
+      logger.error('加载预测数据失败:', err);
       showToast('error', '加载预测数据失败');
     } finally {
       setLoading(false);
@@ -223,7 +224,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const res = await api.algorithm.getBatchAnomaly(selectedClass || undefined, anomalyDays);
       setAnomalyData(res || null);
     } catch (err) {
-      console.error('加载异常检测数据失败:', err);
+      logger.error('加载异常检测数据失败:', err);
       showToast('error', '加载异常检测数据失败');
     } finally {
       setLoading(false);
@@ -237,7 +238,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const res = await api.algorithm.getRuleRecommend(selectedClass || undefined, recommendDays);
       setRuleRecommendData(res || null);
     } catch (err) {
-      console.error('加载规则推荐数据失败:', err);
+      logger.error('加载规则推荐数据失败:', err);
       showToast('error', '加载规则推荐数据失败');
     } finally {
       setLoading(false);
@@ -251,7 +252,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const res = await api.algorithm.getBatchScorePredict(selectedClass || undefined, recommendDays);
       setScorePredictData(res || null);
     } catch (err) {
-      console.error('加载成绩预测数据失败:', err);
+      logger.error('加载成绩预测数据失败:', err);
       showToast('error', '加载成绩预测数据失败');
     } finally {
       setLoading(false);
@@ -265,7 +266,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const res = await api.algorithm.getBatchRiskPredict(selectedClass || undefined, recommendDays);
       setRiskPredictData(res || null);
     } catch (err) {
-      console.error('加载风险评估数据失败:', err);
+      logger.error('加载风险评估数据失败:', err);
       showToast('error', '加载风险评估数据失败');
     } finally {
       setLoading(false);
@@ -280,7 +281,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setModelTrainingData(prev => ({ ...prev, ruleRecommend: data }));
       showToast('success', data.message || '规则推荐模型训练完成');
     } catch (err) {
-      console.error('训练规则推荐模型失败:', err);
+      logger.error('训练规则推荐模型失败:', err);
       showToast('error', '训练规则推荐模型失败');
     } finally {
       setTrainingModel(null);
@@ -294,7 +295,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const data = await api.algorithm.evaluateRuleRecommendModel(days);
       setModelEvaluationData(prev => ({ ...prev, ruleRecommend: data }));
     } catch (err) {
-      console.error('评估规则推荐模型失败:', err);
+      logger.error('评估规则推荐模型失败:', err);
       showToast('error', '评估规则推荐模型失败');
     } finally {
       setEvaluatingModel(null);
@@ -309,7 +310,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setModelTrainingData(prev => ({ ...prev, scorePredict: data }));
       showToast('success', data.message || '成绩预测模型训练完成');
     } catch (err) {
-      console.error('训练成绩预测模型失败:', err);
+      logger.error('训练成绩预测模型失败:', err);
       showToast('error', '训练成绩预测模型失败');
     } finally {
       setTrainingModel(null);
@@ -323,7 +324,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const data = await api.algorithm.evaluateScorePredictModel(days);
       setModelEvaluationData(prev => ({ ...prev, scorePredict: data }));
     } catch (err) {
-      console.error('评估成绩预测模型失败:', err);
+      logger.error('评估成绩预测模型失败:', err);
       showToast('error', '评估成绩预测模型失败');
     } finally {
       setEvaluatingModel(null);
@@ -338,7 +339,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setModelTrainingData(prev => ({ ...prev, riskPredict: data }));
       showToast('success', data?.message || '风险预测模型训练完成');
     } catch (err) {
-      console.error('训练风险预测模型失败:', err);
+      logger.error('训练风险预测模型失败:', err);
       showToast('error', '训练风险预测模型失败');
     } finally {
       setTrainingModel(null);
@@ -351,7 +352,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const data = await api.algorithm.evaluateRiskPredictModel(days);
       setModelEvaluationData(prev => ({ ...prev, riskPredict: data }));
     } catch (err) {
-      console.error('评估风险预测模型失败:', err);
+      logger.error('评估风险预测模型失败:', err);
       showToast('error', '评估风险预测模型失败');
     } finally {
       setEvaluatingModel(null);
@@ -366,7 +367,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setClasses(classesData);
       setLoadWarn(false);
     } catch (err) {
-      console.error('加载班级列表失败:', err);
+      logger.error('加载班级列表失败:', err);
       setClasses([]);
       setLoadWarn(true);
     }
@@ -385,7 +386,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       }));
       setStudents(studentList);
     } catch (err) {
-      console.error('加载学生列表失败:', err);
+      logger.error('加载学生列表失败:', err);
       showToast('error', '加载学生列表失败');
     }
   }, [students, showToast]);
@@ -408,7 +409,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       ]);
       setStudentProfile({ prediction, scorePredict, riskPredict, anomaly, sudden, trend, group, attribution, engagement });
     } catch (err) {
-      console.error('加载学生画像失败:', err);
+      logger.error('加载学生画像失败:', err);
       const msg = err instanceof Error ? err.message : '加载学生画像失败';
       setProfileError(msg);
       showToast('error', '加载学生画像失败');
@@ -429,7 +430,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const res = await api.algorithm.getBatchAttribution(selectedClass, batchAttributionDays);
       setBatchAttribution(res);
     } catch (err) {
-      console.error('批量归因失败:', err);
+      logger.error('批量归因失败:', err);
       const msg = err instanceof Error ? err.message : '批量归因失败';
       setBatchAttributionError(msg);
       showToast('error', '批量归因失败');
@@ -496,7 +497,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       const res = await api.algorithm.getEngagementRank(selectedClass, engagementRankDays);
       setEngagementRank(res);
     } catch (err) {
-      console.error('参与度排名失败:', err);
+      logger.error('参与度排名失败:', err);
       const msg = err instanceof Error ? err.message : '参与度排名失败';
       setEngagementRankError(msg);
       showToast('error', '参与度排名失败');
@@ -514,7 +515,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       setEngagementTrend(res);
       setLoadWarn(false);
     } catch (err) {
-      console.error('参与度周趋势失败:', err);
+      logger.error('参与度周趋势失败:', err);
       setEngagementTrend(null);
       setLoadWarn(true);
     } finally {
@@ -561,7 +562,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
             break;
         }
       } catch (err) {
-        console.error('加载数据失败:', err);
+        logger.error('加载数据失败:', err);
         setError(err instanceof Error ? err.message : '加载数据失败');
       } finally {
         setLoading(false);

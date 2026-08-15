@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useForm, useModal, useConfirmDialog } from '../hooks';
@@ -143,7 +145,7 @@ function RuleList() {
       setCategories(data);
       setLoadError(false);
     } catch (err) {
-      console.error('获取分类失败:', err);
+      logger.error('获取分类失败:', err);
       setLoadError(true);
     }
   }, []);
@@ -190,7 +192,7 @@ function RuleList() {
         setLoadError(false);
       }
     } catch (err) {
-      console.error('获取规则模板失败:', err);
+      logger.error('获取规则模板失败:', err);
       setLoadError(true);
     }
   }, []);
@@ -354,7 +356,7 @@ function RuleList() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error('下载模板失败:', error);
+      logger.error('下载模板失败:', error);
       showToast('error', '下载模板失败: ' + (error as Error).message);
     }
   }, [showToast]);

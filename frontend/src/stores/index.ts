@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * 统一状态管理 - Zustand Stores
  * 所有状态管理统一使用Zustand，移除Context API
@@ -368,13 +369,13 @@ export const useWebSocketStore = create<WebSocketState>()((set, get) => ({
       isSocketConnecting = false;
       currentReconnectAttempt = 0;
       set({ socket: socketInstance, isConnected: true });
-      console.log('[WebSocket] 连接成功');
+      logger.log('[WebSocket] 连接成功');
     });
 
     socketInstance.on('disconnect', (reason: string) => {
       isSocketConnecting = false;
       set({ isConnected: false });
-      console.log(`[WebSocket] 连接断开: ${reason}`);
+      logger.log(`[WebSocket] 连接断开: ${reason}`);
     });
 
     socketInstance.on('connect_error', (error: Error) => {
@@ -382,9 +383,9 @@ export const useWebSocketStore = create<WebSocketState>()((set, get) => ({
       currentReconnectAttempt++;
       if (currentReconnectAttempt <= MAX_RECONNECT_ATTEMPTS) {
         const delay = calculateReconnectionDelay(currentReconnectAttempt);
-        console.log(`[WebSocket] 连接失败 (${currentReconnectAttempt}/${MAX_RECONNECT_ATTEMPTS}), ${(delay / 1000).toFixed(1)}s后重试: ${error.message}`);
+        logger.log(`[WebSocket] 连接失败 (${currentReconnectAttempt}/${MAX_RECONNECT_ATTEMPTS}), ${(delay / 1000).toFixed(1)}s后重试: ${error.message}`);
       } else {
-        console.error('[WebSocket] 重连失败超过最大次数，停止重连');
+        logger.error('[WebSocket] 重连失败超过最大次数，停止重连');
         useToastStore.getState().error('WebSocket连接失败，请刷新页面重试');
         currentReconnectAttempt = 0;
       }
@@ -847,7 +848,7 @@ export const usePermissionStore = create<PermissionState>()(
           
           get().setPermissions(permissions, roles);
         } catch (error) {
-          console.error('Failed to load permissions:', error);
+          logger.error('Failed to load permissions:', error);
           const adminStr = localStorage.getItem('admin');
           if (adminStr) {
             try {
