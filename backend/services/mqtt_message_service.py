@@ -497,12 +497,16 @@ class MQTTMessageService:
 
         record = ProcessedMessage.query.filter_by(message_id=msg_id).first() if msg_id else None
         if record:
+            # 幂等回包也回显 undo_code，使客户端在任意一次重发都能取到撤销码
+            # （否则洪流下首次回包未穿透时，后续重发只回 "already processed" 且无 undo_code，
+            #  客户端将永远拿不到 undo_code、无法完成撤销往返）
             response = {
                 "success": True,
                 "message": "Message already processed (idempotent)",
                 "msg_id": msg_id,
                 "new_score": record.new_score,
                 "record_id": record.record_id,
+                "undo_code": f"UNDO_{record.record_id}",
             }
             publish_mqtt(response_topic, json.dumps(response))
             return
@@ -548,6 +552,7 @@ class MQTTMessageService:
                         )
                         user.current_score = new_score
                         db.session.add(record)
+                        db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
 
                         if msg_id:
                             processed = ProcessedMessage(
@@ -609,6 +614,7 @@ class MQTTMessageService:
                         )
                         user.current_score = new_score
                         db.session.add(record)
+                        db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
 
                         if msg_id:
                             processed = ProcessedMessage(
@@ -643,6 +649,7 @@ class MQTTMessageService:
                 )
                 user.current_score = new_score
                 db.session.add(record)
+                db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
 
                 if msg_id:
                     processed = ProcessedMessage(

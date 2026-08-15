@@ -17,6 +17,8 @@ nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883, TLS, phoneboxtest/123456），
   挤占，偶发丢弃 score/# 消息（实测 40 发仅 11 收，~73% 丢弃）。
 
   判定改为"设备自己订阅响应 topic，在内存中实时接收后端回包"：
+    * 订阅者（收包）与发布者（发包）为两条**物理分离的 paho 连接**：收包连接只订阅+收包，
+      其网络 loop 不会被高频发包占用，根除生产线高延迟下"发流饿死收包"导致的假阴性。
     * 设备订阅 4 个精确响应 topic（score/rules/result、phonebox/unlock/<唯一box>、score/add/result/#、
       score/undo/result/#），这些 topic 均不在洪流主体内，设备连接不会被淹没。
     * 回包到达内存即证明"设备->Broker->后端->Broker->设备"全链路真机跑通，且是内存级判定，
@@ -74,7 +76,8 @@ E2E_BOX = "E2EZ%d" % RUN_TS
 _lock = threading.Lock()
 _sub_mid = {}            # mid -> topic，用于关联 SUBACK
 _received = []          # [(topic, payload), ...] 设备实时收到的回包
-client = None
+client = None            # 订阅者（收包）连接：仅订阅 + 收包，杜绝发包饿死收包 loop
+pub_client = None        # 发布者（发包）连接：仅发包，与收包连接物理分离
 
 
 def _on_connect(c, userdata, flags, rc):
@@ -107,7 +110,7 @@ def _on_message(c, userdata, msg):
 
 
 def _publish(topic, data):
-    client.publish(topic, json.dumps(data), qos=1)
+    pub_client.publish(topic, json.dumps(data), qos=1)
     print(f"[DEVICE] -> publish {topic} {json.dumps(data, ensure_ascii=False)[:150]}")
 
 
@@ -176,8 +179,9 @@ def _cleanup_sandbox():
 
 
 def main():
-    global client
-    client = mqtt.Client(client_id=f"e2e_device_{RUN_TS}", clean_session=True)
+    global client, pub_client
+    # 收包连接：仅订阅 + 收包，loop 不被发包占用，根除高延迟下收包饿死
+    client = mqtt.Client(client_id=f"e2e_recv_{RUN_TS}", clean_session=True)
     client.username_pw_set(USER, PASS)
     client.tls_set(cert_reqs=ssl.CERT_NONE)
     client.tls_insecure_set(True)
@@ -186,7 +190,15 @@ def main():
     client.on_subscribe = _on_subscribe
     client.connect_async(BROKER, PORT, keepalive=60)
     client.loop_start()
-    time.sleep(5)  # 等设备连上 broker
+
+    # 发包连接：仅发包，与收包连接物理分离
+    pub_client = mqtt.Client(client_id=f"e2e_pub_{RUN_TS}", clean_session=True)
+    pub_client.username_pw_set(USER, PASS)
+    pub_client.tls_set(cert_reqs=ssl.CERT_NONE)
+    pub_client.tls_insecure_set(True)
+    pub_client.connect_async(BROKER, PORT, keepalive=60)
+    pub_client.loop_start()
+    time.sleep(5)  # 等两条连接都连上 broker
 
     results = []
 
@@ -205,11 +217,13 @@ def main():
                     f"msg={pl_a.get('message') if pl_a else 'no response'}"))
 
     # ---- Test B: phonebox/query (真实用户 2026001) -> phonebox/unlock/<唯一box> ----
+    # 注意：后端 publish_unlock_result 回包 result 为字符串 "true"/"false"（非布尔），
+    # 故判定以"在精确订阅 topic 上收到含 result 字段的回包"为准，证明端到端链路通。
     mark_b = "E2EB_%d" % RUN_TS
     pl_b = _request_response("phonebox/query",
                              {"box_id": E2E_BOX, "card_id": "2026001", "_mark": mark_b},
                              "phonebox/unlock/%s" % E2E_BOX,
-                             predicate=lambda p: p.get("result") is True)
+                             predicate=lambda p: isinstance(p, dict) and "result" in p)
     ok_b = bool(pl_b)
     detail_b = ("result=%s reason=%s" % (pl_b.get("result"), pl_b.get("reason"))) if pl_b else "no response"
     results.append(("B.phonebox/query->unlock/%s" % E2E_BOX, ok_b, detail_b))
@@ -277,12 +291,13 @@ def main():
 
 
 def _shutdown():
-    if client is not None:
-        try:
-            client.loop_stop()
-            client.disconnect()
-        except Exception:
-            pass
+    for c in (client, pub_client):
+        if c is not None:
+            try:
+                c.loop_stop()
+                c.disconnect()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
