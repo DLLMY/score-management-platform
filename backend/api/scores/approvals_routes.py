@@ -20,9 +20,11 @@ except ImportError:
 try:
     from api.system.admin_notifications_routes import create_admin_notification
 except ImportError:
+    import logging
 
     def create_admin_notification(**kwargs):
-        pass
+        logging.getLogger(__name__).warning("admin_notifications_routes 导入失败，审批相关的管理员通知被静默丢弃")
+        return None
 
 
 ns_approvals = Namespace("approvals", description="审批相关操作")

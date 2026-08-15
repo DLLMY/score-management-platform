@@ -209,7 +209,7 @@ class-manger-integral/
 │
 ├── backend/                 # 后端代码
 │   ├── models/             # 数据模型
-│   ├── routes/             # API路由
+│   ├── api/                # API路由
 │   ├── services/           # 业务服务
 │   ├── utils/              # 工具函数
 │   ├── scripts/            # 数据库脚本
@@ -233,8 +233,8 @@ class-manger-integral/
 │   │   │   └── __tests__/ # 服务测试
 │   │   ├── utils/          # 工具函数
 │   │   ├── context/        # React Context
-│   │   ├── App.js          # 主应用
-│   │   └── index.js        # 入口文件
+│   │   ├── App.tsx         # 主应用
+│   │   └── main.tsx        # 入口文件
 │   ├── package.json        # Node依赖
 │   └── .env.example        # 环境变量模板
 │

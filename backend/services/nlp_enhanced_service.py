@@ -3073,15 +3073,6 @@ class EnhancedNLPParserService:
             "negative_count": negative_count,
         }
 
-    def record_intent_prediction(self, predicted_intent, true_intent, confidence):
-        pass
-
-    def record_performance(self, processing_time, cache_hit=False):
-        pass
-
-    def record_error(self, error_type, input_text, **kwargs):
-        pass
-
 
 _nlp_parser_instance = None
 

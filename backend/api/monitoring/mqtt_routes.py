@@ -151,8 +151,8 @@ class MQTTPublish(Resource):
         limiter = get_limiter()
 
         @limiter.limit(RateLimitStrategy.MQTT_PUBLISH)
-        def _do_publish():
-            pass
+        def _do_publish(topic, message):
+            return publish_mqtt(topic, json.dumps(message) if isinstance(message, dict) else str(message))
 
         data = ns_mqtt.payload
         topic = data.get("topic")
@@ -167,7 +167,7 @@ class MQTTPublish(Resource):
         if len(message) > 10000:
             return APIResponse.error(message="Message content cannot exceed 10000 characters", status_code=400)
 
-        result = publish_mqtt(topic, json.dumps(message) if isinstance(message, dict) else str(message))  # noqa: F841
+        result = _do_publish(topic, message)
         if result:
             return APIResponse.success(message="Published successfully")
         else:
