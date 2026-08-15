@@ -17,9 +17,8 @@ interface Rule {
   category_id: number | null;
   score: number;
   is_active: boolean;
-  max_per_day: number;
+  daily_limit: number;
   min_interval: number;
-  daily_limit?: number;
   score_min?: number;
   score_max?: number;
 }
@@ -43,7 +42,7 @@ interface FormData {
   category_id: string;
   score: number;
   is_active: boolean;
-  max_per_day: number;
+  daily_limit: number;
   min_interval: number;
   [key: string]: unknown;
 }
@@ -52,7 +51,7 @@ interface FormErrors {
   name?: string;
   score?: string;
   description?: string;
-  max_per_day?: string;
+  daily_limit?: string;
   min_interval?: string;
   [key: string]: string | undefined;
 }
@@ -108,13 +107,13 @@ function RuleList() {
     category_id: '',
     score: 0,
     is_active: true,
-    max_per_day: 0,
+    daily_limit: 0,
     min_interval: 0,
   }, {
     name: { required: true, maxLength: 100 },
     score: { required: true, min: -1000, max: 1000 },
     description: { maxLength: 500 },
-    max_per_day: { min: 0, max: 100 },
+    daily_limit: { min: 0, max: 100 },
     min_interval: { min: 0, max: 1440 },
   });
 
@@ -133,7 +132,7 @@ function RuleList() {
       name: ['required', { maxLength: 100 }],
       score: ['required', 'integer', { min: -1000 }, { max: 1000 }],
       description: [{ maxLength: 500 }],
-      max_per_day: ['integer', { min: 0 }, { max: 100 }],
+      daily_limit: ['integer', { min: 0 }, { max: 100 }],
       min_interval: ['integer', { min: 0 }, { max: 1440 }],
     }),
     []
@@ -574,9 +573,9 @@ function RuleList() {
 
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center gap-2'>
-                        {(rule.daily_limit || rule.max_per_day) > 0 && (
+                        {rule.daily_limit > 0 && (
                           <span className='text-xs font-medium text-gray-500 px-2 py-1 bg-gray-50 rounded-lg'>
-                            每日{rule.daily_limit || rule.max_per_day}次
+                            每日{rule.daily_limit}次
                           </span>
                         )}
                         {rule.min_interval > 0 && (
@@ -605,7 +604,7 @@ function RuleList() {
                               category_id: String(rule.category_id || ''),
                               score: rule.score,
                               is_active: rule.is_active,
-                              max_per_day: rule.max_per_day,
+                              daily_limit: rule.daily_limit,
                               min_interval: rule.min_interval,
                             });
                             openModal();
@@ -744,20 +743,20 @@ function RuleList() {
                   <input
                     type='number'
                     min='0'
-                    value={formData.max_per_day}
+                    value={formData.daily_limit}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setFormData({ ...formData, max_per_day: parseInt(e.target.value) || 0 });
-                      if (formErrors.max_per_day) {
-                        setFormErrors({ ...formErrors, max_per_day: undefined });
+                      setFormData({ ...formData, daily_limit: parseInt(e.target.value) || 0 });
+                      if (formErrors.daily_limit) {
+                        setFormErrors({ ...formErrors, daily_limit: undefined });
                       }
                     }}
-                    className={`form-input ${formErrors.max_per_day ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                    className={`form-input ${formErrors.daily_limit ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                     placeholder='0表示无限制'
                   />
-                  {formErrors.max_per_day && (
+                  {formErrors.daily_limit && (
                     <p className='mt-2 text-sm text-danger-600 flex items-center gap-1'>
                       <AlertCircle className='w-4 h-4' />
-                      {formErrors.max_per_day}
+                      {formErrors.daily_limit}
                     </p>
                   )}
                 </div>

@@ -231,7 +231,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         users: state.users.map((user) =>
           user.id === action.payload.userId
-            ? { ...user, score: (user.score || 0) + action.payload.scoreChange }
+            ? { ...user, current_score: (user.current_score || 0) + action.payload.scoreChange }
             : user
         ),
       };
@@ -392,11 +392,11 @@ function UserList() {
       };
       
       if (!showAdvancedSearchRef.current) {
-        apiParams.class_name = selectedClassRef.current && selectedClassRef.current !== '' ? selectedClassRef.current : undefined;
+        apiParams.class_id = selectedClassRef.current && selectedClassRef.current !== '' ? Number(selectedClassRef.current) : undefined;
         apiParams.search = searchTermRef.current && searchTermRef.current !== '' ? searchTermRef.current : undefined;
       } else {
-        const { keyword, className, minScore, maxScore, sortBy, sortOrder } = advancedConditionsRef.current;
-        apiParams.class_name = className || undefined;
+        const { keyword, classId, minScore, maxScore, sortBy, sortOrder } = advancedConditionsRef.current;
+        apiParams.class_id = classId ? Number(classId) : undefined;
         apiParams.keyword = keyword || undefined;
         apiParams.min_score = minScore;
         apiParams.max_score = maxScore;
@@ -482,7 +482,7 @@ function UserList() {
           guardian_phone: user.guardian_phone || '',
           guardian_relation: (user as unknown as { guardian_relation: string }).guardian_relation || '',
           card_id: user.card_id,
-          current_score: user.score || 0,
+          current_score: user.current_score || 0,
         },
       });
     } else {
@@ -527,7 +527,7 @@ function UserList() {
 
       const submitData = {
         ...state.formData,
-        score: state.formData.current_score,
+        current_score: state.formData.current_score,
       };
 
       const { isValid, errors } = validateForm(submitData, validationRules);
@@ -828,14 +828,14 @@ function UserList() {
       }),
     },
     {
-      id: 'className',
+      id: 'classId',
       label: '班级',
       type: 'select' as const,
-      options: classes.map(c => ({ value: c, label: c })),
-      value: state.advancedConditions.className,
+      options: classList.map(c => ({ value: String(c.id), label: c.name })),
+      value: state.advancedConditions.classId,
       onChange: (value: unknown) => dispatch({ 
         type: 'SET_ADVANCED_CONDITIONS', 
-        payload: { ...state.advancedConditions, className: value as string } 
+        payload: { ...state.advancedConditions, classId: value as string } 
       }),
     },
     {
@@ -989,9 +989,9 @@ function UserList() {
               disabled={state.isFetching}
             >
               <option value="">全部班级</option>
-              {classes.map((className) => (
-                <option key={className} value={className}>
-                  {className}
+              {classList.map((cls) => (
+                <option key={cls.id} value={String(cls.id)}>
+                  {cls.name}
                 </option>
               ))}
             </select>

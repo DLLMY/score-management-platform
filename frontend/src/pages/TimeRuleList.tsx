@@ -474,7 +474,7 @@ const TimeRuleList: React.FC = () => {
                       }}
                       className={`form-select flex-1 ${formErrors.start_minute ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                     >
-                      {[0, 15, 30, 45].map((m) => (
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                         <option key={m} value={m}>
                           {m.toString().padStart(2, '0')}
                         </option>
@@ -518,7 +518,7 @@ const TimeRuleList: React.FC = () => {
                       }}
                       className={`form-select flex-1 ${formErrors.end_minute ? 'border-danger-300 focus:ring-danger-500' : ''}`}
                     >
-                      {[0, 15, 30, 45].map((m) => (
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                         <option key={m} value={m}>
                           {m.toString().padStart(2, '0')}
                         </option>

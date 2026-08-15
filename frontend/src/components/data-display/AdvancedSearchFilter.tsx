@@ -8,6 +8,7 @@ export interface SearchCondition {
   status?: string;
   category?: string;
   className?: string;
+  classId?: string;
   minScore?: number;
   maxScore?: number;
   sortBy?: string;

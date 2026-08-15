@@ -130,6 +130,7 @@ class UserList(Resource):
         per_page = request.args.get("per_page", 100, type=int)
         search = request.args.get("search", "")
         class_name = request.args.get("class_name", "")
+        class_id = request.args.get("class_id", type=int)
         skip_cache = request.args.get("skip_cache", "false").lower() == "true"
         # 高级筛选参数
         keyword = request.args.get("keyword", "")
@@ -141,7 +142,7 @@ class UserList(Resource):
         admin_role = admin.role if admin and admin.role else "anonymous"
         cache_key = (
             f"users_list:{admin_role}:{page}:{per_page}:{search}:"
-            f"{class_name}:{keyword}:{min_score}:{max_score}:"
+            f"{class_name}:{class_id}:{keyword}:{min_score}:{max_score}:"
             f"{sort_by}:{sort_order}"
         )
         # 如果不跳过缓存，尝试从缓存获取
@@ -157,13 +158,23 @@ class UserList(Resource):
             return APIResponse.success(data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0})
         # 如果不是超级管理员，只显示允许的班级
         if allowed_classes is not None:
-            if class_name:
+            if class_id:
+                class_info = ClassInfo.query.get(class_id)
+                if not class_info or class_info.name not in allowed_classes:
+                    return APIResponse.success(
+                        data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0}
+                    )
+                query = query.filter(User.class_info_id == class_id)
+            elif class_name:
                 if class_name not in allowed_classes:
                     return APIResponse.success(
                         data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0}
                     )
             else:
                 query = query.filter(User.class_name.in_(allowed_classes))
+        elif class_id:
+            # 超级管理员按 class_id 过滤
+            query = query.filter(User.class_info_id == class_id)
         if search:
             search_lower = search.lower()
             # 检查是否为纯字母（可能是拼音）

@@ -382,7 +382,7 @@ function ExamManagement(): React.ReactElement {
     };
     const labels: Record<string, string> = {
       draft: '草稿',
-      published: '进行中',
+      published: '已发布',
       closed: '已结束',
     };
     return (
@@ -692,6 +692,18 @@ function ExamManagement(): React.ReactElement {
               <option value='low'>低</option>
               <option value='medium'>中</option>
               <option value='high'>高</option>
+            </select>
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>状态</label>
+            <select
+              value={examFormData.status}
+              onChange={(e) => handleExamFormChange('status', e.target.value as 'draft' | 'published' | 'closed')}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+            >
+              <option value='draft'>草稿</option>
+              <option value='published'>已发布</option>
+              <option value='closed'>已结束</option>
             </select>
           </div>
           <div>

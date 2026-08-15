@@ -133,7 +133,8 @@ class StudentRecords(Resource):
         """获取当前学生的积分流水，按时间倒序分页返回。"""
         student = g.current_student
         page = request.args.get("page", 1, type=int)
-        page_size = min(max(request.args.get("page_size", 20, type=int), 1), 100)
+        # 分页参数统一 per_page（兼容旧 page_size）
+        page_size = min(max(request.args.get("per_page", request.args.get("page_size", 20, type=int), type=int), 1), 100)
 
         query = ScoreRecord.query.filter_by(user_id=student.id)
         total = query.count()
@@ -204,7 +205,8 @@ class StudentNotifications(Resource):
         """获取当前学生收到的通知，按时间倒序分页返回。"""
         student = g.current_student
         page = request.args.get("page", 1, type=int)
-        page_size = min(max(request.args.get("page_size", 20, type=int), 1), 100)
+        # 分页参数统一 per_page（兼容旧 page_size）
+        page_size = min(max(request.args.get("per_page", request.args.get("page_size", 20, type=int), type=int), 1), 100)
 
         query = Notification.query.filter_by(user_id=student.id)
         total = query.count()

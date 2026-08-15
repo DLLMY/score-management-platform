@@ -26,6 +26,7 @@ def download_score_template():
         try:
             exam_id = request.args.get("exam_id", type=int)
             class_name = request.args.get("class_name")
+            class_id = request.args.get("class_id", type=int)
             exam = None
             if exam_id:
                 exam = get_by_id(Exam, exam_id)
@@ -34,8 +35,10 @@ def download_score_template():
                 subjects = json.loads(exam.subjects) if isinstance(exam.subjects, str) else exam.subjects
             else:
                 subjects = ["语文", "数学", "英语"]
-            # 获取学生列表
-            if class_name:
+            # 获取学生列表（兼容 class_name / class_id）
+            if class_id:
+                students = User.query.filter(User.class_info_id == class_id).order_by(User.card_id).all()
+            elif class_name:
                 students = User.query.filter_by(class_name=class_name).order_by(User.card_id).all()
             else:
                 students = User.query.order_by(User.class_name, User.card_id).all()

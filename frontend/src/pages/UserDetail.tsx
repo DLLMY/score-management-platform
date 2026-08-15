@@ -8,7 +8,7 @@ import { useStableToast } from '../hooks/useStableToast';
 import { EmptyState, Button, PermissionButton } from '../components';
 
 interface ScoreChange {
-  amount: number;
+  score_change: number;
   description: string;
 }
 
@@ -28,7 +28,7 @@ function UserDetail() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showScoreModal, setShowScoreModal] = useState<boolean>(false);
-  const [scoreChange, setScoreChange] = useState<ScoreChange>({ amount: 0, description: '' });
+  const [scoreChange, setScoreChange] = useState<ScoreChange>({ score_change: 0, description: '' });
 
   const fetchUser = useCallback(async (): Promise<void> => {
     setIsLoading(true);
@@ -62,7 +62,7 @@ function UserDetail() {
   const handleScoreChange = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
 
-    if (scoreChange.amount === 0) {
+    if (scoreChange.score_change === 0) {
       showToast('error', '请输入积分变化值');
       return;
     }
@@ -70,8 +70,8 @@ function UserDetail() {
     try {
       await api.records.create({
         user_id: Number(id),
-        score_change: scoreChange.amount,
-        description: scoreChange.description || (scoreChange.amount > 0 ? '手动加分' : '手动扣分'),
+        score_change: scoreChange.score_change,
+        description: scoreChange.description || (scoreChange.score_change > 0 ? '手动加分' : '手动扣分'),
         operator: '管理员',
       });
 
@@ -79,7 +79,7 @@ function UserDetail() {
         if (prev) {
           return {
             ...prev,
-            current_score: (prev.current_score || 0) + scoreChange.amount,
+            current_score: (prev.current_score || 0) + scoreChange.score_change,
           };
         }
         return prev;
@@ -88,9 +88,9 @@ function UserDetail() {
       // 后端仅返回 {record_id}，重新拉取记录列表以获取完整且 id 正确的新记录
       fetchRecords();
 
-      showToast('success', scoreChange.amount > 0 ? '加分成功' : '扣分成功');
+      showToast('success', scoreChange.score_change > 0 ? '加分成功' : '扣分成功');
       setShowScoreModal(false);
-      setScoreChange({ amount: 0, description: '' });
+      setScoreChange({ score_change: 0, description: '' });
     } catch (err: unknown) {
       showToast('error', '操作失败: ' + (err as Error).message);
     }
@@ -418,7 +418,7 @@ function UserDetail() {
                     <button
                       type='button'
                       onClick={() =>
-                        setScoreChange({ ...scoreChange, amount: -Math.abs(scoreChange.amount) })
+                        setScoreChange({ ...scoreChange, score_change: -Math.abs(scoreChange.score_change) })
                       }
                       className='btn btn-outline h-12 w-12 rounded-l-xl'
                     >
@@ -426,9 +426,9 @@ function UserDetail() {
                     </button>
                     <input
                       type='number'
-                      value={scoreChange.amount}
+                      value={scoreChange.score_change}
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        setScoreChange({ ...scoreChange, amount: parseInt(e.target.value) || 0 })
+                        setScoreChange({ ...scoreChange, score_change: parseInt(e.target.value) || 0 })
                       }
                       className='form-input text-center w-32'
                       placeholder='0'
@@ -436,7 +436,7 @@ function UserDetail() {
                     <button
                       type='button'
                       onClick={() =>
-                        setScoreChange({ ...scoreChange, amount: Math.abs(scoreChange.amount) })
+                        setScoreChange({ ...scoreChange, score_change: Math.abs(scoreChange.score_change) })
                       }
                       className='btn btn-outline h-12 w-12 rounded-r-xl'
                     >
@@ -463,9 +463,9 @@ function UserDetail() {
                   取消
                 </Button>
                 <Button type='submit'>
-                  {scoreChange.amount > 0
+                  {scoreChange.score_change > 0
                     ? '确认加分'
-                    : scoreChange.amount < 0
+                    : scoreChange.score_change < 0
                       ? '确认扣分'
                       : '确认'}
                 </Button>

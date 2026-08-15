@@ -72,6 +72,7 @@ const CourseSchedulePage: React.FC = () => {
   const [periods, setPeriods] = useState<ClassPeriod[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedClass, setSelectedClass] = useState<number>(0);
   const [showClassDropdown, setShowClassDropdown] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -156,16 +157,18 @@ const CourseSchedulePage: React.FC = () => {
   const fetchData = useCallback(async (skipCache = false) => {
     setIsLoading(true);
     try {
-      const [scheduleData, periodData, classData, subjectData] = await Promise.all([
+      const [scheduleData, periodData, classData, subjectData, teacherData] = await Promise.all([
         api.courseSchedules.getAll({ skipCache }),
         api.classPeriods.getAll(),
         api.classes.getAll(),
         api.subjects.getAll().catch(() => []),
+        api.admins.getAll().catch(() => []),
       ]);
       setSchedules(scheduleData);
       setPeriods(periodData.periods || []);
       setClasses(classData.classes || []);
       setSubjects(Array.isArray(subjectData) ? subjectData : []);
+      setTeachers(Array.isArray(teacherData) ? teacherData : []);
     } catch (error) {
       logger.error('获取数据失败:', error);
       showToastRef.current('error', '获取数据失败');
@@ -906,13 +909,21 @@ const CourseSchedulePage: React.FC = () => {
                   </label>
                   <div className='relative'>
                     <User className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
-                    <input
-                      type='text'
-                      value={formData.teacher_name}
-                      onChange={(e) => handleFormChange('teacher_name', e.target.value)}
-                      placeholder='输入教师姓名'
-                      className='w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400'
-                    />
+                    <select
+                      value={formData.teacher_id ?? ''}
+                      onChange={(e) => {
+                        const tid = e.target.value ? Number(e.target.value) : undefined;
+                        const teacher = teachers.find((t) => t.id === tid);
+                        handleFormChange('teacher_id', tid);
+                        handleFormChange('teacher_name', teacher ? teacher.name : '');
+                      }}
+                      className='w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-slate-800 dark:text-slate-100'
+                    >
+                      <option value=''>不指定教师</option>
+                      {teachers.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div>

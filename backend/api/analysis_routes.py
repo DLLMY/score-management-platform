@@ -17,13 +17,21 @@ class UserAnalysis(Resource):
         return APIResponse.success(data=analysis_service.get_user_analysis(user_id))
 
 
-@ns_analysis.route("/class/<string:class_name>")
-@ns_analysis.param("class_name", "班级名称")
+@ns_analysis.route("/class/<string:class_identifier>")
+@ns_analysis.param("class_identifier", "班级名称或班级ID")
 class ClassAnalysis(Resource):
 
     @ns_analysis.doc("get_class_analysis")
     @requires_permission("algorithm.view")
-    def get(self, class_name):
+    def get(self, class_identifier):
+        # 兼容按班级 ID（数字串）或班级名称查询，统一前端 class_id 传参
+        if class_identifier.isdigit():
+            from models import ClassInfo
+
+            class_info = ClassInfo.query.get(int(class_identifier))
+            class_name = class_info.name if class_info else class_identifier
+        else:
+            class_name = class_identifier
         return APIResponse.success(data=analysis_service.get_class_analysis(class_name))
 
 

@@ -22,7 +22,7 @@ function StudentPortal() {
   // 积分
   const [score, setScore] = useState<number | null>(null);
   const [records, setRecords] = useState<ScoreRecordItem[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, page_size: 20, total: 0, pages: 0 });
+  const [pagination, setPagination] = useState({ page: 1, per_page: 20, total: 0, pages: 0 });
 
   // 通知
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -75,7 +75,7 @@ function StudentPortal() {
     try {
       const [scoreRes, recRes] = await Promise.all([
         api.student.getScore(),
-        api.student.getRecords({ page, page_size: 20 }),
+        api.student.getRecords({ page, per_page: 20 }),
       ]);
       setScore(scoreRes.current_score);
       setRecords(recRes.data);
@@ -91,7 +91,7 @@ function StudentPortal() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.student.getNotifications({ page: 1, page_size: 20 });
+      const res = await api.student.getNotifications({ page: 1, per_page: 20 });
       setNotifications(res.data);
       setNotifTotal(res.pagination.total);
     } catch (err: any) {

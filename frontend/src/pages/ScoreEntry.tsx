@@ -247,7 +247,7 @@ const ScoreEntry: React.FC = () => {
     if (!selectedExam) return;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const usersRes = await api.users.getAll({ class_name: selectedClass, skipCache: true });
+      const usersRes = await api.users.getAll({ class_id: selectedClass ? Number(selectedClass) : undefined, skipCache: true });
       const allUsers = Array.isArray(usersRes) ? usersRes : (usersRes as { users?: User[] }).users || [];
       dispatch({ type: 'SET_STUDENTS', payload: allUsers.filter((u) => u.role === 'student') });
 
@@ -658,7 +658,7 @@ const ScoreEntry: React.FC = () => {
     try {
       const baseUrl = '/api/scores/template/download';
       const params = new URLSearchParams();
-      if (selectedClass) params.append('class_name', selectedClass);
+      if (selectedClass) params.append('class_id', selectedClass);
       if (selectedExam) params.append('exam_id', selectedExam);
 
       const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
@@ -809,7 +809,7 @@ const ScoreEntry: React.FC = () => {
             >
               <option value=''>全部班级</option>
               {classes.map((cls) => (
-                <option key={cls.id} value={cls.name}>
+                <option key={cls.id} value={String(cls.id)}>
                   {cls.name}
                 </option>
               ))}

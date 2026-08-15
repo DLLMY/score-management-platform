@@ -149,8 +149,8 @@ class RuleList(Resource):
                 category = get_by_id(ScoreCategory, category_id)
                 if not category:
                     errors.append(f"分类ID {category_id} 不存在")
-        # 每日上限校验
-        daily_limit = data.get("daily_limit", 0)
+        # 每日上限校验（兼容旧字段 max_per_day）
+        daily_limit = data.get("daily_limit", data.get("max_per_day", 0))
         if daily_limit is not None:
             is_valid, error_msg = validate_positive_int(daily_limit)
             if not is_valid and daily_limit != 0:
@@ -169,7 +169,7 @@ class RuleList(Resource):
             category_id=data.get("category_id"),
             score=float(data.get("score")),
             is_active=data.get("is_active", True),
-            daily_limit=int(data.get("daily_limit", 0)),
+            daily_limit=int(data.get("daily_limit", data.get("max_per_day", 0))),
             min_interval=int(data.get("min_interval", 0)),
         )
         db.session.add(rule)
@@ -248,7 +248,7 @@ class RuleResource(Resource):
         rule.category_id = data.get("category_id", rule.category_id)
         rule.score = data.get("score", rule.score)
         rule.is_active = data.get("is_active", rule.is_active)
-        rule.daily_limit = data.get("daily_limit", rule.daily_limit)
+        rule.daily_limit = data.get("daily_limit", data.get("max_per_day", rule.daily_limit))
         rule.min_interval = data.get("min_interval", rule.min_interval)
         rule.updated_at = datetime.now()
         db.session.commit()
