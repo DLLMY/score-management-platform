@@ -10,6 +10,7 @@ _ACTIVE_SCHEDULERS = []
 
 def init_services(app, lightweight=False):
     if not lightweight:
+        init_redis_cache(app)
         init_di_container(app)
         init_config_watcher(app)
         init_mqtt(app)
@@ -17,6 +18,18 @@ def init_services(app, lightweight=False):
         init_cache_warmup(app)
         init_nlp_service(app)
         init_websocket(app)
+        init_system_metric_sampler(app)
+
+
+def init_redis_cache(app):
+    """初始化 Redis 缓存连接；若本机未运行 Redis 且开启 REDIS_AUTO_START，则自动拉起。"""
+    try:
+        from services.redis_cache_service import get_cache_service
+
+        get_cache_service().init_app(app)
+        print("Redis 缓存服务初始化完成")
+    except Exception as e:
+        print(f"Redis 缓存服务初始化失败(已降级为内存缓存): {e}")
 
 
 def init_di_container(app):
@@ -229,3 +242,13 @@ def init_websocket(app):
         print("WebSocket服务初始化完成")
     except Exception as e:
         print(f"WebSocket服务初始化失败: {e}")
+
+
+def init_system_metric_sampler(app):
+    try:
+        from services.system_metric_service import start_sampler
+
+        start_sampler(app)
+        print("系统指标采样服务已启动")
+    except Exception as e:
+        print(f"系统指标采样服务启动失败: {e}")

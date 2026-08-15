@@ -85,6 +85,20 @@ class Config:
             return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
+    # ========== Redis 自动拉起配置 ==========
+    # 后端启动时若本机未运行 Redis，是否自动拉起一个本地 redis-server 子进程。
+    # 仅对 localhost/127.0.0.1 生效；生产环境(env=production)默认关闭，开发环境默认开启。
+    REDIS_AUTO_START = os.getenv(
+        "REDIS_AUTO_START", "true" if env != "production" else "false"
+    ).lower() == "true"
+    # 自定义 redis-server 可执行文件路径；留空则按 项目根/redis/redis-server(.exe) →
+    # C:\Redis\redis-server.exe → PATH 顺序自动探测。
+    REDIS_SERVER_COMMAND = os.getenv("REDIS_SERVER_COMMAND", "")
+    # 启动子进程最长等待就绪时间(秒)，超过则放弃并退回内存缓存。
+    REDIS_AUTO_START_TIMEOUT = int(os.getenv("REDIS_AUTO_START_TIMEOUT", "15"))
+    # 子进程日志输出路径；留空则丢弃(stdout/stderr → DEVNULL)。
+    REDIS_SERVER_LOG = os.getenv("REDIS_SERVER_LOG", "")
+
     # ========== Celery任务队列配置 ==========
     # Celery使用与主应用相同的Redis实例，不同的DB (使用DB 1避免与缓存冲突)
     CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
@@ -376,6 +390,10 @@ __all__ = [
     "REDIS_PORT",
     "REDIS_DB",
     "REDIS_URL",
+    "REDIS_AUTO_START",
+    "REDIS_SERVER_COMMAND",
+    "REDIS_AUTO_START_TIMEOUT",
+    "REDIS_SERVER_LOG",
     # Celery配置
     "CELERY_BROKER_URL",
     "CELERY_RESULT_BACKEND",

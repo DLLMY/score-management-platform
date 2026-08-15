@@ -5,7 +5,12 @@ Redis缓存服务
 """
 
 import json
+import os
 import pickle
+import shutil
+import subprocess
+import threading
+import time
 from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Optional
@@ -13,6 +18,10 @@ from typing import Any, Callable, Optional
 import redis
 
 _warmup_completed = False
+
+# 防止多实例/重入时重复拉起 Redis 子进程
+_auto_start_lock = threading.Lock()
+_auto_start_attempted = False
 
 
 class RedisCache:
@@ -31,19 +40,136 @@ class RedisCache:
             "socket_connect_timeout": app.config.get("REDIS_SOCKET_CONNECT_TIMEOUT", 5),
         }
         redis_url = self._config["url"]
-        try:
-            self.client = redis.from_url(
-                redis_url, decode_responses=True, socket_timeout=5, socket_connect_timeout=5, retry_on_timeout=True
-            )
-            self.client.ping()
+
+        # 1) 先尝试直连（Redis 可能已在本机运行）
+        if self._connect(redis_url):
             print(f"Redis connected: {redis_url}")
-        except redis.ConnectionError as e:
-            print(f"Redis connection failed: {e}")
+            self._register(app)
+            return
+
+        # 2) 测试环境 / 未开启自动拉起 → 直接降级为内存缓存
+        if app.config.get("TESTING"):
+            print("测试环境跳过 Redis 自动拉起")
             self.client = None
+            self._register(app)
+            return
+        if not app.config.get("REDIS_AUTO_START", False):
+            print("REDIS_AUTO_START 未开启，使用内存缓存降级")
+            self.client = None
+            self._register(app)
+            return
+
+        # 3) 自动拉起本地 Redis 子进程并重试
+        print("Redis 初始连接失败，尝试自动拉起本地 Redis ...")
+        if self._try_auto_start_redis(app) and self._connect(redis_url):
+            print(f"Redis connected (auto-started): {redis_url}")
+            self._register(app)
+            return
+
+        print("Redis 自动拉起失败/未配置，使用内存缓存降级")
+        self.client = None
+        self._register(app)
+
+    def _register(self, app):
         try:
             app.config["CACHE_SERVICE"] = self
         except Exception:
             pass
+
+    def _resolve_redis_server_executable(self, app):
+        """按优先级探测本地 redis-server 可执行文件，返回绝对路径或 None。"""
+        cfg_cmd = (app.config.get("REDIS_SERVER_COMMAND") or "").strip()
+        if cfg_cmd:
+            return cfg_cmd
+        candidates = []
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(backend_dir)
+        if os.name == "nt":
+            candidates.append(os.path.join(project_root, "redis", "redis-server.exe"))
+            candidates.append(r"C:\Redis\redis-server.exe")
+            bin_name = "redis-server.exe"
+        else:
+            bin_name = "redis-server"
+        path_exe = shutil.which(bin_name)
+        if path_exe:
+            candidates.append(path_exe)
+        for c in candidates:
+            if c and os.path.isfile(c) and os.access(c, os.X_OK):
+                return c
+        return None
+
+    def _try_auto_start_redis(self, app):
+        """在本地自动启动一个 redis-server 子进程并等待就绪。成功返回 True。"""
+        global _auto_start_attempted
+        if _auto_start_attempted:
+            return False
+        with _auto_start_lock:
+            if _auto_start_attempted:
+                return False
+            _auto_start_attempted = True
+
+            host = app.config.get("REDIS_HOST", "localhost")
+            if host not in ("localhost", "127.0.0.1"):
+                print("Redis 为非本地地址，跳过自动拉起")
+                return False
+
+            exe = self._resolve_redis_server_executable(app)
+            if not exe:
+                print("未找到 redis-server 可执行文件，跳过自动拉起（可设置 REDIS_SERVER_COMMAND）")
+                return False
+
+            port = int(app.config.get("REDIS_PORT", 6379))
+            db = int(app.config.get("REDIS_DB", 0))
+            log_path = (app.config.get("REDIS_SERVER_LOG") or "").strip()
+            args = [exe, "--port", str(port), "--save", "", "--appendonly", "no"]
+
+            logf = subprocess.DEVNULL
+            opened = None
+            if log_path:
+                try:
+                    opened = open(log_path, "ab", buffering=0)
+                    logf = opened
+                except Exception:
+                    logf = subprocess.DEVNULL
+                    opened = None
+
+            spawn_kwargs = dict(stdout=logf, stderr=logf, stdin=subprocess.DEVNULL)
+            if os.name == "nt":
+                flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
+                    subprocess, "CREATE_NEW_PROCESS_GROUP", 0
+                )
+                spawn_kwargs["creationflags"] = flags
+                spawn_kwargs["close_fds"] = opened is None
+            else:
+                spawn_kwargs["start_new_session"] = True
+                spawn_kwargs["close_fds"] = opened is None
+
+            try:
+                proc = subprocess.Popen(args, **spawn_kwargs)
+                print(f"已启动 Redis 子进程 pid={proc.pid} exe={exe}")
+            except Exception as e:
+                print(f"启动 Redis 子进程失败: {e}")
+                return False
+            finally:
+                if opened is not None:
+                    try:
+                        opened.close()
+                    except Exception:
+                        pass
+
+            timeout = int(app.config.get("REDIS_AUTO_START_TIMEOUT", 15))
+            deadline = time.time() + timeout
+            probe_url = f"redis://{host}:{port}/{db}"
+            while time.time() < deadline:
+                try:
+                    probe = redis.from_url(probe_url, socket_connect_timeout=2, socket_timeout=2)
+                    if probe.ping():
+                        return True
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            print("Redis 子进程启动后超时未就绪")
+            return False
 
     def _get_key(self, key: str) -> str:
         """兼容旧测试：_key 的别名。"""
