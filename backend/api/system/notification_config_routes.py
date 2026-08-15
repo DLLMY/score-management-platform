@@ -66,7 +66,7 @@ class NotificationConfig(Resource):
 
         更新微信和短信通知的配置。
         """
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
         if "wechat_appid" in data:
             current_app.config["WECHAT_APPID"] = data["wechat_appid"]

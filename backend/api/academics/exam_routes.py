@@ -64,7 +64,11 @@ class ExamList(Resource):
     @ns_exam.expect(exam_model)
     @requires_permission("score.manage")
     def post(self):
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data.get("name"):
+            return APIResponse.bad_request(message="考试名称 name 为必填项")
+        if not data.get("date"):
+            return APIResponse.bad_request(message="考试日期 date 为必填项")
         exam = Exam(
             name=data.get("name"),
             description=data.get("description"),
@@ -77,8 +81,12 @@ class ExamList(Resource):
             status=data.get("status", "draft"),
             created_by=data.get("created_by"),
         )
-        db.session.add(exam)
-        db.session.commit()
+        try:
+            db.session.add(exam)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
         return APIResponse.success(data=exam.to_dict(), message="创建成功")
 
 

@@ -88,20 +88,27 @@ class ImportConfigList(Resource):
     def post(self):
         """创建新的导入配置"""
         data = ns_import.payload
+        if not data:
+            return APIResponse.bad_request(message="请求体不能为空")
+
+        module_name = data.get("module_name")
+        config_name = data.get("config_name")
+        if not module_name or not config_name:
+            return APIResponse.bad_request(message="module_name 与 config_name 为必填项")
 
         existing = ImportConfig.query.filter(
-            ImportConfig.module_name == data["module_name"], ImportConfig.config_name == data["config_name"]
+            ImportConfig.module_name == module_name, ImportConfig.config_name == config_name
         ).first()
 
         if existing:
             return APIResponse.error(message="该模块下已存在同名配置", status_code=400)
 
         if data.get("is_default"):
-            ImportConfig.query.filter_by(module_name=data["module_name"], is_default=True).update({"is_default": False})
+            ImportConfig.query.filter_by(module_name=module_name, is_default=True).update({"is_default": False})
 
         config = ImportConfig(
-            module_name=data["module_name"],
-            config_name=data["config_name"],
+            module_name=module_name,
+            config_name=config_name,
             field_mappings=data.get("field_mappings", []),
             validation_rules=data.get("validation_rules", []),
             conflict_strategy=data.get("conflict_strategy", "update"),

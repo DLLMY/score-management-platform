@@ -80,14 +80,18 @@ class FirmwareVersions(Resource):
 
         Records new uploaded firmware version information.
         """
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
-        existing = FirmwareVersion.query.filter_by(version=data["version"]).first()
+        version = data.get("version")
+        if not version:
+            return APIResponse.bad_request(message="version 为必填项")
+
+        existing = FirmwareVersion.query.filter_by(version=version).first()
         if existing:
             return APIResponse.error(message="Version already exists", status_code=400)
 
         firmware = FirmwareVersion(
-            version=data["version"],
+            version=version,
             description=data.get("description"),
             file_path=data.get("file_path"),
             file_size=data.get("file_size"),
@@ -98,18 +102,22 @@ class FirmwareVersions(Resource):
             created_by=getattr(request, "admin_id", None),
         )
 
-        db.session.add(firmware)
-        db.session.commit()
+        try:
+            db.session.add(firmware)
+            db.session.commit()
 
-        log = OperationLog(
-            operation_type="firmware_create",
-            target_type="firmware",
-            target_id=firmware.id,
-            operator="Admin",
-            description=f"Created firmware version: {firmware.version}",
-        )
-        db.session.add(log)
-        db.session.commit()
+            log = OperationLog(
+                operation_type="firmware_create",
+                target_type="firmware",
+                target_id=firmware.id,
+                operator="Admin",
+                description=f"Created firmware version: {firmware.version}",
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
         return {"success": True, "message": "Firmware version created", "id": firmware.id}, 201
 
@@ -272,7 +280,7 @@ class OTAReport(Resource):
 
         Device reports status after firmware download or upgrade is complete.
         """
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
 
         device_id = data.get("device_id")
         device_name = data.get("device_name")
@@ -280,6 +288,9 @@ class OTAReport(Resource):
         to_version = data.get("to_version")
         status = data.get("status")
         error_message = data.get("error_message")
+
+        if not device_id or not status:
+            return APIResponse.bad_request(message="device_id 与 status 为必填项")
 
         if status == "started":
             update_record = DeviceFirmwareUpdate(
@@ -299,7 +310,7 @@ class OTAReport(Resource):
             update_record = (
                 DeviceFirmwareUpdate.query.filter_by(device_id=device_id, to_version=to_version, status="in_progress")
                 .order_by(DeviceFirmwareUpdate.started_at.desc())
-                .order_by(DeviceFirmwareUpdate.started_at.desc())
+                .first()
             )
 
             if update_record:
@@ -323,7 +334,7 @@ class OTAReport(Resource):
             update_record = (
                 DeviceFirmwareUpdate.query.filter_by(device_id=device_id, to_version=to_version, status="in_progress")
                 .order_by(DeviceFirmwareUpdate.started_at.desc())
-                .order_by(DeviceFirmwareUpdate.started_at.desc())
+                .first()
             )
 
             if update_record:

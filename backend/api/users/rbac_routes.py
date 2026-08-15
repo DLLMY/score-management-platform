@@ -1,4 +1,5 @@
 from flask import request
+import logging
 from flask_restx import Namespace, Resource, fields
 from models import (
     db,
@@ -435,12 +436,17 @@ class AdminRoleList(Resource):
                 role = RolePermission.query.filter_by(role_code=role_code).first()
                 if role:
                     if role.permissions:
-                        try:
+                        if isinstance(role.permissions, str):
                             perms = role.permissions.split(",")
                             for perm in perms:
-                                all_permissions.add(perm.strip().replace("_", "."))
-                        except Exception:
-                            pass
+                                if perm.strip():
+                                    all_permissions.add(perm.strip().replace("_", "."))
+                        else:
+                            logging.warning(
+                                "角色 %s 的 permissions 字段格式异常（期望字符串，实际 %s），已跳过",
+                                role_code,
+                                type(role.permissions).__name__,
+                            )
                     mappings = RolePermissionMapping.query.filter_by(role_code=role_code).all()
                     for mapping in mappings:
                         all_permissions.add(mapping.permission_code)
