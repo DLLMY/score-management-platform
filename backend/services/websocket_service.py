@@ -36,13 +36,13 @@ class WebSocketService:
         self.socketio = sio
         self._handlers_registered = True
 
-        @sio.on("connect", namespace="/ws")
+        @sio.on("connect")
         def handle_connect():
             client_id = request.sid
             print(f"Client connected: {client_id}")
             emit("connected", {"sid": client_id, "message": "Connected to WebSocket server"})
 
-        @sio.on("disconnect", namespace="/ws")
+        @sio.on("disconnect")
         def handle_disconnect():
             client_id = request.sid
             with self._client_lock:
@@ -52,7 +52,7 @@ class WebSocketService:
                     del self.client_rooms[client_id]
             print(f"Client disconnected: {client_id}")
 
-        @sio.on("subscribe", namespace="/ws")
+        @sio.on("subscribe")
         def handle_subscribe(data):
             room = data.get("room")
             if room:
@@ -64,7 +64,7 @@ class WebSocketService:
                 emit("subscribed", {"room": room})
                 print(f"Client {request.sid} subscribed to {room}")
 
-        @sio.on("unsubscribe", namespace="/ws")
+        @sio.on("unsubscribe")
         def handle_unsubscribe(data):
             room = data.get("room")
             if room:
@@ -74,7 +74,7 @@ class WebSocketService:
                         self.client_rooms[request.sid].remove(room)
                 emit("unsubscribed", {"room": room})
 
-        @sio.on("ping", namespace="/ws")
+        @sio.on("ping")
         def handle_ping():
             emit("pong", {"timestamp": json.dumps({"server_time": None})})
 

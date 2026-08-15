@@ -11,7 +11,8 @@ export const WebSocketProvider = ({ children, url = '' }) => {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
-    const socketInstance = io(`${url}/ws`, {
+    const socketInstance = io(url, {
+      path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,

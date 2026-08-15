@@ -226,6 +226,19 @@ def init_nlp_service(app):
         nlp_service.initialize(flask_app=app)
         nlp_service.warmup()
         app.nlp_service = nlp_service
+
+        # 预加载 NLP 解析器：/api/nlp/execute 走 get_nlp_parser()，其模块链
+        # (nlp_ml_service 的 torch/sklearn/jieba) 若在首个请求时才 import，
+        # 重型导入可超前端 30s 超时阈值(504)。启动期加载把冷代价移到 boot，
+        # 避免首个评分请求卡死；失败不影响主流程(首个请求将退回懒加载)。
+        try:
+            from services.nlp_enhanced_service import get_nlp_parser
+
+            get_nlp_parser()
+            print("NLP 解析器预加载完成")
+        except Exception as e:
+            print(f"NLP 解析器预加载失败(首个请求将懒加载): {e}")
+
         print("NLP服务初始化完成")
     except Exception as e:
         print(f"NLP服务初始化失败: {e}")
