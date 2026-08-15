@@ -414,6 +414,15 @@ class Device(db.Model):
     class_info = db.relationship("ClassInfo", backref=db.backref("devices", lazy=True))
     admin = db.relationship("Admin", backref=db.backref("devices", lazy=True))
 
+    @property
+    def is_online(self) -> bool:
+        """是否在线：以 last_heartbeat 时效性为准（避免 status 陈旧导致「无心跳却显示在线」）。
+
+        等价于 services.heartbeat_service.is_device_online(self)。
+        """
+        from services.heartbeat_service import is_device_online
+        return is_device_online(self)
+
 
 class DeviceAlert(db.Model):
     id = db.Column(db.Integer, primary_key=True)

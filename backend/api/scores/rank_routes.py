@@ -3,7 +3,7 @@ from models import db, ScoreRankRule
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from datetime import datetime
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 
 ns_rank = Namespace("rank-rules", description="排名规则相关操作")
 
@@ -30,7 +30,7 @@ class RankRuleList(Resource):
     @ns_rank.doc("list_rank_rules", security="Bearer")
     @requires_permission("rule.view")
     def get(self):
-        cached = cache_service.get("rank_rules_list")
+        cached = get_cache_service().get("rank_rules_list")
         if cached:
             return APIResponse.success(data=cached)
 
@@ -55,7 +55,7 @@ class RankRuleList(Resource):
             "cached": False,
         }
 
-        cache_service.set("rank_rules_list", result, ttl=300, tags=["rank_rules"])
+        get_cache_service().set("rank_rules_list", result, ttl=300, tags=["rank_rules"])
         return APIResponse.success(data=result)
 
     @ns_rank.doc("create_rank_rule")
@@ -78,7 +78,7 @@ class RankRuleList(Resource):
         db.session.commit()
 
         # 清除排名规则缓存
-        cache_service.invalidate_by_tag("rank_rules")
+        get_cache_service().invalidate_by_tag("rank_rules")
 
         return APIResponse.success(data={"rule_id": rule.id}, message="排名规则创建成功", status_code=201)
 
@@ -91,7 +91,7 @@ class RankRuleResource(Resource):
     @requires_permission("rule.view")
     def get(self, id):
         cache_key = f"rank_rule_{id}"
-        cached = cache_service.get(cache_key)
+        cached = get_cache_service().get(cache_key)
         if cached:
             return APIResponse.success(data=cached)
 
@@ -112,7 +112,7 @@ class RankRuleResource(Resource):
             "cached": False,
         }
 
-        cache_service.set(cache_key, result, ttl=300, tags=["rank_rules"])
+        get_cache_service().set(cache_key, result, ttl=300, tags=["rank_rules"])
         return APIResponse.success(data=result)
 
     @ns_rank.doc("update_rank_rule")
@@ -136,7 +136,7 @@ class RankRuleResource(Resource):
         db.session.commit()
 
         # 清除排名规则缓存
-        cache_service.invalidate_by_tag("rank_rules")
+        get_cache_service().invalidate_by_tag("rank_rules")
 
         return APIResponse.success(message="排名规则更新成功")
 
@@ -148,7 +148,7 @@ class RankRuleResource(Resource):
         db.session.commit()
 
         # 清除排名规则缓存
-        cache_service.invalidate_by_tag("rank_rules")
+        get_cache_service().invalidate_by_tag("rank_rules")
 
         return APIResponse.success(message="排名规则删除成功")
 
@@ -161,7 +161,7 @@ def _get_active_rank_rules_cached():
         list: 按min_score降序排列的规则列表
     """
     cache_key = "rank_rules:active"
-    cached_rules = cache_service.get(cache_key)
+    cached_rules = get_cache_service().get(cache_key)
 
     if cached_rules is not None:
         return cached_rules
@@ -185,7 +185,7 @@ def _get_active_rank_rules_cached():
     ]
 
     # 缓存5分钟
-    cache_service.set(cache_key, rules_data, ttl=300, tags=["rank_rules"])
+    get_cache_service().set(cache_key, rules_data, ttl=300, tags=["rank_rules"])
 
     return rules_data
 

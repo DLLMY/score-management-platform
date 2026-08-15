@@ -4,7 +4,7 @@ from flask import request
 from utils.response import APIResponse
 from utils.permission import requires_permission
 from utils.performance_monitor import performance_monitor
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 from services.mqtt_service import mqtt_manager
 from services.system_config_service import SystemConfigService
 from models import db, FrontendPerfMetric, FrontendErrorLog, SystemMetric
@@ -453,7 +453,7 @@ class SystemCacheStats(Resource):
 
         获取Redis缓存的使用统计信息，包括命中率、操作次数等。
         """
-        return cache_service.get_stats()
+        return get_cache_service().get_stats()
 
     @ns_system.doc("flush_cache", description="刷新缓存", security="Bearer")
     @ns_system.response(200, "成功")
@@ -464,7 +464,7 @@ class SystemCacheStats(Resource):
 
         清空所有缓存数据，需要管理员权限。
         """
-        result = cache_service.flush_all()  # noqa: F841
+        result = get_cache_service().flush_all()  # noqa: F841
         if result:
             return APIResponse.success(message="缓存刷新成功")
         else:
@@ -525,7 +525,7 @@ class SystemHealth(Resource):
 
         # 检查Redis缓存
         try:
-            redis_stats = cache_service.get_stats()
+            redis_stats = get_cache_service().get_stats()
             health_status["components"]["redis"] = {
                 "status": "healthy" if redis_stats.get("redis_available") else "degraded",
                 "message": "Redis可用" if redis_stats.get("redis_available") else "使用内存缓存",
@@ -854,7 +854,7 @@ class SystemStats(Resource):
         返回系统的综合统计数据，包括用户数、积分记录数等。
         """
         try:
-            cache_stats = cache_service.get_stats()
+            cache_stats = get_cache_service().get_stats()
 
             user_count = 0
             record_count = 0

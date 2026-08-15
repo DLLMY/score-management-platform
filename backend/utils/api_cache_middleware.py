@@ -42,11 +42,16 @@ def get_ttl_for_path(path):
     Returns:
         TTL秒数
     """
+    # API_CACHE_TTL 必须是一个 dict（精确/前缀映射）；配置缺失或不是 dict 时回退默认 TTL，
+    # 避免 `path in 300` / `300.items()` 之类的 TypeError 导致整条请求链路崩溃。
+    api_ttl = API_CACHE_TTL
+    if not isinstance(api_ttl, dict):
+        return DEFAULT_CACHE_TTL
     # 检查精确匹配
-    if path in API_CACHE_TTL:
-        return API_CACHE_TTL[path]
+    if path in api_ttl:
+        return api_ttl[path]
     # 检查前缀匹配
-    for api_path, ttl in API_CACHE_TTL.items():
+    for api_path, ttl in api_ttl.items():
         if path.startswith(api_path):
             return ttl
     return DEFAULT_CACHE_TTL
@@ -56,17 +61,17 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
     """
     API缓存装饰器
     用于缓存GET请求的响应，减少重复数据库查询。
+
+    兼容本项目响应约定：
+      - APIResponse.success/error 返回 (data_dict, status_code) 元组；
+      - 也可直接返回 Flask Response 或裸 dict/list。
+    仅对成功的（status==200）响应做缓存；缓存不可用时（降级内存/无 Redis）
+    自动穿透到原函数，不影响业务。
+
     Args:
         ttl: 缓存时间（秒），如果不指定则根据路径自动获取
         key_prefix: 缓存键前缀
         unless: 条件函数，返回True时不缓存
-    使用示例:
-        @cached_api(ttl=60)
-        def get_users():
-            return jsonify({'users': [...]})
-        @cached_api(unless=lambda: request.args.get('nocache'))
-        def get_devices():
-            return jsonify({'devices': [...]})
     """
 
     def decorator(f):
@@ -87,7 +92,10 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
             # 确定TTL
             cache_ttl = ttl if ttl is not None else get_ttl_for_path(request.path)
             # 尝试从缓存获取
-            cached_response = cache.get(cache_key)
+            try:
+                cached_response = cache.get(cache_key)
+            except Exception:
+                cached_response = None
             if cached_response is not None:
                 # 返回缓存的响应
                 response = make_response(jsonify(cached_response))
@@ -95,18 +103,23 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
                 response.headers["X-Cache-TTL"] = str(cache_ttl)
                 return response
             # 执行原函数
-            result = f(*args, **kwargs)  # noqa: F841
-            # 处理响应
+            result = f(*args, **kwargs)
+            # 统一提取 data 与 status_code，兼容多种返回约定
             if hasattr(result, "get_json"):
                 response_data = result.get_json()
                 status_code = result.status_code
+            elif isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+                # 本项目 APIResponse 约定：(data_dict, status_code)
+                response_data, status_code = result
             else:
                 response_data = result
                 status_code = 200
-            # 只缓存成功的响应
+            # 只缓存成功的响应，且避免缓存空响应
             if status_code == 200 and response_data:
-                # 存入缓存
-                cache.set(cache_key, response_data, ttl=cache_ttl)
+                try:
+                    cache.set(cache_key, response_data, ttl=cache_ttl)
+                except Exception:
+                    pass
             # 返回响应
             response = make_response(jsonify(response_data), status_code)
             response.headers["X-Cache"] = "MISS"

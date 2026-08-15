@@ -10,8 +10,8 @@ from utils.permission import requires_permission, get_current_admin, get_admin_c
 from utils.validation import validate_device_id, validate_name
 from utils.response import APIResponse
 from services.mqtt_service import publish_mqtt
-from services.cache_service import cache_service
 from services.heartbeat_service import is_device_online
+from utils.api_cache_middleware import cached_api
 from datetime import datetime
 from sqlalchemy import func
 
@@ -71,7 +71,7 @@ def send_ota_upgrade_command(firmware_url, version="", force=False, device_id=No
         else:
             return APIResponse.server_error(message="MQTT发送失败，请检查连接")
     else:
-        online_devices = Device.query.filter_by(status="online").all()
+        online_devices = [d for d in Device.query.all() if d.is_online]
 
         if not online_devices:
             return APIResponse.bad_request(message="没有在线设备")
@@ -442,23 +442,19 @@ class DeviceStats(Resource):
     @ns_devices.doc("get_device_stats", description="获取设备统计信息")
     @ns_devices.response(200, "成功", device_stats_response)
     @requires_permission("device.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取设备统计信息
 
         获取所有设备的统计数据，包括在线/离线数量、今日心跳数等。
+        响应由 cached_api 统一缓存（Redis，TTL 60s），降低高频轮询的 DB 压力。
         """
-        from services.cache_service import cache_service
-
-        cache_key = "device_stats"
-        cached = cache_service.get(cache_key)
-        if cached:
-            return APIResponse.success(data=cached)
-
         total = Device.query.count()
-        online = Device.query.filter_by(status="online").count()
-        offline = Device.query.filter_by(status="offline").count()
         error = Device.query.filter_by(status="error").count()
+        # 在线以 last_heartbeat 时效性为准，避免陈旧 status 把无心跳设备仍计为在线
+        online = sum(1 for d in Device.query.all() if d.is_online)
+        offline = total - online - error
 
         today = datetime.now().date()
         today_heartbeats = DeviceHeartbeat.query.filter(
@@ -467,7 +463,7 @@ class DeviceStats(Resource):
 
         recent_heartbeats = DeviceHeartbeat.query.order_by(DeviceHeartbeat.received_at.desc()).limit(100).all()
 
-        result = {  # noqa: F841
+        result = {
             "total_devices": total,
             "online_devices": online,
             "offline_devices": offline,
@@ -483,8 +479,6 @@ class DeviceStats(Resource):
             ],
         }
 
-        cache_service.set(cache_key, result, ttl=300)
-
         return APIResponse.success(data=result)
 
 
@@ -494,24 +488,25 @@ class OnlineDevices(Resource):
     @ns_devices.doc("get_online_devices", description="获取在线设备列表")
     @ns_devices.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取在线设备列表
 
         获取所有当前在线的设备列表。
+        响应由 cached_api 统一缓存（Redis，TTL 30s）。
         """
         devices = (
-            Device.query.filter_by(status="online")
-            .options(joinedload(Device.class_info), joinedload(Device.admin))
-            .all()
+            Device.query.options(joinedload(Device.class_info), joinedload(Device.admin)).all()
         )
+        online_devices = [d for d in devices if d.is_online]
         return [
             {
                 "id": d.id,
                 "device_id": d.device_id,
                 "name": d.name,
                 "status": d.status,
-                "is_online": True,
+                "is_online": d.is_online,
                 "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
                 "wifi_signal": d.wifi_signal,
                 "class_info_id": d.class_info_id,
@@ -519,7 +514,7 @@ class OnlineDevices(Resource):
                 "admin_id": d.admin_id,
                 "admin_name": d.admin.real_name if d.admin else None,
             }
-            for d in devices
+            for d in online_devices
         ]
 
 
@@ -942,22 +937,19 @@ class DeviceAdvancedStats(Resource):
     @ns_devices.doc("get_device_advanced_stats", description="获取设备高级统计")
     @ns_devices.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取设备高级统计信息
 
         获取更详细的设备统计，包括信号强度分布、在线时长等。
+        响应由 cached_api 统一缓存（Redis，TTL 60s）。
         """
-
-        cache_key = "device_advanced_stats"
-        cached = cache_service.get(cache_key)
-        if cached:
-            return APIResponse.success(data=cached)
-
         total = Device.query.count()
-        online = Device.query.filter_by(status="online").count()
-        offline = Device.query.filter_by(status="offline").count()
         error = Device.query.filter_by(status="error").count()
+        # 在线以 last_heartbeat 时效性为准，避免陈旧 status 把无心跳设备仍计为在线
+        online = sum(1 for d in Device.query.all() if d.is_online)
+        offline = total - online - error
 
         # 无信号数据时保持 None（前端显示 '--'），0 dBm 会被误读为"极强信号"
         avg_signal = db.session.query(func.avg(Device.wifi_signal)).filter(Device.wifi_signal.isnot(None)).scalar()
@@ -983,7 +975,7 @@ class DeviceAdvancedStats(Resource):
             else:
                 signal_distribution["poor"] += 1
 
-        result = {  # noqa: F841
+        result = {
             "total_devices": total,
             "online_devices": online,
             "offline_devices": offline,
@@ -995,8 +987,6 @@ class DeviceAdvancedStats(Resource):
             "unresolved_alerts": alert_count,
             "critical_alerts": critical_alerts,
         }
-
-        cache_service.set(cache_key, result, ttl=300)
 
         return result
 
@@ -1111,7 +1101,7 @@ class BatchDeviceControl(Resource):
                 results.append({"device_id": device_id, "success": False, "message": "设备不存在"})
                 continue
 
-            if device.status == "online":
+            if device.is_online:
                 if action == "restart":
                     restart_topic = "phonebox/control/restart"
                     result = publish_mqtt(restart_topic, '{"command": "restart"}')  # noqa: F841
@@ -1436,7 +1426,7 @@ class DeviceExport(Resource):
                         "device_id": device.device_id,
                         "name": device.name,
                         "status": device.status,
-                        "is_online": device.is_online,
+                        "is_online": is_device_online(device),
                         "last_heartbeat": (
                             device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S") if device.last_heartbeat else ""
                         ),
@@ -1494,7 +1484,7 @@ class DeviceExport(Resource):
                         device.device_id,
                         device.name,
                         device.status,
-                        "是" if device.is_online else "否",
+                        "是" if is_device_online(device) else "否",
                         device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S") if device.last_heartbeat else "",
                         device.wifi_signal,
                         device.class_info.name if device.class_info else "",

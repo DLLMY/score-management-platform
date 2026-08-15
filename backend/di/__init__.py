@@ -6,8 +6,6 @@ class DIContainer(containers.DeclarativeContainer):
 
     notification_service = providers.Singleton("services.notification_service.NotificationService")
 
-    cache_service = providers.Singleton("services.cache_service.CacheService")
-
     redis_cache_service = providers.Singleton("services.redis_cache_service.RedisCacheService")
 
     alert_service = providers.Singleton("services.alert_service.AlertService")

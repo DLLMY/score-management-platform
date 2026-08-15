@@ -4,7 +4,7 @@ from utils.response import APIResponse
 from models import db, ScoreRecord, User, ScoreRule, get_by_id
 from utils.permission import requires_permission, get_current_admin, get_allowed_classes
 from utils.logger import log_operation
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 from services.class_time_checker import ClassTimeChecker
 from datetime import datetime
 from sqlalchemy.orm import joinedload
@@ -354,7 +354,7 @@ class RecordStatistics(Resource):
                     class_name = allowed_classes[0] if allowed_classes else None
 
         cache_key = f"score_statistics:{user_id}:{class_name}:{start_date}:{end_date}"
-        cached_result = cache_service.get(cache_key)
+        cached_result = get_cache_service().get(cache_key)
         if cached_result:
             return APIResponse.success(data=cached_result)
 
@@ -407,7 +407,7 @@ class RecordStatistics(Resource):
         }
 
         # 使用标签缓存，便于积分变动时清除
-        cache_service.set(cache_key, result, ttl=300, tags=["statistics"])
+        get_cache_service().set(cache_key, result, ttl=300, tags=["statistics"])
 
         return APIResponse.success(data=result)
 
@@ -427,7 +427,7 @@ class ScoreEntryResource(Resource):
         """
         # 尝试从缓存获取
         cache_key = "score_entry_data"
-        cached_result = cache_service.get(cache_key)
+        cached_result = get_cache_service().get(cache_key)
         if cached_result is not None:
             return APIResponse.success(data=cached_result)
 
@@ -460,7 +460,7 @@ class ScoreEntryResource(Resource):
         result = {"rules": rule_list, "users": user_list}  # noqa: F841
 
         # 缓存结果，有效期5分钟
-        cache_service.set(cache_key, result, ttl=300)
+        get_cache_service().set(cache_key, result, ttl=300)
         return APIResponse.success(data=result)
 
     @ns_records.doc("create_score_entry", description="创建积分录入记录", security="Bearer")
@@ -646,7 +646,7 @@ class ScoreEntryResource(Resource):
 
         # 清除统计缓存
         try:
-            invalidated = cache_service.invalidate_by_tag("statistics")
+            invalidated = get_cache_service().invalidate_by_tag("statistics")
             print(f"[Cache] 积分录入后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
             print(f"[Cache] 清除缓存失败: {e}")
@@ -810,7 +810,7 @@ class BatchScoreEntryResource(Resource):
 
         # 清除统计缓存
         try:
-            cache_service.invalidate_by_tag("statistics")
+            get_cache_service().invalidate_by_tag("statistics")
         except Exception:
             pass
 
@@ -943,7 +943,7 @@ class RecordResource(Resource):
 
         # 清除统计缓存
         try:
-            invalidated = cache_service.invalidate_by_tag("statistics")
+            invalidated = get_cache_service().invalidate_by_tag("statistics")
             print(f"[Cache] 删除记录后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
             print(f"[Cache] 清除缓存失败: {e}")

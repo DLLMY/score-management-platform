@@ -220,7 +220,7 @@ class QueryOptimizer:
 
         try:
             total = Device.query.count()
-            online = Device.query.filter(Device.status == "online").count()
+            online = sum(1 for d in Device.query.all() if d.is_online)
         except Exception:
             total, online = 0, 0
         return {"total": total, "online": online, "offline": total - online}

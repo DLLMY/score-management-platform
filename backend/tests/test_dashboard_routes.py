@@ -1,6 +1,8 @@
 import uuid
+import pytest
+from datetime import datetime
 from models import User, Admin, ScoreRecord, ScoreRule, Device
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 
 
 class TestDashboardRoutes:
@@ -16,15 +18,17 @@ class TestDashboardRoutes:
         return data.get('access_token') or data.get('data', {}).get('access_token')
 
     def _clean_data(self, session):
+        # 全清共享表，避免会话内其他测试模块留下的数据污染 dashboard 聚合断言
+        # （Admin 表不受影响，登录用的 test_admin 保留）
         session.query(ScoreRecord).delete()
         session.query(Device).delete()
         session.query(ScoreRule).delete()
-        session.query(User).filter(User.name.like('%测试%') | User.name.like('%排名%') | User.name.like('%平均%') |
-            User.name.like('%统计%') | User.name.like('%缓存%') | User.name.like('%新用户%')).delete()
+        session.query(User).delete()
         session.commit()
 
     def test_get_dashboard_data(self, client, session):
-        cache_service.delete("dashboard_data")
+        self._clean_data(session)
+        get_cache_service().delete("dashboard_data")
         token = self._get_admin_token(client, session)
 
         for i in range(3):
@@ -48,7 +52,8 @@ class TestDashboardRoutes:
         rule = ScoreRule(name='测试规则', description='规则描述', score=5, is_active=True)
         session.add(rule)
 
-        device = Device(device_id='DEV001', name='测试设备', status='online')
+        device = Device(device_id='DEV001', name='测试设备', status='online',
+                        last_heartbeat=datetime.now())
         session.add(device)
 
         session.add(ScoreRecord(user_id=1, score_change=5, description='测试记录'))
@@ -79,7 +84,12 @@ class TestDashboardRoutes:
 
     def test_dashboard_cache(self, client, session):
         self._clean_data(session)
-        cache_service.delete("dashboard_data")
+        # 该测试验证 dashboard 数据被缓存（返回与 DB 变更无关的旧值）。
+        # 需要真实 Redis 才能体现缓存行为；无 Redis 时跳过，避免测试环境无缓存导致误报。
+        cache = get_cache_service()
+        if not cache._connect("redis://localhost:6379/0"):
+            pytest.skip("Redis 不可用，跳过缓存行为验证")
+        cache.delete("dashboard_data")
         token = self._get_admin_token(client, session)
 
         user = User(
@@ -111,9 +121,12 @@ class TestDashboardRoutes:
 
         assert data1['data']['total_users'] == data2['data']['total_users']
 
+        # 验证完缓存行为后复位全局缓存连接，避免污染后续测试的隔离性
+        cache.client = None
+
     def test_dashboard_empty_data(self, client, session):
         self._clean_data(session)
-        cache_service.delete("dashboard_data")
+        get_cache_service().delete("dashboard_data")
         token = self._get_admin_token(client, session)
 
         response = client.get('/api/dashboard/data', headers={'Authorization': f'Bearer {token}'})
@@ -135,7 +148,7 @@ class TestDashboardRoutes:
 
     def test_dashboard_top_users(self, client, session):
         self._clean_data(session)
-        cache_service.delete("dashboard_data")
+        get_cache_service().delete("dashboard_data")
         token = self._get_admin_token(client, session)
 
         users = []
@@ -163,7 +176,7 @@ class TestDashboardRoutes:
 
     def test_dashboard_avg_score(self, client, session):
         self._clean_data(session)
-        cache_service.delete("dashboard_data")
+        get_cache_service().delete("dashboard_data")
         token = self._get_admin_token(client, session)
 
         users = []
@@ -188,7 +201,8 @@ class TestDashboardRoutes:
         assert data['data']['avg_score'] == round(expected_avg, 2)
 
     def test_dashboard_category_stats(self, client, session):
-        cache_service.delete("dashboard_data")
+        self._clean_data(session)
+        get_cache_service().delete("dashboard_data")
         token = self._get_admin_token(client, session)
 
         rule1 = ScoreRule(name='规则1', description='规则1描述', score=5, is_active=True)

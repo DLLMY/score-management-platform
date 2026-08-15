@@ -11,7 +11,7 @@ from utils.validation import (
     validate_positive_int,
     validation_error_response,
 )
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 from datetime import datetime
 import io
 import csv
@@ -66,7 +66,7 @@ class RuleList(Resource):
         category_id = request.args.get("category_id", type=int)
         is_active = request.args.get("is_active")
         cache_key = f"rules_list:{page}:{per_page}:{category_id}:{is_active}"
-        cached_result = cache_service.get(cache_key)
+        cached_result = get_cache_service().get(cache_key)
         if cached_result is not None:
             return APIResponse.success(data=cached_result)
         query = ScoreRule.query
@@ -96,7 +96,7 @@ class RuleList(Resource):
             "per_page": per_page,
             "pages": pagination.pages,
         }
-        cache_service.set(cache_key, result, ttl=300, tags=["rules"])
+        get_cache_service().set(cache_key, result, ttl=300, tags=["rules"])
         return APIResponse.success(data=result)
 
     @ns_rules.doc("create_rule", description="创建积分规则", security="Bearer")
@@ -181,7 +181,7 @@ class RuleList(Resource):
             f"创建积分规则: {rule.name}",
             after_data=data,
         )
-        cache_service.invalidate_by_tag("rules")
+        get_cache_service().invalidate_by_tag("rules")
         return APIResponse.success(
             data={
                 "id": rule.id,
@@ -211,7 +211,7 @@ class RuleResource(Resource):
         根据规则ID获取规则的详细信息。需要规则查看权限。
         """
         cache_key = f"rule:{id}"
-        cached_result = cache_service.get(cache_key)
+        cached_result = get_cache_service().get(cache_key)
         if cached_result is not None:
             return APIResponse.success(data=cached_result)
         rule = ScoreRule.query.get_or_404(id)
@@ -228,7 +228,7 @@ class RuleResource(Resource):
             "created_at": rule.created_at.isoformat() if rule.created_at else None,
             "updated_at": rule.updated_at.isoformat() if rule.updated_at else None,
         }
-        cache_service.set(cache_key, result, ttl=300, tags=["rules"])
+        get_cache_service().set(cache_key, result, ttl=300, tags=["rules"])
         return APIResponse.success(data=result)
 
     @ns_rules.doc("update_rule", description="更新规则", security="Bearer")
@@ -264,7 +264,7 @@ class RuleResource(Resource):
             },
             after_data=data,
         )
-        cache_service.invalidate_by_tag("rules")
+        get_cache_service().invalidate_by_tag("rules")
         return APIResponse.success(message="规则更新成功")
 
     @ns_rules.doc("delete_rule", description="删除规则", security="Bearer")
@@ -281,7 +281,7 @@ class RuleResource(Resource):
         db.session.delete(rule)
         db.session.commit()
         log_operation("rule.delete", "rule", id, f"删除积分规则: {_deleted_name}")
-        cache_service.invalidate_by_tag("rules")
+        get_cache_service().invalidate_by_tag("rules")
         return APIResponse.success(message="规则删除成功")
 
 
@@ -708,7 +708,7 @@ class ApplyRuleTemplate(Resource):
                     created_rules.append(rule_data["name"])
             db.session.commit()
             # 清除所有rules相关缓存
-            invalidated_count = cache_service.invalidate_by_tag("rules")
+            invalidated_count = get_cache_service().invalidate_by_tag("rules")
             print(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
             return APIResponse.success(
                 data={"created_count": len(created_rules), "created_rules": created_rules, "category_id": category_id},

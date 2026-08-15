@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource
 from services.dashboard_service import dashboard_service
 from utils.response import APIResponse
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api
 
 ns_dashboard = Namespace("dashboard", description="仪表板数据相关操作")
 
@@ -11,6 +12,7 @@ class DashboardData(Resource):
 
     @ns_dashboard.doc("get_dashboard_data", security="Bearer")
     @requires_permission("view_dashboard")
+    @cached_api(ttl=120)
     def get(self):
         result = dashboard_service.get_dashboard_data()
         return APIResponse.success(data=result)
@@ -21,6 +23,7 @@ class DashboardStats(Resource):
 
     @ns_dashboard.doc("get_dashboard_stats", security="Bearer")
     @requires_permission("view_dashboard")
+    @cached_api(ttl=60)
     def get(self):
         try:
             data = dashboard_service.get_dashboard_data()

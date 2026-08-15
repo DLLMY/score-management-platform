@@ -14,7 +14,7 @@ from utils.validation import (
     validate_name,
     validation_error_response,
 )
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 from services.class_time_checker import ClassTimeChecker
 from datetime import datetime
 import io
@@ -146,7 +146,7 @@ class UserList(Resource):
         )
         # 如果不跳过缓存，尝试从缓存获取
         if not skip_cache:
-            cached_result = cache_service.get(cache_key)
+            cached_result = get_cache_service().get(cache_key)
             if cached_result is not None:
                 return APIResponse.success(data=cached_result)
         query = User.query
@@ -225,7 +225,7 @@ class UserList(Resource):
                     "per_page": per_page,
                     "pages": max(1, (len(matched_users) + per_page - 1) // per_page),
                 }
-                cache_service.set(cache_key, result, ttl=300, tags=["users"])
+                get_cache_service().set(cache_key, result, ttl=300, tags=["users"])
                 return APIResponse.success(data=result)
             else:
                 # 常规搜索：匹配姓名、卡号、电话
@@ -289,7 +289,7 @@ class UserList(Resource):
             "per_page": per_page,
             "pages": pagination.pages,
         }
-        cache_service.set(cache_key, result, ttl=300, tags=["users"])
+        get_cache_service().set(cache_key, result, ttl=300, tags=["users"])
         return APIResponse.success(data=result)
 
     @ns_users.doc("create_user", description="创建学生", security="Bearer")
@@ -405,7 +405,7 @@ class UserList(Resource):
             description=f"创建学生: {user.name}",
             after_data=data,
         )
-        cache_service.invalidate_by_tag("users")
+        get_cache_service().invalidate_by_tag("users")
         return APIResponse.success(
             data={
                 "user": {
@@ -527,7 +527,7 @@ class UserResource(Resource):
             before_data=before_data,
             after_data=data,
         )
-        cache_service.invalidate_by_tag("users")
+        get_cache_service().invalidate_by_tag("users")
         return APIResponse.success(
             data={
                 "user": {
@@ -592,7 +592,7 @@ class UserResource(Resource):
             description=f'删除学生: {before_data["name"]}',
             before_data=before_data,
         )
-        cache_service.invalidate_by_tag("users")
+        get_cache_service().invalidate_by_tag("users")
         return APIResponse.success(message="用户删除成功")
 
 

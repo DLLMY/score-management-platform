@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from models import db, User, ScoreRecord, Device, ScoreRule, Admin
-from services.cache_service import cache_service
+from services.redis_cache_service import get_cache_service
 
 
 class DashboardService:
@@ -8,7 +8,7 @@ class DashboardService:
     @staticmethod
     def get_dashboard_data():
         cache_key = "dashboard_data"
-        cached_result = cache_service.get(cache_key)
+        cached_result = get_cache_service().get(cache_key)
         if cached_result is not None:
             return cached_result
 
@@ -33,7 +33,7 @@ class DashboardService:
         )
 
         total_devices = Device.query.count() or 0
-        online_devices = Device.query.filter_by(status="online").count() or 0
+        online_devices = sum(1 for d in Device.query.all() if d.is_online) or 0
 
         total_admins = Admin.query.count() or 0
         total_rules = ScoreRule.query.filter_by(is_active=True).count() or 0
@@ -75,7 +75,7 @@ class DashboardService:
             "category_stats": [{"rule_id": r[0], "total_score": r[1]} for r in category_stats],
         }
 
-        cache_service.set(cache_key, result, ttl=60)
+        get_cache_service().set(cache_key, result, ttl=60)
         return result
 
 

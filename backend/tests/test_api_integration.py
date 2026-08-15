@@ -91,7 +91,6 @@ class TestServiceIntegration:
         container = DIContainer()
 
         assert hasattr(container, 'notification_service')
-        assert hasattr(container, 'cache_service')
         assert hasattr(container, 'redis_cache_service')
         assert hasattr(container, 'alert_service')
         assert hasattr(container, 'mqtt_manager')

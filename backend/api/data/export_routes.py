@@ -156,7 +156,7 @@ class ExportData(Resource):
                 users_count = User.query.count()
                 rules_count = ScoreRule.query.count()
                 devices_count = Device.query.count()
-                online_devices = Device.query.filter_by(status="online").count()
+                online_devices = sum(1 for d in Device.query.all() if d.is_online)
                 records_count = ScoreRecord.query.count()
                 output = export_service.export_summary_report(
                     users_count, rules_count, devices_count, online_devices, records_count
@@ -433,7 +433,7 @@ class ExportSummary(Resource):
         users_count = User.query.count()
         rules_count = ScoreRule.query.count()
         devices_count = Device.query.count()
-        online_devices = Device.query.filter_by(status="online").count()
+        online_devices = sum(1 for d in Device.query.all() if d.is_online)
         records_count = ScoreRecord.query.count()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:

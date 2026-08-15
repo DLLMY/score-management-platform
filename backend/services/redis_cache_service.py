@@ -28,6 +28,7 @@ class RedisCache:
     def __init__(self, app=None):
         self.client = None
         self._prefix = "score_management:"
+        self._stats = {"hits": 0, "misses": 0, "sets": 0, "deletes": 0}
         if app:
             self.init_app(app)
 
@@ -211,11 +212,15 @@ class RedisCache:
         try:
             value = self.client.get(self._key(key))
             if value is None:
+                self._stats["misses"] += 1
                 return None
+            self._stats["hits"] += 1
             try:
                 return json.loads(value)
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError):
                 try:
+                    if isinstance(value, (bytes, bytearray)):
+                        return pickle.loads(bytes(value))  # nosec B301 - trusted internal cache
                     return pickle.loads(value.encode("latin1"))  # nosec B301 - trusted internal cache
                 except Exception:
                     return value
@@ -231,28 +236,46 @@ class RedisCache:
         if not self.client:
             return False
         try:
-            key = self._key(key)
+            redis_key = self._key(key)
             if isinstance(value, (dict, list)):
                 value = json.dumps(value, default=str)
             elif not isinstance(value, str):
                 value = pickle.dumps(value)
-                self.client.setex(key, expire or 3600, value)
+                self.client.setex(redis_key, expire or 3600, value)
+                self._stats["sets"] += 1
+                self._store_tags(redis_key, tags, expire)
                 return True
             if expire:
-                self.client.setex(key, expire, value)
+                self.client.setex(redis_key, expire, value)
             else:
-                self.client.set(key, value)
+                self.client.set(redis_key, value)
+            self._stats["sets"] += 1
+            self._store_tags(redis_key, tags, expire)
             return True
         except Exception as e:
             print(f"Redis set error: {e}")
             self.client = None
             return False
 
+    def _store_tags(self, redis_key: str, tags, expire) -> None:
+        """将缓存键登记到各标签集合，便于按标签批量失效（兼容旧 cache_service 契约）。"""
+        if not tags:
+            return
+        try:
+            for tag in tags:
+                tag_key = self._key(f"tag:{tag}")
+                self.client.sadd(tag_key, redis_key)
+                if expire:
+                    self.client.expire(tag_key, expire + 3600)
+        except Exception:
+            pass
+
     def delete(self, key: str) -> bool:
         if not self.client:
             return False
         try:
             self.client.delete(self._key(key))
+            self._stats["deletes"] += 1
             return True
         except Exception as e:
             print(f"Redis delete error: {e}")
@@ -460,6 +483,53 @@ class RedisCache:
         except Exception:
             return {"mode": "single_connection", "connected": False}
 
+    def invalidate_by_tag(self, tag: str) -> int:
+        """按标签失效所有相关缓存（兼容 services.cache_service.CacheService 契约）。"""
+        if not self.client:
+            return 0
+        try:
+            tag_key = self._key(f"tag:{tag}")
+            keys = self.client.smembers(tag_key)
+            if keys:
+                self.client.delete(*keys)
+                self._stats["deletes"] += len(keys)
+            self.client.delete(tag_key)
+            return len(keys)
+        except Exception as e:
+            print(f"Redis invalidate_by_tag error: {e}")
+            self.client = None
+            return 0
+
+    def invalidate_by_tags(self, tags: list) -> int:
+        """按多个标签批量失效。"""
+        return sum(self.invalidate_by_tag(t) for t in (tags or []))
+
+    def get_stats(self) -> dict:
+        """缓存统计信息（兼容旧 system_routes 读取 redis_available/hit_rate/total_operations）。"""
+        try:
+            connected = self.is_connected
+            total = self._stats["hits"] + self._stats["misses"]
+            hit_rate = (self._stats["hits"] / total * 100) if total else 0
+            pool = self.get_pool_status() if connected else {}
+            return {
+                "redis_available": connected,
+                "hits": self._stats["hits"],
+                "misses": self._stats["misses"],
+                "hit_rate": f"{hit_rate:.2f}%",
+                "hit_rate_float": round(hit_rate, 2),
+                "sets": self._stats["sets"],
+                "deletes": self._stats["deletes"],
+                "total_operations": total,
+                "prefix": self._prefix,
+                **pool,
+            }
+        except Exception:
+            return {"redis_available": False, "hit_rate": "N/A", "total_operations": 0}
+
+    def flush_all(self) -> bool:
+        """清空当前库全部缓存键（兼容 services.cache_service.CacheService.flush_all）。"""
+        return self.flush()
+
 
 cache = RedisCache()
 RedisCacheService = RedisCache
@@ -546,7 +616,7 @@ def warmup_cache(app):
             from models import Device
 
             devices = Device.query.all()
-            online_devices = [d.device_id for d in devices if d.status == "online"]
+            online_devices = [d.device_id for d in devices if d.is_online]
             if online_devices:
                 cache.client.delete(cache._key("devices:online"))
                 cache.client.sadd(cache._key("devices:online"), *online_devices)
