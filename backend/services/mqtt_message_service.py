@@ -1,4 +1,8 @@
 from datetime import datetime
+import logging
+import time
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from services.mqtt_service import publish_mqtt, mqtt_manager, mqtt_logs
 from services.class_time_checker import ClassTimeChecker
 from services import phonebox_policy
@@ -8,6 +12,8 @@ from utils.db_session import db_session_scope
 
 import json
 from models import ScoreRecord, db, Approval, get_by_id, User, ScoreRule
+
+logger = logging.getLogger(__name__)
 
 
 class MQTTMessageService:
@@ -706,6 +712,27 @@ class MQTTMessageService:
             }
         publish_mqtt(response_topic, json.dumps(response))
 
+    def _load_active_score_rules(self, retries=4):
+        """读取当前启用的积分规则。
+
+        生产洪流下 score/add、遥测落库(MQTTLog)高频写同一 SQLite，Flask-SQLAlchemy 默认连接
+        busy_timeout=0，读查询易撞写锁抛 OperationalError(database is locked) 被上层 except 静默
+        成 rules=[]（表现为设备偶发收不到规则）。这里显式设 busy_timeout 并重试几次规避。
+        """
+        from models import ScoreRule
+        last_err = None
+        for attempt in range(retries):
+            try:
+                db.session.execute(text("PRAGMA busy_timeout=5000"))
+                return (
+                    ScoreRule.query.filter_by(is_active=True)
+                    .order_by(ScoreRule.category_id, ScoreRule.id)
+                    .all()
+                )
+            except SQLAlchemyError as last_err:
+                time.sleep(0.15 * (attempt + 1))
+        raise last_err
+
     def handle_score_rules_query(self, data):
         """设备查询积分规则：回发当前启用的规则列表（供设备端本地加分/校验参考）。
 
@@ -713,13 +740,7 @@ class MQTTMessageService:
         """
         request_id = data.get("request_id") if isinstance(data, dict) else None
         try:
-            from models import ScoreRule
-
-            rules = (
-                ScoreRule.query.filter_by(is_active=True)
-                .order_by(ScoreRule.category_id, ScoreRule.id)
-                .all()
-            )
+            rules = self._load_active_score_rules()
             rule_list = [
                 {
                     "id": r.id,
@@ -743,7 +764,8 @@ class MQTTMessageService:
                 "request_id": request_id,
             }
         except Exception as e:  # noqa: BLE001
-            # 诚实失败：不伪装"规则为空"
+            # 诚实失败 + 留痕：不再静默吞异常（此前洪流下 database is locked 被吞成 rules=[] 难排查）
+            logger.error("score/rules/query 加载规则失败: %s", e, exc_info=True)
             response = {
                 "success": False,
                 "message": f"Failed to load score rules: {e}",

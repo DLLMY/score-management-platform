@@ -72,6 +72,7 @@ RUN_TS = int(time.time())
 E2E_BOX = "E2EZ%d" % RUN_TS
 
 _lock = threading.Lock()
+_sub_mid = {}            # mid -> topic，用于关联 SUBACK
 _received = []          # [(topic, payload), ...] 设备实时收到的回包
 client = None
 
@@ -80,8 +81,20 @@ def _on_connect(c, userdata, flags, rc):
     print(f"[DEVICE] connected rc={rc}")
     for t in ("score/rules/result", "phonebox/unlock/%s" % E2E_BOX,
               "score/add/result/#", "score/undo/result/#"):
-        c.subscribe(t, qos=1)
-    print(f"[DEVICE] subscribed response topics (box={E2E_BOX})")
+        try:
+            _res, mid = c.subscribe(t, qos=1)
+        except Exception as e:
+            print(f"[DEVICE][SUB] topic={t} subscribe 失败: {e}")
+            continue
+        _sub_mid[mid] = t
+    print(f"[DEVICE] 已发起 {len(_sub_mid)} 个 topic 订阅 (qos=1, 等待 SUBACK 确认)")
+
+
+def _on_subscribe(c, userdata, mid, granted_qos):
+    topic = _sub_mid.get(mid, "<未知 mid=%s>" % mid)
+    gq = list(granted_qos) if isinstance(granted_qos, (list, tuple)) else [granted_qos]
+    status = "OK" if all(q == 1 for q in gq) else "WARN(授予QoS非1)"
+    print(f"[DEVICE][SUBACK] topic={topic} granted_qos={gq} -> {status} (mid={mid})")
 
 
 def _on_message(c, userdata, msg):
@@ -170,6 +183,7 @@ def main():
     client.tls_insecure_set(True)
     client.on_connect = _on_connect
     client.on_message = _on_message
+    client.on_subscribe = _on_subscribe
     client.connect_async(BROKER, PORT, keepalive=60)
     client.loop_start()
     time.sleep(5)  # 等设备连上 broker
@@ -180,10 +194,15 @@ def main():
     mark_a = "E2EA_%d" % RUN_TS
     pl_a = _request_response("score/rules/query", {"request_id": mark_a},
                              "score/rules/result",
-                             predicate=lambda p: isinstance(p.get("rules"), list) and len(p["rules"]) > 0)
-    ok_a = bool(pl_a)
+                             predicate=lambda p: isinstance(p.get("rules"), list))
+    ok_a = bool(pl_a) and len(pl_a.get("rules", [])) > 0
+    if pl_a:
+        print(f"[DEBUG][A 回包] success={pl_a.get('success')} count={pl_a.get('count')} "
+              f"msg={pl_a.get('message')} rules_len={len(pl_a.get('rules', []))}")
     results.append(("A.score/rules/query->result", ok_a,
-                    f"rules={len(pl_a.get('rules', [])) if pl_a else 0}"))
+                    f"rules={len(pl_a.get('rules', [])) if pl_a else 0} "
+                    f"success={pl_a.get('success') if pl_a else None} "
+                    f"msg={pl_a.get('message') if pl_a else 'no response'}"))
 
     # ---- Test B: phonebox/query (真实用户 2026001) -> phonebox/unlock/<唯一box> ----
     mark_b = "E2EB_%d" % RUN_TS
