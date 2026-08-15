@@ -225,41 +225,64 @@ class RecordList(Resource):
         - operator: 操作人（默认system）
         """
         data = request.get_json() or ns_records.payload
+
         user_id = data.get("user_id")
+        if user_id is None:
+            return APIResponse.bad_request(message="user_id 为必填项")
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return APIResponse.bad_request(message="user_id 必须为整数")
+
+        score_change = data.get("score_change")
+        if score_change is None:
+            return APIResponse.bad_request(message="score_change 为必填项")
+        try:
+            score_change = float(score_change)
+        except (TypeError, ValueError):
+            return APIResponse.bad_request(message="score_change 必须为数字")
 
         # 数据隔离检查
         if not _can_access_student(user_id):
             return APIResponse.error(message="无权为该学生创建记录", status_code=403)
 
-        record = ScoreRecord(
-            user_id=user_id,
-            rule_id=data.get("rule_id"),
-            score_change=data.get("score_change"),
-            description=data.get("description"),
-            operator=data.get("operator", "system"),
-        )
+        try:
+            record = ScoreRecord(
+                user_id=user_id,
+                rule_id=data.get("rule_id"),
+                score_change=score_change,
+                description=data.get("description"),
+                operator=data.get("operator", "system"),
+            )
 
-        user = get_by_id(User, user_id)
-        if user:
-            user.current_score = (user.current_score or 0) + data.get("score_change", 0)
-            user_name = user.name
-        else:
-            user_name = "未知用户"
+            user = get_by_id(User, user_id)
+            if user:
+                user.current_score = (user.current_score or 0) + score_change
+                user_name = user.name
+            else:
+                user_name = "未知用户"
 
-        db.session.add(record)
-        db.session.commit()
+            db.session.add(record)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return APIResponse.error(message=f"创建积分记录失败: {str(e)}", status_code=500)
 
-        log_operation(
-            operation_type="score_change",
-            target_type="record",
-            target_id=record.id,
-            description=(
-                f"积分变动: {user_name} "
-                f'{"+" if data.get("score_change", 0) > 0 else ""}'
-                f'{data.get("score_change", 0)}分'
-            ),
-            after_data=data,
-        )
+        # 记录操作日志（失败不影响主流程）
+        try:
+            log_operation(
+                operation_type="score_change",
+                target_type="record",
+                target_id=record.id,
+                description=(
+                    f"积分变动: {user_name} "
+                    f'{"+" if score_change > 0 else ""}'
+                    f"{score_change}分"
+                ),
+                after_data=data,
+            )
+        except Exception:
+            pass
 
         return APIResponse.success(data={"record_id": record.id}, message="记录创建成功", status_code=201)
 

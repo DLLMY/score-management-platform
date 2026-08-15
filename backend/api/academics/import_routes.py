@@ -80,7 +80,7 @@ class ImportConfigList(Resource):
 
         configs = query.order_by(ImportConfig.module_name, ImportConfig.config_name).all()
 
-        return {"success": True, "data": [config.to_dict() for config in configs], "total": len(configs)}
+        return APIResponse.success(data=[config.to_dict() for config in configs], total=len(configs))
 
     @ns_import.doc("create_import_config", description="创建导入配置")
     @ns_import.expect(import_config_model)
