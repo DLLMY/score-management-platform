@@ -32,6 +32,8 @@
 #include <Update.h>
 #include <HTTPClient.h>
 #include <ArduinoOTA.h>
+#include <Preferences.h>      // P2: NVS 持久化 OTA 续传意图
+#include <mbedtls/md.h>       // P2: HMAC-SHA256 指令签名校验
 #include "esp_system.h"
 
 // ==================== 硬件平台自动检测 ====================
@@ -90,6 +92,13 @@ void detectPlatform() {
 #define CONFIG_VERSION  100
 #define DEBUG_VERSION   15              // 每次烧录需要重置时递增此值
 #define FIRMWARE_VERSION "2.5"          // 固件版本号，OTA升级时用于标识
+#define DEVICE_TYPE "phonebox"           // 设备类型，主动上报用（手机箱）
+
+// P2: OTA 指令签名校验密钥（须与后端 OTA_SIGNING_SECRET 完全一致；留空则关闭验签，仅打印告警）
+// 注意：本密钥编译进固件，仅为“防伪造广播”基础防护，非硬件级安全。生产建议配合 TLS + 设备级密钥下发。
+#ifndef OTA_SIGNING_SECRET
+#define OTA_SIGNING_SECRET ""
+#endif
 #define AP_SSID         "PhoneBox-Config"
 #define AP_PASSWORD     "12345678"
 #define RFID_BAUD_RATE  9600
@@ -167,6 +176,9 @@ static struct {
   bool otaPending;         // 是否有OTA升级待处理
   String otaTargetVersion; // 目标固件版本号
   bool otaForceUpdate;     // 是否强制升级（忽略版本检查）
+  String otaMd5;           // P2: 固件MD5（用于 Update.setMD5 完整性校验，可选）
+  String otaSignature;     // P2: OTA指令 HMAC-SHA256 签名（可选）
+  String otaFwId;          // P2: 固件ID（签名校验用，对应后端 firmware.id）
 } stateVars;
 
 void loadConfig();
@@ -195,7 +207,18 @@ void initNF01();
 void processRFID();
 void performOTAUpdate(const String& url);
 void sendOTAStatus(const String& status, int progress = -1);
+void sendDeviceRegister();
 void testPins();
+int cmpVer(const String& a, const String& b);  // 语义化版本比较：a>b 返回 1，a<b 返回 -1，相等返回 0
+
+// OTA P2 辅助函数声明（具体实现位于 performOTAUpdate 之前）
+void saveOtaIntent(const String& url, const String& md5, const String& sig, const String& fwId, const String& ver);
+bool loadOtaIntent(String& url, String& md5, String& sig, String& fwId, String& ver);
+void clearOtaIntent();
+bool hasOtaIntent();
+void markOtaPendingValidate(bool v);
+bool isOtaPendingValidate();
+bool verifyOtaSignature(const String& secret, const String& fwId, const String& version, const String& url, const String& signatureHex);
 
 void loadConfig() {
   EEPROM.begin(EEPROM_SIZE);
@@ -290,6 +313,7 @@ void sendHeartbeat() {
   doc["timestamp"] = millis() / 1000;
   doc["status"] = "online";
   doc["fw_version"] = FIRMWARE_VERSION;
+  doc["device_type"] = DEVICE_TYPE;
   doc["platform"] = platformName;
   doc["wifi_signal"] = WiFi.RSSI();
   doc["free_heap"] = ESP.getFreeHeap();
@@ -438,25 +462,28 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // OTA固件升级指令
-  if (String(topic) == TOPIC_OTA) {
+  // OTA固件升级指令（同时支持全局广播 topic 与本设备专属 topic）
+  if (String(topic) == TOPIC_OTA || String(topic) == String("phonebox/ota/") + String(config.mqtt_client_id)) {
     Serial.println("=== OTA升级指令收到 ===");
     StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, message);
     if (!error) {
-      const char* url = doc["url"];
+      const char* url = doc["url"] | doc["download_url"];  // 兼容后端 url / download_url 两种键名
       const char* action = doc["action"] | "update";
       const char* version = doc["version"] | "";
       bool force = doc["force"] | false;
+      const char* md5 = doc["md5"] | "";           // P2: 固件MD5（可选）
+      const char* signature = doc["signature"] | ""; // P2: 指令HMAC-SHA256签名（可选）
+      const char* fwId = doc["id"] | "";            // P2: 固件ID（签名校验用）
       
       if (url && strlen(url) > 0 && String(action) == "update") {
         Serial.printf("OTA固件URL: %s\n", url);
         Serial.printf("目标版本: %s\n", strlen(version) > 0 ? version : "未知");
         Serial.printf("强制升级: %s\n", force ? "是" : "否");
         
-        // 版本检查（非强制模式下）
+        // 版本检查（非强制模式下，使用语义化比较以支持 2.10 > 2.9 这类多段版本）
         if (!force && strlen(version) > 0) {
-          if (String(version) <= FIRMWARE_VERSION) {
+          if (cmpVer(version, FIRMWARE_VERSION) <= 0) {
             Serial.printf("版本检查失败: 当前版本%s >= 目标版本%s\n", FIRMWARE_VERSION, version);
             sendOTAStatus("version_check_failed", -1);
             return;
@@ -468,6 +495,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         stateVars.otaPending = true;
         stateVars.otaTargetVersion = String(version);
         stateVars.otaForceUpdate = force;
+        stateVars.otaMd5 = String(md5);              // P2
+        stateVars.otaSignature = String(signature);  // P2
+        stateVars.otaFwId = String(fwId);            // P2
+        // P2: 持久化OTA意图到NVS，断电/重启后可自动续传
+        saveOtaIntent(String(url), String(md5), String(signature), String(fwId), String(version));
         
         // 立即回复收到指令的确认
         sendOTAStatus("command_received", -1);
@@ -711,7 +743,10 @@ void reconnect() {
       mqtt.subscribe(TOPIC_UNLOCK_A);
       mqtt.subscribe(TOPIC_UNLOCK_B);
       mqtt.subscribe("phonebox/test/gpio4");  // 订阅测试topic
-      mqtt.subscribe(TOPIC_OTA);             // 订阅OTA升级指令topic
+      mqtt.subscribe(TOPIC_OTA);             // 订阅OTA升级指令topic（全局广播，兼容旧版）
+      // 订阅本设备专属 OTA 指令 topic，使后端按 device_id 精确推送可达（修复指令到不了设备的阻断项）
+      mqtt.subscribe((String("phonebox/ota/") + config.mqtt_client_id).c_str());
+      sendDeviceRegister();                  // 上电/重连主动上报设备类型与版本
       oledShow("手机管理箱 v" FIRMWARE_VERSION, "A箱:远程等待", "B箱:请刷卡", "MQTT已连接");
       
       sendStatus("A", "closed");
@@ -1041,8 +1076,54 @@ void sendOTAStatus(const String& status, int progress) {
   
   String jsonStr;
   serializeJson(doc, jsonStr);
-  mqtt.publish(TOPIC_OTA_STATUS, jsonStr.c_str());
+  String otaDevStatusTopic = String("phonebox/ota/") + String(config.mqtt_client_id) + "/status";
+  mqtt.publish(otaDevStatusTopic.c_str(), jsonStr.c_str());
   Serial.printf("OTA状态: %s\n", jsonStr.c_str());
+}
+
+/**
+ * @brief 设备主动注册 / 类型上报
+ *
+ * 上电或重连 MQTT 后调用，向 phonebox/ota/register 上报设备类型与当前版本，
+ * 供后端进行设备类型识别与后续版本协商（无缝 OTA 第一步）。
+ */
+void sendDeviceRegister() {
+  if (!mqtt.connected()) return;
+
+  StaticJsonDocument<256> doc;
+  doc["device_id"] = String(config.mqtt_client_id);
+  doc["device_type"] = DEVICE_TYPE;
+  doc["fw_version"] = FIRMWARE_VERSION;
+  doc["platform"] = platformName;
+  doc["timestamp"] = millis() / 1000;
+
+  String jsonStr;
+  serializeJson(doc, jsonStr);
+  mqtt.publish("phonebox/ota/register", jsonStr.c_str());
+  Serial.printf("设备注册上报: %s\n", jsonStr.c_str());
+}
+
+/**
+ * @brief 语义化版本比较
+ * @return 1 表示 a>b；-1 表示 a<b；0 表示相等（支持 "2.10" > "2.9" 这种多段版本）
+ */
+int cmpVer(const String& a, const String& b) {
+  int aParts[4] = {0, 0, 0, 0};
+  int bParts[4] = {0, 0, 0, 0};
+  char bufA[32];
+  char bufB[32];
+  strncpy(bufA, a.c_str(), 31); bufA[31] = 0;
+  strncpy(bufB, b.c_str(), 31); bufB[31] = 0;
+  char* tok = strtok(bufA, ".");
+  int i = 0;
+  while (tok && i < 4) { aParts[i++] = atoi(tok); tok = strtok(NULL, "."); }
+  tok = strtok(bufB, ".");
+  i = 0;
+  while (tok && i < 4) { bParts[i++] = atoi(tok); tok = strtok(NULL, "."); }
+  for (int j = 0; j < 4; j++) {
+    if (aParts[j] != bParts[j]) return aParts[j] > bParts[j] ? 1 : -1;
+  }
+  return 0;
 }
 
 /**
@@ -1091,158 +1172,333 @@ void testPins() {
   Serial.println("[引脚测试] 完成");
 }
 
+// ==================== OTA P2：安全校验 / 断点续传 / 安全回滚 ====================
+Preferences otaPrefs;
+#define OTA_NVS_NS "otaimg"
+
+// 保存 OTA 意图（命令参数）到 NVS，供重启后自动恢复续传
+void saveOtaIntent(const String& url, const String& md5, const String& sig, const String& fwId, const String& ver) {
+  otaPrefs.begin(OTA_NVS_NS, false);
+  otaPrefs.putString("url", url);
+  otaPrefs.putString("md5", md5);
+  otaPrefs.putString("sig", sig);
+  otaPrefs.putString("fwId", fwId);
+  otaPrefs.putString("ver", ver);
+  otaPrefs.putInt("offset", 0);
+  otaPrefs.end();
+}
+
+bool loadOtaIntent(String& url, String& md5, String& sig, String& fwId, String& ver) {
+  otaPrefs.begin(OTA_NVS_NS, true);
+  bool ok = otaPrefs.isKey("url");
+  if (ok) {
+    url  = otaPrefs.getString("url", "");
+    md5  = otaPrefs.getString("md5", "");
+    sig  = otaPrefs.getString("sig", "");
+    fwId = otaPrefs.getString("fwId", "");
+    ver  = otaPrefs.getString("ver", "");
+  }
+  otaPrefs.end();
+  return ok;
+}
+
+void clearOtaIntent() {
+  otaPrefs.begin(OTA_NVS_NS, false);
+  otaPrefs.clear();
+  otaPrefs.end();
+}
+
+bool hasOtaIntent() {
+  otaPrefs.begin(OTA_NVS_NS, true);
+  bool ok = otaPrefs.isKey("url");
+  otaPrefs.end();
+  return ok;
+}
+
+// 升级成功后置位“待验证”；新固件成功启动后由 setup() 调用 markAppValidNewPartition 提交
+void markOtaPendingValidate(bool v) {
+  otaPrefs.begin(OTA_NVS_NS, false);
+  otaPrefs.putInt("pending_validate", v ? 1 : 0);
+  otaPrefs.end();
+}
+
+bool isOtaPendingValidate() {
+  otaPrefs.begin(OTA_NVS_NS, true);
+  int v = otaPrefs.getInt("pending_validate", 0);
+  otaPrefs.end();
+  return v == 1;
+}
+
+// HMAC-SHA256 校验：msg = "fwId:version:url"（与后端 sign_ota_command 保持一致）
+bool verifyOtaSignature(const String& secret, const String& fwId, const String& version, const String& url, const String& signatureHex) {
+  if (secret.length() == 0) {
+    Serial.println("[OTA签名] 设备未配置密钥，跳过验签（仅告警）");
+    return true;  // 未配置密钥：不强制验签（运维需保证后端也未配置签名）
+  }
+  if (signatureHex.length() == 0) {
+    Serial.println("[OTA签名] 已启用验签但指令未携带签名，拒绝升级");
+    return false;
+  }
+  String msg = fwId + ":" + version + ":" + url;
+  uint8_t out[32];
+  mbedtls_md_context_t ctx;
+  mbedtls_md_init(&ctx);
+  const mbedtls_md_info_t* info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  if (!info || mbedtls_md_setup(&ctx, info, 1) != 0) {  // 第3参数=1 表示启用 HMAC
+    mbedtls_md_free(&ctx);
+    Serial.println("[OTA签名] mbedTLS 初始化失败");
+    return false;
+  }
+  bool ok = true;
+  if (mbedtls_md_hmac_starts(&ctx, (const unsigned char*)secret.c_str(), secret.length()) != 0) ok = false;
+  if (ok && mbedtls_md_hmac_update(&ctx, (const unsigned char*)msg.c_str(), msg.length()) != 0) ok = false;
+  if (ok && mbedtls_md_hmac_finish(&ctx, out) != 0) ok = false;
+  mbedtls_md_free(&ctx);
+  if (!ok) { Serial.println("[OTA签名] HMAC 计算失败"); return false; }
+  char calc[65];
+  for (int i = 0; i < 32; i++) sprintf(calc + i * 2, "%02x", out[i]);
+  calc[64] = 0;
+  bool match = (strcmp(calc, signatureHex.c_str()) == 0);
+  Serial.printf("[OTA签名] 校验 %s\n", match ? "通过" : "失败");
+  return match;
+}
+
 void performOTAUpdate(const String& url) {
   Serial.println("========================================");
-  Serial.println("开始OTA固件升级");
+  Serial.println("开始OTA固件升级 (P2: 校验/续传/安全回滚)");
   Serial.printf("固件URL: %s\n", url.c_str());
   Serial.printf("当前版本: %s\n", FIRMWARE_VERSION);
   Serial.println("========================================");
-  
+
+  // 0. 指令签名校验（防伪造固件广播推送）
+  if (!verifyOtaSignature(String(OTA_SIGNING_SECRET), stateVars.otaFwId, stateVars.otaTargetVersion, url, stateVars.otaSignature)) {
+    Serial.println("[OTA] 签名校验未通过，拒绝升级");
+    sendOTAStatus("signature_failed", -1);
+    clearOtaIntent();
+    delay(2000);
+    ESP.restart();
+    return;
+  }
+
   // 1. 安全操作：关闭所有继电器
   digitalWrite(RELAY_A, LOW);
   digitalWrite(RELAY_B, LOW);
   setLED(true, false);  // 红灯亮，表示升级中
-  
+
   // 2. 断开MQTT连接，避免升级过程中收到消息干扰
   if (mqtt.connected()) {
     mqtt.disconnect();
     delay(100);
   }
-  
+
   oledShow("OTA固件升级", "正在连接服务器...", "", "");
   sendOTAStatus("started", 0);
-  
-  // 3. 配置HTTP客户端（支持HTTP和HTTPS）
+
+  // 3. 配置HTTP客户端（支持HTTP和HTTPS），并首次请求获取固件大小
   HTTPClient http;
   http.setTimeout(30000);  // 30秒超时
-  
-  // 根据URL协议选择Client
+  WiFiClientSecure* pSecure = nullptr;
+  WiFiClient* pPlain = nullptr;
+  #define OTA_FREE_CLIENT() do { if (pSecure) { delete pSecure; pSecure = nullptr; } if (pPlain) { delete pPlain; pPlain = nullptr; } } while (0)
   if (url.startsWith("https://")) {
-    WiFiClientSecure httpsClient;
-    httpsClient.setInsecure();  // 跳过证书验证
-    http.begin(httpsClient, url);
+    pSecure = new WiFiClientSecure;
+    pSecure->setInsecure();  // 跳过证书验证
+    http.begin(*pSecure, url);   // 必须传派生类引用以启用 TLS
   } else {
-    WiFiClient wifiClient;
-    http.begin(wifiClient, url);
+    pPlain = new WiFiClient;
+    http.begin(*pPlain, url);
   }
-  
+
   // 4. 发送HTTP GET请求
   int httpCode = http.GET();
   Serial.printf("HTTP响应码: %d\n", httpCode);
-  
+
   if (httpCode <= 0) {
     Serial.printf("HTTP请求失败: %s\n", http.errorToString(httpCode).c_str());
     oledShow("OTA下载失败", "HTTP请求失败", "将自动重启...", "");
     sendOTAStatus("download_failed", -1);
     http.end();
+    OTA_FREE_CLIENT();
     delay(3000);
     ESP.restart();
     return;
   }
-  
-  if (httpCode != HTTP_CODE_OK) {
+  if (httpCode != HTTP_CODE_OK && httpCode != HTTP_CODE_PARTIAL_CONTENT) {
     Serial.printf("HTTP状态码异常: %d\n", httpCode);
     oledShow("OTA下载失败", "HTTP " + String(httpCode), "将自动重启...", "");
     sendOTAStatus("download_failed", -1);
     http.end();
+    OTA_FREE_CLIENT();
     delay(3000);
     ESP.restart();
     return;
   }
-  
+
   // 5. 获取固件大小
   int contentLength = http.getSize();
   if (contentLength <= 0) {
     contentLength = 0x100000;  // 未知大小，使用1MB估算
     Serial.println("警告: 无法获取固件大小，使用默认值");
   }
-  
   Serial.printf("固件大小: %d 字节\n", contentLength);
-  
+
   // 6. 检查可用空间
-  if (contentLength > ESP.getFreeSketchSpace()) {
-    Serial.printf("空间不足！需要: %d, 可用: %d\n", 
+  if (contentLength > (int)ESP.getFreeSketchSpace()) {
+    Serial.printf("空间不足！需要: %d, 可用: %d\n",
                   contentLength, ESP.getFreeSketchSpace());
     oledShow("OTA升级失败", "空间不足", "将自动重启...", "");
     sendOTAStatus("space_insufficient", -1);
     http.end();
+    OTA_FREE_CLIENT();
     delay(3000);
     ESP.restart();
     return;
   }
-  
+
   // 7. 开始OTA写入
   if (!Update.begin(contentLength)) {
     Serial.printf("Update.begin() 失败，错误码: %d\n", Update.getError());
     oledShow("OTA开始失败", "错误码:" + String(Update.getError()), "将自动重启...", "");
     sendOTAStatus("begin_failed", -1);
     http.end();
+    OTA_FREE_CLIENT();
     delay(3000);
     ESP.restart();
     return;
   }
-  
+  // P2: 设置MD5完整性校验（仅当后端下发了32位合法MD5）
+  if (stateVars.otaMd5.length() == 32) {
+    Update.setMD5(stateVars.otaMd5.c_str());
+    Serial.printf("OTA MD5校验已启用: %s\n", stateVars.otaMd5.c_str());
+  } else {
+    Serial.println("OTA 未提供有效MD5（需32位十六进制），跳过MD5校验");
+  }
+
   oledShow("OTA固件升级", "正在下载固件...", "", "");
   sendOTAStatus("downloading", 0);
-  
-  // 8. 流式写入固件数据
+
+  // 8. 流式写入 + 断点续传（网络中断时以 HTTP Range 从已写偏移续传，最多 MAX_RESUME 次）
   WiFiClient* stream = http.getStreamPtr();
   uint8_t buffer[1024];
   size_t written = 0;
   int lastProgress = -1;
   unsigned long lastReportTime = millis();
-  
-  while (http.connected() && (written < (size_t)contentLength)) {
-    size_t available = stream->available();
-    if (available == 0) {
-      delay(1);
-      // 防止死循环：30秒无数据则超时
-      if (millis() - lastReportTime > 30000) {
-        Serial.println("下载超时");
-        break;
+  const int MAX_RESUME = 5;
+  int resumeCount = 0;
+  bool done = false;
+
+  while (!done) {
+    while (http.connected() && written < (size_t)contentLength) {
+      size_t available = stream->available();
+      if (available == 0) {
+        delay(1);
+        // 防止死循环：30秒无数据则超时
+        if (millis() - lastReportTime > 30000) {
+          Serial.println("下载超时");
+          break;
+        }
+        continue;
       }
-      continue;
+      size_t toRead = (available > sizeof(buffer)) ? sizeof(buffer) : available;
+      size_t bytesRead = stream->readBytes(buffer, toRead);
+      if (bytesRead > 0) {
+        size_t bytesWritten = Update.write(buffer, bytesRead);
+        if (bytesWritten != bytesRead) {
+          Serial.printf("写入错误: 期望%d字节，实际写入%d字节\n", bytesRead, bytesWritten);
+        }
+        written += bytesWritten;
+        lastReportTime = millis();
+        // 每10%上报一次进度
+        int progress = (contentLength > 0) ? (written * 100 / contentLength) : 0;
+        if (progress >= lastProgress + 10) {
+          lastProgress = progress;
+          oledShow("OTA固件升级", "进度: " + String(progress) + "%",
+                   String(written / 1024) + "KB/" + String(contentLength / 1024) + "KB", "");
+          sendOTAStatus("updating", progress);
+          Serial.printf("OTA进度: %d%% (%d/%d)\n", progress, written, contentLength);
+          // 持久化断点偏移（重启后 loop() 据 NVS 意图自动恢复；OTA 分区不可 seek，故跨重启为整包重下）
+          otaPrefs.begin(OTA_NVS_NS, false);
+          otaPrefs.putInt("offset", (int)written);
+          otaPrefs.end();
+        }
+      }
     }
-    
-    size_t toRead = (available > sizeof(buffer)) ? sizeof(buffer) : available;
-    size_t bytesRead = stream->readBytes(buffer, toRead);
-    if (bytesRead > 0) {
-      size_t bytesWritten = Update.write(buffer, bytesRead);
-      if (bytesWritten != bytesRead) {
-        Serial.printf("写入错误: 期望%d字节，实际写入%d字节\n", bytesRead, bytesWritten);
-      }
-      written += bytesWritten;
+
+    // 已全部写入则完成
+    if (written >= (size_t)contentLength) { done = true; break; }
+
+    // 未完成且连接断开：尝试断点续传
+    http.end();
+    OTA_FREE_CLIENT();
+    if (resumeCount >= MAX_RESUME) {
+      Serial.println("[OTA] 续传次数超限，升级失败");
+      oledShow("OTA升级失败", "网络续传超时", "将重启回滚...", "");
+      sendOTAStatus("resume_exhausted", -1);
+      clearOtaIntent();
+      delay(5000);
+      ESP.restart();
+      return;
+    }
+    resumeCount++;
+    Serial.printf("[OTA] 连接中断，断点续传第%d次 (已写%d/%d)\n", resumeCount, written, contentLength);
+    sendOTAStatus("resuming", (contentLength > 0) ? (written * 100 / contentLength) : 0);
+
+    // 重新建立连接并请求 Range
+    WiFiClientSecure* rs = nullptr;
+    WiFiClient* rw = nullptr;
+    if (url.startsWith("https://")) {
+      rs = new WiFiClientSecure; rs->setInsecure();
+      http.begin(*rs, url);
+    } else {
+      rw = new WiFiClient;
+      http.begin(*rw, url);
+    }
+    String range = "bytes=" + String(written) + "-";
+    http.setRequestHeader("Range", range);
+    int rc = http.GET();
+    if (rc == HTTP_CODE_PARTIAL_CONTENT) {
+      // 服务器支持 Range，从偏移继续（Update 会话保持，继续 append 即可）
+      stream = http.getStreamPtr();
       lastReportTime = millis();
-      
-      // 每10%上报一次进度
-      int progress = (contentLength > 0) ? (written * 100 / contentLength) : 0;
-      if (progress >= lastProgress + 10) {
-        lastProgress = progress;
-        oledShow("OTA固件升级", "进度: " + String(progress) + "%", 
-                 String(written / 1024) + "KB/" + String(contentLength / 1024) + "KB", "");
-        sendOTAStatus("updating", progress);
-        Serial.printf("OTA进度: %d%% (%d/%d)\n", progress, written, contentLength);
-      }
+      Serial.printf("[OTA] 续传连接成功(Range 206)，从 %d 继续\n", written);
+    } else if (rc == HTTP_CODE_OK) {
+      // 服务器不支持 Range，返回整包；OTA 分区不可 seek，无法续传 -> 重启由 NVS 意图整包重下
+      Serial.println("[OTA] 服务器不支持Range，整包重下（重启恢复）");
+      sendOTAStatus("resume_unsupported", -1);
+      http.end();
+      if (rs) delete rs;
+      if (rw) delete rw;
+      delay(2000);
+      ESP.restart();  // 保留 NVS 意图，loop() 将重新触发整包下载
+      return;
+    } else {
+      // 续传请求异常，清理后回到外层循环再试（消耗一次重试额度）
+      Serial.printf("[OTA] 续传请求失败，HTTP %d，稍后重试\n", rc);
+      http.end();
+      if (rs) delete rs;
+      if (rw) delete rw;
     }
   }
-  
-  http.end();
-  
+
+  OTA_FREE_CLIENT();
+
   Serial.printf("下载完成: %d 字节 (期望 %d 字节)\n", written, contentLength);
-  
+
   // 9. 完成OTA写入
-  if (written > 0 && Update.end(true)) {
+  if (done && written > 0 && Update.end(true)) {
     if (Update.isFinished()) {
-      Serial.println("OTA升级成功！即将重启...");
+      Serial.println("OTA升级成功！标记待验证并重启...");
       oledShow("OTA升级成功", "版本: " FIRMWARE_VERSION, "即将重启...", "");
       sendOTAStatus("success", 100);
       setLED(false, true);  // 绿灯亮，升级成功
+      markOtaPendingValidate(true);  // 新固件启动后须确认有效，否则 Bootloader 自动回滚到旧分区
       delay(3000);
       ESP.restart();
     } else {
       Serial.printf("Update.end() 成功但未标记完成，错误: %d\n", Update.getError());
       oledShow("OTA异常", "错误码:" + String(Update.getError()), "尝试重启...", "");
       sendOTAStatus("incomplete", -1);
+      clearOtaIntent();
       delay(3000);
       ESP.restart();
     }
@@ -1251,6 +1507,7 @@ void performOTAUpdate(const String& url) {
     oledShow("OTA升级失败", "错误码:" + String(Update.getError()), "将重启回滚...", "");
     sendOTAStatus("failed", -1);
     setLED(true, false);  // 红灯亮，升级失败
+    clearOtaIntent();     // 清除意图，避免重启后无限重试
     delay(5000);
     ESP.restart();
   }
@@ -1266,7 +1523,14 @@ void setup() {
   Serial.println("======================================");
   Serial.printf("固件版本: v%s\n", FIRMWARE_VERSION);
   Serial.printf("编译时间: %s %s\n", __DATE__, __TIME__);
-  
+
+  // OTA P2：若上次升级写入了新分区且本次成功启动，则提交生效（否则 Bootloader 自动回滚到旧分区）
+  if (isOtaPendingValidate()) {
+    Update.markAppValidNewPartition();
+    clearOtaIntent();
+    Serial.println("[OTA] 新固件已成功启动并通过验证，提交生效");
+  }
+
   // 检测硬件平台
   detectPlatform();
   
@@ -1393,6 +1657,20 @@ void loop() {
   
   updateBeep();
   
+  // OTA P2：若 NVS 中存在未完成的 OTA 意图（如升级中途断电重启），自动恢复续传
+  if (!stateVars.otaPending && currentState != STATE_OTA_UPDATING && hasOtaIntent()) {
+    String u, m, s, fid, v;
+    if (loadOtaIntent(u, m, s, fid, v)) {
+      stateVars.otaUrl = u;
+      stateVars.otaMd5 = m;
+      stateVars.otaSignature = s;
+      stateVars.otaFwId = fid;
+      stateVars.otaTargetVersion = v;
+      stateVars.otaPending = true;
+      Serial.println("[OTA] 检测到未完成的OTA意图，自动恢复升级");
+    }
+  }
+
   // OTA远程升级：在loop中安全处理（避免在MQTT回调中阻塞）
   if (stateVars.otaPending && currentState != STATE_OTA_UPDATING) {
     stateVars.otaPending = false;

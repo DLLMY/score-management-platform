@@ -354,13 +354,60 @@ class MQTTManager:
     def _process_critical_message(self, topic, message):
         """立即处理关键消息（如刷卡查询、OTA状态）"""
         if topic.startswith("phonebox/ota/"):
-            self._process_ota_status(topic, message)
+            if topic.endswith("/status") or topic == "phonebox/ota/status":
+                self._process_ota_status(topic, message)
+            elif topic.endswith("/register") or topic == "phonebox/ota/register":
+                self._process_ota_register(topic, message)
 
         for callback in self._message_callbacks:
             try:
                 callback(topic, message)
             except Exception as e:
                 print(f"[MQTTManager] 消息回调处理错误: {e}")
+
+    def _process_ota_register(self, topic, message):
+        """处理设备主动注册 / 类型上报（phonebox/ota/register 或 phonebox/ota/{device_id}/register）"""
+        try:
+            data = json.loads(message)
+            # 优先取 payload 中的 device_id；否则从 topic 解析（phonebox/ota/{device_id}）
+            device_id = data.get("device_id")
+            if not device_id and topic != "phonebox/ota/register":
+                parts = topic.split("/")
+                if len(parts) >= 3:
+                    device_id = parts[2]
+            if not device_id:
+                return
+
+            device_type = data.get("device_type")
+            fw_version = data.get("fw_version")
+            platform = data.get("platform")
+
+            from app import app
+            from models import db, Device
+
+            with app.app_context():
+                device = Device.query.filter_by(device_id=device_id).first()
+                if not device:
+                    device = Device(device_id=device_id, name=f"设备 {device_id}", status="online")
+                    db.session.add(device)
+                device.status = "online"
+                device.last_heartbeat = datetime.now()
+                if fw_version:
+                    device.fw_version = fw_version
+                if platform:
+                    device.platform = platform
+                if device_type:
+                    device.device_type = device_type
+                db.session.commit()
+                print(f"[OTA] 设备注册/类型上报: {device_id} type={device_type} fw={fw_version}")
+                # 版本协商 + 可能自动推送（无缝 OTA 闭环）
+                try:
+                    from services.ota_negotiation_service import try_auto_negotiate
+                    try_auto_negotiate(device)
+                except Exception as neg_e:
+                    print(f"[OTA] 协商跳过（异常）: {neg_e}")
+        except Exception as e:
+            print(f"[OTA] 处理设备注册失败: {e}")
 
     def _process_ota_status(self, topic, message):
         """处理OTA状态消息
@@ -380,9 +427,12 @@ class MQTTManager:
             print(f"[OTA] 设备 {device_id} OTA状态更新: status={status}, progress={progress}%")
 
             from app import app
-            from models import db, DeviceFirmwareUpdate, OperationLog
+            from models import db, Device, DeviceFirmwareUpdate, OperationLog
 
             with app.app_context():
+                device = Device.query.filter_by(device_id=device_id).first()
+                device_ota_status = None
+
                 if status == "started":
                     record = DeviceFirmwareUpdate(
                         device_id=device_id,
@@ -394,6 +444,8 @@ class MQTTManager:
                     db.session.add(record)
                     db.session.commit()
                     print(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
+                    if device:
+                        device_ota_status = "upgrading"
 
                 elif status == "downloading" or status == "updating":
                     record = (
@@ -406,6 +458,8 @@ class MQTTManager:
 
                     if record:
                         print(f"[OTA] 设备 {device_id} 升级进度: {progress}%")
+                    if device:
+                        device_ota_status = "upgrading"
                     else:
                         record = DeviceFirmwareUpdate(
                             device_id=device_id,
@@ -431,6 +485,11 @@ class MQTTManager:
                         record.completed_at = datetime.now()
                         db.session.commit()
                         print(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
+                    if device:
+                        device_ota_status = "idle"
+                        if to_version:
+                            device.fw_version = to_version
+                        device.last_ota_push_at = None
 
                     log = OperationLog(
                         operation_type="firmware_upgrade_success",
@@ -457,6 +516,8 @@ class MQTTManager:
                         record.error_message = error_message
                         db.session.commit()
                         print(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
+                    if device:
+                        device_ota_status = "failed"
 
                     log = OperationLog(
                         operation_type="firmware_upgrade_failed",
@@ -466,6 +527,11 @@ class MQTTManager:
                         description=f"设备 {device_id} 固件升级失败: {from_version} -> {to_version}, 错误: {error_message}",
                     )
                     db.session.add(log)
+                    db.session.commit()
+
+                # 回写设备 OTA 状态（无缝闭环自愈：升级成功/失败/进行中）
+                if device is not None and device_ota_status is not None:
+                    device.ota_status = device_ota_status
                     db.session.commit()
 
         except Exception as e:
@@ -500,6 +566,8 @@ class MQTTManager:
                     device.system_state = data.get("system_state")
                     device.fw_version = data.get("fw_version")
                     device.platform = data.get("platform")
+                    if data.get("device_type") is not None:
+                        device.device_type = data.get("device_type")
                     device.free_heap = data.get("free_heap")
                     device.updated_at = datetime.now()
 
@@ -527,6 +595,12 @@ class MQTTManager:
                         db.session.add(heartbeat)
                     db.session.commit()
                     print(f"设备心跳更新成功: {device_id}")
+                    # 版本协商 + 可能自动推送（无缝 OTA 闭环）
+                    try:
+                        from services.ota_negotiation_service import try_auto_negotiate
+                        try_auto_negotiate(device)
+                    except Exception as neg_e:
+                        print(f"[OTA] 协商跳过（异常）: {neg_e}")
 
                     # 通过WebSocket发送设备状态更新
                     try:

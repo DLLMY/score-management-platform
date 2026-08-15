@@ -11,6 +11,7 @@ from utils.response import APIResponse
 from hashlib import md5
 import hashlib
 from services.mqtt_service import mqtt_manager
+from services.ota_negotiation_service import build_download_url, negotiate_all_devices, sign_ota_command
 
 ns_firmware = Namespace("firmware", description="Firmware management operations")
 
@@ -434,17 +435,22 @@ class BatchUpgrade(Resource):
 
         from services.mqtt_manager import mqtt_manager
 
+        url = build_download_url(firmware, request)
+        sig = sign_ota_command(firmware, url)
         results = []
         for device_id in device_ids:
-            mqtt_manager.publish_ota_command(
-                device_id,
-                {
-                    "version": firmware.version,
-                    "download_url": f"/api/firmware/download/{firmware.id}",
-                    "md5": firmware.md5,
-                    "is_mandatory": firmware.is_mandatory,
-                },
-            )
+            payload = {
+                "id": firmware.id,
+                "url": url,
+                "download_url": f"/api/firmware/download/{firmware.id}",
+                "version": firmware.version,
+                "md5": firmware.md5,
+                "is_mandatory": firmware.is_mandatory,
+                "force": True,
+            }
+            if sig:
+                payload["signature"] = sig
+            mqtt_manager.publish_ota_command(device_id, payload)
 
             results.append({"device_id": device_id, "status": "command_sent"})
 
@@ -663,16 +669,21 @@ class FirmwareOTAUpgrade(Resource):
             return APIResponse.error(message="Firmware version is not active", status_code=400)
 
         results = []
+        url = build_download_url(firmware, request)
+        sig = sign_ota_command(firmware, url)
         for device_id in device_ids:
-            mqtt_manager.publish_ota_command(
-                str(device_id),
-                {
-                    "version": firmware.version,
-                    "download_url": f"/api/firmware/download/{firmware.id}",
-                    "md5": firmware.md5,
-                    "is_mandatory": firmware.is_mandatory,
-                },
-            )
+            payload = {
+                "id": firmware.id,
+                "url": url,
+                "download_url": f"/api/firmware/download/{firmware.id}",
+                "version": firmware.version,
+                "md5": firmware.md5,
+                "is_mandatory": firmware.is_mandatory,
+                "force": True,
+            }
+            if sig:
+                payload["signature"] = sig
+            mqtt_manager.publish_ota_command(str(device_id), payload)
 
             results.append({"device_id": device_id, "status": "command_sent"})
 
@@ -749,3 +760,36 @@ class OTAStatus(Resource):
                 for r in records[:20]
             ],
         }
+
+
+@ns_firmware.route("/negotiate-all")
+class OTAFirmwareNegotiateAll(Resource):
+    @ns_firmware.doc("negotiate_all", description="Trigger firmware negotiation for all devices")
+    @ns_firmware.response(200, "Success")
+    @requires_permission("device.manage")
+    def post(self):
+        """
+        对全部已上报版本的设备触发 OTA 版本协商扫描。
+
+        逐个比对最新 active 固件：版本落后且 auto_update 开启的设备会被调度自动推送
+        （带滚动抖动）。支持灰度/分批：
+          - stage_percent: 仅推送可升级设备的前 N%（如 10 先灰度，再 50、100 推进）
+          - batch_size:    每批设备数，>0 时批间隔 OTA_STAGE_BATCH_INTERVAL_SEC 错峰
+        返回 checked / eligible / scheduled 计数，便于运维确认推送范围。
+        """
+        body = request.get_json(silent=True) or {}
+        stage_percent = body.get("stage_percent")
+        batch_size = body.get("batch_size")
+        if stage_percent is not None:
+            try:
+                stage_percent = int(stage_percent)
+            except (ValueError, TypeError):
+                return APIResponse.error(message="stage_percent 必须为整数", status_code=400)
+        if batch_size is not None:
+            try:
+                batch_size = int(batch_size)
+            except (ValueError, TypeError):
+                return APIResponse.error(message="batch_size 必须为整数", status_code=400)
+        result = negotiate_all_devices(stage_percent=stage_percent, batch_size=batch_size)
+        return APIResponse.success(data=result)
+

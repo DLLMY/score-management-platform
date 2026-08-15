@@ -399,6 +399,10 @@ class Device(db.Model):
     ip_address = db.Column(db.String(45))
     fw_version = db.Column(db.String(20))
     platform = db.Column(db.String(50))
+    device_type = db.Column(db.String(50))
+    auto_update = db.Column(db.Boolean, default=True)  # 是否允许后端自动推送 OTA
+    ota_status = db.Column(db.String(20), default="idle")  # idle/pending/upgrading/failed
+    last_ota_push_at = db.Column(db.DateTime)  # 最近一次自动推送指令下发时间
     free_heap = db.Column(db.Integer)
     last_error = db.Column(db.String(500))
     error_count = db.Column(db.Integer, default=0)

@@ -1,56 +1,53 @@
 # 管理平台设计 — 长期记忆
 
 ## 运行 / 测试
-- 后端：系统 Python 3.11（带 torch）`python run.py --env development --host 127.0.0.1 --port 5000`；入口 `app/` 包 `get_app()`；顶层 `backend/app.py` 是占位死代码勿改；改启动/MQTT 改 `app/service_init.py::init_mqtt`。改后端须强杀全部 python 重启（Flask-SocketIO 不 reload）。
-- 前端：Vite dev，proxy /api、/ws → 127.0.0.1:5000；3000 被占跳 3005/3006；验证 build 用 `node node_modules/vite/bin/vite.js build --logLevel warn`（勿单跑 tsc --noEmit）。
-- pytest：3.11 + `-p no:locust --timeout=300`。全量 ~35min / 1633 passed + 9 skipped。前端 vitest 149 passed；e2e 21/21（须 `mode:'serial'`，后端先起）。
+- 后端：系统 Python 3.11（带 torch）`python run.py --env development --host 127.0.0.1 --port 5000`；入口 `app/` 包 `get_app()`；顶层 `backend/app.py` 占位死代码勿改；改启动/MQTT 改 `app/service_init.py::init_mqtt`。改后端须强杀全部 python 重启（Flask-SocketIO 不 reload）。
+- 前端：Vite dev，proxy /api、/ws → 127.0.0.1:5000；验证 build 用 `node node_modules/vite/bin/vite.js build --logLevel warn`（勿单跑 tsc --noEmit）。
+- pytest：3.11 + `-p no:locust --timeout=300`，全量 ~35min / 1633 passed + 9 skipped。前端 vitest 149 passed；e2e 21/21（须 mode:'serial'，后端先起）。
 
 ## 架构铁律
-- **路由注册唯一源 = `app/api_versioning.py::register_v1_routes`**（`create_app` 调 `api_version_manager.init_app`）。`conftest.py` 用 `walk_packages` 动态注册 `api` 包全部 Namespace → pytest 永远绿；但生产只注册 `register_v1_routes` 显式列出的 → **漏列即生产 404**。新增命名空间必须同时在此补 `add_namespace`。（`app/route_init.py` 已删，曾漏注册三模块致生产 404。）
-- 路由文件两形态：**flask-restx Namespace**（被 `register_v1_routes` 注册）与**裸 Blueprint**（`migration_bp`/`version_bp`/`logs_bp` 等）。裸 Blueprint 须 `app.register_blueprint` 才生效；未注册=死代码（见代码健康待办）。
-- API 统一信封 `{success,code,data}`；admin/123456=super_admin；纯列表 data=数组，分页 data={xx:[],total}。
+- 路由注册唯一源 = `app/api_versioning.py::register_v1_routes`（conftest 用 walk_packages 动态注册 → pytest 永远绿；生产只注册显式列出的，漏列即 404）。新增命名空间须在此补 add_namespace。
+- 路由两形态：flask-restx Namespace（被注册）与裸 Blueprint（须 app.register_blueprint 才生效）。
+- API 统一信封 {success,code,data}；admin/123456=super_admin。
 
-## RBAC（重要）
-- 正常启动不 seed。新增权限/角色写**幂等增量脚本**；**禁跑 seed_rbac.py**（清库重建）。has_permission 精确匹配。
-- `scripts/verify_rbac_consistency.py --check-only`：CI 用，DB 漂移 exit 1。改 RBAC 后必跑。teacher 角色含 class.edit/culture.*/phonebox.unlock.manage/notification.send；**无 score.manage**（批量录分用 score.entry）。
-- 操作审计 `utils/logger.py::log_operation`（成功才记、异常全吞）。created_by 用 `getattr(g.current_user,'id',None) if getattr(g,'current_user',None) else None or 1`。
+## RBAC
+- 正常启动不 seed；新增权限/角色写幂等增量脚本，禁跑 seed_rbac.py（清库重建）。`scripts/verify_rbac_consistency.py --check-only` 改 RBAC 后必跑。teacher 角色含 class.edit/culture.*/phonebox.unlock.manage/notification.send，无 score.manage。
 
-## 双 JWT 隔离（学生自助端）
-- Admin `type="access"`（`generate_tokens`）+ `requires_permission`；学生 `type="student"`（`generate_student_token`）+ `requires_student`（置 `g.current_student`）。`validate_token(token, token_type)` 按 type 校验，互不越权。学生 = User 实体（无 Student 模型），card_id+姓名双因子免密登录（`validate_card_id` 仅 `^[A-Za-z0-9]{4,20}$`）。`api/student/__init__.py` 必须保留（否则 walk_packages 不递归→404）。
+## 双 JWT 隔离（学生端）
+- Admin type=access + requires_permission；学生 type=student + requires_student（置 g.current_student）。`api/student/__init__.py` 必须保留（否则 walk_packages 不递归→404）。
 
 ## 功能模块状态（已完成）
-- 班主任工作台 12 页、手机箱四态策略（ALLOW_OVERRIDE>ALLOW_WINDOW>BLOCK>DEFER，权限 phonebox.unlock.manage）、上课时间下发互斥（ClassTimeChecker 强拦，逃生 super_admin notification.force_send）、科任老师批量录分+群发通知（TeacherTools.tsx）、班级学期报告导出（SemesterReport.tsx）、积分排行榜（RankBoard.tsx + 学生端排名 Tab）。前端学生区隔离 admin 态（localStorage `student`/`student_token`）。
+- 班主任工作台 12 页、手机箱四态策略（ALLOW_OVERRIDE>ALLOW_WINDOW>BLOCK>DEFER）、上课时间下发互斥、科任批量录分+群发、学期报告导出、积分排行榜、学生端 5 Tab。后端学生 API 全可用，双 JWT 隔离生效。
 
 ## 关键坑（勿回退）
-- NLPScoringRule.last_used_at 是 String(50) → 须 `_coerce_dt()` 转 datetime 否则 /api/nlp/parse 500。
-- SQLAlchemy 关系对象不能当 dict key/value → jsonify 500。
-- 列表 GET 用持久化缓存：写操作后清缓存+提供 skipCache。
-- 学生排行榜：`analysis_service.get_student_ranking` 按 `class_name` 字符串聚合，学生须同时有 class_info_id 与 class_name 才入榜。
-- `api.ts` interface→运行时对象复制时 `};` 须改 `},`（否则 esbuild 整前端 build 失败）。
-- DB 还原：先 `cp 库 库.bak_<ts>`；勿拿旧备份当还原点（WAL 覆盖丢未 checkpoint 写入）。
-- **StudentPortal.tsx TDZ 崩溃（已修复）**：`loadMyRank` 的 `useCallback` 若定义在引用它的 `useEffect` **之后**，运行期报 `Cannot access 'loadMyRank' before initialization`（`const` 暂时性死区），被 ErrorBoundary 捕获→**学生端整页白屏**。须保证所有被 useEffect/useCallback 依赖引用的 hook 定义在使用之前。此 bug **仅浏览器运行时暴露**，build/lint/vitest 全不报——**后期前端页面必须用 playwright 实跑验证**（见功能模块状态）。
-- **MQTT 双连接架构（勿回退为单连接）**：`services/mqtt_manager.py` 现为**双 paho 客户端**——控制连接 `self._client` 订阅 `score/#`+`phonebox/query`+`phonebox/unlock/#`+`phonebox/ota/#`+`phonebox/points/#`（QoS1，即时业务派发，绝不被洪流淹没）；遥测连接 `self._telemetry_client` 订阅 `phonebox/#`（QoS0，可容忍丢包），心跳即时推 WS、DB 落库异步入 Celery `tasks.mqtt_tasks.process_phonebox_telemetry`。各自独立 `_on_connect/_on_message/_on_disconnect` + 重连线程。原单连接 + 13 具体 topic 触发 EMQX 订阅上限死链、且被遥测洪流淹没控制消息，已于 2026-08-14 根治。新增控制 topic 加进 `CONTROL_SUBSCRIPTIONS`、新增遥测加进 `TELEMETRY_SUBSCRIPTIONS`，勿混。
-- **控制回包 QoS=1**：`services/mqtt_service.py::publish_mqtt` 默认 qos=1（低频控制/回包/通知），确保设备可靠收包；遥测高频消息不走此函数。
-- **score/rules 查询锁竞争静默失败（已修复，2026-08-15）**：`handle_score_rules_query` 原用默认 SQLAlchemy 连接（`busy_timeout=0`），生产洪流高频写库时撞 SQLite 写锁 → `OperationalError` 被 `except` **静默吞成 `rules=[]`**（运维不可见、伪装空规则）。库里 `score_rule` 表实测 21 条全 `is_active=1`，数据非空。修复：加 `PRAGMA busy_timeout=5000` + 4 次重试 + `logging.error` 留痕（诚实失败不再伪装空）。**教训：任何读查询都不要在 except 里吞成"空=正常"，且 SQLite 下务必设 busy_timeout/重试。**
-- **score/add 幂等撤销码 undo_code 为 None（已修复，2026-08-15）**：`handle_score_add` 三分支（`rule_id`/`rule_name`/`score_change`）`db.session.add(record)` 后**未 flush 即读 `record.id`** 写入 `ProcessedMessage.record_id` → 自增主键未生成存 `None`。首次 `score/add` 正常回包 `undo_code=f"UNDO_{record.id}"`（在 `with` 块外构造，已 flush 故有值）但洪流下未穿透设备 → 第 2+ 次重发走幂等分支回 `undo_code=f"UNDO_{record.record_id}"` → `UNDO_None` → 测试桩取 `UNDO_None` 发 `score/undo` → `handle_score_undo` 执行 `int("None")` 抛 `ValueError` → 撤销失败（往返 80→85 卡在 85）。修复：三分支 `add(record)` 后补 `db.session.flush()`。**教训：写后未 flush 即读自增主键是经典 SQLAlchemy 陷阱。**
-- **MQTT 回包联调测试必须收发分离连接（测试桩坑，2026-08-15）**：paho 模拟设备若用**单连接**既高频发包又收包，生产 Broker 高延迟下收包 `loop` 会被发流**饿死**，导致回包"no response"假阴性（与后端无关）。`verify_mqtt_e2e.py` 已改为 `recv_client`（仅订阅收包）+ `pub_client`（仅发包）两条独立连接；B 的 predicate 须按后端真实 schema（`result` 是字符串 `"true"`/`"false"`，非布尔）判定。SUBACK 回调可铁证订阅层是否正常。
-- **生产 Broker 洪流（真机 MQTT 测试须知）**：生产 EMQX（nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883）有真实设备 ~5000 msg/s 命中 phonebox/#。后端双连接已根治「控制消息被淹没」（控制连接独立，2026-08-14 验证在洪流下稳定收发并以 qos1 回包）。2026-08-15 通过 e2e 收发分离加固 + SUBACK 诊断，把原 B/C 的 no-response 彻底查清：**B/C1 是测试桩缺陷**（单连接发流饿死收包 loop + B 的 predicate 布尔假阴性，已修）；**C2 是真实后端 bug**（undo_code flush，已修，见关键坑）。最终真机 e2e 第 6 次 **ALL PASS**（A rules=21 / B result=true / C1 User not found / C2 add=85→undo_code=UNDO_3310→undo=80）。干净验证仍建议本地 Broker（amqtt 在 Windows 上 ConnectionResetError 不稳，建议 Linux）。
+- MQTT 双连接：`services/mqtt_manager.py` 控制连接(self._client) 订阅 score/# + phonebox/query + phonebox/unlock/# + phonebox/ota/# + phonebox/points/#（QoS1）；遥测连接(self._telemetry_client) 订阅 phonebox/#（QoS0）。新增控制 topic 加 CONTROL_SUBSCRIPTIONS、遥测加 TELEMETRY_SUBSCRIPTIONS，勿混、勿回退单连接。
+- 控制回包 publish_mqtt 默认 qos=1；遥测高频不走此函数。
+- score/rules 查询锁竞争：handle_score_rules_query 已加 PRAGMA busy_timeout=5000 + 重试 + logging.error（commit 06e8922，勿在 except 吞成空）。
+- score/add 幂等：三分支 add(record) 后须 db.session.flush() 再读 record.id（commit e609259）；否则 undo_code=UNDO_None 致撤销失败。
+- MQTT e2e 测试桩须收发分离连接（recv/pub 两条），B predicate 按 result 字符串判定；SUBACK 诊断订阅层。
+- StudentPortal.tsx TDZ 白屏已修；前端改动须 playwright 实跑验证（build/lint/vitest 不报）。
+- 生产 Broker EMQX（nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883）~5000 msg/s 命中 phonebox/#；干净 e2e 建议本地 Broker（Windows amqtt 不稳，用 Linux）。
 
 ## 测试 / 资产 / 约定
-- 契约回归 `tests/test_api_envelope.py`：遍历无参 GET /api，5xx/未捕获异常判失败（200 无信封仅告警）。改端点后必跑。
-- OpenAPI 校验 `scripts/verify_openapi_contract.py --update/--strict`；快照 api-docs/openapi.json（451 路径）。
-- 不主动 git commit（用户约定）；CI 见下方待办。
-- **Git push 需代理**：本机直连 GitHub 不通（DNS 可解析 github.com→20.205.243.166，但 TCP 443 `Could not connect to server`/`Connection was reset`），6 个常见代理端口（7890/7891/1080/8080/10808/8118）默认全无响应。push 前须用户在本地开代理（Clash 7890 / v2rayN 10808-10809 / SSR 1080），再用 `git -c http.proxy=http://127.0.0.1:<port> push origin main` 重推；**勿写 git 全局代理配置**。提交可离线完成，安全落盘。
+- 契约回归 tests/test_api_envelope.py（改端点后必跑）；OpenAPI scripts/verify_openapi_contract.py --update/--strict。
+- 不主动 git commit；git push 需代理（本机直连 GitHub 443 不通，DNS 可解析但 TCP 重置）。开代理后 `git -c http.proxy=http://127.0.0.1:<port> push origin main`；勿写全局代理配置。
+- 仓库噪音已清理（24 孤儿脚本+12 PNG+21 备份库归档 backend/scripts/archive/，.gitignore 追加）；CI 红已修；裸 Blueprint 已注册；security.py NameError 已修；前端死代码已删；信封拆包 DRY 已抽 unwrapEnvelope。
 
-## 代码健康（评估发现并修复，2026-08-07）
-- ✅ **CI 红已修**：`ci.yml` MQTT 测试改为实际存在的 `test_mqtt_message_service.py`/`test_mqtt_service.py`。
-- ✅ **裸 Blueprint 已注册**：`migration_bp`/`version_bp` 在 `register_v1_routes` 末尾 `app.register_blueprint` 注册（/api/version、/api/v1/compatibility、/api/migration/* 生产可用）。冲突处理：`version_bp` 的 `/api/versions` 与 `api_versioning.py` 的 `api_version_manager` 同名路由重复 → 已删 `version_bp.list_versions`，保留 version_manager 的权威实现。
-- ✅ **security.py NameError 已修**：顶部加 `from flask import request`（`get_request_data`/`get_request_param` 现可调用）。
-- ✅ **前端死代码已删**：`services/api.js` + 4 孤儿页（ClassAssignment.js/MQTTDebug.js/UserManagement.js/ClassTimeSettings.tsx.bak）。确认 api.js 因 vite `resolve.extensions` 优先 .ts 实际由 api.ts 解析（rbacApi.ts 的 `import {request} from './api'` 命中 api.ts 的 request 导出），删除安全。
-- ✅ **utils/ 9 个孤儿已删**：batch_operations/cache_middleware/data_sync_events/db_pool_manager/exception_handler/monitoring_service/performance/swagger_config/initializer（AST 扫描确认活跃+测试零引用）。
-- ✅ **信封拆包 DRY**：api.ts 抽出单一 `unwrapEnvelope(rawData, skipDataExtract)` 替代 3 处内联（行为不变，消除重复并集中维护）；`code` 字段增强判定因担心行为回退暂未加（当前后端业务失败均置 success:false，前端已能识别）。
-- ✅ **仓库噪音已清理（2026-08-13）**：backend 根散落 24 个孤儿脚本（verify_algo*/verify_risk_batch/test_*/debug_*/probe_*/inspect_*/fix_* + scripts/verify_algo_fix.py）+ 12 张 NLP 调试 PNG + instance/ 21 个备份库（.db.bak_* + *_corrupt.db + *_rebuilt_broken.db + .db.*_bak 变体）全部 `git rm --cached` 移出跟踪并 mv 归档到 `backend/scripts/archive/{,screenshots,db_backups}`（保留本地不删）；`.gitignore` 追加 `backend/scripts/archive/` + `backend/*.png`。`instance/` 现仅正常库。commit c771c6b。
-- ✅ **后期功能端到端验证（2026-08-07 playwright 实跑：临时后端 5001 + 前端 3000 代理 5001）**：学生端登录→5 Tab（积分/通知/请假/手机箱/排名）全渲染、0 控制台错误；TeacherTools（教师效率工具/批量录入成绩）、SemesterReport（班级学期报告导出）均完整渲染无崩溃；后端学生 API 全可用（登录/me/score/records/notifications/leaves/rank + 请假 POST 201 + 手机箱 POST 按策略拦截 + 学生 token 打 admin 端点 401 双 JWT 隔离生效）。验证中发现并修复 StudentPortal TDZ 白屏 bug（见关键坑），该 bug 致**学生端自写完一直不可用**，因无 StudentPortal 组件测试未被 vitest(149)/build/lint 覆盖。
+## 项目规模
+- 后端 433 .py / 98k LOC；前端 179 .tsx/.ts / 63k LOC；README/Dockerfile/docker-compose/CI 齐备。
 
-## 项目规模（2026-08-07）
-- 后端 433 .py / 98,668 LOC；前端 179 .tsx/.ts / 63,674 LOC；git 107 commits（2026-08 月 6 commits）。README/Dockerfile/docker-compose/CI 齐备。
+## 🔴 无缝OTA（核心未完成，分阶段）
+- 后端 firmware_routes.py 已全：upload/versions/ota/check(REST)/ota/report(REST)/batch-upgrade/ota-upgrade/download/latest/ota-status；mqtt_manager.publish_ota_command 发 phonebox/ota/{device_id}（有 id）或 phonebox/ota（无 id）。
+- **P0 已实施（2026-08-15）**：① 固件改订阅 `phonebox/ota/{client_id}`（专属）+ 保留全局 `phonebox/ota` 广播，回调同时处理两 topic（phonebox.ino:445/719）；② 状态回报改发 `phonebox/ota/{client_id}/status`（后端 _process_ota_status 按 payload.device_id 处理）；③ 心跳加 `device_type` + 上电/重连主动发 `phonebox/ota/register`（设备类型上报，phonebox.ino:1061）；④ 后端 `_process_ota_register` 落库（device 表新增 `device_type` 列，迁移脚本 scripts/migrate_add_device_type.py 幂等）+ 心跳处理器也存 device_type + devices API 列表/详情暴露 device_type。→ 手动 OTA 现可精确推到指定设备 + 设备类型可见。
+- **P1 已实施（2026-08-15）**：新增 `services/ota_negotiation_service.py`（语义 compare_versions / get_latest_active_firmware / negotiate / can_auto_push / schedule_auto_push（带抖动 Timer 防设备海啸）/ _execute_push 二次校验 / try_auto_negotiate / negotiate_all_devices / build_download_url）。mqtt_manager `_process_ota_register` 与 `_process_heartbeat` 落库后调 try_auto_negotiate；`_process_ota_status` 回写 device.ota_status（upgrading/idle/failed）并成功时写回 fw_version + 清空 last_ota_push_at（闭环自愈）。device 表加 `auto_update`/`ota_status`/`last_ota_push_at`（迁移 scripts/migrate_add_ota_state.py 幂等）。firmware_routes 手动推送改用绝对 `url`（保留 download_url 兼容）+ 新增 `POST /api/firmware/negotiate-all` 全量扫描。
+- **连带修复（P1 发现）**：后端原手动 OTA 发 `download_url` 且为相对路径，固件只认 `url` 且需绝对地址 → 手动 OTA 实际也推不到真机。现固件读 `doc["url"] | doc["download_url"]` 且后端发绝对 `url`（由 `OTA_FIRMWARE_BASE_URL` 或 request.host_url 生成）；固件版本比较由字符串 `<=` 改为语义 `cmpVer`（修复 2.10<2.9 误判）。
+- **P2 已完成（2026-08-15）**：
+  - *固件侧*（phonebox.ino）：① 指令 HMAC-SHA256 验签 `verifyOtaSignature`（msg=`id:version:url`，密钥宏 `OTA_SIGNING_SECRET`，与后端一致；留空则跳过仅告警）；② `Update.setMD5` 完整性校验（后端发32位 md5）；③ 安全回滚——成功置 NVS `pending_validate`，新固件 `setup()` 调 `Update.markAppValidNewPartition()` 提交，否则 Bootloader 自动回滚旧分区；④ 断点续传——下载中连接中断以 HTTP Range(`bytes=N-`) 从偏移续传（最多5次），NVS 存意图供重启后自动恢复（整包重下）；⑤ `Preferences("otaimg")` 持久化 OTA 意图 + loop() 自动恢复。
+  - *后端补丁*：三个 OTA 推送 payload（自动/批量/单推）新增 `"id": firmware.id`（签名校验必备）；`sign_ota_command` 用 `f"{id}:{version}:{url}"`。
+  - 灰度/分批 + 静默时段（上课/夜间窗口）已在后端 `ota_negotiation_service.py` 落地（P2 前期）。
+- **运维必读**：自动推送依赖环境变量 `OTA_FIRMWARE_BASE_URL`（公网可直连的后端地址），未配置则 MQTT 自动推送中止（仅日志告警，不下发坏 URL）；`OTA_AUTO_PUSH_ENABLED`(默认true)/`OTA_PUSH_COOLDOWN_SEC`(600)/`OTA_ROLLOUT_JITTER_SEC`(30) 可调。
+- **生产云端 Broker（EMQX Cloud）**：连接地址 `nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883`（MQTT over TLS/SSL）；另见控制台地址 `c5233fc.ala.cn-hangzhou.emqxsl.cn`；WebSocket over TLS `8084`；设备凭据 `phoneboxtest/123456`；CA 证书有效期至 2031-11-10。后端 `config.py` 经 `MQTT_BROKER/MQTT_PORT/MQTT_SSL/MQTT_USERNAME/MQTT_PASSWORD` 接入。`verify_ota_e2e.py` 与 `test_ota_e2e_local_broker.py` 默认即对接该云端 Broker（TLS，insecure 跳过 CA；设 `MQTT_CA_CERT` 可严格校验）；pytest 全链路可用 `OTA_E2E_BROKER=127.0.0.1:1883 OTA_E2E_SSL=false` 切本地。
+- **P3 已完成（2026-08-15）**：① `docker-compose.mqtt.yml` + `mosquitto/mosquitto.conf`：匿名 1883 + websockets 9001 的常驻本地 Broker（eclipse-mosquitto:2，含 healthcheck/nc 探测），仅作本地干净环境备选（生产用上方云端 Broker）。② `backend/scripts/verify_ota_e2e.py`：standalone OTA e2e（收发分离+SUBACK 诊断范式），默认对接云端 Broker，对接真实后端 HTTP（登录→ota-upgrade→轮询 ota-status）与模拟设备（HMAC 验签+状态回报闭环），env 驱动 broker。③ `backend/tests/test_ota_e2e_local_broker.py`：pytest 两层——确定性「签名契约」单测（TestOTASignatureContract：签名匹配/缺密钥空串/篡改拒绝，无需 broker，本机 3 passed）+ 全链路 e2e（TestOTAE2ELocalBroker：默认本地 127.0.0.1:1883 不可达则 skip；`OTA_E2E_BROKER=nc5233fc...:8883 OTA_E2E_SSL=true` 对真实云端 Broker 实跑 **4 passed**：publish→设备收包验签 + 设备→broker→后端订阅者返回链路 + 离线验证 `_process_critical_message` 把 status topic 路由到 `_process_ota_status`）。
+- **P3 e2e 踩坑（已修）**：① 全链路桩初版用「monkeypatch `_process_ota_status` 捕获」失败——真实处理器在派发顺序里先于回调循环执行，测试上下文抛 DB 异常会中断；且管理器在 pytest 重连后控制连接收不到消息。改为：返回链路用独立「后端侧订阅者」(phonebox/ota/#) 在真实 Broker 上验证 device→broker→后端订阅者，再离线调用 `_process_critical_message` 验证路由。② `be_evt` 会被「指令 topic」抢先置位（`#` 订阅也匹配指令），必须专门等 status topic 出现。③ `phoneboxtest` 并发连接数有限，桩须把设备收/发合一（rec_c 既收指令又发状态），连接数压到 4（rec_c+be_c+manager 控制/遥测）。④ ACL 探针确认云端 Broker 对 `phonebox/ota/#` 订阅授予且能收到嵌套 `phonebox/ota/<id>/status`——返回链路断因是桩本身，非生产 ACL 问题。
+- **本机约束**：无 docker / 无 mosquitto / amqtt 不稳 → 全链路 e2e 需在 Linux+docker 跑；pytest 签名契约层在任意环境可跑。
+- 注：固件改动需在 Arduino IDE 实编+真机/本地 Broker 验证（本机无 ESP32 工具链，仅做了 C++ 逻辑审阅）；后端改动已 py_compile + 应用启动 + 路由冒烟通过。

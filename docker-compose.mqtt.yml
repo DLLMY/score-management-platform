@@ -1,0 +1,55 @@
+# 本地常驻 MQTT Broker —— 开发联调 & OTA 端到端(e2e)验证专用（生产环境「不」用它）
+#
+# 生产 Broker（真实设备所在）：EMQX Cloud
+#   连接地址：nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883（MQTT over TLS/SSL）
+#   WebSocket：8084（wss）；另见控制台地址 c5233fc.ala.cn-hangzhou.emqxsl.cn
+#   设备凭据：phoneboxtest / 123456；CA 证书有效期至 2031-11-10
+#   verify_ota_e2e.py 与 test_ota_e2e_local_broker.py 默认即对接该云端 Broker。
+#
+# 本 compose 仅用于「本地干净环境」跑 e2e（避开生产 ~5000 msg/s 洪流）：
+#   OTA_E2E_BROKER=127.0.0.1:1883 MQTT_SSL=false python -m pytest backend/tests/test_ota_e2e_local_broker.py -v
+#
+# 启动（需本机/本环境已安装 Docker，Windows amqtt 不稳，故用 Linux 容器跑 Broker）：
+#   docker compose -f docker-compose.mqtt.yml up -d
+# 停止：
+#   docker compose -f docker-compose.mqtt.yml down
+#
+# 后端指向本 Broker（在 backend/.env 或启动命令中设置）：
+#   MQTT_BROKER=127.0.0.1
+#   MQTT_PORT=1883
+#   MQTT_SSL=false
+#   MQTT_USERNAME=
+#   MQTT_PASSWORD=
+# （与 config.py 默认一致：MQTT_SSL=false 时走明文 1883，匿名即可连）
+#
+# 安全提示：此 Broker 匿名开放，仅用于本机/内网开发，切勿暴露到公网。
+version: "3.8"
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: phonebox-mqtt-dev
+    ports:
+      - "1883:1883"   # MQTT TCP（OTA e2e / 设备联调，匿名）
+      - "9001:9001"   # WebSocket（前端联调可选）
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+      - mqtt-log:/mosquitto/log
+    restart: unless-stopped
+    healthcheck:
+      # alpine 镜像内置 busybox nc，做 TCP 探测即可
+      test: ["CMD", "nc", "-z", "localhost", "1883"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mqtt-data:
+  mqtt-log:
