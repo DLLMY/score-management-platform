@@ -4142,17 +4142,17 @@ const api: Api = {
       method: 'POST',
       body: data,
     }) as Promise<Firmware>,
-    update: (id, data) => request(`/api/firmware/${id}`, {
+    update: (id, data) => request(`/api/firmware/versions/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }) as Promise<Firmware>,
-    updateVersion: (id: number, data: { is_active: boolean }) => request(`/api/firmware/${id}`, {
+    updateVersion: (id: number, data: { is_active: boolean }) => request(`/api/firmware/versions/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }) as Promise<Firmware>,
-    deleteVersion: (id: number) => request(`/api/firmware/${id}`, { method: 'DELETE' }) as Promise<void>,
-    delete: (id) => request(`/api/firmware/${id}`, { method: 'DELETE' }) as Promise<void>,
-    download: (id) => `/api/firmware/${id}/download`,
+    deleteVersion: (id: number) => request(`/api/firmware/versions/${id}`, { method: 'DELETE' }) as Promise<void>,
+    delete: (id) => request(`/api/firmware/versions/${id}`, { method: 'DELETE' }) as Promise<void>,
+    download: (id) => `/api/firmware/download/${id}`,
     getOTAStatus: () => request('/api/firmware/ota-status') as Promise<OTAStatus>,
     otaUpgrade: (firmwareId, deviceIds) => request(`/api/firmware/${firmwareId}/ota-upgrade`, {
       method: 'POST',

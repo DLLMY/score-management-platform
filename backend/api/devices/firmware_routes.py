@@ -57,6 +57,7 @@ class FirmwareVersions(Resource):
                     "id": v.id,
                     "version": v.version,
                     "description": v.description,
+                    "file_path": v.file_path,
                     "file_size": v.file_size,
                     "md5": v.md5,
                     "min_compatible_version": v.min_compatible_version,

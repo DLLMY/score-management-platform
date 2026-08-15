@@ -338,8 +338,9 @@ function FirmwareManagement() {
                         <PermissionButton
                           permission='firmware.view'
                           onClick={() => handleDownload(v)}
-                          className='p-1 text-blue-600 hover:text-blue-800'
-                          title='下载'
+                          disabled={!v.file_path}
+                          className='p-1 text-blue-600 hover:text-blue-800 disabled:text-gray-300 disabled:hover:text-gray-300'
+                          title={v.file_path ? '下载' : '该版本无固件文件，无法下载'}
                         >
                           <Download className='w-4 h-4' />
                         </PermissionButton>
