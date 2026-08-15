@@ -347,17 +347,23 @@ class MQTTManager:
                 db.session.commit()
                 print(f"[MQTTManager] 批量写入 {len(logs_to_insert)} 条日志")
 
-            # 处理心跳消息更新设备状态
+            # 处理心跳消息更新设备状态（逐条隔离：单条异常不影响其余心跳处理）
             for data in heartbeat_data:
-                self._process_heartbeat(data["topic"], data["message"])
+                try:
+                    self._process_heartbeat(data["topic"], data["message"])
+                except Exception as e:
+                    print(f"[MQTTManager] 心跳处理异常(已跳过本条): {e}")
 
     def _process_critical_message(self, topic, message):
         """立即处理关键消息（如刷卡查询、OTA状态）"""
         if topic.startswith("phonebox/ota/"):
-            if topic.endswith("/status") or topic == "phonebox/ota/status":
-                self._process_ota_status(topic, message)
-            elif topic.endswith("/register") or topic == "phonebox/ota/register":
-                self._process_ota_register(topic, message)
+            try:
+                if topic.endswith("/status") or topic == "phonebox/ota/status":
+                    self._process_ota_status(topic, message)
+                elif topic.endswith("/register") or topic == "phonebox/ota/register":
+                    self._process_ota_register(topic, message)
+            except Exception as e:
+                print(f"[MQTTManager] OTA 消息处理异常(已隔离, 不影响其余回调): {e}")
 
         for callback in self._message_callbacks:
             try:
