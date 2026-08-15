@@ -27,10 +27,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: 安装 Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.11'
 
@@ -78,10 +78,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: 安装 Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.0.0
         with:
           # vitest 4 依赖 node >= 22（webidl.util.markAsUncloneable），与本地 node 22 一致
           node-version: '22'
