@@ -2892,7 +2892,8 @@ class EnhancedNLPParserService:
 
             rule = get_by_id(NLPScoringRule, parse_result["matched_rules"][0]["rule_id"])
             if rule:
-                rule.usage_count += 1
+                # usage_count 列无默认值，新规则为 None，直接 += 1 会 TypeError 500
+                rule.usage_count = (rule.usage_count or 0) + 1
                 rule.last_used_at = datetime.now()
                 score_value = rule.score_value
             else:
@@ -2910,6 +2911,20 @@ class EnhancedNLPParserService:
                 db.session.flush()
 
         user = get_by_id(User, parse_result.get("user_id"))
+        if not user:
+            # 规则已匹配但学生不存在（如文本中的姓名不在用户表）：
+            # 不能静默"评分成功"，否则前端误报而分数实际未应用。
+            name_hint = parse_result.get("extracted_name") or parse_result.get("name") or ""
+            if name_hint:
+                message = f"未找到学生「{name_hint}」，无法应用评分，请先在学生管理中创建该学生"
+            else:
+                message = "未能从文本中识别到学生姓名，无法应用评分"
+            return {
+                "success": False,
+                "message": message,
+                "parse_result": parse_result,
+            }
+
         if user:
             old_score = user.current_score
             user.current_score = max(0, min(100, user.current_score + score_value))
@@ -2962,21 +2977,6 @@ class EnhancedNLPParserService:
                 rule_id=rule.id,
                 intent=parse_result["intent"],
             )
-        else:
-            match_result = NLPMatchResult(
-                input_text=text,
-                matched_rule_id=rule.id if rule else None,
-                matched_keyword=rule.behavior_keyword if rule else parse_result["behavior"],
-                intent=parse_result["intent"],
-                confidence=parse_result["confidence"],
-                user_id=parse_result["user_id"],
-                behavior_description=parse_result["behavior"],
-                score_change=score_value,
-                is_manual_correction=manual_correction is not None,
-            )
-            with db_session_scope():
-
-                db.session.add(match_result)
 
         return {
             "success": True,
