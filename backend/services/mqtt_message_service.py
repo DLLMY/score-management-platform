@@ -727,10 +727,16 @@ class MQTTMessageService:
         成 rules=[]（表现为设备偶发收不到规则）。这里显式设 busy_timeout 并重试几次规避。
         """
         from models import ScoreRule
+        # busy_timeout 为连接级优化，规避洪流下读查询撞 SQLite 写锁被静默吞。
+        # 无 app context 环境(如部分单测)下 db.session.execute 会抛 RuntimeError，跳过即可，
+        # 不影响查询正确性；生产 MQTT 派发路径自带 app context，PRAGMA 正常生效。
+        try:
+            db.session.execute(text("PRAGMA busy_timeout=5000"))
+        except Exception:
+            pass
         last_err = None
         for attempt in range(retries):
             try:
-                db.session.execute(text("PRAGMA busy_timeout=5000"))
                 return (
                     ScoreRule.query.filter_by(is_active=True)
                     .order_by(ScoreRule.category_id, ScoreRule.id)
