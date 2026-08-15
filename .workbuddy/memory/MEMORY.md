@@ -3,7 +3,7 @@
 ## 运行 / 测试
 - 后端：系统 Python 3.11（带 torch）`python run.py --env development --host 127.0.0.1 --port 5000`；入口 `app/` 包 `get_app()`；顶层 `backend/app.py` 占位死代码勿改；改启动/MQTT 改 `app/service_init.py::init_mqtt`。改后端须强杀全部 python 重启（Flask-SocketIO 不 reload）。
 - 前端：Vite dev，proxy /api、/ws → 127.0.0.1:5000；验证 build 用 `node node_modules/vite/bin/vite.js build --logLevel warn`（勿单跑 tsc --noEmit）。
-- pytest：3.11 + `-p no:locust --timeout=300`，全量 ~35min / 1633 passed + 9 skipped。前端 vitest 149 passed；e2e 21/21（须 mode:'serial'，后端先起）。
+- pytest：3.11 + `-p no:locust --timeout=300`，全量实际 collected **1710**（本机内存压力下实测约 16h 仅 33%、按速度 ~50h 不现实，勿跑全量；改用 `bash scripts/run_regression.sh` 闸门：RBAC+OpenAPI+契约+关键路由，几分钟全绿）。前端 vitest **160 passed / 3 skipped**（ErrorBoundary 3 跳过非失败）；e2e 21/21（须 mode:'serial'，后端先起）。
 
 ## 架构铁律
 - 路由注册唯一源 = `app/api_versioning.py::register_v1_routes`（conftest 用 walk_packages 动态注册 → pytest 永远绿；生产只注册显式列出的，漏列即 404）。新增命名空间须在此补 add_namespace。
@@ -21,6 +21,7 @@
 
 ## 关键坑（勿回退）
 - MQTT 双连接：`services/mqtt_manager.py` 控制连接(self._client) 订阅 score/# + phonebox/query + phonebox/unlock/# + phonebox/ota/# + phonebox/points/#（QoS1）；遥测连接(self._telemetry_client) 订阅 phonebox/#（QoS0）。新增控制 topic 加 CONTROL_SUBSCRIPTIONS、遥测加 TELEMETRY_SUBSCRIPTIONS，勿混、勿回退单连接。
+- MQTT 派发逐条隔离（提交 e356abd）：`_process_messages_batch` 心跳循环与 `_process_critical_message` 的 OTA status/register 处理器均已逐条 try/except 隔离——新增/修改业务处理器须保持「单条异常不影响其余消息」的隔离，勿把未保护的调用直接放进批量循环或回调循环前。控制/遥测入口 `_on_message_*` 有顶层兜底防客户端收包循环被打死。
 - 控制回包 publish_mqtt 默认 qos=1；遥测高频不走此函数。
 - score/rules 查询锁竞争：handle_score_rules_query 已加 PRAGMA busy_timeout=5000 + 重试 + logging.error（commit 06e8922，勿在 except 吞成空）。
 - score/add 幂等：三分支 add(record) 后须 db.session.flush() 再读 record.id（commit e609259）；否则 undo_code=UNDO_None 致撤销失败。
@@ -30,7 +31,7 @@
 
 ## 测试 / 资产 / 约定
 - 契约回归 tests/test_api_envelope.py（改端点后必跑）；OpenAPI scripts/verify_openapi_contract.py --update/--strict。
-- 不主动 git commit；git push 需代理（本机直连 GitHub 443 不通，DNS 可解析但 TCP 重置）。开代理后 `git -c http.proxy=http://127.0.0.1:<port> push origin main`；勿写全局代理配置。
+- 不主动 git commit。git push 经 **Steam++.Accelerator.exe（Watt Toolkit，PID 656 监听 `0.0.0.0:80`/`:443`）接管网络栈** → 用户开 Steam++ 后**直连 `git push origin main` 即通**（实测 `25447e0..e356abd` 成功，无需 http.proxy）。未开 Steam++ 时直连 GitHub 443 不通（TCP 重置）。勿写全局代理配置。
 - 仓库噪音已清理（24 孤儿脚本+12 PNG+21 备份库归档 backend/scripts/archive/，.gitignore 追加）；CI 红已修；裸 Blueprint 已注册；security.py NameError 已修；前端死代码已删；信封拆包 DRY 已抽 unwrapEnvelope。
 
 ## 项目规模
@@ -51,3 +52,14 @@
 - **P3 e2e 踩坑（已修）**：① 全链路桩初版用「monkeypatch `_process_ota_status` 捕获」失败——真实处理器在派发顺序里先于回调循环执行，测试上下文抛 DB 异常会中断；且管理器在 pytest 重连后控制连接收不到消息。改为：返回链路用独立「后端侧订阅者」(phonebox/ota/#) 在真实 Broker 上验证 device→broker→后端订阅者，再离线调用 `_process_critical_message` 验证路由。② `be_evt` 会被「指令 topic」抢先置位（`#` 订阅也匹配指令），必须专门等 status topic 出现。③ `phoneboxtest` 并发连接数有限，桩须把设备收/发合一（rec_c 既收指令又发状态），连接数压到 4（rec_c+be_c+manager 控制/遥测）。④ ACL 探针确认云端 Broker 对 `phonebox/ota/#` 订阅授予且能收到嵌套 `phonebox/ota/<id>/status`——返回链路断因是桩本身，非生产 ACL 问题。
 - **本机约束**：无 docker / 无 mosquitto / amqtt 不稳 → 全链路 e2e 需在 Linux+docker 跑；pytest 签名契约层在任意环境可跑。
 - 注：固件改动需在 Arduino IDE 实编+真机/本地 Broker 验证（本机无 ESP32 工具链，仅做了 C++ 逻辑审阅）；后端改动已 py_compile + 应用启动 + 路由冒烟通过。
+
+## 运维中心模块（ops_center，2026-08-14 落地）
+- 三阶段：① 聚合 Dashboard（纯前端，零后端改动）② 前端遥测落库+查看 ③ 系统指标历史采样+趋势。
+- RBAC：幂等增量 `scripts/migrate_ops_center_permission.py` 注册 `ops_center.view`+`system.view`（授权 admin/super_admin/operator），DB 权限 66→68；`verify_rbac_consistency.py --check-only` OK。
+- 三表迁移 `scripts/migrate_ops_center_tables.py`（`from app import app`+`db.create_all()`，**须系统 Python 3.11**，managed 3.13 缺 torch）：frontend_perf_metrics / frontend_error_logs / system_metrics。
+- 后端端点（`api/system/system_routes.py`，ns_system 已注册→自动生效）：POST `/frontend-performance`(+`/batch`)/`/frontend-error`（匿名限频，落库失败不阻塞）；GET `/frontend-metrics`/`/frontend-errors`/`/metrics`（`ops_center.view`，信封返回，含 `/metrics` latest 概览）。
+- **🔴 关键坑（勿回退）**：三 GET 端点用 `timedelta` → 必须 `from datetime import datetime, timedelta`（初版漏导 timedelta 致运行时 NameError，已修）。
+- 采样 `services/system_metric_service.py::sample_once/start_sampler`（守护线程 60s，保留 30 天），由 `app/service_init.py::init_system_metric_sampler` 在**非 lightweight** 模式拉起。
+- 前端：`pages/OpsCenter.tsx`(ops-center)、`SecurityAudit.tsx`(security-audit，后端接口原已存在)、`FrontendTelemetry.tsx`(ops-center/telemetry)、`SystemMetrics.tsx`(ops-center/metrics，recharts 双折线)；Sidebar「运维中心」分组含 运维总览/前端遥测/系统指标趋势/系统诊断/安全审计/操作日志；`permissions.ts` 加 `ops_center.view`/`system.view`。
+- **🔴 登录响应结构（smoke 必备）**：`POST /api/auth/login` 成功响应 `access_token` 在**顶层**（`data` 内是 `admin` 对象）；取 token 用 `body["access_token"]`，非 `body["data"]["access_token"]`。
+- 验证闸门：后端 py_compile + RBAC OK；前端 lint 0 error(我改文件)/build 0/vitest 160 passed·3 skipped；Flask test_client 端到端冒烟全绿。
