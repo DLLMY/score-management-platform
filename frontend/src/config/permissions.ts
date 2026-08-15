@@ -75,6 +75,8 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { code: 'system.settings', name: '系统设置', description: '管理系统设置', category: '系统管理' },
   { code: 'system.roles', name: '角色管理', description: '管理用户角色', category: '系统管理' },
   { code: 'system.logs', name: '查看日志', description: '查看系统日志', category: '系统管理' },
+  { code: 'system.view', name: '系统查看', description: '查看系统健康/性能/统计等监控数据', category: '系统管理' },
+  { code: 'ops_center.view', name: '运维中心查看', description: '查看系统运维中心聚合仪表盘', category: '系统管理' },
 
   // 班主任工作台 - 作业管理
   { code: 'homework.view', name: '查看作业', description: '查看作业信息', category: '班主任工作台' },

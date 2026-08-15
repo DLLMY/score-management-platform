@@ -7,8 +7,8 @@ from utils.performance_monitor import performance_monitor
 from services.cache_service import cache_service
 from services.mqtt_service import mqtt_manager
 from services.system_config_service import SystemConfigService
-from models import db
-from datetime import datetime
+from models import db, FrontendPerfMetric, FrontendErrorLog, SystemMetric
+from datetime import datetime, timedelta
 from sqlalchemy import text
 import os
 import time
@@ -166,6 +166,51 @@ def validate_error_data(data):
             return False, "column 必须是整数"
 
     return True, ""
+
+
+def _persist_perf_metric(data):
+    """把单条前端性能指标落库（失败静默，绝不阻塞上报接口）。"""
+    try:
+        metric = FrontendPerfMetric(
+            metric_type=str(data.get("type", "custom"))[:30],
+            name=str(data.get("name", ""))[:200],
+            value=float(data.get("value", 0)),
+            unit=(str(data.get("unit"))[:20] if data.get("unit") is not None else None),
+            page=(str(data.get("page"))[:200] if data.get("page") else None),
+            user_agent=(str(data.get("user_agent"))[:500] if data.get("user_agent") else None),
+            screen_width=data.get("screen_width"),
+            screen_height=data.get("screen_height"),
+            detail=data.get("data"),
+        )
+        db.session.add(metric)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.warning(f"前端性能指标落库失败（已忽略）: {e}")
+
+
+def _persist_frontend_error(data):
+    """把单条前端错误上报落库（失败静默，绝不阻塞上报接口）。"""
+    try:
+        err = FrontendErrorLog(
+            error_type=str(data.get("type", "js_error"))[:30],
+            message=str(data.get("message", ""))[:2000],
+            stack=data.get("stack"),
+            file=(str(data.get("file"))[:500] if data.get("file") else None),
+            line=data.get("line"),
+            column=data.get("column"),
+            page=(str(data.get("page"))[:200] if data.get("page") else None),
+            url=(str(data.get("url"))[:500] if data.get("url") else None),
+            method=(str(data.get("method"))[:10] if data.get("method") else None),
+            status=data.get("status"),
+            user_agent=(str(data.get("user_agent"))[:500] if data.get("user_agent") else None),
+            detail=data.get("data"),
+        )
+        db.session.add(err)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.warning(f"前端错误落库失败（已忽略）: {e}")
 
 
 ns_system = Namespace("system", description="系统管理相关操作")
@@ -716,6 +761,7 @@ class FrontendPerformance(Resource):
             if not valid:
                 return APIResponse.error(message=msg, status_code=400)
 
+            _persist_perf_metric(data)
             logger.info(f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}')
             return APIResponse.success(message="性能指标接收成功")
         except Exception as e:
@@ -755,6 +801,7 @@ class FrontendPerformanceBatch(Resource):
                 if not valid:
                     logger.warning(f"批量上报中跳过无效数据: {msg}")
                     continue
+                _persist_perf_metric(metric)
                 valid_count += 1
 
             logger.info(f"批量接收前端性能指标: {valid_count}/{len(metrics)} 条有效")
@@ -786,6 +833,7 @@ class FrontendError(Resource):
             if not valid:
                 return APIResponse.error(message=msg, status_code=400)
 
+            _persist_frontend_error(data)
             logger.error(f'前端错误上报: {data.get("type")} - {data.get("message")}')
             return APIResponse.success(message="错误信息接收成功")
         except Exception as e:
@@ -892,3 +940,165 @@ class SystemStats(Resource):
             }
         except Exception as e:
             return APIResponse.error(message=f"获取系统统计失败: {str(e)}", status_code=500)
+
+
+# ---------- 运维中心：前端遥测 / 系统指标查看 ----------
+
+
+@ns_system.route("/frontend-metrics")
+class FrontendMetricsList(Resource):
+
+    @ns_system.doc("get_frontend_metrics", description="查看已落库的前端性能指标")
+    @ns_system.response(200, "成功")
+    @requires_permission("ops_center.view")
+    def get(self):
+        """分页查看前端性能/自定义指标上报记录（运维中心）。"""
+        try:
+            metric_type = request.args.get("metric_type")
+            name = request.args.get("name")
+            hours = int(request.args.get("hours", 24))
+            page = int(request.args.get("page", 1))
+            per_page = min(int(request.args.get("per_page", 50)), 200)
+
+            query = FrontendPerfMetric.query
+            if metric_type:
+                query = query.filter(FrontendPerfMetric.metric_type == metric_type)
+            if name:
+                query = query.filter(FrontendPerfMetric.name == name)
+            if hours > 0:
+                since = datetime.now() - timedelta(hours=hours)
+                query = query.filter(FrontendPerfMetric.created_at >= since)
+
+            pagination = query.order_by(FrontendPerfMetric.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            items = [
+                {
+                    "id": m.id,
+                    "metric_type": m.metric_type,
+                    "name": m.name,
+                    "value": m.value,
+                    "unit": m.unit,
+                    "page": m.page,
+                    "detail": m.detail,
+                    "created_at": m.created_at.isoformat() if m.created_at else None,
+                }
+                for m in pagination.items
+            ]
+            return APIResponse.success(
+                data={"items": items, "total": pagination.total, "page": page, "per_page": per_page, "pages": pagination.pages}
+            )
+        except Exception as e:
+            return APIResponse.error(message=f"获取前端指标失败: {str(e)}", status_code=500)
+
+
+@ns_system.route("/frontend-errors")
+class FrontendErrorList(Resource):
+
+    @ns_system.doc("get_frontend_errors", description="查看已落库的前端错误")
+    @ns_system.response(200, "成功")
+    @requires_permission("ops_center.view")
+    def get(self):
+        """分页查看前端错误上报记录（运维中心）。"""
+        try:
+            error_type = request.args.get("error_type")
+            hours = int(request.args.get("hours", 24))
+            page = int(request.args.get("page", 1))
+            per_page = min(int(request.args.get("per_page", 50)), 200)
+
+            query = FrontendErrorLog.query
+            if error_type:
+                query = query.filter(FrontendErrorLog.error_type == error_type)
+            if hours > 0:
+                since = datetime.now() - timedelta(hours=hours)
+                query = query.filter(FrontendErrorLog.created_at >= since)
+
+            pagination = query.order_by(FrontendErrorLog.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            items = [
+                {
+                    "id": e.id,
+                    "error_type": e.error_type,
+                    "message": e.message,
+                    "page": e.page,
+                    "url": e.url,
+                    "method": e.method,
+                    "status": e.status,
+                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                }
+                for e in pagination.items
+            ]
+            return APIResponse.success(
+                data={"items": items, "total": pagination.total, "page": page, "per_page": per_page, "pages": pagination.pages}
+            )
+        except Exception as e:
+            return APIResponse.error(message=f"获取前端错误失败: {str(e)}", status_code=500)
+
+
+@ns_system.route("/metrics")
+class SystemMetricsList(Resource):
+
+    @ns_system.doc("get_system_metrics", description="查看系统指标历史采样")
+    @ns_system.response(200, "成功")
+    @requires_permission("ops_center.view")
+    def get(self):
+        """分页查看系统指标历史采样（CPU/内存/磁盘/网络），并提供各指标最新值概览。"""
+        try:
+            metric_name = request.args.get("metric_name")
+            category = request.args.get("category")
+            hours = int(request.args.get("hours", 24))
+            page = int(request.args.get("page", 1))
+            per_page = min(int(request.args.get("per_page", 200)), 500)
+
+            query = SystemMetric.query
+            if metric_name:
+                query = query.filter(SystemMetric.metric_name == metric_name)
+            if category:
+                query = query.filter(SystemMetric.category == category)
+            if hours > 0:
+                since = datetime.now() - timedelta(hours=hours)
+                query = query.filter(SystemMetric.created_at >= since)
+
+            # 各指标最新值（用于趋势卡片）
+            latest = {}
+            names = [metric_name] if metric_name else ["cpu_percent", "memory_percent", "disk_percent", "net_sent", "net_recv"]
+            for nm in names:
+                row = (
+                    SystemMetric.query.filter(SystemMetric.metric_name == nm)
+                    .order_by(SystemMetric.created_at.desc())
+                    .first()
+                )
+                if row:
+                    latest[nm] = {
+                        "value": row.metric_value,
+                        "unit": row.unit,
+                        "updated_at": row.created_at.isoformat() if row.created_at else None,
+                    }
+
+            pagination = query.order_by(SystemMetric.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            items = [
+                {
+                    "id": s.id,
+                    "metric_name": s.metric_name,
+                    "metric_value": s.metric_value,
+                    "unit": s.unit,
+                    "category": s.category,
+                    "created_at": s.created_at.isoformat() if s.created_at else None,
+                }
+                for s in pagination.items
+            ]
+            return APIResponse.success(
+                data={
+                    "items": items,
+                    "latest": latest,
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                }
+            )
+        except Exception as e:
+            return APIResponse.error(message=f"获取系统指标失败: {str(e)}", status_code=500)

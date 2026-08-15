@@ -129,6 +129,10 @@ const MentalHealth = createLazyComponent(() => import('./pages/MentalHealth'));
 const ActivityManage = createLazyComponent(() => import('./pages/ActivityManage'));
 const CultureBoard = createLazyComponent(() => import('./pages/CultureBoard'));
 const StudyGuide = createLazyComponent(() => import('./pages/StudyGuide'));
+const OpsCenter = createLazyComponent(() => import('./pages/OpsCenter'));
+const SecurityAudit = createLazyComponent(() => import('./pages/SecurityAudit'));
+const FrontendTelemetry = createLazyComponent(() => import('./pages/FrontendTelemetry'));
+const SystemMetrics = createLazyComponent(() => import('./pages/SystemMetrics'));
 
 const Login = createLazyComponent(() => import('./pages/Login'), true);
 const StudentLogin = createLazyComponent(() => import('./pages/StudentLogin'));
@@ -360,6 +364,12 @@ function App() {
                 <Route path='activity' element={<PermissionGuard requiredPermission='class.view'><ActivityManage /></PermissionGuard>} />
                 <Route path='culture' element={<PermissionGuard requiredPermission='class.view'><CultureBoard /></PermissionGuard>} />
                 <Route path='study-guide' element={<PermissionGuard requiredPermission='class.view'><StudyGuide /></PermissionGuard>} />
+
+                {/* 运维中心 - 系统运维聚合总览 */}
+                <Route path='ops-center' element={<PermissionGuard requiredPermission='ops_center.view'><OpsCenter /></PermissionGuard>} />
+                <Route path='ops-center/telemetry' element={<PermissionGuard requiredPermission='ops_center.view'><FrontendTelemetry /></PermissionGuard>} />
+                <Route path='ops-center/metrics' element={<PermissionGuard requiredPermission='ops_center.view'><SystemMetrics /></PermissionGuard>} />
+                <Route path='security-audit' element={<PermissionGuard requiredPermission='system.settings'><SecurityAudit /></PermissionGuard>} />
               </Route>
             </Routes>
           </HashRouter>

@@ -28,6 +28,8 @@ import {
   Upload,
   Server,
   Calendar,
+  Gauge,
+  LineChart,
   X,
   Clock,
   LucideIcon,
@@ -74,6 +76,7 @@ interface ExpandedGroups {
   deviceManagement: boolean;
   notificationCenter: boolean;
   systemAdmin: boolean;
+  opsCenter: boolean;
   [key: string]: boolean | undefined;
 }
 
@@ -260,6 +263,7 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
     deviceManagement: false,
     notificationCenter: false,
     systemAdmin: false,
+    opsCenter: false,
   });
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -441,6 +445,20 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         { path: '/permission', label: '权限管理', icon: Shield, permission: 'system.roles' },
         
         { path: '/data-sync', label: '数据同步', icon: RefreshCw, permission: 'system.settings' },
+      ],
+    },
+    {
+      id: 'opsCenter',
+      label: '运维中心',
+      icon: Server,
+      permission: 'ops_center.view',
+      items: [
+        { path: '/ops-center', label: '运维总览', icon: Activity, permission: 'ops_center.view' },
+        { path: '/ops-center/telemetry', label: '前端遥测', icon: Gauge, permission: 'ops_center.view' },
+        { path: '/ops-center/metrics', label: '系统指标趋势', icon: LineChart, permission: 'ops_center.view' },
+        { path: '/diagnostics', label: '系统诊断', icon: Server, permission: 'device.view' },
+        { path: '/security-audit', label: '安全审计', icon: Shield, permission: 'system.settings' },
+        { path: '/operation-logs', label: '操作日志', icon: History, permission: 'system.logs' },
       ],
     },
   ], []);
