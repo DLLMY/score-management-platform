@@ -18,6 +18,7 @@ def init_services(app, lightweight=False):
         init_cache_warmup(app)
         init_nlp_service(app)
         init_websocket(app)
+        init_notification_config(app)
         init_system_metric_sampler(app)
 
 
@@ -242,6 +243,16 @@ def init_nlp_service(app):
         print("NLP服务初始化完成")
     except Exception as e:
         print(f"NLP服务初始化失败: {e}")
+
+
+def init_notification_config(app):
+    """启动时从数据库加载通知配置到 current_app.config（持久化通知配置）。"""
+    try:
+        from services.notification_config_store import load_notification_config_to_app
+
+        load_notification_config_to_app(app)
+    except Exception as e:
+        print(f"通知配置初始化失败(沿用环境默认): {e}")
 
 
 def init_websocket(app):

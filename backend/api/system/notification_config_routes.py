@@ -97,6 +97,16 @@ class NotificationConfig(Resource):
         if "enable_sms_notification" in data:
             current_app.config["ENABLE_SMS_NOTIFICATION"] = data["enable_sms_notification"]
 
+        # 持久化到 notification_config 表（字段名与模型列一一对应；掩码值不落库，避免覆盖真实密钥）
+        from services.notification_config_store import save_notification_config
+
+        updates = dict(data)
+        if updates.get("wechat_secret") == "***":
+            updates.pop("wechat_secret", None)
+        if updates.get("sms_access_key_secret") == "***":
+            updates.pop("sms_access_key_secret", None)
+        save_notification_config(updates)
+
         return APIResponse.success(message="通知配置已更新")
 
 

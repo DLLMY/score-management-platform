@@ -1372,3 +1372,6 @@ from models.culture import CultureRecord, CultureItem  # noqa: E402,F401
 
 # 班主任工作台 - 学法指导
 from models.study_guide import StudyGuide, ImprovementPlan  # noqa: E402,F401
+
+# 通知配置（单行持久化，替代 current_app.config 内存实现）
+from models.notification_config import NotificationConfig  # noqa: E402,F401
