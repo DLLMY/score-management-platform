@@ -27,6 +27,7 @@ import { useForm, useModal, useConfirmDialog } from '../hooks';
 import { useStableToast } from '../hooks/useStableToast';
 import { validateForm } from '../utils/validation';
 import { PermissionButton } from '../components';
+import { ToggleSwitch } from '../components/form/ToggleSwitch';
 import { useDebouncedValue } from '../hooks';
 
 const ICONS = [
@@ -623,19 +624,10 @@ function RankRuleList() {
 
               <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl mb-5'>
                 <label className='text-sm font-medium text-gray-700 dark:text-slate-300'>启用</label>
-                <button
-                  type='button'
-                  onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                  className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
-                    formData.is_active ? 'bg-gradient-to-r from-primary-500 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300 ${
-                      formData.is_active ? 'left-7' : 'left-0.5'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={formData.is_active}
+                  onChange={(v) => setFormData({ ...formData, is_active: v })}
+                />
               </div>
 
               <div className='flex gap-3 pt-4'>

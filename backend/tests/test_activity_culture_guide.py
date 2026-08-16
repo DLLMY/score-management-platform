@@ -1,5 +1,6 @@
 import pytest
 from models import db
+from models import ClassInfo
 from models.activity import Activity, ActivityRegistration
 from models.culture import CultureRecord
 from models.study_guide import StudyGuide, ImprovementPlan
@@ -8,16 +9,25 @@ from services.culture_service import culture_service
 from services.study_guide_service import study_guide_service
 
 
+@pytest.fixture
+def existing_class(db_session):
+    """创建一个真实班级（E4 校验后 create_* 需要 class_id 真实存在）。"""
+    cls = ClassInfo(name=f"测试班-{id(object())}", grade="高一")
+    db_session.add(cls)
+    db_session.commit()
+    return cls
+
+
 class TestActivityService:
-    def test_create_activity(self, app, db_session):
+    def test_create_activity(self, app, db_session, existing_class):
         result = activity_service.create_activity({
-            "class_id": 1, "title": "运动会", "activity_type": "sports"
+            "class_id": existing_class.id, "title": "运动会", "activity_type": "sports"
         })
         assert result[0]["success"] is True
 
-    def test_register_student(self, app, db_session):
+    def test_register_student(self, app, db_session, existing_class):
         create_result = activity_service.create_activity({
-            "class_id": 1, "title": "报名测试活动"
+            "class_id": existing_class.id, "title": "报名测试活动"
         })
         activity_id = create_result[0]["data"]["id"]
         result = activity_service.register_student(activity_id, 10)
@@ -25,18 +35,18 @@ class TestActivityService:
 
 
 class TestCultureService:
-    def test_create_record(self, app, db_session):
+    def test_create_record(self, app, db_session, existing_class):
         result = culture_service.create_record({
-            "class_id": 1, "category": "slogan",
+            "class_id": existing_class.id, "category": "slogan",
             "title": "班级口号", "content": "团结友爱"
         })
         assert result[0]["success"] is True
 
 
 class TestStudyGuideService:
-    def test_create_guide(self, app, db_session):
+    def test_create_guide(self, app, db_session, existing_class):
         result = study_guide_service.create_guide({
-            "class_id": 1, "title": "高效学习方法",
+            "class_id": existing_class.id, "title": "高效学习方法",
             "guide_type": "method", "content": "费曼学习法..."
         })
         assert result[0]["success"] is True

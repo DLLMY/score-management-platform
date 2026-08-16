@@ -1,7 +1,8 @@
 from datetime import datetime, date
-from models import db, ClassInfo, get_by_id
+from models import db
 from models.activity import Activity, ActivityRegistration
 from utils.permission import get_current_admin
+from utils.entity_guard import require_class, class_not_found_response
 from services.entity_names import names
 
 
@@ -30,9 +31,8 @@ class ActivityService:
 
     def create_activity(self, data):
         admin = get_current_admin()
-        class_info = get_by_id(ClassInfo, data.get("class_id"))
-        if not class_info:
-            return {"success": False, "message": "班级不存在，无法创建活动"}, 400
+        if not require_class(data.get("class_id")):
+            return class_not_found_response("创建活动")
         activity = Activity(
             class_id=data["class_id"],
             title=data["title"],

@@ -20,6 +20,7 @@ import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { CultureRecord, CultureCreateInput } from '../types';
 import { ClassSelect } from '../components/form/EntitySelect';
+import { ToggleSwitch } from '../components/form/ToggleSwitch';
 
 interface CultureFormData {
   id: number | null;
@@ -513,18 +514,11 @@ function CultureBoard() {
 
               <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl'>
                 <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>启用状态</label>
-                <button
-                  onClick={() => handleChange('is_active', !formData.is_active)}
-                  className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
-                    formData.is_active ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300 ${
-                      formData.is_active ? 'left-7' : 'left-0.5'
-                    }`}
-                  />
-                </button>
+                <ToggleSwitch
+                  checked={formData.is_active}
+                  onChange={(v) => handleChange('is_active', v)}
+                  activeClass='bg-gradient-to-r from-emerald-500 to-teal-500'
+                />
               </div>
             </div>
 
