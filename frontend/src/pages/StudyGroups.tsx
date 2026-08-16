@@ -18,6 +18,7 @@ import {
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { StudyGroup, StudyGroupCreateInput, StudyGroupMember } from '../types';
+import { ClassSelect, StudentSelect } from '../components/form/EntitySelect';
 
 interface GroupFormData {
   id: number | null;
@@ -40,8 +41,6 @@ const defaultGroupForm: GroupFormData = {
 function StudyGroups() {
   const { showToast } = useStableToast();
   const [groups, setGroups] = useState<StudyGroup[]>([]);
-  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
-  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -56,17 +55,9 @@ function StudyGroups() {
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, classRes, userRes] = await Promise.all([
-        api.studyGroup.getAll(),
-        api.classes.getAll().catch(() => null),
-        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
-      ]);
+      const data = await api.studyGroup.getAll();
       setGroups(data || []);
-      const cls = (classRes && classRes.classes) || [];
-      setClassList(cls);
-      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
-      const users = (userRes && (userRes.users || userRes)) || [];
-      setStudentList(Array.isArray(users) ? users : []);
+      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: 0 }));
     } catch (error) {
       logger.error('获取学习小组列表失败:', error);
       showToast('error', '获取学习小组列表失败');
@@ -472,19 +463,13 @@ function StudyGroups() {
 
                           {showAddMember && (
                             <div className="flex items-center gap-2 mb-2">
-                              <select
-                                value={newMemberId}
-                                onChange={(e) => setNewMemberId(e.target.value)}
-                                className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                              >
-                                <option value=''>请选择学生</option>
-                                {studentList.map((s) => (
-                                  <option key={s.id} value={String(s.id)}>
-                                    {s.name}
-                                    {s.class_name ? `（${s.class_name}）` : ''}
-                                  </option>
-                                ))}
-                              </select>
+                              <StudentSelect
+                                value={newMemberId ? Number(newMemberId) : 0}
+                                onChange={(id) => setNewMemberId(String(id))}
+                                allowEmpty
+                                emptyLabel='请选择学生'
+                                className='flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-slate-800 dark:text-slate-100'
+                              />
                               <button
                                 onClick={() => {
                                   if (newMemberId) {
@@ -590,38 +575,25 @@ function StudyGroups() {
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     班级 <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.class_id || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, class_id: Number(e.target.value) }))}
+                  <ClassSelect
+                    value={formData.class_id}
+                    onChange={(id) => setFormData((prev) => ({ ...prev, class_id: id }))}
                     disabled={!!formData.id}
+                    emptyPlaceholder='暂无班级'
                     className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-slate-800 dark:text-slate-100 disabled:opacity-60 ${
                       errors.class_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-purple-500'
                     }`}
-                  >
-                    {classList.length === 0 && <option value={0}>暂无班级</option>}
-                    {classList.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {errors.class_id && <p className="mt-1 text-xs text-red-500">{errors.class_id}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">组长</label>
-                  <select
-                    value={formData.leader_id ?? ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, leader_id: e.target.value ? Number(e.target.value) : undefined }))}
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-slate-800 dark:text-slate-100"
-                  >
-                    <option value=''>不指定组长</option>
-                    {studentList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                        {s.class_name ? `（${s.class_name}）` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <StudentSelect
+                    value={formData.leader_id ?? 0}
+                    onChange={(id) => setFormData((prev) => ({ ...prev, leader_id: id || undefined }))}
+                    allowEmpty
+                    emptyLabel='不指定组长'
+                  />
                 </div>
               </div>
             </div>

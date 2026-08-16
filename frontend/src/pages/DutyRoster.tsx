@@ -15,6 +15,7 @@ import {
 import api from '../services/api';
 import { DutyGroup, DutyAssignment, DutyGroupCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { ClassSelect, StudentSelect } from '../components/form/EntitySelect';
 
 interface DutyFormData {
   name: string;
@@ -65,8 +66,6 @@ const defaultAssignmentForm: AssignmentFormData = {
 function DutyRosterPage() {
   const [groups, setGroups] = useState<DutyGroup[]>([]);
   const [assignments, setAssignments] = useState<DutyAssignment[]>([]);
-  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
-  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -77,17 +76,8 @@ function DutyRosterPage() {
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, classRes, userRes] = await Promise.all([
-        api.duty.getAll(),
-        api.classes.getAll().catch(() => null),
-        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
-      ]);
+      const data = await api.duty.getAll();
       setGroups(data || []);
-      const cls = (classRes && classRes.classes) || [];
-      setClassList(cls);
-      setDutyForm((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
-      const users = (userRes && (userRes.users || userRes)) || [];
-      setStudentList(Array.isArray(users) ? users : []);
     } catch (error) {
       logger.error('获取值日组列表失败:', error);
       showToast('error', '获取值日组列表失败');
@@ -382,18 +372,11 @@ function DutyRosterPage() {
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   班级 <span className="text-red-500">*</span>
                 </label>
-                <select
+                <ClassSelect
                   value={dutyForm.class_id}
-                  onChange={(e) => setDutyForm({ ...dutyForm, class_id: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100"
-                >
-                  {classList.length === 0 && <option value={0}>暂无班级</option>}
-                  {classList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setDutyForm({ ...dutyForm, class_id: id })}
+                  emptyPlaceholder='暂无班级'
+                />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">组名 <span className="text-red-500">*</span></label>
@@ -482,19 +465,12 @@ function DutyRosterPage() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">学生 <span className="text-red-500">*</span></label>
-                <select
-                  value={assignmentForm.student_id || ''}
-                  onChange={(e) => setAssignmentForm({ ...assignmentForm, student_id: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-800 dark:text-slate-100"
-                >
-                  <option value={0}>请选择学生</option>
-                  {studentList.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                      {s.class_name ? `（${s.class_name}）` : ''}
-                    </option>
-                  ))}
-                </select>
+                <StudentSelect
+                  value={assignmentForm.student_id}
+                  onChange={(id) => setAssignmentForm({ ...assignmentForm, student_id: id })}
+                  allowEmpty
+                  emptyLabel='请选择学生'
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { ClassSelect, StudentSelect, SubjectSelect } from '../components/form/EntitySelect';
 import {
   StudyGuide,
   StudyGuideCreateInput,
@@ -74,10 +75,7 @@ const audiences = ['全班', '优生', '后进生', '中等生', '个人'];
 function StudyGuidePage() {
   const [guides, setGuides] = useState<StudyGuide[]>([]);
   const [plans, setPlans] = useState<ImprovementPlan[]>([]);
-  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number>(0);
-  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
-  const [subjectList, setSubjectList] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'guides' | 'plans'>('guides');
@@ -96,20 +94,8 @@ function StudyGuidePage() {
 
   const fetchGuides = useCallback(async () => {
     try {
-      const [data, classRes, userRes, subjectRes] = await Promise.all([
-        api.studyGuide.getGuides(),
-        api.classes.getAll().catch(() => null),
-        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
-        api.subjects.getAll().catch(() => null),
-      ]);
+      const data = await api.studyGuide.getGuides();
       setGuides(Array.isArray(data) ? data : []);
-      const cls = (classRes && classRes.classes) || [];
-      setClassList(cls);
-      setSelectedClassId((prev) => (prev && prev > 0 ? prev : cls.length > 0 ? cls[0].id : 0));
-      const users = (userRes && (userRes.users || userRes)) || [];
-      setStudentList(Array.isArray(users) ? users : []);
-      const subs = Array.isArray(subjectRes) ? subjectRes : [];
-      setSubjectList(subs);
     } catch (error) {
       logger.error('获取指导文章失败:', error);
       showToast('error', '获取指导文章失败');
@@ -673,19 +659,12 @@ function StudyGuidePage() {
                 <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
                   班级 <span className='text-red-500'>*</span>
                 </label>
-                <select
+                <ClassSelect
                   value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(Number(e.target.value))}
+                  onChange={setSelectedClassId}
                   disabled={!!guideForm.id}
-                  className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 dark:text-slate-100 disabled:opacity-60'
-                >
-                  {classList.length === 0 && <option value={0}>暂无班级</option>}
-                  {classList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  emptyPlaceholder='暂无班级'
+                />
                 {guideForm.id && (
                   <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>
                 )}
@@ -818,21 +797,15 @@ function StudyGuidePage() {
                 </label>
                 <div className='relative'>
                   <User className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
-                  <select
-                    value={planForm.student_id || ''}
-                    onChange={(e) => handlePlanChange('student_id', Number(e.target.value))}
+                  <StudentSelect
+                    value={planForm.student_id}
+                    onChange={(id) => handlePlanChange('student_id', id)}
+                    allowEmpty
+                    emptyLabel='请选择学生'
                     className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100 ${
                       planErrors.student_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-cyan-500'
                     }`}
-                  >
-                    {studentList.length === 0 && <option value={0}>暂无学生</option>}
-                    {studentList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                        {s.class_name ? `（${s.class_name}）` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 {planErrors.student_id && <p className='mt-1 text-xs text-red-500'>{planErrors.student_id}</p>}
               </div>
@@ -854,18 +827,12 @@ function StudyGuidePage() {
                 </div>
                 <div>
                   <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>科目</label>
-                  <select
-                    value={planForm.subject_id ?? ''}
-                    onChange={(e) => handlePlanChange('subject_id', e.target.value ? Number(e.target.value) : null)}
-                    className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100'
-                  >
-                    <option value=''>不指定科目</option>
-                    {subjectList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SubjectSelect
+                    value={planForm.subject_id ?? null}
+                    onChange={(id) => handlePlanChange('subject_id', id || null)}
+                    allowEmpty
+                    emptyLabel='不指定科目'
+                  />
                 </div>
               </div>
 

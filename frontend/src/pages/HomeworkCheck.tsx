@@ -15,6 +15,7 @@ import {
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { HomeworkAssignment, HomeworkCreateInput } from '../types';
+import { ClassSelect, SubjectSelect } from '../components/form/EntitySelect';
 
 interface HomeworkFormData {
   id: number | null;
@@ -39,8 +40,6 @@ const defaultForm: HomeworkFormData = {
 function HomeworkCheck() {
   const { showToast } = useStableToast();
   const [assignments, setAssignments] = useState<HomeworkAssignment[]>([]);
-  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
-  const [subjectList, setSubjectList] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -50,17 +49,9 @@ function HomeworkCheck() {
   const fetchAssignments = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, classRes, subjectRes] = await Promise.all([
-        api.homework.getAll(),
-        api.classes.getAll().catch(() => null),
-        api.subjects.getAll().catch(() => null),
-      ]);
+      const data = await api.homework.getAll();
       setAssignments(data || []);
-      const cls = (classRes && classRes.classes) || [];
-      setClassList(cls);
-      const subs = Array.isArray(subjectRes) ? subjectRes : [];
-      setSubjectList(subs);
-      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
+      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: 0 }));
     } catch (error) {
       logger.error('获取作业列表失败:', error);
       showToast('error', '获取作业列表失败');
@@ -436,37 +427,25 @@ function HomeworkCheck() {
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     班级 <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.class_id || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, class_id: Number(e.target.value) }))}
+                  <ClassSelect
+                    value={formData.class_id}
+                    onChange={(id) => setFormData((prev) => ({ ...prev, class_id: id }))}
                     disabled={!!formData.id}
+                    emptyPlaceholder='暂无班级'
                     className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-slate-800 dark:text-slate-100 disabled:opacity-60 ${
                       errors.class_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
                     }`}
-                  >
-                    {classList.length === 0 && <option value={0}>暂无班级</option>}
-                    {classList.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {errors.class_id && <p className="mt-1 text-xs text-red-500">{errors.class_id}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">科目</label>
-                  <select
-                    value={formData.subject_id ?? ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, subject_id: e.target.value ? Number(e.target.value) : undefined }))}
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-slate-800 dark:text-slate-100"
-                  >
-                    <option value=''>不指定科目</option>
-                    {subjectList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SubjectSelect
+                    value={formData.subject_id ?? null}
+                    onChange={(id) => setFormData((prev) => ({ ...prev, subject_id: id || undefined }))}
+                    allowEmpty
+                    emptyLabel='不指定科目'
+                  />
                 </div>
               </div>
 

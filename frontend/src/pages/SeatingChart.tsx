@@ -16,6 +16,7 @@ import {
 import api from '../services/api';
 import { SeatingChart, SeatingChartCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { ClassSelect } from '../components/form/EntitySelect';
 
 interface SeatPosition {
   row: number;
@@ -50,7 +51,6 @@ const defaultForm: CreateFormData = {
 function SeatingChartPage() {
   const [charts, setCharts] = useState<SeatingChart[]>([]);
   const [selectedChart, setSelectedChart] = useState<SeatingChart | null>(null);
-  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState<CreateFormData>(defaultForm);
@@ -61,14 +61,9 @@ function SeatingChartPage() {
   const fetchCharts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, classRes] = await Promise.all([
-        api.seating.getAll(),
-        api.classes.getAll().catch(() => null),
-      ]);
+      const data = await api.seating.getAll();
       setCharts(data || []);
-      const cls = (classRes && classRes.classes) || [];
-      setClassList(cls);
-      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
+      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: 0 }));
       if (!selectedChart && data && data.length > 0) {
         setSelectedChart(data[0]);
       }
@@ -435,18 +430,11 @@ function SeatingChartPage() {
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   班级 <span className="text-red-500">*</span>
                 </label>
-                <select
+                <ClassSelect
                   value={formData.class_id}
-                  onChange={(e) => setFormData({ ...formData, class_id: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-slate-100"
-                >
-                  {classList.length === 0 && <option value={0}>暂无班级</option>}
-                  {classList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setFormData({ ...formData, class_id: id })}
+                  emptyPlaceholder='暂无班级'
+                />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">座次表名称 <span className="text-red-500">*</span></label>

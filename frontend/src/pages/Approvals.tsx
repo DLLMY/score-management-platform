@@ -4,6 +4,7 @@ import { ClipboardCheck, Check, X, Filter, RefreshCw, Clock, User, Plus } from '
 import { Card, Button, Modal, PermissionButton } from '../components';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { StudentSelect } from '../components/form/EntitySelect';
 
 interface Approval {
   id: number;
@@ -36,7 +37,6 @@ interface Pagination {
 function Approvals() {
   const { showToast } = useStableToast();
   const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
@@ -57,12 +57,7 @@ function Approvals() {
       setLoading(true);
       const params: Record<string, unknown> = { page: pagination.page, per_page: pagination.per_page };
       if (filterStatus) params.status = filterStatus;
-      const [data, userRes] = await Promise.all([
-        api.approvals.getAll(params),
-        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
-      ]);
-      const users = (userRes && (userRes.users || userRes)) || [];
-      setStudentList(Array.isArray(users) ? users : []);
+      const data = await api.approvals.getAll(params);
       // API返回格式是 { approvals: [...], pagination: { total } }
       const approvalsList = Array.isArray(data) ? data : ((data as { approvals?: Approval[] })?.approvals || []);
       setApprovals(approvalsList);
@@ -366,20 +361,13 @@ function Approvals() {
         <form onSubmit={handleCreateApproval} className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>学生</label>
-            <select
-              value={createForm.user_id}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) => setCreateForm({ ...createForm, user_id: e.target.value })}
+            <StudentSelect
+              value={createForm.user_id ? Number(createForm.user_id) : 0}
+              onChange={(id) => setCreateForm({ ...createForm, user_id: id ? String(id) : '' })}
+              allowEmpty
+              emptyLabel='请选择学生'
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
-              required
-            >
-              <option value=''>请选择学生</option>
-              {studentList.map((s) => (
-                <option key={s.id} value={String(s.id)}>
-                  {s.name}
-                  {s.class_name ? `（${s.class_name}）` : ''}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>申请类型</label>
