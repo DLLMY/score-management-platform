@@ -1,7 +1,7 @@
 from models import db
 from models.study_guide import StudyGuide, ImprovementPlan
 from utils.permission import get_current_admin
-from utils.entity_guard import require_class, class_not_found_response
+from utils.entity_guard import require_class, class_not_found_response, require_student, student_not_found_response
 from services.entity_names import names
 
 
@@ -64,6 +64,8 @@ class StudyGuideService:
 
     def create_plan(self, data):
         admin = get_current_admin()
+        if not require_student(data.get("student_id")):
+            return student_not_found_response("创建改进计划")
         plan = ImprovementPlan(
             student_id=data["student_id"],
             plan_type=data.get("plan_type", "tutorial"),

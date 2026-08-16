@@ -1,6 +1,6 @@
 import pytest
 from models import db
-from models import ClassInfo
+from models import ClassInfo, User
 from models.activity import Activity, ActivityRegistration
 from models.culture import CultureRecord
 from models.study_guide import StudyGuide, ImprovementPlan
@@ -16,6 +16,15 @@ def existing_class(db_session):
     db_session.add(cls)
     db_session.commit()
     return cls
+
+
+@pytest.fixture
+def existing_student(db_session):
+    """创建一个真实学生（require_student 校验需要 student_id 存在）。"""
+    u = User(name=f"测试学生-{id(object())}", card_id=f"C{id(object())}")
+    db_session.add(u)
+    db_session.commit()
+    return u
 
 
 class TestActivityService:
@@ -51,16 +60,16 @@ class TestStudyGuideService:
         })
         assert result[0]["success"] is True
 
-    def test_create_plan(self, app, db_session):
+    def test_create_plan(self, app, db_session, existing_student):
         result = study_guide_service.create_plan({
-            "student_id": 10, "plan_type": "tutorial",
+            "student_id": existing_student.id, "plan_type": "tutorial",
             "target_score": 90, "current_score": 75
         })
         assert result[0]["success"] is True
 
-    def test_update_plan_progress(self, app, db_session):
+    def test_update_plan_progress(self, app, db_session, existing_student):
         create_result = study_guide_service.create_plan({
-            "student_id": 10, "plan_type": "remedial",
+            "student_id": existing_student.id, "plan_type": "remedial",
             "progress": 50
         })
         plan_id = create_result[0]["data"]["id"]

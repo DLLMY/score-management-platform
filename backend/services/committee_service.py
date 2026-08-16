@@ -2,6 +2,7 @@ from datetime import datetime
 from models import db
 from models.committee import ClassCommittee, CommitteeTerm
 from utils.datetime_utils import parse_date
+from utils.entity_guard import require_class, require_student
 from services.entity_names import names
 
 
@@ -23,6 +24,8 @@ class CommitteeService:
         missing = [k for k in ("class_id", "position", "student_id") if not data.get(k)]
         if missing:
             return {"success": False, "message": "缺少必填字段: " + ", ".join(missing)}, 400
+        if not require_class(data["class_id"]) or not require_student(data["student_id"]):
+            return {"success": False, "message": "班级或学生不存在，无法添加班委"}, 400
         member = ClassCommittee(
             class_id=data["class_id"],
             position=data["position"],

@@ -3,6 +3,7 @@ from models import db
 from models.attendance import Attendance, LeaveApplication
 from utils.permission import get_current_admin
 from utils.datetime_utils import parse_date, parse_datetime
+from utils.entity_guard import require_class, require_student
 from services.entity_names import names
 
 
@@ -26,6 +27,8 @@ class AttendanceService:
         missing = [k for k in ("class_id", "student_id") if not data.get(k)]
         if missing:
             return {"success": False, "message": "缺少必填字段: " + ", ".join(missing)}, 400
+        if not require_class(data["class_id"]) or not require_student(data["student_id"]):
+            return {"success": False, "message": "班级或学生不存在，无法记录考勤"}, 400
         admin = get_current_admin()
         record = Attendance(
             class_id=data["class_id"],
@@ -51,6 +54,8 @@ class AttendanceService:
             missing = [k for k in ("class_id", "student_id") if not data.get(k)]
             if missing:
                 return {"success": False, "message": f"第 {i+1} 条记录缺少必填字段: " + ", ".join(missing)}, 400
+            if not require_class(data["class_id"]) or not require_student(data["student_id"]):
+                return {"success": False, "message": f"第 {i+1} 条记录班级或学生不存在"}, 400
         admin = get_current_admin()
         created = []
         for data in records_data:
@@ -79,6 +84,8 @@ class AttendanceService:
         return {"success": True, "data": [self._build_leave_response(leave) for leave in leaves]}
 
     def apply_leave(self, data):
+        if not require_student(data.get("student_id")):
+            return {"success": False, "message": "学生不存在，无法提交请假"}, 400
         leave = LeaveApplication(
             student_id=data["student_id"],
             leave_type=data.get("leave_type", "personal"),
