@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
-import { Plus, Edit2, Trash2, Clock, AlertCircle, CheckCircle, Save, X, Search, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, AlertCircle, Save, X, Search, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useForm, useModal } from '../hooks';
 import { useStableToast } from '../hooks/useStableToast';
@@ -63,6 +63,7 @@ const TimeRuleList: React.FC = () => {
   const [loadError, setLoadError] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<TimeRule | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const {
     formData,
@@ -213,13 +214,19 @@ const TimeRuleList: React.FC = () => {
   }, []);
 
   const filteredRules = useMemo(() => {
-    if (!debouncedSearchTerm) return rules;
-    const searchLower = debouncedSearchTerm.toLowerCase();
-    return rules.filter(rule => 
-      rule.name.toLowerCase().includes(searchLower) ||
-      rule.description.toLowerCase().includes(searchLower)
-    );
-  }, [rules, debouncedSearchTerm]);
+    const keyword = debouncedSearchTerm.toLowerCase();
+    return rules.filter(rule => {
+      if (statusFilter !== 'all') {
+        const isActive = statusFilter === 'active';
+        if (rule.is_active !== isActive) return false;
+      }
+      if (!keyword) return true;
+      return (
+        rule.name.toLowerCase().includes(keyword) ||
+        rule.description.toLowerCase().includes(keyword)
+      );
+    });
+  }, [rules, debouncedSearchTerm, statusFilter]);
 
   return (
     <div className='space-y-6'>
@@ -248,15 +255,26 @@ const TimeRuleList: React.FC = () => {
       <div className='card'>
         <div className='card-body p-0'>
           <div className='px-6 py-4 border-b border-gray-200 bg-gray-50'>
-            <div className='relative max-w-md'>
-              <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
-              <input
-                type='text'
-                placeholder='搜索规则名称或描述...'
-                value={searchTerm}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className='w-full pl-10 pr-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50'
-              />
+            <div className='flex flex-wrap items-center gap-3'>
+              <div className='relative max-w-md flex-1'>
+                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
+                <input
+                  type='text'
+                  placeholder='搜索规则名称或描述...'
+                  value={searchTerm}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                  className='w-full pl-10 pr-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50'
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className='px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50'
+              >
+                <option value='all'>全部状态</option>
+                <option value='active'>启用</option>
+                <option value='inactive'>禁用</option>
+              </select>
             </div>
           </div>
           <div className='overflow-x-auto'>
@@ -307,11 +325,11 @@ const TimeRuleList: React.FC = () => {
                       <td className='px-6 py-4 text-gray-600'>{getDayLabel(rule.day_of_week)}</td>
                       <td className='px-6 py-4'>
                         <div className='flex items-center gap-2'>
-                          {rule.is_active ? (
-                            <CheckCircle className='w-5 h-5 text-success-500' />
-                          ) : (
-                            <AlertCircle className='w-5 h-5 text-gray-400' />
-                          )}
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${rule.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}
+                          >
+                            {rule.is_active ? '启用' : '禁用'}
+                          </span>
                           <span
                             className={`badge ${rule.allow_unlock ? 'badge-success' : 'badge-danger'}`}
                           >
@@ -543,25 +561,27 @@ const TimeRuleList: React.FC = () => {
                 </div>
               )}
 
-              <div className='flex items-center gap-6'>
-                <label className='flex items-center gap-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={formData.is_active}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className='w-4 h-4 text-primary-600 rounded focus:ring-primary-500'
-                  />
+              <div className='flex items-center gap-8'>
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${formData.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${formData.is_active ? 'left-6' : 'left-0.5'}`} />
+                  </button>
                   <span className='text-sm text-gray-700'>启用规则</span>
-                </label>
-                <label className='flex items-center gap-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={formData.allow_unlock}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, allow_unlock: e.target.checked })}
-                    className='w-4 h-4 text-primary-600 rounded focus:ring-primary-500'
-                  />
+                </div>
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={() => setFormData({ ...formData, allow_unlock: !formData.allow_unlock })}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${formData.allow_unlock ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${formData.allow_unlock ? 'left-6' : 'left-0.5'}`} />
+                  </button>
                   <span className='text-sm text-gray-700'>允许开锁</span>
-                </label>
+                </div>
               </div>
 
               <div className='modal-footer'>

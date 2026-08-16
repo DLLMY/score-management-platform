@@ -916,8 +916,8 @@ function SubjectManagementPage() {
                           </div>
                           <div>
                             <p className='font-semibold text-slate-800 dark:text-slate-100 text-sm'>{sc.class_name}</p>
-                            {sc.class_grade && (
-                              <p className='text-xs text-slate-500 dark:text-slate-400'>{sc.class_grade}</p>
+                            {sc.grade && (
+                              <p className='text-xs text-slate-500 dark:text-slate-400'>{sc.grade}</p>
                             )}
                           </div>
                         </div>

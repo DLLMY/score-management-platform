@@ -277,7 +277,7 @@ class SubjectClasses(Resource):
                     "id": link.id,
                     "class_info_id": link.class_info_id,
                     "class_name": class_info.name if class_info else "",
-                    "class_grade": class_info.grade if class_info else "",
+                    "grade": class_info.grade if class_info else "",
                     "teacher_id": link.teacher_id,
                     "teacher_name": teacher.real_name if teacher else None,
                     "created_at": link.created_at.isoformat() if link.created_at else None,
@@ -446,7 +446,7 @@ class SubjectExport(Resource):
                         {
                             "class_info_id": link.class_info_id,
                             "class_name": class_info.name if class_info else "",
-                            "class_grade": class_info.grade if class_info else "",
+                            "grade": class_info.grade if class_info else "",
                             "teacher_id": link.teacher_id,
                             "teacher_name": teacher.real_name if teacher else None,
                         }
