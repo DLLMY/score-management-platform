@@ -36,7 +36,7 @@ const TABS = [
 const SEVERITY_COLORS: Record<string, { bg: string; text: string; light: string }> = {
   high: { bg: 'bg-red-500', text: 'text-red-600', light: 'bg-red-50 dark:bg-red-500/10' },
   medium: { bg: 'bg-yellow-500', text: 'text-yellow-600', light: 'bg-yellow-50 dark:bg-yellow-500/10' },
-  low: { bg: 'bg-blue-500', text: 'text-blue-600', light: 'bg-blue-50 dark:bg-blue-500/10' },
+  low: { bg: 'bg-green-500', text: 'text-green-600', light: 'bg-green-50 dark:bg-green-500/10' },
 };
 
 /**
@@ -843,7 +843,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
             <div className="text-sm text-gray-500 dark:text-slate-400">低严重度</div>
-            <div className="text-3xl font-bold text-blue-600 mt-1">{safeSummary.low_severity_count ?? 0}</div>
+            <div className="text-3xl font-bold text-green-600 mt-1">{safeSummary.low_severity_count ?? 0}</div>
           </div>
         </div>
 

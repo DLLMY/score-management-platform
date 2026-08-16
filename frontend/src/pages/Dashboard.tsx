@@ -1008,7 +1008,7 @@ function Dashboard(): React.ReactElement {
               {state.notifications.slice(0, 5).map((notification) => (
                 <div key={notification.id} className='p-3 bg-gray-50/50 rounded-lg hover:bg-gray-50 transition-colors'>
                   <div className='flex items-start gap-2'>
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${notification.priority === 'high' || notification.priority === 'urgent' ? 'bg-red-500' : notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'}`} />
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${notification.priority === 'high' || notification.priority === 'urgent' ? 'bg-red-500' : notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`} />
                     <div className='flex-1 min-w-0'>
                       <p className='text-sm font-medium text-gray-900 truncate'>{notification.title}</p>
                       <p className='text-xs text-gray-500 mt-0.5'>{notification.content}</p>
