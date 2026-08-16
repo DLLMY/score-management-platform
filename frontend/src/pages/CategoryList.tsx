@@ -423,15 +423,22 @@ function CategoryList() {
               </div>
 
               <div className='form-group'>
-                <label className='flex items-center gap-3 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={formData.is_active}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className='w-5 h-5 text-primary-600 rounded focus:ring-primary-500'
-                  />
-                  <span className='text-sm font-medium text-gray-700'>启用分类</span>
-                </label>
+                <div className='flex items-center justify-between'>
+                  <label className='text-sm font-medium text-gray-700'>启用分类</label>
+                  <button
+                    type='button'
+                    onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                    className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
+                      formData.is_active ? 'bg-gradient-to-r from-primary-500 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300 ${
+                        formData.is_active ? 'left-7' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
 
               <div className='modal-footer'>

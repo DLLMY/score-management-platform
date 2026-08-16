@@ -219,7 +219,7 @@ function RemoteNotify() {
     scheduled_at: '',
     repeat_type: 'once',
     repeat_interval: 1,
-    repeat_day_of_week: [1, 2, 3, 4, 5],
+    repeat_day_of_week: [0, 1, 2, 3, 4],
     repeat_end_at: '',
   }, {
     text: { required: true, minLength: 1 },
@@ -561,7 +561,7 @@ function RemoteNotify() {
       scheduled_at: '',
       repeat_type: 'once',
       repeat_interval: 1,
-      repeat_day_of_week: [1, 2, 3, 4, 5],
+      repeat_day_of_week: [0, 1, 2, 3, 4],
       repeat_end_at: '',
     });
     openScheduledModal();
@@ -1312,7 +1312,7 @@ function RemoteNotify() {
                           <button
                             key={index}
                             onClick={() => {
-                              const dayNum = index + 1;
+                              const dayNum = index;
                               setScheduledForm(prev => ({
                                 ...prev,
                                 repeat_day_of_week: prev.repeat_day_of_week.includes(dayNum)
@@ -1321,7 +1321,7 @@ function RemoteNotify() {
                               }));
                             }}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              scheduledForm.repeat_day_of_week.includes(index + 1)
+                              scheduledForm.repeat_day_of_week.includes(index)
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                             }`}

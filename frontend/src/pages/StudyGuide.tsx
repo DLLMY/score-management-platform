@@ -76,6 +76,8 @@ function StudyGuidePage() {
   const [plans, setPlans] = useState<ImprovementPlan[]>([]);
   const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number>(0);
+  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
+  const [subjectList, setSubjectList] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'guides' | 'plans'>('guides');
@@ -94,14 +96,20 @@ function StudyGuidePage() {
 
   const fetchGuides = useCallback(async () => {
     try {
-      const [data, classRes] = await Promise.all([
+      const [data, classRes, userRes, subjectRes] = await Promise.all([
         api.studyGuide.getGuides(),
         api.classes.getAll().catch(() => null),
+        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
+        api.subjects.getAll().catch(() => null),
       ]);
       setGuides(Array.isArray(data) ? data : []);
       const cls = (classRes && classRes.classes) || [];
       setClassList(cls);
       setSelectedClassId((prev) => (prev && prev > 0 ? prev : cls.length > 0 ? cls[0].id : 0));
+      const users = (userRes && (userRes.users || userRes)) || [];
+      setStudentList(Array.isArray(users) ? users : []);
+      const subs = Array.isArray(subjectRes) ? subjectRes : [];
+      setSubjectList(subs);
     } catch (error) {
       logger.error('获取指导文章失败:', error);
       showToast('error', '获取指导文章失败');
@@ -806,19 +814,25 @@ function StudyGuidePage() {
             <div className='px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto'>
               <div>
                 <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
-                  学生 ID <span className='text-red-500'>*</span>
+                  学生 <span className='text-red-500'>*</span>
                 </label>
                 <div className='relative'>
                   <User className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
-                  <input
-                    type='number'
+                  <select
                     value={planForm.student_id || ''}
                     onChange={(e) => handlePlanChange('student_id', Number(e.target.value))}
-                    placeholder='输入学生 ID'
                     className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100 ${
                       planErrors.student_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-cyan-500'
                     }`}
-                  />
+                  >
+                    {studentList.length === 0 && <option value={0}>暂无学生</option>}
+                    {studentList.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                        {s.class_name ? `（${s.class_name}）` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {planErrors.student_id && <p className='mt-1 text-xs text-red-500'>{planErrors.student_id}</p>}
               </div>
@@ -839,14 +853,19 @@ function StudyGuidePage() {
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>学科 ID</label>
-                  <input
-                    type='number'
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>科目</label>
+                  <select
                     value={planForm.subject_id ?? ''}
                     onChange={(e) => handlePlanChange('subject_id', e.target.value ? Number(e.target.value) : null)}
-                    placeholder='学科 ID（可选）'
                     className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100'
-                  />
+                  >
+                    <option value=''>不指定科目</option>
+                    {subjectList.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

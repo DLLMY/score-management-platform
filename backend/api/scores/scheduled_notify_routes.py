@@ -298,7 +298,8 @@ def calculate_next_send(notify):
             except Exception:
                 day_of_week_list = []
             if day_of_week_list:
-                current_weekday = now.weekday() + 1
+                # 星期统一 0 基（0=周一…6=周日，与时间规则/话机策略一致）
+                current_weekday = now.weekday()
                 hours = notify.scheduled_at.hour
                 minutes = notify.scheduled_at.minute
                 days_ahead = []

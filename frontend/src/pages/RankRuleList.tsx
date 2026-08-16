@@ -621,16 +621,21 @@ function RankRuleList() {
                 </div>
               </div>
 
-              <div className='flex items-center gap-4 mb-5'>
-                <label className='flex items-center gap-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={formData.is_active}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className='w-4 h-4 text-primary-600 rounded focus:ring-primary-500'
+              <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl mb-5'>
+                <label className='text-sm font-medium text-gray-700 dark:text-slate-300'>启用</label>
+                <button
+                  type='button'
+                  onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                  className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
+                    formData.is_active ? 'bg-gradient-to-r from-primary-500 to-indigo-500' : 'bg-slate-300 dark:bg-slate-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-lg transition-all duration-300 ${
+                      formData.is_active ? 'left-7' : 'left-0.5'
+                    }`}
                   />
-                  <span className='text-sm text-gray-700'>启用</span>
-                </label>
+                </button>
               </div>
 
               <div className='flex gap-3 pt-4'>
