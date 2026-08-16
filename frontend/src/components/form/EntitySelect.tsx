@@ -70,6 +70,8 @@ function useSubjectOptions(): EntityOption[] {
 interface EntitySelectProps {
   value: number | null | undefined;
   onChange: (id: number) => void;
+  /** 可选：同时回调所选选项的 name（需要名称而非 id 的场景，如后端按名称接收） */
+  onChangeValue?: (name: string) => void;
   disabled?: boolean;
   /** 是否包含空选项（可选场景），空选项值为 0 */
   allowEmpty?: boolean;
@@ -114,7 +116,12 @@ function EntitySelect(
   return (
     <select
       value={value || ''}
-      onChange={(e) => onChange(Number(e.target.value))}
+      onChange={(e) => {
+        const id = Number(e.target.value);
+        const opt = options.find((o) => o.id === id);
+        onChange(id);
+        props.onChangeValue?.(opt ? opt.name : '');
+      }}
       disabled={disabled}
       className={className || baseClass}
     >

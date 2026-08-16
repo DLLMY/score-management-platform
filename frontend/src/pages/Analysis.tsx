@@ -99,7 +99,7 @@ const RISK_COLORS: Record<string, { bg: string; text: string; light: string }> =
 
 function Analysis() {
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<number | ''>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
   const [algorithmData, setAlgorithmData] = useState<AlgorithmData>({
@@ -178,8 +178,8 @@ function Analysis() {
     fetchAlgorithmData();
   };
 
-  const classes = classList.map(c => c.name);
-  const filteredUsers = selectedClass ? users.filter((u) => u.class_name === selectedClass) : users;
+  const selectedClassName = selectedClass ? classList.find((c) => c.id === selectedClass)?.name : '';
+  const filteredUsers = selectedClassName ? users.filter((u) => u.class_name === selectedClassName) : users;
 
   // 使用 useMemo 优化用户数据处理
   const usersWithCluster = useMemo((): UserWithCluster[] => {
@@ -313,7 +313,7 @@ function Analysis() {
     }
     const exportData = {
       exportTime: new Date().toISOString(),
-      filterClass: selectedClass || '全部班级',
+      filterClass: selectedClassName || '全部班级',
       basicStats: {
         totalStudents: filteredUsers.length,
         avgScore,
@@ -372,13 +372,13 @@ function Analysis() {
             <Filter className='w-5 h-5 text-gray-500' />
             <select
               value={selectedClass}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedClass(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedClass(e.target.value ? Number(e.target.value) : '')}
               className='bg-transparent border-none text-sm font-medium text-gray-700 focus:outline-none cursor-pointer'
             >
               <option value=''>全部班级</option>
-              {classes.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {classList.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>

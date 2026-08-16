@@ -1194,11 +1194,19 @@ function RemoteNotify() {
                 <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>分类</label>
                 <input
                   type='text'
+                  list='notify-template-categories'
                   value={templateForm.category}
                   onChange={(e) => setTemplateForm(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder='例如：教学、行政、紧急'
+                  placeholder='选择或输入分类'
                   className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                 />
+                <datalist id='notify-template-categories'>
+                  <option value='教学' />
+                  <option value='行政' />
+                  <option value='紧急' />
+                  <option value='活动' />
+                  <option value='其他' />
+                </datalist>
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div>

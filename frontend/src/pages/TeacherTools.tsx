@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components';
 import { useStableToast } from '../hooks/useStableToast';
+import { SubjectSelect } from '../components/form/EntitySelect';
 import api from '../services/api';
 import type { User } from '../types';
 
@@ -30,6 +31,7 @@ const TeacherTools: React.FC = () => {
 
   // 批量录分
   const [scoreExam, setScoreExam] = useState<number | ''>('');
+  const [scoreSubjectId, setScoreSubjectId] = useState<number | ''>('');
   const [scoreSubject, setScoreSubject] = useState('');
   const [scoreClass, setScoreClass] = useState<string>('');
   const [scoreStudents, setScoreStudents] = useState<User[]>([]);
@@ -350,7 +352,14 @@ const TeacherTools: React.FC = () => {
           </div>
           <div>
             <label className={labelCls}>科目</label>
-            <input className={inputCls} value={scoreSubject} onChange={(e) => setScoreSubject(e.target.value)} placeholder="如：数学" />
+            <SubjectSelect
+              value={scoreSubjectId || 0}
+              onChange={(id) => setScoreSubjectId(id)}
+              onChangeValue={(name) => setScoreSubject(name)}
+              allowEmpty
+              emptyLabel='请选择科目'
+              className={inputCls}
+            />
           </div>
           <div>
             <label className={labelCls}>班级（用于核对学生数）</label>
