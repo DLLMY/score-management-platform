@@ -49,6 +49,8 @@ function AttendanceManage() {
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
   const [leavesError, setLeavesError] = useState(false);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
+  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -62,8 +64,17 @@ function AttendanceManage() {
   const fetchAttendances = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.attendance.getAll();
+      const [data, classRes, userRes] = await Promise.all([
+        api.attendance.getAll(),
+        api.classes.getAll().catch(() => null),
+        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
+      ]);
       setAttendances(data || []);
+      const cls = (classRes && classRes.classes) || [];
+      setClassList(cls);
+      setRecordForm((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
+      const users = (userRes && (userRes.users || userRes)) || [];
+      setStudentList(Array.isArray(users) ? users : []);
     } catch (error) {
       logger.error('获取考勤列表失败:', error);
       showToast('error', '获取考勤列表失败');
@@ -551,27 +562,44 @@ function AttendanceManage() {
             <div className="px-6 py-5 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">班级 ID</label>
-                  <input
-                    type="number"
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    班级 <span className="text-red-500">*</span>
+                  </label>
+                  <select
                     value={recordForm.class_id || ''}
                     onChange={(e) => setRecordForm((prev) => ({ ...prev, class_id: Number(e.target.value) }))}
                     className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-slate-800 dark:text-slate-100 ${
                       errors.class_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-emerald-500'
                     }`}
-                  />
+                  >
+                    {classList.length === 0 && <option value={0}>暂无班级</option>}
+                    {classList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                   {errors.class_id && <p className="mt-1 text-xs text-red-500">{errors.class_id}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">学生 ID</label>
-                  <input
-                    type="number"
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    学生 <span className="text-red-500">*</span>
+                  </label>
+                  <select
                     value={recordForm.student_id || ''}
                     onChange={(e) => setRecordForm((prev) => ({ ...prev, student_id: Number(e.target.value) }))}
                     className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-slate-800 dark:text-slate-100 ${
                       errors.student_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-emerald-500'
                     }`}
-                  />
+                  >
+                    <option value={0}>请选择学生</option>
+                    {studentList.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                        {s.class_name ? `（${s.class_name}）` : ''}
+                      </option>
+                    ))}
+                  </select>
                   {errors.student_id && <p className="mt-1 text-xs text-red-500">{errors.student_id}</p>}
                 </div>
               </div>
@@ -688,15 +716,24 @@ function AttendanceManage() {
 
             <div className="px-6 py-5 space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">学生 ID</label>
-                <input
-                  type="number"
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  学生 <span className="text-red-500">*</span>
+                </label>
+                <select
                   value={leaveForm.student_id || ''}
                   onChange={(e) => setLeaveForm((prev) => ({ ...prev, student_id: Number(e.target.value) }))}
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-slate-800 dark:text-slate-100 ${
                     errors.student_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
                   }`}
-                />
+                >
+                  <option value={0}>请选择学生</option>
+                  {studentList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.class_name ? `（${s.class_name}）` : ''}
+                    </option>
+                  ))}
+                </select>
                 {errors.student_id && <p className="mt-1 text-xs text-red-500">{errors.student_id}</p>}
               </div>
 

@@ -66,6 +66,7 @@ function DutyRosterPage() {
   const [groups, setGroups] = useState<DutyGroup[]>([]);
   const [assignments, setAssignments] = useState<DutyAssignment[]>([]);
   const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  const [studentList, setStudentList] = useState<{ id: number; name: string; class_name?: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -76,14 +77,17 @@ function DutyRosterPage() {
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, classRes] = await Promise.all([
+      const [data, classRes, userRes] = await Promise.all([
         api.duty.getAll(),
         api.classes.getAll().catch(() => null),
+        api.users.getAll({ per_page: 500, skipCache: true }).catch(() => null),
       ]);
       setGroups(data || []);
       const cls = (classRes && classRes.classes) || [];
       setClassList(cls);
       setDutyForm((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
+      const users = (userRes && (userRes.users || userRes)) || [];
+      setStudentList(Array.isArray(users) ? users : []);
     } catch (error) {
       logger.error('获取值日组列表失败:', error);
       showToast('error', '获取值日组列表失败');
@@ -477,14 +481,20 @@ function DutyRosterPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">学生 ID <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">学生 <span className="text-red-500">*</span></label>
+                <select
                   value={assignmentForm.student_id || ''}
                   onChange={(e) => setAssignmentForm({ ...assignmentForm, student_id: parseInt(e.target.value) || 0 })}
-                  placeholder="输入学生 ID"
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-800 dark:text-slate-100"
-                />
+                >
+                  <option value={0}>请选择学生</option>
+                  {studentList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.class_name ? `（${s.class_name}）` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

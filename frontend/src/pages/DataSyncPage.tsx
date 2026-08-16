@@ -15,7 +15,7 @@ interface ConsistencyStats {
 
 interface ConsistencyIssue {
   type: string;
-  severity: 'critical' | 'error' | 'warning' | 'info';
+  severity: 'critical' | 'error' | 'warning' | 'info' | 'debug';
   model: string;
   id: number;
   message: string;
@@ -79,6 +79,7 @@ const DataSyncPage: React.FC = () => {
     error: 'bg-orange-100 text-orange-700 border-orange-300',
     warning: 'bg-yellow-100 text-yellow-700 border-yellow-300',
     info: 'bg-blue-100 text-blue-700 border-blue-300',
+    debug: 'bg-gray-100 text-gray-600 border-gray-300',
   };
 
   const severityIcons = {
@@ -86,6 +87,7 @@ const DataSyncPage: React.FC = () => {
     error: '🟠',
     warning: '🟡',
     info: '🔵',
+    debug: '⚪',
   };
 
   return (
