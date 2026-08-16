@@ -74,6 +74,8 @@ const audiences = ['全班', '优生', '后进生', '中等生', '个人'];
 function StudyGuidePage() {
   const [guides, setGuides] = useState<StudyGuide[]>([]);
   const [plans, setPlans] = useState<ImprovementPlan[]>([]);
+  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'guides' | 'plans'>('guides');
@@ -92,8 +94,14 @@ function StudyGuidePage() {
 
   const fetchGuides = useCallback(async () => {
     try {
-      const data = await api.studyGuide.getGuides();
+      const [data, classRes] = await Promise.all([
+        api.studyGuide.getGuides(),
+        api.classes.getAll().catch(() => null),
+      ]);
       setGuides(Array.isArray(data) ? data : []);
+      const cls = (classRes && classRes.classes) || [];
+      setClassList(cls);
+      setSelectedClassId((prev) => (prev && prev > 0 ? prev : cls.length > 0 ? cls[0].id : 0));
     } catch (error) {
       logger.error('获取指导文章失败:', error);
       showToast('error', '获取指导文章失败');
@@ -169,10 +177,14 @@ function StudyGuidePage() {
 
   const handleGuideSubmit = useCallback(async () => {
     if (!validateGuideForm()) return;
+    if (!guideForm.id && !selectedClassId) {
+      showToast('error', '请先选择班级');
+      return;
+    }
 
     try {
       const payload: StudyGuideCreateInput = {
-        class_id: guideForm.id ? undefined : 0,
+        class_id: guideForm.id ? undefined : selectedClassId,
         title: guideForm.title,
         guide_type: guideForm.guide_type || undefined,
         content: guideForm.content || undefined,
@@ -192,7 +204,7 @@ function StudyGuidePage() {
       logger.error('保存指导文章失败:', error);
       showToast('error', guideForm.id ? '更新指导文章失败' : '创建指导文章失败');
     }
-  }, [guideForm, validateGuideForm, showToast, handleCloseGuideModal, fetchGuides]);
+  }, [guideForm, validateGuideForm, showToast, handleCloseGuideModal, fetchGuides, selectedClassId]);
 
   const handleOpenPlanCreate = useCallback(() => {
     setPlanForm(defaultPlanForm);
@@ -649,6 +661,28 @@ function StudyGuidePage() {
             </div>
 
             <div className='px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto'>
+              <div>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  班级 <span className='text-red-500'>*</span>
+                </label>
+                <select
+                  value={selectedClassId}
+                  onChange={(e) => setSelectedClassId(Number(e.target.value))}
+                  disabled={!!guideForm.id}
+                  className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 dark:text-slate-100 disabled:opacity-60'
+                >
+                  {classList.length === 0 && <option value={0}>暂无班级</option>}
+                  {classList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {guideForm.id && (
+                  <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>
+                )}
+              </div>
+
               <div>
                 <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
                   标题 <span className='text-red-500'>*</span>

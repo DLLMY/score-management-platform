@@ -63,6 +63,8 @@ const categoryBg: Record<string, string> = {
 
 function CultureBoard() {
   const [records, setRecords] = useState<CultureRecord[]>([]);
+  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('全部');
@@ -75,8 +77,14 @@ function CultureBoard() {
   const fetchRecords = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.culture.getAll();
+      const [data, classRes] = await Promise.all([
+        api.culture.getAll(),
+        api.classes.getAll().catch(() => null),
+      ]);
       setRecords(Array.isArray(data) ? data : []);
+      const cls = (classRes && classRes.classes) || [];
+      setClassList(cls);
+      setSelectedClassId((prev) => (prev && prev > 0 ? prev : cls.length > 0 ? cls[0].id : 0));
     } catch (error) {
       logger.error('获取班级文化记录失败:', error);
       showToast('error', '获取班级文化记录失败');
@@ -147,10 +155,14 @@ function CultureBoard() {
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
+    if (!formData.id && !selectedClassId) {
+      showToast('error', '请先选择班级');
+      return;
+    }
 
     try {
       const payload: CultureCreateInput = {
-        class_id: formData.id ? undefined : 0,
+        class_id: formData.id ? undefined : selectedClassId,
         category: formData.category || undefined,
         title: formData.title || undefined,
         content: formData.content,
@@ -171,7 +183,7 @@ function CultureBoard() {
       logger.error('保存记录失败:', error);
       showToast('error', formData.id ? '更新记录失败' : '创建记录失败');
     }
-  }, [formData, validateForm, showToast, handleCloseModal, fetchRecords]);
+  }, [formData, validateForm, showToast, handleCloseModal, fetchRecords, selectedClassId]);
 
   const handleDelete = useCallback(
     async (id: number) => {
@@ -422,6 +434,28 @@ function CultureBoard() {
             </div>
 
             <div className='px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto'>
+              <div>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  班级 <span className='text-red-500'>*</span>
+                </label>
+                <select
+                  value={selectedClassId}
+                  onChange={(e) => setSelectedClassId(Number(e.target.value))}
+                  disabled={!!formData.id}
+                  className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-slate-100 disabled:opacity-60'
+                >
+                  {classList.length === 0 && <option value={0}>暂无班级</option>}
+                  {classList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {formData.id && (
+                  <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>
+                )}
+              </div>
+
               <div>
                 <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>分类</label>
                 <select

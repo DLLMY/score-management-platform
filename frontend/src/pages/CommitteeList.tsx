@@ -49,6 +49,7 @@ const defaultForm: CommitteeFormData = {
 
 function CommitteeListPage() {
   const [committee, setCommittee] = useState<ClassCommittee[]>([]);
+  const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -58,8 +59,14 @@ function CommitteeListPage() {
   const fetchCommittee = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.committee.getAll();
+      const [data, classRes] = await Promise.all([
+        api.committee.getAll(),
+        api.classes.getAll().catch(() => null),
+      ]);
       setCommittee(data || []);
+      const cls = (classRes && classRes.classes) || [];
+      setClassList(cls);
+      setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: cls.length > 0 ? cls[0].id : 0 }));
     } catch (error) {
       logger.error('获取班委名单失败:', error);
       showToast('error', '获取班委名单失败');
@@ -74,9 +81,9 @@ function CommitteeListPage() {
 
   const openCreateModal = useCallback(() => {
     setEditingId(null);
-    setFormData(defaultForm);
+    setFormData({ ...defaultForm, class_id: classList.length > 0 ? classList[0].id : 0 });
     setShowFormModal(true);
-  }, []);
+  }, [classList]);
 
   const openEditModal = useCallback((item: ClassCommittee) => {
     setEditingId(item.id);
@@ -361,6 +368,26 @@ function CommitteeListPage() {
               </div>
             </div>
             <div className="px-6 py-5 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  班级 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.class_id}
+                  onChange={(e) => setFormData({ ...formData, class_id: Number(e.target.value) })}
+                  disabled={!!editingId}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-800 dark:text-slate-100 disabled:opacity-60"
+                >
+                  {classList.length === 0 && <option value={0}>暂无班级</option>}
+                  {classList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {editingId && <p className="mt-1 text-xs text-slate-400">编辑时班级不可更改</p>}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">职位</label>

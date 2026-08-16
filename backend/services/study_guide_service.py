@@ -1,4 +1,4 @@
-from models import db
+from models import db, ClassInfo, get_by_id
 from models.study_guide import StudyGuide, ImprovementPlan
 from utils.permission import get_current_admin
 from services.entity_names import names
@@ -18,6 +18,9 @@ class StudyGuideService:
 
     def create_guide(self, data):
         admin = get_current_admin()
+        class_info = get_by_id(ClassInfo, data.get("class_id"))
+        if not class_info:
+            return {"success": False, "message": "班级不存在，无法创建学法指导"}, 400
         guide = StudyGuide(
             class_id=data["class_id"],
             title=data["title"],

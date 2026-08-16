@@ -1221,6 +1221,8 @@ export interface ContactLogCreateInput {
 export interface HomeworkAssignment {
   id: number;
   class_id: number;
+  /** 班级名称（展示派生，后端 names.klass 输出） */
+  class_name?: string;
   subject_id?: number;
   title: string;
   description?: string;

@@ -1,4 +1,4 @@
-from models import db
+from models import db, ClassInfo, get_by_id
 from models.culture import CultureRecord, CultureItem
 from utils.permission import get_current_admin
 from services.entity_names import names
@@ -18,6 +18,9 @@ class CultureService:
 
     def create_record(self, data):
         admin = get_current_admin()
+        class_info = get_by_id(ClassInfo, data.get("class_id"))
+        if not class_info:
+            return {"success": False, "message": "班级不存在，无法创建文化记录"}, 400
         record = CultureRecord(
             class_id=data["class_id"],
             category=data.get("category"),
