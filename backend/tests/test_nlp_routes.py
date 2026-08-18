@@ -91,4 +91,7 @@ def test_correction_delete(client, app, auth_headers):
     assert body["success"] is True
     assert "纠正记录已删除" in body["message"]
     with app.app_context():
+        # expire_all：强制重新 SELECT，避免同一 session 的 identity map 在
+        # 多文件 + --cov 场景下返回已删除对象的幽灵实例（偶发假失败）
+        db.session.expire_all()
         assert NLPCorrection.query.get(cid) is None
