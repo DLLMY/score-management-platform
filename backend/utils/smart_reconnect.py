@@ -52,7 +52,11 @@ class SmartReconnectConfig:
         self.successful_connection_stability = 3  # 连续成功连接次数后才重置
         # 网络检测配置
         self.network_check_enabled = True
-        self.network_check_urls = ["https://www.baidu.com", "https://www.taobao.com", "https://www.qq.com"]
+        self.network_check_urls = [
+            "https://www.baidu.com",
+            "https://www.taobao.com",
+            "https://www.qq.com",
+        ]
         self.network_check_timeout = 5  # 网络检测超时（秒）
         self.network_check_interval = 30  # 网络检测间隔（秒）
         # 统计配置
@@ -118,7 +122,11 @@ class ReconnectStats:
         with self._lock:
             current_time = time.time()
             # 清理过期记录
-            self._attempts = [(ts, result) for ts, result in self._attempts if current_time - ts < self._window_size]
+            self._attempts = [
+                (ts, result)
+                for ts, result in self._attempts
+                if current_time - ts < self._window_size
+            ]
             # 添加新记录
             self._attempts.append((current_time, success))
             # 更新统计
@@ -143,7 +151,9 @@ class ReconnectStats:
             if window_seconds is None:
                 window_seconds = self._window_size
             current_time = time.time()
-            recent_attempts = [success for ts, success in self._attempts if current_time - ts < window_seconds]
+            recent_attempts = [
+                success for ts, success in self._attempts if current_time - ts < window_seconds
+            ]
             if not recent_attempts:
                 return 0.0
             return sum(recent_attempts) / len(recent_attempts)
@@ -155,7 +165,9 @@ class ReconnectStats:
                 window_seconds = self._window_size
             current_time = time.time()
             # 注意：这里简化了实现，实际应该记录latency_ms
-            recent_count = len([ts for ts, _ in self._attempts if current_time - ts < window_seconds])
+            recent_count = len(
+                [ts for ts, _ in self._attempts if current_time - ts < window_seconds]
+            )
             if recent_count == 0:
                 return 0.0
             return recent_count / max(1, self.total_attempts) * 1000  # 简化计算
@@ -225,7 +237,9 @@ class NetworkChecker:
                 for url in self._config.network_check_urls:
                     try:
                         start_time = time.time()
-                        response = requests.head(url, timeout=self._config.network_check_timeout, allow_redirects=True)
+                        response = requests.head(
+                            url, timeout=self._config.network_check_timeout, allow_redirects=True
+                        )
                         (time.time() - start_time) * 1000
                         if response.status_code < 500:
                             new_status = NetworkStatus.AVAILABLE
@@ -239,7 +253,9 @@ class NetworkChecker:
                 new_status = NetworkStatus.UNKNOWN
             # 更新状态
             if new_status != self._status:
-                logger.info(f"[NetworkChecker] 网络状态变化: {self._status.value} -> {new_status.value}")
+                logger.info(
+                    f"[NetworkChecker] 网络状态变化: {self._status.value} -> {new_status.value}"
+                )
                 self._status = new_status
             # 记录历史
             self._history.append((current_time, new_status))
@@ -413,13 +429,20 @@ class SmartReconnect:
         """重连失败处理"""
         self._stats.record_attempt(False)
         # 检查是否超过最大重连次数
-        if self._config.max_reconnect_attempts > 0 and self._reconnect_count >= self._config.max_reconnect_attempts:
-            logger.error(f"[SmartReconnect] 超过最大重连次数 ({self._config.max_reconnect_attempts})，停止重连")
+        if (
+            self._config.max_reconnect_attempts > 0
+            and self._reconnect_count >= self._config.max_reconnect_attempts
+        ):
+            logger.error(
+                f"[SmartReconnect] 超过最大重连次数 ({self._config.max_reconnect_attempts})，停止重连"
+            )
             self._should_reconnect = False
             return
         # 通知监听器
         self._state_listener.notify_listeners(
-            "reconnecting", "error", {"attempt": self._reconnect_count, "failure_count": self._stats.total_failures}
+            "reconnecting",
+            "error",
+            {"attempt": self._reconnect_count, "failure_count": self._stats.total_failures},
         )
         if self._on_reconnect_failure:
             self._on_reconnect_failure(self._reconnect_count)
@@ -434,7 +457,9 @@ class SmartReconnect:
         """移除连接状态监听器"""
         self._state_listener.remove_listener(callback)
 
-    def set_callbacks(self, on_start=None, on_success=None, on_failure=None, on_network_change=None):
+    def set_callbacks(
+        self, on_start=None, on_success=None, on_failure=None, on_network_change=None
+    ):
         """设置回调函数
         Args:
             on_start: 重连开始回调

@@ -1,9 +1,11 @@
 from models import ClassInfo
+
 """Tests for Class Service"""
 
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
+
 try:
     from services.class_service import ClassService
 except ImportError:
@@ -40,9 +42,7 @@ class TestClassService:
             mock_admin = MagicMock()
             mock_admin.id = 1
 
-            with patch(
-                "services.class_service.get_allowed_classes", return_value=None
-            ):
+            with patch("services.class_service.get_allowed_classes", return_value=None):
                 result = service._can_access_class("一班", admin=mock_admin)
 
                 assert result is True
@@ -139,9 +139,7 @@ class TestClassService:
             mock_paginate.items = [mock_class]
 
             with patch("utils.permission.get_current_admin", return_value=mock_admin):
-                with patch(
-                    "services.class_service.get_allowed_classes", return_value=None
-                ):
+                with patch("services.class_service.get_allowed_classes", return_value=None):
                     with patch("services.class_service.ClassInfo.query") as mock_query:
                         mock_query.order_by.return_value.paginate.return_value = mock_paginate
                         mock_query.count.return_value = 1
@@ -176,11 +174,11 @@ class TestClassService:
             mock_paginate.items = [mock_class]
 
             with patch("utils.permission.get_current_admin", return_value=mock_admin):
-                with patch(
-                    "services.class_service.get_allowed_classes", return_value=None
-                ):
+                with patch("services.class_service.get_allowed_classes", return_value=None):
                     with patch("services.class_service.ClassInfo.query") as mock_query:
-                        mock_query.filter.return_value.order_by.return_value.paginate.return_value = mock_paginate
+                        mock_query.filter.return_value.order_by.return_value.paginate.return_value = (
+                            mock_paginate
+                        )
                         mock_query.filter.return_value.count.return_value = 1
 
                         result = service.get_class_list(keyword="测试")
@@ -229,7 +227,11 @@ class TestClassService:
                 with patch("services.class_service.db_session_scope"):
                     with patch("services.class_service.db.session.add"):
                         with patch("services.class_service.db.session.flush"):
-                            with patch.object(service, "_build_class_response", return_value={"id": 1, "name": "一班"}):
+                            with patch.object(
+                                service,
+                                "_build_class_response",
+                                return_value={"id": 1, "name": "一班"},
+                            ):
                                 result, status = service.create_class(
                                     {"name": "一班", "grade": "一年级"}
                                 )
@@ -261,8 +263,11 @@ class TestClassService:
                     with patch("services.class_service.db.session.add"):
                         with patch("services.class_service.db.session.flush"):
                             with patch("services.class_service.AdminClass"):
-                                with patch.object(service, "_build_class_response",
-                                    return_value={"id": 1, "name": "一班"}):
+                                with patch.object(
+                                    service,
+                                    "_build_class_response",
+                                    return_value={"id": 1, "name": "一班"},
+                                ):
                                     result, status = service.create_class(
                                         {
                                             "name": "一班",
@@ -334,7 +339,9 @@ class TestClassService:
                 MockClassInfo.query.get_or_404.return_value = mock_class
 
                 with patch.object(service, "_can_access_class", return_value=True):
-                    with patch.object(service, "_build_class_response", return_value={"id": 1, "name": "一班"}):
+                    with patch.object(
+                        service, "_build_class_response", return_value={"id": 1, "name": "一班"}
+                    ):
                         result = service.get_class(1, admin=mock_admin)
 
                         assert "id" in result
@@ -379,9 +386,7 @@ class TestClassService:
                 MockClassInfo.query.filter_by.return_value.first.return_value = MagicMock()
 
                 with patch.object(service, "_can_access_class", return_value=True):
-                    result, status = service.update_class(
-                        1, {"name": "二班"}, admin=mock_admin
-                    )
+                    result, status = service.update_class(1, {"name": "二班"}, admin=mock_admin)
 
                     assert status == 400
                     assert "已存在" in result["message"]
@@ -411,10 +416,10 @@ class TestClassService:
 
                 with patch.object(service, "_can_access_class", return_value=True):
                     with patch("services.class_service.db_session_scope"):
-                        with patch.object(service, "_build_class_response", return_value={"grade": "二年级"}):
-                            result = service.update_class(
-                                1, {"grade": "二年级"}, admin=mock_admin
-                            )
+                        with patch.object(
+                            service, "_build_class_response", return_value={"grade": "二年级"}
+                        ):
+                            result = service.update_class(1, {"grade": "二年级"}, admin=mock_admin)
 
                             assert result["grade"] == "二年级"
 
@@ -581,7 +586,9 @@ class TestClassService:
                                 result = service.fix_associations()
 
                                 assert result["fixed_count"] >= 1
-                                assert "created_link" in [i["action"] for i in result["issues_fixed"]]
+                                assert "created_link" in [
+                                    i["action"] for i in result["issues_fixed"]
+                                ]
 
     def test_fix_associations_set_primary(self, app):
         """测试修复关联-设置is_primary"""
@@ -777,7 +784,9 @@ class TestClassService:
                 MockClassInfo.query.filter_by.return_value.first.return_value = mock_existing
 
                 with patch("services.class_service.db_session_scope"):
-                    result = service.import_classes(import_list, MagicMock(conflict_strategy="skip"))
+                    result = service.import_classes(
+                        import_list, MagicMock(conflict_strategy="skip")
+                    )
 
                     assert "skipped" in [m["action"] for m in result["messages"]]
 
@@ -790,8 +799,12 @@ class TestClassService:
             import_list = [{"name": None}]
 
             mock_config = MagicMock()
-            mock_config.field_mappings = [{"source_field": "班级名称", "target_field": "name", "required": True}]
-            mock_config.validation_rules = [{"field": "name", "rule_type": "required", "message": "班级名称必填"}]
+            mock_config.field_mappings = [
+                {"source_field": "班级名称", "target_field": "name", "required": True}
+            ]
+            mock_config.validation_rules = [
+                {"field": "name", "rule_type": "required", "message": "班级名称必填"}
+            ]
             mock_config.conflict_strategy = "update"
 
             with patch("services.class_service.db_session_scope"):
@@ -814,15 +827,19 @@ class TestClassService:
             mock_admin.real_name = "张老师"
             mock_admin.role = "teacher"
 
-            with patch("services.class_service.ClassInfo") as MockClassInfo, \
-                 patch("services.class_service.Admin.query") as mock_admin_query, \
-                 patch("services.class_service.db_session_scope"):
+            with (
+                patch("services.class_service.ClassInfo") as MockClassInfo,
+                patch("services.class_service.Admin.query") as mock_admin_query,
+                patch("services.class_service.db_session_scope"),
+            ):
 
                 MockClassInfo.query.filter_by.return_value.first.return_value = None
                 mock_admin_query.filter.return_value.first.return_value = mock_admin
 
-                with patch("services.class_service.db.session.add"), \
-                     patch("services.class_service.db.session.flush"):
+                with (
+                    patch("services.class_service.db.session.add"),
+                    patch("services.class_service.db.session.flush"),
+                ):
 
                     result = service.import_classes(import_list)
 

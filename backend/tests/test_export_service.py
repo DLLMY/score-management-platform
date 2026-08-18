@@ -1,11 +1,13 @@
 """
 Export Service Tests
 """
+
 import io
 import os
 import pytest
 from datetime import datetime
 from unittest.mock import patch
+
 try:
     from services.export_service import ExportService
 except ImportError:
@@ -72,10 +74,24 @@ class TestExportServiceCSV:
         """Test export users to CSV"""
 
         users = [
-                        {"id": 1, "name": "张三", "card_id": "123", "class_name": "一班", "current_score": 100, "status"
-            : 1, "created_at": "2024-01-01"},
-                        {"id": 2, "name": "李四", "card_id": "456", "class_name": "二班", "current_score": 50, "status": 0,
-            "created_at": "2024-01-02"},
+            {
+                "id": 1,
+                "name": "张三",
+                "card_id": "123",
+                "class_name": "一班",
+                "current_score": 100,
+                "status": 1,
+                "created_at": "2024-01-01",
+            },
+            {
+                "id": 2,
+                "name": "李四",
+                "card_id": "456",
+                "class_name": "二班",
+                "current_score": 50,
+                "status": 0,
+                "created_at": "2024-01-02",
+            },
         ]
 
         result = ExportService.export_users_to_csv(users)
@@ -89,8 +105,16 @@ class TestExportServiceCSV:
         """Test export score records to CSV"""
 
         records = [
-                        {"id": 1, "user_id": 1, "user_name": "张三", "rule_id": 1, "rule_name": "迟到", "score_change": -5,
-            "description": "迟到扣分", "created_at": "2024-01-01"},
+            {
+                "id": 1,
+                "user_id": 1,
+                "user_name": "张三",
+                "rule_id": 1,
+                "rule_name": "迟到",
+                "score_change": -5,
+                "description": "迟到扣分",
+                "created_at": "2024-01-01",
+            },
         ]
 
         result = ExportService.export_score_records_to_csv(records)
@@ -102,8 +126,16 @@ class TestExportServiceCSV:
         """Test export exam scores to CSV"""
 
         scores = [
-                        {"id": 1, "student_id": 1, "student_name": "张三", "exam_id": 1, "exam_name": "期中考试", "subject":
-            "数学", "score": 90, "created_at": "2024-01-01"},
+            {
+                "id": 1,
+                "student_id": 1,
+                "student_name": "张三",
+                "exam_id": 1,
+                "exam_name": "期中考试",
+                "subject": "数学",
+                "score": 90,
+                "created_at": "2024-01-01",
+            },
         ]
 
         result = ExportService.export_exam_scores_to_csv(scores)
@@ -171,8 +203,16 @@ class TestExportServiceExcel:
             pytest.skip("openpyxl not available")
 
         users = [
-                        {"id": 1, "name": "张三", "gender": "男", "class_name": "一班", "phone": "13800138000", "card_id":
-            "123", "current_score": 100, "created_at": "2024-01-01"},
+            {
+                "id": 1,
+                "name": "张三",
+                "gender": "男",
+                "class_name": "一班",
+                "phone": "13800138000",
+                "card_id": "123",
+                "current_score": 100,
+                "created_at": "2024-01-01",
+            },
         ]
 
         result = ExportService.export_users_to_excel(users)
@@ -186,8 +226,17 @@ class TestExportServiceExcel:
             pytest.skip("openpyxl not available")
 
         rules = [
-                        {"id": 1, "name": "迟到", "description": "上课迟到", "category_name": "纪律", "score": -5, "is_active"
-            : True, "daily_limit": 3, "min_interval": 60, "created_at": "2024-01-01"},
+            {
+                "id": 1,
+                "name": "迟到",
+                "description": "上课迟到",
+                "category_name": "纪律",
+                "score": -5,
+                "is_active": True,
+                "daily_limit": 3,
+                "min_interval": 60,
+                "created_at": "2024-01-01",
+            },
         ]
 
         result = ExportService.export_rules_to_excel(rules)
@@ -201,8 +250,17 @@ class TestExportServiceExcel:
             pytest.skip("openpyxl not available")
 
         devices = [
-                        {"id": 1, "device_id": "DEV001", "name": "教室1设备", "status": "online", "is_online": True,
-            "wifi_signal": "80%", "class_name": "一班", "admin_name": "王老师", "created_at": "2024-01-01"},
+            {
+                "id": 1,
+                "device_id": "DEV001",
+                "name": "教室1设备",
+                "status": "online",
+                "is_online": True,
+                "wifi_signal": "80%",
+                "class_name": "一班",
+                "admin_name": "王老师",
+                "created_at": "2024-01-01",
+            },
         ]
 
         result = ExportService.export_devices_to_excel(devices)
@@ -216,9 +274,20 @@ class TestExportServiceExcel:
             pytest.skip("openpyxl not available")
 
         records = [
-                        {"id": 1, "user_id": 1, "user_name": "张三", "card_id": "123", "score_change": -5, "new_score"
-            : 95, "rule_id": 1, "rule_name": "迟到", "category_name": "纪律", "description": "迟到扣分", "created_at":
-            "2024-01-01", "operator": "王老师"},
+            {
+                "id": 1,
+                "user_id": 1,
+                "user_name": "张三",
+                "card_id": "123",
+                "score_change": -5,
+                "new_score": 95,
+                "rule_id": 1,
+                "rule_name": "迟到",
+                "category_name": "纪律",
+                "description": "迟到扣分",
+                "created_at": "2024-01-01",
+                "operator": "王老师",
+            },
         ]
 
         result = ExportService.export_records_to_excel(records)
@@ -306,8 +375,15 @@ class TestExportServicePDF:
             pytest.skip("reportlab not available")
 
         users = [
-                        {"id": 1, "name": "张三", "gender": "男", "class_name": "一班", "phone": "13800138000", "card_id":
-            "123", "current_score": 100},
+            {
+                "id": 1,
+                "name": "张三",
+                "gender": "男",
+                "class_name": "一班",
+                "phone": "13800138000",
+                "card_id": "123",
+                "current_score": 100,
+            },
         ]
 
         result = ExportService.export_users_to_pdf(users)
@@ -321,8 +397,16 @@ class TestExportServicePDF:
             pytest.skip("reportlab not available")
 
         rules = [
-                        {"id": 1, "name": "迟到", "description": "上课迟到", "category_name": "纪律", "score": -5, "is_active"
-            : True, "daily_limit": 3, "min_interval": 60},
+            {
+                "id": 1,
+                "name": "迟到",
+                "description": "上课迟到",
+                "category_name": "纪律",
+                "score": -5,
+                "is_active": True,
+                "daily_limit": 3,
+                "min_interval": 60,
+            },
         ]
 
         result = ExportService.export_rules_to_pdf(rules)
@@ -336,8 +420,16 @@ class TestExportServicePDF:
             pytest.skip("reportlab not available")
 
         devices = [
-                        {"id": 1, "device_id": "DEV001", "name": "教室1设备", "status": "online", "is_online": True,
-            "wifi_signal": "80%", "class_name": "一班", "admin_name": "王老师"},
+            {
+                "id": 1,
+                "device_id": "DEV001",
+                "name": "教室1设备",
+                "status": "online",
+                "is_online": True,
+                "wifi_signal": "80%",
+                "class_name": "一班",
+                "admin_name": "王老师",
+            },
         ]
 
         result = ExportService.export_devices_to_pdf(devices)
@@ -351,8 +443,16 @@ class TestExportServicePDF:
             pytest.skip("reportlab not available")
 
         records = [
-                        {"id": 1, "user_name": "张三", "card_id": "123", "score_change": -5, "new_score": 95, "rule_name"
-            : "迟到", "description": "迟到扣分", "created_at": "2024-01-01"},
+            {
+                "id": 1,
+                "user_name": "张三",
+                "card_id": "123",
+                "score_change": -5,
+                "new_score": 95,
+                "rule_name": "迟到",
+                "description": "迟到扣分",
+                "created_at": "2024-01-01",
+            },
         ]
 
         result = ExportService.export_records_to_pdf(records)

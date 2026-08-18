@@ -42,7 +42,9 @@ assign_class_model = ns_admin_classes.model(
 @ns_admin_classes.param("admin_id", "管理员ID")
 class AdminClasses(Resource):
 
-    @ns_admin_classes.doc("get_admin_classes", description="获取管理员关联的班级列表", security="Bearer")
+    @ns_admin_classes.doc(
+        "get_admin_classes", description="获取管理员关联的班级列表", security="Bearer"
+    )
     @ns_admin_classes.response(200, "成功", admin_classes_response)
     @ns_admin_classes.response(404, "管理员不存在")
     @requires_permission("score.view")
@@ -77,7 +79,9 @@ class AdminClasses(Resource):
 @ns_admin_classes.param("admin_id", "管理员ID")
 class AdminAssignClass(Resource):
 
-    @ns_admin_classes.doc("assign_class_to_admin", description="为管理员分配班级", security="Bearer")
+    @ns_admin_classes.doc(
+        "assign_class_to_admin", description="为管理员分配班级", security="Bearer"
+    )
     @ns_admin_classes.expect(assign_class_model)
     @ns_admin_classes.response(200, "分配成功")
     @ns_admin_classes.response(404, "管理员或班级不存在")
@@ -112,7 +116,9 @@ class AdminAssignClass(Resource):
 @ns_admin_classes.param("class_id", "班级ID")
 class AdminRemoveClass(Resource):
 
-    @ns_admin_classes.doc("remove_class_from_admin", description="移除管理员的班级关联", security="Bearer")
+    @ns_admin_classes.doc(
+        "remove_class_from_admin", description="移除管理员的班级关联", security="Bearer"
+    )
     @ns_admin_classes.response(200, "移除成功")
     @ns_admin_classes.response(404, "未找到关联记录")
     @requires_permission("score.entry")

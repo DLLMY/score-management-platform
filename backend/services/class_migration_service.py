@@ -98,7 +98,9 @@ class ClassMigrationService:
 
     def migrate_users(self, class_map: Dict[str, ClassInfo]) -> Tuple[int, List[str]]:
         """迁移用户数据"""
-        users = User.query.filter(User.class_name.isnot(None), User.class_info_id.is_(None)).all()  # 只迁移未关联的
+        users = User.query.filter(
+            User.class_name.isnot(None), User.class_info_id.is_(None)
+        ).all()  # 只迁移未关联的
         migrated = 0
         errors = []
         for user in users:
@@ -128,13 +130,18 @@ class ClassMigrationService:
                 continue
             if class_name not in class_map:
                 errors.append(
-                    (f"管理员 {admin.real_name or admin.username} " f"(ID:{admin.id}) 班级 '{class_name}' 不存在")
+                    (
+                        f"管理员 {admin.real_name or admin.username} "
+                        f"(ID:{admin.id}) 班级 '{class_name}' 不存在"
+                    )
                 )
                 continue
             # 设置主班级
             admin.primary_class_id = class_map[class_name].id
             # 同时创建 AdminClass 关联记录
-            admin_class = AdminClass.query.filter_by(admin_id=admin.id, class_info_id=class_map[class_name].id).first()
+            admin_class = AdminClass.query.filter_by(
+                admin_id=admin.id, class_info_id=class_map[class_name].id
+            ).first()
             if not admin_class:
                 admin_class = AdminClass(
                     admin_id=admin.id,
@@ -209,13 +216,17 @@ class ClassMigrationService:
                 "total_with_class": users_total,
                 "linked": users_with_fk,
                 "unlinked": users_total - users_with_fk,
-                "link_rate": (f"{(users_with_fk/users_total*100):.1f}%" if users_total > 0 else "N/A"),
+                "link_rate": (
+                    f"{(users_with_fk/users_total*100):.1f}%" if users_total > 0 else "N/A"
+                ),
             },
             "admins": {
                 "total_with_class": admins_total,
                 "linked": admins_with_fk,
                 "unlinked": admins_total - admins_with_fk,
-                "link_rate": (f"{(admins_with_fk/admins_total*100):.1f}%" if admins_total > 0 else "N/A"),
+                "link_rate": (
+                    f"{(admins_with_fk/admins_total*100):.1f}%" if admins_total > 0 else "N/A"
+                ),
             },
             "admin_class_links": admin_class_links,
             "missing_classes": analysis["missing_classes"],

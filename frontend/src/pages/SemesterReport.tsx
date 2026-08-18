@@ -30,10 +30,7 @@ const SemesterReport: React.FC = () => {
       .finally(() => setLoadingClasses(false));
   }, []);
 
-  const selectedClass = useMemo(
-    () => classes.find((c) => c.id === classId),
-    [classes, classId],
-  );
+  const selectedClass = useMemo(() => classes.find((c) => c.id === classId), [classes, classId]);
 
   useEffect(() => {
     if (!selectedClass) {
@@ -74,12 +71,13 @@ const SemesterReport: React.FC = () => {
   return (
     <div style={{ padding: 24, maxWidth: 760, margin: '0 auto' }}>
       <Title level={3}>班级学期报告导出</Title>
-      <Paragraph type="secondary">
-        一键导出所选班级的学期积分 / 成绩汇总表：包含每位学生的当前积分余额，以及各次考试（跨科目合计）的成绩，并自动计算总分与平均分。
+      <Paragraph type='secondary'>
+        一键导出所选班级的学期积分 /
+        成绩汇总表：包含每位学生的当前积分余额，以及各次考试（跨科目合计）的成绩，并自动计算总分与平均分。
       </Paragraph>
 
       <Card style={{ marginTop: 16 }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space direction='vertical' style={{ width: '100%' }} size='middle'>
           <div>
             <Text strong>选择班级</Text>
             <div style={{ marginTop: 8 }}>
@@ -91,25 +89,27 @@ const SemesterReport: React.FC = () => {
                 onChange={(v: number) => setClassId(v)}
                 options={classes.map((c) => ({ label: c.name, value: c.id }))}
                 showSearch
-                optionFilterProp="label"
+                optionFilterProp='label'
               />
             </div>
           </div>
 
           {selectedClass && (
             <Alert
-              type="info"
+              type='info'
               showIcon
               message={`已选：${selectedClass.name}`}
-              description={`班级学生人数：${studentCount === null ? '加载中…' : studentCount} 人。导出将汇总该班全部学生的积分与各次考试成绩。`}
+              description={`班级学生人数：${
+                studentCount === null ? '加载中…' : studentCount
+              } 人。导出将汇总该班全部学生的积分与各次考试成绩。`}
             />
           )}
 
-          {error && <Alert type="error" showIcon message={error} />}
+          {error && <Alert type='error' showIcon message={error} />}
 
           <Space wrap>
             <Button
-              type="primary"
+              type='primary'
               icon={<FileExcelOutlined />}
               loading={exporting === 'excel'}
               disabled={!classId || exporting !== ''}
@@ -128,8 +128,9 @@ const SemesterReport: React.FC = () => {
             <Spin spinning={exporting !== ''} />
           </Space>
 
-          <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            <DownloadOutlined /> 导出文件为「班级名_学期报告.xlsx / .csv」，可直接发给家长或留存归档。
+          <Paragraph type='secondary' style={{ marginBottom: 0 }}>
+            <DownloadOutlined /> 导出文件为「班级名_学期报告.xlsx /
+            .csv」，可直接发给家长或留存归档。
           </Paragraph>
         </Space>
       </Card>

@@ -25,22 +25,34 @@ health_status_model = ns_diagnostics.model(
                 "HealthComponents",
                 {
                     "database": fields.Nested(
-                        ns_diagnostics.model("ComponentStatus", {"status": fields.String, "message": fields.String})
+                        ns_diagnostics.model(
+                            "ComponentStatus", {"status": fields.String, "message": fields.String}
+                        )
                     ),
                     "redis": fields.Nested(
-                        ns_diagnostics.model("ComponentStatus", {"status": fields.String, "message": fields.String})
+                        ns_diagnostics.model(
+                            "ComponentStatus", {"status": fields.String, "message": fields.String}
+                        )
                     ),
                     "mqtt": fields.Nested(
-                        ns_diagnostics.model("ComponentStatus", {"status": fields.String, "message": fields.String})
+                        ns_diagnostics.model(
+                            "ComponentStatus", {"status": fields.String, "message": fields.String}
+                        )
                     ),
                     "cpu": fields.Nested(
-                        ns_diagnostics.model("ComponentStatus", {"status": fields.String, "message": fields.String})
+                        ns_diagnostics.model(
+                            "ComponentStatus", {"status": fields.String, "message": fields.String}
+                        )
                     ),
                     "memory": fields.Nested(
-                        ns_diagnostics.model("ComponentStatus", {"status": fields.String, "message": fields.String})
+                        ns_diagnostics.model(
+                            "ComponentStatus", {"status": fields.String, "message": fields.String}
+                        )
                     ),
                     "disk": fields.Nested(
-                        ns_diagnostics.model("ComponentStatus", {"status": fields.String, "message": fields.String})
+                        ns_diagnostics.model(
+                            "ComponentStatus", {"status": fields.String, "message": fields.String}
+                        )
                     ),
                 },
             )

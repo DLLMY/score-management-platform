@@ -11,6 +11,7 @@ SQLite 不支持 ALTER COLUMN 改类型，采用「建新表 -> 拷数据 -> 删
   python scripts/migrate_nlp_score_change_float.py            # 执行
   python scripts/migrate_nlp_score_change_float.py --check-only  # 仅报告
 """
+
 import os
 import re
 import sqlite3

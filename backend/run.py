@@ -46,7 +46,15 @@ def maybe_start_celery(basedir, env):
     try:
         procs.append(
             subprocess.Popen(
-                common + ["worker", "-Q", "default,notification,mqtt,export", "-c", "4", "--loglevel=info"],
+                common
+                + [
+                    "worker",
+                    "-Q",
+                    "default,notification,mqtt,export",
+                    "-c",
+                    "4",
+                    "--loglevel=info",
+                ],
                 cwd=basedir,
             )
         )

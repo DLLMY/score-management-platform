@@ -2,6 +2,7 @@
 项目全面评估诊断脚本
 收集代码规模、质量、性能、安全、架构等多维度指标
 """
+
 import ast
 import json
 import os
@@ -54,9 +55,17 @@ def collect_code_metrics():
                     stripped = line.strip()
                     if not stripped:
                         blank_lines += 1
-                    elif stripped.startswith("#") or stripped.startswith("//") or stripped.startswith("--"):
+                    elif (
+                        stripped.startswith("#")
+                        or stripped.startswith("//")
+                        or stripped.startswith("--")
+                    ):
                         comment_lines += 1
-                    elif stripped.startswith('"""') or stripped.startswith("'''") or stripped.startswith("/**"):
+                    elif (
+                        stripped.startswith('"""')
+                        or stripped.startswith("'''")
+                        or stripped.startswith("/**")
+                    ):
                         comment_lines += 1
                     else:
                         code_lines += 1
@@ -124,7 +133,9 @@ def collect_test_metrics():
                 content = f.read()
             tree = ast.parse(content, filename=test_file)
             funcs = [
-                node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name.startswith("test")
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef) and node.name.startswith("test")
             ]
             classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
             test_metrics["test_functions"] += len(funcs)
@@ -153,7 +164,9 @@ def collect_test_metrics():
     print(f'  测试类数: {test_metrics["test_classes"]}')
     print(f'  测试/源文件比: {test_metrics["coverage_ratio"]:.1%}')
     print("\n  测试模块列表:")
-    for mod in sorted(test_metrics["test_modules"], key=lambda x: x["functions"], reverse=True)[:20]:
+    for mod in sorted(test_metrics["test_modules"], key=lambda x: x["functions"], reverse=True)[
+        :20
+    ]:
         print(f'    {mod["file"]}: {mod["functions"]} 个测试函数')
     return test_metrics
 
@@ -216,7 +229,9 @@ def collect_security_metrics():
                     count = content.count("@requires_permission")
                     if count > 0:
                         perm_decorators += count
-                        perm_files_checked.append({"file": os.path.basename(fpath), "permissions": count})
+                        perm_files_checked.append(
+                            {"file": os.path.basename(fpath), "permissions": count}
+                        )
                 except Exception:
                     pass
     sec_metrics["permission_system"]["total_decorators"] = perm_decorators
@@ -258,7 +273,9 @@ def collect_security_metrics():
                     with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                     # 检查字符串拼接的SQL
-                    sql_concat = re.findall(r'(?:execute|raw)\s*\(\s*[f"\'].*\{.*\}.*[f"\']', content)
+                    sql_concat = re.findall(
+                        r'(?:execute|raw)\s*\(\s*[f"\'].*\{.*\}.*[f"\']', content
+                    )
                     for match in sql_concat:
                         sec_metrics["sql_injection_risks"].append(
                             {
@@ -308,7 +325,8 @@ def collect_api_coverage():
                 ns_names = [(m.group(1), m.group(2)) for m in ns_match]
                 # 找路由
                 route_matches = re.finditer(
-                    r"@(\w+)\.route\([\'\"]([^\'\"]*)[\r'\]\)[\\s\S]*?class\\s+(\\w+)(?:\\s*\(.*?\))?\\s*:", content
+                    r"@(\w+)\.route\([\'\"]([^\'\"]*)[\r'\]\)[\\s\S]*?class\\s+(\\w+)(?:\\s*\(.*?\))?\\s*:",
+                    content,
                 )
                 for rm in route_matches:
                     ns_var = rm.group(1)
@@ -321,7 +339,9 @@ def collect_api_coverage():
                             ns_desc = nd
                             break
                     # 找出这个类中的HTTP方法
-                    methods = re.findall(r"def\s+(get|post|put|delete|patch)\s*\(self[,\)]", content)
+                    methods = re.findall(
+                        r"def\s+(get|post|put|delete|patch)\s*\(self[,\)]", content
+                    )
                     for method in methods:
                         api_metrics["total_endpoints"] += 1
                         api_metrics["by_method"][method.upper()] += 1
@@ -353,7 +373,9 @@ def collect_api_coverage():
     for method, count in sorted(api_metrics["by_method"].items()):
         print(f"    {method}: {count}")
     print("\n  按分类(前15):")
-    for ns, count in sorted(api_metrics["by_namespace"].items(), key=lambda x: x[1], reverse=True)[:15]:
+    for ns, count in sorted(api_metrics["by_namespace"].items(), key=lambda x: x[1], reverse=True)[
+        :15
+    ]:
         print(f"    {ns}: {count}")
     return api_metrics
 
@@ -416,7 +438,9 @@ def collect_architecture_metrics():
     for d in backend_dirs:
         full_path = os.path.join(BACKEND_DIR, d)
         if os.path.isdir(full_path):
-            py_files = [f for f in os.listdir(full_path) if f.endswith(".py") and not f.startswith("__")]
+            py_files = [
+                f for f in os.listdir(full_path) if f.endswith(".py") and not f.startswith("__")
+            ]
             arch_metrics["layers"].append({"layer": d, "files": len(py_files)})
     # 统计模型
     models_path = os.path.join(BACKEND_DIR, "models")
@@ -432,7 +456,9 @@ def collect_architecture_metrics():
     # 统计服务
     services_path = os.path.join(BACKEND_DIR, "services")
     if os.path.isdir(services_path):
-        service_files = [f for f in os.listdir(services_path) if f.endswith(".py") and not f.startswith("__")]
+        service_files = [
+            f for f in os.listdir(services_path) if f.endswith(".py") and not f.startswith("__")
+        ]
         arch_metrics["service_count"] = len(service_files)
         print(f"  服务类文件: {len(service_files)}")
     # 统计路由文件
@@ -455,7 +481,11 @@ def collect_architecture_metrics():
             try:
                 with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
-                if re.search(r'class\s+\w+Service', content) or "class " in content and "Service" in content:
+                if (
+                    re.search(r"class\s+\w+Service", content)
+                    or "class " in content
+                    and "Service" in content
+                ):
                     patterns_found.append("Service Layer")
                     break
             except Exception:

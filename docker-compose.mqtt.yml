@@ -33,7 +33,7 @@ services:
       - "1883:1883"   # MQTT TCP（OTA e2e / 设备联调，匿名）
       - "9001:9001"   # WebSocket（前端联调可选）
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mqtt-data:/mosquitto/data
       - mqtt-log:/mosquitto/log
     restart: unless-stopped

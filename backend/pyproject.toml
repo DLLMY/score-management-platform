@@ -1,0 +1,27 @@
+# Backend Python formatting configuration.
+# Standardizes: indentation (4 spaces), line length (100), double quotes,
+# line-break normalization. Semantics-preserving only.
+#
+# NOTE: isort (import ordering) was evaluated but DEFERRED — `isort .` hangs
+# (1.4 GB RAM, 5+ min) on this large import graph (circular re-exports in
+# package __init__ files). Black already delivers the required format
+# consistency; import *ordering* is not in scope for this task.
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+skip-string-normalization = false
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.pytest_cache
+  | __pycache__
+  | migrations
+  | instance
+  | migration_backups
+  | backups
+  | logs
+  | node_modules
+)/
+'''

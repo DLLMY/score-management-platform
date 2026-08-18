@@ -213,7 +213,11 @@ class RedisCache:
         """兼容旧测试：连接 Redis 并返回是否成功。"""
         try:
             client = redis.from_url(
-                url, decode_responses=True, socket_timeout=5, socket_connect_timeout=5, retry_on_timeout=True
+                url,
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5,
+                retry_on_timeout=True,
             )
             client.ping()
             self.client = client
@@ -240,7 +244,9 @@ class RedisCache:
                 try:
                     if isinstance(value, (bytes, bytearray)):
                         return pickle.loads(bytes(value))  # nosec B301 - trusted internal cache
-                    return pickle.loads(value.encode("latin1"))  # nosec B301 - trusted internal cache
+                    return pickle.loads(
+                        value.encode("latin1")
+                    )  # nosec B301 - trusted internal cache
                 except Exception:
                     return value
         except Exception as e:
@@ -248,7 +254,9 @@ class RedisCache:
             self.client = None
             return None
 
-    def set(self, key: str, value: Any, expire: int = None, ttl: int = None, tags: list = None) -> bool:
+    def set(
+        self, key: str, value: Any, expire: int = None, ttl: int = None, tags: list = None
+    ) -> bool:
         # 兼容 ttl 和 expire 两个参数名
         if ttl is not None:
             expire = ttl
@@ -639,7 +647,8 @@ def warmup_cache(app):
 
             categories = ScoreCategory.query.all()
             categories_data = [
-                {"id": c.id, "name": c.name, "color": c.color, "enabled": c.is_active} for c in categories
+                {"id": c.id, "name": c.name, "color": c.color, "enabled": c.is_active}
+                for c in categories
             ]
             cache.set("categories:all", categories_data, expire=3600)
             print(f"预热分类数据: {len(categories_data)} 条")

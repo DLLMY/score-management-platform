@@ -114,13 +114,14 @@ function ScoreAnalysis(): React.ReactElement {
 
   const fetchData = useCallback(async (): Promise<void> => {
     try {
-      const [examsRes, classesRes] = await Promise.all([
-        api.exams.getAll(),
-        api.classes.getAll(),
-      ]);
+      const [examsRes, classesRes] = await Promise.all([api.exams.getAll(), api.classes.getAll()]);
 
       setExams(Array.isArray(examsRes) ? examsRes : (examsRes as { data?: Exam[] }).data || []);
-      setClasses(Array.isArray(classesRes) ? classesRes : (classesRes as { classes?: ClassInfo[] }).classes || []);
+      setClasses(
+        Array.isArray(classesRes)
+          ? classesRes
+          : (classesRes as { classes?: ClassInfo[] }).classes || []
+      );
     } catch (err: unknown) {
       showToast('error', '获取数据失败: ' + (err as Error).message);
     }
@@ -223,7 +224,9 @@ function ScoreAnalysis(): React.ReactElement {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `score_analysis_report_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.json`;
+    a.download = `score_analysis_report_${new Date()
+      .toLocaleDateString('zh-CN')
+      .replace(/\//g, '-')}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -269,9 +272,7 @@ function ScoreAnalysis(): React.ReactElement {
                   minHeight: count > 0 ? '12px' : '0',
                 }}
               >
-                {count > 0 && (
-                  <div className='absolute inset-0 rounded-t-md bg-white/20' />
-                )}
+                {count > 0 && <div className='absolute inset-0 rounded-t-md bg-white/20' />}
               </div>
               <div className='text-xs text-gray-500 mt-1.5'>{labels[index]}</div>
             </div>
@@ -281,11 +282,14 @@ function ScoreAnalysis(): React.ReactElement {
     );
   };
 
-  const renderSubjectBarChart = (stats: Record<string, SubjectStats>): React.ReactElement | null => {
+  const renderSubjectBarChart = (
+    stats: Record<string, SubjectStats>
+  ): React.ReactElement | null => {
     if (!stats) return null;
 
     const subjects = Object.keys(stats);
-    const maxAvg = subjects.length > 0 ? Math.max(...subjects.map((s) => stats[s].average || 0), 1) : 100;
+    const maxAvg =
+      subjects.length > 0 ? Math.max(...subjects.map((s) => stats[s].average || 0), 1) : 100;
 
     const barColors = [
       'from-blue-500 to-blue-600',
@@ -307,9 +311,7 @@ function ScoreAnalysis(): React.ReactElement {
 
           return (
             <div key={subject} className='flex flex-col items-center flex-1'>
-              <div className={`text-sm font-bold text-gray-700 mb-1.5`}>
-                {avg.toFixed(1)}
-              </div>
+              <div className={`text-sm font-bold text-gray-700 mb-1.5`}>{avg.toFixed(1)}</div>
               <div
                 className={`w-full rounded-t-md bg-gradient-to-t ${barColors[colorIndex]} transition-all duration-700 hover:opacity-80 relative shadow-sm`}
                 style={{
@@ -317,9 +319,7 @@ function ScoreAnalysis(): React.ReactElement {
                   minHeight: avg > 0 ? '10px' : '0',
                 }}
               >
-                {avg > 0 && (
-                  <div className='absolute inset-0 rounded-t-md bg-white/20' />
-                )}
+                {avg > 0 && <div className='absolute inset-0 rounded-t-md bg-white/20' />}
               </div>
               <div className='text-xs text-gray-500 mt-1.5 truncate max-w-full px-1'>{subject}</div>
             </div>
@@ -330,17 +330,40 @@ function ScoreAnalysis(): React.ReactElement {
   };
 
   // 分群配色
-  const CLUSTER_COLORS: Record<string, { bg: string; text: string; light: string; border: string }> = {
-    '全面优秀型': { bg: 'bg-blue-500', text: 'text-blue-600', light: 'bg-blue-50', border: 'border-blue-200' },
-    '遵纪但学业吃力型': { bg: 'bg-yellow-500', text: 'text-yellow-600', light: 'bg-yellow-50', border: 'border-yellow-200' },
-    '聪明但散漫型': { bg: 'bg-orange-500', text: 'text-orange-600', light: 'bg-orange-50', border: 'border-orange-200' },
-    '双困型': { bg: 'bg-red-500', text: 'text-red-600', light: 'bg-red-50', border: 'border-red-200' },
+  const CLUSTER_COLORS: Record<
+    string,
+    { bg: string; text: string; light: string; border: string }
+  > = {
+    全面优秀型: {
+      bg: 'bg-blue-500',
+      text: 'text-blue-600',
+      light: 'bg-blue-50',
+      border: 'border-blue-200',
+    },
+    遵纪但学业吃力型: {
+      bg: 'bg-yellow-500',
+      text: 'text-yellow-600',
+      light: 'bg-yellow-50',
+      border: 'border-yellow-200',
+    },
+    聪明但散漫型: {
+      bg: 'bg-orange-500',
+      text: 'text-orange-600',
+      light: 'bg-orange-50',
+      border: 'border-orange-200',
+    },
+    双困型: {
+      bg: 'bg-red-500',
+      text: 'text-red-600',
+      light: 'bg-red-50',
+      border: 'border-red-200',
+    },
   };
 
   const { clusters, compositeScores, warnings } = algorithmData;
   const clusterSummary = clusters?.cluster_summary || [];
   const riskStudents = useMemo(() => warnings?.risk_students || [], [warnings]);
-  
+
   // 使用 useMemo 优化风险学生统计
   const riskStats = useMemo(() => {
     const high = riskStudents.filter((s) => s.risk_level === 'high').length;
@@ -348,15 +371,16 @@ function ScoreAnalysis(): React.ReactElement {
     const low = riskStudents.filter((s) => s.risk_level === 'low').length;
     return { high, medium, low, total: riskStudents.length };
   }, [riskStudents]);
-  
+
   // 使用 useMemo 优化综合评分分布计算
   const compositeScoreDistribution = useMemo(() => {
     const scores = compositeScores?.scores || [];
-    return [0, 20, 40, 60, 80, 100].map((range) => 
-      scores.filter((s) => s.composite_score >= range && s.composite_score < range + 20).length
+    return [0, 20, 40, 60, 80, 100].map(
+      (range) =>
+        scores.filter((s) => s.composite_score >= range && s.composite_score < range + 20).length
     );
   }, [compositeScores]);
-  
+
   // 行为-学业相关性：无真实计算数据源，置空避免伪造数值（此前为硬编码模拟数据 0.68，已移除）
   const behaviorAcademicCorrelation: number | null = null;
 
@@ -365,7 +389,9 @@ function ScoreAnalysis(): React.ReactElement {
       {loadWarn && (
         <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>算法分析数据加载失败，相关图表可能不完整，请刷新重试</p>
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            算法分析数据加载失败，相关图表可能不完整，请刷新重试
+          </p>
         </div>
       )}
       <div>
@@ -541,7 +567,9 @@ function ScoreAnalysis(): React.ReactElement {
                 </div>
               </div>
             </div>
-            <p className='text-xs text-gray-500 mt-2'>{clusters && clusters.students ? `${clusters.students.length}名学生已分群` : '—'}</p>
+            <p className='text-xs text-gray-500 mt-2'>
+              {clusters && clusters.students ? `${clusters.students.length}名学生已分群` : '—'}
+            </p>
           </div>
         </Card>
 
@@ -563,18 +591,52 @@ function ScoreAnalysis(): React.ReactElement {
           </div>
         </Card>
 
-        <Card className={`border-l-3 ${warnings === null ? 'border-l-gray-300' : riskStudents.length > 0 ? 'border-l-red-500' : 'border-l-green-500'} bg-gradient-to-r ${warnings === null ? 'from-gray-50' : riskStudents.length > 0 ? 'from-red-50/50' : 'from-green-50/50'} to-transparent`}>
+        <Card
+          className={`border-l-3 ${
+            warnings === null
+              ? 'border-l-gray-300'
+              : riskStudents.length > 0
+              ? 'border-l-red-500'
+              : 'border-l-green-500'
+          } bg-gradient-to-r ${
+            warnings === null
+              ? 'from-gray-50'
+              : riskStudents.length > 0
+              ? 'from-red-50/50'
+              : 'from-green-50/50'
+          } to-transparent`}
+        >
           <div className='p-4'>
             <div className='flex items-center gap-3'>
-              <div className={`p-2 rounded-lg ${warnings === null ? 'bg-gray-100' : riskStudents.length > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                <ShieldAlert className={`w-5 h-5 ${warnings === null ? 'text-gray-400' : riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              <div
+                className={`p-2 rounded-lg ${
+                  warnings === null
+                    ? 'bg-gray-100'
+                    : riskStudents.length > 0
+                    ? 'bg-red-100'
+                    : 'bg-green-100'
+                }`}
+              >
+                <ShieldAlert
+                  className={`w-5 h-5 ${
+                    warnings === null
+                      ? 'text-gray-400'
+                      : riskStudents.length > 0
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                  }`}
+                />
               </div>
               <div>
                 <div className='text-xs text-gray-500'>风险预警学生</div>
                 {warnings === null ? (
                   <div className='text-sm font-bold text-gray-400'>无法获取</div>
                 ) : (
-                  <div className={`text-xl font-bold ${riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <div
+                    className={`text-xl font-bold ${
+                      riskStudents.length > 0 ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
                     {riskStudents.length}
                     <span className='text-xs font-normal text-gray-500 ml-1'>人</span>
                   </div>
@@ -601,7 +663,9 @@ function ScoreAnalysis(): React.ReactElement {
               <div className='flex-1'>
                 <h3 className='font-semibold text-gray-900 mb-0.5'>风险预警提醒</h3>
                 <p className='text-sm text-gray-600'>
-                  当前有 <span className='font-semibold text-red-600'>{riskStats.total}</span> 名学生处于风险状态（高风险: {riskStats.high}人，中风险: {riskStats.medium}人），建议结合成绩分析及时关注并采取干预措施。
+                  当前有 <span className='font-semibold text-red-600'>{riskStats.total}</span>{' '}
+                  名学生处于风险状态（高风险: {riskStats.high}人，中风险: {riskStats.medium}
+                  人），建议结合成绩分析及时关注并采取干预措施。
                 </p>
               </div>
             </div>
@@ -627,7 +691,9 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>参考人数</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.total_students != null ? examAnalysis.overall.total_students : '--'}
+                        {examAnalysis.overall.total_students != null
+                          ? examAnalysis.overall.total_students
+                          : '--'}
                       </div>
                     </div>
                   </div>
@@ -642,7 +708,9 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>平均成绩</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.overall_average != null ? examAnalysis.overall.overall_average : '--'}
+                        {examAnalysis.overall.overall_average != null
+                          ? examAnalysis.overall.overall_average
+                          : '--'}
                       </div>
                     </div>
                   </div>
@@ -657,7 +725,9 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>优秀率</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.excellent_rate != null ? `${examAnalysis.overall.excellent_rate}%` : '--'}
+                        {examAnalysis.overall.excellent_rate != null
+                          ? `${examAnalysis.overall.excellent_rate}%`
+                          : '--'}
                       </div>
                     </div>
                   </div>
@@ -672,7 +742,9 @@ function ScoreAnalysis(): React.ReactElement {
                     <div>
                       <div className='text-[10px] text-gray-500'>及格率</div>
                       <div className='text-lg font-bold text-gray-900'>
-                        {examAnalysis.overall.pass_rate != null ? `${examAnalysis.overall.pass_rate}%` : '--'}
+                        {examAnalysis.overall.pass_rate != null
+                          ? `${examAnalysis.overall.pass_rate}%`
+                          : '--'}
                       </div>
                     </div>
                   </div>
@@ -694,9 +766,7 @@ function ScoreAnalysis(): React.ReactElement {
                       各科平均分对比
                     </h3>
                   </div>
-                  <div className='p-3'>
-                    {renderSubjectBarChart(examAnalysis.subject_stats)}
-                  </div>
+                  <div className='p-3'>{renderSubjectBarChart(examAnalysis.subject_stats)}</div>
                 </Card>
               )}
 
@@ -738,31 +808,45 @@ function ScoreAnalysis(): React.ReactElement {
                   <div className='p-3'>
                     <div className='space-y-2'>
                       {Object.entries(examAnalysis.subject_stats).map(([subject, data]) => (
-                        <div key={subject} className='flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-50/80 rounded-lg'>{/* 窄屏换行，防横向溢出 */}
+                        <div
+                          key={subject}
+                          className='flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-50/80 rounded-lg'
+                        >
+                          {/* 窄屏换行，防横向溢出 */}
                           <div className='flex items-center gap-2'>
                             <span className='px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary-100 text-primary-700 whitespace-nowrap'>
                               {subject}
                             </span>
                             <div>
-                              <div className='text-[10px] text-gray-500'>参考 {data.count != null ? data.count : '--'} 人</div>
+                              <div className='text-[10px] text-gray-500'>
+                                参考 {data.count != null ? data.count : '--'} 人
+                              </div>
                             </div>
                           </div>
                           <div className='flex items-center gap-4'>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>平均分</div>
-                              <div className='text-sm font-bold text-gray-900'>{data.average != null ? data.average.toFixed(1) : '--'}</div>
+                              <div className='text-sm font-bold text-gray-900'>
+                                {data.average != null ? data.average.toFixed(1) : '--'}
+                              </div>
                             </div>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>最高分</div>
-                              <div className='text-sm font-bold text-green-600'>{data.max != null ? data.max : '--'}</div>
+                              <div className='text-sm font-bold text-green-600'>
+                                {data.max != null ? data.max : '--'}
+                              </div>
                             </div>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>最低分</div>
-                              <div className='text-sm font-bold text-red-600'>{data.min != null ? data.min : '--'}</div>
+                              <div className='text-sm font-bold text-red-600'>
+                                {data.min != null ? data.min : '--'}
+                              </div>
                             </div>
                             <div className='text-center min-w-[50px]'>
                               <div className='text-[9px] text-gray-500'>及格率</div>
-                              <div className='text-sm font-bold text-purple-600'>{data.pass_rate != null ? `${data.pass_rate}%` : '--'}</div>
+                              <div className='text-sm font-bold text-purple-600'>
+                                {data.pass_rate != null ? `${data.pass_rate}%` : '--'}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -795,32 +879,69 @@ function ScoreAnalysis(): React.ReactElement {
                           <div className={`w-1.5 h-1.5 rounded-full ${item.color}`} />
                           <span className='text-[10px] text-gray-600 w-10'>{item.label}</span>
                           <div className='flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden'>
-                            <div 
+                            <div
                               className={`h-full ${item.color}`}
-                              style={{ width: `${riskStudents.length > 0 ? (item.count / riskStudents.length) * 100 : 0}%` }}
+                              style={{
+                                width: `${
+                                  riskStudents.length > 0
+                                    ? (item.count / riskStudents.length) * 100
+                                    : 0
+                                }%`,
+                              }}
                             />
                           </div>
-                          <span className='text-[10px] font-semibold text-gray-800 w-6 text-right'>{item.count}</span>
+                          <span className='text-[10px] font-semibold text-gray-800 w-6 text-right'>
+                            {item.count}
+                          </span>
                         </div>
                       ))}
                     </div>
                     <div className='relative w-18 h-18 ml-3'>
                       <svg className='w-full h-full transform -rotate-90'>
-                        <circle cx='36' cy='36' r='30' stroke='#e5e7eb' strokeWidth='5' fill='none' />
-                        <circle 
-                          cx='36' cy='36' r='30' 
-                          stroke='#ef4444' strokeWidth='5' fill='none'
-                          strokeDasharray={`${riskStudents.length ? riskStudents.filter((r) => r.risk_level === 'high').length / riskStudents.length * 188 : 0} 188`}
+                        <circle
+                          cx='36'
+                          cy='36'
+                          r='30'
+                          stroke='#e5e7eb'
+                          strokeWidth='5'
+                          fill='none'
                         />
-                        <circle 
-                          cx='36' cy='36' r='30' 
-                          stroke='#eab308' strokeWidth='5' fill='none'
-                          strokeDasharray={`${riskStudents.length ? riskStudents.filter((r) => r.risk_level === 'medium').length / riskStudents.length * 188 : 0} 188`}
+                        <circle
+                          cx='36'
+                          cy='36'
+                          r='30'
+                          stroke='#ef4444'
+                          strokeWidth='5'
+                          fill='none'
+                          strokeDasharray={`${
+                            riskStudents.length
+                              ? (riskStudents.filter((r) => r.risk_level === 'high').length /
+                                  riskStudents.length) *
+                                188
+                              : 0
+                          } 188`}
+                        />
+                        <circle
+                          cx='36'
+                          cy='36'
+                          r='30'
+                          stroke='#eab308'
+                          strokeWidth='5'
+                          fill='none'
+                          strokeDasharray={`${
+                            riskStudents.length
+                              ? (riskStudents.filter((r) => r.risk_level === 'medium').length /
+                                  riskStudents.length) *
+                                188
+                              : 0
+                          } 188`}
                           transform='rotate(180 36 36)'
                         />
                       </svg>
                       <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                        <span className='text-base font-bold text-gray-800'>{riskStudents.length}</span>
+                        <span className='text-base font-bold text-gray-800'>
+                          {riskStudents.length}
+                        </span>
                         <span className='text-[8px] text-gray-500'>预警人数</span>
                       </div>
                     </div>
@@ -846,22 +967,32 @@ function ScoreAnalysis(): React.ReactElement {
                     {behaviorAcademicCorrelation === null ? (
                       <div className='text-center'>
                         <div className='text-sm text-gray-400'>暂无相关数据</div>
-                        <div className='text-[10px] text-gray-400 mt-0.5'>需同时存在行为积分与成绩记录</div>
+                        <div className='text-[10px] text-gray-400 mt-0.5'>
+                          需同时存在行为积分与成绩记录
+                        </div>
                       </div>
                     ) : (
-                    <div className='text-center'>
-                      <div className={`text-2xl font-bold ${
-                        Math.abs(behaviorAcademicCorrelation) >= 0.7 ? 'text-green-600' :
-                        Math.abs(behaviorAcademicCorrelation) >= 0.4 ? 'text-yellow-600' :
-                        'text-gray-500'
-                      }`}>
-                        {behaviorAcademicCorrelation.toFixed(2)}
+                      <div className='text-center'>
+                        <div
+                          className={`text-2xl font-bold ${
+                            Math.abs(behaviorAcademicCorrelation) >= 0.7
+                              ? 'text-green-600'
+                              : Math.abs(behaviorAcademicCorrelation) >= 0.4
+                              ? 'text-yellow-600'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {behaviorAcademicCorrelation.toFixed(2)}
+                        </div>
+                        <div className='text-[10px] text-gray-500 mt-0.5'>相关系数</div>
+                        <div className='text-[9px] text-gray-400 mt-0.5'>
+                          {behaviorAcademicCorrelation > 0
+                            ? '正相关'
+                            : behaviorAcademicCorrelation < 0
+                            ? '负相关'
+                            : '无明显相关'}
+                        </div>
                       </div>
-                      <div className='text-[10px] text-gray-500 mt-0.5'>相关系数</div>
-                      <div className='text-[9px] text-gray-400 mt-0.5'>
-                        {behaviorAcademicCorrelation > 0 ? '正相关' : behaviorAcademicCorrelation < 0 ? '负相关' : '无明显相关'}
-                      </div>
-                    </div>
                     )}
                   </div>
                   <div className='mt-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-1.5'>
@@ -892,7 +1023,7 @@ function ScoreAnalysis(): React.ReactElement {
                       const maxCount = Math.max(...compositeScoreDistribution, 1);
                       return (
                         <div key={index} className='flex-1 flex flex-col items-center'>
-                          <div 
+                          <div
                             className='w-full bg-gradient-to-t from-indigo-500 to-indigo-300 rounded-t transition-all duration-500 hover:from-indigo-600 hover:to-indigo-400'
                             style={{ height: `${(count / maxCount) * 45}px`, minHeight: '5px' }}
                           />
@@ -921,21 +1052,37 @@ function ScoreAnalysis(): React.ReactElement {
                     {clusterSummary.map((cluster, index) => {
                       const colors = CLUSTER_COLORS[cluster.label];
                       const features: Record<string, { desc: string; suggestion: string }> = {
-                        '全面优秀型': { desc: '行为规范，学业优秀', suggestion: '保持状态，引领同学' },
-                        '遵纪但学业吃力型': { desc: '遵守纪律，学习待提高', suggestion: '加强学习辅导' },
-                        '聪明但散漫型': { desc: '学习能力强，行为需改进', suggestion: '加强纪律教育' },
-                        '双困型': { desc: '行为和学业需关注', suggestion: '制定个性化方案' },
+                        全面优秀型: {
+                          desc: '行为规范，学业优秀',
+                          suggestion: '保持状态，引领同学',
+                        },
+                        遵纪但学业吃力型: {
+                          desc: '遵守纪律，学习待提高',
+                          suggestion: '加强学习辅导',
+                        },
+                        聪明但散漫型: {
+                          desc: '学习能力强，行为需改进',
+                          suggestion: '加强纪律教育',
+                        },
+                        双困型: { desc: '行为和学业需关注', suggestion: '制定个性化方案' },
                       };
                       const feature = features[cluster.label] || { desc: '-', suggestion: '-' };
-                      
+
                       return (
-                        <div key={index} className={`p-2 rounded-lg ${colors?.light} border ${colors?.border}`}>
+                        <div
+                          key={index}
+                          className={`p-2 rounded-lg ${colors?.light} border ${colors?.border}`}
+                        >
                           <div className='flex items-center justify-between mb-0.5'>
                             <div className='flex items-center gap-1'>
                               <div className={`w-1.5 h-1.5 rounded-full ${colors?.bg}`} />
-                              <span className='text-[10px] font-semibold text-gray-800'>{cluster.label}</span>
+                              <span className='text-[10px] font-semibold text-gray-800'>
+                                {cluster.label}
+                              </span>
                             </div>
-                            <span className='text-xs font-bold text-gray-900'>{cluster.count}人</span>
+                            <span className='text-xs font-bold text-gray-900'>
+                              {cluster.count}人
+                            </span>
                           </div>
                           <p className='text-[9px] text-gray-600'>{feature.desc}</p>
                           <p className='text-[9px] text-gray-500 mt-0.5'>{feature.suggestion}</p>

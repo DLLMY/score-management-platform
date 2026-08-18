@@ -28,7 +28,12 @@ class InputValidationMiddleware:
 
         @app.errorhandler(400)
         def validation_error(e):
-            return jsonify({"success": False, "message": "Invalid request parameters", "error": str(e)}), 400
+            return (
+                jsonify(
+                    {"success": False, "message": "Invalid request parameters", "error": str(e)}
+                ),
+                400,
+            )
 
     def add_whitelist(self, endpoints: List[str]):
         """Add whitelist endpoints"""
@@ -175,7 +180,13 @@ def validate_json(*required_fields):
 
             if missing_fields:
                 return (
-                    jsonify({"success": False, "message": "Missing required fields", "missing_fields": missing_fields}),
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "Missing required fields",
+                            "missing_fields": missing_fields,
+                        }
+                    ),
                     400,
                 )
 
@@ -215,7 +226,12 @@ def validate_fields(**validators):
                         errors[field] = error_msg
 
             if errors:
-                return jsonify({"success": False, "message": "Field validation failed", "errors": errors}), 400
+                return (
+                    jsonify(
+                        {"success": False, "message": "Field validation failed", "errors": errors}
+                    ),
+                    400,
+                )
 
             return func(*args, **kwargs)
 
@@ -241,7 +257,10 @@ def validate_pagination(func):
             page = max(1, int(page))
             per_page = max(1, min(100, int(per_page)))
         except ValueError:
-            return jsonify({"success": False, "message": "Pagination parameters must be integers"}), 400
+            return (
+                jsonify({"success": False, "message": "Pagination parameters must be integers"}),
+                400,
+            )
 
         request.args = request.args.copy()
         request.args["page"] = str(page)

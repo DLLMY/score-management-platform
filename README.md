@@ -243,7 +243,7 @@ class-manger-integral/
 │   ├── stop_all.bat        # 停止所有服务
 │   ├── server_deploy.ps1   # PowerShell 部署脚本
 │   ├── service_manager.py  # 服务管理器
-│   ├── 一键部署.py          # Python 一键部署脚本
+│   ├── one_click_deploy.py          # Python 一键部署脚本
 │   ├── ngrok/              # ngrok配置
 │   ├── redis/              # Redis 配置
 │   ├── README.md           # 部署说明
@@ -254,8 +254,12 @@ class-manger-integral/
 │   ├── RELEASE_GUIDE.md    # 发布流程指南
 │   └── BRANCH_STRATEGY.md  # 分支策略指南
 │
-├── docs/                   # 文档
-├── mqtt-test-tool/         # MQTT测试工具
+├── docs/                   # 文档（重构/评估日志、STARTUP_GUIDE、MQTT_INTEGRATION）
+├── docs/archive/           # 历史中文文档（原 doc/ 归档）
+├── firmware/               # ESP32 固件工程（esp32/、esp32-old-c3/、phonebox.ino）
+├── infra/                  # 基础设施（Dockerfile、mosquitto/、start_redis.bat、mqtt-test-tool/、pm2.config.json）
+├── tools/                  # 独立工具（remote_notify/ 桌面通知客户端）
+├── reports/                # 评估报告归档（中文 .md）
 ├── CHANGELOG.md            # 版本变更日志
 ├── .gitignore              # Git忽略文件
 └── README.md               # 本文件

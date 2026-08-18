@@ -1,20 +1,20 @@
 import { memo, useState, ChangeEventHandler, FocusEventHandler } from 'react';
 import { LucideIcon } from 'lucide-react';
 
-type InputType = 
-  | 'text' 
-  | 'password' 
-  | 'email' 
-  | 'number' 
-  | 'tel' 
-  | 'url' 
-  | 'search' 
-  | 'date' 
-  | 'datetime-local' 
-  | 'time' 
-  | 'month' 
-  | 'week' 
-  | 'file' 
+type InputType =
+  | 'text'
+  | 'password'
+  | 'email'
+  | 'number'
+  | 'tel'
+  | 'url'
+  | 'search'
+  | 'date'
+  | 'datetime-local'
+  | 'time'
+  | 'month'
+  | 'week'
+  | 'file'
   | 'color';
 
 interface InputProps {
@@ -139,8 +139,8 @@ function Input({
                   ? 'border-red-400 focus:border-red-500 focus:ring-red-200'
                   : 'border-primary-400 focus:border-primary-500 focus:ring-primary-200'
                 : error
-                  ? 'border-red-300'
-                  : 'border-slate-200 hover:border-slate-300'
+                ? 'border-red-300'
+                : 'border-slate-200 hover:border-slate-300'
             }
           `}
         />

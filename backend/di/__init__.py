@@ -24,11 +24,15 @@ class DIContainer(containers.DeclarativeContainer):
 
     mqtt_message_service = providers.Singleton("services.mqtt_message_service.MQTTMessageService")
 
-    mqtt_management_service = providers.Singleton("services.mqtt_management_service.MQTTManagementService")
+    mqtt_management_service = providers.Singleton(
+        "services.mqtt_management_service.MQTTManagementService"
+    )
 
     nlp_service = providers.Factory("services.nlp_service.get_nlp_service")
 
-    nlp_algorithm_analyzer = providers.Singleton("services.nlp_analyzer_service.NLPAlgorithmAnalyzer")
+    nlp_algorithm_analyzer = providers.Singleton(
+        "services.nlp_analyzer_service.NLPAlgorithmAnalyzer"
+    )
 
     nlp_parser_service = providers.Singleton("services.nlp_parser_service.NLPParserService")
 
@@ -44,11 +48,15 @@ class DIContainer(containers.DeclarativeContainer):
 
     warning_service = providers.Singleton("services.warning_service.WarningService")
 
-    score_predict_service = providers.Singleton("services.score_predict_service.ScorePredictService")
+    score_predict_service = providers.Singleton(
+        "services.score_predict_service.ScorePredictService"
+    )
 
     risk_predict_service = providers.Singleton("services.risk_predict_service.RiskPredictService")
 
-    composite_score_service = providers.Singleton("services.composite_score_service.CompositeScoreService")
+    composite_score_service = providers.Singleton(
+        "services.composite_score_service.CompositeScoreService"
+    )
 
     score_distribution_controller = providers.Singleton(
         "services.score_distribution_service.ScoreDistributionController"
@@ -56,13 +64,19 @@ class DIContainer(containers.DeclarativeContainer):
 
     rule_execution_engine = providers.Singleton("services.rule_engine_service.RuleExecutionEngine")
 
-    rule_recommendation_service = providers.Singleton("services.rule_recommendation_service.RuleRecommendationService")
+    rule_recommendation_service = providers.Singleton(
+        "services.rule_recommendation_service.RuleRecommendationService"
+    )
 
     data_sync_service = providers.Singleton("services.data_sync_service.DataSyncService")
 
-    data_consistency_checker = providers.Singleton("services.data_consistency_checker.DataConsistencyChecker")
+    data_consistency_checker = providers.Singleton(
+        "services.data_consistency_checker.DataConsistencyChecker"
+    )
 
-    system_config_service = providers.Singleton("services.system_config_service.SystemConfigService")
+    system_config_service = providers.Singleton(
+        "services.system_config_service.SystemConfigService"
+    )
 
 
 def init_container(app):

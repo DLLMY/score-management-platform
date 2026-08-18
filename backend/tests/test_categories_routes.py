@@ -99,9 +99,7 @@ class TestCategoriesRoutes:
                 headers=auth_headers,
             )
             cat_id = _body(created)["data"]["category"]["id"]
-            response = client.delete(
-                "/api/score-categories/%d" % cat_id, headers=auth_headers
-            )
+            response = client.delete("/api/score-categories/%d" % cat_id, headers=auth_headers)
         assert response.status_code == 200
         assert response.get_json()["message"] == "分类删除成功"
 
@@ -118,9 +116,7 @@ class TestCategoriesRoutes:
             rule = ScoreRule(name="附属规则", category_id=cat_id, score=1, is_active=True)
             db.session.add(rule)
             db.session.commit()
-            response = client.delete(
-                "/api/score-categories/%d" % cat_id, headers=auth_headers
-            )
+            response = client.delete("/api/score-categories/%d" % cat_id, headers=auth_headers)
         assert response.status_code == 400
         assert "条规则" in response.get_json()["message"]
 

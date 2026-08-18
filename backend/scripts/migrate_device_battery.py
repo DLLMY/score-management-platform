@@ -7,10 +7,13 @@
 用法（须系统 Python 3.11）:
     python scripts/migrate_device_battery.py
 """
+
 import os
 import sqlite3
 
-DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db"))
+DB = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db")
+)
 
 
 def main():

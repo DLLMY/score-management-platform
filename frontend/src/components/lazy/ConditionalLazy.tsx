@@ -57,9 +57,13 @@ export const FeatureLazy = <P extends Record<string, unknown> = Record<string, u
     }
 
     return (
-      <Suspense fallback={<div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
-      </div>}>
+      <Suspense
+        fallback={
+          <div className='flex items-center justify-center py-8'>
+            <div className='w-6 h-6 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin'></div>
+          </div>
+        }
+      >
         <LazyComponent {...props} />
       </Suspense>
     );

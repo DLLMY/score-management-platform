@@ -1,7 +1,34 @@
 import logger from '../utils/logger';
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback, useEffect } from 'react';
-import { Send, Radio, Monitor, Bell, Volume2, VolumeX, AlertTriangle, TestTube, CheckCircle, Loader2, Wifi, WifiOff, Bookmark, Clock, History, Palette, Plus, Trash2, Edit2, Calendar, Play, Pause, Filter, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
+import {
+  Send,
+  Radio,
+  Monitor,
+  Bell,
+  Volume2,
+  VolumeX,
+  AlertTriangle,
+  TestTube,
+  CheckCircle,
+  Loader2,
+  Wifi,
+  WifiOff,
+  Bookmark,
+  Clock,
+  History,
+  Palette,
+  Plus,
+  Trash2,
+  Edit2,
+  Calendar,
+  Play,
+  Pause,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Trash,
+} from 'lucide-react';
 import api, { NotifyTemplate, ScheduledNotify, NotifyHistory } from '../services/api';
 import { useForm, useModal, useConfirmDialog, useClassNowStatus } from '../hooks';
 import type { BlockScope } from '../hooks';
@@ -39,7 +66,11 @@ const QUICK_PRESETS = [
   { name: '上课提醒', text: '请同学们注意，上课时间到了，请回到座位准备上课。', urgent: false },
   { name: '下课通知', text: '下课时间到了，请同学们整理好桌面有序离开教室。', urgent: false },
   { name: '紧急会议', text: '紧急通知：请所有老师立即到会议室开会！', urgent: true },
-  { name: '作业提醒', text: '请同学们注意，今日作业截止时间为下午5点，请按时提交。', urgent: false },
+  {
+    name: '作业提醒',
+    text: '请同学们注意，今日作业截止时间为下午5点，请按时提交。',
+    urgent: false,
+  },
   { name: '考试通知', text: '考试即将开始，请同学们准备好文具，保持安静。', urgent: true },
   { name: '放学提醒', text: '放学时间到了，请同学们有序离校，注意安全。', urgent: false },
 ];
@@ -80,48 +111,52 @@ function RemoteNotify() {
   const { showToast } = useStableToast();
   const [mode, setMode] = useState<NotifyMode>('broadcast');
   const [isSending, setIsSending] = useState(false);
-  const [lastResult, setLastResult] = useState<{ success: boolean; message: string; topic: string } | null>(null);
+  const [lastResult, setLastResult] = useState<{
+    success: boolean;
+    message: string;
+    topic: string;
+  } | null>(null);
   const [mqttConnected, setMqttConnected] = useState<boolean | null>(null);
   // 强制发送开关（受 notification.force_send 权限门控，仅超管可见复选框）
   const [forceSend, setForceSend] = useState(false);
   const [scheduledForceSend, setScheduledForceSend] = useState(false);
-  
+
   // 使用 useConfirmDialog 管理确认对话框
   const { show: showConfirm } = useConfirmDialog();
-  
+
   // 使用 useForm 管理表单状态
-  const {
-    formData: form,
-    setFormData: setForm,
-  } = useForm<NotifyForm>({
-    text: '',
-    volume: 0.7,
-    speak: true,
-    popup: true,
-    timeout_sec: 8,
-    urgent: false,
-    device_id: '',
-    bg_color: '#000000',
-    text_color: '#FF0000',
-    font_size: 48,
-    language: 'zh',
-  }, {
-    text: { required: true, minLength: 1 },
-  });
-  
-  const {
-    formData: scoreForm,
-    setFormData: setScoreForm,
-  } = useForm<ScoreChangeForm>({
-    student_name: '',
-    score_change: 0,
-    reason: '',
-    course: '',
-    device_id: '',
-  }, {
-    student_name: { required: true, minLength: 1 },
-  });
-  
+  const { formData: form, setFormData: setForm } = useForm<NotifyForm>(
+    {
+      text: '',
+      volume: 0.7,
+      speak: true,
+      popup: true,
+      timeout_sec: 8,
+      urgent: false,
+      device_id: '',
+      bg_color: '#000000',
+      text_color: '#FF0000',
+      font_size: 48,
+      language: 'zh',
+    },
+    {
+      text: { required: true, minLength: 1 },
+    }
+  );
+
+  const { formData: scoreForm, setFormData: setScoreForm } = useForm<ScoreChangeForm>(
+    {
+      student_name: '',
+      score_change: 0,
+      reason: '',
+      course: '',
+      device_id: '',
+    },
+    {
+      student_name: { required: true, minLength: 1 },
+    }
+  );
+
   // 模板相关状态
   const [templates, setTemplates] = useState<NotifyTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false); // M9: 模板加载反馈
@@ -130,17 +165,17 @@ function RemoteNotify() {
   const [loadError, setLoadError] = useState(false);
 
   // 班级实时上课状态（用于下发前的拦截提示；scope 必须对应后端判定口径）
-  const nowDeviceId = mode === 'device' ? form.device_id : mode === 'score_change' ? scoreForm.device_id : undefined;
-  const nowScope: BlockScope = mode === 'broadcast'
-    ? 'broadcast'
-    : (nowDeviceId ? 'class' : 'global');
+  const nowDeviceId =
+    mode === 'device' ? form.device_id : mode === 'score_change' ? scoreForm.device_id : undefined;
+  const nowScope: BlockScope =
+    mode === 'broadcast' ? 'broadcast' : nowDeviceId ? 'class' : 'global';
   const classNow = useClassNowStatus(undefined, {
     scope: nowScope,
     deviceId: nowDeviceId || undefined,
   });
   // 定时通知「立即发送」的实时状态（定时项可能为广播或指定设备，后端按各自目标强拦截，这里用广播口径作提示）
   const scheduledClassNow = useClassNowStatus(undefined, { scope: 'broadcast' });
-  
+
   const {
     formData: templateForm,
     setFormData: setTemplateForm,
@@ -154,41 +189,56 @@ function RemoteNotify() {
     font_size: number;
     language: string;
     [key: string]: unknown;
-  }>({
-    name: '',
-    text: '',
-    category: '',
-    bg_color: '#000000',
-    text_color: '#FF0000',
-    font_size: 48,
-    language: 'zh',
-  }, {
-    name: { required: true, minLength: 1 },
-    text: { required: true, minLength: 1 },
-  });
-  
+  }>(
+    {
+      name: '',
+      text: '',
+      category: '',
+      bg_color: '#000000',
+      text_color: '#FF0000',
+      font_size: 48,
+      language: 'zh',
+    },
+    {
+      name: { required: true, minLength: 1 },
+      text: { required: true, minLength: 1 },
+    }
+  );
+
   // 使用 useModal 管理弹窗状态
-  const { isOpen: showTemplateModal, open: openTemplateModal, close: closeTemplateModal } = useModal<NotifyTemplate | null>({
+  const {
+    isOpen: showTemplateModal,
+    open: openTemplateModal,
+    close: closeTemplateModal,
+  } = useModal<NotifyTemplate | null>({
     onClose: () => {
       resetTemplateForm();
       setEditingTemplate(null);
     },
   });
-  
+
   // 历史记录
   const [historyData, setHistoryData] = useState<NotifyHistory[]>([]);
-  const [historyStats, setHistoryStats] = useState<{ total_count: number; today_count: number; week_count: number; month_count: number; success_count: number; fail_count: number; success_rate: number } | null>(null);
+  const [historyStats, setHistoryStats] = useState<{
+    total_count: number;
+    today_count: number;
+    week_count: number;
+    month_count: number;
+    success_count: number;
+    fail_count: number;
+    success_rate: number;
+  } | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyFilter, setHistoryFilter] = useState<string>('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  
+
   const { isOpen: showHistory, open: openHistory, close: closeHistory } = useModal<null>({});
-  
+
   // 定时通知相关状态
   const [scheduledNotifications, setScheduledNotifications] = useState<ScheduledNotify[]>([]);
   const [editingScheduled, setEditingScheduled] = useState<ScheduledNotify | null>(null);
-  
+
   const {
     formData: scheduledForm,
     setFormData: setScheduledForm,
@@ -208,26 +258,33 @@ function RemoteNotify() {
     repeat_day_of_week: number[];
     repeat_end_at: string;
     [key: string]: unknown;
-  }>({
-    text: '',
-    volume: 0.7,
-    speak: true,
-    popup: true,
-    timeout_sec: 8,
-    urgent: false,
-    send_mode: 'broadcast',
-    device_id: '',
-    scheduled_at: '',
-    repeat_type: 'once',
-    repeat_interval: 1,
-    repeat_day_of_week: [0, 1, 2, 3, 4],
-    repeat_end_at: '',
-  }, {
-    text: { required: true, minLength: 1 },
-    scheduled_at: { required: true, minLength: 1 },
-  });
-  
-  const { isOpen: showScheduledModal, open: openScheduledModal, close: closeScheduledModal } = useModal<ScheduledNotify | null>({
+  }>(
+    {
+      text: '',
+      volume: 0.7,
+      speak: true,
+      popup: true,
+      timeout_sec: 8,
+      urgent: false,
+      send_mode: 'broadcast',
+      device_id: '',
+      scheduled_at: '',
+      repeat_type: 'once',
+      repeat_interval: 1,
+      repeat_day_of_week: [0, 1, 2, 3, 4],
+      repeat_end_at: '',
+    },
+    {
+      text: { required: true, minLength: 1 },
+      scheduled_at: { required: true, minLength: 1 },
+    }
+  );
+
+  const {
+    isOpen: showScheduledModal,
+    open: openScheduledModal,
+    close: closeScheduledModal,
+  } = useModal<ScheduledNotify | null>({
     onClose: () => {
       resetScheduledForm();
       setEditingScheduled(null);
@@ -310,7 +367,14 @@ function RemoteNotify() {
       loadHistoryData();
       loadHistoryStats();
     }
-  }, [checkMqttStatus, loadTemplates, loadScheduledNotifications, showHistory, loadHistoryData, loadHistoryStats]);
+  }, [
+    checkMqttStatus,
+    loadTemplates,
+    loadScheduledNotifications,
+    showHistory,
+    loadHistoryData,
+    loadHistoryStats,
+  ]);
 
   useEffect(() => {
     if (showHistory) {
@@ -441,31 +505,37 @@ function RemoteNotify() {
     setLastResult(null);
   }, []);
 
-  const handleUseTemplate = useCallback(async (template: NotifyTemplate) => {
-    setForm({
-      text: template.text,
-      volume: template.volume || 0.7,
-      speak: template.speak || true,
-      popup: template.popup || true,
-      timeout_sec: template.timeout_sec || 8,
-      urgent: template.urgent || false,
-      device_id: form.device_id,
-      bg_color: template.bg_color || '#000000',
-      text_color: template.text_color || '#FF0000',
-      font_size: template.font_size || 48,
-      language: template.language || 'zh',
-    });
-    showToast('success', `已加载模板: ${template.name}`);
-  }, [form.device_id, showToast]);
+  const handleUseTemplate = useCallback(
+    async (template: NotifyTemplate) => {
+      setForm({
+        text: template.text,
+        volume: template.volume || 0.7,
+        speak: template.speak || true,
+        popup: template.popup || true,
+        timeout_sec: template.timeout_sec || 8,
+        urgent: template.urgent || false,
+        device_id: form.device_id,
+        bg_color: template.bg_color || '#000000',
+        text_color: template.text_color || '#FF0000',
+        font_size: template.font_size || 48,
+        language: template.language || 'zh',
+      });
+      showToast('success', `已加载模板: ${template.name}`);
+    },
+    [form.device_id, showToast]
+  );
 
-  const handleUsePreset = useCallback((preset: typeof QUICK_PRESETS[0]) => {
-    setForm(prev => ({
-      ...prev,
-      text: preset.text,
-      urgent: preset.urgent,
-    }));
-    showToast('success', `已加载预设: ${preset.name}`);
-  }, [showToast]);
+  const handleUsePreset = useCallback(
+    (preset: (typeof QUICK_PRESETS)[0]) => {
+      setForm((prev) => ({
+        ...prev,
+        text: preset.text,
+        urgent: preset.urgent,
+      }));
+      showToast('success', `已加载预设: ${preset.name}`);
+    },
+    [showToast]
+  );
 
   const handleSaveTemplate = useCallback(async () => {
     if (!templateForm.name.trim() || !templateForm.text.trim()) {
@@ -488,16 +558,19 @@ function RemoteNotify() {
     }
   }, [templateForm, editingTemplate, loadTemplates, showToast]);
 
-  const handleDeleteTemplate = useCallback(async (id: number) => {
-    if (!window.confirm('确定要删除该通知模板吗？')) return; // 删除确认
-    try {
-      await api.notifyTemplates.delete(id);
-      showToast('success', '模板已删除');
-      loadTemplates();
-    } catch (error) {
-      showToast('error', '删除失败');
-    }
-  }, [loadTemplates, showToast]);
+  const handleDeleteTemplate = useCallback(
+    async (id: number) => {
+      if (!window.confirm('确定要删除该通知模板吗？')) return; // 删除确认
+      try {
+        await api.notifyTemplates.delete(id);
+        showToast('success', '模板已删除');
+        loadTemplates();
+      } catch (error) {
+        showToast('error', '删除失败');
+      }
+    },
+    [loadTemplates, showToast]
+  );
 
   const handleSaveScheduled = useCallback(async () => {
     if (!scheduledForm.text.trim()) {
@@ -524,35 +597,44 @@ function RemoteNotify() {
     }
   }, [scheduledForm, editingScheduled, loadScheduledNotifications, showToast]);
 
-  const handleDeleteScheduled = useCallback(async (id: number) => {
-    try {
-      await api.scheduledNotify.delete(id);
-      showToast('success', '定时通知已删除');
-      loadScheduledNotifications();
-    } catch (error) {
-      showToast('error', '删除失败');
-    }
-  }, [loadScheduledNotifications, showToast]);
+  const handleDeleteScheduled = useCallback(
+    async (id: number) => {
+      try {
+        await api.scheduledNotify.delete(id);
+        showToast('success', '定时通知已删除');
+        loadScheduledNotifications();
+      } catch (error) {
+        showToast('error', '删除失败');
+      }
+    },
+    [loadScheduledNotifications, showToast]
+  );
 
-  const handleCancelScheduled = useCallback(async (id: number) => {
-    try {
-      await api.scheduledNotify.cancel(id);
-      showToast('success', '定时通知已取消');
-      loadScheduledNotifications();
-    } catch (error) {
-      showToast('error', '取消失败');
-    }
-  }, [loadScheduledNotifications, showToast]);
+  const handleCancelScheduled = useCallback(
+    async (id: number) => {
+      try {
+        await api.scheduledNotify.cancel(id);
+        showToast('success', '定时通知已取消');
+        loadScheduledNotifications();
+      } catch (error) {
+        showToast('error', '取消失败');
+      }
+    },
+    [loadScheduledNotifications, showToast]
+  );
 
-  const handleTriggerScheduled = useCallback(async (id: number) => {
-    try {
-      await api.scheduledNotify.trigger(id, { force_send: scheduledForceSend });
-      showToast('success', '通知已发送');
-      loadScheduledNotifications();
-    } catch (error) {
-      showToast('error', '发送失败');
-    }
-  }, [loadScheduledNotifications, showToast, scheduledForceSend]);
+  const handleTriggerScheduled = useCallback(
+    async (id: number) => {
+      try {
+        await api.scheduledNotify.trigger(id, { force_send: scheduledForceSend });
+        showToast('success', '通知已发送');
+        loadScheduledNotifications();
+      } catch (error) {
+        showToast('error', '发送失败');
+      }
+    },
+    [loadScheduledNotifications, showToast, scheduledForceSend]
+  );
 
   const handleUseCurrentFormForScheduled = useCallback(() => {
     setScheduledForm({
@@ -586,20 +668,52 @@ function RemoteNotify() {
       <div className='flex items-center justify-between mb-6'>
         <div>
           <h1 className='text-2xl font-bold text-gray-800 dark:text-white'>远程通知</h1>
-          <p className='text-gray-500 dark:text-slate-400 mt-1'>通过MQTT向远程电脑客户端发送通知消息</p>
+          <p className='text-gray-500 dark:text-slate-400 mt-1'>
+            通过MQTT向远程电脑客户端发送通知消息
+          </p>
         </div>
         <div className='flex items-center gap-3'>
           <button
             onClick={() => (showHistory ? closeHistory() : openHistory())}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${showHistory ? 'bg-primary-100 dark:bg-primary-500/20 text-primary-600' : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300'}`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+              showHistory
+                ? 'bg-primary-100 dark:bg-primary-500/20 text-primary-600'
+                : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300'
+            }`}
           >
             <History className='w-4 h-4' />
             历史记录
           </button>
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${mqttConnected === true ? 'bg-green-100/80 dark:bg-green-500/20' : mqttConnected === false ? 'bg-red-100/80 dark:bg-red-500/20' : 'bg-gray-100/80 dark:bg-slate-700/50'}`}>
-            {mqttConnected === true ? <Wifi className='w-4 h-4 text-green-600' /> : mqttConnected === false ? <WifiOff className='w-4 h-4 text-red-600' /> : <Loader2 className='w-4 h-4 text-gray-500 animate-spin' />}
-            <span className={`text-sm font-medium ${mqttConnected === true ? 'text-green-700' : mqttConnected === false ? 'text-red-700' : 'text-gray-600'}`}>
-              {mqttConnected === true ? 'MQTT已连接' : mqttConnected === false ? 'MQTT未连接' : '检查中...'}
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+              mqttConnected === true
+                ? 'bg-green-100/80 dark:bg-green-500/20'
+                : mqttConnected === false
+                ? 'bg-red-100/80 dark:bg-red-500/20'
+                : 'bg-gray-100/80 dark:bg-slate-700/50'
+            }`}
+          >
+            {mqttConnected === true ? (
+              <Wifi className='w-4 h-4 text-green-600' />
+            ) : mqttConnected === false ? (
+              <WifiOff className='w-4 h-4 text-red-600' />
+            ) : (
+              <Loader2 className='w-4 h-4 text-gray-500 animate-spin' />
+            )}
+            <span
+              className={`text-sm font-medium ${
+                mqttConnected === true
+                  ? 'text-green-700'
+                  : mqttConnected === false
+                  ? 'text-red-700'
+                  : 'text-gray-600'
+              }`}
+            >
+              {mqttConnected === true
+                ? 'MQTT已连接'
+                : mqttConnected === false
+                ? 'MQTT未连接'
+                : '检查中...'}
             </span>
           </div>
         </div>
@@ -626,7 +740,9 @@ function RemoteNotify() {
                   }`}
                 >
                   <span className='font-medium'>{preset.name}</span>
-                  {preset.urgent && <span className='ml-2 text-xs bg-red-500 text-white px-1 rounded'>紧急</span>}
+                  {preset.urgent && (
+                    <span className='ml-2 text-xs bg-red-500 text-white px-1 rounded'>紧急</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -643,7 +759,15 @@ function RemoteNotify() {
                 permission='notification.send'
                 onClick={() => {
                   setEditingTemplate(null);
-                  setTemplateForm({ name: '', text: form.text, category: '', bg_color: form.bg_color, text_color: form.text_color, font_size: form.font_size, language: form.language });
+                  setTemplateForm({
+                    name: '',
+                    text: form.text,
+                    category: '',
+                    bg_color: form.bg_color,
+                    text_color: form.text_color,
+                    font_size: form.font_size,
+                    language: form.language,
+                  });
                   openTemplateModal();
                 }}
                 className='flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-100 dark:bg-primary-500/20 text-primary-600 text-sm hover:bg-primary-200 dark:hover:bg-primary-500/30'
@@ -653,19 +777,28 @@ function RemoteNotify() {
               </PermissionButton>
             </div>
             {templatesLoading ? (
-              <p className='text-sm text-gray-400 dark:text-slate-500 text-center py-4 animate-pulse'>正在加载模板...</p>
+              <p className='text-sm text-gray-400 dark:text-slate-500 text-center py-4 animate-pulse'>
+                正在加载模板...
+              </p>
             ) : templates.length === 0 ? (
-              <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>暂无模板，点击新建按钮创建</p>
+              <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>
+                暂无模板，点击新建按钮创建
+              </p>
             ) : (
               <div className='space-y-2 max-h-60 overflow-y-auto'>
                 {templates.map((template) => (
-                  <div key={template.id} className='flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 group'>
+                  <div
+                    key={template.id}
+                    className='flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 group'
+                  >
                     <button
                       onClick={() => handleUseTemplate(template)}
                       className='flex-1 text-left text-sm text-gray-700 dark:text-slate-300 hover:text-primary-600 truncate'
                     >
                       {template.name}
-                      {template.category && <span className='ml-2 text-xs text-gray-500'>({template.category})</span>}
+                      {template.category && (
+                        <span className='ml-2 text-xs text-gray-500'>({template.category})</span>
+                      )}
                     </button>
                     <div className='hidden group-hover:flex items-center gap-1'>
                       <PermissionButton
@@ -724,26 +857,50 @@ function RemoteNotify() {
               forceSendLabel='强制发送（跳过上课时间限制，作用于「立即发送」，将记入审计）'
             />
             {scheduledNotifications.length === 0 ? (
-              <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>暂无定时通知</p>
+              <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>
+                暂无定时通知
+              </p>
             ) : (
               <div className='space-y-2 max-h-60 overflow-y-auto'>
                 {scheduledNotifications.map((item) => (
-                  <div key={item.id} className='flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 group'>
+                  <div
+                    key={item.id}
+                    className='flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 group'
+                  >
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2'>
-                        <span className={`w-2 h-2 rounded-full ${
-                          item.status === 'sent' ? 'bg-green-500'
-                          : item.status === 'pending' ? 'bg-yellow-500'
-                          : item.status === 'failed' ? 'bg-red-500'
-                          : 'bg-gray-400'
-                        }`}></span>
-                        <span className='text-sm text-gray-700 dark:text-slate-300 truncate'>{item.text}</span>
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            item.status === 'sent'
+                              ? 'bg-green-500'
+                              : item.status === 'pending'
+                              ? 'bg-yellow-500'
+                              : item.status === 'failed'
+                              ? 'bg-red-500'
+                              : 'bg-gray-400'
+                          }`}
+                        ></span>
+                        <span className='text-sm text-gray-700 dark:text-slate-300 truncate'>
+                          {item.text}
+                        </span>
                       </div>
                       <div className='flex items-center gap-2 mt-1'>
                         <Clock className='w-3 h-3 text-gray-400' />
-                        <span className='text-xs text-gray-500'>{(item.next_send_at || item.scheduled_at) ? new Date(item.next_send_at || item.scheduled_at).toLocaleString('zh-CN') : '--'}</span>
+                        <span className='text-xs text-gray-500'>
+                          {item.next_send_at || item.scheduled_at
+                            ? new Date(item.next_send_at || item.scheduled_at).toLocaleString(
+                                'zh-CN'
+                              )
+                            : '--'}
+                        </span>
                         {item.repeat_type !== 'once' && (
-                          <span className='text-xs text-primary-500'>{item.repeat_type === 'daily' ? '每天' : item.repeat_type === 'weekly' ? '每周' : '每月'}</span>
+                          <span className='text-xs text-primary-500'>
+                            {item.repeat_type === 'daily'
+                              ? '每天'
+                              : item.repeat_type === 'weekly'
+                              ? '每周'
+                              : '每月'}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -787,28 +944,44 @@ function RemoteNotify() {
           <div className='flex gap-4 mb-6'>
             <button
               onClick={() => setMode('broadcast')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${mode === 'broadcast' ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'}`}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                mode === 'broadcast'
+                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
+              }`}
             >
               <Radio className='w-5 h-5' />
               广播通知
             </button>
             <button
               onClick={() => setMode('device')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${mode === 'device' ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'}`}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                mode === 'device'
+                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
+              }`}
             >
               <Monitor className='w-5 h-5' />
               指定设备
             </button>
             <button
               onClick={() => setMode('test')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${mode === 'test' ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'}`}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                mode === 'test'
+                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
+              }`}
             >
               <TestTube className='w-5 h-5' />
               测试通知
             </button>
             <button
               onClick={() => setMode('score_change')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${mode === 'score_change' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'}`}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                mode === 'score_change'
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
+                  : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
+              }`}
             >
               <Bookmark className='w-5 h-5' />
               积分变化
@@ -818,7 +991,9 @@ function RemoteNotify() {
           <div className='space-y-5'>
             {mode === 'device' && (
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>设备ID</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                  设备ID
+                </label>
                 <input
                   type='text'
                   value={form.device_id}
@@ -831,7 +1006,9 @@ function RemoteNotify() {
 
             {mode !== 'test' && mode !== 'score_change' && (
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>通知内容</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                  通知内容
+                </label>
                 <textarea
                   value={form.text}
                   onChange={(e) => setForm((prev) => ({ ...prev, text: e.target.value }))}
@@ -846,20 +1023,31 @@ function RemoteNotify() {
               <div className='space-y-4'>
                 <div className='grid grid-cols-2 gap-4'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>学生姓名 *</label>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                      学生姓名 *
+                    </label>
                     <input
                       type='text'
                       value={scoreForm.student_name}
-                      onChange={(e) => setScoreForm((prev) => ({ ...prev, student_name: e.target.value }))}
+                      onChange={(e) =>
+                        setScoreForm((prev) => ({ ...prev, student_name: e.target.value }))
+                      }
                       placeholder='输入学生姓名'
                       className='w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 bg-white dark:bg-slate-700/50 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all'
                     />
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>积分变化 *</label>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                      积分变化 *
+                    </label>
                     <div className='flex items-center gap-2'>
                       <button
-                        onClick={() => setScoreForm((prev) => ({ ...prev, score_change: Math.max(-100, prev.score_change - 1) }))}
+                        onClick={() =>
+                          setScoreForm((prev) => ({
+                            ...prev,
+                            score_change: Math.max(-100, prev.score_change - 1),
+                          }))
+                        }
                         className='px-3 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 hover:bg-gray-100 dark:hover:bg-slate-600/50 transition-all'
                       >
                         -
@@ -867,12 +1055,22 @@ function RemoteNotify() {
                       <input
                         type='number'
                         value={scoreForm.score_change}
-                        onChange={(e) => setScoreForm((prev) => ({ ...prev, score_change: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setScoreForm((prev) => ({
+                            ...prev,
+                            score_change: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         placeholder='0'
                         className='flex-1 px-4 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 bg-white dark:bg-slate-700/50 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all text-center'
                       />
                       <button
-                        onClick={() => setScoreForm((prev) => ({ ...prev, score_change: Math.min(100, prev.score_change + 1) }))}
+                        onClick={() =>
+                          setScoreForm((prev) => ({
+                            ...prev,
+                            score_change: Math.min(100, prev.score_change + 1),
+                          }))
+                        }
                         className='px-3 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 hover:bg-gray-100 dark:hover:bg-slate-600/50 transition-all'
                       >
                         +
@@ -907,7 +1105,9 @@ function RemoteNotify() {
                   </div>
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>变动原因 *</label>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                    变动原因 *
+                  </label>
                   <input
                     type='text'
                     value={scoreForm.reason}
@@ -918,21 +1118,29 @@ function RemoteNotify() {
                 </div>
                 <div className='grid grid-cols-2 gap-4'>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>课程名称</label>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                      课程名称
+                    </label>
                     <input
                       type='text'
                       value={scoreForm.course}
-                      onChange={(e) => setScoreForm((prev) => ({ ...prev, course: e.target.value }))}
+                      onChange={(e) =>
+                        setScoreForm((prev) => ({ ...prev, course: e.target.value }))
+                      }
                       placeholder='输入课程名称（可选）'
                       className='w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 bg-white dark:bg-slate-700/50 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all'
                     />
                   </div>
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>指定设备</label>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                      指定设备
+                    </label>
                     <input
                       type='text'
                       value={scoreForm.device_id}
-                      onChange={(e) => setScoreForm((prev) => ({ ...prev, device_id: e.target.value }))}
+                      onChange={(e) =>
+                        setScoreForm((prev) => ({ ...prev, device_id: e.target.value }))
+                      }
                       placeholder='设备ID（不填则广播）'
                       className='w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 bg-white dark:bg-slate-700/50 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all'
                     />
@@ -953,13 +1161,13 @@ function RemoteNotify() {
                     <input
                       type='color'
                       value={form.bg_color}
-                      onChange={(e) => setForm(prev => ({ ...prev, bg_color: e.target.value }))}
+                      onChange={(e) => setForm((prev) => ({ ...prev, bg_color: e.target.value }))}
                       className='w-12 h-12 rounded-lg cursor-pointer border-2 border-gray-200 dark:border-slate-600'
                     />
                     <input
                       type='text'
                       value={form.bg_color}
-                      onChange={(e) => setForm(prev => ({ ...prev, bg_color: e.target.value }))}
+                      onChange={(e) => setForm((prev) => ({ ...prev, bg_color: e.target.value }))}
                       className='flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm font-mono'
                     />
                   </div>
@@ -967,8 +1175,12 @@ function RemoteNotify() {
                     {PRESET_COLORS.map((color) => (
                       <button
                         key={color.value}
-                        onClick={() => setForm(prev => ({ ...prev, bg_color: color.value }))}
-                        className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${form.bg_color === color.value ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-gray-200 dark:border-slate-600'}`}
+                        onClick={() => setForm((prev) => ({ ...prev, bg_color: color.value }))}
+                        className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${
+                          form.bg_color === color.value
+                            ? 'border-primary-500 ring-2 ring-primary-500/30'
+                            : 'border-gray-200 dark:border-slate-600'
+                        }`}
                         style={{ backgroundColor: color.value }}
                         title={color.name}
                       />
@@ -984,13 +1196,13 @@ function RemoteNotify() {
                     <input
                       type='color'
                       value={form.text_color}
-                      onChange={(e) => setForm(prev => ({ ...prev, text_color: e.target.value }))}
+                      onChange={(e) => setForm((prev) => ({ ...prev, text_color: e.target.value }))}
                       className='w-12 h-12 rounded-lg cursor-pointer border-2 border-gray-200 dark:border-slate-600'
                     />
                     <input
                       type='text'
                       value={form.text_color}
-                      onChange={(e) => setForm(prev => ({ ...prev, text_color: e.target.value }))}
+                      onChange={(e) => setForm((prev) => ({ ...prev, text_color: e.target.value }))}
                       className='flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm font-mono'
                     />
                   </div>
@@ -998,8 +1210,12 @@ function RemoteNotify() {
                     {PRESET_TEXT_COLORS.map((color) => (
                       <button
                         key={color.value}
-                        onClick={() => setForm(prev => ({ ...prev, text_color: color.value }))}
-                        className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${form.text_color === color.value ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-gray-200 dark:border-slate-600'}`}
+                        onClick={() => setForm((prev) => ({ ...prev, text_color: color.value }))}
+                        className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${
+                          form.text_color === color.value
+                            ? 'border-primary-500 ring-2 ring-primary-500/30'
+                            : 'border-gray-200 dark:border-slate-600'
+                        }`}
                         style={{ backgroundColor: color.value }}
                         title={color.name}
                       />
@@ -1014,7 +1230,11 @@ function RemoteNotify() {
                 <div>
                   <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
                     <div className='flex items-center gap-2'>
-                      {form.speak ? <Volume2 className='w-4 h-4 text-primary-500' /> : <VolumeX className='w-4 h-4 text-gray-400' />}
+                      {form.speak ? (
+                        <Volume2 className='w-4 h-4 text-primary-500' />
+                      ) : (
+                        <VolumeX className='w-4 h-4 text-gray-400' />
+                      )}
                       语音播报
                     </div>
                   </label>
@@ -1040,7 +1260,9 @@ function RemoteNotify() {
                           max='1'
                           step='0.1'
                           value={form.volume}
-                          onChange={(e) => setForm((prev) => ({ ...prev, volume: parseFloat(e.target.value) }))}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, volume: parseFloat(e.target.value) }))
+                          }
                           className='w-full h-2 bg-gray-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-primary-500'
                         />
                       </div>
@@ -1077,7 +1299,9 @@ function RemoteNotify() {
                           max='30'
                           step='1'
                           value={form.timeout_sec}
-                          onChange={(e) => setForm((prev) => ({ ...prev, timeout_sec: parseInt(e.target.value) }))}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, timeout_sec: parseInt(e.target.value) }))
+                          }
                           className='w-full h-2 bg-gray-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-primary-500'
                         />
                       </div>
@@ -1114,20 +1338,38 @@ function RemoteNotify() {
 
             {/* 预览效果 */}
             {mode !== 'test' && mode !== 'score_change' && form.popup && (
-              <div 
+              <div
                 className='p-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 text-center'
-                style={{ backgroundColor: form.bg_color, color: form.text_color, fontSize: `${Math.min(form.font_size, 24)}px` }}
+                style={{
+                  backgroundColor: form.bg_color,
+                  color: form.text_color,
+                  fontSize: `${Math.min(form.font_size, 24)}px`,
+                }}
               >
                 {form.text || '预览效果'}
               </div>
             )}
 
             {lastResult && (
-              <div className={`p-4 rounded-xl border ${lastResult.success ? 'bg-green-50/80 dark:bg-green-500/10 border-green-200/80 dark:border-green-500/30' : 'bg-red-50/80 dark:bg-red-500/10 border-red-200/80 dark:border-red-500/30'}`}>
+              <div
+                className={`p-4 rounded-xl border ${
+                  lastResult.success
+                    ? 'bg-green-50/80 dark:bg-green-500/10 border-green-200/80 dark:border-green-500/30'
+                    : 'bg-red-50/80 dark:bg-red-500/10 border-red-200/80 dark:border-red-500/30'
+                }`}
+              >
                 <div className='flex items-center gap-3'>
-                  {lastResult.success ? <CheckCircle className='w-5 h-5 text-green-600' /> : <AlertTriangle className='w-5 h-5 text-red-600' />}
+                  {lastResult.success ? (
+                    <CheckCircle className='w-5 h-5 text-green-600' />
+                  ) : (
+                    <AlertTriangle className='w-5 h-5 text-red-600' />
+                  )}
                   <div>
-                    <p className={`font-medium ${lastResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                    <p
+                      className={`font-medium ${
+                        lastResult.success ? 'text-green-700' : 'text-red-700'
+                      }`}
+                    >
                       {lastResult.success ? '发送成功' : '发送失败'}
                     </p>
                     <p className='text-sm text-gray-600 dark:text-slate-400 mt-1'>
@@ -1154,9 +1396,17 @@ function RemoteNotify() {
                 permission='notification.send'
                 onClick={handleSubmit}
                 disabled={isSending}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${isSending ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40'}`}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  isSending
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40'
+                }`}
               >
-                {isSending ? <Loader2 className='w-5 h-5 animate-spin' /> : <Send className='w-5 h-5' />}
+                {isSending ? (
+                  <Loader2 className='w-5 h-5 animate-spin' />
+                ) : (
+                  <Send className='w-5 h-5' />
+                )}
                 {isSending ? '发送中...' : '发送通知'}
               </PermissionButton>
               <button
@@ -1172,39 +1422,49 @@ function RemoteNotify() {
 
       {/* 模板编辑弹窗 */}
       {showTemplateModal && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'> {/* L6: 移动端留边 */}
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
+          {' '}
+          {/* L6: 移动端留边 */}
           <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-md mx-auto'>
             <h3 className='text-lg font-semibold text-gray-800 dark:text-white mb-4'>
               {editingTemplate ? '编辑模板' : '新建模板'}
             </h3>
             <div className='space-y-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>模板名称</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                  模板名称
+                </label>
                 <input
                   type='text'
                   value={templateForm.name}
-                  onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder='例如：上课提醒'
                   className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>通知内容</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                  通知内容
+                </label>
                 <textarea
                   value={templateForm.text}
-                  onChange={(e) => setTemplateForm(prev => ({ ...prev, text: e.target.value }))}
+                  onChange={(e) => setTemplateForm((prev) => ({ ...prev, text: e.target.value }))}
                   placeholder='输入通知文本...'
                   rows={3}
                   className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 resize-none'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>分类</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                  分类
+                </label>
                 <input
                   type='text'
                   list='notify-template-categories'
                   value={templateForm.category}
-                  onChange={(e) => setTemplateForm(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={(e) =>
+                    setTemplateForm((prev) => ({ ...prev, category: e.target.value }))
+                  }
                   placeholder='选择或输入分类'
                   className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                 />
@@ -1218,20 +1478,28 @@ function RemoteNotify() {
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>背景颜色</label>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                    背景颜色
+                  </label>
                   <input
                     type='color'
                     value={templateForm.bg_color}
-                    onChange={(e) => setTemplateForm(prev => ({ ...prev, bg_color: e.target.value }))}
+                    onChange={(e) =>
+                      setTemplateForm((prev) => ({ ...prev, bg_color: e.target.value }))
+                    }
                     className='w-full h-10 rounded cursor-pointer'
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>文字颜色</label>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                    文字颜色
+                  </label>
                   <input
                     type='color'
                     value={templateForm.text_color}
-                    onChange={(e) => setTemplateForm(prev => ({ ...prev, text_color: e.target.value }))}
+                    onChange={(e) =>
+                      setTemplateForm((prev) => ({ ...prev, text_color: e.target.value }))
+                    }
                     className='w-full h-10 rounded cursor-pointer'
                   />
                 </div>
@@ -1257,17 +1525,21 @@ function RemoteNotify() {
 
       {/* 定时通知编辑弹窗 */}
       {showScheduledModal && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'> {/* L6: 移动端留边 */}
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
+          {' '}
+          {/* L6: 移动端留边 */}
           <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-lg mx-auto'>
             <h3 className='text-lg font-semibold text-gray-800 dark:text-white mb-4'>
               {editingScheduled ? '编辑定时通知' : '新建定时通知'}
             </h3>
             <div className='space-y-4 max-h-[70vh] overflow-y-auto'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>通知内容</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                  通知内容
+                </label>
                 <textarea
                   value={scheduledForm.text}
-                  onChange={(e) => setScheduledForm(prev => ({ ...prev, text: e.target.value }))}
+                  onChange={(e) => setScheduledForm((prev) => ({ ...prev, text: e.target.value }))}
                   placeholder='输入通知文本...'
                   rows={3}
                   className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 resize-none'
@@ -1275,19 +1547,27 @@ function RemoteNotify() {
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>发送时间</label>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                    发送时间
+                  </label>
                   <input
                     type='datetime-local'
                     value={scheduledForm.scheduled_at}
-                    onChange={(e) => setScheduledForm(prev => ({ ...prev, scheduled_at: e.target.value }))}
+                    onChange={(e) =>
+                      setScheduledForm((prev) => ({ ...prev, scheduled_at: e.target.value }))
+                    }
                     className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>重复类型</label>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                    重复类型
+                  </label>
                   <select
                     value={scheduledForm.repeat_type}
-                    onChange={(e) => setScheduledForm(prev => ({ ...prev, repeat_type: e.target.value }))}
+                    onChange={(e) =>
+                      setScheduledForm((prev) => ({ ...prev, repeat_type: e.target.value }))
+                    }
                     className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                   >
                     <option value='once'>一次性</option>
@@ -1301,60 +1581,79 @@ function RemoteNotify() {
                 <>
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
-                      <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>重复间隔</label>
+                      <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                        重复间隔
+                      </label>
                       <input
                         type='number'
                         min='1'
                         value={scheduledForm.repeat_interval}
-                        onChange={(e) => setScheduledForm(prev => ({ ...prev, repeat_interval: parseInt(e.target.value) || 1 }))}
+                        onChange={(e) =>
+                          setScheduledForm((prev) => ({
+                            ...prev,
+                            repeat_interval: parseInt(e.target.value) || 1,
+                          }))
+                        }
                         className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                       />
                     </div>
                     <div>
-                      <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>结束时间（可选）</label>
+                      <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                        结束时间（可选）
+                      </label>
                       <input
                         type='datetime-local'
                         value={scheduledForm.repeat_end_at}
-                        onChange={(e) => setScheduledForm(prev => ({ ...prev, repeat_end_at: e.target.value }))}
+                        onChange={(e) =>
+                          setScheduledForm((prev) => ({ ...prev, repeat_end_at: e.target.value }))
+                        }
                         className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                       />
                     </div>
                   </div>
                   {scheduledForm.repeat_type === 'weekly' && (
                     <div className='mt-4'>
-                      <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>选择星期</label>
+                      <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2'>
+                        选择星期
+                      </label>
                       <div className='flex flex-wrap gap-2'>
-                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((day, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              const dayNum = index;
-                              setScheduledForm(prev => ({
-                                ...prev,
-                                repeat_day_of_week: prev.repeat_day_of_week.includes(dayNum)
-                                  ? prev.repeat_day_of_week.filter(d => d !== dayNum)
-                                  : [...prev.repeat_day_of_week, dayNum].sort()
-                              }));
-                            }}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              scheduledForm.repeat_day_of_week.includes(index)
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
+                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map(
+                          (day, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                const dayNum = index;
+                                setScheduledForm((prev) => ({
+                                  ...prev,
+                                  repeat_day_of_week: prev.repeat_day_of_week.includes(dayNum)
+                                    ? prev.repeat_day_of_week.filter((d) => d !== dayNum)
+                                    : [...prev.repeat_day_of_week, dayNum].sort(),
+                                }));
+                              }}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                scheduledForm.repeat_day_of_week.includes(index)
+                                  ? 'bg-primary-500 text-white'
+                                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
                 </>
               )}
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>发送模式</label>
+                <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                  发送模式
+                </label>
                 <select
                   value={scheduledForm.send_mode}
-                  onChange={(e) => setScheduledForm(prev => ({ ...prev, send_mode: e.target.value }))}
+                  onChange={(e) =>
+                    setScheduledForm((prev) => ({ ...prev, send_mode: e.target.value }))
+                  }
                   className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                 >
                   <option value='broadcast'>广播通知</option>
@@ -1363,11 +1662,15 @@ function RemoteNotify() {
               </div>
               {scheduledForm.send_mode === 'device' && (
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>设备ID</label>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1'>
+                    设备ID
+                  </label>
                   <input
                     type='text'
                     value={scheduledForm.device_id}
-                    onChange={(e) => setScheduledForm(prev => ({ ...prev, device_id: e.target.value }))}
+                    onChange={(e) =>
+                      setScheduledForm((prev) => ({ ...prev, device_id: e.target.value }))
+                    }
                     placeholder='输入设备ID'
                     className='w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600'
                   />
@@ -1378,7 +1681,9 @@ function RemoteNotify() {
                   <input
                     type='checkbox'
                     checked={scheduledForm.speak}
-                    onChange={(e) => setScheduledForm(prev => ({ ...prev, speak: e.target.checked }))}
+                    onChange={(e) =>
+                      setScheduledForm((prev) => ({ ...prev, speak: e.target.checked }))
+                    }
                     className='rounded border-gray-300 text-primary-600 focus:ring-primary-500'
                   />
                   <span className='text-sm text-gray-700 dark:text-slate-300'>语音播报</span>
@@ -1387,7 +1692,9 @@ function RemoteNotify() {
                   <input
                     type='checkbox'
                     checked={scheduledForm.popup}
-                    onChange={(e) => setScheduledForm(prev => ({ ...prev, popup: e.target.checked }))}
+                    onChange={(e) =>
+                      setScheduledForm((prev) => ({ ...prev, popup: e.target.checked }))
+                    }
                     className='rounded border-gray-300 text-primary-600 focus:ring-primary-500'
                   />
                   <span className='text-sm text-gray-700 dark:text-slate-300'>弹窗显示</span>
@@ -1396,7 +1703,9 @@ function RemoteNotify() {
                   <input
                     type='checkbox'
                     checked={scheduledForm.urgent}
-                    onChange={(e) => setScheduledForm(prev => ({ ...prev, urgent: e.target.checked }))}
+                    onChange={(e) =>
+                      setScheduledForm((prev) => ({ ...prev, urgent: e.target.checked }))
+                    }
                     className='rounded border-gray-300 text-red-600 focus:ring-red-500'
                   />
                   <span className='text-sm text-gray-700 dark:text-slate-300'>紧急通知</span>
@@ -1443,15 +1752,21 @@ function RemoteNotify() {
               <div className='grid grid-cols-4 gap-4 p-6 bg-gray-50 dark:bg-slate-700/30'>
                 <div className='bg-white dark:bg-slate-800 rounded-xl p-4'>
                   <p className='text-sm text-gray-500 dark:text-slate-400'>总发送量</p>
-                  <p className='text-2xl font-bold text-gray-800 dark:text-white mt-1'>{historyStats.total_count}</p>
+                  <p className='text-2xl font-bold text-gray-800 dark:text-white mt-1'>
+                    {historyStats.total_count}
+                  </p>
                 </div>
                 <div className='bg-white dark:bg-slate-800 rounded-xl p-4'>
                   <p className='text-sm text-gray-500 dark:text-slate-400'>今日发送</p>
-                  <p className='text-2xl font-bold text-blue-600 mt-1'>{historyStats.today_count}</p>
+                  <p className='text-2xl font-bold text-blue-600 mt-1'>
+                    {historyStats.today_count}
+                  </p>
                 </div>
                 <div className='bg-white dark:bg-slate-800 rounded-xl p-4'>
                   <p className='text-sm text-gray-500 dark:text-slate-400'>成功率</p>
-                  <p className='text-2xl font-bold text-green-600 mt-1'>{historyStats.success_rate}%</p>
+                  <p className='text-2xl font-bold text-green-600 mt-1'>
+                    {historyStats.success_rate}%
+                  </p>
                 </div>
                 <div className='bg-white dark:bg-slate-800 rounded-xl p-4'>
                   <p className='text-sm text-gray-500 dark:text-slate-400'>失败次数</p>
@@ -1487,7 +1802,9 @@ function RemoteNotify() {
             </div>
 
             {/* 历史记录列表 */}
-            <div className='overflow-x-auto overflow-y-auto max-h-[400px]'> {/* L4: 窄屏横向滚动 */}
+            <div className='overflow-x-auto overflow-y-auto max-h-[400px]'>
+              {' '}
+              {/* L4: 窄屏横向滚动 */}
               {isLoadingHistory ? (
                 <div className='flex items-center justify-center py-8'>
                   <Loader2 className='w-6 h-6 animate-spin text-primary-500' />
@@ -1498,42 +1815,71 @@ function RemoteNotify() {
                 <table className='w-full'>
                   <thead className='bg-gray-50 dark:bg-slate-700/50 sticky top-0'>
                     <tr>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>内容</th>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>发送模式</th>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>状态</th>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>时间</th>
+                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
+                        内容
+                      </th>
+                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
+                        发送模式
+                      </th>
+                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
+                        状态
+                      </th>
+                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
+                        时间
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {historyData.map((item) => (
-                      <tr key={item.id} className='border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50'>
+                      <tr
+                        key={item.id}
+                        className='border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                      >
                         <td className='px-4 py-3'>
                           <div className='flex items-center gap-2'>
                             {item.urgent && <AlertTriangle className='w-4 h-4 text-red-500' />}
-                            <span className='text-sm text-gray-800 dark:text-white truncate max-w-xs'>{item.text}</span>
+                            <span className='text-sm text-gray-800 dark:text-white truncate max-w-xs'>
+                              {item.text}
+                            </span>
                           </div>
                         </td>
                         <td className='px-4 py-3'>
-                          <span className={`px-2 py-1 rounded text-xs ${item.send_mode === 'broadcast' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600' : 'bg-green-100 dark:bg-green-500/20 text-green-600'}`}>
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              item.send_mode === 'broadcast'
+                                ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600'
+                                : 'bg-green-100 dark:bg-green-500/20 text-green-600'
+                            }`}
+                          >
                             {item.send_mode === 'broadcast' ? '广播' : '指定设备'}
                           </span>
                         </td>
                         <td className='px-4 py-3'>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            item.status === 'sent'
-                              ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              item.status === 'sent'
+                                ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
+                                : item.status === 'pending'
+                                ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600'
+                                : item.status === 'failed'
+                                ? 'bg-red-100 dark:bg-red-500/20 text-red-600'
+                                : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
+                            }`}
+                          >
+                            {item.status === 'sent'
+                              ? '成功'
                               : item.status === 'pending'
-                              ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600'
+                              ? '待发送'
                               : item.status === 'failed'
-                              ? 'bg-red-100 dark:bg-red-500/20 text-red-600'
-                              : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
-                          }`}>
-                            {item.status === 'sent' ? '成功' : item.status === 'pending' ? '待发送' : item.status === 'failed' ? '失败' : '未知'}
+                              ? '失败'
+                              : '未知'}
                           </span>
                         </td>
                         <td className='px-4 py-3'>
                           <span className='text-sm text-gray-500 dark:text-slate-400'>
-                            {item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '-'}
+                            {item.created_at
+                              ? new Date(item.created_at).toLocaleString('zh-CN')
+                              : '-'}
                           </span>
                         </td>
                       </tr>
@@ -1547,7 +1893,8 @@ function RemoteNotify() {
             {historyTotal > 20 && (
               <div className='flex items-center justify-between p-4 border-t border-gray-200 dark:border-slate-700'>
                 <p className='text-sm text-gray-500 dark:text-slate-400'>
-                  显示 {(historyPage - 1) * 20 + 1} - {Math.min(historyPage * 20, historyTotal)} 条，共 {historyTotal} 条
+                  显示 {(historyPage - 1) * 20 + 1} - {Math.min(historyPage * 20, historyTotal)}{' '}
+                  条，共 {historyTotal} 条
                 </p>
                 <div className='flex items-center gap-2'>
                   <button
@@ -1559,7 +1906,9 @@ function RemoteNotify() {
                   </button>
                   <span className='text-sm text-gray-600 dark:text-slate-300'>{historyPage}</span>
                   <button
-                    onClick={() => setHistoryPage((prev) => Math.min(Math.ceil(historyTotal / 20), prev + 1))}
+                    onClick={() =>
+                      setHistoryPage((prev) => Math.min(Math.ceil(historyTotal / 20), prev + 1))
+                    }
                     disabled={historyPage >= Math.ceil(historyTotal / 20)}
                     className='p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'
                   >
@@ -1578,19 +1927,34 @@ function RemoteNotify() {
         <ul className='space-y-2 text-sm text-blue-700 dark:text-blue-400'>
           <li className='flex items-start gap-2'>
             <span className='text-blue-500'>•</span>
-            <span><strong>快捷预设</strong>：点击左侧预设按钮快速加载常用通知内容</span>
+            <span>
+              <strong>快捷预设</strong>：点击左侧预设按钮快速加载常用通知内容
+            </span>
           </li>
           <li className='flex items-start gap-2'>
             <span className='text-blue-500'>•</span>
-            <span><strong>我的模板</strong>：保存常用通知为模板，支持自定义样式和分类</span>
+            <span>
+              <strong>我的模板</strong>：保存常用通知为模板，支持自定义样式和分类
+            </span>
           </li>
           <li className='flex items-start gap-2'>
             <span className='text-blue-500'>•</span>
-            <span><strong>样式设置</strong>：自定义弹窗背景色、文字颜色和播报语言</span>
+            <span>
+              <strong>样式设置</strong>：自定义弹窗背景色、文字颜色和播报语言
+            </span>
           </li>
           <li className='flex items-start gap-2'>
             <span className='text-blue-500'>•</span>
-            <span><strong>客户端安装</strong>：在 <code className='px-2 py-1 bg-white dark:bg-slate-700 rounded text-blue-800'>remote_notify</code> 目录运行 <code className='px-2 py-1 bg-white dark:bg-slate-700 rounded text-blue-800'>install.bat</code></span>
+            <span>
+              <strong>客户端安装</strong>：在{' '}
+              <code className='px-2 py-1 bg-white dark:bg-slate-700 rounded text-blue-800'>
+                remote_notify
+              </code>{' '}
+              目录运行{' '}
+              <code className='px-2 py-1 bg-white dark:bg-slate-700 rounded text-blue-800'>
+                install.bat
+              </code>
+            </span>
           </li>
         </ul>
       </div>

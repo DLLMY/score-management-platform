@@ -37,7 +37,8 @@ class PhoneAccessHandler:
         original_score = user.current_score or 0
         user.current_score = max(0, original_score - deduction)
 
-        score_record = ScoreRecord(student_id=user_id,
+        score_record = ScoreRecord(
+            student_id=user_id,
             rule_id="PHONE_ACCESS",
             score_change=-deduction,
             description=f"手机拿取奖励扣除 x{access_count}",
@@ -160,7 +161,8 @@ class RewardSystem:
 
         user.current_score = (user.current_score or 0) - reward["cost"]
 
-        score_record = ScoreRecord(student_id=user_id,
+        score_record = ScoreRecord(
+            student_id=user_id,
             rule_id=reward_type,
             score_change=-reward["cost"],
             description=f'兑换奖励：{reward["name"]}',

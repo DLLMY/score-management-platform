@@ -56,7 +56,9 @@ def require_api_version(version: str):
             header_version = request.headers.get("X-API-Version")
             if header_version and header_version != version:
                 return APIResponse.error(
-                    message=f"此端点仅支持 {version} 版本", status_code=400, data={"your_version": header_version}
+                    message=f"此端点仅支持 {version} 版本",
+                    status_code=400,
+                    data={"your_version": header_version},
                 )
             return f(*args, **kwargs)
 

@@ -8,11 +8,14 @@ create_all 时自动跳过已存在的同名索引）。
 用法（须系统 Python 3.11）:
     python scripts/migrate_score_unique_constraint.py [--force]
 """
+
 import os
 import sqlite3
 import sys
 
-DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db"))
+DB = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db")
+)
 IDX_NAME = "uq_scores_exam_student_subject"
 
 
@@ -29,24 +32,22 @@ def main():
         if exists:
             print("[migrate] 唯一索引已存在，跳过")
             return
-        dups = cur.execute(
-            """
+        dups = cur.execute("""
             SELECT exam_id, student_id, subject_id, COUNT(*) AS c
             FROM scores
             GROUP BY exam_id, student_id, subject_id
             HAVING c > 1
-            """
-        ).fetchall()
+            """).fetchall()
         if dups:
             print("[migrate] 发现 %d 组重复成绩（不自动删除，请人工处理）:" % len(dups))
             for d in dups[:10]:
                 print("  exam=%s student=%s subject=%s x%d" % d)
             if "--force" not in sys.argv:
-                print("[migrate] 已中止。处理重复数据后重跑，或使用 --force（重复会致建索引失败）。")
+                print(
+                    "[migrate] 已中止。处理重复数据后重跑，或使用 --force（重复会致建索引失败）。"
+                )
                 sys.exit(1)
-        cur.execute(
-            "CREATE UNIQUE INDEX %s ON scores(exam_id, student_id, subject_id)" % IDX_NAME
-        )
+        cur.execute("CREATE UNIQUE INDEX %s ON scores(exam_id, student_id, subject_id)" % IDX_NAME)
         conn.commit()
         print("[migrate] 唯一索引 %s 创建成功" % IDX_NAME)
     except sqlite3.IntegrityError as e:

@@ -39,7 +39,9 @@ class DataConsistencyChecker:
         """
         issues = []
         total_users = User.query.count()
-        users_with_class_name = User.query.filter(User.class_name.isnot(None), User.class_name != "").count()
+        users_with_class_name = User.query.filter(
+            User.class_name.isnot(None), User.class_name != ""
+        ).count()
         users_with_fk = User.query.filter(User.class_info_id.isnot(None)).count()
         self.stats["users"] = {
             "total": total_users,
@@ -48,7 +50,9 @@ class DataConsistencyChecker:
             "unlinked": users_with_class_name - users_with_fk,
         }
         unlinked_users = (
-            User.query.filter(User.class_name.isnot(None), User.class_name != "", User.class_info_id.is_(None))
+            User.query.filter(
+                User.class_name.isnot(None), User.class_name != "", User.class_info_id.is_(None)
+            )
             .limit(50)
             .all()
         )
@@ -86,9 +90,7 @@ class DataConsistencyChecker:
         invalid_fk_users = (
             User.query.filter(User.class_info_id.isnot(None))
             .filter(
-                ~db.session.query(ClassInfo.id)
-                .filter(ClassInfo.id == User.class_info_id)
-                .exists()
+                ~db.session.query(ClassInfo.id).filter(ClassInfo.id == User.class_info_id).exists()
             )
             .limit(20)
             .all()
@@ -114,7 +116,9 @@ class DataConsistencyChecker:
         """
         issues = []
         total_admins = Admin.query.count()
-        admins_with_class = Admin.query.filter(Admin.class_name.isnot(None), Admin.class_name != "").count()
+        admins_with_class = Admin.query.filter(
+            Admin.class_name.isnot(None), Admin.class_name != ""
+        ).count()
         admins_with_fk = Admin.query.filter(Admin.primary_class_id.isnot(None)).count()
         self.stats["admins"] = {
             "total": total_admins,
@@ -123,7 +127,11 @@ class DataConsistencyChecker:
             "unlinked": admins_with_class - admins_with_fk,
         }
         unlinked_admins = (
-            Admin.query.filter(Admin.class_name.isnot(None), Admin.class_name != "", Admin.primary_class_id.is_(None))
+            Admin.query.filter(
+                Admin.class_name.isnot(None),
+                Admin.class_name != "",
+                Admin.primary_class_id.is_(None),
+            )
             .limit(30)
             .all()
         )
@@ -294,7 +302,12 @@ class DataConsistencyChecker:
         if result["issues"]:
             lines.append("Issues Found:")
             for issue in result["issues"][:50]:
-                icon = {"critical": "[CRITICAL]", "error": "[ERROR]", "warning": "[WARNING]", "info": "[INFO]"}
+                icon = {
+                    "critical": "[CRITICAL]",
+                    "error": "[ERROR]",
+                    "warning": "[WARNING]",
+                    "info": "[INFO]",
+                }
                 icon_text = icon.get(issue["severity"], "[UNKNOWN]")
                 lines.append(f"  {icon_text} [{issue['type']}] {issue['message']}")
         return "\n".join(lines)

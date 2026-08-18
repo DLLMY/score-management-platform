@@ -256,7 +256,9 @@ class ConfigLoader:
             self._watch_interval = interval
 
         if self._watch_thread is None or not self._watch_thread.is_alive():
-            self._watch_thread = threading.Thread(target=self._config_watcher, daemon=True, name="config-watcher")
+            self._watch_thread = threading.Thread(
+                target=self._config_watcher, daemon=True, name="config-watcher"
+            )
             self._watch_thread.start()
             print(f"[ConfigLoader] 配置监控线程已启动，检查间隔: {self._watch_interval}秒")
 
@@ -292,7 +294,9 @@ class ConfigLoader:
     def get_logging_config(self):
         return {
             "level": self.get_config("LOG_LEVEL", "INFO"),
-            "format": self.get_config("LOG_FORMAT", "%(asctime)s %(levelname)s %(name)s: %(message)s"),
+            "format": self.get_config(
+                "LOG_FORMAT", "%(asctime)s %(levelname)s %(name)s: %(message)s"
+            ),
             "file_path": self.get_config("LOG_FILE_PATH", "logs/app.log"),
             "max_size": self.get_config("LOG_MAX_SIZE", 10 * 1024 * 1024),
             "backup_count": self.get_config("LOG_BACKUP_COUNT", 5),

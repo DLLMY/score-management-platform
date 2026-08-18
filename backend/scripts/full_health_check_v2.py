@@ -1,15 +1,19 @@
 """全面服务健康检查 V2 - 使用所有正确的API路径"""
+
 import requests
 import time
 
 BASE = "http://127.0.0.1:5000/api"
+
 
 def check():
     results = []
     # 1. 登录
     try:
         t0 = time.time()
-        r = requests.post(f"{BASE}/auth/login", json={"username": "admin", "password": "123456"}, timeout=10)
+        r = requests.post(
+            f"{BASE}/auth/login", json={"username": "admin", "password": "123456"}, timeout=10
+        )
         elapsed = (time.time() - t0) * 1000
         if r.status_code == 200:
             token = r.json().get("access_token")
@@ -82,7 +86,19 @@ def check():
             try:
                 j = r.json()
                 if isinstance(j, dict):
-                    for k in ("items", "data", "rules", "users", "classes", "devices", "notifications", "admins", "periods", "versions", "logs"):
+                    for k in (
+                        "items",
+                        "data",
+                        "rules",
+                        "users",
+                        "classes",
+                        "devices",
+                        "notifications",
+                        "admins",
+                        "periods",
+                        "versions",
+                        "logs",
+                    ):
                         if k in j:
                             v = j[k]
                             if isinstance(v, list):
@@ -112,13 +128,16 @@ def check():
     p = sum(1 for _, s, _ in results if s == "PASS")
     f = sum(1 for _, s, _ in results if s == "FAIL")
     e = sum(1 for _, s, _ in results if s == "ERROR")
-    print(f"总计: {len(results)}  通过: {p}  失败: {f}  错误: {e}  通过率: {p/len(results)*100:.0f}%")
+    print(
+        f"总计: {len(results)}  通过: {p}  失败: {f}  错误: {e}  通过率: {p/len(results)*100:.0f}%"
+    )
     print("-" * 95)
     for name, status, detail in results:
         icon = "✓" if status == "PASS" else "✗" if status == "FAIL" else "!"
         print(f"{icon} [{status:4}] {name:45} {detail}")
     print("=" * 95)
     return p, f, e
+
 
 if __name__ == "__main__":
     check()

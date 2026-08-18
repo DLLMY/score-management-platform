@@ -1,4 +1,5 @@
 import pytest
+
 try:
     from utils.query_optimizer import QueryOptimizer
 except ImportError:
@@ -20,6 +21,7 @@ class TestQueryOptimizer:
     def test_get_users_paginated(self, app, session):
         with app.app_context():
             from utils.query_optimizer import QueryOptimizer
+
             result = QueryOptimizer.get_users_paginated(page=1, per_page=10)
             assert result is not None
 
@@ -60,6 +62,7 @@ class TestCacheManager:
     def test_cache_manager_init(self, app):
         with app.app_context():
             from utils.query_optimizer import CacheManager
+
             manager = CacheManager()
             assert manager is not None
 
@@ -69,6 +72,7 @@ class TestCachedQueries:
     def test_service_init(self, app):
         with app.app_context():
             from utils.query_optimizer import CachedQueries
+
             cache_manager = CacheManager()
             service = CachedQueries(cache_manager)
             assert service is not None

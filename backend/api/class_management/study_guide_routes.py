@@ -5,37 +5,49 @@ from utils.permission import requires_permission
 
 ns_study_guide = Namespace("study_guide", description="学法指导管理")
 
-guide_model = ns_study_guide.model("StudyGuideInput", {
-    "class_id": fields.Integer(required=True),
-    "title": fields.String(required=True),
-    "guide_type": fields.String(),
-    "content": fields.String(),
-    "target_audience": fields.String(),
-})
+guide_model = ns_study_guide.model(
+    "StudyGuideInput",
+    {
+        "class_id": fields.Integer(required=True),
+        "title": fields.String(required=True),
+        "guide_type": fields.String(),
+        "content": fields.String(),
+        "target_audience": fields.String(),
+    },
+)
 
-plan_model = ns_study_guide.model("ImprovementPlanInput", {
-    "student_id": fields.Integer(required=True),
-    "plan_type": fields.String(default="tutorial"),
-    "subject_id": fields.Integer(),
-    "target_score": fields.Float(),
-    "current_score": fields.Float(),
-    "plan_content": fields.String(),
-    "start_date": fields.String(),
-    "end_date": fields.String(),
-})
+plan_model = ns_study_guide.model(
+    "ImprovementPlanInput",
+    {
+        "student_id": fields.Integer(required=True),
+        "plan_type": fields.String(default="tutorial"),
+        "subject_id": fields.Integer(),
+        "target_score": fields.Float(),
+        "current_score": fields.Float(),
+        "plan_content": fields.String(),
+        "start_date": fields.String(),
+        "end_date": fields.String(),
+    },
+)
 
-progress_model = ns_study_guide.model("ProgressInput", {
-    "progress": fields.Integer(required=True),
-})
+progress_model = ns_study_guide.model(
+    "ProgressInput",
+    {
+        "progress": fields.Integer(required=True),
+    },
+)
 
 
 @ns_study_guide.route("/guides")
 class StudyGuideList(Resource):
-    @ns_study_guide.doc("list_guides", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "guide_type": {"description": "指导类型"},
-        "is_published": {"description": "是否已发布"},
-    })
+    @ns_study_guide.doc(
+        "list_guides",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "guide_type": {"description": "指导类型"},
+            "is_published": {"description": "是否已发布"},
+        },
+    )
     @requires_permission("study_guide.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)
@@ -69,11 +81,14 @@ class StudyGuideDetail(Resource):
 
 @ns_study_guide.route("/plans")
 class ImprovementPlanList(Resource):
-    @ns_study_guide.doc("list_plans", params={
-        "student_id": {"description": "学生ID", "type": int},
-        "plan_type": {"description": "计划类型"},
-        "is_completed": {"description": "是否完成"},
-    })
+    @ns_study_guide.doc(
+        "list_plans",
+        params={
+            "student_id": {"description": "学生ID", "type": int},
+            "plan_type": {"description": "计划类型"},
+            "is_completed": {"description": "是否完成"},
+        },
+    )
     @requires_permission("study_guide.view")
     def get(self):
         student_id = request.args.get("student_id", type=int)

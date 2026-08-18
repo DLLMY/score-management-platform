@@ -26,6 +26,7 @@ def _record_server_error(error_type, exc, stack):
     except Exception:
         pass
 
+
 # ==================== 自定义异常类 ====================
 
 
@@ -144,13 +145,17 @@ def register_error_handlers(app):
     def handle_validation_error(e):
         """处理参数验证异常"""
         logger.warning(f"参数验证失败: {e.message}")
-        return make_error_response(message=e.message, status_code=400, error_code=e.error_code, details=e.details)
+        return make_error_response(
+            message=e.message, status_code=400, error_code=e.error_code, details=e.details
+        )
 
     @app.errorhandler(400)
     def handle_bad_request(e):
         """处理400错误"""
         logger.warning(f"请求参数错误: {e}")
-        return make_error_response(message="请求参数错误", status_code=400, error_code="BAD_REQUEST")
+        return make_error_response(
+            message="请求参数错误", status_code=400, error_code="BAD_REQUEST"
+        )
 
     @app.errorhandler(404)
     def handle_not_found(e):
@@ -174,7 +179,9 @@ def register_error_handlers(app):
         _record_server_error("INTERNAL_ERROR", e, error_trace)
 
         # 生产环境不返回详细错误信息
-        return make_error_response(message="服务器内部错误", status_code=500, error_code="INTERNAL_ERROR")
+        return make_error_response(
+            message="服务器内部错误", status_code=500, error_code="INTERNAL_ERROR"
+        )
 
     @app.errorhandler(Exception)
     def handle_uncaught_exception(e):
@@ -183,7 +190,9 @@ def register_error_handlers(app):
         logger.error(f"未捕获异常: {e}\n{error_trace}")
         _record_server_error("UNCAUGHT_EXCEPTION", e, error_trace)
 
-        return make_error_response(message="服务器内部错误", status_code=500, error_code="UNCAUGHT_EXCEPTION")
+        return make_error_response(
+            message="服务器内部错误", status_code=500, error_code="UNCAUGHT_EXCEPTION"
+        )
 
     logger.info("全局异常处理器已注册")
 

@@ -22,10 +22,13 @@ wol_request_model = ns_wol.model(
         "mac_address": fields.String(
             required=True, description="Target computer MAC address (e.g., AA:BB:CC:DD:EE:FF)"
         ),
-        "broadcast_ip": fields.String(description="Broadcast IP address", default="255.255.255.255"),
+        "broadcast_ip": fields.String(
+            description="Broadcast IP address", default="255.255.255.255"
+        ),
         "port": fields.Integer(description="UDP port", default=9),
         "force_send": fields.Boolean(
-            default=False, description="强制唤醒（需 notification.force_send 权限，跳过上课时间检查)"
+            default=False,
+            description="强制唤醒（需 notification.force_send 权限，跳过上课时间检查)",
         ),
     },
 )
@@ -33,18 +36,28 @@ wol_request_model = ns_wol.model(
 wol_broadcast_model = ns_wol.model(
     "WakeOnLANBroadcast",
     {
-        "mac_addresses": fields.List(fields.String, required=True, description="List of MAC addresses"),
-        "broadcast_ip": fields.String(description="Broadcast IP address", default="255.255.255.255"),
+        "mac_addresses": fields.List(
+            fields.String, required=True, description="List of MAC addresses"
+        ),
+        "broadcast_ip": fields.String(
+            description="Broadcast IP address", default="255.255.255.255"
+        ),
         "port": fields.Integer(description="UDP port", default=9),
         "force_send": fields.Boolean(
-            default=False, description="强制唤醒（需 notification.force_send 权限，跳过上课时间检查）"
+            default=False,
+            description="强制唤醒（需 notification.force_send 权限，跳过上课时间检查）",
         ),
     },
 )
 
 wol_response = ns_wol.model(
     "WOLResponse",
-    {"success": fields.Boolean, "message": fields.String, "mac_address": fields.String, "timestamp": fields.String},
+    {
+        "success": fields.Boolean,
+        "message": fields.String,
+        "mac_address": fields.String,
+        "timestamp": fields.String,
+    },
 )
 
 wol_device_model = ns_wol.model(
@@ -92,7 +105,9 @@ class WakeOnLAN(Resource):
 
         # 上课时间全局时段拦截（WOL 无班级上下文，仅按全校时段判断）
         force_send = bool(data.get("force_send", False))
-        _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        _admin_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         if force_send and not has_permission(g.current_user, "notification.force_send"):
             return APIResponse.error(
                 message="无强制唤醒权限（需 notification.force_send）",
@@ -102,8 +117,13 @@ class WakeOnLAN(Resource):
             _blocked, _rule = ClassTimeChecker.is_during_class_time()
             if _blocked:
                 ClassTimeChecker.log_notify_audit(
-                    "wol", None, _admin_id, {"mac_address": mac_address},
-                    "GLOBAL_TIME_RULE", "当前处于上课时间，远程开机已暂停", force_send=False,
+                    "wol",
+                    None,
+                    _admin_id,
+                    {"mac_address": mac_address},
+                    "GLOBAL_TIME_RULE",
+                    "当前处于上课时间，远程开机已暂停",
+                    force_send=False,
                 )
                 return APIResponse.error(
                     message="当前处于上课时间，远程开机已暂停",
@@ -111,7 +131,13 @@ class WakeOnLAN(Resource):
                 )
         else:
             ClassTimeChecker.log_notify_audit(
-                "wol", None, _admin_id, {"mac_address": mac_address}, "FORCE", "强制远程开机", force_send=True
+                "wol",
+                None,
+                _admin_id,
+                {"mac_address": mac_address},
+                "FORCE",
+                "强制远程开机",
+                force_send=True,
             )
 
         # 发送Wake-on-LAN魔术包
@@ -128,7 +154,8 @@ class WakeOnLAN(Resource):
             )
         else:
             return APIResponse.server_error(
-                message="Failed to send magic packet", data={"mac_address": mac_address, "timestamp": None}
+                message="Failed to send magic packet",
+                data={"mac_address": mac_address, "timestamp": None},
             )
 
 
@@ -152,7 +179,9 @@ class WakeOnLANBatch(Resource):
 
         # 上课时间全局时段拦截
         force_send = bool(data.get("force_send", False))
-        _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        _admin_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         if force_send and not has_permission(g.current_user, "notification.force_send"):
             return APIResponse.error(
                 message="无强制唤醒权限（需 notification.force_send）",
@@ -161,8 +190,13 @@ class WakeOnLANBatch(Resource):
         if not force_send:
             if ClassTimeChecker.is_during_class_time()[0]:
                 ClassTimeChecker.log_notify_audit(
-                    "wol", None, _admin_id, {"mac_addresses": mac_addresses},
-                    "GLOBAL_TIME_RULE", "当前处于上课时间，批量远程开机已暂停", force_send=False,
+                    "wol",
+                    None,
+                    _admin_id,
+                    {"mac_addresses": mac_addresses},
+                    "GLOBAL_TIME_RULE",
+                    "当前处于上课时间，批量远程开机已暂停",
+                    force_send=False,
                 )
                 return APIResponse.error(
                     message="当前处于上课时间，批量远程开机已暂停",
@@ -170,7 +204,13 @@ class WakeOnLANBatch(Resource):
                 )
         else:
             ClassTimeChecker.log_notify_audit(
-                "wol", None, _admin_id, {"mac_addresses": mac_addresses}, "FORCE", "强制批量远程开机", force_send=True
+                "wol",
+                None,
+                _admin_id,
+                {"mac_addresses": mac_addresses},
+                "FORCE",
+                "强制批量远程开机",
+                force_send=True,
             )
 
         for mac_address in mac_addresses:
@@ -232,7 +272,9 @@ class DeviceStatus(Resource):
 
         mac_clean = mac_address.replace("-", ":").upper()
         if not is_valid_mac(mac_clean):
-            return APIResponse.bad_request(message="Invalid MAC address format", data={"online": None})
+            return APIResponse.bad_request(
+                message="Invalid MAC address format", data={"online": None}
+            )
 
         target_ip = None
 
@@ -243,7 +285,9 @@ class DeviceStatus(Resource):
             arp_pattern = re.compile(r"(\d+\.\d+\.\d+\.\d+)\s+([0-9A-Fa-f:-]+)")
             for match in arp_pattern.finditer(arp_result.stdout):
                 ip, mac = match.groups()
-                if mac.upper().replace("-", ":") == mac_clean or mac.upper() == mac_clean.replace(":", ""):
+                if mac.upper().replace("-", ":") == mac_clean or mac.upper() == mac_clean.replace(
+                    ":", ""
+                ):
                     target_ip = ip
                     break
         except Exception:

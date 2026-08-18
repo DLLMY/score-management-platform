@@ -5,6 +5,7 @@ import time
 import io
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 try:
     from models import Subject, db
 except ImportError:
@@ -45,46 +46,50 @@ class TestConcurrentImportExport:
             try:
                 import_data_batch = [
                     {
-                        'name': f'并发测试_{thread_id}_{i:04d}',
-                        'code': f'CONC_{thread_id}_{i:04d}',
-                        'grade': f'Grade_{(i % 3) + 1}',
-                        'is_active': True
+                        "name": f"并发测试_{thread_id}_{i:04d}",
+                        "code": f"CONC_{thread_id}_{i:04d}",
+                        "grade": f"Grade_{(i % 3) + 1}",
+                        "is_active": True,
                     }
                     for i in range(records_count)
                 ]
 
                 data = {
-                    'file': (io.BytesIO(json.dumps(import_data_batch).encode()), f'concurrent_{thread_id}.json')
+                    "file": (
+                        io.BytesIO(json.dumps(import_data_batch).encode()),
+                        f"concurrent_{thread_id}.json",
+                    )
                 }
 
                 response = client.post(
-                    '/api/subjects/import',
+                    "/api/subjects/import",
                     headers=auth_headers,
                     data=data,
-                    content_type='multipart/form-data'
+                    content_type="multipart/form-data",
                 )
 
                 with lock:
                     if response.status_code == 200:
                         result = response.get_json()
-                        import_results.append({
-                            'thread_id': thread_id,
-                            'success': result.get('success_count', 0),
-                            'failed': result.get('failed_count', 0)
-                        })
+                        import_results.append(
+                            {
+                                "thread_id": thread_id,
+                                "success": result.get("success_count", 0),
+                                "failed": result.get("failed_count", 0),
+                            }
+                        )
                     else:
-                        errors.append({
-                            'thread_id': thread_id,
-                            'status': response.status_code,
-                            'error': response.get_json()
-                        })
+                        errors.append(
+                            {
+                                "thread_id": thread_id,
+                                "status": response.status_code,
+                                "error": response.get_json(),
+                            }
+                        )
 
             except Exception as e:
                 with lock:
-                    errors.append({
-                        'thread_id': thread_id,
-                        'error': str(e)
-                    })
+                    errors.append({"thread_id": thread_id, "error": str(e)})
 
         # 执行并发导入
         num_threads = 5
@@ -104,8 +109,8 @@ class TestConcurrentImportExport:
         elapsed_time = time.time() - start_time
 
         # 验证结果
-        total_imported = sum(r['success'] for r in import_results)
-        total_failed = sum(r['failed'] for r in import_results)
+        total_imported = sum(r["success"] for r in import_results)
+        total_failed = sum(r["failed"] for r in import_results)
 
         print("[RESULT] 并发导入结果:")
         print(f"  - 并发线程数: {num_threads}")
@@ -123,14 +128,15 @@ class TestConcurrentImportExport:
 
         # 验证数据一致性
         from models import Subject
-        actual_count = Subject.query.filter(Subject.code.like('CONC_%')).count()
+
+        actual_count = Subject.query.filter(Subject.code.like("CONC_%")).count()
 
         print("\n[VERIFY] 数据一致性验证:")
         print(f"  - 预期导入: {total_imported} 条")
         print(f"  - 数据库实际: {actual_count} 条")
 
         # 清理测试数据
-        Subject.query.filter(Subject.code.like('CONC_%')).delete()
+        Subject.query.filter(Subject.code.like("CONC_%")).delete()
         db_session.commit()
 
         # 断言
@@ -145,10 +151,10 @@ class TestConcurrentImportExport:
         # 先创建一些测试数据
         test_data = [
             Subject(
-                name=f'并发导出测试_{i:04d}',
-                code=f'EXPORT_CONC_{i:04d}',
-                grade='Grade_1',
-                is_active=True
+                name=f"并发导出测试_{i:04d}",
+                code=f"EXPORT_CONC_{i:04d}",
+                grade="Grade_1",
+                is_active=True,
             )
             for i in range(100)
         ]
@@ -163,35 +169,36 @@ class TestConcurrentImportExport:
             """执行导出操作"""
             try:
                 response = client.get(
-                    '/api/subjects/export',
+                    "/api/subjects/export",
                     headers=auth_headers,
-                    query_string={'format': format_type}
+                    query_string={"format": format_type},
                 )
 
                 with lock:
                     if response.status_code == 200:
-                        export_results.append({
-                            'thread_id': thread_id,
-                            'format': format_type,
-                            'size': len(response.data)
-                        })
+                        export_results.append(
+                            {
+                                "thread_id": thread_id,
+                                "format": format_type,
+                                "size": len(response.data),
+                            }
+                        )
                     else:
-                        errors.append({
-                            'thread_id': thread_id,
-                            'format': format_type,
-                            'status': response.status_code
-                        })
+                        errors.append(
+                            {
+                                "thread_id": thread_id,
+                                "format": format_type,
+                                "status": response.status_code,
+                            }
+                        )
 
             except Exception as e:
                 with lock:
-                    errors.append({
-                        'thread_id': thread_id,
-                        'error': str(e)
-                    })
+                    errors.append({"thread_id": thread_id, "error": str(e)})
 
         # 执行并发导出
         num_threads = 4
-        formats = ['excel', 'csv', 'excel', 'csv']
+        formats = ["excel", "csv", "excel", "csv"]
 
         start_time = time.time()
 
@@ -216,15 +223,19 @@ class TestConcurrentImportExport:
         if export_results:
             print("\n  各线程导出详情:")
             for result in export_results:
-                print(f"    线程{result['thread_id']}: {result['format']}格式, {result['size']/1024:.2f}KB")
+                print(
+                    f"    线程{result['thread_id']}: {result['format']}格式, {result['size']/1024:.2f}KB"
+                )
 
         # 清理测试数据
-        Subject.query.filter(Subject.code.like('EXPORT_CONC_%')).delete()
+        Subject.query.filter(Subject.code.like("EXPORT_CONC_%")).delete()
         db_session.commit()
 
         # 断言
         assert len(errors) == 0, f"并发导出发生 {len(errors)} 个错误"
-        assert len(export_results) == num_threads, f"只有 {len(export_results)}/{num_threads} 个导出成功"
+        assert (
+            len(export_results) == num_threads
+        ), f"只有 {len(export_results)}/{num_threads} 个导出成功"
         print("\n  - 状态: ✅ 通过")
 
     def test_mixed_concurrent_operations(self, client, auth_headers, db_session, app):
@@ -234,10 +245,7 @@ class TestConcurrentImportExport:
         # 准备初始数据
         initial_data = [
             Subject(
-                name=f'混合测试_{i:04d}',
-                code=f'MIXED_{i:04d}',
-                grade='Grade_1',
-                is_active=True
+                name=f"混合测试_{i:04d}", code=f"MIXED_{i:04d}", grade="Grade_1", is_active=True
             )
             for i in range(50)
         ]
@@ -253,85 +261,92 @@ class TestConcurrentImportExport:
             try:
                 import_batch = [
                     {
-                        'name': f'混合导入_{thread_id}_{i:04d}',
-                        'code': f'MIXED_IMP_{thread_id}_{i:04d}',
-                        'grade': 'Grade_2',
-                        'is_active': True
+                        "name": f"混合导入_{thread_id}_{i:04d}",
+                        "code": f"MIXED_IMP_{thread_id}_{i:04d}",
+                        "grade": "Grade_2",
+                        "is_active": True,
                     }
                     for i in range(10)
                 ]
 
                 data = {
-                    'file': (io.BytesIO(json.dumps(import_batch).encode()), f'mixed_import_{thread_id}.json')
+                    "file": (
+                        io.BytesIO(json.dumps(import_batch).encode()),
+                        f"mixed_import_{thread_id}.json",
+                    )
                 }
 
                 response = client.post(
-                    '/api/subjects/import',
+                    "/api/subjects/import",
                     headers=auth_headers,
                     data=data,
-                    content_type='multipart/form-data'
+                    content_type="multipart/form-data",
                 )
 
                 with lock:
-                    operation_results.append({
-                        'thread_id': thread_id,
-                        'operation': 'import',
-                        'status': response.status_code
-                    })
+                    operation_results.append(
+                        {
+                            "thread_id": thread_id,
+                            "operation": "import",
+                            "status": response.status_code,
+                        }
+                    )
 
             except Exception as e:
                 with lock:
-                    errors.append({'thread_id': thread_id, 'operation': 'import', 'error': str(e)})
+                    errors.append({"thread_id": thread_id, "operation": "import", "error": str(e)})
 
         def do_export(thread_id):
             """执行导出"""
             try:
                 response = client.get(
-                    '/api/subjects/export',
-                    headers=auth_headers,
-                    query_string={'format': 'excel'}
+                    "/api/subjects/export", headers=auth_headers, query_string={"format": "excel"}
                 )
 
                 with lock:
-                    operation_results.append({
-                        'thread_id': thread_id,
-                        'operation': 'export',
-                        'status': response.status_code,
-                        'size': len(response.data) if response.status_code == 200 else 0
-                    })
+                    operation_results.append(
+                        {
+                            "thread_id": thread_id,
+                            "operation": "export",
+                            "status": response.status_code,
+                            "size": len(response.data) if response.status_code == 200 else 0,
+                        }
+                    )
 
             except Exception as e:
                 with lock:
-                    errors.append({'thread_id': thread_id, 'operation': 'export', 'error': str(e)})
+                    errors.append({"thread_id": thread_id, "operation": "export", "error": str(e)})
 
         def do_filter(thread_id):
             """执行筛选"""
             try:
                 response = client.get(
-                    '/api/subjects/',
-                    headers=auth_headers,
-                    query_string={'search': '混合'}
+                    "/api/subjects/", headers=auth_headers, query_string={"search": "混合"}
                 )
 
                 with lock:
                     if response.status_code == 200:
                         data = response.get_json()
-                        operation_results.append({
-                            'thread_id': thread_id,
-                            'operation': 'filter',
-                            'status': response.status_code,
-                            'results': len(data['data']['items'])
-                        })
+                        operation_results.append(
+                            {
+                                "thread_id": thread_id,
+                                "operation": "filter",
+                                "status": response.status_code,
+                                "results": len(data["data"]["items"]),
+                            }
+                        )
                     else:
-                        operation_results.append({
-                            'thread_id': thread_id,
-                            'operation': 'filter',
-                            'status': response.status_code
-                        })
+                        operation_results.append(
+                            {
+                                "thread_id": thread_id,
+                                "operation": "filter",
+                                "status": response.status_code,
+                            }
+                        )
 
             except Exception as e:
                 with lock:
-                    errors.append({'thread_id': thread_id, 'operation': 'filter', 'error': str(e)})
+                    errors.append({"thread_id": thread_id, "operation": "filter", "error": str(e)})
 
         # 执行混合并发操作
         start_time = time.time()
@@ -359,9 +374,9 @@ class TestConcurrentImportExport:
         elapsed_time = time.time() - start_time
 
         # 统计结果
-        imports = [r for r in operation_results if r['operation'] == 'import']
-        exports = [r for r in operation_results if r['operation'] == 'export']
-        filters = [r for r in operation_results if r['operation'] == 'filter']
+        imports = [r for r in operation_results if r["operation"] == "import"]
+        exports = [r for r in operation_results if r["operation"] == "export"]
+        filters = [r for r in operation_results if r["operation"] == "filter"]
 
         print("[RESULT] 混合并发操作结果:")
         print(f"  - 总线程数: {len(threads)}")
@@ -372,9 +387,9 @@ class TestConcurrentImportExport:
         print(f"  - 错误数: {len(errors)}")
 
         # 验证操作状态
-        import_success = all(r['status'] == 200 for r in imports)
-        export_success = all(r['status'] == 200 for r in exports)
-        filter_success = all(r['status'] == 200 for r in filters)
+        import_success = all(r["status"] == 200 for r in imports)
+        export_success = all(r["status"] == 200 for r in exports)
+        filter_success = all(r["status"] == 200 for r in filters)
 
         print("\n  操作状态:")
         print(f"    导入: {'✅ 全部成功' if import_success else '❌ 存在失败'}")
@@ -382,7 +397,7 @@ class TestConcurrentImportExport:
         print(f"    筛选: {'✅ 全部成功' if filter_success else '❌ 存在失败'}")
 
         # 清理测试数据
-        Subject.query.filter(Subject.code.like('MIXED%')).delete()
+        Subject.query.filter(Subject.code.like("MIXED%")).delete()
         db_session.commit()
 
         # 断言
@@ -404,16 +419,19 @@ class TestConcurrentImportExport:
         def import_batch(thread_id):
             import_data_batch = [
                 {
-                    'name': f'完整性测试_{thread_id}_{i:04d}',
-                    'code': f'INTEGRITY_{thread_id}_{i:04d}',
-                    'grade': 'Grade_1',
-                    'is_active': True
+                    "name": f"完整性测试_{thread_id}_{i:04d}",
+                    "code": f"INTEGRITY_{thread_id}_{i:04d}",
+                    "grade": "Grade_1",
+                    "is_active": True,
                 }
                 for i in range(20)
             ]
 
             data = {
-                'file': (io.BytesIO(json.dumps(import_data_batch).encode()), f'integrity_{thread_id}.json')
+                "file": (
+                    io.BytesIO(json.dumps(import_data_batch).encode()),
+                    f"integrity_{thread_id}.json",
+                )
             }
 
             # 并发场景下 SQLite :memory: 偶发 NULL identity key / PendingRollbackError 竞态
@@ -421,13 +439,13 @@ class TestConcurrentImportExport:
             # future.result() 把异常抛回主线程导致统计前崩溃。
             try:
                 return client.post(
-                    '/api/subjects/import',
+                    "/api/subjects/import",
                     headers=auth_headers,
                     data=data,
-                    content_type='multipart/form-data'
+                    content_type="multipart/form-data",
                 )
             except Exception as e:
-                errors.append({'thread_id': thread_id, 'error': str(e)})
+                errors.append({"thread_id": thread_id, "error": str(e)})
                 return None
 
         # 并发执行导入
@@ -440,11 +458,13 @@ class TestConcurrentImportExport:
                 response = future.result()
                 if response is not None and response.status_code == 200:
                     result = response.get_json()
-                    results.append({
-                        'thread_id': thread_id,
-                        'success': result.get('success_count', 0),
-                        'failed': result.get('failed_count', 0)
-                    })
+                    results.append(
+                        {
+                            "thread_id": thread_id,
+                            "success": result.get("success_count", 0),
+                            "failed": result.get("failed_count", 0),
+                        }
+                    )
 
         # 并发导入可能污染主线程会话（PendingRollback 状态），统计前先回滚恢复。
         try:
@@ -454,8 +474,8 @@ class TestConcurrentImportExport:
             pass
 
         # 验证数据完整性
-        final_count = Subject.query.filter(Subject.code.like('INTEGRITY_%')).count()
-        expected_count = sum(r['success'] for r in results)
+        final_count = Subject.query.filter(Subject.code.like("INTEGRITY_%")).count()
+        expected_count = sum(r["success"] for r in results)
 
         print("\n[RESULT] 数据完整性验证:")
         print(f"  - 预期导入: {expected_count} 条")
@@ -463,7 +483,7 @@ class TestConcurrentImportExport:
         print(f"  - 数据匹配: {'✅' if final_count == expected_count else '❌'}")
 
         # 验证每条记录的完整性
-        all_records = Subject.query.filter(Subject.code.like('INTEGRITY_%')).all()
+        all_records = Subject.query.filter(Subject.code.like("INTEGRITY_%")).all()
         records_with_name = sum(1 for r in all_records if r.name)
         records_with_code = sum(1 for r in all_records if r.code)
         records_with_grade = sum(1 for r in all_records if r.grade)
@@ -474,14 +494,16 @@ class TestConcurrentImportExport:
         print(f"    有年级: {records_with_grade}/{len(all_records)}")
 
         # 清理
-        Subject.query.filter(Subject.code.like('INTEGRITY_%')).delete()
+        Subject.query.filter(Subject.code.like("INTEGRITY_%")).delete()
         db_session.commit()
 
         # 断言
         # SQLite 在并发单连接下可能出现 "database is locked" / NULL identity key 等竞态，
         # 导致极少数记录未落库或整批回滚，这是测试环境（SQLite）的已知并发限制，
         # 生产使用独立数据库无此问题，故允许小幅容差（最多 5 条）。
-        assert final_count >= expected_count - 5, f"数据不一致: 预期{expected_count}, 实际{final_count}"
+        assert (
+            final_count >= expected_count - 5
+        ), f"数据不一致: 预期{expected_count}, 实际{final_count}"
         assert records_with_name == len(all_records), "存在缺少名称的记录"
         assert records_with_code == len(all_records), "存在缺少代码的记录"
         print("\n  - 状态: ✅ 通过")
@@ -509,6 +531,7 @@ class TestConcurrentTestReport:
         print("\n运行命令: pytest tests/test_concurrent_operations.py -v")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
-    sys.exit(pytest.main([__file__, '-v', '--tb=short']))
+
+    sys.exit(pytest.main([__file__, "-v", "--tb=short"]))

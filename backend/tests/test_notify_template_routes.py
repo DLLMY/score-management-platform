@@ -48,7 +48,9 @@ class TestNotifyTemplateRoutes:
     def test_get_template_detail(self, client, app, auth_headers):
         with app.app_context():
             created = client.post(
-                "/api/notify_templates/", json={"name": "详情模板", "text": "x"}, headers=auth_headers
+                "/api/notify_templates/",
+                json={"name": "详情模板", "text": "x"},
+                headers=auth_headers,
             )
             tid = _json(created)["id"]
             resp = client.get("/api/notify_templates/%d" % tid, headers=auth_headers)
@@ -86,12 +88,15 @@ class TestNotifyTemplateRoutes:
     def test_use_template_broadcast(self, client, app, auth_headers):
         with app.app_context():
             created = client.post(
-                "/api/notify_templates/", json={"name": "用", "text": "播报内容"}, headers=auth_headers
+                "/api/notify_templates/",
+                json={"name": "用", "text": "播报内容"},
+                headers=auth_headers,
             )
             tid = _json(created)["id"]
-        with patch("api.scores.notify_template_routes.publish_mqtt") as mock_mqtt, patch(
-            "api.scores.notify_template_routes.ClassTimeChecker"
-        ) as mock_ctc:
+        with (
+            patch("api.scores.notify_template_routes.publish_mqtt") as mock_mqtt,
+            patch("api.scores.notify_template_routes.ClassTimeChecker") as mock_ctc,
+        ):
             mock_ctc.is_broadcast_blocked.return_value = (False, "", None)
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)
             with app.app_context():
@@ -117,9 +122,10 @@ class TestNotifyTemplateRoutes:
                 "/api/notify_templates/", json={"name": "拦", "text": "x"}, headers=auth_headers
             )
             tid = _json(created)["id"]
-        with patch("api.scores.notify_template_routes.publish_mqtt"), patch(
-            "api.scores.notify_template_routes.ClassTimeChecker"
-        ) as mock_ctc:
+        with (
+            patch("api.scores.notify_template_routes.publish_mqtt"),
+            patch("api.scores.notify_template_routes.ClassTimeChecker") as mock_ctc,
+        ):
             mock_ctc.is_broadcast_blocked.return_value = (True, "上课时间", "GLOBAL_TIME_RULE")
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)
             with app.app_context():
@@ -135,10 +141,10 @@ class TestNotifyTemplateRoutes:
                 "/api/notify_templates/", json={"name": "强", "text": "x"}, headers=auth_headers
             )
             tid = _json(created)["id"]
-        with patch("api.scores.notify_template_routes.publish_mqtt"), patch(
-            "api.scores.notify_template_routes.ClassTimeChecker"
-        ) as mock_ctc, patch(
-            "api.scores.notify_template_routes.has_permission", return_value=False
+        with (
+            patch("api.scores.notify_template_routes.publish_mqtt"),
+            patch("api.scores.notify_template_routes.ClassTimeChecker") as mock_ctc,
+            patch("api.scores.notify_template_routes.has_permission", return_value=False),
         ):
             mock_ctc.is_broadcast_blocked.return_value = (False, "", None)
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)

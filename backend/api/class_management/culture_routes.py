@@ -5,23 +5,29 @@ from utils.permission import requires_permission
 
 ns_culture = Namespace("culture", description="班级文化管理")
 
-culture_model = ns_culture.model("CultureInput", {
-    "class_id": fields.Integer(required=True),
-    "category": fields.String(),
-    "title": fields.String(),
-    "content": fields.String(),
-    "image_url": fields.String(),
-    "display_order": fields.Integer(default=0),
-})
+culture_model = ns_culture.model(
+    "CultureInput",
+    {
+        "class_id": fields.Integer(required=True),
+        "category": fields.String(),
+        "title": fields.String(),
+        "content": fields.String(),
+        "image_url": fields.String(),
+        "display_order": fields.Integer(default=0),
+    },
+)
 
 
 @ns_culture.route("/records")
 class CultureList(Resource):
-    @ns_culture.doc("list_culture", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "category": {"description": "分类"},
-        "is_active": {"description": "是否活跃"},
-    })
+    @ns_culture.doc(
+        "list_culture",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "category": {"description": "分类"},
+            "is_active": {"description": "是否活跃"},
+        },
+    )
     @requires_permission("culture.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)

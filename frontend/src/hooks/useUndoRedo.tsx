@@ -18,44 +18,47 @@ interface UseUndoRedoOptions {
 
 export function useUndoRedo(options: UseUndoRedoOptions = {}) {
   const { maxHistory = 50, autoHideDelay = 5000 } = options;
-  
+
   const [history, setHistory] = useState<Operation[]>([]);
   const [currentPosition, setCurrentPosition] = useState<number>(-1);
   const [visibleNotifications, setVisibleNotifications] = useState<Set<string>>(new Set());
 
-  const addOperation = useCallback((operation: Omit<Operation, 'id' | 'timestamp'>) => {
-    const newOperation: Operation = {
-      ...operation,
-      id: `op-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      timestamp: Date.now(),
-    };
+  const addOperation = useCallback(
+    (operation: Omit<Operation, 'id' | 'timestamp'>) => {
+      const newOperation: Operation = {
+        ...operation,
+        id: `op-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        timestamp: Date.now(),
+      };
 
-    setHistory(prev => {
-      const newHistory = [...prev.slice(0, currentPosition + 1), newOperation];
-      return newHistory.slice(-maxHistory);
-    });
-    
-    setCurrentPosition(prev => Math.min(prev + 1, maxHistory - 1));
-    
-    setVisibleNotifications(prev => new Set(prev).add(newOperation.id));
-    
-    setTimeout(() => {
-      setVisibleNotifications(prev => {
-        const next = new Set(prev);
-        next.delete(newOperation.id);
-        return next;
+      setHistory((prev) => {
+        const newHistory = [...prev.slice(0, currentPosition + 1), newOperation];
+        return newHistory.slice(-maxHistory);
       });
-    }, autoHideDelay);
-  }, [currentPosition, maxHistory, autoHideDelay]);
+
+      setCurrentPosition((prev) => Math.min(prev + 1, maxHistory - 1));
+
+      setVisibleNotifications((prev) => new Set(prev).add(newOperation.id));
+
+      setTimeout(() => {
+        setVisibleNotifications((prev) => {
+          const next = new Set(prev);
+          next.delete(newOperation.id);
+          return next;
+        });
+      }, autoHideDelay);
+    },
+    [currentPosition, maxHistory, autoHideDelay]
+  );
 
   const undo = useCallback(async () => {
     if (currentPosition < 0) return;
-    
+
     const operation = history[currentPosition];
     if (operation.undo) {
       try {
         await operation.undo();
-        setCurrentPosition(prev => prev - 1);
+        setCurrentPosition((prev) => prev - 1);
       } catch (error) {
         logger.error('撤销失败:', error);
       }
@@ -64,12 +67,12 @@ export function useUndoRedo(options: UseUndoRedoOptions = {}) {
 
   const redo = useCallback(async () => {
     if (currentPosition >= history.length - 1) return;
-    
+
     const operation = history[currentPosition + 1];
     if (operation.redo) {
       try {
         await operation.redo();
-        setCurrentPosition(prev => prev + 1);
+        setCurrentPosition((prev) => prev + 1);
       } catch (error) {
         logger.error('重做失败:', error);
       }
@@ -131,12 +134,14 @@ interface ToastNotificationProps {
 
 function ToastNotification({ operation, onUndo, onDismiss }: ToastNotificationProps) {
   const isSuccess = operation.type !== 'delete';
-  
+
   return (
     <div className='fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300'>
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${
-        isSuccess ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-      }`}>
+      <div
+        className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${
+          isSuccess ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+        }`}
+      >
         {isSuccess ? (
           <CheckCircle className='w-5 h-5 text-green-500 flex-shrink-0' />
         ) : (

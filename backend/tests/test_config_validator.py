@@ -1,5 +1,6 @@
 import os
 from unittest.mock import patch
+
 try:
     from utils.config_validator import ConfigValidator
 except ImportError:
@@ -30,24 +31,27 @@ class TestConfigValidator:
             validator.validate_jwt_secret()
 
         assert len(validator.errors) == 1
-        assert validator.errors[0]['category'] == 'security'
+        assert validator.errors[0]["category"] == "security"
 
     def test_validate_jwt_secret_short(self):
         """测试JWT密钥过短时返回警告"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'JWT_SECRET_KEY': 'short_key'}, clear=False):
+        with patch.dict(os.environ, {"JWT_SECRET_KEY": "short_key"}, clear=False):
             validator.validate_jwt_secret()
 
         assert len(validator.warnings) == 1
-        assert validator.warnings[0]['category'] == 'security'
+        assert validator.warnings[0]["category"] == "security"
 
     def test_validate_jwt_secret_default_value(self):
         """测试JWT密钥使用默认值时返回错误"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'JWT_SECRET_KEY': 'CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p'},
-                clear=False):
+        with patch.dict(
+            os.environ,
+            {"JWT_SECRET_KEY": "CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p"},
+            clear=False,
+        ):
             validator.validate_jwt_secret()
 
         assert len(validator.errors) == 1
@@ -56,7 +60,11 @@ class TestConfigValidator:
         """测试JWT密钥有效时不产生错误或警告"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'JWT_SECRET_KEY': 'valid_secret_key_at_least_32_characters_long'}, clear=False):
+        with patch.dict(
+            os.environ,
+            {"JWT_SECRET_KEY": "valid_secret_key_at_least_32_characters_long"},
+            clear=False,
+        ):
             validator.validate_jwt_secret()
 
         assert len(validator.errors) == 0
@@ -66,7 +74,7 @@ class TestConfigValidator:
         """测试Flask密钥为空时返回错误"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'FLASK_SECRET_KEY': ''}, clear=False):
+        with patch.dict(os.environ, {"FLASK_SECRET_KEY": ""}, clear=False):
             validator.validate_flask_secret()
 
         assert len(validator.errors) == 1
@@ -75,7 +83,7 @@ class TestConfigValidator:
         """测试Flask密钥过短时返回警告"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'FLASK_SECRET_KEY': 'short'}, clear=False):
+        with patch.dict(os.environ, {"FLASK_SECRET_KEY": "short"}, clear=False):
             validator.validate_flask_secret()
 
         assert len(validator.warnings) == 1
@@ -84,7 +92,11 @@ class TestConfigValidator:
         """测试Redis DB冲突时返回警告"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'REDIS_DB': '0', 'CELERY_BROKER_URL': 'redis://localhost:6379/0'}, clear=False):
+        with patch.dict(
+            os.environ,
+            {"REDIS_DB": "0", "CELERY_BROKER_URL": "redis://localhost:6379/0"},
+            clear=False,
+        ):
             validator.validate_redis_config()
 
         assert len(validator.warnings) == 1
@@ -93,7 +105,7 @@ class TestConfigValidator:
         """测试Redis DB超出范围时返回错误"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'REDIS_DB': '16'}, clear=False):
+        with patch.dict(os.environ, {"REDIS_DB": "16"}, clear=False):
             validator.validate_redis_config()
 
         assert len(validator.errors) == 1
@@ -102,8 +114,8 @@ class TestConfigValidator:
         """测试生产环境CORS使用通配符时返回错误"""
 
         validator = ConfigValidator()
-        validator.flask_env = 'production'
-        with patch.dict(os.environ, {'CORS_ORIGINS': '*'}, clear=False):
+        validator.flask_env = "production"
+        with patch.dict(os.environ, {"CORS_ORIGINS": "*"}, clear=False):
             validator.validate_cors_config()
 
         assert len(validator.errors) == 1
@@ -112,8 +124,8 @@ class TestConfigValidator:
         """测试生产环境使用SQLite时返回警告"""
 
         validator = ConfigValidator()
-        validator.flask_env = 'production'
-        with patch.dict(os.environ, {'DATABASE_URI': 'sqlite:///test.db'}, clear=False):
+        validator.flask_env = "production"
+        with patch.dict(os.environ, {"DATABASE_URI": "sqlite:///test.db"}, clear=False):
             validator.validate_database_config()
 
         assert len(validator.warnings) == 1
@@ -122,7 +134,7 @@ class TestConfigValidator:
         """测试MQTT SSL与端口不匹配时返回警告"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'MQTT_PORT': '1883', 'MQTT_SSL': 'true'}, clear=False):
+        with patch.dict(os.environ, {"MQTT_PORT": "1883", "MQTT_SSL": "true"}, clear=False):
             validator.validate_mqtt_config()
 
         assert len(validator.warnings) == 1
@@ -131,7 +143,7 @@ class TestConfigValidator:
         """测试端口无效时返回错误"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'FLASK_PORT': '70000'}, clear=False):
+        with patch.dict(os.environ, {"FLASK_PORT": "70000"}, clear=False):
             validator.validate_port_config()
 
         assert len(validator.errors) == 1
@@ -140,8 +152,8 @@ class TestConfigValidator:
         """测试生产环境启用DEBUG时返回错误"""
 
         validator = ConfigValidator()
-        validator.flask_env = 'production'
-        with patch.dict(os.environ, {'FLASK_DEBUG': 'true'}, clear=False):
+        validator.flask_env = "production"
+        with patch.dict(os.environ, {"FLASK_DEBUG": "true"}, clear=False):
             validator.validate_env_consistency()
 
         assert len(validator.errors) == 1
@@ -150,7 +162,9 @@ class TestConfigValidator:
         """测试限流配置不一致时返回警告"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'RATE_LIMIT_PER_MINUTE': '10', 'RATE_LIMIT_PER_HOUR': '1000'}, clear=False):
+        with patch.dict(
+            os.environ, {"RATE_LIMIT_PER_MINUTE": "10", "RATE_LIMIT_PER_HOUR": "1000"}, clear=False
+        ):
             validator.validate_rate_limit_config()
 
         assert len(validator.warnings) == 1
@@ -159,7 +173,7 @@ class TestConfigValidator:
         """测试限流配置值为负数时返回错误"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {'RATE_LIMIT_PER_MINUTE': '-1'}, clear=False):
+        with patch.dict(os.environ, {"RATE_LIMIT_PER_MINUTE": "-1"}, clear=False):
             validator.validate_rate_limit_config()
 
         assert len(validator.errors) == 1
@@ -168,25 +182,29 @@ class TestConfigValidator:
         """测试完整验证流程"""
 
         validator = ConfigValidator()
-        with patch.dict(os.environ, {
-            'JWT_SECRET_KEY': 'valid_key_32_characters_long',
-            'FLASK_SECRET_KEY': 'valid_flask_secret_key',
-            'REDIS_DB': '0',
-            'CELERY_BROKER_URL': 'redis://localhost:6379/1',
-            'CORS_ORIGINS': 'http://localhost:3000',
-            'DATABASE_URI': 'sqlite:///test.db',
-            'MQTT_PORT': '1883',
-            'MQTT_SSL': 'false',
-            'FLASK_PORT': '5000',
-            'FLASK_DEBUG': 'false',
-            'RATE_LIMIT_PER_MINUTE': '30',
-            'RATE_LIMIT_PER_HOUR': '1000',
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "JWT_SECRET_KEY": "valid_key_32_characters_long",
+                "FLASK_SECRET_KEY": "valid_flask_secret_key",
+                "REDIS_DB": "0",
+                "CELERY_BROKER_URL": "redis://localhost:6379/1",
+                "CORS_ORIGINS": "http://localhost:3000",
+                "DATABASE_URI": "sqlite:///test.db",
+                "MQTT_PORT": "1883",
+                "MQTT_SSL": "false",
+                "FLASK_PORT": "5000",
+                "FLASK_DEBUG": "false",
+                "RATE_LIMIT_PER_MINUTE": "30",
+                "RATE_LIMIT_PER_HOUR": "1000",
+            },
+            clear=False,
+        ):
             result = validator.validate_all()
 
         assert isinstance(result, dict)
-        assert 'errors' in result
-        assert 'warnings' in result
+        assert "errors" in result
+        assert "warnings" in result
 
     def test_is_valid(self):
         """测试is_valid方法"""
@@ -194,7 +212,7 @@ class TestConfigValidator:
         validator = ConfigValidator()
         assert validator.is_valid() is True
 
-        validator._add_error('test', 'error')
+        validator._add_error("test", "error")
         assert validator.is_valid() is False
 
     def test_print_report(self, capsys):
@@ -203,7 +221,7 @@ class TestConfigValidator:
         validator = ConfigValidator()
         validator.validate_all()
 
-        with patch('builtins.print') as mock_print:
+        with patch("builtins.print") as mock_print:
             validator.print_report()
             assert mock_print.call_count > 0
 
@@ -211,9 +229,13 @@ class TestConfigValidator:
         """测试validate_config便捷函数"""
         from utils.config_validator import validate_config
 
-        with patch.dict(os.environ, {
-            'JWT_SECRET_KEY': 'valid_key_32_characters_long',
-            'FLASK_SECRET_KEY': 'valid_flask_secret_key',
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "JWT_SECRET_KEY": "valid_key_32_characters_long",
+                "FLASK_SECRET_KEY": "valid_flask_secret_key",
+            },
+            clear=False,
+        ):
             result = validate_config()
             assert isinstance(result, bool)

@@ -62,7 +62,10 @@ class ExcelUtils:
         header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
         header_alignment = Alignment(horizontal="center", vertical="center")
         thin_border = Border(
-            left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
         )
 
         for col_idx, header in enumerate(headers, start=1):
@@ -227,7 +230,15 @@ class ExcelTemplateGenerator:
     }
 
     RULE_TEMPLATE = {
-        "headers": ["规则名称", "描述", "分类名称", "分数", "是否启用", "每日上限", "最小间隔(分钟)"],
+        "headers": [
+            "规则名称",
+            "描述",
+            "分类名称",
+            "分数",
+            "是否启用",
+            "每日上限",
+            "最小间隔(分钟)",
+        ],
         "examples": [
             ["按时到校", "每天按时到校打卡", "日常行为", 10, "是", 1, 0],
             ["课堂表现优秀", "课堂积极回答问题", "学习成绩", 5, "是", 3, 30],
@@ -279,13 +290,19 @@ class ExcelTemplateGenerator:
 
         sheets = [
             {"name": "导入数据", "headers": template["headers"], "data": template["examples"]},
-            {"name": "填写说明", "headers": ["填写说明"], "data": [[desc] for desc in template["description"]]},
+            {
+                "name": "填写说明",
+                "headers": ["填写说明"],
+                "data": [[desc] for desc in template["description"]],
+            },
         ]
 
         return ExcelUtils.export_to_excel(sheets)
 
     @staticmethod
-    def validate_import_data(template_type: str, headers: List[str], data: List[List[Any]]) -> Dict[str, Any]:
+    def validate_import_data(
+        template_type: str, headers: List[str], data: List[List[Any]]
+    ) -> Dict[str, Any]:
         """
         验证导入数据格式
 

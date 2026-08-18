@@ -19,6 +19,7 @@ F9-A: 将 device_alert 物理合并进 alert 表。
 运行：系统 Python 3.11
   python scripts/migrate_f09a_alert_merge.py
 """
+
 import os
 import sys
 import shutil
@@ -35,7 +36,7 @@ DB_URI = app.config.get("SQLALCHEMY_DATABASE_URI", "")
 if not DB_URI.startswith("sqlite:///"):
     raise SystemExit(f"非预期数据库类型: {DB_URI}")
 
-DB_PATH = os.path.abspath(DB_URI[len("sqlite:///"):])
+DB_PATH = os.path.abspath(DB_URI[len("sqlite:///") :])
 if not os.path.exists(DB_PATH):
     raise SystemExit(f"数据库文件不存在: {DB_PATH}")
 
@@ -82,8 +83,7 @@ def main():
         src_count = cur.fetchone()[0]
         print(f"[copy] device_alert 现有 {src_count} 行")
 
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO alert (
                 alert_type, severity, message, device_id, device_name,
                 extra_data, is_read, read_at, created_at,
@@ -94,16 +94,13 @@ def main():
                 NULL, 0, NULL, created_at,
                 'device', is_resolved, resolved_at
             FROM device_alert
-            """
-        )
+            """)
         cur.execute("SELECT COUNT(*) FROM alert WHERE source='device'")
         dst_count = cur.fetchone()[0]
         print(f"[copy] alert(source='device') 现有 {dst_count} 行")
 
         if src_count and dst_count < src_count:
-            raise SystemExit(
-                f"[copy] 校验失败: 期望 >= {src_count} 行，实际 {dst_count} 行，回滚"
-            )
+            raise SystemExit(f"[copy] 校验失败: 期望 >= {src_count} 行，实际 {dst_count} 行，回滚")
 
         # 6) 删除 device_alert
         cur.execute("DROP TABLE device_alert")

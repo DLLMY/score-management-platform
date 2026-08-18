@@ -67,16 +67,18 @@ class PerformanceReportingService {
       this.stopFlushInterval();
       if (this.queue.length > 0 || this.errorQueue.length > 0) {
         try {
-          const metricsPayload = this.queue.length > 0 
-            ? JSON.stringify({ metrics: this.queue }) 
-            : null;
-          const errorsPayload = this.errorQueue.map(e => JSON.stringify(e));
-          
+          const metricsPayload =
+            this.queue.length > 0 ? JSON.stringify({ metrics: this.queue }) : null;
+          const errorsPayload = this.errorQueue.map((e) => JSON.stringify(e));
+
           if (metricsPayload) {
-            navigator.sendBeacon(`${API_BASE_URL}/api/system/frontend-performance/batch`, metricsPayload);
+            navigator.sendBeacon(
+              `${API_BASE_URL}/api/system/frontend-performance/batch`,
+              metricsPayload
+            );
           }
-          
-          errorsPayload.forEach(payload => {
+
+          errorsPayload.forEach((payload) => {
             navigator.sendBeacon(`${API_BASE_URL}/api/system/frontend-error`, payload);
           });
         } catch {
@@ -115,7 +117,9 @@ class PerformanceReportingService {
     };
   }
 
-  reportMetric(metric: Omit<PerformanceMetric, 'timestamp' | 'user_agent' | 'screen_width' | 'screen_height'>): void {
+  reportMetric(
+    metric: Omit<PerformanceMetric, 'timestamp' | 'user_agent' | 'screen_width' | 'screen_height'>
+  ): void {
     const fullMetric: PerformanceMetric = {
       ...metric,
       timestamp: new Date().toISOString(),
@@ -208,7 +212,11 @@ class PerformanceReportingService {
 
       if (this.isDev && (!resp || !resp.ok)) {
         // 仅失败（网络/5xx）时 debug 输出；成功静默，避免高频轮询刷屏
-        logger.debug(`[Performance] Flush 失败: ${resp ? resp.status : 'network'} (${metricsToSend.length} metrics, silently ignored)`);
+        logger.debug(
+          `[Performance] Flush 失败: ${resp ? resp.status : 'network'} (${
+            metricsToSend.length
+          } metrics, silently ignored)`
+        );
       }
     } catch {
       // 完全静默：任何异常都不抛到控制台
@@ -238,7 +246,9 @@ class PerformanceReportingService {
       }
 
       if (this.isDev) {
-        logger.debug(`[Error] Flushed: ${okCount}/${errorsToSend.length} errors (silently handled)`);
+        logger.debug(
+          `[Error] Flushed: ${okCount}/${errorsToSend.length} errors (silently handled)`
+        );
       }
     } catch {
       // 完全静默：任何异常都不抛到控制台

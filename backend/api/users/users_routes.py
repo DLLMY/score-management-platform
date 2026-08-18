@@ -3,7 +3,12 @@ from utils.response import APIResponse
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from models import User, ClassInfo, get_by_id
-from utils.permission import requires_permission, get_current_admin, get_admin_class_ids, get_allowed_classes
+from utils.permission import (
+    requires_permission,
+    get_current_admin,
+    get_admin_class_ids,
+    get_allowed_classes,
+)
 from utils.logger import log_operation
 from utils.validation import (
     ValidationRules,
@@ -159,20 +164,34 @@ class UserList(Resource):
         allowed_classes = get_classes_for_admin(admin)
         # 如果不是超级管理员且没有分配班级，返回空结果
         if allowed_classes == []:
-            return APIResponse.success(data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0})
+            return APIResponse.success(
+                data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0}
+            )
         # 如果不是超级管理员，只显示允许的班级
         if allowed_classes is not None:
             if class_id:
                 class_info = ClassInfo.query.get(class_id)
                 if not class_info or class_info.name not in allowed_classes:
                     return APIResponse.success(
-                        data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0}
+                        data={
+                            "users": [],
+                            "total": 0,
+                            "page": page,
+                            "per_page": per_page,
+                            "pages": 0,
+                        }
                     )
                 query = query.filter(User.class_info_id == class_id)
             elif class_name:
                 if class_name not in allowed_classes:
                     return APIResponse.success(
-                        data={"users": [], "total": 0, "page": page, "per_page": per_page, "pages": 0}
+                        data={
+                            "users": [],
+                            "total": 0,
+                            "page": page,
+                            "per_page": per_page,
+                            "pages": 0,
+                        }
                     )
             else:
                 query = query.filter(User.class_name.in_(allowed_classes))
@@ -190,7 +209,8 @@ class UserList(Resource):
                 # 如果搜索词看起来像卡号（纯数字或字母数字组合），先尝试精确匹配
                 if search_lower.isalnum() and len(search_lower) >= 3:
                     filtered_query = filtered_query.filter(
-                        (User.card_id.like(f"%{search_lower}%")) | (User.phone.like(f"%{search_lower}%"))
+                        (User.card_id.like(f"%{search_lower}%"))
+                        | (User.phone.like(f"%{search_lower}%"))
                     )
                 # 限制单次加载数量，避免全表扫描内存溢出
                 max_preload = min(1000, per_page * 10)
@@ -228,7 +248,8 @@ class UserList(Resource):
                             "guardian_phone": u.guardian_phone,
                             "guardian_relation": u.guardian_relation,
                             "card_id": u.card_id,
-                            "current_score": u.current_score,                            "is_active": u.is_active,
+                            "current_score": u.current_score,
+                            "is_active": u.is_active,
                             "is_blacklisted": u.is_blacklisted,
                             "role": "student",
                             "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -292,7 +313,8 @@ class UserList(Resource):
                     "guardian_phone": u.guardian_phone,
                     "guardian_relation": u.guardian_relation,
                     "card_id": u.card_id,
-                    "current_score": u.current_score,                    "role": "student",
+                    "current_score": u.current_score,
+                    "role": "student",
                     "created_at": u.created_at.isoformat() if u.created_at else None,
                 }
                 for u in pagination.items
@@ -392,7 +414,9 @@ class UserList(Resource):
             from utils.fulltext_search import get_search_engine
 
             search_engine = get_search_engine()
-            search_engine.add_to_index(user.id, user.name, user.card_id, user.phone, user.class_name)
+            search_engine.add_to_index(
+                user.id, user.name, user.card_id, user.phone, user.class_name
+            )
         except Exception as e:
             # 索引更新失败：新数据搜不到（索引与 DB 不一致），须留痕
             logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}")
@@ -512,10 +536,14 @@ class UserResource(Resource):
         user = get_by_id(User, user_id)
         # 更新FTS搜索索引
         try:
-            from utils.fulltext_search import get_search_engine  # 函数内 import（与 create 分支一致，缺失会 NameError）
+            from utils.fulltext_search import (
+                get_search_engine,
+            )  # 函数内 import（与 create 分支一致，缺失会 NameError）
 
             search_engine = get_search_engine()
-            search_engine.add_to_index(user.id, user.name, user.card_id, user.phone, user.class_name)
+            search_engine.add_to_index(
+                user.id, user.name, user.card_id, user.phone, user.class_name
+            )
         except Exception as e:
             # 索引更新失败：改动后搜不到（索引与 DB 不一致），须留痕
             logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}")
@@ -632,7 +660,11 @@ class UserImport(Resource):
     @ns_users.expect(
         ns_users.model(
             "UserImportRequest",
-            {"users": fields.List(fields.Nested(user_model), required=True, description="学生列表")},
+            {
+                "users": fields.List(
+                    fields.Nested(user_model), required=True, description="学生列表"
+                )
+            },
         )
     )
     @ns_users.response(200, "导入完成")
@@ -667,7 +699,9 @@ class UserImport(Resource):
                 elif not isinstance(card_id, (int, str)) or len(str(card_id).strip()) == 0:
                     row_errors.append({"field": "card_id", "message": "学号格式无效"})
                 elif len(str(card_id).strip()) > 50:
-                    row_errors.append({"field": "card_id", "message": "学号长度超过限制（最大50字符）"})
+                    row_errors.append(
+                        {"field": "card_id", "message": "学号长度超过限制（最大50字符）"}
+                    )
                 else:
                     card_id_str = str(card_id).strip()
                     is_valid, msg = validate_student_id(card_id_str)
@@ -677,9 +711,13 @@ class UserImport(Resource):
                 if not name:
                     row_errors.append({"field": "name", "message": "姓名不能为空"})
                 elif not isinstance(name, str) or len(name.strip()) == 0:
-                    row_errors.append({"field": "name", "message": "姓名格式无效，必须为非空字符串"})
+                    row_errors.append(
+                        {"field": "name", "message": "姓名格式无效，必须为非空字符串"}
+                    )
                 elif len(name.strip()) > 50:
-                    row_errors.append({"field": "name", "message": "姓名长度超过限制（最大50字符）"})
+                    row_errors.append(
+                        {"field": "name", "message": "姓名长度超过限制（最大50字符）"}
+                    )
                 else:
                     is_valid, msg = validate_name(name.strip())
                     if not is_valid:
@@ -687,16 +725,30 @@ class UserImport(Resource):
                 class_name = user_data.get("class_name")
                 if class_name:
                     if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                        row_errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
+                        row_errors.append(
+                            {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
+                        )
                     elif len(class_name.strip()) > 100:
-                        row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+                        row_errors.append(
+                            {
+                                "field": "class_name",
+                                "message": "班级名称长度超过限制（最大100字符）",
+                            }
+                        )
                     else:
                         class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
                         if not class_info:
-                            row_errors.append({"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'})
+                            row_errors.append(
+                                {
+                                    "field": "class_name",
+                                    "message": f'班级 "{class_name}" 在系统中不存在',
+                                }
+                            )
                 gender = user_data.get("gender")
                 if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
-                    row_errors.append({"field": "gender", "message": '性别值无效，只能是"男"或"女"'})
+                    row_errors.append(
+                        {"field": "gender", "message": '性别值无效，只能是"男"或"女"'}
+                    )
                 phone = user_data.get("phone")
                 if phone:
                     is_valid, msg = validate_phone(str(phone))
@@ -704,20 +756,28 @@ class UserImport(Resource):
                         row_errors.append({"field": "phone", "message": msg})
                     else:
                         if not re.match(r"^1[3-9]\d{9}$", str(phone).strip()):
-                            row_errors.append({"field": "phone", "message": "联系电话格式无效，请输入11位手机号"})
+                            row_errors.append(
+                                {"field": "phone", "message": "联系电话格式无效，请输入11位手机号"}
+                            )
                 if card_id:
                     card_id_norm = str(card_id).strip()
                     existing = User.query.filter_by(card_id=card_id_norm).first()
                     if existing:
-                        row_errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 已存在'})
+                        row_errors.append(
+                            {"field": "card_id", "message": f'学号 "{card_id_norm}" 已存在'}
+                        )
                     elif card_id_norm in seen_card_ids:
-                        row_errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 在本批中重复'})
+                        row_errors.append(
+                            {"field": "card_id", "message": f'学号 "{card_id_norm}" 在本批中重复'}
+                        )
                 if row_errors:
                     error_count += 1
                     errors.append(
                         {
                             "row": idx + 1,
-                            "message": "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors]),
+                            "message": "; ".join(
+                                [f'{err["field"]}: {err["message"]}' for err in row_errors]
+                            ),
                             "row_data": row_data,
                             "error_fields": [err["field"] for err in row_errors],
                         }
@@ -743,7 +803,14 @@ class UserImport(Resource):
                 imported_count += 1
             except Exception as e:
                 error_count += 1
-                errors.append({"row": idx + 1, "message": str(e), "row_data": user_data, "error_fields": ["system"]})
+                errors.append(
+                    {
+                        "row": idx + 1,
+                        "message": str(e),
+                        "row_data": user_data,
+                        "error_fields": ["system"],
+                    }
+                )
         try:
             user_service.bulk_create_users(pending_users)
         except Exception as e:
@@ -764,7 +831,8 @@ class UserBatchDelete(Resource):
     @ns_users.doc("batch_delete_users", description="批量删除学生", security="Bearer")
     @ns_users.expect(
         ns_users.model(
-            "BatchDeleteRequest", {"ids": fields.List(fields.Integer, required=True, description="用户ID列表")}
+            "BatchDeleteRequest",
+            {"ids": fields.List(fields.Integer, required=True, description="用户ID列表")},
         )
     )
     @ns_users.response(200, "删除完成")
@@ -828,12 +896,16 @@ class UserBatchScore(Resource):
         try:
             from api.monitoring.mqtt_routes import publish_mqtt
 
-            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=False)
+            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(
+                force_send=False
+            )
             if not blocked:
                 users = User.query.filter(User.id.in_(ids)).all()
                 score_change_str = f"{score_change:+g}" if score_change > 0 else str(score_change)
                 for user in users:
-                    score_change_text = f"学生:{user.name}, {score_change_str}分, 原因:{description}"
+                    score_change_text = (
+                        f"学生:{user.name}, {score_change_str}分, 原因:{description}"
+                    )
                     score_notification = {
                         "type": "score_change",
                         "text": score_change_text,
@@ -841,13 +913,22 @@ class UserBatchScore(Resource):
                         "timestamp": datetime.now().isoformat(),
                     }
                     publish_mqtt("phonebox/remote/notify", score_notification)
-                print(f"[ScoreChange] 批量积分变动通知已发送: {updated_count}个用户, {score_change_str}分")
+                print(
+                    f"[ScoreChange] 批量积分变动通知已发送: {updated_count}个用户, {score_change_str}分"
+                )
             else:
                 ClassTimeChecker.log_notify_audit(
-                    "score_change", None, None,
-                    {"users": ids}, reason_code or "GLOBAL_TIME_RULE", check_message, force_send=False,
+                    "score_change",
+                    None,
+                    None,
+                    {"users": ids},
+                    reason_code or "GLOBAL_TIME_RULE",
+                    check_message,
+                    force_send=False,
                 )
-                print(f"[ScoreChange] 批量积分变动通知被拦截（上课时间）: {updated_count}个用户, {score_change_str}分")
+                print(
+                    f"[ScoreChange] 批量积分变动通知被拦截（上课时间）: {updated_count}个用户, {score_change_str}分"
+                )
         except Exception as e:
             print(f"[ScoreChange] 批量发送积分变动通知失败: {e}")
         return APIResponse.success(message=f"批量积分调整完成: 成功{updated_count}条")
@@ -956,7 +1037,9 @@ class UserImportFile(Resource):
             content_bytes = file.read()
             content, encoding = detect_encoding(content_bytes)
             if content is None:
-                return APIResponse.error(message="无法识别文件编码，请使用UTF-8或GBK编码保存文件", status_code=400)
+                return APIResponse.error(
+                    message="无法识别文件编码，请使用UTF-8或GBK编码保存文件", status_code=400
+                )
             lines = content.split("\n")
             if len(lines) == 0:
                 return APIResponse.error(message="文件为空", status_code=400)
@@ -1002,57 +1085,104 @@ class UserImportFile(Resource):
                     elif not isinstance(card_id, (int, str)) or len(str(card_id).strip()) == 0:
                         row_errors.append({"field": "card_id", "message": "学号格式无效"})
                     elif len(str(card_id).strip()) > 50:
-                        row_errors.append({"field": "card_id", "message": "学号长度超过限制（最大50字符）"})
+                        row_errors.append(
+                            {"field": "card_id", "message": "学号长度超过限制（最大50字符）"}
+                        )
                     name = row_dict.get("name", "").strip()
                     if not name:
                         row_errors.append({"field": "name", "message": "姓名不能为空"})
                     elif not isinstance(name, str) or len(name.strip()) == 0:
-                        row_errors.append({"field": "name", "message": "姓名格式无效，必须为非空字符串"})
+                        row_errors.append(
+                            {"field": "name", "message": "姓名格式无效，必须为非空字符串"}
+                        )
                     elif len(name.strip()) > 50:
-                        row_errors.append({"field": "name", "message": "姓名长度超过限制（最大50字符）"})
+                        row_errors.append(
+                            {"field": "name", "message": "姓名长度超过限制（最大50字符）"}
+                        )
                     class_name = row_dict.get("class_name", "").strip()
                     if class_name:
                         if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                            row_errors.append({"field": "class_name", "message": "班级名称格式无效"})
+                            row_errors.append(
+                                {"field": "class_name", "message": "班级名称格式无效"}
+                            )
                         elif len(class_name.strip()) > 100:
-                            row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+                            row_errors.append(
+                                {
+                                    "field": "class_name",
+                                    "message": "班级名称长度超过限制（最大100字符）",
+                                }
+                            )
                         else:
                             class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
                             if not class_info:
                                 row_errors.append(
-                                    {"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'}
+                                    {
+                                        "field": "class_name",
+                                        "message": f'班级 "{class_name}" 在系统中不存在',
+                                    }
                                 )
                         if allowed_classes is not None and class_name not in allowed_classes:
-                            row_errors.append({"field": "class_name", "message": f'无权为班级 "{class_name}" 导入学生'})
+                            row_errors.append(
+                                {
+                                    "field": "class_name",
+                                    "message": f'无权为班级 "{class_name}" 导入学生',
+                                }
+                            )
                     gender = row_dict.get("gender", "").strip()
                     if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
-                        row_errors.append({"field": "gender", "message": '性别格式无效，只能是"男"或"女"'})
+                        row_errors.append(
+                            {"field": "gender", "message": '性别格式无效，只能是"男"或"女"'}
+                        )
                     phone = row_dict.get("phone", "").strip()
                     if phone:
                         if not re.match(r"^1[3-9]\d{9}$", phone):
-                            row_errors.append({"field": "phone", "message": "联系电话格式无效，请输入11位手机号"})
+                            row_errors.append(
+                                {"field": "phone", "message": "联系电话格式无效，请输入11位手机号"}
+                            )
                     father_phone = row_dict.get("father_phone", "").strip()
                     if father_phone and not re.match(r"^1[3-9]\d{9}$", father_phone):
-                        row_errors.append({"field": "father_phone", "message": "父亲电话格式无效，请输入11位手机号"})
+                        row_errors.append(
+                            {
+                                "field": "father_phone",
+                                "message": "父亲电话格式无效，请输入11位手机号",
+                            }
+                        )
                     mother_phone = row_dict.get("mother_phone", "").strip()
                     if mother_phone and not re.match(r"^1[3-9]\d{9}$", mother_phone):
-                        row_errors.append({"field": "mother_phone", "message": "母亲电话格式无效，请输入11位手机号"})
+                        row_errors.append(
+                            {
+                                "field": "mother_phone",
+                                "message": "母亲电话格式无效，请输入11位手机号",
+                            }
+                        )
                     guardian_phone = row_dict.get("guardian_phone", "").strip()
                     if guardian_phone and not re.match(r"^1[3-9]\d{9}$", guardian_phone):
                         row_errors.append(
-                            {"field": "guardian_phone", "message": "监护人电话格式无效，请输入11位手机号"}
+                            {
+                                "field": "guardian_phone",
+                                "message": "监护人电话格式无效，请输入11位手机号",
+                            }
                         )
                     current_score = row_dict.get("current_score", "0").strip()
                     if current_score:
                         try:
                             current_score_int = int(current_score)
                             if current_score_int < 0:
-                                row_errors.append({"field": "current_score", "message": "初始积分不能为负数"})
+                                row_errors.append(
+                                    {"field": "current_score", "message": "初始积分不能为负数"}
+                                )
                         except ValueError:
-                            row_errors.append({"field": "current_score", "message": "初始积分格式无效，必须为整数"})
+                            row_errors.append(
+                                {
+                                    "field": "current_score",
+                                    "message": "初始积分格式无效，必须为整数",
+                                }
+                            )
                     if row_errors:
                         error_count = len(errors)
-                        error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
+                        error_msg = "; ".join(
+                            [f'{err["field"]}: {err["message"]}' for err in row_errors]
+                        )
                         errors.append(
                             {
                                 "row": row_number,
@@ -1102,7 +1232,13 @@ class UserImportFile(Resource):
                         updates["current_score"] = current_score_int
                         pending_updates.append((existing.id, updates))
                         updated += 1
-                        messages.append({"name": name, "action": "updated", "message": f'学生"{name}"信息更新成功'})
+                        messages.append(
+                            {
+                                "name": name,
+                                "action": "updated",
+                                "message": f'学生"{name}"信息更新成功',
+                            }
+                        )
                     else:
                         user = User(
                             name=name,
@@ -1122,7 +1258,9 @@ class UserImportFile(Resource):
                         )
                         pending_users.append(user)
                         imported += 1
-                        messages.append({"name": name, "action": "created", "message": f'学生"{name}"导入成功'})
+                        messages.append(
+                            {"name": name, "action": "created", "message": f'学生"{name}"导入成功'}
+                        )
                 except Exception as e:
                     error_count = len(errors)
                     error_msg = str(e)

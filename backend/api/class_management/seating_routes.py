@@ -60,7 +60,9 @@ class AutoArrangeSeating(Resource):
     @requires_permission("class.edit")
     def post(self, chart_id):
         data = request.get_json()
-        return seating_service.auto_arrange(chart_id, data.get("strategy", "manual"), data.get("class_id", 1))
+        return seating_service.auto_arrange(
+            chart_id, data.get("strategy", "manual"), data.get("class_id", 1)
+        )
 
 
 @ns_seating.route("/charts/<int:chart_id>/seats")
@@ -68,4 +70,6 @@ class UpdateSeat(Resource):
     @requires_permission("class.edit")
     def put(self, chart_id):
         data = request.get_json()
-        return seating_service.update_seat(chart_id, data.get("row"), data.get("col"), data.get("student_id"))
+        return seating_service.update_seat(
+            chart_id, data.get("row"), data.get("col"), data.get("student_id")
+        )

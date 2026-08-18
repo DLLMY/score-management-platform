@@ -1,5 +1,12 @@
 import { memo } from 'react';
-import { AlertTriangle, CheckCircle, Clock, HelpCircle, RefreshCw, ShieldAlert } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  HelpCircle,
+  RefreshCw,
+  ShieldAlert,
+} from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { ClassNowStatusResult } from '../../hooks/useClassNowStatus';
 
@@ -32,13 +39,14 @@ function ClassStatusBadge({
 
   const { loading, error, blocked, label, refresh } = state;
 
-  const tone = loading || error
-    ? {
-        wrap: 'bg-gray-50 border-gray-200 dark:bg-slate-800 dark:border-slate-700',
-        text: 'text-gray-600 dark:text-slate-300',
-        Icon: error ? HelpCircle : Clock,
-      }
-    : blocked
+  const tone =
+    loading || error
+      ? {
+          wrap: 'bg-gray-50 border-gray-200 dark:bg-slate-800 dark:border-slate-700',
+          text: 'text-gray-600 dark:text-slate-300',
+          Icon: error ? HelpCircle : Clock,
+        }
+      : blocked
       ? {
           wrap: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-900',
           text: 'text-red-700 dark:text-red-300',
@@ -56,7 +64,10 @@ function ClassStatusBadge({
   return (
     <div className={`rounded-lg border px-3 py-2 ${tone.wrap} ${className}`}>
       <div className='flex items-center gap-2 flex-wrap'>
-        <Icon className={`w-4 h-4 shrink-0 ${tone.text} ${loading ? 'animate-pulse' : ''}`} aria-hidden='true' />
+        <Icon
+          className={`w-4 h-4 shrink-0 ${tone.text} ${loading ? 'animate-pulse' : ''}`}
+          aria-hidden='true'
+        />
         <span className={`text-sm font-medium ${tone.text}`} role='status' aria-live='polite'>
           {label}
         </span>

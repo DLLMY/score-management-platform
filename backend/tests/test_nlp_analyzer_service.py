@@ -1,6 +1,7 @@
 """
 NLP Analyzer Service Test Cases
 """
+
 try:
     from services.nlp_analyzer_service import IntentMetrics
 except ImportError:
@@ -387,7 +388,7 @@ class TestAlgorithmBenchmark:
         """测试基准测试意图分类器"""
         from services.nlp_analyzer_service import AlgorithmBenchmark
 
-        mock_classifier = type('MockClassifier', (), {})()
+        mock_classifier = type("MockClassifier", (), {})()
         mock_classifier.predict_intent = lambda text: ("intent_a", 0.9)
 
         test_cases = [
@@ -396,7 +397,9 @@ class TestAlgorithmBenchmark:
             {"text": "text3", "expected": "intent_b"},
         ]
 
-        result = AlgorithmBenchmark.benchmark_intent_classifier(mock_classifier, test_cases, iterations=3)
+        result = AlgorithmBenchmark.benchmark_intent_classifier(
+            mock_classifier, test_cases, iterations=3
+        )
 
         assert isinstance(result, dict)
         assert result["iterations"] == 3

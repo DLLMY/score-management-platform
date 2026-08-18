@@ -43,7 +43,7 @@ export function useOptimisticState<T>(initialState: T): {
   const [previousState, setPreviousState] = React.useState<T>(initialState);
   const [isOptimistic, setIsOptimistic] = React.useState(false);
 
-  const setOptimistic = (updateFn: (prev: T) => T): () => void => {
+  const setOptimistic = (updateFn: (prev: T) => T): (() => void) => {
     setState((prev) => {
       setPreviousState(prev);
       setIsOptimistic(true);
@@ -109,9 +109,7 @@ class OptimisticQueue<T> {
   }
 
   getPendingActions(): OptimisticAction<T>[] {
-    return this.queue.filter(
-      (a) => !this.resolvedIds.has(a.id) && !this.rejectedIds.has(a.id)
-    );
+    return this.queue.filter((a) => !this.resolvedIds.has(a.id) && !this.rejectedIds.has(a.id));
   }
 
   getAllActions(): OptimisticAction<T>[] {

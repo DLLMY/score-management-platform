@@ -1,7 +1,12 @@
 from models import db
 from models.study_guide import StudyGuide, ImprovementPlan
 from utils.permission import get_current_admin
-from utils.entity_guard import require_class, class_not_found_response, require_student, student_not_found_response
+from utils.entity_guard import (
+    require_class,
+    class_not_found_response,
+    require_student,
+    student_not_found_response,
+)
 from services.entity_names import names
 
 

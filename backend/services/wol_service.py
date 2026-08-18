@@ -41,7 +41,9 @@ def wake_on_lan(mac_address: str, broadcast_ip: str = "255.255.255.255", port: i
         return False
 
 
-def wake_multiple(mac_addresses: list, broadcast_ip: str = "255.255.255.255", port: int = 9) -> dict:
+def wake_multiple(
+    mac_addresses: list, broadcast_ip: str = "255.255.255.255", port: int = 9
+) -> dict:
     """
     批量唤醒多台电脑
 

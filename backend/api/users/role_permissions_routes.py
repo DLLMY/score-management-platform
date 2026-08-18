@@ -19,13 +19,19 @@ role_permission_model = ns_role_permissions.model(
 
 role_permission_list_response = ns_role_permissions.model(
     "RolePermissionListResponse",
-    {"role_permissions": fields.List(fields.Nested(role_permission_model), description="权限定义列表")},
+    {
+        "role_permissions": fields.List(
+            fields.Nested(role_permission_model), description="权限定义列表"
+        )
+    },
 )
 
 
 @ns_role_permissions.route("/")
 class RolePermissionList(Resource):
-    @ns_role_permissions.doc("list_role_permissions", description="获取权限定义列表", security="Bearer")
+    @ns_role_permissions.doc(
+        "list_role_permissions", description="获取权限定义列表", security="Bearer"
+    )
     @ns_role_permissions.response(200, "成功")
     @requires_admin
     def get(self):
@@ -51,7 +57,9 @@ class RolePermissionList(Resource):
 @ns_role_permissions.route("/<int:id>")
 @ns_role_permissions.param("id", "权限定义ID")
 class RolePermissionResource(Resource):
-    @ns_role_permissions.doc("get_role_permission", description="获取权限定义详情", security="Bearer")
+    @ns_role_permissions.doc(
+        "get_role_permission", description="获取权限定义详情", security="Bearer"
+    )
     @ns_role_permissions.response(200, "成功")
     @ns_role_permissions.response(404, "权限定义不存在")
     @requires_admin
@@ -69,8 +77,8 @@ class RolePermissionResource(Resource):
             "id": permission.id,
             "role_code": permission.role_code,
             "role_name": permission.role_name,
-        "description": permission.description,
-        "is_active": permission.is_active,
+            "description": permission.description,
+            "is_active": permission.is_active,
             "created_at": permission.created_at.isoformat() if permission.created_at else None,
             "updated_at": permission.updated_at.isoformat() if permission.updated_at else None,
         }

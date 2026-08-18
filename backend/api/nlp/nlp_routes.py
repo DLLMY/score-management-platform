@@ -146,7 +146,9 @@ train_input_model = ns_nlp.model(
         "trained_by": fields.Integer(description="训练者ID"),
         "algorithm": fields.String(description="算法类型"),
         "use_cross_validation": fields.Boolean(description="是否使用交叉验证", default=False),
-        "use_hyperparameter_tuning": fields.Boolean(description="是否使用超参数优化", default=False),
+        "use_hyperparameter_tuning": fields.Boolean(
+            description="是否使用超参数优化", default=False
+        ),
         "tuning_method": fields.String(description="优化方法(grid/random)", default="random"),
     },
 )
@@ -193,7 +195,9 @@ class NLPExecute(Resource):
 
         parser = get_nlp_parser()
         context_memory = get_context_memory()
-        result = parser.execute_scoring(text, manual_correction, context_history=context_memory)  # noqa: F841
+        result = parser.execute_scoring(
+            text, manual_correction, context_history=context_memory
+        )  # noqa: F841
 
         if result["success"]:
             if result.get("parse_result"):
@@ -202,19 +206,25 @@ class NLPExecute(Resource):
                 intent = result["parse_result"].get("intent")
 
                 if user_name:
-                    context_memory["recent_users"] = [u for u in context_memory["recent_users"] if u != user_name]
+                    context_memory["recent_users"] = [
+                        u for u in context_memory["recent_users"] if u != user_name
+                    ]
                     context_memory["recent_users"].append(user_name)
                     if len(context_memory["recent_users"]) > context_memory["max_memory_size"]:
                         context_memory["recent_users"].pop(0)
 
                 if rule_id:
-                    context_memory["recent_rules"] = [r for r in context_memory["recent_rules"] if r != rule_id]
+                    context_memory["recent_rules"] = [
+                        r for r in context_memory["recent_rules"] if r != rule_id
+                    ]
                     context_memory["recent_rules"].append(rule_id)
                     if len(context_memory["recent_rules"]) > context_memory["max_memory_size"]:
                         context_memory["recent_rules"].pop(0)
 
                 if intent:
-                    context_memory["recent_intents"] = [i for i in context_memory["recent_intents"] if i != intent]
+                    context_memory["recent_intents"] = [
+                        i for i in context_memory["recent_intents"] if i != intent
+                    ]
                     context_memory["recent_intents"].append(intent)
                     if len(context_memory["recent_intents"]) > context_memory["max_memory_size"]:
                         context_memory["recent_intents"].pop(0)
@@ -285,7 +295,9 @@ class NLPRuleList(Resource):
         sort_order = request.args.get("sort_order", "desc")
 
         service = NLPRuleManagementService()
-        result = service.get_rules(page, per_page, keyword, score_type, sort_by, sort_order)  # noqa: F841
+        result = service.get_rules(
+            page, per_page, keyword, score_type, sort_by, sort_order
+        )  # noqa: F841
 
         return APIResponse.success(data=result, message="success")
 
@@ -1064,12 +1076,20 @@ class NLPFeedbackRecord(Resource):
             corrections = []
             if corrected_name and corrected_name != original_name:
                 corrections.append(
-                    {"field_type": "name", "original_value": original_name, "corrected_value": corrected_name}
+                    {
+                        "field_type": "name",
+                        "original_value": original_name,
+                        "corrected_value": corrected_name,
+                    }
                 )
 
             if corrected_intent and corrected_intent != predicted_intent:
                 corrections.append(
-                    {"field_type": "intent", "original_value": predicted_intent, "corrected_value": corrected_intent}
+                    {
+                        "field_type": "intent",
+                        "original_value": predicted_intent,
+                        "corrected_value": corrected_intent,
+                    }
                 )
 
             if corrected_score is not None and corrected_score != original_score:
@@ -1104,7 +1124,8 @@ class NLPFeedbackRecord(Resource):
                     pass
 
                 return APIResponse.success(
-                    message="反馈已记录，纠正已保存（自学习生效）", data={"corrections_saved": saved}
+                    message="反馈已记录，纠正已保存（自学习生效）",
+                    data={"corrections_saved": saved},
                 )
 
             return APIResponse.success(message="反馈已记录")
@@ -1149,7 +1170,9 @@ class NLPCorrectionsList(Resource):
                         "status": c.status,
                         "confidence_after": c.confidence_after,
                         "learn_count": c.learn_count,
-                        "last_learned_at": c.last_learned_at.isoformat() if c.last_learned_at else None,
+                        "last_learned_at": (
+                            c.last_learned_at.isoformat() if c.last_learned_at else None
+                        ),
                         "created_at": c.created_at.isoformat(),
                         "verified_at": c.verified_at.isoformat() if c.verified_at else None,
                     }
@@ -1262,7 +1285,9 @@ class NLPParseWithAnalysis(Resource):
         # 记录分析数据
         nlp_analyzer.record_performance(total_time, components=components)
 
-        nlp_analyzer.record_intent_prediction(result.get("intent", ""), confidence=result.get("confidence", 0.0))
+        nlp_analyzer.record_intent_prediction(
+            result.get("intent", ""), confidence=result.get("confidence", 0.0)
+        )
 
         nlp_analyzer.add_request_to_history(
             {

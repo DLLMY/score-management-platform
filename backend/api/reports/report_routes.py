@@ -5,6 +5,7 @@ GET /api/reports/class-semester?class_id=<id>&format=excel|csv
 - 聚合：班级全体学生 + 各考试总分（跨科目求和）+ 当前积分余额
 - 输出：Excel（默认）/ CSV，文件名含班级名
 """
+
 from io import BytesIO
 
 from flask import request, send_file
@@ -57,15 +58,9 @@ class ClassSemesterReport(Resource):
                 .order_by(User.name)
                 .all()
             )
-            exams = (
-                Exam.query.filter_by(class_id=class_id).order_by(Exam.id).all()
-            )
+            exams = Exam.query.filter_by(class_id=class_id).order_by(Exam.id).all()
             exam_ids = [e.id for e in exams]
-            scores = (
-                Score.query.filter(Score.exam_id.in_(exam_ids)).all()
-                if exam_ids
-                else []
-            )
+            scores = Score.query.filter(Score.exam_id.in_(exam_ids)).all() if exam_ids else []
 
             # (student_id, exam_id) -> 该考试跨科目总分
             score_map = {}

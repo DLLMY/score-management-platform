@@ -12,14 +12,7 @@ interface ModalProps {
   footer?: ReactNode;
 }
 
-function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  size = 'md', 
-  footer 
-}: ModalProps) {
+function Modal({ isOpen, onClose, title, children, size = 'md', footer }: ModalProps) {
   if (!isOpen) return null;
 
   const sizeStyles: Record<ModalSize, string> = {
@@ -37,9 +30,9 @@ function Modal({
 
   return (
     <div className='fixed inset-0 z-[100] flex items-center justify-center'>
-      <div 
-        className='absolute inset-0 bg-black/50 backdrop-blur-sm' 
-        onClick={handleBackdropClick} 
+      <div
+        className='absolute inset-0 bg-black/50 backdrop-blur-sm'
+        onClick={handleBackdropClick}
       />
       <div
         className={`relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full mx-4 ${sizeStyles[size]} max-h-[85vh] flex flex-col`}

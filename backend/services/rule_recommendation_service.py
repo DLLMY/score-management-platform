@@ -442,9 +442,7 @@ class RuleRecommendationService:
                     "rule_name": r.get("rule_name") or f"规则{r.get('rule_id')}",
                     "category": r.get("rule_category") or "未分类",
                     "description": (
-                        (suggestions[0]["message"] if suggestions else "")
-                        if suggestions
-                        else ""
+                        (suggestions[0]["message"] if suggestions else "") if suggestions else ""
                     ),
                     "confidence": float(r.get("effectiveness") or 0),
                     "estimated_impact": estimated_impact,
@@ -454,9 +452,7 @@ class RuleRecommendationService:
 
         for r in combinations or []:
             rules = r.get("rules") or []
-            rules_text = " + ".join(
-                [str(rt.get("name") or f"规则{rt.get('id')}") for rt in rules]
-            )
+            rules_text = " + ".join([str(rt.get("name") or f"规则{rt.get('id')}") for rt in rules])
             unified_recommendations.append(
                 {
                     "rule_id": None,
@@ -583,7 +579,9 @@ class RuleRecommendationService:
         user_category_usage = defaultdict(set)
 
         for record in records:
-            category = getattr(record, "category", None) or record.description or "未分类" or "未分类"
+            category = (
+                getattr(record, "category", None) or record.description or "未分类" or "未分类"
+            )
             category_usage[category]["count"] += 1
             category_usage[category]["users"].add(record.student_id)
             category_usage[category]["score_sum"] += record.score_change
@@ -603,7 +601,9 @@ class RuleRecommendationService:
                         "usage_count": stats["count"],
                         "unique_users": len(stats["users"]),
                         "avg_score_change": (
-                            round(stats["score_sum"] / stats["count"], 2) if stats["count"] > 0 else 0
+                            round(stats["score_sum"] / stats["count"], 2)
+                            if stats["count"] > 0
+                            else 0
                         ),
                     }
                 )
@@ -686,7 +686,9 @@ class RuleRecommendationService:
         category_stats = defaultdict(lambda: {"record_count": 0, "user_count": 0})
 
         for record in records:
-            category = getattr(record, "category", None) or record.description or "未分类" or "未分类"
+            category = (
+                getattr(record, "category", None) or record.description or "未分类" or "未分类"
+            )
             category_stats[category]["record_count"] += 1
             category_stats[category]["user_count"] += 1
 

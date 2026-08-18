@@ -92,18 +92,21 @@ function ExamManagement(): React.ReactElement {
     handleChange: handleExamFormChange,
     setFormData: setExamFormData,
     resetForm: resetExamForm,
-  } = useForm<ExamFormData>({
-    name: '',
-    description: '',
-    subjects: ['语文', '数学', '英语'],
-    start_time: '',
-    end_time: '',
-    importance: 'medium',
-    class_id: '',
-    status: 'draft',
-  }, {
-    name: { required: true, minLength: 1, maxLength: 100 },
-  });
+  } = useForm<ExamFormData>(
+    {
+      name: '',
+      description: '',
+      subjects: ['语文', '数学', '英语'],
+      start_time: '',
+      end_time: '',
+      importance: 'medium',
+      class_id: '',
+      status: 'draft',
+    },
+    {
+      name: { required: true, minLength: 1, maxLength: 100 },
+    }
+  );
 
   // 使用 useForm 管理科目表单
   const {
@@ -111,23 +114,34 @@ function ExamManagement(): React.ReactElement {
     errors: subjectFormErrors,
     handleChange: handleSubjectFormChange,
     resetForm: resetSubjectForm,
-  } = useForm<SubjectFormData>({
-    name: '',
-    description: '',
-    color: '#10B981',
-  }, {
-    name: { required: true, minLength: 1, maxLength: 50 },
-  });
+  } = useForm<SubjectFormData>(
+    {
+      name: '',
+      description: '',
+      color: '#10B981',
+    },
+    {
+      name: { required: true, minLength: 1, maxLength: 50 },
+    }
+  );
 
   // 使用 useModal 管理考试弹窗
-  const { isOpen: showModal, open: openExamModal, close: closeExamModal } = useModal<Exam | null>({
+  const {
+    isOpen: showModal,
+    open: openExamModal,
+    close: closeExamModal,
+  } = useModal<Exam | null>({
     onClose: () => {
       resetExamForm();
     },
   });
 
   // 使用 useModal 管理科目弹窗
-  const { isOpen: showSubjectModal, open: openSubjectModal, close: closeSubjectModal } = useModal<Subject | null>({
+  const {
+    isOpen: showSubjectModal,
+    open: openSubjectModal,
+    close: closeSubjectModal,
+  } = useModal<Subject | null>({
     onClose: () => {
       resetSubjectForm();
     },
@@ -135,7 +149,7 @@ function ExamManagement(): React.ReactElement {
 
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-  
+
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -158,9 +172,17 @@ function ExamManagement(): React.ReactElement {
         api.classes.getAll(),
         api.subjects.getAll(),
       ]);
-      
-      setExams(Array.isArray(examsRes) ? examsRes as unknown as Exam[] : ((examsRes as { data?: unknown[] })?.data || []) as unknown as Exam[]);
-      setClasses(Array.isArray(classesRes) ? classesRes : ((classesRes as { classes?: ClassItem[] })?.classes || []));
+
+      setExams(
+        Array.isArray(examsRes)
+          ? (examsRes as unknown as Exam[])
+          : (((examsRes as { data?: unknown[] })?.data || []) as unknown as Exam[])
+      );
+      setClasses(
+        Array.isArray(classesRes)
+          ? classesRes
+          : (classesRes as { classes?: ClassItem[] })?.classes || []
+      );
       setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
     } catch (err: unknown) {
       showToast('error', '获取数据失败: ' + (err as Error).message);
@@ -179,47 +201,53 @@ function ExamManagement(): React.ReactElement {
     e.dataTransfer.setData('text/plain', String(index));
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, index: number): void => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (index !== draggedIndex) {
-      setDragOverIndex(index);
-    }
-  }, [draggedIndex]);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, index: number): void => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (index !== draggedIndex) {
+        setDragOverIndex(index);
+      }
+    },
+    [draggedIndex]
+  );
 
   const handleDragLeave = useCallback((): void => {
     setDragOverIndex(null);
   }, []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent, targetIndex: number): Promise<void> => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) {
+  const handleDrop = useCallback(
+    async (e: React.DragEvent, targetIndex: number): Promise<void> => {
+      e.preventDefault();
+      if (draggedIndex === null || draggedIndex === targetIndex) {
+        setDragOverIndex(null);
+        setDraggedIndex(null);
+        return;
+      }
+
+      const newSubjects = [...subjects];
+      const draggedSubject = newSubjects[draggedIndex];
+      newSubjects.splice(draggedIndex, 1);
+      newSubjects.splice(targetIndex, 0, draggedSubject);
+
+      setSubjects(newSubjects);
+
+      try {
+        const orderData = newSubjects.map((subject, idx) => ({
+          id: subject.id,
+          order: idx + 1,
+        }));
+        await api.subjects.updateOrder(orderData);
+      } catch (err) {
+        logger.error('更新科目顺序失败:', err);
+        showToast('error', '科目顺序更新失败，请重试');
+      }
+
       setDragOverIndex(null);
       setDraggedIndex(null);
-      return;
-    }
-
-    const newSubjects = [...subjects];
-    const draggedSubject = newSubjects[draggedIndex];
-    newSubjects.splice(draggedIndex, 1);
-    newSubjects.splice(targetIndex, 0, draggedSubject);
-
-    setSubjects(newSubjects);
-    
-    try {
-      const orderData = newSubjects.map((subject, idx) => ({
-        id: subject.id,
-        order: idx + 1,
-      }));
-      await api.subjects.updateOrder(orderData);
-    } catch (err) {
-      logger.error('更新科目顺序失败:', err);
-      showToast('error', '科目顺序更新失败，请重试');
-    }
-
-    setDragOverIndex(null);
-    setDraggedIndex(null);
-  }, [draggedIndex, subjects]);
+    },
+    [draggedIndex, subjects]
+  );
 
   const handleCreateExam = useCallback((): void => {
     setEditingExam(null);
@@ -227,20 +255,27 @@ function ExamManagement(): React.ReactElement {
     openExamModal(null);
   }, [resetExamForm, openExamModal]);
 
-  const handleEditExam = useCallback((exam: Exam): void => {
-    setEditingExam(exam);
-    setExamFormData({
-      name: exam.name || '',
-      description: exam.description || '',
-      subjects: exam.subjects ? (Array.isArray(exam.subjects) ? exam.subjects : exam.subjects.split(',').map((s: string) => s.trim())) : [],
-      start_time: exam.start_time ? new Date(exam.start_time).toISOString().slice(0, 16) : '',
-      end_time: exam.end_time ? new Date(exam.end_time).toISOString().slice(0, 16) : '',
-      importance: exam.importance || 'medium',
-      class_id: exam.class_id ? String(exam.class_id) : '',
-      status: exam.status || 'draft',
-    });
-    openExamModal(exam);
-  }, [setExamFormData, openExamModal]);
+  const handleEditExam = useCallback(
+    (exam: Exam): void => {
+      setEditingExam(exam);
+      setExamFormData({
+        name: exam.name || '',
+        description: exam.description || '',
+        subjects: exam.subjects
+          ? Array.isArray(exam.subjects)
+            ? exam.subjects
+            : exam.subjects.split(',').map((s: string) => s.trim())
+          : [],
+        start_time: exam.start_time ? new Date(exam.start_time).toISOString().slice(0, 16) : '',
+        end_time: exam.end_time ? new Date(exam.end_time).toISOString().slice(0, 16) : '',
+        importance: exam.importance || 'medium',
+        class_id: exam.class_id ? String(exam.class_id) : '',
+        status: exam.status || 'draft',
+      });
+      openExamModal(exam);
+    },
+    [setExamFormData, openExamModal]
+  );
 
   const handleCreateSubject = useCallback((): void => {
     setEditingSubject(null);
@@ -269,17 +304,20 @@ function ExamManagement(): React.ReactElement {
     }
   }, [subjectFormData, editingSubject, showToast, fetchData, closeSubjectModal]);
 
-  const handleDeleteSubject = useCallback(async (subject: Subject): Promise<void> => {
-    if (!window.confirm(`确定要删除科目 ${subject.name} 吗？`)) return;
+  const handleDeleteSubject = useCallback(
+    async (subject: Subject): Promise<void> => {
+      if (!window.confirm(`确定要删除科目 ${subject.name} 吗？`)) return;
 
-    try {
-      await api.subjects.delete(subject.id);
-      showToast('success', '科目删除成功');
-      fetchData();
-    } catch (err: unknown) {
-      showToast('error', '删除失败: ' + (err as Error).message);
-    }
-  }, [showDeleteConfirm, showToast, fetchData]);
+      try {
+        await api.subjects.delete(subject.id);
+        showToast('success', '科目删除成功');
+        fetchData();
+      } catch (err: unknown) {
+        showToast('error', '删除失败: ' + (err as Error).message);
+      }
+    },
+    [showDeleteConfirm, showToast, fetchData]
+  );
 
   const handleExport = useCallback(async (format: 'excel' | 'csv'): Promise<Blob> => {
     const response = await fetch(`/api/exams/export?format=${format}`, {
@@ -293,15 +331,25 @@ function ExamManagement(): React.ReactElement {
     return response.blob();
   }, []);
 
-  const handleImportComplete = useCallback((result: { success: boolean }) => {
-    if (result.success) {
-      fetchData();
-    }
-  }, [fetchData]);
+  const handleImportComplete = useCallback(
+    (result: { success: boolean }) => {
+      if (result.success) {
+        fetchData();
+      }
+    },
+    [fetchData]
+  );
 
   // P1-1: 考试导入走后端 /api/exam-import/execute（FormData: file + exam_id）
   const handleImportFile = useCallback(
-    async (file: File): Promise<{ success: boolean; message?: string; success_count?: number; failed_count?: number }> => {
+    async (
+      file: File
+    ): Promise<{
+      success: boolean;
+      message?: string;
+      success_count?: number;
+      failed_count?: number;
+    }> => {
       if (!importExamId) {
         return { success: false, message: '请先在上方选择要导入成绩的考试' };
       }
@@ -314,7 +362,12 @@ function ExamManagement(): React.ReactElement {
         headers: getAuthHeaders(),
         body: formData,
       });
-      const result = (await response.json()) as { success?: boolean; message?: string; success_count?: number; failed_count?: number };
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        success_count?: number;
+        failed_count?: number;
+      };
       if (!response.ok || result.success === false) {
         throw new Error(result.message || '导入失败');
       }
@@ -369,44 +422,53 @@ function ExamManagement(): React.ReactElement {
     }
   }, [examFormData, editingExam, showToast, fetchData, closeExamModal]);
 
-  const handlePublishExam = useCallback(async (exam: Exam): Promise<void> => {
-    if (!window.confirm(`确定要发布考试 ${exam.name} 吗？`)) return;
+  const handlePublishExam = useCallback(
+    async (exam: Exam): Promise<void> => {
+      if (!window.confirm(`确定要发布考试 ${exam.name} 吗？`)) return;
 
-    try {
-      await api.exams.publish(exam.id);
-      showToast('success', '考试发布成功');
-    } catch (err: unknown) {
-      showToast('error', '发布失败: ' + (err as Error).message);
-    } finally {
-      fetchData();
-    }
-  }, [showDeleteConfirm, showToast, fetchData]);
+      try {
+        await api.exams.publish(exam.id);
+        showToast('success', '考试发布成功');
+      } catch (err: unknown) {
+        showToast('error', '发布失败: ' + (err as Error).message);
+      } finally {
+        fetchData();
+      }
+    },
+    [showDeleteConfirm, showToast, fetchData]
+  );
 
-  const handleCloseExam = useCallback(async (exam: Exam): Promise<void> => {
-    if (!window.confirm(`确定要结束考试 ${exam.name} 吗？`)) return;
+  const handleCloseExam = useCallback(
+    async (exam: Exam): Promise<void> => {
+      if (!window.confirm(`确定要结束考试 ${exam.name} 吗？`)) return;
 
-    try {
-      await api.exams.close(exam.id);
-      showToast('success', '考试已结束');
-    } catch (err: unknown) {
-      showToast('error', '操作失败: ' + (err as Error).message);
-    } finally {
-      fetchData();
-    }
-  }, [showDeleteConfirm, showToast, fetchData]);
+      try {
+        await api.exams.close(exam.id);
+        showToast('success', '考试已结束');
+      } catch (err: unknown) {
+        showToast('error', '操作失败: ' + (err as Error).message);
+      } finally {
+        fetchData();
+      }
+    },
+    [showDeleteConfirm, showToast, fetchData]
+  );
 
-  const handleDeleteExam = useCallback(async (exam: Exam): Promise<void> => {
-    if (!window.confirm(`确定要删除考试 ${exam.name} 吗？`)) return;
+  const handleDeleteExam = useCallback(
+    async (exam: Exam): Promise<void> => {
+      if (!window.confirm(`确定要删除考试 ${exam.name} 吗？`)) return;
 
-    try {
-      await api.exams.delete(exam.id);
-      showToast('success', '考试删除成功');
-    } catch (err: unknown) {
-      showToast('error', '删除失败: ' + (err as Error).message);
-    } finally {
-      fetchData();
-    }
-  }, [showDeleteConfirm, showToast, fetchData]);
+      try {
+        await api.exams.delete(exam.id);
+        showToast('success', '考试删除成功');
+      } catch (err: unknown) {
+        showToast('error', '删除失败: ' + (err as Error).message);
+      } finally {
+        fetchData();
+      }
+    },
+    [showDeleteConfirm, showToast, fetchData]
+  );
 
   const getStatusBadge = (status?: string): React.ReactElement => {
     const styles: Record<string, string> = {
@@ -420,7 +482,9 @@ function ExamManagement(): React.ReactElement {
       closed: '已结束',
     };
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status || 'draft']}`}>
+      <span
+        className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status || 'draft']}`}
+      >
         {labels[status || 'draft'] || status}
       </span>
     );
@@ -438,7 +502,11 @@ function ExamManagement(): React.ReactElement {
       high: '高',
     };
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[importance || 'medium']}`}>
+      <span
+        className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          styles[importance || 'medium']
+        }`}
+      >
         {labels[importance || 'medium'] || importance}
       </span>
     );
@@ -463,16 +531,18 @@ function ExamManagement(): React.ReactElement {
           >
             <option value={0}>导入到考试…</option>
             {exams.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
             ))}
           </select>
           <ImportExportPanel
-            type="exam"
+            type='exam'
             showExport={true}
             showImport={true}
             showTemplate={true}
-            exportUrl="/api/exams/export"
-            templateUrl="/api/exam-import/template"
+            exportUrl='/api/exams/export'
+            templateUrl='/api/exam-import/template'
             onDataExport={handleExport}
             onDataImport={handleImportFile}
             onImportComplete={handleImportComplete}
@@ -507,7 +577,10 @@ function ExamManagement(): React.ReactElement {
                 onChange: setSelectedClass,
                 options: [
                   { label: '全部班级', value: '' },
-                  ...classes.map((cls: { id: number; name: string }) => ({ label: cls.name, value: String(cls.id) })),
+                  ...classes.map((cls: { id: number; name: string }) => ({
+                    label: cls.name,
+                    value: String(cls.id),
+                  })),
                 ],
               },
             ]}
@@ -547,9 +620,7 @@ function ExamManagement(): React.ReactElement {
                           <Calendar className='w-5 h-5 text-white' />
                         </div>
                         <div className='ml-4'>
-                          <div className='text-sm font-medium text-gray-900'>
-                            {exam.name}
-                          </div>
+                          <div className='text-sm font-medium text-gray-900'>{exam.name}</div>
                           <div className='text-sm text-gray-500'>
                             {exam.class_name || '全部班级'}
                           </div>
@@ -558,14 +629,18 @@ function ExamManagement(): React.ReactElement {
                     </td>
                     <td className='px-6 py-4'>
                       <div className='text-sm text-gray-900'>
-                        {Array.isArray(exam.subjects) ? exam.subjects.join(', ') : exam.subjects || '-'}
+                        {Array.isArray(exam.subjects)
+                          ? exam.subjects.join(', ')
+                          : exam.subjects || '-'}
                       </div>
                     </td>
                     <td className='px-6 py-4 whitespace-nowrap'>
                       <div className='text-sm text-gray-900'>
                         <div className='flex items-center gap-1'>
                           <Clock className='w-4 h-4 text-gray-400' />
-                          {exam.start_time ? new Date(exam.start_time).toLocaleString('zh-CN') : '-'}
+                          {exam.start_time
+                            ? new Date(exam.start_time).toLocaleString('zh-CN')
+                            : '-'}
                         </div>
                         {exam.end_time && (
                           <div className='text-gray-500 text-xs mt-1'>
@@ -583,19 +658,37 @@ function ExamManagement(): React.ReactElement {
                     <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
                       {exam.status === 'draft' && (
                         <>
-                          <Button variant='secondary' size='sm' onClick={() => handleEditExam(exam)}>
+                          <Button
+                            variant='secondary'
+                            size='sm'
+                            onClick={() => handleEditExam(exam)}
+                          >
                             <Edit2 className='w-4 h-4' />
                           </Button>
-                          <PermissionButton permission='exam.manage' size='sm' onClick={() => handlePublishExam(exam)}>
+                          <PermissionButton
+                            permission='exam.manage'
+                            size='sm'
+                            onClick={() => handlePublishExam(exam)}
+                          >
                             <CheckCircle className='w-4 h-4' />
                           </PermissionButton>
-                          <PermissionButton permission='exam.manage' variant='danger' size='sm' onClick={() => handleDeleteExam(exam)}>
+                          <PermissionButton
+                            permission='exam.manage'
+                            variant='danger'
+                            size='sm'
+                            onClick={() => handleDeleteExam(exam)}
+                          >
                             <Trash2 className='w-4 h-4' />
                           </PermissionButton>
                         </>
                       )}
                       {exam.status === 'published' && (
-                        <PermissionButton permission='exam.manage' variant='secondary' size='sm' onClick={() => handleCloseExam(exam)}>
+                        <PermissionButton
+                          permission='exam.manage'
+                          variant='secondary'
+                          size='sm'
+                          onClick={() => handleCloseExam(exam)}
+                        >
                           <XCircle className='w-4 h-4' />
                         </PermissionButton>
                       )}
@@ -635,7 +728,9 @@ function ExamManagement(): React.ReactElement {
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
               placeholder='请输入考试名称'
             />
-            {examFormErrors.name && <p className='text-sm text-red-500 mt-1'>{examFormErrors.name}</p>}
+            {examFormErrors.name && (
+              <p className='text-sm text-red-500 mt-1'>{examFormErrors.name}</p>
+            )}
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>考试说明</label>
@@ -650,60 +745,65 @@ function ExamManagement(): React.ReactElement {
           <div>
             <div className='flex items-center justify-between mb-1'>
               <label className='block text-sm font-medium text-gray-700'>考试科目 *</label>
-              <PermissionButton permission='subject.manage' variant='secondary' size='sm' onClick={handleCreateSubject}>
+              <PermissionButton
+                permission='subject.manage'
+                variant='secondary'
+                size='sm'
+                onClick={handleCreateSubject}
+              >
                 + 添加科目
               </PermissionButton>
             </div>
             <div className='space-y-1'>
-                  {subjects.map((subject, index) => (
-                    <label
-                      key={subject.id}
-                      className={`flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all duration-200 ${
-                        draggedIndex === index
-                          ? 'opacity-50 scale-95'
-                          : dragOverIndex === index
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-gray-200'
-                      }`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, index)}
-                    >
-                      <GripVertical className='w-4 h-4 text-gray-400 cursor-grab hover:text-gray-600' />
-                      <input
-                        type='checkbox'
-                        checked={examFormData.subjects.includes(subject.name)}
-                        onChange={(e) => {
-                          const newSubjects = e.target.checked
-                            ? [...examFormData.subjects, subject.name]
-                            : examFormData.subjects.filter((s) => s !== subject.name);
-                          handleExamFormChange('subjects', newSubjects);
-                        }}
-                        className='w-4 h-4 text-primary-600 rounded focus:ring-primary-500'
-                      />
-                      <span
-                        className='w-3 h-3 rounded-full'
-                        style={{ backgroundColor: subject.color }}
-                      />
-                      <span className='text-sm text-gray-700'>{subject.name}</span>
-                      {subject.description && (
-                        <span className='text-xs text-gray-400 ml-auto'>{subject.description}</span>
-                      )}
-                      <Button
-                        variant='danger'
-                        size='xs'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSubject(subject);
-                        }}
-                      >
-                        删除
-                      </Button>
-                    </label>
-                  ))}
-                </div>
+              {subjects.map((subject, index) => (
+                <label
+                  key={subject.id}
+                  className={`flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all duration-200 ${
+                    draggedIndex === index
+                      ? 'opacity-50 scale-95'
+                      : dragOverIndex === index
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200'
+                  }`}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                >
+                  <GripVertical className='w-4 h-4 text-gray-400 cursor-grab hover:text-gray-600' />
+                  <input
+                    type='checkbox'
+                    checked={examFormData.subjects.includes(subject.name)}
+                    onChange={(e) => {
+                      const newSubjects = e.target.checked
+                        ? [...examFormData.subjects, subject.name]
+                        : examFormData.subjects.filter((s) => s !== subject.name);
+                      handleExamFormChange('subjects', newSubjects);
+                    }}
+                    className='w-4 h-4 text-primary-600 rounded focus:ring-primary-500'
+                  />
+                  <span
+                    className='w-3 h-3 rounded-full'
+                    style={{ backgroundColor: subject.color }}
+                  />
+                  <span className='text-sm text-gray-700'>{subject.name}</span>
+                  {subject.description && (
+                    <span className='text-xs text-gray-400 ml-auto'>{subject.description}</span>
+                  )}
+                  <Button
+                    variant='danger'
+                    size='xs'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSubject(subject);
+                    }}
+                  >
+                    删除
+                  </Button>
+                </label>
+              ))}
+            </div>
             {subjects.length === 0 && (
               <p className='text-sm text-gray-500 text-center py-4'>暂无科目，请先添加科目</p>
             )}
@@ -732,7 +832,9 @@ function ExamManagement(): React.ReactElement {
             <label className='block text-sm font-medium text-gray-700 mb-1'>重要性</label>
             <select
               value={examFormData.importance}
-              onChange={(e) => handleExamFormChange('importance', e.target.value as 'low' | 'medium' | 'high')}
+              onChange={(e) =>
+                handleExamFormChange('importance', e.target.value as 'low' | 'medium' | 'high')
+              }
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             >
               <option value='low'>低</option>
@@ -744,7 +846,9 @@ function ExamManagement(): React.ReactElement {
             <label className='block text-sm font-medium text-gray-700 mb-1'>状态</label>
             <select
               value={examFormData.status}
-              onChange={(e) => handleExamFormChange('status', e.target.value as 'draft' | 'published' | 'closed')}
+              onChange={(e) =>
+                handleExamFormChange('status', e.target.value as 'draft' | 'published' | 'closed')
+              }
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             >
               <option value='draft'>草稿</option>
@@ -768,7 +872,9 @@ function ExamManagement(): React.ReactElement {
             </select>
           </div>
           <div className='flex space-x-3 pt-4'>
-            <Button onClick={() => runExamSubmit(handleSaveExam)} disabled={examSubmitting}>保存</Button>
+            <Button onClick={() => runExamSubmit(handleSaveExam)} disabled={examSubmitting}>
+              保存
+            </Button>
             <Button variant='secondary' onClick={closeExamModal}>
               取消
             </Button>
@@ -791,7 +897,9 @@ function ExamManagement(): React.ReactElement {
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
               placeholder='请输入科目名称'
             />
-            {subjectFormErrors.name && <p className='text-sm text-red-500 mt-1'>{subjectFormErrors.name}</p>}
+            {subjectFormErrors.name && (
+              <p className='text-sm text-red-500 mt-1'>{subjectFormErrors.name}</p>
+            )}
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>科目描述</label>
@@ -829,7 +937,6 @@ function ExamManagement(): React.ReactElement {
           </div>
         </div>
       </Modal>
-
     </div>
   );
 }

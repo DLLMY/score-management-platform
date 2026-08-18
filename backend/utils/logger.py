@@ -24,14 +24,20 @@ console_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
 
 # 创建文件处理器（带轮转）
 file_handler = RotatingFileHandler(
-    os.path.join(LOG_DIR, "app.log"), maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"  # 10MB  # 保留5个备份
+    os.path.join(LOG_DIR, "app.log"),
+    maxBytes=10 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8",  # 10MB  # 保留5个备份
 )
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
 
 # 创建错误日志处理器
 error_handler = RotatingFileHandler(
-    os.path.join(LOG_DIR, "error.log"), maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"  # 5MB
+    os.path.join(LOG_DIR, "error.log"),
+    maxBytes=5 * 1024 * 1024,
+    backupCount=3,
+    encoding="utf-8",  # 5MB
 )
 error_handler.setLevel(logging.ERROR)
 error_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
@@ -106,7 +112,13 @@ def log_critical(message, exception=None, **kwargs):
 
 
 def log_operation(
-    operation_type, target_type=None, target_id=None, description=None, before_data=None, after_data=None, operator=None
+    operation_type,
+    target_type=None,
+    target_id=None,
+    description=None,
+    before_data=None,
+    after_data=None,
+    operator=None,
 ):
     """记录操作日志到数据库。
 
@@ -144,8 +156,12 @@ def log_operation(
             target_type=target_type,
             target_id=target_id,
             description=description,
-            before_data=json.dumps(before_data, ensure_ascii=False, default=str) if before_data else None,
-            after_data=json.dumps(after_data, ensure_ascii=False, default=str) if after_data else None,
+            before_data=(
+                json.dumps(before_data, ensure_ascii=False, default=str) if before_data else None
+            ),
+            after_data=(
+                json.dumps(after_data, ensure_ascii=False, default=str) if after_data else None
+            ),
             operator=operator,
             user_id=user_id,
             ip_address=ip_address,
@@ -197,7 +213,13 @@ def log_frontend_error(error_data):
         timestamp = error_data.get("timestamp", datetime.now().isoformat())
         url = error_data.get("url", "unknown")
 
-        log_error(f"前端错误: {error}", stack=stack, component_stack=component_stack, url=url, timestamp=timestamp)
+        log_error(
+            f"前端错误: {error}",
+            stack=stack,
+            component_stack=component_stack,
+            url=url,
+            timestamp=timestamp,
+        )
         return True
     except Exception as e:
         log_error(f"记录前端错误日志失败: {e}", exception=e)
@@ -244,7 +266,10 @@ def log_security_event(event_type, description, **kwargs):
         # 创建安全日志处理器（如果不存在）
         if not security_logger.handlers:
             security_handler = RotatingFileHandler(
-                os.path.join(LOG_DIR, "security.log"), maxBytes=10 * 1024 * 1024, backupCount=10, encoding="utf-8"
+                os.path.join(LOG_DIR, "security.log"),
+                maxBytes=10 * 1024 * 1024,
+                backupCount=10,
+                encoding="utf-8",
             )
             security_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
             security_logger.addHandler(security_handler)
@@ -305,7 +330,9 @@ def log_token_issue(token_type, admin_id=None, success=True, reason=None):
     if reason:
         description += f" | 原因: {reason}"
 
-    log_security_event(event_type, description, token_type=token_type, admin_id=admin_id, success=success)
+    log_security_event(
+        event_type, description, token_type=token_type, admin_id=admin_id, success=success
+    )
 
 
 def log_data_access(operation, data_type, record_count=0, admin_id=None):
@@ -320,7 +347,12 @@ def log_data_access(operation, data_type, record_count=0, admin_id=None):
 
     description = f"数据{operation}: {data_type} | 记录数: {record_count}"
     log_security_event(
-        event_type, description, operation=operation, data_type=data_type, record_count=record_count, admin_id=admin_id
+        event_type,
+        description,
+        operation=operation,
+        data_type=data_type,
+        record_count=record_count,
+        admin_id=admin_id,
     )
 
 
@@ -331,7 +363,11 @@ def log_request_middleware(app):
     @app.before_request
     def before_request():
         request.start_time = datetime.now()
-        log_debug(f"请求开始: {request.method} {request.path}", query=dict(request.args), client_ip=request.remote_addr)
+        log_debug(
+            f"请求开始: {request.method} {request.path}",
+            query=dict(request.args),
+            client_ip=request.remote_addr,
+        )
 
     @app.after_request
     def after_request(response):
@@ -339,7 +375,12 @@ def log_request_middleware(app):
             duration = (datetime.now() - request.start_time).microseconds // 1000
         else:
             duration = None
-        log_access(endpoint=request.path, method=request.method, status_code=response.status_code, duration=duration)
+        log_access(
+            endpoint=request.path,
+            method=request.method,
+            status_code=response.status_code,
+            duration=duration,
+        )
         return response
 
     @app.errorhandler(Exception)

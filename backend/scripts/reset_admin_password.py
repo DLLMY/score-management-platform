@@ -29,7 +29,10 @@ def reset_admin_password(new_password=None):
         else:
             print("未找到admin用户")
             admin = Admin(
-                username="admin", password=hash_password(new_password), role="super_admin", real_name="超级管理员"
+                username="admin",
+                password=hash_password(new_password),
+                role="super_admin",
+                real_name="超级管理员",
             )
             db.session.add(admin)
             db.session.commit()

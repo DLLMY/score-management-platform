@@ -72,8 +72,9 @@ def delete_firmware_version(firmware):
     return None
 
 
-def report_ota_status(status, device_id, device_name=None, from_version=None,
-                      to_version=None, error_message=None):
+def report_ota_status(
+    status, device_id, device_name=None, from_version=None, to_version=None, error_message=None
+):
     """处理 OTA 上报（started / completed / failed）的事务逻辑。
 
     入参已从请求解析；device_id / status 非空校验由路由负责。
@@ -147,8 +148,16 @@ def report_ota_status(status, device_id, device_name=None, from_version=None,
         return
 
 
-def create_uploaded_firmware(version, description, file_path, file_size, md5_hex,
-                             min_compatible_version, is_mandatory, created_by=None):
+def create_uploaded_firmware(
+    version,
+    description,
+    file_path,
+    file_size,
+    md5_hex,
+    min_compatible_version,
+    is_mandatory,
+    created_by=None,
+):
     """上传固件：创建 FirmwareVersion 记录并落库 + 写操作日志。返回新建 id。
 
     文件保存 / MD5 计算 / 扩展名校验由路由负责，service 只做落库。

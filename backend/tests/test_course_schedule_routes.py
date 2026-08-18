@@ -89,7 +89,9 @@ class TestCourseScheduleRoutes:
         assert sched["classroom"] == "202"
 
     def test_update_schedule_404(self, client, auth_headers, schedule_payload):
-        resp = client.put("/api/course-schedules/999999", json=schedule_payload, headers=auth_headers)
+        resp = client.put(
+            "/api/course-schedules/999999", json=schedule_payload, headers=auth_headers
+        )
         assert resp.status_code == 404
 
     def test_delete_schedule(self, client, auth_headers, schedule_payload):
@@ -125,7 +127,9 @@ class TestCourseScheduleRoutes:
         assert data["success_count"] == 1
         assert data["failed_count"] == 0
 
-    def test_import_json_existing_slot_conflict(self, client, auth_headers, schedule_payload, seeded_schedule):
+    def test_import_json_existing_slot_conflict(
+        self, client, auth_headers, schedule_payload, seeded_schedule
+    ):
         # 先建一条 day_of_week=0 period_number=1
         create = client.post("/api/course-schedules/", json=schedule_payload, headers=auth_headers)
         assert create.status_code == 201

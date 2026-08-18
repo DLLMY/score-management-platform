@@ -29,7 +29,9 @@ except ImportError:
     import logging
 
     def create_admin_notification(**kwargs):
-        logging.getLogger(__name__).warning("admin_notifications_routes 导入失败，成绩变动相关的管理员通知被静默丢弃")
+        logging.getLogger(__name__).warning(
+            "admin_notifications_routes 导入失败，成绩变动相关的管理员通知被静默丢弃"
+        )
         return None
 
 
@@ -53,16 +55,22 @@ def check_rule_limits(user_id, rule_id):
 
     if rule.daily_limit > 0:
         today_count = ScoreRecord.query.filter(
-            ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id, ScoreRecord.created_at >= today_start
+            ScoreRecord.student_id == user_id,
+            ScoreRecord.rule_id == rule_id,
+            ScoreRecord.created_at >= today_start,
         ).count()
         if today_count >= rule.daily_limit:
             return False, f"该规则今日已使用{today_count}次，达到上限{rule.daily_limit}次"
 
     if rule.min_interval > 0:
         # F1 修复: Query 对象恒真，须 .first() 取记录，否则 last_record.created_at 抛 AttributeError → 500
-        last_record = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id).order_by(
-            ScoreRecord.created_at.desc()
-        ).first()
+        last_record = (
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id
+            )
+            .order_by(ScoreRecord.created_at.desc())
+            .first()
+        )
         if last_record:
             time_diff = (now - last_record.created_at).total_seconds()
             if time_diff < rule.min_interval:
@@ -84,7 +92,9 @@ def _apply_score_data_isolation(query):
         return query
     if not allowed_classes:
         return query.filter(False)
-    return query.filter(exists().where((User.id == ScoreRecord.student_id) & (User.class_name.in_(allowed_classes))))
+    return query.filter(
+        exists().where((User.id == ScoreRecord.student_id) & (User.class_name.in_(allowed_classes)))
+    )
 
 
 def _can_access_student(user_id):
@@ -178,7 +188,9 @@ class RecordList(Resource):
         end_date = request.args.get("end_date")
 
         # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
-        query = ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
+        query = ScoreRecord.query.options(
+            joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule)
+        )
         if user_id:
             query = query.filter(ScoreRecord.student_id == user_id)
         if rule_id:
@@ -209,7 +221,7 @@ class RecordList(Resource):
                     {
                         "id": r.id,
                         "user_id": r.student_id,
-"student_id": r.student_id,
+                        "student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "rule_id": r.rule_id,
                         "rule_name": r.rule.name if r.rule else None,
@@ -285,6 +297,7 @@ class RecordList(Resource):
         # R4: 手动创建积分记录同样触发综合评分重算（原仅 score-entry 路径触发 → 两套行为）
         try:
             from services.composite_score_service import CompositeScoreService
+
             CompositeScoreService.recalculate_user_score(user_id)
         except Exception:
             pass
@@ -305,7 +318,9 @@ class RecordList(Resource):
         except Exception:
             pass
 
-        return APIResponse.success(data={"record_id": record.id}, message="记录创建成功", status_code=201)
+        return APIResponse.success(
+            data={"record_id": record.id}, message="记录创建成功", status_code=201
+        )
 
 
 @ns_records.route("/user/<int:user_id>")
@@ -345,7 +360,7 @@ class RecordByUser(Resource):
                     {
                         "id": r.id,
                         "user_id": r.student_id,
-"student_id": r.student_id,
+                        "student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "rule_id": r.rule_id,
                         "rule_name": r.rule.name if r.rule else None,
@@ -434,10 +449,18 @@ class RecordStatistics(Resource):
         stats = (
             db.session.query(
                 func.coalesce(
-                    func.sum(case((ScoreRecord.score_change > 0, ScoreRecord.score_change), else_=0)), 0
+                    func.sum(
+                        case((ScoreRecord.score_change > 0, ScoreRecord.score_change), else_=0)
+                    ),
+                    0,
                 ).label("total_add"),
                 func.coalesce(
-                    func.abs(func.sum(case((ScoreRecord.score_change < 0, ScoreRecord.score_change), else_=0))), 0
+                    func.abs(
+                        func.sum(
+                            case((ScoreRecord.score_change < 0, ScoreRecord.score_change), else_=0)
+                        )
+                    ),
+                    0,
                 ).label("total_subtract"),
             )
             .filter(ScoreRecord.id.in_(query.with_entities(ScoreRecord.id)))
@@ -448,7 +471,9 @@ class RecordStatistics(Resource):
         total_subtract = float(stats.total_subtract) if stats else 0
 
         today = datetime.now().date()
-        today_records = ScoreRecord.query.filter(ScoreRecord.created_at >= datetime.combine(today, datetime.min.time()))
+        today_records = ScoreRecord.query.filter(
+            ScoreRecord.created_at >= datetime.combine(today, datetime.min.time())
+        )
         if user_id:
             today_records = today_records.filter(ScoreRecord.student_id == user_id)
         today_count = today_records.count()
@@ -489,7 +514,13 @@ class ScoreEntryResource(Resource):
         # 获取积分规则列表
         rules = ScoreRule.query.filter_by(is_active=True).all()
         rule_list = [
-            {"id": r.id, "name": r.name, "score": r.score, "description": r.description, "category_id": r.category_id}
+            {
+                "id": r.id,
+                "name": r.name,
+                "score": r.score,
+                "description": r.description,
+                "category_id": r.category_id,
+            }
             for r in rules
         ]
 
@@ -579,7 +610,10 @@ class ScoreEntryResource(Resource):
         user_name = user.name
 
         # 使用缓存获取排名规则（仅用于排名变动通知的 before/after 对比，不改写积分）
-        from api.scores.rank_routes import _find_rank_by_score_binary_search, _get_active_rank_rules_cached
+        from api.scores.rank_routes import (
+            _find_rank_by_score_binary_search,
+            _get_active_rank_rules_cached,
+        )
 
         before_rules = _get_active_rank_rules_cached()
         before_rank = _find_rank_by_score_binary_search(before_rules, before_score)
@@ -610,10 +644,14 @@ class ScoreEntryResource(Resource):
 
                 # 支持字典和对象两种格式
                 rank_icon = (
-                    after_rank.get("icon") if isinstance(after_rank, dict) else getattr(after_rank, "icon", "Minus")
+                    after_rank.get("icon")
+                    if isinstance(after_rank, dict)
+                    else getattr(after_rank, "icon", "Minus")
                 )
                 rank_color = (
-                    after_rank.get("color") if isinstance(after_rank, dict) else getattr(after_rank, "color", "#9CA3AF")
+                    after_rank.get("color")
+                    if isinstance(after_rank, dict)
+                    else getattr(after_rank, "color", "#9CA3AF")
                 )
                 notification = {
                     "type": "rank_change",
@@ -631,7 +669,9 @@ class ScoreEntryResource(Resource):
                 }
                 publish_mqtt("phonebox/rank_change", notification)
                 publish_mqtt(f"phonebox/rank_change/{user.card_id}", notification)
-                print(f"[Rank] 排名变动通知已发送: {user_name} {before_rank_name} -> {after_rank_name}")
+                print(
+                    f"[Rank] 排名变动通知已发送: {user_name} {before_rank_name} -> {after_rank_name}"
+                )
             except Exception as e:
                 print(f"[Rank] 发送排名变动通知失败: {e}")
 
@@ -640,7 +680,11 @@ class ScoreEntryResource(Resource):
 
             # 构建积分变化消息文本
             score_change_str = f"{score_change:+g}" if score_change > 0 else str(score_change)
-            text_parts = [f"学生:{user_name}", f"{score_change_str}分", f"原因:{description or '积分变动'}"]
+            text_parts = [
+                f"学生:{user_name}",
+                f"{score_change_str}分",
+                f"原因:{description or '积分变动'}",
+            ]
             # 如果有规则名称，添加到原因中
             if rule_id:
                 rule = get_by_id(ScoreRule, rule_id)
@@ -649,8 +693,10 @@ class ScoreEntryResource(Resource):
 
             score_change_text = ", ".join(text_parts)
 
-            allowed, check_message, reason_code, rule_info = ClassTimeChecker.is_notification_allowed(
-                target_class_info_id=getattr(user, "class_info_id", None), force_send=False
+            allowed, check_message, reason_code, rule_info = (
+                ClassTimeChecker.is_notification_allowed(
+                    target_class_info_id=getattr(user, "class_info_id", None), force_send=False
+                )
             )
             if allowed:
                 score_notification = {
@@ -663,8 +709,13 @@ class ScoreEntryResource(Resource):
                 print(f"[ScoreChange] 积分变动通知已发送: {score_change_text}")
             else:
                 ClassTimeChecker.log_notify_audit(
-                    "score_change", getattr(user, "class_info_id", None), None,
-                    {"text": score_change_text}, reason_code or "GLOBAL_TIME_RULE", check_message, force_send=False,
+                    "score_change",
+                    getattr(user, "class_info_id", None),
+                    None,
+                    {"text": score_change_text},
+                    reason_code or "GLOBAL_TIME_RULE",
+                    check_message,
+                    force_send=False,
                 )
                 print(f"[ScoreChange] 积分变动通知被拦截（上课时间）: {score_change_text}")
 
@@ -699,7 +750,9 @@ class ScoreEntryResource(Resource):
             result = CompositeScoreService.recalculate_user_score(user_id)  # noqa: F841
             if result:
                 composite_score_updated = True
-                print(f"[CompositeScore] 用户{user_id}综合评分已更新: {result.get('composite_score')}")
+                print(
+                    f"[CompositeScore] 用户{user_id}综合评分已更新: {result.get('composite_score')}"
+                )
         except Exception as e:
             print(f"[CompositeScore] 综合评分更新失败: {e}")
 
@@ -846,6 +899,7 @@ class BatchScoreEntryResource(Resource):
         if results:
             try:
                 from services.composite_score_service import CompositeScoreService
+
                 for uid in {item["user"].id for item in created_records}:
                     CompositeScoreService.recalculate_user_score(uid)
             except Exception:
@@ -983,10 +1037,13 @@ class RecordResource(Resource):
         # R4: 删除回滚后触发综合评分重算
         try:
             from services.composite_score_service import CompositeScoreService
+
             CompositeScoreService.recalculate_user_score(record.student_id)
         except Exception:
             pass
 
         print(f"[Record] 删除记录: id={id}, user={user_name}, score_change={record.score_change}")
 
-        return APIResponse.success(data={"rollback_score": -record.score_change}, message="记录删除成功")
+        return APIResponse.success(
+            data={"rollback_score": -record.score_change}, message="记录删除成功"
+        )

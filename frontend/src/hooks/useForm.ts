@@ -20,7 +20,9 @@ export interface UseFormResult<T> {
   isSubmitting: boolean;
   touched: Set<keyof T>;
   handleChange: <K extends keyof T>(field: K, value: T[K]) => void;
-  handleChangeEvent: <K extends keyof T>(field: K) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  handleChangeEvent: <K extends keyof T>(
+    field: K
+  ) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleSubmit: (onSubmit: (data: T) => Promise<void>) => (e: React.FormEvent) => Promise<void>;
   setFormData: (data: Partial<T> | ((prev: T) => Partial<T>)) => void;
   resetForm: () => void;
@@ -40,77 +42,91 @@ export function useForm<T extends Record<string, unknown>>(
   const [touched, setTouched] = useState<Set<keyof T>>(new Set());
   const initialDataRef = useRef(initialData);
 
-  const validateValue = useCallback((field: keyof T, value: unknown): string | undefined => {
-    const rule = validationRules?.[field];
-    if (!rule) return undefined;
+  const validateValue = useCallback(
+    (field: keyof T, value: unknown): string | undefined => {
+      const rule = validationRules?.[field];
+      if (!rule) return undefined;
 
-    if (rule.required && (value === undefined || value === null || value === '')) {
-      return '此字段为必填项';
-    }
-
-    if (rule.required && Array.isArray(value) && value.length === 0) {
-      return '此字段为必填项';
-    }
-
-    if (typeof value === 'string') {
-      if (rule.minLength !== undefined && value.length < rule.minLength) {
-        return `最少需要 ${rule.minLength} 个字符`;
+      if (rule.required && (value === undefined || value === null || value === '')) {
+        return '此字段为必填项';
       }
-      if (rule.maxLength !== undefined && value.length > rule.maxLength) {
-        return `最多允许 ${rule.maxLength} 个字符`;
-      }
-      if (rule.pattern && !rule.pattern.test(value)) {
-        return '格式不正确';
-      }
-    }
 
-    if (typeof value === 'number') {
-      if (rule.min !== undefined && value < rule.min) {
-        return `最小值为 ${rule.min}`;
+      if (rule.required && Array.isArray(value) && value.length === 0) {
+        return '此字段为必填项';
       }
-      if (rule.max !== undefined && value > rule.max) {
-        return `最大值为 ${rule.max}`;
+
+      if (typeof value === 'string') {
+        if (rule.minLength !== undefined && value.length < rule.minLength) {
+          return `最少需要 ${rule.minLength} 个字符`;
+        }
+        if (rule.maxLength !== undefined && value.length > rule.maxLength) {
+          return `最多允许 ${rule.maxLength} 个字符`;
+        }
+        if (rule.pattern && !rule.pattern.test(value)) {
+          return '格式不正确';
+        }
       }
-    }
 
-    if (rule.validate) {
-      return rule.validate(value);
-    }
+      if (typeof value === 'number') {
+        if (rule.min !== undefined && value < rule.min) {
+          return `最小值为 ${rule.min}`;
+        }
+        if (rule.max !== undefined && value > rule.max) {
+          return `最大值为 ${rule.max}`;
+        }
+      }
 
-    return undefined;
-  }, [validationRules]);
+      if (rule.validate) {
+        return rule.validate(value);
+      }
+
+      return undefined;
+    },
+    [validationRules]
+  );
 
   const validateFieldRef = useRef<(<K extends keyof T>(field: K) => boolean) | null>(null);
 
-  const validateField = useCallback(<K extends keyof T>(field: K) => {
-    const error = validateValue(field, formData[field]);
-    setErrorsState((prev) => ({
-      ...prev,
-      [field]: error,
-    }));
-    return !error;
-  }, [validateValue, formData]);
+  const validateField = useCallback(
+    <K extends keyof T>(field: K) => {
+      const error = validateValue(field, formData[field]);
+      setErrorsState((prev) => ({
+        ...prev,
+        [field]: error,
+      }));
+      return !error;
+    },
+    [validateValue, formData]
+  );
 
   validateFieldRef.current = validateField;
 
-  const handleChange = useCallback(<K extends keyof T>(field: K, value: T[K]) => {
-    setFormDataState((prev) => ({ ...prev, [field]: value }));
-    if (touched.has(field)) {
-      validateFieldRef.current?.(field);
-    }
-  }, [touched]);
+  const handleChange = useCallback(
+    <K extends keyof T>(field: K, value: T[K]) => {
+      setFormDataState((prev) => ({ ...prev, [field]: value }));
+      if (touched.has(field)) {
+        validateFieldRef.current?.(field);
+      }
+    },
+    [touched]
+  );
 
-  const handleChangeEvent = useCallback(<K extends keyof T>(field: K) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const target = e.target;
-    const value = target.type === 'checkbox'
-      ? (target as HTMLInputElement).checked
-      : target.type === 'number'
-      ? target.value === '' ? '' : Number(target.value)
-      : target.value;
-    handleChange(field, value as T[K]);
-  }, [handleChange]);
+  const handleChangeEvent = useCallback(
+    <K extends keyof T>(field: K) =>
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const target = e.target;
+        const value =
+          target.type === 'checkbox'
+            ? (target as HTMLInputElement).checked
+            : target.type === 'number'
+            ? target.value === ''
+              ? ''
+              : Number(target.value)
+            : target.value;
+        handleChange(field, value as T[K]);
+      },
+    [handleChange]
+  );
 
   const validateAll = useCallback((): boolean => {
     const newErrors: FormErrors<T> = {};
@@ -125,22 +141,23 @@ export function useForm<T extends Record<string, unknown>>(
     return Object.keys(newErrors).length === 0;
   }, [validateValue, formData]);
 
-  const handleSubmit = useCallback((onSubmit: (data: T) => Promise<void>) => async (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
-    
-    if (!validateAll()) {
-      return;
-    }
+  const handleSubmit = useCallback(
+    (onSubmit: (data: T) => Promise<void>) => async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    setIsSubmitting(true);
-    try {
-      await onSubmit(formData);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [validateAll, formData]);
+      if (!validateAll()) {
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        await onSubmit(formData);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [validateAll, formData]
+  );
 
   const setFormData = useCallback((data: Partial<T> | ((prev: T) => Partial<T>)) => {
     setFormDataState((prev) => {
@@ -159,10 +176,13 @@ export function useForm<T extends Record<string, unknown>>(
     setErrorsState(errors as FormErrors<T>);
   }, []);
 
-  const markTouched = useCallback(<K extends keyof T>(field: K) => {
-    setTouched((prev) => new Set(prev).add(field));
-    validateField(field);
-  }, [validateField]);
+  const markTouched = useCallback(
+    <K extends keyof T>(field: K) => {
+      setTouched((prev) => new Set(prev).add(field));
+      validateField(field);
+    },
+    [validateField]
+  );
 
   return {
     formData,

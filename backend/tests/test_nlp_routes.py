@@ -49,7 +49,11 @@ def test_feedback_record_creates_corrections(client, app, auth_headers):
 def test_correction_update_status(client, app, auth_headers):
     with app.app_context():
         c = NLPCorrection(
-            input_text="u", field_type="name", original_value="a", corrected_value="b", status="pending"
+            input_text="u",
+            field_type="name",
+            original_value="a",
+            corrected_value="b",
+            status="pending",
         )
         db.session.add(c)
         db.session.commit()
@@ -71,7 +75,11 @@ def test_correction_update_status(client, app, auth_headers):
 def test_correction_delete(client, app, auth_headers):
     with app.app_context():
         c = NLPCorrection(
-            input_text="u", field_type="name", original_value="a", corrected_value="b", status="pending"
+            input_text="u",
+            field_type="name",
+            original_value="a",
+            corrected_value="b",
+            status="pending",
         )
         db.session.add(c)
         db.session.commit()

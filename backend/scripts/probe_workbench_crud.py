@@ -4,15 +4,16 @@
 只验证创建接口能否走通（权限 + 必填字段 + service 层），
 创建成功的记录随后尽量删除，避免污染数据。
 """
+
 import json
 import sys
 import urllib.error
 import urllib.request
 
 BASE = "http://127.0.0.1:5000"
-CLASS_ID = 1        # 一年级1班 = teacher 的 primary_class_id
-STUDENT_ID = 1      # 1班学生
-SUBJECT_ID = 5      # 化学
+CLASS_ID = 1  # 一年级1班 = teacher 的 primary_class_id
+STUDENT_ID = 1  # 1班学生
+SUBJECT_ID = 5  # 化学
 
 
 def call(method, path, token=None, body=None):
@@ -44,38 +45,107 @@ def login(username, password):
 
 # (标签, method, path, body, 删除路径模板 or None)
 CASES = [
-    ("座次表-新建", "POST", "/api/seating/charts",
-     {"class_id": CLASS_ID, "name": "冒烟_座次表", "rows": 6, "columns": 6}, "/api/seating/charts/{id}"),
-    ("值日组-新建", "POST", "/api/duty/groups",
-     {"class_id": CLASS_ID, "name": "冒烟_值日组", "day_of_week": "1", "area": "教室"}, "/api/duty/groups/{id}"),
-    ("班委-新建", "POST", "/api/committee/members",
-     {"class_id": CLASS_ID, "position": "冒烟_学习委员", "student_id": STUDENT_ID}, "/api/committee/members/{id}"),
-    ("家长联系-新建", "POST", "/api/parent/contacts",
-     {"student_id": STUDENT_ID, "father_name": "冒烟_父", "father_phone": "13800000000"},
-     "/api/parent/contacts/{id}"),
-    ("作业-新建", "POST", "/api/homework/assignments",
-     {"class_id": CLASS_ID, "title": "冒烟_作业", "due_date": "2026-12-31", "subject_id": SUBJECT_ID},
-     "/api/homework/assignments/{id}"),
-    ("考勤-新建", "POST", "/api/attendance/records",
-     {"class_id": CLASS_ID, "student_id": STUDENT_ID, "date": "2026-08-05", "status": "present"},
-     "/api/attendance/records/{id}"),
-    ("请假-新建", "POST", "/api/attendance/leaves",
-     {"student_id": STUDENT_ID, "start_date": "2026-08-06", "end_date": "2026-08-07", "leave_type": "personal"},
-     "/api/attendance/leaves/{id}"),
-    ("学习小组-新建", "POST", "/api/study-group/groups",
-     {"class_id": CLASS_ID, "name": "冒烟_小组", "leader_id": STUDENT_ID}, "/api/study-group/groups/{id}"),
-    ("心理记录-新建", "POST", "/api/mental-health/records",
-     {"student_id": STUDENT_ID, "mood_level": 4, "stress_level": 2, "sleep_hours": 8},
-     "/api/mental-health/records/{id}"),
-    ("文体活动-新建", "POST", "/api/activity",
-     {"class_id": CLASS_ID, "title": "冒烟_活动", "activity_type": "sports"}, "/api/activity/{id}"),
-    ("班级文化-新建", "POST", "/api/culture/records",
-     {"class_id": CLASS_ID, "category": "班训", "title": "冒烟_文化", "content": "测试"},
-     "/api/culture/records/{id}"),
-    ("学法指导-新建", "POST", "/api/study-guide/guides",
-     {"class_id": CLASS_ID, "title": "冒烟_学法", "guide_type": "method"}, "/api/study-guide/guides/{id}"),
-    ("手机箱-一键放行", "POST", "/api/phonebox-policy/override",
-     {"minutes": 5, "class_info_id": CLASS_ID}, None),
+    (
+        "座次表-新建",
+        "POST",
+        "/api/seating/charts",
+        {"class_id": CLASS_ID, "name": "冒烟_座次表", "rows": 6, "columns": 6},
+        "/api/seating/charts/{id}",
+    ),
+    (
+        "值日组-新建",
+        "POST",
+        "/api/duty/groups",
+        {"class_id": CLASS_ID, "name": "冒烟_值日组", "day_of_week": "1", "area": "教室"},
+        "/api/duty/groups/{id}",
+    ),
+    (
+        "班委-新建",
+        "POST",
+        "/api/committee/members",
+        {"class_id": CLASS_ID, "position": "冒烟_学习委员", "student_id": STUDENT_ID},
+        "/api/committee/members/{id}",
+    ),
+    (
+        "家长联系-新建",
+        "POST",
+        "/api/parent/contacts",
+        {"student_id": STUDENT_ID, "father_name": "冒烟_父", "father_phone": "13800000000"},
+        "/api/parent/contacts/{id}",
+    ),
+    (
+        "作业-新建",
+        "POST",
+        "/api/homework/assignments",
+        {
+            "class_id": CLASS_ID,
+            "title": "冒烟_作业",
+            "due_date": "2026-12-31",
+            "subject_id": SUBJECT_ID,
+        },
+        "/api/homework/assignments/{id}",
+    ),
+    (
+        "考勤-新建",
+        "POST",
+        "/api/attendance/records",
+        {"class_id": CLASS_ID, "student_id": STUDENT_ID, "date": "2026-08-05", "status": "present"},
+        "/api/attendance/records/{id}",
+    ),
+    (
+        "请假-新建",
+        "POST",
+        "/api/attendance/leaves",
+        {
+            "student_id": STUDENT_ID,
+            "start_date": "2026-08-06",
+            "end_date": "2026-08-07",
+            "leave_type": "personal",
+        },
+        "/api/attendance/leaves/{id}",
+    ),
+    (
+        "学习小组-新建",
+        "POST",
+        "/api/study-group/groups",
+        {"class_id": CLASS_ID, "name": "冒烟_小组", "leader_id": STUDENT_ID},
+        "/api/study-group/groups/{id}",
+    ),
+    (
+        "心理记录-新建",
+        "POST",
+        "/api/mental-health/records",
+        {"student_id": STUDENT_ID, "mood_level": 4, "stress_level": 2, "sleep_hours": 8},
+        "/api/mental-health/records/{id}",
+    ),
+    (
+        "文体活动-新建",
+        "POST",
+        "/api/activity",
+        {"class_id": CLASS_ID, "title": "冒烟_活动", "activity_type": "sports"},
+        "/api/activity/{id}",
+    ),
+    (
+        "班级文化-新建",
+        "POST",
+        "/api/culture/records",
+        {"class_id": CLASS_ID, "category": "班训", "title": "冒烟_文化", "content": "测试"},
+        "/api/culture/records/{id}",
+    ),
+    (
+        "学法指导-新建",
+        "POST",
+        "/api/study-guide/guides",
+        {"class_id": CLASS_ID, "title": "冒烟_学法", "guide_type": "method"},
+        "/api/study-guide/guides/{id}",
+    ),
+    (
+        "手机箱-一键放行",
+        "POST",
+        "/api/phonebox-policy/override",
+        {"minutes": 5, "class_info_id": CLASS_ID},
+        None,
+    ),
 ]
 
 

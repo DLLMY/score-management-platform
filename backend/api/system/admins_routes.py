@@ -25,7 +25,11 @@ from utils.security import (
     set_auth_cookies,
 )
 from datetime import datetime
-from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from api.system.security_routes import (
+    check_login_rate_limit,
+    record_failed_login,
+    clear_login_attempts,
+)
 from services.admins_service import (
     create_admin as _service_create_admin,
     update_admin as _service_update_admin,
@@ -110,7 +114,9 @@ change_password_model = ns_admins.model(
     "ChangePasswordRequest",
     {
         "old_password": fields.String(required=True, description="旧密码"),
-        "new_password": fields.String(required=True, description="新密码（至少8位，包含字母和数字）"),
+        "new_password": fields.String(
+            required=True, description="新密码（至少8位，包含字母和数字）"
+        ),
     },
 )
 assign_class_model = ns_admins.model(
@@ -170,7 +176,9 @@ class AdminList(Resource):
         password = data.get("password")
         # 密码强度验证
         if not password or not is_strong_password(password):
-            return APIResponse.error(message="密码强度不足：至少8位，包含字母和数字", status_code=400)
+            return APIResponse.error(
+                message="密码强度不足：至少8位，包含字母和数字", status_code=400
+            )
         role = data.get("role", "admin")
         roles = data.get("roles")
         admin = _service_create_admin(
@@ -183,9 +191,14 @@ class AdminList(Resource):
             roles=roles,
         )
         log_permission_action(
-            "创建管理员", "admin", admin.id, f"创建管理员: {data.get('username')} ({data.get('real_name')})"
+            "创建管理员",
+            "admin",
+            admin.id,
+            f"创建管理员: {data.get('username')} ({data.get('real_name')})",
         )
-        return APIResponse.success(data={"admin_id": admin.id}, message="管理员创建成功", status_code=201)
+        return APIResponse.success(
+            data={"admin_id": admin.id}, message="管理员创建成功", status_code=201
+        )
 
 
 @ns_admins.route("/<int:id>")
@@ -329,7 +342,13 @@ class AdminCsrfToken(Resource):
         csrf_token = generate_csrf()
         response = make_response(APIResponse.success(data={"csrf_token": csrf_token}))
         response.set_cookie(
-            "csrf_token", value=csrf_token, httponly=False, secure=False, samesite="Lax", max_age=3600, path="/"
+            "csrf_token",
+            value=csrf_token,
+            httponly=False,
+            secure=False,
+            samesite="Lax",
+            max_age=3600,
+            path="/",
         )
         return response
 
@@ -405,7 +424,9 @@ class AdminChangePassword(Resource):
             return APIResponse.error(message="请提供旧密码和新密码", status_code=400)
         # 新密码强度验证
         if not is_strong_password(new_password):
-            return APIResponse.error(message="新密码强度不足：至少8位，包含字母和数字", status_code=400)
+            return APIResponse.error(
+                message="新密码强度不足：至少8位，包含字母和数字", status_code=400
+            )
         admin = Admin.query.get_or_404(id)
         # 使用bcrypt验证旧密码
         if not verify_password(old_password, admin.password):

@@ -1,6 +1,7 @@
 """
 Business Integration Tests
 """
+
 try:
     from services.mqtt_message_service import MQTTMessageService
 except ImportError:
@@ -64,11 +65,11 @@ class TestBusinessIntegration:
 
         service = MQTTMessageService()
         assert service is not None
-        assert hasattr(service, 'check_time_valid')
-        assert hasattr(service, 'check_rule_limit')
-        assert hasattr(service, 'handle_mqtt_message')
-        assert hasattr(service, 'handle_unlock_message')
-        assert hasattr(service, 'handle_points_add')
+        assert hasattr(service, "check_time_valid")
+        assert hasattr(service, "check_rule_limit")
+        assert hasattr(service, "handle_mqtt_message")
+        assert hasattr(service, "handle_unlock_message")
+        assert hasattr(service, "handle_points_add")
 
     def test_alert_service_initialization(self):
         """Test AlertService initialization"""
@@ -76,8 +77,8 @@ class TestBusinessIntegration:
 
         service = AlertService()
         assert service is not None
-        assert hasattr(service, 'SEVERITY_LEVELS')
-        assert hasattr(service, 'ALERT_TYPES')
+        assert hasattr(service, "SEVERITY_LEVELS")
+        assert hasattr(service, "ALERT_TYPES")
 
     def test_export_service_initialization(self):
         """Test ExportService initialization"""
@@ -85,8 +86,8 @@ class TestBusinessIntegration:
 
         service = ExportService()
         assert service is not None
-        assert hasattr(service, 'export_to_excel')
-        assert hasattr(service, 'export_to_csv')
+        assert hasattr(service, "export_to_excel")
+        assert hasattr(service, "export_to_csv")
 
     def test_redis_cache_service_initialization(self):
         """Test RedisCacheService initialization"""
@@ -94,9 +95,9 @@ class TestBusinessIntegration:
 
         service = RedisCacheService()
         assert service is not None
-        assert hasattr(service, 'get')
-        assert hasattr(service, 'set')
-        assert hasattr(service, 'delete')
+        assert hasattr(service, "get")
+        assert hasattr(service, "set")
+        assert hasattr(service, "delete")
 
     def test_algorithm_service_initialization(self):
         """Test AlgorithmService initialization"""
@@ -104,33 +105,33 @@ class TestBusinessIntegration:
 
         service = AlgorithmService()
         assert service is not None
-        assert hasattr(service, 'calculate_correlation')
-        assert hasattr(service, 'standardize_data')
-        assert hasattr(service, 'normalize_data')
+        assert hasattr(service, "calculate_correlation")
+        assert hasattr(service, "standardize_data")
+        assert hasattr(service, "normalize_data")
 
     def test_di_container_class_availability(self):
         """Test DI container class is properly defined"""
         from di import DIContainer
 
         container = DIContainer()
-        assert hasattr(container, 'notification_service')
-        assert hasattr(container, 'mqtt_manager')
-        assert hasattr(container, 'redis_cache_service')
-        assert hasattr(container, 'export_service')
-        assert hasattr(container, 'reward_system')
-        assert hasattr(container, 'score_distribution_controller')
-        assert hasattr(container, 'rule_execution_engine')
-        assert hasattr(container, 'anomaly_service')
+        assert hasattr(container, "notification_service")
+        assert hasattr(container, "mqtt_manager")
+        assert hasattr(container, "redis_cache_service")
+        assert hasattr(container, "export_service")
+        assert hasattr(container, "reward_system")
+        assert hasattr(container, "score_distribution_controller")
+        assert hasattr(container, "rule_execution_engine")
+        assert hasattr(container, "anomaly_service")
 
     def test_config_loader_methods(self):
         """Test config_loader methods availability"""
         from config.config_loader import config_loader
 
-        assert hasattr(config_loader, 'get_config')
-        assert hasattr(config_loader, 'start_config_watcher')
-        assert hasattr(config_loader, 'get_mqtt_config')
-        assert hasattr(config_loader, 'get_redis_config')
-        assert hasattr(config_loader, 'get_nlp_keywords')
+        assert hasattr(config_loader, "get_config")
+        assert hasattr(config_loader, "start_config_watcher")
+        assert hasattr(config_loader, "get_mqtt_config")
+        assert hasattr(config_loader, "get_redis_config")
+        assert hasattr(config_loader, "get_nlp_keywords")
 
     def test_db_session_scope_availability(self):
         """Test db_session_scope utility is available"""
@@ -143,17 +144,19 @@ class TestBusinessIntegration:
         """Test APIResponse class functionality"""
         from utils.response import APIResponse
 
-        success_response, status_code = APIResponse.success(data={'key': 'value'}, message='Success')
+        success_response, status_code = APIResponse.success(
+            data={"key": "value"}, message="Success"
+        )
         assert status_code == 200
-        assert success_response['success'] is True
-        assert success_response['data'] == {'key': 'value'}
-        assert success_response['message'] == 'Success'
-        assert success_response['code'] == 0
+        assert success_response["success"] is True
+        assert success_response["data"] == {"key": "value"}
+        assert success_response["message"] == "Success"
+        assert success_response["code"] == 0
 
-        error_response, error_status = APIResponse.error(message='Error', code=500)
+        error_response, error_status = APIResponse.error(message="Error", code=500)
         assert error_status == 400
-        assert error_response['success'] is False
-        assert error_response['message'] == 'Error'
+        assert error_response["success"] is False
+        assert error_response["message"] == "Error"
 
     def test_error_handler_availability(self):
         """Test error handler is available and properly configured"""

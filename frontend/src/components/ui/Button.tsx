@@ -1,16 +1,16 @@
 import { memo, useState, ReactNode, MouseEventHandler, CSSProperties } from 'react';
 import { Loader2, LucideIcon } from 'lucide-react';
 
-type ButtonVariant = 
-  | 'primary' 
-  | 'secondary' 
-  | 'success' 
-  | 'warning' 
-  | 'danger' 
-  | 'blue' 
-  | 'purple' 
-  | 'outline' 
-  | 'ghost' 
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'blue'
+  | 'purple'
+  | 'outline'
+  | 'ghost'
   | 'link';
 
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -90,8 +90,7 @@ function Button({
     purple: gradient
       ? 'bg-gradient-to-r from-purple-500 via-violet-500 to-fuchsia-600 text-white shadow-lg shadow-purple-500/30'
       : 'bg-purple-500 text-white shadow-md shadow-purple-500/20',
-    outline:
-      'border-2 border-slate-300 text-slate-700 bg-transparent',
+    outline: 'border-2 border-slate-300 text-slate-700 bg-transparent',
     ghost: 'text-slate-600 bg-transparent',
     link: 'text-primary-600 bg-transparent',
   };
@@ -100,9 +99,7 @@ function Button({
     primary: gradient
       ? 'hover:shadow-xl hover:shadow-primary-500/40 hover:from-primary-600 hover:via-blue-600 hover:to-indigo-700'
       : 'hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/30',
-    secondary: gradient
-      ? 'hover:shadow-lg'
-      : 'hover:bg-slate-200',
+    secondary: gradient ? 'hover:shadow-lg' : 'hover:bg-slate-200',
     success: gradient
       ? 'hover:shadow-xl hover:shadow-green-500/40'
       : 'hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/30',
@@ -189,11 +186,19 @@ function Button({
       )}
       {loading && <Loader2 className={`${iconSize[size]} animate-spin`} />}
       {!loading && Icon && iconPosition === 'left' && (
-        <Icon className={`${iconSize[size]} transition-transform duration-300 ${isHovered ? 'scale-110' : ''}`} />
+        <Icon
+          className={`${iconSize[size]} transition-transform duration-300 ${
+            isHovered ? 'scale-110' : ''
+          }`}
+        />
       )}
       <span className='relative z-10 inline-flex items-center gap-2'>{children}</span>
       {!loading && Icon && iconPosition === 'right' && (
-        <Icon className={`${iconSize[size]} transition-transform duration-300 ${isHovered ? 'scale-110' : ''}`} />
+        <Icon
+          className={`${iconSize[size]} transition-transform duration-300 ${
+            isHovered ? 'scale-110' : ''
+          }`}
+        />
       )}
     </button>
   );

@@ -1,5 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Undo2, X, CheckCircle, AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Undo2,
+  X,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 interface ToastItem {
   id: number;
@@ -13,7 +22,16 @@ interface ToastItem {
 
 interface ToastContextValue {
   toasts: ToastItem[];
-  showToast: (type: 'success' | 'error' | 'warning' | 'info', message: string, options?: { undoAction?: () => void; undoLabel?: string; details?: string; errorFields?: string[] }) => void;
+  showToast: (
+    type: 'success' | 'error' | 'warning' | 'info',
+    message: string,
+    options?: {
+      undoAction?: () => void;
+      undoLabel?: string;
+      details?: string;
+      errorFields?: string[];
+    }
+  ) => void;
   removeToast: (id: number) => void;
 }
 
@@ -27,7 +45,16 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [expandedToasts, setExpandedToasts] = useState<Set<number>>(new Set());
 
-  const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, options?: { undoAction?: () => void; undoLabel?: string; details?: string; errorFields?: string[] }) => {
+  const showToast = (
+    type: 'success' | 'error' | 'warning' | 'info',
+    message: string,
+    options?: {
+      undoAction?: () => void;
+      undoLabel?: string;
+      details?: string;
+      errorFields?: string[];
+    }
+  ) => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, type, ...options }]);
   };
@@ -122,15 +149,15 @@ export function ToastProvider({ children }: ToastProviderProps) {
               className={`${style.bg} ${style.border} border rounded-xl shadow-lg px-4 py-3 animate-in slide-in-from-right-full duration-300`}
             >
               <div className='flex items-start gap-3'>
-                <div className={`w-10 h-10 rounded-lg ${style.iconBg} flex items-center justify-center flex-shrink-0`}>
+                <div
+                  className={`w-10 h-10 rounded-lg ${style.iconBg} flex items-center justify-center flex-shrink-0`}
+                >
                   <Icon className='w-5 h-5' />
                 </div>
-                
+
                 <div className='flex-1 min-w-0'>
                   <div className='flex items-start justify-between gap-2'>
-                    <p className={`font-semibold text-sm ${style.text}`}>
-                      {toast.message}
-                    </p>
+                    <p className={`font-semibold text-sm ${style.text}`}>{toast.message}</p>
                     <button
                       onClick={() => removeToast(toast.id)}
                       className='p-1 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0'
@@ -138,25 +165,34 @@ export function ToastProvider({ children }: ToastProviderProps) {
                       <X className='w-4 h-4 text-gray-400 hover:text-gray-600' />
                     </button>
                   </div>
-                  
+
                   {(toast.details || toast.errorFields) && (
                     <div className='mt-2'>
                       <button
                         onClick={() => toggleExpand(toast.id)}
                         className='flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors'
                       >
-                        {isExpanded ? <ChevronUp className='w-4 h-4' /> : <ChevronDown className='w-4 h-4' />}
+                        {isExpanded ? (
+                          <ChevronUp className='w-4 h-4' />
+                        ) : (
+                          <ChevronDown className='w-4 h-4' />
+                        )}
                         {isExpanded ? '收起详情' : '查看详情'}
                       </button>
-                      
+
                       {isExpanded && (
                         <div className='mt-2 pl-2 border-l-2 border-gray-200'>
                           {toast.errorFields && toast.errorFields.length > 0 && (
                             <div className='mb-2'>
-                              <div className='text-xs font-medium text-gray-500 mb-1'>错误字段：</div>
+                              <div className='text-xs font-medium text-gray-500 mb-1'>
+                                错误字段：
+                              </div>
                               <div className='flex flex-wrap gap-1'>
                                 {toast.errorFields.map((field, idx) => (
-                                  <span key={idx} className='px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-xs'>
+                                  <span
+                                    key={idx}
+                                    className='px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-xs'
+                                  >
                                     {field}
                                   </span>
                                 ))}
@@ -172,7 +208,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                       )}
                     </div>
                   )}
-                  
+
                   {toast.undoAction && (
                     <button
                       onClick={() => handleUndo(toast)}

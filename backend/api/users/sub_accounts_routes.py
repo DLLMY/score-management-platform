@@ -5,7 +5,11 @@ from utils.permission import requires_permission, get_current_admin
 from utils.security import hash_password, verify_password, generate_subaccount_token
 from utils.response import APIResponse
 from datetime import datetime
-from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from api.system.security_routes import (
+    check_login_rate_limit,
+    record_failed_login,
+    clear_login_attempts,
+)
 from services.sub_accounts_service import (
     create_sub_account,
     update_sub_account,
@@ -141,7 +145,9 @@ class SubAccountList(Resource):
         # 记录权限日志
         log_permission_action("create", account.id, f"创建子账号: {account.username}")
 
-        return APIResponse.success(data={"account_id": account.id}, message="子账号创建成功", status_code=201)
+        return APIResponse.success(
+            data={"account_id": account.id}, message="子账号创建成功", status_code=201
+        )
 
 
 @ns_sub_accounts.route("/<int:id>")

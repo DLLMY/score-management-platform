@@ -19,11 +19,18 @@ import {
   Check,
   ChevronDown,
 } from 'lucide-react';
-import { useState, useEffect, useCallback, useMemo, useRef, MouseEventHandler, FocusEventHandler } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  MouseEventHandler,
+  FocusEventHandler,
+} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useThemeStore, usePermissionStore } from '../../stores';
 import api, { AdminNotification } from '../../services/api';
-
 
 // 类型定义
 interface Admin {
@@ -74,7 +81,10 @@ function Header() {
     if (!savedAdmin) return;
     try {
       const parsedAdmin = JSON.parse(savedAdmin);
-      const result = await api.adminNotifications.getRecent({ admin_id: parsedAdmin.id, limit: 10 });
+      const result = await api.adminNotifications.getRecent({
+        admin_id: parsedAdmin.id,
+        limit: 10,
+      });
       setNotifications(result);
     } catch (error) {
       if ((error as { status?: number }).status !== 401) {
@@ -96,9 +106,7 @@ function Header() {
   const handleMarkRead = useCallback(async (id: number) => {
     try {
       await api.adminNotifications.markRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     } catch (error) {
       // 标记已读失败：红点保持未读（真实状态），不伪装成功；记录日志供排查
       logger.error('Failed to mark notification as read:', error);
@@ -301,7 +309,7 @@ function Header() {
   }, [notifications]);
 
   const { isAdmin: isSuperAdmin } = usePermissionStore();
-  
+
   const roleLabel = useMemo<string>(() => {
     if (isSuperAdmin) return '超级管理员';
     if (admin?.role === 'admin') return '管理员';
@@ -340,17 +348,27 @@ function Header() {
           </button>
 
           <div
-            className={`relative hidden md:block transition-all duration-500 ease-out ${searchFocused ? 'w-[450px]' : 'w-64'}`}
+            className={`relative hidden md:block transition-all duration-500 ease-out ${
+              searchFocused ? 'w-[450px]' : 'w-64'
+            }`}
           >
             <div
-              className={`absolute inset-0 rounded-2xl transition-all duration-500 ${searchFocused ? 'bg-gradient-to-r from-primary-50 via-blue-50 to-cyan-50 dark:from-primary-500/20 dark:via-blue-500/10 dark:to-cyan-500/10 shadow-xl shadow-primary-500/15 dark:shadow-primary-500/10 ring-2 ring-primary-200 dark:ring-primary-500/30' : 'bg-gray-50 dark:bg-slate-700/50'}`}
+              className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
+                searchFocused
+                  ? 'bg-gradient-to-r from-primary-50 via-blue-50 to-cyan-50 dark:from-primary-500/20 dark:via-blue-500/10 dark:to-cyan-500/10 shadow-xl shadow-primary-500/15 dark:shadow-primary-500/10 ring-2 ring-primary-200 dark:ring-primary-500/30'
+                  : 'bg-gray-50 dark:bg-slate-700/50'
+              }`}
             />
 
             <div
-              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${searchFocused ? 'text-primary-500 scale-110' : 'text-gray-400 dark:text-slate-500'}`}
+              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                searchFocused ? 'text-primary-500 scale-110' : 'text-gray-400 dark:text-slate-500'
+              }`}
             >
               <Search
-                className={`w-5 h-5 transition-all duration-300 ${searchFocused ? 'animate-bounce-once' : ''}`}
+                className={`w-5 h-5 transition-all duration-300 ${
+                  searchFocused ? 'animate-bounce-once' : ''
+                }`}
               />
             </div>
 
@@ -509,7 +527,9 @@ function Header() {
               }`}
             >
               <div
-                className={`relative transition-all duration-300 ${showNotifications ? 'scale-115' : 'group-hover:scale-110'}`}
+                className={`relative transition-all duration-300 ${
+                  showNotifications ? 'scale-115' : 'group-hover:scale-110'
+                }`}
               >
                 <Bell className='w-5 h-5' />
                 {showNotificationBadge && unreadCount > 0 && (
@@ -557,10 +577,13 @@ function Header() {
                 <div className='max-h-[32rem] overflow-y-auto scrollbar-thin'>
                   {notifications.map((notification) => {
                     const typeColors = {
-                      success: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-500/10 dark:to-emerald-500/10 border-l-4 border-green-500',
+                      success:
+                        'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-500/10 dark:to-emerald-500/10 border-l-4 border-green-500',
                       info: 'bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-500/10 dark:to-cyan-500/10 border-l-4 border-blue-500',
-                      warning: 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border-l-4 border-amber-500',
-                      error: 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-500/10 dark:to-rose-500/10 border-l-4 border-red-500',
+                      warning:
+                        'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border-l-4 border-amber-500',
+                      error:
+                        'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-500/10 dark:to-rose-500/10 border-l-4 border-red-500',
                     };
 
                     const handleClick = () => {
@@ -573,9 +596,9 @@ function Header() {
                       <div
                         key={notification.id}
                         onClick={handleClick}
-                        className={`px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all duration-200 cursor-pointer border-b border-gray-50 dark:border-slate-700/50 ${typeColors[notification.type]} ${
-                          !notification.is_read ? 'bg-blue-50/30 dark:bg-blue-500/5' : ''
-                        }`}
+                        className={`px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all duration-200 cursor-pointer border-b border-gray-50 dark:border-slate-700/50 ${
+                          typeColors[notification.type]
+                        } ${!notification.is_read ? 'bg-blue-50/30 dark:bg-blue-500/5' : ''}`}
                       >
                         <div className='flex items-start gap-3'>
                           <div className='flex-shrink-0 mt-0.5'>
@@ -673,7 +696,9 @@ function Header() {
                 <p className='text-xs text-gray-500 dark:text-slate-500'>{roleLabel}</p>
               </div>
               <ChevronDown
-                className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
+                className={`hidden sm:block w-4 h-4 text-gray-400 transition-transform duration-300 ${
+                  showUserMenu ? 'rotate-180' : ''
+                }`}
               />
             </button>
 

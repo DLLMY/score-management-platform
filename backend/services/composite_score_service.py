@@ -58,7 +58,12 @@ class CompositeScoreService:
             _computation_progress["progress"] = 100
             _computation_progress["message"] = "没有找到学生数据"
             _computation_progress["end_time"] = datetime.now().isoformat()
-            return {"method": "entropy_weight", "weights": {}, "rankings": [], "message": "没有找到学生数据"}
+            return {
+                "method": "entropy_weight",
+                "weights": {},
+                "rankings": [],
+                "message": "没有找到学生数据",
+            }
 
         user_ids = [user.id for user in users]
         _computation_progress["progress"] = 15
@@ -128,7 +133,9 @@ class CompositeScoreService:
 
         _computation_progress["progress"] = 65
         _computation_progress["message"] = "正在计算熵权..."
-        features = np.array([[d["behavior_norm"], d["academic_norm"], d["compliance_norm"]] for d in processed_data])
+        features = np.array(
+            [[d["behavior_norm"], d["academic_norm"], d["compliance_norm"]] for d in processed_data]
+        )
         weights = AlgorithmService.entropy_weight(features)
 
         _computation_progress["progress"] = 80
@@ -196,7 +203,9 @@ class CompositeScoreService:
         results = []
         for d in data:
             weighted_score = (
-                d["behavior_norm"] * weights[0] + d["academic_norm"] * weights[1] + d["compliance_norm"] * weights[2]
+                d["behavior_norm"] * weights[0]
+                + d["academic_norm"] * weights[1]
+                + d["compliance_norm"] * weights[2]
             )
             composite_score = round(float(weighted_score * 100), 2)
             results.append(
@@ -228,7 +237,8 @@ class CompositeScoreService:
         CompositeScore.query.delete()
         with db_session_scope():
             for r in results:
-                composite = CompositeScore(student_id=r["user_id"],
+                composite = CompositeScore(
+                    student_id=r["user_id"],
                     behavior_score=r["behavior_score"],
                     academic_score=r["academic_score"],
                     composite_score=r["composite_score"],
@@ -251,7 +261,9 @@ class CompositeScoreService:
         Returns:
             dict: 综合评分结果
         """
-        query = CompositeScore.query.join(User, CompositeScore.student_id == User.id).filter(User.is_active)
+        query = CompositeScore.query.join(User, CompositeScore.student_id == User.id).filter(
+            User.is_active
+        )
         if class_name:
             query = query.filter(User.class_name == class_name)
         composites = query.order_by(CompositeScore.composite_score.desc()).all()
@@ -288,9 +300,13 @@ class CompositeScoreService:
                 .all()
             )
             for stat in score_stats:
-                academic_map[stat.student_id] = round(float(stat.avg_score), 2) if stat.avg_score else None
+                academic_map[stat.student_id] = (
+                    round(float(stat.avg_score), 2) if stat.avg_score else None
+                )
 
-        user_map = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+        user_map = (
+            {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+        )
         rankings = []
         for i, composite in enumerate(composites):
             u = user_map.get(composite.student_id)
@@ -299,7 +315,11 @@ class CompositeScoreService:
                     "user_id": composite.student_id,
                     "name": u.name if u else None,
                     "class_name": u.class_name if u else None,
-                    "behavior_score": composite.behavior_score if composite.behavior_score is not None else (u.current_score if u else None),  # R7: 与写入归一化语义一致（原被 current_score 覆盖）
+                    "behavior_score": (
+                        composite.behavior_score
+                        if composite.behavior_score is not None
+                        else (u.current_score if u else None)
+                    ),  # R7: 与写入归一化语义一致（原被 current_score 覆盖）
                     "academic_score": academic_map.get(composite.student_id),
                     "composite_score": composite.composite_score,
                     "ranking": i + 1,
@@ -310,7 +330,9 @@ class CompositeScoreService:
             "method": "entropy_weight",
             "weights": weights,
             "rankings": rankings,
-            "updated_at": composites[0].computed_at.isoformat() if composites[0].computed_at else None,
+            "updated_at": (
+                composites[0].computed_at.isoformat() if composites[0].computed_at else None
+            ),
         }
 
     @staticmethod
@@ -407,7 +429,10 @@ class CompositeScoreService:
             print(f"[CompositeScore] 学生 {user_id} 无综合评分记录，跳过增量重算（首次需全量计算）")
             return None
 
-        behavior_map = {u.id: u.current_score or 0 for u in User.query.filter(User.id.in_(active_user_ids)).all()}
+        behavior_map = {
+            u.id: u.current_score or 0
+            for u in User.query.filter(User.id.in_(active_user_ids)).all()
+        }
 
         academic_map = {}
         academic_stats = (
@@ -455,7 +480,9 @@ class CompositeScoreService:
         compliance_norm_value = float(compliance_norm[user_index])
 
         weighted_score = (
-            behavior_norm_value * weights[0] + academic_norm_value * weights[1] + compliance_norm_value * weights[2]
+            behavior_norm_value * weights[0]
+            + academic_norm_value * weights[1]
+            + compliance_norm_value * weights[2]
         )
         composite_score = round(float(weighted_score * 100), 2)
 

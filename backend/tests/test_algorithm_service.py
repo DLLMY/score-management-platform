@@ -3,12 +3,14 @@
 算法服务测试模块
 覆盖核心算法功能：相关性分析、数据标准化、熵权法、聚类等
 """
+
 """
 """
 
 import numpy as np
 from unittest.mock import patch, MagicMock
 from services.algorithm_service import AlgorithmService
+
 try:
     import pandas as pd
 except ImportError:
@@ -198,7 +200,11 @@ class TestAlgorithmService:
     def test_calculate_statistics_empty(self, app):
         """测试计算统计指标-空数据"""
         with app.app_context():
-            with patch.object(AlgorithmService, "get_student_data_for_analysis", return_value=MagicMock(empty=True)):
+            with patch.object(
+                AlgorithmService,
+                "get_student_data_for_analysis",
+                return_value=MagicMock(empty=True),
+            ):
                 stats = AlgorithmService.calculate_statistics()
 
                 assert stats["student_count"] == 0
@@ -210,13 +216,15 @@ class TestAlgorithmService:
         with app.app_context():
             import pandas as pd
 
-            df = pd.DataFrame({
-                "user_id": [1, 2, 3],
-                "name": ["张三", "李四", "王五"],
-                "class_name": ["一班", "一班", "一班"],
-                "behavior_score": [80, 60, 40],
-                "academic_score": [90, 70, 50],
-            })
+            df = pd.DataFrame(
+                {
+                    "user_id": [1, 2, 3],
+                    "name": ["张三", "李四", "王五"],
+                    "class_name": ["一班", "一班", "一班"],
+                    "behavior_score": [80, 60, 40],
+                    "academic_score": [90, 70, 50],
+                }
+            )
 
             with patch.object(AlgorithmService, "get_student_data_for_analysis", return_value=df):
                 stats = AlgorithmService.calculate_statistics()

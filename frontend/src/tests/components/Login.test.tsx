@@ -9,7 +9,7 @@ import Login from '../../pages/Login';
 
 const mockLocalStorage = () => {
   const store: Record<string, string> = {};
-  
+
   Object.defineProperty(window, 'localStorage', {
     value: {
       getItem: jest.fn((key: string) => store[key] || null),
@@ -23,7 +23,7 @@ const mockLocalStorage = () => {
     },
     writable: true,
   });
-  
+
   return store;
 };
 
@@ -39,7 +39,7 @@ describe('Login Component', () => {
 
   test('登录页面可以渲染并显示表单', async () => {
     render(<Login />, { wrapper });
-    
+
     await waitFor(() => {
       const usernameInput = screen.getByPlaceholderText(/用户名/i);
       expect(usernameInput).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('Login Component', () => {
 
   test('表单验证 - 空用户名显示错误', async () => {
     render(<Login />, { wrapper });
-    
+
     await waitFor(() => {
       const submitButton = screen.getByRole('button', { name: /登录/i });
       expect(submitButton).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('Login Component', () => {
 
     const submitButton = screen.getByRole('button', { name: /登录/i });
     userEvent.click(submitButton);
-    
+
     await waitFor(() => {
       const errorMessages = screen.getAllByText(/必填/i);
       expect(errorMessages.length).toBeGreaterThanOrEqual(1);
@@ -75,7 +75,7 @@ describe('Login Component', () => {
 
   test('表单验证 - 密码过短显示错误', async () => {
     render(<Login />, { wrapper });
-    
+
     await waitFor(() => {
       const usernameInput = screen.getByPlaceholderText(/用户名/i);
       expect(usernameInput).toBeInTheDocument();
@@ -94,17 +94,16 @@ describe('Login Component', () => {
     const usernameInput = screen.getByPlaceholderText(/用户名/i);
     const passwordInput = screen.getByPlaceholderText(/密码/i);
     const submitBtn = screen.getByRole('button', { name: /登录/i });
-    
+
     await userEvent.type(usernameInput, 'admin');
     await userEvent.type(passwordInput, '123');
     userEvent.click(submitBtn);
-    
+
     await waitFor(() => {
       const minLengthError = screen.getByText(/最少/i);
       expect(minLengthError).toBeInTheDocument();
     });
   });
-
 });
 
 describe('Login Component - Force Password Change', () => {
@@ -115,7 +114,7 @@ describe('Login Component - Force Password Change', () => {
 
   test('登录页面初始状态下不显示强制改密弹窗', async () => {
     render(<Login />, { wrapper });
-    
+
     await waitFor(() => {
       const modal = screen.queryByRole('dialog');
       expect(modal).not.toBeInTheDocument();
@@ -124,7 +123,7 @@ describe('Login Component - Force Password Change', () => {
 
   test('登录页面渲染完整的登录表单', async () => {
     render(<Login />, { wrapper });
-    
+
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/用户名/i)).toBeInTheDocument();
     });
@@ -141,10 +140,9 @@ describe('Login Component - Force Password Change', () => {
   test('localStorage mock 工作正常', async () => {
     const store = mockLocalStorage();
     store['test_key'] = 'test_value';
-    
+
     expect(window.localStorage.getItem('test_key')).toBe('test_value');
     window.localStorage.setItem('new_key', 'new_value');
     expect(store['new_key']).toBe('new_value');
   });
-
 });

@@ -43,7 +43,9 @@ def migrate_passwords():
             hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
             hashed_password_str = hashed_password.decode("utf-8")
 
-            cursor.execute("UPDATE admin SET password = ? WHERE id = ?", (hashed_password_str, admin_id))
+            cursor.execute(
+                "UPDATE admin SET password = ? WHERE id = ?", (hashed_password_str, admin_id)
+            )
             conn.commit()
 
             print(f"[OK] 用户 {username} 的密码已迁移")
@@ -65,7 +67,10 @@ def migrate_passwords():
             hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
             hashed_password_str = hashed_password.decode("utf-8")
 
-            cursor.execute("UPDATE sub_account SET password = ? WHERE id = ?", (hashed_password_str, account_id))
+            cursor.execute(
+                "UPDATE sub_account SET password = ? WHERE id = ?",
+                (hashed_password_str, account_id),
+            )
             conn.commit()
 
             print(f"[OK] 子账户 {username} 的密码已迁移")

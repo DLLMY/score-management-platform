@@ -9,6 +9,7 @@
 
 使用内存版 fake cache，不依赖 Redis，也不加载重型 app/torch。
 """
+
 import json
 
 import pytest

@@ -28,7 +28,12 @@ class EmailService:
         self.enabled = enabled
 
     def send_email(
-        self, to_email: str, subject: str, body: str, from_email: Optional[str] = None, cc: Optional[List[str]] = None
+        self,
+        to_email: str,
+        subject: str,
+        body: str,
+        from_email: Optional[str] = None,
+        cc: Optional[List[str]] = None,
     ) -> bool:
         """发送邮件"""
         if not self.enabled:

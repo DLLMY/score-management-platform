@@ -41,9 +41,7 @@ class TestRuleLimitRegression:
                 db_session.add(student)
                 db_session.commit()
                 db_session.refresh(student)
-            rule = ScoreRule(
-                name="回归-限频", score=1, min_interval=60, daily_limit=10
-            )
+            rule = ScoreRule(name="回归-限频", score=1, min_interval=60, daily_limit=10)
             db_session.add(rule)
             db_session.commit()
             db_session.refresh(rule)
@@ -53,7 +51,9 @@ class TestRuleLimitRegression:
             assert message is None
             # 插入一条记录后再次调用（min_interval 生效，应返回 False 而非 500）
             db_session.add(
-                ScoreRecord(student_id=student.id, rule_id=rule.id, score_change=1, description="回归记录")
+                ScoreRecord(
+                    student_id=student.id, rule_id=rule.id, score_change=1, description="回归记录"
+                )
             )
             db_session.commit()
             allowed2, message2 = check_rule_limits(student.id, rule.id)
@@ -115,16 +115,23 @@ class TestR1R9ReviewRegression:
 
         with app.app_context():
             student = User(
-                name="请假学生", card_id="reg_leave_20260817", role="student",
-                class_name="复核班", class_info_id=1,
+                name="请假学生",
+                card_id="reg_leave_20260817",
+                role="student",
+                class_name="复核班",
+                class_info_id=1,
             )
             db_session.add(student)
             db_session.commit()
             db_session.refresh(student)
             leave = Approval(
-                student_id=student.id, type="leave", leave_type="personal",
-                start_date=date.today(), end_date=date.today() + timedelta(days=1),
-                description="复核请假", status="pending",
+                student_id=student.id,
+                type="leave",
+                leave_type="personal",
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=1),
+                description="复核请假",
+                status="pending",
             )
             db_session.add(leave)
             db_session.commit()
@@ -156,8 +163,12 @@ class TestR1R9ReviewRegression:
 
         with app.app_context():
             student = User(
-                name="老数据学生", card_id="reg_nl_20260817", role="student",
-                class_name="复核班", current_score=85, is_active=True,
+                name="老数据学生",
+                card_id="reg_nl_20260817",
+                role="student",
+                class_name="复核班",
+                current_score=85,
+                is_active=True,
                 daily_unlock_limit=None,  # 历史数据 NULL
             )
             db_session.add(student)
@@ -210,7 +221,13 @@ class TestS12345678910Regression:
         from services.mqtt_manager import MQTTManager
 
         src = inspect.getsource(MQTTManager._process_ota_status)
-        for code in ("download_failed", "space_insufficient", "signature_failed", "version_check_failed", "incomplete"):
+        for code in (
+            "download_failed",
+            "space_insufficient",
+            "signature_failed",
+            "version_check_failed",
+            "incomplete",
+        ):
             assert code in src, f"OTA 失败码 {code} 未映射"
 
     def test_nlp_scoring_writes_score_record(self):

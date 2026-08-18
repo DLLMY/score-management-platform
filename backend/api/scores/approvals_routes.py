@@ -32,7 +32,9 @@ except ImportError:
     import logging
 
     def create_admin_notification(**kwargs):
-        logging.getLogger(__name__).warning("admin_notifications_routes 导入失败，审批相关的管理员通知被静默丢弃")
+        logging.getLogger(__name__).warning(
+            "admin_notifications_routes 导入失败，审批相关的管理员通知被静默丢弃"
+        )
         return None
 
 
@@ -114,7 +116,9 @@ class ApprovalList(Resource):
         # 数据隔离
         query = _apply_approval_data_isolation(query)
 
-        pagination = query.order_by(Approval.created_at.desc()).paginate(page=page, per_page=per_page)
+        pagination = query.order_by(Approval.created_at.desc()).paginate(
+            page=page, per_page=per_page
+        )
         approvals = pagination.items
 
         return APIResponse.success(
@@ -123,7 +127,7 @@ class ApprovalList(Resource):
                     {
                         "id": a.id,
                         "user_id": a.student_id,
-"student_id": a.student_id,
+                        "student_id": a.student_id,
                         "user_name": a.user.name if a.user else None,
                         "type": a.type,
                         "title": a.title,
@@ -168,7 +172,9 @@ class ApprovalList(Resource):
         approval_id, err = create_approval(data)
         if err:
             return APIResponse.error(message=err, status_code=400)
-        return APIResponse.success(data={"approval_id": approval_id}, message="审批申请创建成功", status_code=201)
+        return APIResponse.success(
+            data={"approval_id": approval_id}, message="审批申请创建成功", status_code=201
+        )
 
 
 @ns_approvals.route("/<int:id>")
@@ -196,7 +202,9 @@ class ApprovalResource(Resource):
                 "approver_id": approval.approver_id,
                 "comment": approval.comment,
                 "created_at": approval.created_at.isoformat() if approval.created_at else None,
-                "approve_time": approval.approve_time.isoformat() if approval.approve_time else None,
+                "approve_time": (
+                    approval.approve_time.isoformat() if approval.approve_time else None
+                ),
             }
         )
 
@@ -248,6 +256,7 @@ class ApprovalApprove(Resource):
         if user:
             try:
                 from services.composite_score_service import CompositeScoreService
+
                 CompositeScoreService.recalculate_user_score(user.id)
             except Exception:
                 pass
@@ -257,11 +266,15 @@ class ApprovalApprove(Resource):
         if user:
             try:
                 from services.notification_service import create_approval_result_notification
+
                 create_approval_result_notification(
                     user_id=user.id,
                     title="审批通过",
                     content="您的申请「%s」已审批通过%s"
-                    % (approval.title, "，积分变动 %+g 分" % actual_change if actual_change else ""),
+                    % (
+                        approval.title,
+                        "，积分变动 %+g 分" % actual_change if actual_change else "",
+                    ),
                 )
             except Exception as e:
                 print(f"[Approval] 审批结果通知写入失败: {e}")
@@ -269,7 +282,9 @@ class ApprovalApprove(Resource):
         # 更新用户缓存
         if mqtt_available and user:
             mqtt_manager.set_cached_user(user.card_id, user)
-            print(f"[Approval] 已更新用户缓存: card_id={user.card_id}, new_score={user.current_score}")
+            print(
+                f"[Approval] 已更新用户缓存: card_id={user.card_id}, new_score={user.current_score}"
+            )
 
         # 发送审批结果通知到设备端
         if mqtt_available and user:
@@ -294,12 +309,18 @@ class ApprovalApprove(Resource):
         if mqtt_available and user:
             try:
                 score_change_str = (
-                    f"{approval.score_change:+g}" if approval.score_change > 0 else str(approval.score_change)
+                    f"{approval.score_change:+g}"
+                    if approval.score_change > 0
+                    else str(approval.score_change)
                 )
-                score_change_text = f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
+                score_change_text = (
+                    f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
+                )
 
-                allowed, check_message, reason_code, rule_info = ClassTimeChecker.is_notification_allowed(
-                    target_class_info_id=getattr(user, "class_info_id", None), force_send=False
+                allowed, check_message, reason_code, rule_info = (
+                    ClassTimeChecker.is_notification_allowed(
+                        target_class_info_id=getattr(user, "class_info_id", None), force_send=False
+                    )
                 )
                 if allowed:
                     score_notification = {
@@ -312,8 +333,13 @@ class ApprovalApprove(Resource):
                     print(f"[ScoreChange] 审批积分变动通知已发送: {score_change_text}")
                 else:
                     ClassTimeChecker.log_notify_audit(
-                        "score_change", getattr(user, "class_info_id", None), None,
-                        {"text": score_change_text}, reason_code or "GLOBAL_TIME_RULE", check_message, force_send=False,
+                        "score_change",
+                        getattr(user, "class_info_id", None),
+                        None,
+                        {"text": score_change_text},
+                        reason_code or "GLOBAL_TIME_RULE",
+                        check_message,
+                        force_send=False,
                     )
                     print(f"[ScoreChange] 审批积分变动通知被拦截（上课时间）: {score_change_text}")
 
@@ -369,10 +395,12 @@ class ApprovalReject(Resource):
         if user:
             try:
                 from services.notification_service import create_approval_result_notification
+
                 create_approval_result_notification(
                     user_id=user.id,
                     title="审批未通过",
-                    content="您的申请「%s」未通过审批：%s" % (approval.title, approval.comment or "审批未通过"),
+                    content="您的申请「%s」未通过审批：%s"
+                    % (approval.title, approval.comment or "审批未通过"),
                 )
             except Exception as e:
                 print(f"[Approval] 审批结果通知写入失败: {e}")
@@ -394,7 +422,11 @@ class ApprovalReject(Resource):
             print(f"[Approval] 已发送审批拒绝通知: card_id={user.card_id}")
 
         return APIResponse.success(
-            data={"approval_id": approval.id, "comment": approval.comment, "notification_sent": mqtt_available},
+            data={
+                "approval_id": approval.id,
+                "comment": approval.comment,
+                "notification_sent": mqtt_available,
+            },
             message="审批已拒绝",
         )
 
@@ -402,7 +434,9 @@ class ApprovalReject(Resource):
 @ns_approvals.route("/pending")
 class PendingApprovals(Resource):
 
-    @ns_approvals.doc("get_pending_approvals", params={"page": "页码（默认1）", "per_page": "每页数量（默认10）"})
+    @ns_approvals.doc(
+        "get_pending_approvals", params={"page": "页码（默认1）", "per_page": "每页数量（默认10）"}
+    )
     @requires_permission("score.view")
     def get(self):
         """获取待审批列表。非管理员用户只能查看关联班级的待审批。"""
@@ -413,7 +447,9 @@ class PendingApprovals(Resource):
         # 数据隔离
         query = _apply_approval_data_isolation(query)
 
-        pagination = query.order_by(Approval.created_at.desc()).paginate(page=page, per_page=per_page)
+        pagination = query.order_by(Approval.created_at.desc()).paginate(
+            page=page, per_page=per_page
+        )
         approvals = pagination.items
 
         return APIResponse.success(
@@ -422,7 +458,7 @@ class PendingApprovals(Resource):
                     {
                         "id": a.id,
                         "user_id": a.student_id,
-"student_id": a.student_id,
+                        "student_id": a.student_id,
                         "user_name": a.user.name if a.user else None,
                         "type": a.type,
                         "title": a.title,

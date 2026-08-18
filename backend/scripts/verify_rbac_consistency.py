@@ -22,6 +22,7 @@ RBAC 一致性校验 + 幂等补齐脚本（P1 改进项：RBAC 自动 seed / �
     python scripts/verify_rbac_consistency.py            # 只检查
     python scripts/verify_rbac_consistency.py --apply    # 检查 + 补齐
 """
+
 import argparse
 import ast
 import os
@@ -111,10 +112,15 @@ def run_check(check_only=True, apply=False):
 
     db_perms = {r[0] for r in cur.execute("SELECT code FROM permissions")}
     db_roles = {r[0] for r in cur.execute("SELECT role_code FROM role_permission")}
-    db_map_roles = {r[0] for r in cur.execute("SELECT DISTINCT role_code FROM role_permission_mappings")}
-    mapped_perm_codes = {r[0] for r in cur.execute("SELECT DISTINCT permission_code FROM role_permission_mappings")}
+    db_map_roles = {
+        r[0] for r in cur.execute("SELECT DISTINCT role_code FROM role_permission_mappings")
+    }
+    mapped_perm_codes = {
+        r[0] for r in cur.execute("SELECT DISTINCT permission_code FROM role_permission_mappings")
+    }
     teacher_perms = {
-        r[0] for r in cur.execute(
+        r[0]
+        for r in cur.execute(
             "SELECT permission_code FROM role_permission_mappings WHERE role_code='teacher'"
         )
     }
@@ -124,16 +130,22 @@ def run_check(check_only=True, apply=False):
     missing_perms = seed_perm_codes - db_perms
     orphan_mapped = mapped_perm_codes - db_perms
     if missing_perms:
-        issues.append(f"permissions 表缺 {len(missing_perms)} 条 seed 定义权限: {sorted(missing_perms)[:10]}")
+        issues.append(
+            f"permissions 表缺 {len(missing_perms)} 条 seed 定义权限: {sorted(missing_perms)[:10]}"
+        )
     if orphan_mapped:
-        issues.append(f"role_permission_mappings 引用 {len(orphan_mapped)} 个不存在的权限码(孤儿): {sorted(orphan_mapped)[:10]}")
+        issues.append(
+            f"role_permission_mappings 引用 {len(orphan_mapped)} 个不存在的权限码(孤儿): {sorted(orphan_mapped)[:10]}"
+        )
 
     # ---- 2. 角色集合一致 ----
     role_diff = set(seed_role_map) - db_roles
     if role_diff:
         issues.append(f"role_permission 缺 seed 定义角色: {sorted(role_diff)}")
     if db_roles != db_map_roles:
-        issues.append(f"role_permission 与 mappings 角色集合不一致: role_permission={sorted(db_roles)} mappings={sorted(db_map_roles)}")
+        issues.append(
+            f"role_permission 与 mappings 角色集合不一致: role_permission={sorted(db_roles)} mappings={sorted(db_map_roles)}"
+        )
 
     # ---- 3. teacher 关键权限 smoke ----
     missing_teacher = [p for p in KEY_TEACHER_PERMS if p not in teacher_perms]
@@ -148,7 +160,9 @@ def run_check(check_only=True, apply=False):
     # ---- 输出 ----
     print(f"DB 权限目录: {len(db_perms)} 条, 角色: {sorted(db_roles)}")
     print(f"seed 权威权限: {len(seed_perm_codes)} 条, 角色: {sorted(seed_role_map)}")
-    print(f"teacher 权限数: {len(teacher_perms)}, 关键权限: {'OK' if not missing_teacher else '缺 ' + str(missing_teacher)}")
+    print(
+        f"teacher 权限数: {len(teacher_perms)}, 关键权限: {'OK' if not missing_teacher else '缺 ' + str(missing_teacher)}"
+    )
     for info in infos:
         print(f"[提示] {info}")
     if not issues:
@@ -164,7 +178,7 @@ def run_check(check_only=True, apply=False):
         for code, name, category, desc in seed_permissions:
             if code not in db_perms:
                 cur.execute(
-                    'INSERT OR IGNORE INTO permissions (code, name, category, description, is_active, created_at, updated_at) '
+                    "INSERT OR IGNORE INTO permissions (code, name, category, description, is_active, created_at, updated_at) "
                     'VALUES (?,?,?,?,1,datetime("now"),datetime("now"))',
                     (code, name, category, desc),
                 )
@@ -173,13 +187,15 @@ def run_check(check_only=True, apply=False):
             if role_code not in db_roles:
                 _, role_name, desc, csv_perms, active = role
                 cur.execute(
-                    'INSERT OR IGNORE INTO role_permission (role_code, role_name, description, is_active, created_at, updated_at) '
+                    "INSERT OR IGNORE INTO role_permission (role_code, role_name, description, is_active, created_at, updated_at) "
                     'VALUES (?,?,?,?,datetime("now"),datetime("now"))',
                     (role_code, role_name, desc, active),
                 )
                 fixed += 1
             # 补齐该角色的映射（seed csv + 关键 teacher 权限）
-            perms_to_add = set(seed_role_map[role_code][3].split(",")) | (set(KEY_TEACHER_PERMS) if role_code == "teacher" else set())
+            perms_to_add = set(seed_role_map[role_code][3].split(",")) | (
+                set(KEY_TEACHER_PERMS) if role_code == "teacher" else set()
+            )
             for pc in perms_to_add:
                 pc = pc.strip()
                 if pc:
@@ -204,7 +220,9 @@ def run_check(check_only=True, apply=False):
 
 def main():
     ap = argparse.ArgumentParser(description="RBAC 一致性校验与幂等补齐")
-    ap.add_argument("--apply", action="store_true", help="幂等补齐缺失项（INSERT OR IGNORE，绝不删除）")
+    ap.add_argument(
+        "--apply", action="store_true", help="幂等补齐缺失项（INSERT OR IGNORE，绝不删除）"
+    )
     ap.add_argument(
         "--check-only",
         action="store_true",

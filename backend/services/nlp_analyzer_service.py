@@ -349,7 +349,9 @@ class NLPAlgorithmAnalyzer:
                     {
                         "category": "quality",
                         "priority": "medium",
-                        "issue": ("常见错误类型: " + ", ".join([f"{t}({c}次)" for t, c in top_errors])),
+                        "issue": (
+                            "常见错误类型: " + ", ".join([f"{t}({c}次)" for t, c in top_errors])
+                        ),
                         "suggestions": [
                             "分析错误样例",
                             "扩展训练数据",
@@ -419,7 +421,9 @@ class AlgorithmBenchmark:
     """算法基准测试工具"""
 
     @staticmethod
-    def benchmark_intent_classifier(classifier, test_cases: List[Dict], iterations: int = 10) -> Dict:
+    def benchmark_intent_classifier(
+        classifier, test_cases: List[Dict], iterations: int = 10
+    ) -> Dict:
         """
         基准测试意图分类器
         :param classifier: 分类器实例

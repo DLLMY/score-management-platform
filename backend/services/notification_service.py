@@ -14,7 +14,9 @@ class NotificationService:
     WECHAT_TEMPLATE_URL = "https://api.weixin.qq.com/cgi-bin/message/template/send"
 
     @staticmethod
-    def send_wechat_notification(user_id: int, template_id: str, data: Dict, jump_url: Optional[str] = None) -> Dict:
+    def send_wechat_notification(
+        user_id: int, template_id: str, data: Dict, jump_url: Optional[str] = None
+    ) -> Dict:
         """
         发送微信模板消息
 
@@ -53,7 +55,9 @@ class NotificationService:
                 message["url"] = jump_url
 
             response = requests.post(
-                f"{NotificationService.WECHAT_TEMPLATE_URL}?access_token={access_token}", json=message, timeout=10
+                f"{NotificationService.WECHAT_TEMPLATE_URL}?access_token={access_token}",
+                json=message,
+                timeout=10,
             )
 
             result = response.json()
@@ -121,7 +125,10 @@ class NotificationService:
             else:
                 # P2-3 修复: 移除腾讯云 stub 分支（产品配置层无腾讯云凭据字段，该渠道不可达）；
                 # 统一由下方兜底报错，避免"腾讯云短信功能待实现"误导
-                return {"success": False, "message": "不支持的短信提供商（当前仅支持 aliyun，请设置 SMS_PROVIDER=aliyun）"}
+                return {
+                    "success": False,
+                    "message": "不支持的短信提供商（当前仅支持 aliyun，请设置 SMS_PROVIDER=aliyun）",
+                }
 
         except Exception as e:
             logger.error(f"notification_service error: {e}")
@@ -166,7 +173,9 @@ class NotificationService:
             )
 
             canonicalized = "&".join([f"{k}={requests.utils.quote(v)}" for k, v in sorted_params])
-            string_to_sign = f'GET&{requests.utils.quote("/")}&{requests.utils.quote(canonicalized)}'
+            string_to_sign = (
+                f'GET&{requests.utils.quote("/")}&{requests.utils.quote(canonicalized)}'
+            )
 
             signature = hashlib.hmac.new(
                 f"{access_key_secret}&".encode(), string_to_sign.encode(), hashlib.sha1

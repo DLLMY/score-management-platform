@@ -1,7 +1,16 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Modal, Form, Input, Select, Switch, Tag } from 'antd';
-import { Plus, Edit2, Trash2, CheckCircle, XCircle, Settings, FileText, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Settings,
+  FileText,
+  AlertTriangle,
+} from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import type { ImportConfig, FieldMapping, ValidationRule } from '../services/api';
@@ -47,7 +56,10 @@ const CONFLICT_STRATEGY_OPTIONS = [
   { value: 'skip', label: '跳过' },
 ];
 
-const TARGET_FIELD_MAP: Record<string, { label: string; options: { value: string; label: string }[] }> = {
+const TARGET_FIELD_MAP: Record<
+  string,
+  { label: string; options: { value: string; label: string }[] }
+> = {
   classes: {
     label: '班级管理',
     options: [
@@ -90,8 +102,20 @@ const defaultMappings: Record<string, FieldMappingUI[]> = {
     { source_field: '班级名称', target_field: 'name', field_type: 'string', required: true },
     { source_field: '年级', target_field: 'grade', field_type: 'string', required: false },
     { source_field: '描述', target_field: 'description', field_type: 'string', required: false },
-    { source_field: '班主任ID', target_field: 'head_teacher_id', field_type: 'integer', required: false, relation: 'admin' },
-    { source_field: '班主任姓名', target_field: 'head_teacher_name', field_type: 'string', required: false, relation: 'admin' },
+    {
+      source_field: '班主任ID',
+      target_field: 'head_teacher_id',
+      field_type: 'integer',
+      required: false,
+      relation: 'admin',
+    },
+    {
+      source_field: '班主任姓名',
+      target_field: 'head_teacher_name',
+      field_type: 'string',
+      required: false,
+      relation: 'admin',
+    },
     { source_field: '是否启用', target_field: 'is_active', field_type: 'boolean', required: false },
   ],
   subjects: [
@@ -103,8 +127,20 @@ const defaultMappings: Record<string, FieldMappingUI[]> = {
     { source_field: '是否启用', target_field: 'is_active', field_type: 'boolean', required: false },
   ],
   course_schedule: [
-    { source_field: '班级名称', target_field: 'class_name', field_type: 'string', required: true, relation: 'class_info' },
-    { source_field: '科目名称', target_field: 'subject_name', field_type: 'string', required: true, relation: 'subject' },
+    {
+      source_field: '班级名称',
+      target_field: 'class_name',
+      field_type: 'string',
+      required: true,
+      relation: 'class_info',
+    },
+    {
+      source_field: '科目名称',
+      target_field: 'subject_name',
+      field_type: 'string',
+      required: true,
+      relation: 'subject',
+    },
     { source_field: '星期', target_field: 'day_of_week', field_type: 'string', required: true },
     { source_field: '节次', target_field: 'period_number', field_type: 'integer', required: true },
     { source_field: '教师', target_field: 'teacher_name', field_type: 'string', required: false },
@@ -201,7 +237,10 @@ const ImportConfigManagement: React.FC = () => {
   };
 
   const handleAddFieldMapping = () => {
-    setFieldMappings([...fieldMappings, { source_field: '', target_field: '', field_type: 'string', required: false }]);
+    setFieldMappings([
+      ...fieldMappings,
+      { source_field: '', target_field: '', field_type: 'string', required: false },
+    ]);
   };
 
   const handleRemoveFieldMapping = (index: number) => {
@@ -224,7 +263,11 @@ const ImportConfigManagement: React.FC = () => {
     setValidationRules(newRules);
   };
 
-  const handleUpdateValidationRule = (index: number, field: keyof ValidationRule, value: unknown) => {
+  const handleUpdateValidationRule = (
+    index: number,
+    field: keyof ValidationRule,
+    value: unknown
+  ) => {
     const newRules = [...validationRules];
     newRules[index] = { ...newRules[index], [field]: value };
     setValidationRules(newRules);
@@ -261,8 +304,8 @@ const ImportConfigManagement: React.FC = () => {
       dataIndex: 'config_name',
       key: 'config_name',
       render: (text: string, record: ImportConfig) => (
-        <div className="flex items-center gap-2">
-          {record.is_default && <Tag color="gold">默认</Tag>}
+        <div className='flex items-center gap-2'>
+          {record.is_default && <Tag color='gold'>默认</Tag>}
           {text}
         </div>
       ),
@@ -271,7 +314,7 @@ const ImportConfigManagement: React.FC = () => {
       title: '所属模块',
       dataIndex: 'module_name',
       key: 'module_name',
-      render: (text: string) => MODULE_OPTIONS.find(o => o.value === text)?.label || text,
+      render: (text: string) => MODULE_OPTIONS.find((o) => o.value === text)?.label || text,
     },
     {
       title: '字段映射数',
@@ -289,54 +332,56 @@ const ImportConfigManagement: React.FC = () => {
       title: '冲突策略',
       dataIndex: 'conflict_strategy',
       key: 'conflict_strategy',
-      render: (text: string) => CONFLICT_STRATEGY_OPTIONS.find(o => o.value === text)?.label || text,
+      render: (text: string) =>
+        CONFLICT_STRATEGY_OPTIONS.find((o) => o.value === text)?.label || text,
     },
     {
       title: '状态',
       dataIndex: 'is_active',
       key: 'is_active',
-      render: (isActive: boolean) => isActive ? (
-        <Tag color="green"><CheckCircle className="w-4 h-4" /> 启用</Tag>
-      ) : (
-        <Tag color="red"><XCircle className="w-4 h-4" /> 禁用</Tag>
-      ),
+      render: (isActive: boolean) =>
+        isActive ? (
+          <Tag color='green'>
+            <CheckCircle className='w-4 h-4' /> 启用
+          </Tag>
+        ) : (
+          <Tag color='red'>
+            <XCircle className='w-4 h-4' /> 禁用
+          </Tag>
+        ),
     },
     {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (text: string) => text ? new Date(text).toLocaleString('zh-CN') : '-',
+      render: (text: string) => (text ? new Date(text).toLocaleString('zh-CN') : '-'),
     },
     {
       title: '操作',
       key: 'actions',
       render: (_: unknown, record: ImportConfig) => (
-        <div className="flex items-center gap-2">
+        <div className='flex items-center gap-2'>
           <Button
-            type="text"
-            icon={<Edit2 className="w-4 h-4" />}
+            type='text'
+            icon={<Edit2 className='w-4 h-4' />}
             onClick={() => handleEdit(record)}
-            size="small"
+            size='small'
           >
             编辑
           </Button>
           {!record.is_default && (
             <Button
-              type="text"
-              icon={<Trash2 className="w-4 h-4" />}
+              type='text'
+              icon={<Trash2 className='w-4 h-4' />}
               onClick={() => handleDelete(record.id)}
-              size="small"
+              size='small'
               danger
             >
               删除
             </Button>
           )}
           {!record.is_default && (
-            <Button
-              type="text"
-              onClick={() => handleSetDefault(record.id)}
-              size="small"
-            >
+            <Button type='text' onClick={() => handleSetDefault(record.id)} size='small'>
               设为默认
             </Button>
           )}
@@ -346,52 +391,54 @@ const ImportConfigManagement: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 p-4 md:p-6">
+    <div className='min-h-screen bg-gray-50 dark:bg-slate-900 p-4 md:p-6'>
       {loadError && (
-        <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
-          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-300">导入配置加载失败，当前列表可能不完整，请刷新重试</p>
+        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
+          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            导入配置加载失败，当前列表可能不完整，请刷新重试
+          </p>
         </div>
       )}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
-            <Settings className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+      <div className='flex items-center justify-between mb-6'>
+        <div className='flex items-center gap-3'>
+          <div className='w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center'>
+            <Settings className='w-5 h-5 text-primary-600 dark:text-primary-400' />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">导入配置管理</h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400">管理系统各模块的导入配置，包括字段映射、验证规则和冲突处理策略</p>
+            <h1 className='text-xl font-bold text-gray-800 dark:text-white'>导入配置管理</h1>
+            <p className='text-sm text-gray-500 dark:text-slate-400'>
+              管理系统各模块的导入配置，包括字段映射、验证规则和冲突处理策略
+            </p>
           </div>
         </div>
-        <Button
-          type="primary"
-          icon={<Plus className="w-4 h-4" />}
-          onClick={handleAdd}
-        >
+        <Button type='primary' icon={<Plus className='w-4 h-4' />} onClick={handleAdd}>
           添加配置
         </Button>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-slate-700">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-slate-300">已配置 {configs.length} 个导入方案</span>
+      <div className='bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden'>
+        <div className='p-4 border-b border-gray-200 dark:border-slate-700'>
+          <div className='flex items-center gap-4'>
+            <div className='flex items-center gap-2'>
+              <FileText className='w-4 h-4 text-gray-500' />
+              <span className='text-sm font-medium text-gray-700 dark:text-slate-300'>
+                已配置 {configs.length} 个导入方案
+              </span>
             </div>
           </div>
         </div>
         <Table
           columns={columns}
           dataSource={configs}
-          rowKey="id"
+          rowKey='id'
           loading={loading}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
             showTotal: (total: number) => `共 ${total} 条记录`,
           }}
-          className="px-4"
+          className='px-4'
         />
       </div>
 
@@ -403,83 +450,89 @@ const ImportConfigManagement: React.FC = () => {
         width={800}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical">
-          <div className="grid grid-cols-2 gap-4">
+        <Form form={form} layout='vertical'>
+          <div className='grid grid-cols-2 gap-4'>
             <Form.Item
-              name="config_name"
-              label="配置名称"
+              name='config_name'
+              label='配置名称'
               rules={[{ required: true, message: '请输入配置名称' }]}
             >
-              <Input placeholder="例如：标准导入配置" />
+              <Input placeholder='例如：标准导入配置' />
             </Form.Item>
             <Form.Item
-              name="module_name"
-              label="所属模块"
+              name='module_name'
+              label='所属模块'
               rules={[{ required: true, message: '请选择所属模块' }]}
             >
-              <Select
-                options={MODULE_OPTIONS}
-                onChange={handleModuleChange}
-              />
+              <Select options={MODULE_OPTIONS} onChange={handleModuleChange} />
             </Form.Item>
           </div>
 
-          <Form.Item
-            name="description"
-            label="描述"
-          >
-            <Input.TextArea placeholder="描述此配置的用途" rows={2} />
+          <Form.Item name='description' label='描述'>
+            <Input.TextArea placeholder='描述此配置的用途' rows={2} />
           </Form.Item>
 
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">字段映射配置</h3>
-            <div className="space-y-2">
+          <div className='mb-4'>
+            <h3 className='text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3'>
+              字段映射配置
+            </h3>
+            <div className='space-y-2'>
               {fieldMappings.map((mapping, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                  className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg'
                 >
-                  <div className="flex-1">
+                  <div className='flex-1'>
                     <Input
-                      placeholder="源字段（Excel列名）"
+                      placeholder='源字段（Excel列名）'
                       value={mapping.source_field}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUpdateFieldMapping(index, 'source_field', e.target.value)}
-                      className="mb-2"
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleUpdateFieldMapping(index, 'source_field', e.target.value)
+                      }
+                      className='mb-2'
                     />
-                    <div className="flex gap-2">
+                    <div className='flex gap-2'>
                       <Select
                         options={TARGET_FIELD_MAP[selectedModule]?.options || []}
                         value={mapping.target_field}
-                        onChange={(value: string) => handleUpdateFieldMapping(index, 'target_field', value)}
-                        placeholder="目标字段"
+                        onChange={(value: string) =>
+                          handleUpdateFieldMapping(index, 'target_field', value)
+                        }
+                        placeholder='目标字段'
                         style={{ width: 160 }}
                       />
                       <Select
                         options={FIELD_TYPE_OPTIONS}
                         value={mapping.field_type}
-                        onChange={(value: string) => handleUpdateFieldMapping(index, 'field_type', value)}
-                        placeholder="字段类型"
+                        onChange={(value: string) =>
+                          handleUpdateFieldMapping(index, 'field_type', value)
+                        }
+                        placeholder='字段类型'
                         style={{ width: 120 }}
                       />
                       <Select
                         options={RELATION_OPTIONS}
                         value={mapping.relation || ''}
-                        onChange={(value: string) => handleUpdateFieldMapping(index, 'relation', value)}
-                        placeholder="关联类型"
+                        onChange={(value: string) =>
+                          handleUpdateFieldMapping(index, 'relation', value)
+                        }
+                        placeholder='关联类型'
                         style={{ width: 120 }}
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">必填</span>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-gray-500'>必填</span>
                     <Switch
                       checked={mapping.required}
-                      onChange={(checked: boolean) => handleUpdateFieldMapping(index, 'required', checked)}
+                      onChange={(checked: boolean) =>
+                        handleUpdateFieldMapping(index, 'required', checked)
+                      }
                     />
                     <Button
-                      type="text"
+                      type='text'
                       danger
-                      size="small"
+                      size='small'
                       onClick={() => handleRemoveFieldMapping(index)}
                     >
                       删除
@@ -488,79 +541,92 @@ const ImportConfigManagement: React.FC = () => {
                 </div>
               ))}
             </div>
-            <Button
-              type="dashed"
-              block
-              onClick={handleAddFieldMapping}
-              className="mt-2"
-            >
+            <Button type='dashed' block onClick={handleAddFieldMapping} className='mt-2'>
               添加字段映射
             </Button>
           </div>
 
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">数据验证规则</h3>
-            <div className="space-y-2">
+          <div className='mb-4'>
+            <h3 className='text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3'>
+              数据验证规则
+            </h3>
+            <div className='space-y-2'>
               {validationRules.map((rule, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                  className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg'
                 >
-                  <div className="flex-1">
+                  <div className='flex-1'>
                     <Select
                       options={TARGET_FIELD_MAP[selectedModule]?.options || []}
                       value={rule.field}
-                      onChange={(value: string) => handleUpdateValidationRule(index, 'field', value)}
-                      placeholder="验证字段"
+                      onChange={(value: string) =>
+                        handleUpdateValidationRule(index, 'field', value)
+                      }
+                      placeholder='验证字段'
                       style={{ width: 160 }}
-                      className="mb-2"
+                      className='mb-2'
                     />
-                    <div className="flex gap-2">
+                    <div className='flex gap-2'>
                       <Select
                         options={RULE_TYPE_OPTIONS}
                         value={rule.rule_type}
-                        onChange={(value: string) => handleUpdateValidationRule(index, 'rule_type', value)}
-                        placeholder="规则类型"
+                        onChange={(value: string) =>
+                          handleUpdateValidationRule(index, 'rule_type', value)
+                        }
+                        placeholder='规则类型'
                         style={{ width: 140 }}
                       />
                       {rule.rule_type === 'max_length' && (
                         <Input
-                          type="number"
-                          placeholder="最大长度"
+                          type='number'
+                          placeholder='最大长度'
                           value={(rule.params as Record<string, number>)?.max ?? ''}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUpdateValidationRule(index, 'params', { max: parseInt(e.target.value) || 0 })}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleUpdateValidationRule(index, 'params', {
+                              max: parseInt(e.target.value) || 0,
+                            })
+                          }
                           style={{ width: 100 }}
                         />
                       )}
                       {rule.rule_type === 'min_length' && (
                         <Input
-                          type="number"
-                          placeholder="最小长度"
+                          type='number'
+                          placeholder='最小长度'
                           value={(rule.params as Record<string, number>)?.min ?? ''}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUpdateValidationRule(index, 'params', { min: parseInt(e.target.value) || 0 })}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleUpdateValidationRule(index, 'params', {
+                              min: parseInt(e.target.value) || 0,
+                            })
+                          }
                           style={{ width: 100 }}
                         />
                       )}
                       {rule.rule_type === 'regex' && (
                         <Input
-                          placeholder="正则表达式"
+                          placeholder='正则表达式'
                           value={(rule.params as Record<string, string>)?.pattern ?? ''}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUpdateValidationRule(index, 'params', { pattern: e.target.value })}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleUpdateValidationRule(index, 'params', { pattern: e.target.value })
+                          }
                           style={{ width: 160 }}
                         />
                       )}
                     </div>
                     <Input
-                      placeholder="错误提示信息"
+                      placeholder='错误提示信息'
                       value={rule.message}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleUpdateValidationRule(index, 'message', e.target.value)}
-                      className="mt-2"
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleUpdateValidationRule(index, 'message', e.target.value)
+                      }
+                      className='mt-2'
                     />
                   </div>
                   <Button
-                    type="text"
+                    type='text'
                     danger
-                    size="small"
+                    size='small'
                     onClick={() => handleRemoveValidationRule(index)}
                   >
                     删除
@@ -568,25 +634,20 @@ const ImportConfigManagement: React.FC = () => {
                 </div>
               ))}
             </div>
-            <Button
-              type="dashed"
-              block
-              onClick={handleAddValidationRule}
-              className="mt-2"
-            >
+            <Button type='dashed' block onClick={handleAddValidationRule} className='mt-2'>
               添加验证规则
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className='grid grid-cols-2 gap-4'>
             <Form.Item
-              name="conflict_strategy"
-              label="冲突处理策略"
+              name='conflict_strategy'
+              label='冲突处理策略'
               rules={[{ required: true, message: '请选择冲突处理策略' }]}
             >
               <Select options={CONFLICT_STRATEGY_OPTIONS} />
             </Form.Item>
-            <Form.Item name="is_active" label="启用状态" valuePropName="checked">
+            <Form.Item name='is_active' label='启用状态' valuePropName='checked'>
               <Switch defaultChecked />
             </Form.Item>
           </div>

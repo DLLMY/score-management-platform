@@ -8,6 +8,7 @@ F10: WOLDevice 并入 Device（数据迁移 + 建列；WOLDevice 模型类已删
 - 不删除 wol_devices 表（F5 验证通过后再删）。
 - SQLite FK 在项目内默认开启，故全程 PRAGMA foreign_keys=OFF 操作、结束恢复。
 """
+
 import os
 import sys
 import json
@@ -40,7 +41,9 @@ def upgrade():
         db.session.execute(text("PRAGMA foreign_keys=OFF"))
         try:
             # 1) 给 device 追加 WOL 列（幂等）
-            existing = {r[1] for r in db.session.execute(text("PRAGMA table_info(device)")).fetchall()}
+            existing = {
+                r[1] for r in db.session.execute(text("PRAGMA table_info(device)")).fetchall()
+            }
             for col, ctype in WOL_COLS.items():
                 if col not in existing:
                     db.session.execute(text(f"ALTER TABLE device ADD COLUMN {col} {ctype}"))
@@ -59,7 +62,18 @@ def upgrade():
             map_wol_int_id = {}
             merged = 0
             for w in wols:
-                (wid, wdevice_id, mac, ip, subnet, bcast, wol_en, last_wake, wake_count, is_active) = w
+                (
+                    wid,
+                    wdevice_id,
+                    mac,
+                    ip,
+                    subnet,
+                    bcast,
+                    wol_en,
+                    last_wake,
+                    wake_count,
+                    is_active,
+                ) = w
                 dev_id = wdevice_id if wdevice_id else f"wol-{wid}"
                 existing_dev = Device.query.filter_by(device_id=dev_id).first()
                 if existing_dev and existing_dev.device_type == "wol":

@@ -45,7 +45,9 @@ class FastNLPParser:
         self._name_patterns = [
             re.compile(r"(?:给|为|对|把)([\u4e00-\u9fa5]{2,4}?)(?:的)?"),
             re.compile(r"(?:查询|查看|显示|看看|展示)([\u4e00-\u9fa5]{2,4})的"),
-            re.compile(r"([\u4e00-\u9fa5]{2,4})(?:迟到|早退|旷课|上课|作业|做好事|帮助|发言|回答|值日|打扫)"),
+            re.compile(
+                r"([\u4e00-\u9fa5]{2,4})(?:迟到|早退|旷课|上课|作业|做好事|帮助|发言|回答|值日|打扫)"
+            ),
             re.compile(r"([\u4e00-\u9fa5]{2,4})(?:加|扣)(?:[\d分])"),
             re.compile(r"(?:姓名|名字|同学)[：:]?([\u4e00-\u9fa5]{2,4})"),
             re.compile(r"([\u4e00-\u9fa5]{2,4})的?分"),
@@ -218,7 +220,8 @@ class FastNLPParser:
         has_name = any(pattern.search(text) for pattern in self._name_patterns)
         has_score = any(pattern.search(text) for pattern in self._score_patterns)
         has_intent = any(
-            kw in text for kw in [k for keywords in self._quick_intent_keywords.values() for k in keywords]
+            kw in text
+            for kw in [k for keywords in self._quick_intent_keywords.values() for k in keywords]
         )
 
         return has_name or has_score or has_intent
@@ -292,7 +295,9 @@ class FastNLPParser:
             "is_simple": True,
         }
 
-    def _calculate_confidence(self, intent: str, name: Optional[str], score: Optional[float]) -> float:
+    def _calculate_confidence(
+        self, intent: str, name: Optional[str], score: Optional[float]
+    ) -> float:
         """计算置信度"""
         factors = []
 

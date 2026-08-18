@@ -21,13 +21,28 @@ class ResponseMiddleware:
             if data is not None:
                 if "success" not in data:
                     if isinstance(data, dict) and "items" in data and "pagination" in data:
-                        wrapped_data = {"success": True, "code": 0, "message": "操作成功", "data": data}
+                        wrapped_data = {
+                            "success": True,
+                            "code": 0,
+                            "message": "操作成功",
+                            "data": data,
+                        }
                     elif isinstance(data, dict) and "data" in data and "pagination" in data:
                         wrapped_data = {"success": True, "code": 0, "message": "操作成功", **data}
                     elif isinstance(data, (list, dict)):
-                        wrapped_data = {"success": True, "code": 0, "message": "操作成功", "data": data}
+                        wrapped_data = {
+                            "success": True,
+                            "code": 0,
+                            "message": "操作成功",
+                            "data": data,
+                        }
                     else:
-                        wrapped_data = {"success": True, "code": 0, "message": "操作成功", "data": data}
+                        wrapped_data = {
+                            "success": True,
+                            "code": 0,
+                            "message": "操作成功",
+                            "data": data,
+                        }
 
                     response.data = json.dumps(wrapped_data, ensure_ascii=False).encode("utf-8")
                     response.content_length = len(response.data)

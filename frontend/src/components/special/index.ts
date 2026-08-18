@@ -5,4 +5,8 @@
 export { default as ImportExportPanel } from './ImportExportPanel';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as DevTools } from './DevTools';
-export { GlobalLoading, GlobalErrorBoundary, NetworkStatusIndicator } from './GlobalStateComponents';
+export {
+  GlobalLoading,
+  GlobalErrorBoundary,
+  NetworkStatusIndicator,
+} from './GlobalStateComponents';

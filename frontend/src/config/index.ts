@@ -3,7 +3,7 @@ import logger from '../utils/logger';
  * 前端统一配置管理模块
  * ======================
  * 集中管理所有前端配置项，确保配置的一致性与可维护性。
- * 
+ *
  * 配置分类：
  * 1. 应用基础配置
  * 2. API配置
@@ -11,7 +11,7 @@ import logger from '../utils/logger';
  * 4. 缓存配置
  * 5. 开发工具配置
  * 6. 安全配置
- * 
+ *
  * 使用方式：
  * import { config, getConfig } from './config';
  * const apiUrl = config.api.baseUrl;
@@ -183,12 +183,12 @@ export const createConfig = (): Config => {
       enabled: getEnvBoolean('REACT_APP_ENABLE_CACHE', true),
       defaultTtl: getEnvNumber('REACT_APP_CACHE_TTL', isDevelopment ? 60000 : 120000),
       ttl: {
-        users: 60000,        // 用户数据60秒
-        devices: 5000,       // 设备状态5秒
+        users: 60000, // 用户数据60秒
+        devices: 5000, // 设备状态5秒
         notifications: 30000, // 通知30秒
-        rules: 300000,       // 规则5分钟
-        statistics: 300000,  // 统计数据5分钟
-        default: 60000,      // 默认60秒
+        rules: 300000, // 规则5分钟
+        statistics: 300000, // 统计数据5分钟
+        default: 60000, // 默认60秒
       },
     },
 
@@ -196,7 +196,11 @@ export const createConfig = (): Config => {
     devTools: {
       enabled: getEnvBoolean('REACT_APP_ENABLE_DEV_TOOLS', isDevelopment),
       debugMode: getEnvBoolean('REACT_APP_DEBUG_MODE', isDevelopment),
-      logLevel: (getEnv('REACT_APP_LOG_LEVEL', isDevelopment ? 'debug' : 'error') as 'debug' | 'info' | 'warn' | 'error'),
+      logLevel: getEnv('REACT_APP_LOG_LEVEL', isDevelopment ? 'debug' : 'error') as
+        | 'debug'
+        | 'info'
+        | 'warn'
+        | 'error',
     },
 
     // 安全配置
@@ -247,7 +251,7 @@ export const getWebSocketUrl = (): string => {
   if (config.websocket.baseUrl) {
     return config.websocket.baseUrl;
   }
-  
+
   // 否则根据当前页面协议和主机名生成（不包含路径）
   // socket.io会自动处理路径，命名空间由调用方指定
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -282,7 +286,11 @@ export const getCacheTtlByUrl = (url: string): number => {
   if (url.includes('/api/rules')) {
     return config.cache.ttl.rules;
   }
-  if (url.includes('/api/statistics') || url.includes('/api/analysis') || url.includes('/api/dashboard')) {
+  if (
+    url.includes('/api/statistics') ||
+    url.includes('/api/analysis') ||
+    url.includes('/api/dashboard')
+  ) {
     return config.cache.ttl.statistics;
   }
   return config.cache.ttl.default;
@@ -291,7 +299,10 @@ export const getCacheTtlByUrl = (url: string): number => {
 /**
  * 验证配置
  */
-export const validateConfig = (): { valid: boolean; warnings: Array<{ type: string; message: string }> } => {
+export const validateConfig = (): {
+  valid: boolean;
+  warnings: Array<{ type: string; message: string }>;
+} => {
   const warnings: Array<{ type: string; message: string }> = [];
 
   // 检查API配置
@@ -335,7 +346,7 @@ export const validateConfig = (): { valid: boolean; warnings: Array<{ type: stri
   }
 
   return {
-    valid: warnings.filter(w => w.type === 'error').length === 0,
+    valid: warnings.filter((w) => w.type === 'error').length === 0,
     warnings,
   };
 };

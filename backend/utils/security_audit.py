@@ -71,7 +71,10 @@ class SecurityLogger:
         logger.setLevel(logging.INFO)
         if not logger.handlers:
             security_handler = RotatingFileHandler(
-                os.path.join(LOG_DIR, "security_audit.log"), maxBytes=20 * 1024 * 1024, backupCount=20, encoding="utf-8"
+                os.path.join(LOG_DIR, "security_audit.log"),
+                maxBytes=20 * 1024 * 1024,
+                backupCount=20,
+                encoding="utf-8",
             )
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
@@ -101,7 +104,9 @@ class SecurityLogger:
                 backupCount=30,
                 encoding="utf-8",
             )
-            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            )
             critical_handler.setFormatter(formatter)
             self.critical_logger.addHandler(critical_handler)
             self.critical_logger.propagate = False
@@ -220,12 +225,20 @@ def audit_log(event_type):
         @wraps(func)
         def wrapper(*args, **kwargs):
             start_time = datetime.now()
-            func_args = {"function": func.__name__, "args": str(args)[:200], "kwargs": str(kwargs)[:200]}
+            func_args = {
+                "function": func.__name__,
+                "args": str(args)[:200],
+                "kwargs": str(kwargs)[:200],
+            }
             try:
                 result = func(*args, **kwargs)
                 duration = (datetime.now() - start_time).total_seconds()
                 security_logger.log_event(
-                    event_type, f"函数执行成功: {func.__name__}", duration=duration, status="success", **func_args
+                    event_type,
+                    f"函数执行成功: {func.__name__}",
+                    duration=duration,
+                    status="success",
+                    **func_args,
                 )
                 return result
             except Exception as e:
@@ -326,7 +339,9 @@ class SecurityMonitor:
         """
         now = datetime.now()
         if identifier in self._rate_limits:
-            self._rate_limits[identifier] = [t for t in self._rate_limits[identifier] if (now - t).seconds < window]
+            self._rate_limits[identifier] = [
+                t for t in self._rate_limits[identifier] if (now - t).seconds < window
+            ]
             if len(self._rate_limits[identifier]) >= max_requests:
                 security_logger.log_event(
                     SecurityEventType.RATE_LIMIT_EXCEEDED,
@@ -351,12 +366,17 @@ security_monitor = SecurityMonitor()
 def log_login(username, success=True, reason=None, **kwargs):
     """记录登录事件"""
     event_type = SecurityEventType.LOGIN_SUCCESS if success else SecurityEventType.LOGIN_FAILED
-    return security_logger.log_authentication(event_type, username, success, reason=reason, **kwargs)
+    return security_logger.log_authentication(
+        event_type, username, success, reason=reason, **kwargs
+    )
 
 
 def log_device_unlock(device_id, action, success=True, **kwargs):
     """记录设备开锁事件"""
-    event_type_map = {"A": SecurityEventType.DEVICE_UNLOCK_A, "B": SecurityEventType.DEVICE_UNLOCK_B}
+    event_type_map = {
+        "A": SecurityEventType.DEVICE_UNLOCK_A,
+        "B": SecurityEventType.DEVICE_UNLOCK_B,
+    }
     event_type = event_type_map.get(action, SecurityEventType.DEVICE_CONTROL)
     if not success:
         event_type = SecurityEventType.DEVICE_UNLOCK_FAILED

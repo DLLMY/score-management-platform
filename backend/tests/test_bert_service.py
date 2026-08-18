@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # BERT服务测试模块
 """
 """
@@ -8,6 +8,7 @@
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock
+
 try:
     from services.bert_service import BertNLPService
 except ImportError:
@@ -204,7 +205,7 @@ class TestBertService:
         service.model = mock_model
         service._initialized = True
 
-        with patch.object(service, 'get_embedding') as mock_get_embedding:
+        with patch.object(service, "get_embedding") as mock_get_embedding:
             service.warmup()
 
             assert service._warmup_done is True
@@ -217,7 +218,7 @@ class TestBertService:
         service._initialized = True
         service._warmup_done = True
 
-        with patch.object(service, 'get_embedding') as mock_get_embedding:
+        with patch.object(service, "get_embedding") as mock_get_embedding:
             service.warmup()
 
             assert service._warmup_done is True
@@ -233,10 +234,10 @@ class TestBertService:
         mock_torch.nn = MagicMock()
         mock_torch.qint8 = MagicMock()
 
-        sys.modules['torch'] = mock_torch
+        sys.modules["torch"] = mock_torch
 
-        if 'services.bert_service' in sys.modules:
-            del sys.modules['services.bert_service']
+        if "services.bert_service" in sys.modules:
+            del sys.modules["services.bert_service"]
 
         final_embedding = np.array([[1.0, 0.0, 0.0]])
 

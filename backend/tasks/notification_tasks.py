@@ -3,7 +3,9 @@ import json
 import time
 
 
-@celery_app.task(bind=True, name="tasks.notification_tasks.send_remote_notify", queue="notification")
+@celery_app.task(
+    bind=True, name="tasks.notification_tasks.send_remote_notify", queue="notification"
+)
 def send_remote_notify(self, device_id, message, urgent=False):
     """
     发送远程通知
@@ -60,7 +62,11 @@ def broadcast_notify(self, message, device_ids=None, urgent=False):
                     "urgent": urgent,
                     "timestamp": time.time(),
                 }
-                ok = publish_mqtt(f"phonebox/notify/{device_id}", json.dumps(notify_data, ensure_ascii=False), qos=1)
+                ok = publish_mqtt(
+                    f"phonebox/notify/{device_id}",
+                    json.dumps(notify_data, ensure_ascii=False),
+                    qos=1,
+                )
                 if ok:
                     count += 1
             print(f"[Notification Task] 定向广播通知完成: {count}/{total} 台设备")

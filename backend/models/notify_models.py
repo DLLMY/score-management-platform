@@ -21,6 +21,8 @@ class Notification(db.Model):
     extra_data = db.Column(db.JSON)
 
     user = db.relationship("User", backref="notifications")
+
+
 class Approval(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
@@ -39,20 +41,28 @@ class Approval(db.Model):
     end_date = db.Column(db.Date)
 
     user = db.relationship("User", backref="approvals")
+
+
 class NotifyAudit(db.Model):
     """上课时间拦截 / 强制发送审计表"""
 
     __tablename__ = "notify_audit"
 
     id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(50), index=True)  # remote_notify / wol / scheduled / template / celery / ota / unlock
+    type = db.Column(
+        db.String(50), index=True
+    )  # remote_notify / wol / scheduled / template / celery / ota / unlock
     target_class_id = db.Column(db.Integer, index=True)
     admin_id = db.Column(db.Integer, index=True)
     payload = db.Column(db.Text)  # 下发内容（截断）
-    reason_code = db.Column(db.String(50), index=True)  # GLOBAL_TIME_RULE / CLASS_IN_SESSION / NORMAL / FORCE
+    reason_code = db.Column(
+        db.String(50), index=True
+    )  # GLOBAL_TIME_RULE / CLASS_IN_SESSION / NORMAL / FORCE
     reason_message = db.Column(db.String(200))
     force_send = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class ScheduledNotify(db.Model):
     """定时通知"""
 
@@ -78,7 +88,10 @@ class ScheduledNotify(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     template_id = db.Column(db.Integer, db.ForeignKey("notify_templates.id"), index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now)
-    created_by = db.Column(db.Integer)  # 定时通知创建人（审计链）；修复历史遗漏：路由早已引用，模型/库表此前缺失
+    created_by = db.Column(
+        db.Integer
+    )  # 定时通知创建人（审计链）；修复历史遗漏：路由早已引用，模型/库表此前缺失
+
 
 class NotifyTemplate(db.Model):
     """通知模板"""
@@ -106,6 +119,8 @@ class NotifyTemplate(db.Model):
     created_by = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class NotifyHistory(db.Model):
     """通知发送历史"""
 

@@ -132,10 +132,12 @@ const HealthStatus: React.FC<{
   const StatusIcon = config.icon;
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${config.color}`}>
+    <div
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${config.color}`}
+    >
       <StatusIcon size={16} />
       <span>{config.label}</span>
-      {message && <span className="text-xs opacity-75">| {message}</span>}
+      {message && <span className='text-xs opacity-75'>| {message}</span>}
     </div>
   );
 };
@@ -150,7 +152,11 @@ const HealthCard: React.FC<{
   const hasIssues = checks.some((c) => c.status !== 'healthy');
 
   return (
-    <div className={`bg-white rounded-xl p-4 border transition-all ${hasIssues ? 'border-red-100 shadow-sm' : 'border-gray-100'}`}>
+    <div
+      className={`bg-white rounded-xl p-4 border transition-all ${
+        hasIssues ? 'border-red-100 shadow-sm' : 'border-gray-100'
+      }`}
+    >
       <div className='flex items-center gap-3 mb-3'>
         <div className={`p-2 rounded-lg ${hasIssues ? 'bg-red-50' : 'bg-blue-50'}`}>
           <Icon size={20} className={hasIssues ? 'text-red-500' : 'text-blue-500'} />
@@ -252,10 +258,10 @@ const SlowRequestsTable: React.FC<{ requests: SlowRequest[] }> = ({ requests }) 
                         req.method === 'GET'
                           ? 'bg-blue-100 text-blue-600'
                           : req.method === 'POST'
-                            ? 'bg-green-100 text-green-600'
-                            : req.method === 'PUT'
-                              ? 'bg-yellow-100 text-yellow-600'
-                              : 'bg-red-100 text-red-600'
+                          ? 'bg-green-100 text-green-600'
+                          : req.method === 'PUT'
+                          ? 'bg-yellow-100 text-yellow-600'
+                          : 'bg-red-100 text-red-600'
                       }`}
                     >
                       {req.method}
@@ -268,8 +274,8 @@ const SlowRequestsTable: React.FC<{ requests: SlowRequest[] }> = ({ requests }) 
                         req.status_code >= 200 && req.status_code < 300
                           ? 'bg-green-100 text-green-600'
                           : req.status_code >= 400 && req.status_code < 500
-                            ? 'bg-yellow-100 text-yellow-600'
-                            : 'bg-red-100 text-red-600'
+                          ? 'bg-yellow-100 text-yellow-600'
+                          : 'bg-red-100 text-red-600'
                       }`}
                     >
                       {req.status_code}
@@ -478,7 +484,12 @@ export const DiagnosticsPage: React.FC = () => {
 
   const refreshAll = useCallback(async (): Promise<void> => {
     setIsRefreshing(true);
-    await Promise.all([fetchHealthData(), fetchPerformanceData(), fetchErrorData(), fetchSystemData()]);
+    await Promise.all([
+      fetchHealthData(),
+      fetchPerformanceData(),
+      fetchErrorData(),
+      fetchSystemData(),
+    ]);
     setIsRefreshing(false);
   }, [fetchHealthData, fetchPerformanceData, fetchErrorData, fetchSystemData]);
 
@@ -517,7 +528,10 @@ export const DiagnosticsPage: React.FC = () => {
       )}
 
       {loadError && (
-        <div role='alert' className='flex items-center gap-2 px-4 py-3 mt-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'>
+        <div
+          role='alert'
+          className='flex items-center gap-2 px-4 py-3 mt-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'
+        >
           <AlertTriangle size={16} className='flex-shrink-0' />
           部分诊断数据加载失败，下方指标可能不完整，请点击「刷新」重试
         </div>
@@ -530,8 +544,8 @@ export const DiagnosticsPage: React.FC = () => {
             healthData.status === 'healthy'
               ? 'bg-green-50 border-green-200'
               : healthData.status === 'degraded'
-                ? 'bg-yellow-50 border-yellow-200'
-                : 'bg-red-50 border-red-200'
+              ? 'bg-yellow-50 border-yellow-200'
+              : 'bg-red-50 border-red-200'
           }`}
         >
           <div className='flex items-center gap-3'>
@@ -541,8 +555,8 @@ export const DiagnosticsPage: React.FC = () => {
                 healthData.status === 'healthy'
                   ? 'text-green-500'
                   : healthData.status === 'degraded'
-                    ? 'text-yellow-500'
-                    : 'text-red-500'
+                  ? 'text-yellow-500'
+                  : 'text-red-500'
               }
             />
             <div>
@@ -551,15 +565,15 @@ export const DiagnosticsPage: React.FC = () => {
                   healthData.status === 'healthy'
                     ? 'text-green-700'
                     : healthData.status === 'degraded'
-                      ? 'text-yellow-700'
-                      : 'text-red-700'
+                    ? 'text-yellow-700'
+                    : 'text-red-700'
                 }`}
               >
                 {healthData.status === 'healthy'
                   ? '系统运行正常'
                   : healthData.status === 'degraded'
-                    ? '系统部分降级'
-                    : '系统存在严重问题'}
+                  ? '系统部分降级'
+                  : '系统存在严重问题'}
               </span>
               <p className='text-sm text-gray-600 mt-0.5'>
                 检查时间: {new Date(healthData.timestamp).toLocaleString()}
@@ -577,10 +591,14 @@ export const DiagnosticsPage: React.FC = () => {
           checks={[
             {
               name: '主数据库',
-              status: healthData?.components?.database?.status as HealthStatusType || 'unknown',
+              status: (healthData?.components?.database?.status as HealthStatusType) || 'unknown',
               message: healthData?.components?.database?.message,
             },
-            { name: '连接池', status: 'unknown' as HealthStatusType, message: '未检测（暂无连接池监控数据）' },
+            {
+              name: '连接池',
+              status: 'unknown' as HealthStatusType,
+              message: '未检测（暂无连接池监控数据）',
+            },
           ]}
         />
         <HealthCard
@@ -589,7 +607,7 @@ export const DiagnosticsPage: React.FC = () => {
           checks={[
             {
               name: 'Redis',
-              status: healthData?.components?.redis?.status as HealthStatusType || 'unknown',
+              status: (healthData?.components?.redis?.status as HealthStatusType) || 'unknown',
               message: healthData?.components?.redis?.message,
             },
           ]}
@@ -600,7 +618,7 @@ export const DiagnosticsPage: React.FC = () => {
           checks={[
             {
               name: 'MQTT Broker',
-              status: healthData?.components?.mqtt?.status as HealthStatusType || 'unknown',
+              status: (healthData?.components?.mqtt?.status as HealthStatusType) || 'unknown',
               message: healthData?.components?.mqtt?.message,
             },
           ]}
@@ -611,17 +629,17 @@ export const DiagnosticsPage: React.FC = () => {
           checks={[
             {
               name: 'CPU',
-              status: healthData?.components?.cpu?.status as HealthStatusType || 'unknown',
+              status: (healthData?.components?.cpu?.status as HealthStatusType) || 'unknown',
               message: healthData?.components?.cpu?.message,
             },
             {
               name: '内存',
-              status: healthData?.components?.memory?.status as HealthStatusType || 'unknown',
+              status: (healthData?.components?.memory?.status as HealthStatusType) || 'unknown',
               message: healthData?.components?.memory?.message,
             },
             {
               name: '磁盘',
-              status: healthData?.components?.disk?.status as HealthStatusType || 'unknown',
+              status: (healthData?.components?.disk?.status as HealthStatusType) || 'unknown',
               message: healthData?.components?.disk?.message,
             },
           ]}
@@ -661,7 +679,12 @@ export const DiagnosticsPage: React.FC = () => {
       </div>
 
       {/* 系统信息 */}
-      {systemData && <SystemInfoComponent system={systemData.system || {}} processInfo={systemData.process || {}} />}
+      {systemData && (
+        <SystemInfoComponent
+          system={systemData.system || {}}
+          processInfo={systemData.process || {}}
+        />
+      )}
 
       {/* 慢请求记录 */}
       {performanceData && <SlowRequestsTable requests={performanceData.slow_requests || []} />}

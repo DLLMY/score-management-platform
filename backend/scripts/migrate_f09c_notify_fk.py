@@ -14,6 +14,7 @@ F9-C: 为通知相关表补充外键关联列。
 3. 列不存在则 ALTER ADD COLUMN（带 REFERENCES）；存在则跳过
 4. 恢复 FK 并提交
 """
+
 import os
 import sys
 import shutil
@@ -30,7 +31,7 @@ DB_URI = app.config.get("SQLALCHEMY_DATABASE_URI", "")
 if not DB_URI.startswith("sqlite:///"):
     raise SystemExit(f"非预期数据库类型: {DB_URI}")
 
-DB_PATH = os.path.abspath(DB_URI[len("sqlite:///"):])
+DB_PATH = os.path.abspath(DB_URI[len("sqlite:///") :])
 if not os.path.exists(DB_PATH):
     raise SystemExit(f"数据库文件不存在: {DB_PATH}")
 
@@ -79,13 +80,17 @@ def main():
 
         # scheduled_notifies.template_id -> notify_templates(id)
         add_column_if_missing(
-            cur, "scheduled_notifies", "template_id",
+            cur,
+            "scheduled_notifies",
+            "template_id",
             "INTEGER REFERENCES notify_templates(id)",
         )
 
         # notify_histories.notification_id -> notification(id)
         add_column_if_missing(
-            cur, "notify_histories", "notification_id",
+            cur,
+            "notify_histories",
+            "notification_id",
             "INTEGER REFERENCES notification(id)",
         )
 

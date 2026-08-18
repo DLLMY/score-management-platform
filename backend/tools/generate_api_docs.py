@@ -2,6 +2,7 @@
 API文档生成工具
 自动扫描API路由并生成完整的Markdown文档
 """
+
 import os
 import re
 from datetime import datetime

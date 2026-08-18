@@ -4,6 +4,7 @@ ScoreRecord 已通过 user_id (FK->user.id) 引用学生，原 student_id 仅索
 无任何 service/route/serialize 读取，属同义重复字段（报告 F1）。
 幂等：列不存在则跳过。需在系统 Python 3.11 下运行。
 """
+
 import os
 import sys
 
@@ -14,7 +15,9 @@ from sqlalchemy import text
 from app import app
 from models import db, ScoreRecord
 
-TABLE = ScoreRecord.__tablename__  # 实际物理表名（无显式 __tablename__，Flask-SQLAlchemy 默认 score_record）
+TABLE = (
+    ScoreRecord.__tablename__
+)  # 实际物理表名（无显式 __tablename__，Flask-SQLAlchemy 默认 score_record）
 
 
 def upgrade():

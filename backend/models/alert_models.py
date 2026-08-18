@@ -25,6 +25,8 @@ class Alert(db.Model):
     recommended_action = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=True)
     acknowledged_at = db.Column(db.DateTime, nullable=True)
+
+
 class StudentCluster(db.Model):
     """学生聚类分组"""
 

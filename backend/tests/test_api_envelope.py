@@ -12,6 +12,7 @@
 
 新增端点或改动响应结构后跑一次本文件，即可在发版前发现契约违规。
 """
+
 import pytest
 
 
@@ -73,7 +74,9 @@ class TestAPIEnvelope:
             "/api/devices": "devices",
             "/api/classes": "classes",
         }
-        registered = {rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith("/api/")}
+        registered = {
+            rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith("/api/")
+        }
 
         def _hit(path):
             resp = client.get(path, headers=auth_headers)
@@ -95,7 +98,7 @@ class TestAPIEnvelope:
             checked += 1
             data = _hit(path)
             assert isinstance(data, dict), f"{path} 应为分页 dict, 实际 {type(data).__name__}"
-            assert isinstance(data.get(field), list), (
-                f"{path} data.{field} 应为数组, 实际 {type(data.get(field)).__name__}"
-            )
+            assert isinstance(
+                data.get(field), list
+            ), f"{path} data.{field} 应为数组, 实际 {type(data.get(field)).__name__}"
         assert checked >= 1, "分页端点全部未注册，请检查路径是否漂移"

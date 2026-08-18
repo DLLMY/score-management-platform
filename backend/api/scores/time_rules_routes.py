@@ -43,7 +43,8 @@ time_rule_response = ns_time_rules.model(
 )
 
 time_rule_list_response = ns_time_rules.model(
-    "TimeRuleListResponse", {"rules": fields.List(fields.Nested(time_rule_response), description="时间规则列表")}
+    "TimeRuleListResponse",
+    {"rules": fields.List(fields.Nested(time_rule_response), description="时间规则列表")},
 )
 
 time_rule_check_response = ns_time_rules.model(
@@ -243,6 +244,9 @@ class TimeRuleCheck(Resource):
             end_time = rule.end_hour * 60 + rule.end_minute
 
             if start_time <= current_time <= end_time:
-                return {"allowed": True, "rule": {"id": rule.id, "name": rule.name, "allow_unlock": rule.allow_unlock}}
+                return {
+                    "allowed": True,
+                    "rule": {"id": rule.id, "name": rule.name, "allow_unlock": rule.allow_unlock},
+                }
 
         return {"allowed": False, "message": "当前时间不允许操作"}

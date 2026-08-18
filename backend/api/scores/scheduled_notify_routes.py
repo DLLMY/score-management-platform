@@ -19,6 +19,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def _resolve_class_from_device(device_id):
     if not device_id:
         return None
@@ -73,7 +74,9 @@ class ScheduledList(Resource):
                 "scheduled_at": s.scheduled_at.isoformat() if s.scheduled_at else None,
                 "repeat_type": s.repeat_type,
                 "repeat_interval": s.repeat_interval,
-                "repeat_day_of_week": json.loads(s.repeat_day_of_week) if s.repeat_day_of_week else [],
+                "repeat_day_of_week": (
+                    json.loads(s.repeat_day_of_week) if s.repeat_day_of_week else []
+                ),
                 "repeat_end_at": s.repeat_end_at.isoformat() if s.repeat_end_at else None,
                 "status": s.status,
                 "last_sent_at": s.last_sent_at.isoformat() if s.last_sent_at else None,
@@ -89,7 +92,9 @@ class ScheduledList(Resource):
         """创建定时通知"""
         data = ns_scheduled_notify.payload
         # 从 token 获取当前管理员，避免审计链丢失真实责任人；无 token 时兜底种子管理员
-        _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        _admin_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         notify = create_scheduled_notify(data, _admin_id)
         return {
             "success": True,
@@ -119,7 +124,9 @@ class ScheduledDetail(Resource):
             "scheduled_at": notify.scheduled_at.isoformat() if notify.scheduled_at else None,
             "repeat_type": notify.repeat_type,
             "repeat_interval": notify.repeat_interval,
-            "repeat_day_of_week": json.loads(notify.repeat_day_of_week) if notify.repeat_day_of_week else [],
+            "repeat_day_of_week": (
+                json.loads(notify.repeat_day_of_week) if notify.repeat_day_of_week else []
+            ),
             "repeat_end_at": notify.repeat_end_at.isoformat() if notify.repeat_end_at else None,
             "status": notify.status,
             "last_sent_at": notify.last_sent_at.isoformat() if notify.last_sent_at else None,
@@ -164,7 +171,9 @@ class ScheduledTrigger(Resource):
         notify = ScheduledNotify.query.get_or_404(id)
         _body = request.get_json(silent=True) or {}
         force_send = bool(_body.get("force_send", False))
-        _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        _admin_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         if force_send and not has_permission(g.current_user, "notification.force_send"):
             return APIResponse.error(message="无强制发送权限（需 notification.force_send）")
         message = {
@@ -184,23 +193,40 @@ class ScheduledTrigger(Resource):
         else:
             topics = ["phonebox/remote/notify"]
         # 上课时间拦截（广播按全校+任意班级；指定设备按班级课表反查）
-        cls_id = _resolve_class_from_device(notify.device_id) if (notify.send_mode == "device" and notify.device_id) else None
+        cls_id = (
+            _resolve_class_from_device(notify.device_id)
+            if (notify.send_mode == "device" and notify.device_id)
+            else None
+        )
         if cls_id:
             allowed, check_message, reason_code, _ = ClassTimeChecker.is_notification_allowed(
                 target_class_info_id=cls_id, force_send=force_send
             )
         else:
-            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=force_send)
+            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(
+                force_send=force_send
+            )
             allowed = not blocked
         if not allowed:
             ClassTimeChecker.log_notify_audit(
-                "scheduled_notify", cls_id, _admin_id, {"id": id}, reason_code or "GLOBAL_TIME_RULE",
-                check_message, force_send=False,
+                "scheduled_notify",
+                cls_id,
+                _admin_id,
+                {"id": id},
+                reason_code or "GLOBAL_TIME_RULE",
+                check_message,
+                force_send=False,
             )
             return APIResponse.error(message=f"上课时间，定时通知已暂停: {check_message}")
         if force_send:
             ClassTimeChecker.log_notify_audit(
-                "scheduled_notify", cls_id, _admin_id, {"id": id}, "FORCE", "强制触发定时通知", force_send=True
+                "scheduled_notify",
+                cls_id,
+                _admin_id,
+                {"id": id},
+                "FORCE",
+                "强制触发定时通知",
+                force_send=True,
             )
 
         try:
@@ -216,7 +242,9 @@ class ScheduledTrigger(Resource):
             if not all(ok for _, ok in publish_results):
                 db.session.rollback()
                 failed_topics = [t for t, ok in publish_results if not ok]
-                return APIResponse.error(message=f"MQTT发布失败（设备未连接），未标记已发送: {failed_topics}")
+                return APIResponse.error(
+                    message=f"MQTT发布失败（设备未连接），未标记已发送: {failed_topics}"
+                )
             record_scheduled_notify_sent(notify, topics)
             return APIResponse.success(message="通知已发送")
         except Exception as e:
@@ -250,7 +278,11 @@ def process_scheduled_notifications():
             else:
                 topics = ["phonebox/remote/notify"]
             # 上课时间拦截（执行那一刻才判）：广播按全校+任意班级；指定设备按班级课表
-            cls_id = _resolve_class_from_device(notify.device_id) if (notify.send_mode == "device" and notify.device_id) else None
+            cls_id = (
+                _resolve_class_from_device(notify.device_id)
+                if (notify.send_mode == "device" and notify.device_id)
+                else None
+            )
             if cls_id:
                 allowed, _, reason_code, _ = ClassTimeChecker.is_notification_allowed(
                     target_class_info_id=cls_id, force_send=False
@@ -260,8 +292,13 @@ def process_scheduled_notifications():
                 allowed = not blocked
             if not allowed:
                 ClassTimeChecker.log_notify_audit(
-                    "scheduled_notify", cls_id, None, {"id": notify.id},
-                    reason_code or "GLOBAL_TIME_RULE", "上课时间，定时通知跳过发送", force_send=False,
+                    "scheduled_notify",
+                    cls_id,
+                    None,
+                    {"id": notify.id},
+                    reason_code or "GLOBAL_TIME_RULE",
+                    "上课时间，定时通知跳过发送",
+                    force_send=False,
                 )
                 continue  # 保持 pending，待非上课时段重试
 

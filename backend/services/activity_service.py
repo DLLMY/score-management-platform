@@ -75,7 +75,9 @@ class ActivityService:
         activity = Activity.query.get(activity_id)
         if not activity:
             return {"success": False, "message": "活动不存在"}, 404
-        existing = ActivityRegistration.query.filter_by(activity_id=activity_id, student_id=student_id).first()
+        existing = ActivityRegistration.query.filter_by(
+            activity_id=activity_id, student_id=student_id
+        ).first()
         if existing:
             return {"success": False, "message": "已报名"}, 400
         reg = ActivityRegistration(activity_id=activity_id, student_id=student_id)
@@ -84,7 +86,9 @@ class ActivityService:
         return {"success": True, "data": {"activity_id": activity_id, "student_id": student_id}}
 
     def cancel_registration(self, activity_id, student_id):
-        reg = ActivityRegistration.query.filter_by(activity_id=activity_id, student_id=student_id).first()
+        reg = ActivityRegistration.query.filter_by(
+            activity_id=activity_id, student_id=student_id
+        ).first()
         if not reg:
             return {"success": False, "message": "报名记录不存在"}, 404
         reg.status = "cancelled"
@@ -92,7 +96,9 @@ class ActivityService:
         return {"success": True, "message": "已取消"}
 
     def _build_activity_response(self, a):
-        reg_count = ActivityRegistration.query.filter_by(activity_id=a.id, status="registered").count()
+        reg_count = ActivityRegistration.query.filter_by(
+            activity_id=a.id, status="registered"
+        ).count()
         return {
             "id": a.id,
             "class_id": a.class_id,

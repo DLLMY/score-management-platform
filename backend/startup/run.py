@@ -98,7 +98,14 @@ def main():
         use_reloader = False
         print("使用 Flask-SocketIO 开发服务器启动...")
         print()
-        socketio.run(app, host=host, port=port, debug=debug, use_reloader=use_reloader, allow_unsafe_werkzeug=True)
+        socketio.run(
+            app,
+            host=host,
+            port=port,
+            debug=debug,
+            use_reloader=use_reloader,
+            allow_unsafe_werkzeug=True,
+        )
 
 
 if __name__ == "__main__":

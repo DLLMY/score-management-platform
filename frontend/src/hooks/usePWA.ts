@@ -38,7 +38,10 @@ export const usePWA = (): PWAReturnValue => {
 
     // 环境 guard: 无 matchMedia 环境跳过 PWA 判定
     try {
-      if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+      if (
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(display-mode: standalone)').matches
+      ) {
         setStatus(PWA_STATUS.INSTALLED);
       }
     } catch {

@@ -95,12 +95,16 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
 
             <h2 className='text-3xl font-bold text-white mb-3 tracking-tight'>页面出错了</h2>
 
-            <p className='text-slate-400 mb-6 text-lg'>抱歉，页面加载时出现了错误。请尝试刷新页面。</p>
+            <p className='text-slate-400 mb-6 text-lg'>
+              抱歉，页面加载时出现了错误。请尝试刷新页面。
+            </p>
 
             <div className='bg-slate-800/50 rounded-xl p-4 mb-6 text-left border border-slate-700/50'>
               <div className='flex items-center gap-2 mb-3'>
                 <Bug className='w-4 h-4 text-red-400' />
-                <span className='text-xs text-slate-400 font-semibold uppercase tracking-wider'>错误信息</span>
+                <span className='text-xs text-slate-400 font-semibold uppercase tracking-wider'>
+                  错误信息
+                </span>
               </div>
               <p className='text-sm text-red-400 break-all font-mono leading-relaxed'>
                 {this.state.error?.message || '未知错误'}
@@ -108,7 +112,9 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
               {isDevelopment && this.state.errorInfo && (
                 <div className='mt-3 pt-3 border-t border-slate-700/50'>
                   <p className='text-xs text-slate-500 mb-1'>组件堆栈:</p>
-                  <pre className='text-xs text-slate-400 font-mono overflow-x-auto'>{this.state.errorInfo.componentStack}</pre>
+                  <pre className='text-xs text-slate-400 font-mono overflow-x-auto'>
+                    {this.state.errorInfo.componentStack}
+                  </pre>
                 </div>
               )}
             </div>
@@ -151,10 +157,7 @@ interface ErrorBoundaryFallbackProps {
   onRetry?: () => void;
 }
 
-export const ErrorBoundaryFallback: React.FC<ErrorBoundaryFallbackProps> = ({
-  error,
-  onRetry,
-}) => (
+export const ErrorBoundaryFallback: React.FC<ErrorBoundaryFallbackProps> = ({ error, onRetry }) => (
   <div className='min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4'>
     <div className='max-w-md w-full text-center'>
       <div className='w-20 h-20 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-6'>

@@ -203,7 +203,9 @@ class AlertCleanup(Resource):
         count = alert_service.delete_old_alerts(days=args["days"])
         if count is None:
             return APIResponse.error(message="清理过期告警失败", status_code=500)
-        return APIResponse.success(data={"deleted_count": count}, message=f"已删除 {count} 条过期告警")
+        return APIResponse.success(
+            data={"deleted_count": count}, message=f"已删除 {count} 条过期告警"
+        )
 
 
 @ns_alerts.route("/test")

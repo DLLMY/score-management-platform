@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 综合评分服务测试模块
 """
 """
 
 from unittest.mock import MagicMock, patch
 import numpy as np
+
 try:
     from services.composite_score_service import CompositeScoreService
 except ImportError:
@@ -65,14 +66,17 @@ class TestCompositeScoreService:
                     mock_unlock_count.count = 2
 
                     mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = [
-                        mock_academic_stat, mock_academic_stat2
+                        mock_academic_stat,
+                        mock_academic_stat2,
                     ]
                     mock_db_query.return_value.filter.return_value.group_by.return_value.all.side_effect = [
                         [mock_academic_stat, mock_academic_stat2],
-                        [mock_unlock_count]
+                        [mock_unlock_count],
                     ]
 
-                    with patch("services.composite_score_service.CompositeScore.query") as mock_composite_query:
+                    with patch(
+                        "services.composite_score_service.CompositeScore.query"
+                    ) as mock_composite_query:
                         mock_composite_query.delete.return_value = None
 
                         with patch("services.composite_score_service.db_session_scope"):
@@ -100,13 +104,19 @@ class TestCompositeScoreService:
                 mock_query.filter.return_value.filter.return_value.all.return_value = [mock_user]
 
                 with patch("services.composite_score_service.db.session.query") as mock_db_query:
-                    mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = []
+                    mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = (
+                        []
+                    )
 
-                    with patch("services.composite_score_service.CompositeScore.query") as mock_composite_query:
+                    with patch(
+                        "services.composite_score_service.CompositeScore.query"
+                    ) as mock_composite_query:
                         mock_composite_query.delete.return_value = None
 
                         with patch("services.composite_score_service.db_session_scope"):
-                            result = CompositeScoreService.calculate_composite_score(class_name="二班")
+                            result = CompositeScoreService.calculate_composite_score(
+                                class_name="二班"
+                            )
 
                             assert result["method"] == "entropy_weight"
                             assert len(result["rankings"]) == 1
@@ -116,7 +126,9 @@ class TestCompositeScoreService:
         with app.app_context():
 
             with patch("services.composite_score_service.CompositeScore.query") as mock_query:
-                mock_query.join.return_value.filter.return_value.order_by.return_value.all.return_value = []
+                mock_query.join.return_value.filter.return_value.order_by.return_value.all.return_value = (
+                    []
+                )
 
                 result = CompositeScoreService.get_composite_scores()
 
@@ -145,15 +157,15 @@ class TestCompositeScoreService:
             mock_user.is_active = True
             mock_composite.user = mock_user
 
-            with patch(
-                "services.composite_score_service.CompositeScore.query"
-            ) as mock_query:
+            with patch("services.composite_score_service.CompositeScore.query") as mock_query:
                 mock_query.join.return_value.filter.return_value.order_by.return_value.all.return_value = [
                     mock_composite
                 ]
 
                 with patch("services.composite_score_service.db.session.query") as mock_db_query:
-                    mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = []
+                    mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = (
+                        []
+                    )
 
                     with patch("services.composite_score_service.User.query") as mock_user_query:
                         mock_user_query.filter.return_value.all.return_value = [mock_user]
@@ -247,8 +259,22 @@ class TestCompositeScoreService:
         with app.app_context():
 
             data = [
-                {"user_id": 1, "name": "张三", "class_name": "一班", "behavior": 80, "academic": 85, "unlock_count": 2},
-                {"user_id": 2, "name": "李四", "class_name": "一班", "behavior": 90, "academic": 92, "unlock_count": 1},
+                {
+                    "user_id": 1,
+                    "name": "张三",
+                    "class_name": "一班",
+                    "behavior": 80,
+                    "academic": 85,
+                    "unlock_count": 2,
+                },
+                {
+                    "user_id": 2,
+                    "name": "李四",
+                    "class_name": "一班",
+                    "behavior": 90,
+                    "academic": 92,
+                    "unlock_count": 1,
+                },
             ]
 
             result = CompositeScoreService._preprocess_data(data)
@@ -267,10 +293,28 @@ class TestCompositeScoreService:
         with app.app_context():
 
             data = [
-                                {"user_id": 1, "name": "张三", "class_name": "一班", "behavior": 80, "academic": 85,
-                "unlock_count": 2, "behavior_norm": 0.5, "academic_norm": 0.5, "compliance_norm": 0.5},
-                                {"user_id": 2, "name": "李四", "class_name": "一班", "behavior": 90, "academic": 92,
-                "unlock_count": 1, "behavior_norm": 1.0, "academic_norm": 1.0, "compliance_norm": 1.0},
+                {
+                    "user_id": 1,
+                    "name": "张三",
+                    "class_name": "一班",
+                    "behavior": 80,
+                    "academic": 85,
+                    "unlock_count": 2,
+                    "behavior_norm": 0.5,
+                    "academic_norm": 0.5,
+                    "compliance_norm": 0.5,
+                },
+                {
+                    "user_id": 2,
+                    "name": "李四",
+                    "class_name": "一班",
+                    "behavior": 90,
+                    "academic": 92,
+                    "unlock_count": 1,
+                    "behavior_norm": 1.0,
+                    "academic_norm": 1.0,
+                    "compliance_norm": 1.0,
+                },
             ]
             weights = np.array([0.3333, 0.3333, 0.3334])
 

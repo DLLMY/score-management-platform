@@ -184,6 +184,7 @@ def check_bandit():
         if os.path.exists(report_path):
             with open(report_path, "r", encoding="utf-8") as f:
                 import json as j
+
                 data = j.load(f)
                 results = data.get("results", [])
                 high_count = len([r for r in results if r.get("issue_severity") == "HIGH"])
@@ -232,13 +233,19 @@ def generate_report(flake8_result, syntax_result, compile_result, bandit_result=
     print("\n" + "=" * 60)
     print("📊 检查汇总")
     print("=" * 60)
-    print(f"  Flake8: {'✅ 通过' if flake8_result['passed'] else '❌ 失败'} ({flake8_result['total_errors']} 错误)")
-    print(f"  语法检查: {'✅ 通过' if syntax_result['passed'] else '❌ 失败'} ({syntax_result['syntax_errors']} 错误)")
+    print(
+        f"  Flake8: {'✅ 通过' if flake8_result['passed'] else '❌ 失败'} ({flake8_result['total_errors']} 错误)"
+    )
+    print(
+        f"  语法检查: {'✅ 通过' if syntax_result['passed'] else '❌ 失败'} ({syntax_result['syntax_errors']} 错误)"
+    )
     print(
         f"  编译检查: {'✅ 通过' if compile_result['passed'] else '❌ 失败'} ({compile_result['compile_errors']} 错误)"
     )
     if bandit_result:
-        print(f"  安全扫描: {'✅ 通过' if bandit_result['passed'] else '❌ 失败'} (HIGH:{bandit_result['high']}, MEDIUM:{bandit_result['medium']})")
+        print(
+            f"  安全扫描: {'✅ 通过' if bandit_result['passed'] else '❌ 失败'} (HIGH:{bandit_result['high']}, MEDIUM:{bandit_result['medium']})"
+        )
     print(f"\n  报告已保存: {report_path}")
 
     return report["summary"]["overall_passed"]

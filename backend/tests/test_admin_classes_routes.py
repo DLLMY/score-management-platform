@@ -5,6 +5,7 @@
 - 移除班级（成功清空 head_teacher_id、未找到回 404）
 - GET 列表
 """
+
 import pytest
 
 from models import db, Admin, AdminClass, ClassInfo
@@ -58,7 +59,9 @@ class TestAdminClassesRoutes:
             # 原实现仅在 is_primary=True 分支同步 head_teacher_id；is_primary=False 重分配不清除，保持零漂移
             assert ClassInfo.query.get(cls_id).head_teacher_id == 1
 
-    def test_assign_primary_reassigns_prev_teacher(self, client, app, auth_headers, seeded_academics):
+    def test_assign_primary_reassigns_prev_teacher(
+        self, client, app, auth_headers, seeded_academics
+    ):
         cls_id = seeded_academics["cls_id"]
         with app.app_context():
             client.post(
@@ -99,9 +102,7 @@ class TestAdminClassesRoutes:
                 json={"class_id": cls_id, "is_primary": True},
                 headers=auth_headers,
             )
-            resp = client.post(
-                f"/api/admin-classes/1/remove-class/{cls_id}", headers=auth_headers
-            )
+            resp = client.post(f"/api/admin-classes/1/remove-class/{cls_id}", headers=auth_headers)
             assert resp.status_code == 200
             assert AdminClass.query.filter_by(admin_id=1, class_info_id=cls_id).first() is None
             assert ClassInfo.query.get(cls_id).head_teacher_id is None
@@ -109,7 +110,5 @@ class TestAdminClassesRoutes:
     def test_remove_class_not_found(self, client, app, auth_headers, seeded_academics):
         cls_id = seeded_academics["cls_id"]
         with app.app_context():
-            resp = client.post(
-                f"/api/admin-classes/1/remove-class/{cls_id}", headers=auth_headers
-            )
+            resp = client.post(f"/api/admin-classes/1/remove-class/{cls_id}", headers=auth_headers)
             assert resp.status_code == 404

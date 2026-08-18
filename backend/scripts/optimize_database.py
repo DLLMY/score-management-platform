@@ -199,7 +199,9 @@ def analyze_table_sizes():
                     row_count = "N/A"
                 try:
                     idx_count_result = conn.execute(
-                        text("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name=:name"),
+                        text(
+                            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name=:name"
+                        ),
                         {"name": table_name},
                     )
                     idx_count = idx_count_result.scalar()

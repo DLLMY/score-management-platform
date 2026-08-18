@@ -7,7 +7,10 @@ interface ValidationRule {
   [key: string]: ValidationRuleConfig;
 }
 
-type FieldRules = Record<string, (string | Record<string, unknown> | { [key: string]: number })[] | Record<string, unknown>>;
+type FieldRules = Record<
+  string,
+  (string | Record<string, unknown> | { [key: string]: number })[] | Record<string, unknown>
+>;
 
 interface ValidationResult {
   isValid: boolean;
@@ -140,7 +143,10 @@ const validationRules: ValidationRule = {
   },
 };
 
-export const validateField = (value: unknown, rules: (string | Record<string, unknown>)[]): string | null => {
+export const validateField = (
+  value: unknown,
+  rules: (string | Record<string, unknown>)[]
+): string | null => {
   for (const rule of rules) {
     if (typeof rule === 'string') {
       const ruleConfig = validationRules[rule];
@@ -173,7 +179,7 @@ export const validateForm = (formData: unknown, fieldRules: FieldRules): Validat
   for (const [fieldName, rules] of Object.entries(fieldRules)) {
     const value = data[fieldName];
     let error: string | null = null;
-    
+
     if (Array.isArray(rules)) {
       error = validateField(value, rules);
     } else {
@@ -187,7 +193,7 @@ export const validateForm = (formData: unknown, fieldRules: FieldRules): Validat
       }
       error = validateField(value, ruleArray);
     }
-    
+
     if (error) {
       errors[fieldName] = error;
       isValid = false;

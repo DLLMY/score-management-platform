@@ -219,7 +219,11 @@ class NLPPerformanceOptimizer:
 
     def get_service(self, service_type: str):
         """获取已预热的服务实例"""
-        services = {"bert": self._bert_service, "ml": self._nlp_ml_service, "parser": self._nlp_parser_service}
+        services = {
+            "bert": self._bert_service,
+            "ml": self._nlp_ml_service,
+            "parser": self._nlp_parser_service,
+        }
         return services.get(service_type)
 
 

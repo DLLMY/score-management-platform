@@ -38,7 +38,7 @@ export function useAutoSave<T>({
 
   useEffect(() => {
     const hasChanges = JSON.stringify(data) !== JSON.stringify(previousData);
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isDirty: hasChanges,
       hasUnsavedChanges: hasChanges && !prev.lastSaved,
@@ -58,7 +58,7 @@ export function useAutoSave<T>({
         if (parsed.timestamp) {
           const age = Date.now() - parsed.timestamp;
           if (age < 24 * 60 * 60 * 1000) {
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               hasUnsavedChanges: true,
             }));
@@ -70,12 +70,18 @@ export function useAutoSave<T>({
     }
   }, [key]);
 
-  const saveDraft = useCallback((currentData: T) => {
-    localStorage.setItem(`draft_${key}`, JSON.stringify({
-      data: currentData,
-      timestamp: Date.now(),
-    }));
-  }, [key]);
+  const saveDraft = useCallback(
+    (currentData: T) => {
+      localStorage.setItem(
+        `draft_${key}`,
+        JSON.stringify({
+          data: currentData,
+          timestamp: Date.now(),
+        })
+      );
+    },
+    [key]
+  );
 
   const loadDraft = useCallback((): T | null => {
     const savedDraft = localStorage.getItem(`draft_${key}`);
@@ -84,7 +90,7 @@ export function useAutoSave<T>({
     try {
       const parsed = JSON.parse(savedDraft);
       const age = Date.now() - parsed.timestamp;
-      
+
       if (age > 24 * 60 * 60 * 1000) {
         localStorage.removeItem(`draft_${key}`);
         return null;
@@ -99,7 +105,7 @@ export function useAutoSave<T>({
 
   const clearDraft = useCallback(() => {
     localStorage.removeItem(`draft_${key}`);
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       hasUnsavedChanges: false,
       isDirty: false,
@@ -115,7 +121,7 @@ export function useAutoSave<T>({
     const draft = loadDraft();
     if (draft) {
       setPreviousData(draft);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         hasUnsavedChanges: false,
         isDirty: false,
@@ -128,11 +134,11 @@ export function useAutoSave<T>({
     if (!enabled || !state.isDirty || !onSave) return;
 
     const timer = setTimeout(async () => {
-      setState(prev => ({ ...prev, isSaving: true }));
+      setState((prev) => ({ ...prev, isSaving: true }));
 
       try {
         await onSave(data);
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isSaving: false,
           lastSaved: new Date(),
@@ -142,7 +148,7 @@ export function useAutoSave<T>({
         clearDraft();
         onSaveSuccess?.();
       } catch (error) {
-        setState(prev => ({ ...prev, isSaving: false }));
+        setState((prev) => ({ ...prev, isSaving: false }));
         onSaveError?.(error as Error);
       }
     }, debounceMs);

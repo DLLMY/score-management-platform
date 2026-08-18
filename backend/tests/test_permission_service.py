@@ -5,6 +5,7 @@
 数据库 RBAC 表（AdminRole / RolePermissionMapping / RoleHierarchy）查询，
 不再依赖 admin.role 字段或静态 PERMISSIONS 字典的角色推导。
 """
+
 import pytest
 from utils.permission import (
     has_permission,

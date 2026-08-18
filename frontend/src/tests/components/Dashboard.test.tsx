@@ -39,7 +39,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘页面可以渲染', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const title = screen.getByText(/仪表盘/i);
       expect(title).toBeInTheDocument();
@@ -48,7 +48,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘显示统计卡片', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const userCard = screen.getByText(/总用户数/i);
       expect(userCard).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘显示刷新按钮', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const refreshButton = screen.getByRole('button', { name: /刷新/i });
       expect(refreshButton).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('Dashboard Component', () => {
 
   test('点击刷新按钮触发刷新状态', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const refreshButton = screen.getByRole('button', { name: /刷新/i });
       expect(refreshButton).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘显示用户排名区域', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const rankingSection = screen.getByText(/积分排行榜/i);
       expect(rankingSection).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘显示设备状态区域', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const deviceSection = screen.getByText(/设备状态/i);
       expect(deviceSection).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘显示通知区域', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const notificationSection = screen.getByText(/最新通知/i);
       expect(notificationSection).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('Dashboard Component', () => {
 
   test('仪表盘显示算法数据区域', async () => {
     renderWithProviders(<Dashboard />);
-    
+
     await waitFor(() => {
       const algorithmSection = screen.getByText(/算法分析/i);
       expect(algorithmSection).toBeInTheDocument();

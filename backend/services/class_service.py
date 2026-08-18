@@ -67,7 +67,9 @@ class ClassService:
 
             total = query.count()
 
-            classes = query.order_by(ClassInfo.name).paginate(page=page, per_page=per_page, error_out=False)
+            classes = query.order_by(ClassInfo.name).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
 
             return {
                 "classes": [self._build_class_response(c) for c in classes.items],
@@ -199,7 +201,9 @@ class ClassService:
             head_teacher_id = cls.head_teacher_id
 
             if head_teacher_id:
-                admin_link = AdminClass.query.filter_by(admin_id=head_teacher_id, class_info_id=cls.id).first()
+                admin_link = AdminClass.query.filter_by(
+                    admin_id=head_teacher_id, class_info_id=cls.id
+                ).first()
 
                 if not admin_link:
                     issues.append(
@@ -209,7 +213,8 @@ class ClassService:
                             "class_id": cls.id,
                             "head_teacher_id": head_teacher_id,
                             "message": (
-                                f'班级 "{cls.name}" 的班主任ID({head_teacher_id})' "在AdminClass表中缺少关联记录"
+                                f'班级 "{cls.name}" 的班主任ID({head_teacher_id})'
+                                "在AdminClass表中缺少关联记录"
                             ),
                         }
                     )
@@ -259,7 +264,9 @@ class ClassService:
                 head_teacher_id = cls.head_teacher_id
 
                 if head_teacher_id:
-                    admin_link = AdminClass.query.filter_by(admin_id=head_teacher_id, class_info_id=cls.id).first()
+                    admin_link = AdminClass.query.filter_by(
+                        admin_id=head_teacher_id, class_info_id=cls.id
+                    ).first()
 
                     if not admin_link:
                         new_link = AdminClass(
@@ -284,11 +291,15 @@ class ClassService:
                             {
                                 "class_name": cls.name,
                                 "action": "set_primary",
-                                "message": (f'将班级 "{cls.name}" 的AdminClass关联is_primary设置为True'),
+                                "message": (
+                                    f'将班级 "{cls.name}" 的AdminClass关联is_primary设置为True'
+                                ),
                             }
                         )
 
-                primary_link = AdminClass.query.filter_by(class_info_id=cls.id, is_primary=True).first()
+                primary_link = AdminClass.query.filter_by(
+                    class_info_id=cls.id, is_primary=True
+                ).first()
 
                 if primary_link and cls.head_teacher_id != primary_link.admin_id:
                     cls.head_teacher_id = primary_link.admin_id
@@ -297,7 +308,9 @@ class ClassService:
                         {
                             "class_name": cls.name,
                             "action": "sync_head_teacher",
-                            "message": (f'同步班级 "{cls.name}" 的head_teacher_id为AdminClass主班管理员'),
+                            "message": (
+                                f'同步班级 "{cls.name}" 的head_teacher_id为AdminClass主班管理员'
+                            ),
                         }
                     )
 
@@ -471,11 +484,17 @@ class ClassService:
 
                 if rule_type == "required" and value is None:
                     errors.append(message)
-                elif rule_type == "max_length" and value and len(str(value)) > params.get("max", 100):
+                elif (
+                    rule_type == "max_length" and value and len(str(value)) > params.get("max", 100)
+                ):
                     errors.append(message)
                 elif rule_type == "min_length" and value and len(str(value)) < params.get("min", 1):
                     errors.append(message)
-                elif rule_type == "regex" and value and not re.match(params.get("pattern", ""), str(value)):
+                elif (
+                    rule_type == "regex"
+                    and value
+                    and not re.match(params.get("pattern", ""), str(value))
+                ):
                     errors.append(message)
             return errors
 
@@ -493,20 +512,30 @@ class ClassService:
                     if head_teacher_name and head_teacher_id:
                         validation_errors.append("不能同时提供班主任姓名和班主任ID")
                     elif head_teacher_name:
-                        if not isinstance(head_teacher_name, str) or len(head_teacher_name.strip()) == 0:
+                        if (
+                            not isinstance(head_teacher_name, str)
+                            or len(head_teacher_name.strip()) == 0
+                        ):
                             validation_errors.append("班主任姓名格式无效，必须为非空字符串")
                         elif len(head_teacher_name.strip()) > 50:
                             validation_errors.append("班主任姓名长度超过限制（最大50字符）")
                         else:
-                            admin = Admin.query.filter(Admin.real_name == head_teacher_name.strip()).first()
+                            admin = Admin.query.filter(
+                                Admin.real_name == head_teacher_name.strip()
+                            ).first()
                             if not admin:
-                                admin = Admin.query.filter(Admin.username == head_teacher_name.strip()).first()
+                                admin = Admin.query.filter(
+                                    Admin.username == head_teacher_name.strip()
+                                ).first()
                             if not admin:
-                                validation_errors.append(f'班主任 "{head_teacher_name}" 在系统中不存在')
+                                validation_errors.append(
+                                    f'班主任 "{head_teacher_name}" 在系统中不存在'
+                                )
                             else:
                                 if admin.role not in ["admin", "teacher"]:
                                     validation_errors.append(
-                                        f'用户 "{head_teacher_name}" 的角色不是' "管理员或教师，无法担任班主任"
+                                        f'用户 "{head_teacher_name}" 的角色不是'
+                                        "管理员或教师，无法担任班主任"
                                     )
                                 resolved["head_teacher_id"] = admin.id
                     elif head_teacher_id:
@@ -517,11 +546,14 @@ class ClassService:
                                 admin_id = int(head_teacher_id)
                                 admin = get_by_id(Admin, admin_id)
                                 if not admin:
-                                    validation_errors.append(f'班主任ID "{head_teacher_id}" 在系统中不存在')
+                                    validation_errors.append(
+                                        f'班主任ID "{head_teacher_id}" 在系统中不存在'
+                                    )
                                 else:
                                     if admin.role not in ["admin", "teacher"]:
                                         validation_errors.append(
-                                            f'用户ID "{head_teacher_id}" 的角色不是' "管理员或教师，无法担任班主任"
+                                            f'用户ID "{head_teacher_id}" 的角色不是'
+                                            "管理员或教师，无法担任班主任"
                                         )
                                     resolved["head_teacher_id"] = admin.id
                             except ValueError:
@@ -543,7 +575,13 @@ class ClassService:
                                 "message": (f'验证失败: {", ".join(errors)}'),
                                 "row_data": item,
                                 "error_fields": list(
-                                    set([rule["field"] for rule in validation_rules if item.get(rule["field"]) is None])
+                                    set(
+                                        [
+                                            rule["field"]
+                                            for rule in validation_rules
+                                            if item.get(rule["field"]) is None
+                                        ]
+                                    )
                                 ),
                             }
                         )
@@ -583,7 +621,9 @@ class ClassService:
                             continue
                         elif conflict_strategy == "update":
                             existing.grade = resolved_item.get("grade", existing.grade)
-                            existing.description = resolved_item.get("description", existing.description)
+                            existing.description = resolved_item.get(
+                                "description", existing.description
+                            )
                             existing.is_active = resolved_item.get("is_active", existing.is_active)
                             existing.updated_at = datetime.now()
 

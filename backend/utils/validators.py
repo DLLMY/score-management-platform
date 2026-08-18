@@ -55,7 +55,9 @@ class Validator:
     def one_of(value: Any, choices: List[Any], field_name: str) -> None:
         """验证值必须在列表中"""
         if value and value not in choices:
-            raise ValidationError(f"{field_name}必须是以下之一: {', '.join(map(str, choices))}", field_name)
+            raise ValidationError(
+                f"{field_name}必须是以下之一: {', '.join(map(str, choices))}", field_name
+            )
 
 
 class SchemaValidator:
@@ -131,7 +133,10 @@ def validate_json(schema: Dict[str, Dict]):
             validator = SchemaValidator(schema)
             is_valid, result = validator.validate(data)
             if not is_valid:
-                return (jsonify({"success": False, "message": "数据验证失败", "errors": result}), 400)
+                return (
+                    jsonify({"success": False, "message": "数据验证失败", "errors": result}),
+                    400,
+                )
             return f(*args, **kwargs)
 
         return decorated_function
@@ -156,7 +161,10 @@ def validate_query(schema: Dict[str, Dict]):
             validator = SchemaValidator(schema)
             is_valid, result = validator.validate(dict(request.args))
             if not is_valid:
-                return (jsonify({"success": False, "message": "查询参数验证失败", "errors": result}), 400)
+                return (
+                    jsonify({"success": False, "message": "查询参数验证失败", "errors": result}),
+                    400,
+                )
             return f(*args, **kwargs)
 
         return decorated_function
@@ -197,9 +205,15 @@ def validate_chinese_phone(value: str, field_name: str = "手机号") -> None:
     """
     if value is None or (isinstance(value, str) and not value.strip()):
         return
-    Validator.pattern(value, PHONE_PATTERN, field_name, message=f"{field_name}格式不正确（应为 11 位手机号）")
+    Validator.pattern(
+        value, PHONE_PATTERN, field_name, message=f"{field_name}格式不正确（应为 11 位手机号）"
+    )
 
 
 PHONE_SCHEMA = {
-    "phone": {"required": False, "pattern": PHONE_PATTERN, "pattern_message": "手机号格式不正确（应为 11 位手机号）"},
+    "phone": {
+        "required": False,
+        "pattern": PHONE_PATTERN,
+        "pattern_message": "手机号格式不正确（应为 11 位手机号）",
+    },
 }

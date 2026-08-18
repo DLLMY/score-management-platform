@@ -240,6 +240,10 @@ def get_task_status(task_id):
     elif result.state == "SUCCESS":
         return {"task_id": task_id, "status": "SUCCESS", "result": result.result}
     elif result.state == "FAILURE":
-        return {"task_id": task_id, "status": "FAILURE", "error": str(result.info) if result.info else "未知错误"}
+        return {
+            "task_id": task_id,
+            "status": "FAILURE",
+            "error": str(result.info) if result.info else "未知错误",
+        }
     else:
         return {"task_id": task_id, "status": result.state, "meta": result.info}

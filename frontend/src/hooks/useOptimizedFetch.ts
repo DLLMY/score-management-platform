@@ -23,17 +23,12 @@ export function useOptimizedFetch<T = unknown>(
   dependencies: unknown[],
   options: UseOptimizedFetchOptions = {}
 ): UseOptimizedFetchResult<T> {
-  const {
-    debounceDelay = 300,
-    initialData = null,
-    onError,
-    onSuccess,
-  } = options;
+  const { debounceDelay = 300, initialData = null, onError, onSuccess } = options;
 
   const [data, setData] = useState<T | null>(initialData as T | null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
+
   const fetcherRef = useRef(fetcher);
   const abortControllerRef = useRef<AbortController | null>(null);
   const onSuccessRef = useRef(onSuccess);

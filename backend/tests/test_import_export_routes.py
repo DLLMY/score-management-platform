@@ -39,7 +39,9 @@ def test_import_users(client, app, auth_headers):
         [["张三", "男", "", "13800138001", "CARD001", ""]],
     )
     with app.app_context():
-        resp = _upload(client, "/api/import_export/import/users", "users.csv", content, auth_headers)
+        resp = _upload(
+            client, "/api/import_export/import/users", "users.csv", content, auth_headers
+        )
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["success"] is True
@@ -61,7 +63,9 @@ def test_import_categories(client, app, auth_headers):
         [["测试导入分类", "导入测试", "#3B82F6"]],
     )
     with app.app_context():
-        resp = _upload(client, "/api/import_export/import/categories", "cats.csv", content, auth_headers)
+        resp = _upload(
+            client, "/api/import_export/import/categories", "cats.csv", content, auth_headers
+        )
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["success"] is True
@@ -81,7 +85,9 @@ def test_import_rules(client, app, auth_headers):
         [["导入测试规则", "规则导入测试", "导入规则分类", 5, "是", 1, 0]],
     )
     with app.app_context():
-        resp = _upload(client, "/api/import_export/import/rules", "rules.csv", content, auth_headers)
+        resp = _upload(
+            client, "/api/import_export/import/rules", "rules.csv", content, auth_headers
+        )
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["success"] is True

@@ -9,7 +9,11 @@ from werkzeug.utils import secure_filename
 from utils.response import APIResponse
 import hashlib
 from services.mqtt_service import mqtt_manager
-from services.ota_negotiation_service import build_download_url, negotiate_all_devices, sign_ota_command
+from services.ota_negotiation_service import (
+    build_download_url,
+    negotiate_all_devices,
+    sign_ota_command,
+)
 from services.firmware_service import (
     create_firmware_version,
     update_firmware_version,
@@ -200,7 +204,9 @@ class OTACheck(Resource):
             return APIResponse.error(message="Device not registered", status_code=401)
 
         latest_firmware = (
-            FirmwareVersion.query.filter(FirmwareVersion.is_active).order_by(FirmwareVersion.created_at.desc()).first()
+            FirmwareVersion.query.filter(FirmwareVersion.is_active)
+            .order_by(FirmwareVersion.created_at.desc())
+            .first()
         )
 
         if not latest_firmware:
@@ -211,7 +217,10 @@ class OTACheck(Resource):
 
         if latest_firmware.min_compatible_version:
             if self._compare_versions(current_version, latest_firmware.min_compatible_version) < 0:
-                return {"has_update": False, "message": "Current version too old, need intermediate upgrade first"}
+                return {
+                    "has_update": False,
+                    "message": "Current version too old, need intermediate upgrade first",
+                }
 
         return {
             "has_update": True,
@@ -273,7 +282,9 @@ class OTAReport(Resource):
             return APIResponse.success(message="Upgrade completed")
 
         elif status == "failed":
-            report_ota_status("failed", device_id, device_name, from_version, to_version, error_message)
+            report_ota_status(
+                "failed", device_id, device_name, from_version, to_version, error_message
+            )
             return APIResponse.success(message="Failed status recorded")
 
         return APIResponse.success()
@@ -341,8 +352,12 @@ class BatchUpgrade(Resource):
         ns_firmware.model(
             "BatchUpgradeRequest",
             {
-                "device_ids": fields.List(fields.String, required=True, description="Device ID list"),
-                "target_version": fields.String(required=True, description="Target firmware version"),
+                "device_ids": fields.List(
+                    fields.String, required=True, description="Device ID list"
+                ),
+                "target_version": fields.String(
+                    required=True, description="Target firmware version"
+                ),
             },
         )
     )
@@ -366,10 +381,14 @@ class BatchUpgrade(Resource):
                 .first()
             )
         else:
-            firmware = FirmwareVersion.query.filter_by(version=target_version, is_active=True).first()
+            firmware = FirmwareVersion.query.filter_by(
+                version=target_version, is_active=True
+            ).first()
 
         if not firmware:
-            return APIResponse.error(message="Target version does not exist or is not active", status_code=404)
+            return APIResponse.error(
+                message="Target version does not exist or is not active", status_code=404
+            )
 
         from services.mqtt_manager import mqtt_manager
 
@@ -394,10 +413,16 @@ class BatchUpgrade(Resource):
 
         log_batch_upgrade(firmware.id, len(device_ids), target_version)
 
-        return {"success": True, "message": f"Upgrade commands sent to {len(device_ids)} devices", "results": results}
+        return {
+            "success": True,
+            "message": f"Upgrade commands sent to {len(device_ids)} devices",
+            "results": results,
+        }
 
 
-FIRMWARE_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "firmware")
+FIRMWARE_UPLOAD_FOLDER = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "uploads", "firmware"
+)
 ALLOWED_EXTENSIONS = {"bin", "hex", "fw"}
 
 
@@ -452,7 +477,9 @@ class FirmwareUpload(Resource):
             return APIResponse.error(message="No file selected", status_code=400)
 
         if not allowed_file(file.filename):
-            return APIResponse.error(message="Unsupported file type, only bin/hex/fw allowed", status_code=400)
+            return APIResponse.error(
+                message="Unsupported file type, only bin/hex/fw allowed", status_code=400
+            )
 
         existing = FirmwareVersion.query.filter_by(version=version).first()
         if existing:
@@ -472,8 +499,13 @@ class FirmwareUpload(Resource):
                 md5_hex = md5_hash.hexdigest()
 
             firmware_id = create_uploaded_firmware(
-                version, description, file_path, file_size, md5_hex,
-                min_compatible_version, is_mandatory,
+                version,
+                description,
+                file_path,
+                file_size,
+                md5_hex,
+                min_compatible_version,
+                is_mandatory,
                 created_by=getattr(request, "admin_id", None),
             )
 
@@ -545,7 +577,9 @@ class FirmwareLatest(Resource):
         Returns latest active firmware version information for device update check.
         """
         latest_firmware = (
-            FirmwareVersion.query.filter(FirmwareVersion.is_active).order_by(FirmwareVersion.created_at.desc()).first()
+            FirmwareVersion.query.filter(FirmwareVersion.is_active)
+            .order_by(FirmwareVersion.created_at.desc())
+            .first()
         )
 
         if not latest_firmware:
@@ -558,7 +592,9 @@ class FirmwareLatest(Resource):
             "file_size": latest_firmware.file_size,
             "md5": latest_firmware.md5,
             "is_mandatory": latest_firmware.is_mandatory,
-            "created_at": latest_firmware.created_at.isoformat() if latest_firmware.created_at else None,
+            "created_at": (
+                latest_firmware.created_at.isoformat() if latest_firmware.created_at else None
+            ),
         }
 
 
@@ -605,7 +641,11 @@ class FirmwareOTAUpgrade(Resource):
         log_ota_upgrade(firmware.id, len(device_ids), firmware.version)
 
         return APIResponse.success(
-            data={"success": True, "message": f"Upgrade commands sent to {len(device_ids)} devices", "results": results}
+            data={
+                "success": True,
+                "message": f"Upgrade commands sent to {len(device_ids)} devices",
+                "results": results,
+            }
         )
 
 
@@ -699,4 +739,3 @@ class OTAFirmwareNegotiateAll(Resource):
                 return APIResponse.error(message="batch_size 必须为整数", status_code=400)
         result = negotiate_all_devices(stage_percent=stage_percent, batch_size=batch_size)
         return APIResponse.success(data=result)
-

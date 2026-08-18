@@ -15,23 +15,26 @@ P0-1 字段统一化迁移：将 7 张表中指向「学生」的 user_id 列统
 
 仅改 7 张表，不触碰 OperationLog/SecurityAudit/NLPRuleUsage/PhoneBoxPolicy 等审计列。
 """
+
 import os
 import shutil
 import sqlite3
 import sys
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "score_management.db")
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "score_management.db"
+)
 
 # (table, nullable, 是否补 FK) — fk=True 表示目标列应带 REFERENCES user(id)
 CONFIG = {
-    "score_record":     {"nullable": True,  "add_fk": False},  # 已有 FK
-    "notification":     {"nullable": True,  "add_fk": False},  # 已有 FK
-    "approval":         {"nullable": True,  "add_fk": False},  # 已有 FK
+    "score_record": {"nullable": True, "add_fk": False},  # 已有 FK
+    "notification": {"nullable": True, "add_fk": False},  # 已有 FK
+    "approval": {"nullable": True, "add_fk": False},  # 已有 FK
     "student_clusters": {"nullable": False, "add_fk": True},
     "composite_scores": {"nullable": False, "add_fk": True},
-    "risk_warnings":    {"nullable": False, "add_fk": True},
-    "nlp_match_results":{"nullable": True,  "add_fk": True},
+    "risk_warnings": {"nullable": False, "add_fk": True},
+    "nlp_match_results": {"nullable": True, "add_fk": True},
 }
 
 
@@ -64,7 +67,7 @@ def rebuild_table_add_fk(conn, table, nullable):
 
     # 建新表 DDL
     ddl = []
-    for (cid, name, ctype, notnull, dflt, pk) in cols:
+    for cid, name, ctype, notnull, dflt, pk in cols:
         if name == "user_id":
             name = "student_id"
             ctype = "INTEGER"
@@ -98,7 +101,7 @@ def rebuild_table_add_fk(conn, table, nullable):
         f"SELECT {', '.join(select_parts)} FROM {q(table)}"
     )
     if not nullable:
-        total = cur.execute(f'SELECT COUNT(*) FROM {q(table)}').fetchone()[0]
+        total = cur.execute(f"SELECT COUNT(*) FROM {q(table)}").fetchone()[0]
         insert_sql += ' WHERE "user_id" IS NULL OR "user_id" IN (SELECT id FROM "user")'
         cur.execute(insert_sql)
         kept = cur.execute(f"SELECT COUNT(*) FROM {q(new_table)}").fetchone()[0]
@@ -115,7 +118,7 @@ def rebuild_table_add_fk(conn, table, nullable):
     # 重建索引（含 user_id→student_id 重命名）
     cur.execute(f"PRAGMA index_list({q(table)})")
     indexes = cur.fetchall()  # seq,name,unique,origin,partial
-    for (seq, idx_name, unique, origin, partial) in indexes:
+    for seq, idx_name, unique, origin, partial in indexes:
         if origin == "pk":
             continue
         cur.execute(f"PRAGMA index_info({q(idx_name)})")

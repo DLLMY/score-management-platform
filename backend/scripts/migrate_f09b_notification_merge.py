@@ -24,6 +24,7 @@ F9-B: 将 admin_notifications 物理合并进 notification 表。
 运行：系统 Python 3.11
   python scripts/migrate_f09b_notification_merge.py
 """
+
 import os
 import sys
 import shutil
@@ -40,7 +41,7 @@ DB_URI = app.config.get("SQLALCHEMY_DATABASE_URI", "")
 if not DB_URI.startswith("sqlite:///"):
     raise SystemExit(f"非预期数据库类型: {DB_URI}")
 
-DB_PATH = os.path.abspath(DB_URI[len("sqlite:///"):])
+DB_PATH = os.path.abspath(DB_URI[len("sqlite:///") :])
 if not os.path.exists(DB_PATH):
     raise SystemExit(f"数据库文件不存在: {DB_PATH}")
 
@@ -77,10 +78,14 @@ def main():
                 print(f"[alter] notification 列 {col} 已存在，跳过")
 
         # 显式确认既有用户通知 recipient_type='user'（ADD COLUMN DEFAULT 通常已生效，双保险）
-        cur.execute("UPDATE notification SET recipient_type='user' WHERE recipient_type IS NULL OR recipient_type=''")
+        cur.execute(
+            "UPDATE notification SET recipient_type='user' WHERE recipient_type IS NULL OR recipient_type=''"
+        )
         print("[update] 既有通知 recipient_type 置 'user'")
 
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='admin_notifications'")
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_notifications'"
+        )
         if not cur.fetchone():
             print("[copy] admin_notifications 表不存在，无需合并（可能已执行过）")
             cur.execute("PRAGMA foreign_keys=ON")
@@ -92,8 +97,7 @@ def main():
         src_count = cur.fetchone()[0]
         print(f"[copy] admin_notifications 现有 {src_count} 行")
 
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO notification (
                 user_id, type, title, content, status, phone, created_at, sent_at,
                 recipient_type, admin_id, priority, is_read, read_at, extra_data
@@ -102,16 +106,13 @@ def main():
                 NULL, type, title, message, 'sent', NULL, created_at, NULL,
                 'admin', admin_id, priority, is_read, read_at, extra_data
             FROM admin_notifications
-            """
-        )
+            """)
         cur.execute("SELECT COUNT(*) FROM notification WHERE recipient_type='admin'")
         dst_count = cur.fetchone()[0]
         print(f"[copy] notification(recipient_type='admin') 现有 {dst_count} 行")
 
         if src_count and dst_count < src_count:
-            raise SystemExit(
-                f"[copy] 校验失败: 期望 >= {src_count} 行，实际 {dst_count} 行，回滚"
-            )
+            raise SystemExit(f"[copy] 校验失败: 期望 >= {src_count} 行，实际 {dst_count} 行，回滚")
 
         cur.execute("DROP TABLE admin_notifications")
         print("[drop] admin_notifications 表已删除")

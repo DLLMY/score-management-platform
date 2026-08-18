@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getOptimizedImageUrl, generatePlaceholder, handleImageError, getResponsiveImage } from '../../utils/imageOptimization';
+import {
+  getOptimizedImageUrl,
+  generatePlaceholder,
+  handleImageError,
+  getResponsiveImage,
+} from '../../utils/imageOptimization';
 
 interface OptimizedImageProps {
   src: string;
@@ -82,11 +87,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     onLoad?.();
   };
 
-  const placeholderSrc = generatePlaceholder(
-    width || 100,
-    height || 100,
-    fallbackColor
-  );
+  const placeholderSrc = generatePlaceholder(width || 100, height || 100, fallbackColor);
 
   const responsiveConfig = responsive && imageSrc ? getResponsiveImage(imageSrc) : null;
 
@@ -97,11 +98,11 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         <img
           src={placeholderSrc}
           alt={alt}
-          className="w-full h-full object-cover"
+          className='w-full h-full object-cover'
           style={{ width, height }}
         />
       )}
-      
+
       {/* 实际图片 */}
       {imageSrc && (
         <img
@@ -119,11 +120,11 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
           loading={lazy ? 'lazy' : 'eager'}
         />
       )}
-      
+
       {/* 加载动画 */}
       {!isLoaded && imageSrc && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className='absolute inset-0 flex items-center justify-center bg-gray-100'>
+          <div className='w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin'></div>
         </div>
       )}
     </div>

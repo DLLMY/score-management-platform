@@ -56,17 +56,24 @@ function FirmwareManagement() {
     formData: uploadForm,
     setFormData: setUploadForm,
     resetForm: resetUploadForm,
-  } = useForm<UploadFormData>({
-    version: '',
-    description: '',
-    min_compatible_version: '',
-    is_mandatory: false,
-  }, {
-    version: { required: true, minLength: 1 },
-  });
+  } = useForm<UploadFormData>(
+    {
+      version: '',
+      description: '',
+      min_compatible_version: '',
+      is_mandatory: false,
+    },
+    {
+      version: { required: true, minLength: 1 },
+    }
+  );
 
   // 使用 useModal 管理弹窗状态
-  const { isOpen: showUploadModal, open: openUploadModal, close: closeUploadModal } = useModal<null>({
+  const {
+    isOpen: showUploadModal,
+    open: openUploadModal,
+    close: closeUploadModal,
+  } = useModal<null>({
     onClose: () => {
       resetUploadForm();
       setUploadFile(null);
@@ -246,7 +253,9 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>升级成功</p>
-              <p className='text-2xl font-bold'>{otaStatus ? (otaStatus.summary?.completed_count || 0) : '--'}</p>
+              <p className='text-2xl font-bold'>
+                {otaStatus ? otaStatus.summary?.completed_count || 0 : '--'}
+              </p>
             </div>
           </div>
         </div>
@@ -257,7 +266,9 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>进行中</p>
-              <p className='text-2xl font-bold'>{otaStatus ? (otaStatus.summary?.in_progress_count || 0) : '--'}</p>
+              <p className='text-2xl font-bold'>
+                {otaStatus ? otaStatus.summary?.in_progress_count || 0 : '--'}
+              </p>
             </div>
           </div>
         </div>
@@ -268,7 +279,9 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>升级失败</p>
-              <p className='text-2xl font-bold'>{otaStatus ? (otaStatus.summary?.failed_count || 0) : '--'}</p>
+              <p className='text-2xl font-bold'>
+                {otaStatus ? otaStatus.summary?.failed_count || 0 : '--'}
+              </p>
             </div>
           </div>
         </div>
@@ -350,7 +363,11 @@ function FirmwareManagement() {
                         <PermissionButton
                           permission='system.settings'
                           onClick={() => handleToggleActive(v)}
-                          className={`p-1 ${v.is_active ? 'text-yellow-600 hover:text-yellow-800' : 'text-green-600 hover:text-green-800'}`}
+                          className={`p-1 ${
+                            v.is_active
+                              ? 'text-yellow-600 hover:text-yellow-800'
+                              : 'text-green-600 hover:text-green-800'
+                          }`}
                           title={v.is_active ? '禁用' : '启用'}
                         >
                           {v.is_active ? (
@@ -467,9 +484,7 @@ function FirmwareManagement() {
             <input
               type='text'
               value={uploadForm.min_compatible_version}
-              onChange={(e) =>
-                setUploadForm({ min_compatible_version: e.target.value })
-              }
+              onChange={(e) => setUploadForm({ min_compatible_version: e.target.value })}
               placeholder='例如: v0.8.0'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
             />

@@ -83,7 +83,9 @@ def process_phonebox_telemetry(self, topic, payload):
         with flask_app.app_context():
             try:
                 db.session.add(
-                    MQTTLog(topic=topic, message=payload, direction="receive", timestamp=datetime.now())
+                    MQTTLog(
+                        topic=topic, message=payload, direction="receive", timestamp=datetime.now()
+                    )
                 )
                 db.session.commit()
             except Exception:

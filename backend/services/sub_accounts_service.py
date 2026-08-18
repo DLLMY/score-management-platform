@@ -48,7 +48,9 @@ def delete_sub_account(account):
     db.session.commit()
 
 
-def log_sub_account_action(action, target_id=None, description=None, operator_id=None, ip_address=None):
+def log_sub_account_action(
+    action, target_id=None, description=None, operator_id=None, ip_address=None
+):
     """复刻 log_permission_action 内联 PermissionLog 建模 + add + commit。
 
     失败回滚防脏 session 污染后续请求（与原实现一致）。

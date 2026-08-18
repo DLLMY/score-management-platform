@@ -34,6 +34,7 @@ except ImportError as e:
 
 class DatabaseMigrator:
     """数据库迁移器"""
+
     def __init__(
         self,
         source_uri: str,
@@ -61,13 +62,9 @@ class DatabaseMigrator:
     def build_target_uri(self) -> str:
         """构建目标数据库URI"""
         if self.target_type == "mysql":
-            return (
-                f"mysql+pymysql://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}?charset=utf8mb4"  # noqa: E501
-            )
+            return f"mysql+pymysql://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}?charset=utf8mb4"  # noqa: E501
         elif self.target_type == "postgresql":
-            return (
-                f"postgresql+psycopg2://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}"  # noqa: E501
-            )
+            return f"postgresql+psycopg2://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}"  # noqa: E501
         else:
             raise ValueError(f"不支持的目标数据库类型: {self.target_type}")
 
@@ -89,7 +86,9 @@ class DatabaseMigrator:
         """连接目标数据库"""
         try:
             target_uri = self.build_target_uri()
-            print(f"[迁移] 连接目标数据库: {target_uri.split('@')[1] if '@' in target_uri else target_uri}")
+            print(
+                f"[迁移] 连接目标数据库: {target_uri.split('@')[1] if '@' in target_uri else target_uri}"
+            )
             self.target_engine = create_engine(target_uri)
             # 测试连接
             with self.target_engine.connect() as conn:
@@ -145,7 +144,12 @@ class DatabaseMigrator:
         except SQLAlchemyError as e:
             print(f"[迁移] 数据库结构迁移失败: {e}")
             self.migration_log.append(
-                {"type": "schema", "status": "failed", "error": str(e), "timestamp": datetime.now().isoformat()}
+                {
+                    "type": "schema",
+                    "status": "failed",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
             return False
 
@@ -193,7 +197,9 @@ class DatabaseMigrator:
                                     processed_values.append(v.isoformat())
                                 else:
                                     processed_values.append(v)
-                            target_table = Table(table_name, self.metadata, autoload_with=self.target_engine)
+                            target_table = Table(
+                                table_name, self.metadata, autoload_with=self.target_engine
+                            )
                             insert_stmt = target_table.insert().values(
                                 **{col: val for col, val in zip(columns, processed_values)}
                             )
@@ -220,7 +226,12 @@ class DatabaseMigrator:
         except SQLAlchemyError as e:
             print(f"[迁移] 数据迁移失败: {e}")
             self.migration_log.append(
-                {"type": "data", "status": "failed", "error": str(e), "timestamp": datetime.now().isoformat()}
+                {
+                    "type": "data",
+                    "status": "failed",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
             return False
 
@@ -239,7 +250,9 @@ class DatabaseMigrator:
                 with self.target_engine.connect() as target_conn:
                     target_count = target_conn.execute(target_table.count()).scalar()
                 if source_count != target_count:
-                    print(f"[迁移] 验证失败: {table_name} 记录数不匹配 (源: {source_count}, 目标: {target_count})")
+                    print(
+                        f"[迁移] 验证失败: {table_name} 记录数不匹配 (源: {source_count}, 目标: {target_count})"
+                    )
                     all_valid = False
                 else:
                     print(f"[迁移] 验证成功: {table_name} ({source_count} 条记录)")
@@ -258,7 +271,9 @@ class DatabaseMigrator:
         with open(log_path, "w", encoding="utf-8") as f:
             json.dump(
                 {
-                    "source_uri": self.source_uri.split("@")[1] if "@" in self.source_uri else self.source_uri,
+                    "source_uri": (
+                        self.source_uri.split("@")[1] if "@" in self.source_uri else self.source_uri
+                    ),
                     "target_type": self.target_type,
                     "target_database": self.target_database,
                     "timestamp": datetime.now().isoformat(),
@@ -305,9 +320,13 @@ def main():
     # 源数据库配置（默认使用当前SQLite）
     parser.add_argument("--source", type=str, default=None, help="源数据库URI (默认使用当前SQLite)")
     # 目标数据库配置
-    parser.add_argument("--target", type=str, required=True, choices=["mysql", "postgresql"], help="目标数据库类型")
+    parser.add_argument(
+        "--target", type=str, required=True, choices=["mysql", "postgresql"], help="目标数据库类型"
+    )
     parser.add_argument("--host", type=str, required=True, help="目标数据库主机")
-    parser.add_argument("--port", type=int, help="目标数据库端口 (MySQL默认3306, PostgreSQL默认5432)")
+    parser.add_argument(
+        "--port", type=int, help="目标数据库端口 (MySQL默认3306, PostgreSQL默认5432)"
+    )
     parser.add_argument("--user", type=str, required=True, help="目标数据库用户名")
     parser.add_argument("--password", type=str, required=True, help="目标数据库密码")
     parser.add_argument("--database", type=str, required=True, help="目标数据库名称")

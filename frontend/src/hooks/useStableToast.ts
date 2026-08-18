@@ -3,22 +3,22 @@ import { useToast } from '../context/ToastContext';
 
 /**
  * 稳定的 Toast Hook - 防止 useEffect 无限循环
- * 
+ *
  * 问题背景：
  * - useToast() 返回的 showToast 函数每次渲染都是新引用
  * - 如果在 useCallback 的依赖数组中包含 showToast，会导致回调函数每次都重新创建
  * - 如果 useEffect 依赖这个回调函数，就会形成无限循环
- * 
+ *
  * 解决方案：
  * - 使用 useRef 保存 showToast 的最新引用
  * - 返回一个稳定的 showToast 函数，不随渲染变化
  * - 该函数内部通过 ref 调用最新的 showToast
- * 
+ *
  * 使用方式：
  * ```typescript
  * // 推荐：使用 useStableToast
  * const { showToast } = useStableToast();
- * 
+ *
  * const fetchData = useCallback(async () => {
  *   try {
  *     // ...
@@ -27,7 +27,7 @@ import { useToast } from '../context/ToastContext';
  *   }
  * }, []); // 依赖数组为空，不会触发无限循环
  * ```
- * 
+ *
  * 禁止：直接使用 useToast() 在 useCallback 依赖中
  * ```typescript
  * // ❌ 错误：会导致无限循环
@@ -50,7 +50,12 @@ export function useStableToast() {
     (
       type: 'success' | 'error' | 'warning' | 'info',
       message: string,
-      options?: { undoAction?: () => void; undoLabel?: string; details?: string; errorFields?: string[] }
+      options?: {
+        undoAction?: () => void;
+        undoLabel?: string;
+        details?: string;
+        errorFields?: string[];
+      }
     ) => {
       showToastRef.current(type, message, options);
     },

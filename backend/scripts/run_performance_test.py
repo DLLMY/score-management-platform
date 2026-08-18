@@ -25,7 +25,12 @@ class PerformanceBenchmark:
         self.start_time = None
 
     def run_benchmark(
-        self, endpoint: str, method: str = "GET", iterations: int = 100, data: Dict = None, headers: Dict = None
+        self,
+        endpoint: str,
+        method: str = "GET",
+        iterations: int = 100,
+        data: Dict = None,
+        headers: Dict = None,
     ) -> Dict[str, Any]:
         """运行单个端点的基准测试"""
         results = []
@@ -52,10 +57,14 @@ class PerformanceBenchmark:
                 )
             except Exception as e:
                 elapsed = (time.perf_counter() - start) * 1000
-                results.append({"response_time": elapsed, "status_code": 0, "success": False, "error": str(e)})
+                results.append(
+                    {"response_time": elapsed, "status_code": 0, "success": False, "error": str(e)}
+                )
         return self._analyze_results(endpoint, method, iterations, results)
 
-    def _analyze_results(self, endpoint: str, method: str, iterations: int, results: List[Dict]) -> Dict[str, Any]:
+    def _analyze_results(
+        self, endpoint: str, method: str, iterations: int, results: List[Dict]
+    ) -> Dict[str, Any]:
         """分析测试结果"""
         response_times = [r["response_time"] for r in results]
         successes = [r for r in results if r["success"]]

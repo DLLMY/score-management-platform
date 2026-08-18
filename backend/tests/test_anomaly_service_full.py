@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 异常检测服务完整测试模块
 """
 """
@@ -64,9 +64,9 @@ class TestAnomalyServiceBasic:
     """异常服务基础测试类"""
 
     def test_anomaly_service_exists(self):
-        assert hasattr(AnomalyService, 'get_student_score_changes')
+        assert hasattr(AnomalyService, "get_student_score_changes")
 
     def test_anomaly_types_definition_complete(self):
         for key in ANOMALY_TYPES:
-            assert 'name' in ANOMALY_TYPES[key]
-            assert 'description' in ANOMALY_TYPES[key]
+            assert "name" in ANOMALY_TYPES[key]
+            assert "description" in ANOMALY_TYPES[key]

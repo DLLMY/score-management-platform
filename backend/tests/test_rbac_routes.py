@@ -37,13 +37,17 @@ def test_create_update_delete_permission(client, app, auth_headers):
     # 重复 code → 409
     with app.app_context():
         dup = client.post(
-            "/api/rbac/permissions", json={"code": "test.perm1", "name": "重复"}, headers=auth_headers
+            "/api/rbac/permissions",
+            json={"code": "test.perm1", "name": "重复"},
+            headers=auth_headers,
         )
     assert dup.status_code == 409
 
     # 更新
     with app.app_context():
-        up = client.put("/api/rbac/permissions/test.perm1", json={"name": "改名"}, headers=auth_headers)
+        up = client.put(
+            "/api/rbac/permissions/test.perm1", json={"name": "改名"}, headers=auth_headers
+        )
     assert up.status_code == 200
     assert "权限更新成功" in _json(up)["message"]
     with app.app_context():
@@ -62,7 +66,11 @@ def test_create_update_delete_role(client, app, auth_headers):
     with app.app_context():
         resp = client.post(
             "/api/rbac/roles",
-            json={"role_code": "test_role_x", "role_name": "测试角色", "permissions": ["student.view"]},
+            json={
+                "role_code": "test_role_x",
+                "role_name": "测试角色",
+                "permissions": ["student.view"],
+            },
             headers=auth_headers,
         )
     assert resp.status_code == 201
@@ -74,7 +82,9 @@ def test_create_update_delete_role(client, app, auth_headers):
 
     # 重复 → 409
     with app.app_context():
-        dup = client.post("/api/rbac/roles", json={"role_code": "test_role_x"}, headers=auth_headers)
+        dup = client.post(
+            "/api/rbac/roles", json={"role_code": "test_role_x"}, headers=auth_headers
+        )
     assert dup.status_code == 409
 
     # 更新（覆盖式权限）
@@ -108,12 +118,16 @@ def test_assign_roles_admin(client, app, auth_headers):
             headers=auth_headers,
         )
         resp = client.put(
-            "/api/rbac/admin-roles/1", json={"role_codes": ["test_assign_role"]}, headers=auth_headers
+            "/api/rbac/admin-roles/1",
+            json={"role_codes": ["test_assign_role"]},
+            headers=auth_headers,
         )
     assert resp.status_code == 200
     assert "角色分配成功" in _json(resp)["message"]
     with app.app_context():
-        assert AdminRole.query.filter_by(admin_id=1, role_code="test_assign_role").first() is not None
+        assert (
+            AdminRole.query.filter_by(admin_id=1, role_code="test_assign_role").first() is not None
+        )
 
 
 def test_admin_role_add_remove(client, app, auth_headers):
@@ -164,17 +178,23 @@ def test_role_permission_set_add_remove(client, app, auth_headers):
             json={"code": "test.permX", "name": "单条权限", "category": "test"},
             headers=auth_headers,
         )
-        addp = client.post("/api/rbac/role-permissions/test_role_y/test.permX", headers=auth_headers)
+        addp = client.post(
+            "/api/rbac/role-permissions/test_role_y/test.permX", headers=auth_headers
+        )
     assert addp.status_code == 200
     assert "权限添加成功" in _json(addp)["message"]
 
     # 单条移除
     with app.app_context():
-        rmp = client.delete("/api/rbac/role-permissions/test_role_y/test.permX", headers=auth_headers)
+        rmp = client.delete(
+            "/api/rbac/role-permissions/test_role_y/test.permX", headers=auth_headers
+        )
     assert rmp.status_code == 200
     assert "权限移除成功" in _json(rmp)["message"]
     with app.app_context():
         assert (
-            RolePermissionMapping.query.filter_by(role_code="test_role_y", permission_code="test.permX").first()
+            RolePermissionMapping.query.filter_by(
+                role_code="test_role_y", permission_code="test.permX"
+            ).first()
             is None
         )

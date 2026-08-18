@@ -1,6 +1,7 @@
 import numpy as np
 import tempfile
 import os
+
 try:
     from services.textcnn_service import TextCNNClassifier
 except ImportError:

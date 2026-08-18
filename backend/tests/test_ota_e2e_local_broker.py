@@ -20,6 +20,7 @@
   # 全链路（默认云端 Broker；本地覆盖）
   OTA_E2E_BROKER=127.0.0.1:1883 MQTT_SSL=false python -m pytest backend/tests/test_ota_e2e_local_broker.py -v
 """
+
 import hashlib
 import hmac
 import json
@@ -43,7 +44,9 @@ DEV_ID = "E2E_P3_%d" % int(time.time())
 # 全链路默认走「本地干净 Broker」(127.0.0.1:1883, 需 docker compose 起)，避免 CI/常规跑误打生产。
 # 手动对云端 Broker 验证：OTA_E2E_BROKER=nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883 OTA_E2E_SSL=true
 E2E_BROKER = os.getenv("OTA_E2E_BROKER", "127.0.0.1:1883")
-E2E_SSL = os.getenv("OTA_E2E_SSL", "true" if E2E_BROKER.endswith(":8883") else "false").lower() == "true"
+E2E_SSL = (
+    os.getenv("OTA_E2E_SSL", "true" if E2E_BROKER.endswith(":8883") else "false").lower() == "true"
+)
 E2E_USER = os.getenv("OTA_E2E_USER", "phoneboxtest")
 E2E_PASS = os.getenv("OTA_E2E_PASS", "123456")
 
@@ -138,7 +141,8 @@ class TestOTAE2ELocalBroker:
         # 设备客户端：既订阅收指令、又发布状态回报（减少并发连接数，避免触发云端 Broker 连接上限）
         rec_c = mqtt.Client(client_id="p3_recv_%d" % int(time.time()), clean_session=True)
         if E2E_SSL:
-            rec_c.tls_set(cert_reqs=ssl.CERT_NONE); rec_c.tls_insecure_set(True)
+            rec_c.tls_set(cert_reqs=ssl.CERT_NONE)
+            rec_c.tls_insecure_set(True)
         rec_c.username_pw_set(E2E_USER, E2E_PASS)
 
         # 后端侧订阅者：模拟 MQTTManager 控制连接对 phonebox/ota/# 的订阅。
@@ -147,7 +151,8 @@ class TestOTAE2ELocalBroker:
         be_evt = threading.Event()
         be_c = mqtt.Client(client_id="p3_be_%d" % int(time.time()), clean_session=True)
         if E2E_SSL:
-            be_c.tls_set(cert_reqs=ssl.CERT_NONE); be_c.tls_insecure_set(True)
+            be_c.tls_set(cert_reqs=ssl.CERT_NONE)
+            be_c.tls_insecure_set(True)
         be_c.username_pw_set(E2E_USER, E2E_PASS)
 
         def on_connect(c, u, f, rc):
@@ -173,18 +178,28 @@ class TestOTAE2ELocalBroker:
         rec_c.on_message = on_msg
         be_c.on_connect = on_be_connect
         be_c.on_message = on_be_msg
-        rec_c.connect(host, port, 60); rec_c.loop_start()
-        be_c.connect(host, port, 60); be_c.loop_start()
+        rec_c.connect(host, port, 60)
+        rec_c.loop_start()
+        be_c.connect(host, port, 60)
+        be_c.loop_start()
         time.sleep(2)
 
         # 后端经 MQTTManager 下发 OTA 指令（关闭重连，避免遗留线程）
         mqtt_manager._should_reconnect = False
         mqtt_manager.disconnect()
-        mqtt_manager.set_config({
-            "broker": host, "port": port, "client_id": "p3_backend",
-            "username": E2E_USER, "password": E2E_PASS, "ssl": E2E_SSL,
-            "timeout": 10, "keepalive": 60, "transport": "tcp",
-        })
+        mqtt_manager.set_config(
+            {
+                "broker": host,
+                "port": port,
+                "client_id": "p3_backend",
+                "username": E2E_USER,
+                "password": E2E_PASS,
+                "ssl": E2E_SSL,
+                "timeout": 10,
+                "keepalive": 60,
+                "transport": "tcp",
+            }
+        )
         mqtt_manager.connect()
         deadline = time.time() + 10
         while not mqtt_manager.is_connected and time.time() < deadline:
@@ -196,8 +211,13 @@ class TestOTAE2ELocalBroker:
         url = "http://broker.local/fw/phonebox_2.6.bin"
         sig = sign_ota_command(fw, url)
         payload = {
-            "id": fw.id, "url": url, "download_url": "/api/firmware/download/7",
-            "version": fw.version, "md5": fw.md5, "is_mandatory": False, "force": True,
+            "id": fw.id,
+            "url": url,
+            "download_url": "/api/firmware/download/7",
+            "version": fw.version,
+            "md5": fw.md5,
+            "is_mandatory": False,
+            "force": True,
         }
         if sig:
             payload["signature"] = sig
@@ -208,16 +228,23 @@ class TestOTAE2ELocalBroker:
         pl = received[0]
         msg = f"{pl.get('id')}:{pl.get('version')}:{pl.get('url')}".encode("utf-8")
         expect = hmac.new(SECRET.encode("utf-8"), msg, hashlib.sha256).hexdigest()
-        assert hmac.compare_digest(pl.get("signature", ""), expect), "设备侧验签失败（P2 契约不一致）"
+        assert hmac.compare_digest(
+            pl.get("signature", ""), expect
+        ), "设备侧验签失败（P2 契约不一致）"
 
         # 2) 设备回报状态 -> 后端侧订阅者（phonebox/ota/#）应经 Broker 收到（返回链路）
         status_topic = "phonebox/ota/%s/status" % DEV_ID
         rec_c.publish(
             status_topic,
-            json.dumps({
-                "device_id": DEV_ID, "status": "success",
-                "from_version": "0.0.0", "to_version": "2.6", "progress": 100,
-            }),
+            json.dumps(
+                {
+                    "device_id": DEV_ID,
+                    "status": "success",
+                    "from_version": "0.0.0",
+                    "to_version": "2.6",
+                    "progress": 100,
+                }
+            ),
             qos=1,
         )
         # 注意：be_evt 会被「指令 topic」(phonebox/ota/<id>) 抢先置位（# 订阅也匹配指令），
@@ -234,9 +261,12 @@ class TestOTAE2ELocalBroker:
             "phonebox/ota/%s/status" % DEV_ID,
             json.dumps({"device_id": DEV_ID, "status": "success"}),
         )
-        assert routed and routed[0] == "phonebox/ota/%s/status" % DEV_ID, \
-            "管理器未将 status topic 路由到 _process_ota_status"
+        assert (
+            routed and routed[0] == "phonebox/ota/%s/status" % DEV_ID
+        ), "管理器未将 status topic 路由到 _process_ota_status"
 
-        rec_c.loop_stop(); rec_c.disconnect()
-        be_c.loop_stop(); be_c.disconnect()
+        rec_c.loop_stop()
+        rec_c.disconnect()
+        be_c.loop_stop()
+        be_c.disconnect()
         mqtt_manager.disconnect()

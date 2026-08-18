@@ -30,9 +30,12 @@ admin_notification_model = ns_admin_notifications.model(
         "title": fields.String(required=True, description="通知标题"),
         "message": fields.String(required=True, description="通知内容"),
         "type": fields.String(
-            description="类型: success/info/warning/error", enum=["success", "info", "warning", "error"]
+            description="类型: success/info/warning/error",
+            enum=["success", "info", "warning", "error"],
         ),
-        "priority": fields.String(description="优先级: high/medium/low", enum=["high", "medium", "low"]),
+        "priority": fields.String(
+            description="优先级: high/medium/low", enum=["high", "medium", "low"]
+        ),
         "is_read": fields.Boolean(readOnly=True, description="是否已读"),
         "extra_data": fields.Raw(description="额外数据"),
         "created_at": fields.DateTime(readOnly=True, description="创建时间"),
@@ -113,7 +116,9 @@ class AdminNotificationList(Resource):
                     "type": notification.type,
                     "priority": notification.priority,
                     "is_read": notification.is_read,
-                    "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                    "created_at": (
+                        notification.created_at.isoformat() if notification.created_at else None
+                    ),
                 }
             },
             message="通知创建成功",
@@ -177,9 +182,13 @@ class AdminNotificationCount(Resource):
             unread_count = Notification.query.filter_by(
                 admin_id=admin_id, recipient_type="admin", is_read=False
             ).count()
-            total_count = Notification.query.filter_by(admin_id=admin_id, recipient_type="admin").count()
+            total_count = Notification.query.filter_by(
+                admin_id=admin_id, recipient_type="admin"
+            ).count()
         else:
-            unread_count = Notification.query.filter_by(recipient_type="admin", is_read=False).count()
+            unread_count = Notification.query.filter_by(
+                recipient_type="admin", is_read=False
+            ).count()
             total_count = Notification.query.filter_by(recipient_type="admin").count()
 
         return APIResponse.success(data={"unread_count": unread_count, "total_count": total_count})
@@ -203,7 +212,9 @@ class AdminNotificationRecent(Resource):
         return [_serialize(n) for n in notifications]
 
 
-def create_admin_notification(title, message, notify_type="info", priority="medium", admin_id=None, extra_data=None):
+def create_admin_notification(
+    title, message, notify_type="info", priority="medium", admin_id=None, extra_data=None
+):
     """
     创建管理员通知（写入 notification 表，recipient_type='admin'）
 

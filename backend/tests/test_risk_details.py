@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 
 from services.risk_predict_service import RiskPredictService
 
-
 VALID_LEVELS = {"high", "medium", "low"}
 SUB_KEYS = ["academic", "behavior", "attendance"]
 
@@ -116,9 +115,9 @@ def test_risk_details_healthy_low(db_session):
     result = RiskPredictService.predict_risk(uid, 30)
     details = result["risk_details"]
     for k in SUB_KEYS:
-        assert details[k]["risk_level"] == "low", (
-            f"健康用户子维度 {k} 应为 low，实际 {details[k]['risk_level']}"
-        )
+        assert (
+            details[k]["risk_level"] == "low"
+        ), f"健康用户子维度 {k} 应为 low，实际 {details[k]['risk_level']}"
 
 
 def test_risk_predict_user_not_found(db_session):

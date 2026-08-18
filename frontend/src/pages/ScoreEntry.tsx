@@ -1,6 +1,14 @@
 import logger from '../utils/logger';
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo, useReducer } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ChangeEvent,
+  useMemo,
+  useReducer,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Card, Button, Modal, LoadingSpinner, PermissionButton } from '../components';
@@ -71,7 +79,12 @@ interface ImportResult {
   successCount: number;
   failedCount: number;
   failedMessages: string[];
-  errors?: Array<{ row?: number; error_fields: string[]; message: string; row_data?: Record<string, unknown> }>;
+  errors?: Array<{
+    row?: number;
+    error_fields: string[];
+    message: string;
+    row_data?: Record<string, unknown>;
+  }>;
 }
 
 // 单元格位置接口
@@ -221,26 +234,52 @@ const ScoreEntry: React.FC = () => {
   const { show: showConfirm } = useConfirmDialog();
 
   // 使用 useModal 管理弹窗状态
-  const { isOpen: showImportModal, open: openImportModal, close: closeImportModal } = useModal<null>({
+  const {
+    isOpen: showImportModal,
+    open: openImportModal,
+    close: closeImportModal,
+  } = useModal<null>({
     onClose: () => dispatch({ type: 'SET_IMPORT_FILE', payload: null }),
   });
 
-  const { isOpen: showBatchModal, open: openBatchModal, close: closeBatchModal } = useModal<null>({
+  const {
+    isOpen: showBatchModal,
+    open: openBatchModal,
+    close: closeBatchModal,
+  } = useModal<null>({
     onClose: () => dispatch({ type: 'SET_BATCH_SUBJECT', payload: '' }),
   });
 
-  const { isOpen: showImportResultModal, open: openImportResultModal, close: closeImportResultModal } = useModal<null>({});
+  const {
+    isOpen: showImportResultModal,
+    open: openImportResultModal,
+    close: closeImportResultModal,
+  } = useModal<null>({});
 
   const fetchData = useCallback(async (): Promise<void> => {
     try {
-      const [examsRes, classesRes, subjectsRes] = await Promise.all([api.exams.getAll(), api.classes.getAll(), api.subjects.getAll()]);
+      const [examsRes, classesRes, subjectsRes] = await Promise.all([
+        api.exams.getAll(),
+        api.classes.getAll(),
+        api.subjects.getAll(),
+      ]);
 
       const allExams: ExamData[] = Array.isArray(examsRes)
         ? examsRes
         : (examsRes as { data?: ExamData[] }).data || [];
       dispatch({ type: 'SET_EXAMS', payload: allExams.filter((e) => e.status === 'published') });
-      dispatch({ type: 'SET_CLASSES', payload: Array.isArray(classesRes) ? classesRes : (classesRes as { classes?: ClassInfo[] }).classes || [] });
-      dispatch({ type: 'SET_SUBJECTS', payload: Array.isArray(subjectsRes) ? subjectsRes : (subjectsRes as { data?: Subject[] }).data || [] });
+      dispatch({
+        type: 'SET_CLASSES',
+        payload: Array.isArray(classesRes)
+          ? classesRes
+          : (classesRes as { classes?: ClassInfo[] }).classes || [],
+      });
+      dispatch({
+        type: 'SET_SUBJECTS',
+        payload: Array.isArray(subjectsRes)
+          ? subjectsRes
+          : (subjectsRes as { data?: Subject[] }).data || [],
+      });
     } catch (err: unknown) {
       showToast('error', '获取数据失败: ' + (err as Error).message);
     }
@@ -253,14 +292,21 @@ const ScoreEntry: React.FC = () => {
     const seq = ++fetchSeqRef.current;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const usersRes = await api.users.getAll({ class_id: selectedClass ? Number(selectedClass) : undefined, skipCache: true });
+      const usersRes = await api.users.getAll({
+        class_id: selectedClass ? Number(selectedClass) : undefined,
+        skipCache: true,
+      });
       if (seq !== fetchSeqRef.current) return;
-      const allUsers = Array.isArray(usersRes) ? usersRes : (usersRes as { users?: User[] }).users || [];
+      const allUsers = Array.isArray(usersRes)
+        ? usersRes
+        : (usersRes as { users?: User[] }).users || [];
       dispatch({ type: 'SET_STUDENTS', payload: allUsers.filter((u) => u.role === 'student') });
 
       const scoresRes = await api.scores.getAll({ exam_id: selectedExam });
       if (seq !== fetchSeqRef.current) return;
-      const scoresList: ScoreItem[] = Array.isArray(scoresRes) ? scoresRes : (scoresRes as { data?: ScoreItem[] }).data || [];
+      const scoresList: ScoreItem[] = Array.isArray(scoresRes)
+        ? scoresRes
+        : (scoresRes as { data?: ScoreItem[] }).data || [];
 
       const scoresMap: Record<string, ScoreItem> = {};
       scoresList.forEach((score) => {
@@ -280,24 +326,24 @@ const ScoreEntry: React.FC = () => {
   // 防抖搜索 - 班级选择不会频繁变化，所以使用较短延迟
   const [classInput, setClassInput] = useState(selectedClass);
   const debouncedClass = useDebouncedValue(classInput, 150);
-  
+
   // 班级变化时更新 selectedClass
   useEffect(() => {
     if (debouncedClass !== selectedClass) {
       dispatch({ type: 'SET_SELECTED_CLASS', payload: debouncedClass });
     }
   }, [debouncedClass, selectedClass]);
-  
+
   // 节流刷新 - 限制刷新频率（最少间隔 1 秒）
   const fetchDataRef = useRef<typeof fetchData | null>(null);
   const fetchStudentsRef = useRef<typeof fetchStudentsAndScores | null>(null);
-  
+
   const throttledRefresh = useThrottledCallback(() => {
     if (fetchStudentsRef.current) {
       fetchStudentsRef.current();
     }
   }, 1000);
-  
+
   useEffect(() => {
     fetchDataRef.current = fetchData;
     fetchStudentsRef.current = fetchStudentsAndScores;
@@ -346,30 +392,46 @@ const ScoreEntry: React.FC = () => {
     return [];
   }, [exams, selectedExam]);
 
-  const getSubjectId = useCallback((subjectName: string): number | undefined => {
-    const subject = subjects.find((s) => s.name === subjectName && s.exam_id !== undefined && s.exam_id.toString() === selectedExam);
-    return subject?.id;
-  }, [subjects, selectedExam]);
+  const getSubjectId = useCallback(
+    (subjectName: string): number | undefined => {
+      const subject = subjects.find(
+        (s) =>
+          s.name === subjectName && s.exam_id !== undefined && s.exam_id.toString() === selectedExam
+      );
+      return subject?.id;
+    },
+    [subjects, selectedExam]
+  );
 
   const visibleSubjects = useMemo((): string[] => {
     if (!filterSubject) return examSubjects;
     return examSubjects.filter((s) => s === filterSubject);
   }, [examSubjects, filterSubject]);
 
-
   // 单个分数 onBlur 即时入库：用户改完一个分数失焦即 POST/PUT 到后端，
   // 不再依赖「保存全部」按钮批量提交。「保存全部」仍保留，用于批量修改场景。
-  const handleScoreBlur = async (studentId: number, subject: string, value: string): Promise<void> => {
+  const handleScoreBlur = async (
+    studentId: number,
+    subject: string,
+    value: string
+  ): Promise<void> => {
     const key = `${studentId}-${subject}`;
     const existing = scores[key];
     const subjectId = existing?.subject_id || getSubjectId(subject);
     const score = value === '' ? null : parseFloat(value);
     // 防御性校验：与 handleSaveAll 保持一致，避免脏科目名继续污染 scores 表
-    if (typeof subject !== 'string' || /[[\]"'\\,]/.test(subject) || /\\u[0-9a-f]{4}/i.test(subject)) {
+    if (
+      typeof subject !== 'string' ||
+      /[[\]"'\\,]/.test(subject) ||
+      /\\u[0-9a-f]{4}/i.test(subject)
+    ) {
       showToast('error', `科目名异常，跳过: ${subject}`);
       return;
     }
-    if (value !== '' && (Number.isNaN(score as number) || (score as number) < 0 || (score as number) > 100)) {
+    if (
+      value !== '' &&
+      (Number.isNaN(score as number) || (score as number) < 0 || (score as number) > 100)
+    ) {
       showToast('error', '分数需在 0-100');
       return;
     }
@@ -391,12 +453,22 @@ const ScoreEntry: React.FC = () => {
         type: 'UPDATE_SCORE',
         payload: {
           key,
-          score: { ...existing, ...(returned as object), student_id: studentId, subject, subject_id: subjectId, score },
+          score: {
+            ...existing,
+            ...(returned as object),
+            student_id: studentId,
+            subject,
+            subject_id: subjectId,
+            score,
+          },
         },
       });
       dispatch({ type: 'REMOVE_PENDING_CHANGE', payload: key });
     } catch (e: unknown) {
-      const msg = (e && typeof e === 'object' && 'message' in e) ? (e as { message: string }).message : String(e);
+      const msg =
+        e && typeof e === 'object' && 'message' in e
+          ? (e as { message: string }).message
+          : String(e);
       logger.error(`[score-blur-save] failed for ${key}:`, e);
       showToast('error', `保存失败: ${msg}`);
     }
@@ -416,7 +488,11 @@ const ScoreEntry: React.FC = () => {
     for (const key of keys) {
       const { student_id, subject, subject_id, score } = pendingChanges[key];
       // 防御性校验：科目名里若含异常字符（来自历史脏数据/解析错位），主动跳过，避免再写入 '["语文"' 这类脏 subject
-      if (typeof subject !== 'string' || /[[\]"'\\,]/.test(subject) || /\\u[0-9a-f]{4}/i.test(subject)) {
+      if (
+        typeof subject !== 'string' ||
+        /[[\]"'\\,]/.test(subject) ||
+        /\\u[0-9a-f]{4}/i.test(subject)
+      ) {
         failCount++;
         skipReasons.push(`[${student_id}/${subject}] 非法的科目名`);
         logger.error(`[save-skip] bad subject "${subject}" for student ${student_id}`);
@@ -453,20 +529,23 @@ const ScoreEntry: React.FC = () => {
     fetchStudentsAndScores();
   }, [pendingChanges, scores, selectedExam, showToast, fetchStudentsAndScores]);
 
-  const handleExport = useCallback(async (format: 'excel' | 'csv'): Promise<Blob> => {
-    if (!selectedExam) {
-      throw new Error('请先选择考试');
-    }
-    const response = await fetch(`/api/scores/export?exam_id=${selectedExam}&format=${format}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) {
-      throw new Error('导出失败');
-    }
-    return response.blob();
-  }, [selectedExam]);
+  const handleExport = useCallback(
+    async (format: 'excel' | 'csv'): Promise<Blob> => {
+      if (!selectedExam) {
+        throw new Error('请先选择考试');
+      }
+      const response = await fetch(`/api/scores/export?exam_id=${selectedExam}&format=${format}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error('导出失败');
+      }
+      return response.blob();
+    },
+    [selectedExam]
+  );
 
   const handleImport = useCallback(async (): Promise<void> => {
     if (!importFile || !selectedExam) return;
@@ -477,7 +556,17 @@ const ScoreEntry: React.FC = () => {
 
     try {
       const result = await api.scores.importScores(formData);
-      const resultData = result as { success_count?: number; failed_count?: number; failed_messages?: string[]; errors?: Array<{ row?: number; error_fields: string[]; message: string; row_data?: Record<string, unknown> }> };
+      const resultData = result as {
+        success_count?: number;
+        failed_count?: number;
+        failed_messages?: string[];
+        errors?: Array<{
+          row?: number;
+          error_fields: string[];
+          message: string;
+          row_data?: Record<string, unknown>;
+        }>;
+      };
       const data = (result as { data?: typeof resultData })?.data || resultData;
       dispatch({
         type: 'SET_IMPORT_RESULT',
@@ -495,7 +584,14 @@ const ScoreEntry: React.FC = () => {
     } catch (err: unknown) {
       showToast('error', '导入失败: ' + (err as Error).message);
     }
-  }, [importFile, selectedExam, showToast, fetchStudentsAndScores, closeImportModal, openImportResultModal]);
+  }, [
+    importFile,
+    selectedExam,
+    showToast,
+    fetchStudentsAndScores,
+    closeImportModal,
+    openImportResultModal,
+  ]);
 
   const handleExportErrors = useCallback((): void => {
     if (!importResult?.errors) return;
@@ -709,7 +805,11 @@ const ScoreEntry: React.FC = () => {
       locked: '已锁定',
     };
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[normalized] || styles.pending}`}>
+      <span
+        className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          styles[normalized] || styles.pending
+        }`}
+      >
         {labels[normalized] || normalized}
       </span>
     );
@@ -763,7 +863,11 @@ const ScoreEntry: React.FC = () => {
             <Download className='w-4 h-4 mr-2' />
             下载模板
           </PermissionButton>
-          <PermissionButton permission='score.edit' variant='secondary' onClick={() => openBatchModal()}>
+          <PermissionButton
+            permission='score.edit'
+            variant='secondary'
+            onClick={() => openBatchModal()}
+          >
             <Filter className='w-4 h-4 mr-2' />
             批量操作
           </PermissionButton>
@@ -772,7 +876,7 @@ const ScoreEntry: React.FC = () => {
             打印
           </PermissionButton>
           <ImportExportPanel
-            type="score"
+            type='score'
             showExport={true}
             showImport={false}
             showTemplate={false}
@@ -873,47 +977,57 @@ const ScoreEntry: React.FC = () => {
                 <div
                   className='h-full bg-primary-500 transition-all duration-300'
                   style={{ width: `${getEntryProgress}%` }}
-              />
-            </div>
-            <span className='text-sm font-medium text-gray-700'>{getEntryProgress}%</span>
-            {Object.keys(pendingChanges).length > 0 && (
-              <span className='text-sm text-orange-500'>({Object.keys(pendingChanges).length} 条待保存)</span>
-            )}
-          </div>
-          <div className='flex gap-2'>
-            {getEntryProgress === 100 && (
-              <PermissionButton
-                permission='score.view'
-                variant='secondary'
-                onClick={() => {
-                  navigate(`/score-analysis?exam_id=${selectedExam}`);
-                }}
-              >
-                <BarChart3 className='w-4 h-4 mr-2' />
-                查看分析
-              </PermissionButton>
-            )}
-            <PermissionButton
-              permission='score.edit'
-              variant='secondary'
-              onClick={() => runSubmit(handleSaveAll)}
-              disabled={submitting || Object.keys(pendingChanges).length === 0}
-              title={Object.keys(pendingChanges).length === 0 ? '所有改动已在失焦时自动保存' : '批量保存尚未失焦的待保存改动'}
-            >
-              <Save className='w-4 h-4 mr-2' />
-              保存全部
+                />
+              </div>
+              <span className='text-sm font-medium text-gray-700'>{getEntryProgress}%</span>
               {Object.keys(pendingChanges).length > 0 && (
-                <span className='ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700'>
-                  {Object.keys(pendingChanges).length}
+                <span className='text-sm text-orange-500'>
+                  ({Object.keys(pendingChanges).length} 条待保存)
                 </span>
               )}
-            </PermissionButton>
-            <PermissionButton
-              permission='score.approve'
-              variant='primary'
-              onClick={handleConfirmAll}
-              disabled={!selectedExam || students.length === 0}
-              title={students.length === 0 ? '请先选择考试' : '将该考试下所有 pending/normal 状态的成绩改为已确认'}
+            </div>
+            <div className='flex gap-2'>
+              {getEntryProgress === 100 && (
+                <PermissionButton
+                  permission='score.view'
+                  variant='secondary'
+                  onClick={() => {
+                    navigate(`/score-analysis?exam_id=${selectedExam}`);
+                  }}
+                >
+                  <BarChart3 className='w-4 h-4 mr-2' />
+                  查看分析
+                </PermissionButton>
+              )}
+              <PermissionButton
+                permission='score.edit'
+                variant='secondary'
+                onClick={() => runSubmit(handleSaveAll)}
+                disabled={submitting || Object.keys(pendingChanges).length === 0}
+                title={
+                  Object.keys(pendingChanges).length === 0
+                    ? '所有改动已在失焦时自动保存'
+                    : '批量保存尚未失焦的待保存改动'
+                }
+              >
+                <Save className='w-4 h-4 mr-2' />
+                保存全部
+                {Object.keys(pendingChanges).length > 0 && (
+                  <span className='ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700'>
+                    {Object.keys(pendingChanges).length}
+                  </span>
+                )}
+              </PermissionButton>
+              <PermissionButton
+                permission='score.approve'
+                variant='primary'
+                onClick={handleConfirmAll}
+                disabled={!selectedExam || students.length === 0}
+                title={
+                  students.length === 0
+                    ? '请先选择考试'
+                    : '将该考试下所有 pending/normal 状态的成绩改为已确认'
+                }
               >
                 <CheckCircle className='w-4 h-4 mr-2' />
                 确认全部
@@ -937,7 +1051,10 @@ const ScoreEntry: React.FC = () => {
                       姓名
                     </th>
                     {visibleSubjects.map((subject) => (
-                      <th key={subject} className='px-4 py-3 text-center font-medium text-gray-600 min-w-[100px]'>
+                      <th
+                        key={subject}
+                        className='px-4 py-3 text-center font-medium text-gray-600 min-w-[100px]'
+                      >
                         {subject}
                       </th>
                     ))}
@@ -946,14 +1063,19 @@ const ScoreEntry: React.FC = () => {
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={2 + visibleSubjects.length} className='px-4 py-8 text-center text-gray-500'>
+                      <td
+                        colSpan={2 + visibleSubjects.length}
+                        className='px-4 py-8 text-center text-gray-500'
+                      >
                         暂无学生数据
                       </td>
                     </tr>
                   ) : (
                     filteredStudents.map((student) => (
                       <tr key={student.id} className='border-t border-gray-100 hover:bg-gray-50'>
-                        <td className='px-4 py-2 text-gray-600 sticky left-0 bg-white z-10'>{student.card_id}</td>
+                        <td className='px-4 py-2 text-gray-600 sticky left-0 bg-white z-10'>
+                          {student.card_id}
+                        </td>
                         <td className='px-4 py-2 font-medium text-gray-900 sticky left-16 bg-white z-10'>
                           {student.name}
                         </td>
@@ -981,7 +1103,12 @@ const ScoreEntry: React.FC = () => {
                                     const v = e.target.value.trim();
                                     const old = scoreData?.score ?? null;
                                     const num = v === '' ? null : parseFloat(v);
-                                    if (v !== '' && (Number.isNaN(num as number) || (num as number) < 0 || (num as number) > 100)) {
+                                    if (
+                                      v !== '' &&
+                                      (Number.isNaN(num as number) ||
+                                        (num as number) < 0 ||
+                                        (num as number) > 100)
+                                    ) {
                                       showToast('error', '分数需在 0-100');
                                       return;
                                     }
@@ -992,7 +1119,9 @@ const ScoreEntry: React.FC = () => {
                                     if (e.key === 'Enter') {
                                       (e.target as HTMLInputElement).blur();
                                     } else if (e.key === 'Escape') {
-                                      (e.target as HTMLInputElement).value = String(scoreData?.score ?? '');
+                                      (e.target as HTMLInputElement).value = String(
+                                        scoreData?.score ?? ''
+                                      );
                                       (e.target as HTMLInputElement).blur();
                                     }
                                   }}
@@ -1020,7 +1149,9 @@ const ScoreEntry: React.FC = () => {
             <input
               type='file'
               accept='.xlsx,.xls'
-              onChange={(e: ChangeEvent<HTMLInputElement>) => dispatch({ type: 'SET_IMPORT_FILE', payload: e.target.files?.[0] || null })}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                dispatch({ type: 'SET_IMPORT_FILE', payload: e.target.files?.[0] || null })
+              }
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
             />
           </div>
@@ -1028,13 +1159,17 @@ const ScoreEntry: React.FC = () => {
             请确保 Excel 文件格式正确，包含学号、科目、成绩等列。
           </div>
           <div className='flex justify-end gap-2 pt-4'>
-          <Button variant='secondary' onClick={closeImportModal}>
-            取消
-          </Button>
-          <PermissionButton permission='score.edit' onClick={() => runSubmit(handleImport)} disabled={submitting || !importFile}>
-            导入
-          </PermissionButton>
-        </div>
+            <Button variant='secondary' onClick={closeImportModal}>
+              取消
+            </Button>
+            <PermissionButton
+              permission='score.edit'
+              onClick={() => runSubmit(handleImport)}
+              disabled={submitting || !importFile}
+            >
+              导入
+            </PermissionButton>
+          </div>
         </div>
       </Modal>
 
@@ -1057,16 +1192,31 @@ const ScoreEntry: React.FC = () => {
             </select>
           </div>
           <div className='flex flex-wrap gap-2 pt-4'>
-            <PermissionButton permission='score.approve' variant='secondary' onClick={() => runSubmit(handleBatchConfirm)} disabled={submitting || !batchSubject}>
+            <PermissionButton
+              permission='score.approve'
+              variant='secondary'
+              onClick={() => runSubmit(handleBatchConfirm)}
+              disabled={submitting || !batchSubject}
+            >
               <CheckCircle className='w-4 h-4 mr-2' />
               批量确认
             </PermissionButton>
-            <PermissionButton permission='score.edit' variant='secondary' onClick={() => runSubmit(handleBatchReset)} disabled={submitting || !batchSubject}>
+            <PermissionButton
+              permission='score.edit'
+              variant='secondary'
+              onClick={() => runSubmit(handleBatchReset)}
+              disabled={submitting || !batchSubject}
+            >
               <RotateCcw className='w-4 h-4 mr-2' />
               批量重置
             </PermissionButton>
             {/* S1: 批量删除与"修改成绩"分离，用 score.delete（teacher 无此权限不能删） */}
-            <PermissionButton permission='score.delete' variant='danger' onClick={() => runSubmit(handleBatchDelete)} disabled={submitting || !batchSubject}>
+            <PermissionButton
+              permission='score.delete'
+              variant='danger'
+              onClick={() => runSubmit(handleBatchDelete)}
+              disabled={submitting || !batchSubject}
+            >
               <Trash2 className='w-4 h-4 mr-2' />
               批量删除
             </PermissionButton>

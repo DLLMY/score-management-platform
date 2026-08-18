@@ -235,7 +235,9 @@ class DeviceGroupDevices(Resource):
 class DeviceGroupDeviceItem(Resource):
     """分组内单个设备操作"""
 
-    @ns_device_group.doc("remove_device_from_group", description="从分组中移除设备", security="Bearer")
+    @ns_device_group.doc(
+        "remove_device_from_group", description="从分组中移除设备", security="Bearer"
+    )
     @ns_device_group.response(200, "移除成功")
     @ns_device_group.response(404, "映射不存在")
     @requires_permission("device.manage")
@@ -252,7 +254,9 @@ class DeviceGroupDeviceItem(Resource):
 class DeviceGroupStats(Resource):
     """设备分组统计"""
 
-    @ns_device_group.doc("get_device_group_stats", description="获取设备分组统计信息", security="Bearer")
+    @ns_device_group.doc(
+        "get_device_group_stats", description="获取设备分组统计信息", security="Bearer"
+    )
     @ns_device_group.response(200, "成功")
     @requires_permission("device.view")
     def get(self):
@@ -266,7 +270,9 @@ class DeviceGroupStats(Resource):
         groups = DeviceGroup.query.all()
         for group in groups:
             stats = group.to_dict()
-            stats["actual_device_count"] = DeviceGroupMapping.query.filter_by(group_id=group.id).count()
+            stats["actual_device_count"] = DeviceGroupMapping.query.filter_by(
+                group_id=group.id
+            ).count()
             group_stats.append(stats)
 
         return APIResponse.success(
@@ -283,7 +289,9 @@ class DeviceGroupStats(Resource):
 class DeviceGroups(Resource):
     """设备所属的分组"""
 
-    @ns_device_group.doc("get_device_groups", description="获取设备所属的分组列表", security="Bearer")
+    @ns_device_group.doc(
+        "get_device_groups", description="获取设备所属的分组列表", security="Bearer"
+    )
     @ns_device_group.response(200, "成功", [device_group_model])
     @ns_device_group.response(404, "设备不存在")
     @requires_permission("device.view")
@@ -312,12 +320,16 @@ class DeviceGroups(Resource):
 class DeviceGroupOptions(Resource):
     """设备分组选项（用于下拉选择）"""
 
-    @ns_device_group.doc("get_device_group_options", description="获取设备分组选项列表", security="Bearer")
+    @ns_device_group.doc(
+        "get_device_group_options", description="获取设备分组选项列表", security="Bearer"
+    )
     @ns_device_group.response(200, "成功")
     @requires_permission("device.view")
     def get(self):
         """获取分组选项"""
-        groups = DeviceGroup.query.filter_by(is_active=True).order_by(DeviceGroup.sort_order.asc()).all()
+        groups = (
+            DeviceGroup.query.filter_by(is_active=True).order_by(DeviceGroup.sort_order.asc()).all()
+        )
 
         return APIResponse.success(
             data=[

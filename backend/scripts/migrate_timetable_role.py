@@ -36,15 +36,15 @@ ROLE_DESC = "课程时间规则与节次排课管理（维护 TimeRule / 节次 
 # 「排课」职责所需的配套查看/管理权限。
 ROLE_PERMS = [
     "timetable.rule.manage",  # 核心：管理时间规则（TimeRule）与节次 —— 用户明确要求
-    "period.manage",          # 管理节次
-    "period.view",            # 查看节次
-    "schedule.manage",        # 管理课表（排课）
-    "schedule.view",          # 查看课表
-    "class.view",             # 查看班级
-    "subject.view",           # 查看科目
-    "rule.view",              # 查看评分规则
-    "student.view",           # 查看学生
-    "notification.view",      # 查看通知
+    "period.manage",  # 管理节次
+    "period.view",  # 查看节次
+    "schedule.manage",  # 管理课表（排课）
+    "schedule.view",  # 查看课表
+    "class.view",  # 查看班级
+    "subject.view",  # 查看科目
+    "rule.view",  # 查看评分规则
+    "student.view",  # 查看学生
+    "notification.view",  # 查看通知
 ]
 
 # 权限码 -> 名称（仅用于「缺失时补建」的友好名；正常 seeded 库已存在，不会触发）

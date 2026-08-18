@@ -32,12 +32,16 @@ def download_score_template():
                 exam = get_by_id(Exam, exam_id)
             # 获取科目列表
             if exam and exam.subjects:
-                subjects = json.loads(exam.subjects) if isinstance(exam.subjects, str) else exam.subjects
+                subjects = (
+                    json.loads(exam.subjects) if isinstance(exam.subjects, str) else exam.subjects
+                )
             else:
                 subjects = ["语文", "数学", "英语"]
             # 获取学生列表（兼容 class_name / class_id）
             if class_id:
-                students = User.query.filter(User.class_info_id == class_id).order_by(User.card_id).all()
+                students = (
+                    User.query.filter(User.class_info_id == class_id).order_by(User.card_id).all()
+                )
             elif class_name:
                 students = User.query.filter_by(class_name=class_name).order_by(User.card_id).all()
             else:

@@ -1,9 +1,19 @@
 from models import Admin
 from utils.permission import (
-    get_access_token, has_permission, get_admin_permissions,
-    get_current_admin, get_allowed_classes, get_admin_class_ids,
-    is_admin_or_super_admin, ROLES, PERMISSIONS, _get_inherited_permissions,
-    requires_admin, requires_permission, requires_role, can_access_device
+    get_access_token,
+    has_permission,
+    get_admin_permissions,
+    get_current_admin,
+    get_allowed_classes,
+    get_admin_class_ids,
+    is_admin_or_super_admin,
+    ROLES,
+    PERMISSIONS,
+    _get_inherited_permissions,
+    requires_admin,
+    requires_permission,
+    requires_role,
+    can_access_device,
 )
 
 
@@ -16,7 +26,9 @@ class TestPermissionUtils:
         if not AdminRole.query.filter_by(admin_id=admin.id, role_code=role_code).first():
             db_session.add(AdminRole(admin_id=admin.id, role_code=role_code))
         for code in PERMISSIONS.get(role_code, []):
-            if not RolePermissionMapping.query.filter_by(role_code=role_code, permission_code=code).first():
+            if not RolePermissionMapping.query.filter_by(
+                role_code=role_code, permission_code=code
+            ).first():
                 db_session.add(RolePermissionMapping(role_code=role_code, permission_code=code))
         db_session.commit()
 
@@ -29,44 +41,44 @@ class TestPermissionUtils:
         with app.app_context():
             admin = Admin.query.first()
             if admin:
-                result = has_permission(admin, 'score.view')
+                result = has_permission(admin, "score.view")
                 assert isinstance(result, bool)
 
     def test_has_permission_none_admin(self, app):
         with app.app_context():
-            result = has_permission(None, 'score.view')
+            result = has_permission(None, "score.view")
             assert result is False
 
     def test_has_permission_admin_role(self, app):
         with app.app_context():
             admin = Admin.query.first()
-            result = has_permission(admin, 'any.permission')
+            result = has_permission(admin, "any.permission")
             assert result is True
 
     def test_has_permission_super_admin_role(self, app):
         with app.app_context():
             admin = Admin.query.first()
-            result = has_permission(admin, 'any.permission')
+            result = has_permission(admin, "any.permission")
             assert result is True
 
     def test_has_permission_teacher_role(self, app, db_session):
         with app.app_context():
             admin = Admin.query.first()
-            self._bind_role(db_session, admin, 'teacher')
-            result = has_permission(admin, 'score.view')
+            self._bind_role(db_session, admin, "teacher")
+            result = has_permission(admin, "score.view")
             assert result is True
 
     def test_has_permission_viewer_role(self, app, db_session):
         with app.app_context():
             admin = Admin.query.first()
-            self._bind_role(db_session, admin, 'viewer')
-            result = has_permission(admin, 'student.view')
+            self._bind_role(db_session, admin, "viewer")
+            result = has_permission(admin, "student.view")
             assert result is True
 
     def test_has_permission_no_permission(self, app):
         with app.app_context():
-            admin = Admin(role='viewer', username='rbac_viewer', password='testpass123')
-            result = has_permission(admin, 'score.edit')
+            admin = Admin(role="viewer", username="rbac_viewer", password="testpass123")
+            result = has_permission(admin, "score.edit")
             assert isinstance(result, bool)
 
     def test_get_admin_permissions(self, app):
@@ -85,7 +97,7 @@ class TestPermissionUtils:
         with app.app_context():
             admin = Admin.query.first()
             permissions = get_admin_permissions(admin)
-            assert 'all' in permissions
+            assert "all" in permissions
 
     def test_get_current_admin_no_token(self, app):
         with app.test_request_context():
@@ -122,23 +134,23 @@ class TestPermissionUtils:
 
     def test_is_admin_or_super_admin_false(self, app):
         with app.app_context():
-            admin = Admin(role='teacher', username='rbac_teacher', password='testpass123')
+            admin = Admin(role="teacher", username="rbac_teacher", password="testpass123")
             result = is_admin_or_super_admin(admin)
             assert result is False
 
     def test_roles_definition(self):
         assert isinstance(ROLES, dict)
-        assert 'admin' in ROLES
-        assert 'super_admin' in ROLES
+        assert "admin" in ROLES
+        assert "super_admin" in ROLES
 
     def test_permissions_definition(self):
         assert isinstance(PERMISSIONS, dict)
-        assert 'admin' in PERMISSIONS
-        assert 'teacher' in PERMISSIONS
+        assert "admin" in PERMISSIONS
+        assert "teacher" in PERMISSIONS
 
     def test_get_inherited_permissions_empty(self, app):
         with app.app_context():
-            perms = _get_inherited_permissions('nonexistent_role')
+            perms = _get_inherited_permissions("nonexistent_role")
             assert isinstance(perms, set)
 
     def test_requires_admin_decorator(self, app):
@@ -146,7 +158,7 @@ class TestPermissionUtils:
 
             @requires_admin
             def protected_func():
-                return {'success': True}
+                return {"success": True}
 
             decorated = protected_func
             assert callable(decorated)
@@ -154,9 +166,9 @@ class TestPermissionUtils:
     def test_requires_permission_decorator(self, app):
         with app.app_context():
 
-            @requires_permission('score.view')
+            @requires_permission("score.view")
             def protected_func():
-                return {'success': True}
+                return {"success": True}
 
             decorated = protected_func
             assert callable(decorated)
@@ -164,29 +176,29 @@ class TestPermissionUtils:
     def test_requires_role_decorator(self, app):
         with app.app_context():
 
-            @requires_role(['admin', 'teacher'])
+            @requires_role(["admin", "teacher"])
             def protected_func():
-                return {'success': True}
+                return {"success": True}
 
             decorated = protected_func
             assert callable(decorated)
 
     def test_get_inherited_permissions_admin(self, app):
         with app.app_context():
-            perms = _get_inherited_permissions('admin')
+            perms = _get_inherited_permissions("admin")
             assert isinstance(perms, set)
 
     def test_get_inherited_permissions_teacher(self, app):
         with app.app_context():
-            perms = _get_inherited_permissions('teacher')
+            perms = _get_inherited_permissions("teacher")
             assert isinstance(perms, set)
 
     def test_requires_role_decorator_single_role(self, app):
         with app.app_context():
 
-            @requires_role(['admin'])
+            @requires_role(["admin"])
             def protected_func():
-                return {'success': True}
+                return {"success": True}
 
             decorated = protected_func
             assert callable(decorated)
@@ -198,25 +210,25 @@ class TestPermissionUtils:
 
     def test_can_access_device_admin_role(self, app):
         with app.app_context():
-            admin = Admin(role='admin', username='rbac_admin', password='testpass123')
+            admin = Admin(role="admin", username="rbac_admin", password="testpass123")
             result = can_access_device(admin, 1)
             assert result is True
 
     def test_can_access_device_teacher_no_device(self, app):
         with app.app_context():
-            admin = Admin(role='teacher', username='rbac_teacher', password='testpass123')
+            admin = Admin(role="teacher", username="rbac_teacher", password="testpass123")
             result = can_access_device(admin, 99999)
             assert result is False
 
     def test_has_permission_with_all_permission(self, app):
         with app.app_context():
             admin = Admin.query.first()
-            result = has_permission(admin, 'all')
+            result = has_permission(admin, "all")
             assert result is True
 
     def test_get_admin_permissions_empty(self, app):
         with app.app_context():
-            admin = Admin(role='viewer', username='rbac_viewer', password='testpass123')
+            admin = Admin(role="viewer", username="rbac_viewer", password="testpass123")
             permissions = get_admin_permissions(admin)
             assert isinstance(permissions, list)
 
@@ -236,24 +248,24 @@ class TestPermissionUtils:
             assert admin is None
 
     def test_get_access_token_from_bearer(self, app):
-        with app.test_request_context(headers={'Authorization': 'Bearer test_token'}):
+        with app.test_request_context(headers={"Authorization": "Bearer test_token"}):
             token = get_access_token()
-            assert token == 'test_token'
+            assert token == "test_token"
 
     def test_has_permission_with_inherited(self, app):
         with app.app_context():
-            admin = Admin(role='head_teacher', username='test_head')
-            result = has_permission(admin, 'score.approve')
+            admin = Admin(role="head_teacher", username="test_head")
+            result = has_permission(admin, "score.approve")
             assert isinstance(result, bool)
 
     def test_has_permission_subject_teacher(self, app):
         with app.app_context():
-            admin = Admin(role='subject_teacher', username='test_subject')
-            result = has_permission(admin, 'score.entry')
+            admin = Admin(role="subject_teacher", username="test_subject")
+            result = has_permission(admin, "score.entry")
             assert isinstance(result, bool)
 
     def test_has_permission_operator(self, app):
         with app.app_context():
-            admin = Admin(role='operator', username='test_operator')
-            result = has_permission(admin, 'device.view')
+            admin = Admin(role="operator", username="test_operator")
+            result = has_permission(admin, "device.view")
             assert isinstance(result, bool)

@@ -18,7 +18,14 @@ logger = logging.getLogger(__name__)
 class TransactionRetry:
     """事务重试管理器"""
 
-    def __init__(self, max_retries=5, base_delay=0.1, max_delay=5.0, retry_on=(Exception,), backoff_factor=2.0):
+    def __init__(
+        self,
+        max_retries=5,
+        base_delay=0.1,
+        max_delay=5.0,
+        retry_on=(Exception,),
+        backoff_factor=2.0,
+    ):
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.max_delay = max_delay
@@ -62,7 +69,9 @@ class TransactionRetry:
                 self._stats["last_retry_time"] = time.time()
 
                 if attempt < self.max_retries:
-                    logger.warning(f"事务执行失败 (第{attempt + 1}次), " f"{delay:.2f}秒后重试: {str(e)}")
+                    logger.warning(
+                        f"事务执行失败 (第{attempt + 1}次), " f"{delay:.2f}秒后重试: {str(e)}"
+                    )
                     time.sleep(delay)
                     delay = min(delay * self.backoff_factor, self.max_delay)
                 else:

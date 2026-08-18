@@ -4,6 +4,7 @@
 断言响应体/状态码/错误与迁移前逐字节一致，锁定契约零漂移。其余端点（list/detail/stats/
 read/read-all/cleanup/test）早已收口至 alert_service，本文件仅补强写入路径回归。
 """
+
 from services.alert_service import alert_service
 
 

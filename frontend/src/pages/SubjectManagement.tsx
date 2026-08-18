@@ -1,6 +1,24 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Edit2, Trash2, BookOpen, X, Check, GraduationCap, Layers, Palette, Link2, Users, Minus, School, ToggleLeft, ToggleRight, RefreshCw, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  BookOpen,
+  X,
+  Check,
+  GraduationCap,
+  Layers,
+  Palette,
+  Link2,
+  Users,
+  Minus,
+  School,
+  ToggleLeft,
+  ToggleRight,
+  RefreshCw,
+  AlertTriangle,
+} from 'lucide-react';
 import api, { Subject, SubjectClassLink, ClassInfo, getAuthHeaders } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, SearchFilter } from '../components';
@@ -40,9 +58,18 @@ const defaultForm: FormData = {
 };
 
 const presetColors = [
-  '#10B981', '#3B82F6', '#8B5CF6', '#EC4899',
-  '#F59E0B', '#EF4444', '#06B6D4', '#84CC16',
-  '#F97316', '#6366F1', '#14B8A6', '#A855F7',
+  '#10B981',
+  '#3B82F6',
+  '#8B5CF6',
+  '#EC4899',
+  '#F59E0B',
+  '#EF4444',
+  '#06B6D4',
+  '#84CC16',
+  '#F97316',
+  '#6366F1',
+  '#14B8A6',
+  '#A855F7',
 ];
 
 function SubjectManagementPage() {
@@ -54,7 +81,7 @@ function SubjectManagementPage() {
   const [loadError, setLoadError] = useState<boolean>(false);
   const { showToast } = useStableToast();
   const showToastRef = useRef(showToast);
-  
+
   useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
@@ -75,7 +102,11 @@ function SubjectManagementPage() {
     description: { maxLength: 200 },
   });
 
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<Subject | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<Subject | null>({
     onClose: () => {
       resetForm();
       setErrors({});
@@ -84,26 +115,27 @@ function SubjectManagementPage() {
 
   // 防抖搜索 - 延迟 300ms 更新搜索词
   const debouncedKeyword = useDebouncedValue(searchInput, 300);
-  
+
   // 使用 useMemo 优化过滤逻辑
   const filteredSubjects = useMemo(() => {
     let filtered = subjects;
-    
+
     if (statusFilter === 'active') {
-      filtered = filtered.filter(s => s.is_active);
+      filtered = filtered.filter((s) => s.is_active);
     } else if (statusFilter === 'inactive') {
-      filtered = filtered.filter(s => !s.is_active);
+      filtered = filtered.filter((s) => !s.is_active);
     }
-    
+
     if (debouncedKeyword) {
       const searchLower = debouncedKeyword.toLowerCase();
-      filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(searchLower) ||
-        (s.code && s.code.toLowerCase().includes(searchLower)) ||
-        (s.grade && s.grade.toLowerCase().includes(searchLower))
+      filtered = filtered.filter(
+        (s) =>
+          s.name.toLowerCase().includes(searchLower) ||
+          (s.code && s.code.toLowerCase().includes(searchLower)) ||
+          (s.grade && s.grade.toLowerCase().includes(searchLower))
       );
     }
-    
+
     return filtered;
   }, [subjects, statusFilter, debouncedKeyword]);
 
@@ -127,21 +159,27 @@ function SubjectManagementPage() {
 
   usePermissions();
 
-  const fetchSubjects = useCallback(async (includeInactive = statusFilter !== 'active', skipCache = false) => {
-    setIsLoading(true);
-    try {
-      const data = await api.subjects.getAll({ include_inactive: includeInactive, skipCache }) as Subject[];
-      const subjectArray = Array.isArray(data) ? data : [];
-      setSubjects(subjectArray);
-      setLoadError(false);
-    } catch (error) {
-      logger.error('获取科目列表失败:', error);
-      setLoadError(true);
-      showToastRef.current('error', '获取科目列表失败');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [statusFilter]);
+  const fetchSubjects = useCallback(
+    async (includeInactive = statusFilter !== 'active', skipCache = false) => {
+      setIsLoading(true);
+      try {
+        const data = (await api.subjects.getAll({
+          include_inactive: includeInactive,
+          skipCache,
+        })) as Subject[];
+        const subjectArray = Array.isArray(data) ? data : [];
+        setSubjects(subjectArray);
+        setLoadError(false);
+      } catch (error) {
+        logger.error('获取科目列表失败:', error);
+        setLoadError(true);
+        showToastRef.current('error', '获取科目列表失败');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [statusFilter]
+  );
 
   useEffect(() => {
     fetchSubjects();
@@ -151,29 +189,40 @@ function SubjectManagementPage() {
     setStatusFilter(status);
   }, []);
 
-  const handleToggleStatus = useCallback(async (subject: Subject) => {
-    try {
-      const result = await api.subjects.toggle(subject.id) as Subject & { message: string };
-      showToast('success', result.message);
-      setSubjects(prev => prev.map(s => 
-        s.id === subject.id ? { ...s, is_active: !s.is_active, class_count: result.class_count } : s
-      ));
-    } catch (error: unknown) {
-      logger.error('切换状态失败:', error);
-      showToast('error', (error as Error).message || '切换状态失败');
-    }
-  }, [showToast]);
+  const handleToggleStatus = useCallback(
+    async (subject: Subject) => {
+      try {
+        const result = (await api.subjects.toggle(subject.id)) as Subject & { message: string };
+        showToast('success', result.message);
+        setSubjects((prev) =>
+          prev.map((s) =>
+            s.id === subject.id
+              ? { ...s, is_active: !s.is_active, class_count: result.class_count }
+              : s
+          )
+        );
+      } catch (error: unknown) {
+        logger.error('切换状态失败:', error);
+        showToast('error', (error as Error).message || '切换状态失败');
+      }
+    },
+    [showToast]
+  );
 
   const fetchTeachers = useCallback(async () => {
     try {
       const data = await api.admins.getAll();
       const rawList = Array.isArray(data) ? data : (data as { admins?: unknown[] }).admins || [];
       const adminList = rawList as AdminUser[];
-      setTeachers(adminList.filter((a) => a.is_active !== false).map((a) => ({
-        id: a.id,
-        real_name: a.real_name || a.username,
-        username: a.username,
-      })));
+      setTeachers(
+        adminList
+          .filter((a) => a.is_active !== false)
+          .map((a) => ({
+            id: a.id,
+            real_name: a.real_name || a.username,
+            username: a.username,
+          }))
+      );
       setLoadError(false);
     } catch (error) {
       logger.error('获取教师列表失败:', error);
@@ -205,12 +254,15 @@ function SubjectManagementPage() {
     }
   }, []);
 
-  const handleEditTeacher = useCallback((link: SubjectClassLink) => {
-    setEditingTeacherSubjectId(selectedSubject?.id || 0);
-    setEditingTeacherClassId(link.class_info_id);
-    setEditingTeacherLinkId(link.id);
-    setEditingTeacherId(link.teacher_id || 0);
-  }, [selectedSubject]);
+  const handleEditTeacher = useCallback(
+    (link: SubjectClassLink) => {
+      setEditingTeacherSubjectId(selectedSubject?.id || 0);
+      setEditingTeacherClassId(link.class_info_id);
+      setEditingTeacherLinkId(link.id);
+      setEditingTeacherId(link.teacher_id || 0);
+    },
+    [selectedSubject]
+  );
 
   const handleSaveTeacher = useCallback(async () => {
     if (!editingTeacherSubjectId || !editingTeacherClassId) return;
@@ -230,21 +282,27 @@ function SubjectManagementPage() {
       logger.error('更新教师失败:', error);
       showToast('error', (error as Error).message || '更新教师失败');
     }
-  }, [editingTeacherSubjectId, editingTeacherClassId, editingTeacherId, selectedSubject, showToast, fetchSubjectClasses]);
+  }, [
+    editingTeacherSubjectId,
+    editingTeacherClassId,
+    editingTeacherId,
+    selectedSubject,
+    showToast,
+    fetchSubjectClasses,
+  ]);
 
-  const openClassLinkModal = useCallback(async (subject: Subject) => {
-    setSelectedSubject(subject);
-    setShowClassLinkModal(true);
-    setSelectedClassId(0);
-    setSelectedTeacherId(0);
-    setLinkLoading(true);
-    await Promise.all([
-      fetchSubjectClasses(subject.id),
-      fetchAllClasses(),
-      fetchTeachers(),
-    ]);
-    setLinkLoading(false);
-  }, [fetchSubjectClasses, fetchAllClasses, fetchTeachers]);
+  const openClassLinkModal = useCallback(
+    async (subject: Subject) => {
+      setSelectedSubject(subject);
+      setShowClassLinkModal(true);
+      setSelectedClassId(0);
+      setSelectedTeacherId(0);
+      setLinkLoading(true);
+      await Promise.all([fetchSubjectClasses(subject.id), fetchAllClasses(), fetchTeachers()]);
+      setLinkLoading(false);
+    },
+    [fetchSubjectClasses, fetchAllClasses, fetchTeachers]
+  );
 
   const closeClassLinkModal = useCallback(() => {
     setShowClassLinkModal(false);
@@ -273,105 +331,133 @@ function SubjectManagementPage() {
       logger.error('关联班级失败:', error);
       showToast('error', (error as Error).message || '关联班级失败');
     }
-  }, [selectedSubject, selectedClassId, selectedTeacherId, showToast, fetchSubjectClasses, fetchSubjects]);
+  }, [
+    selectedSubject,
+    selectedClassId,
+    selectedTeacherId,
+    showToast,
+    fetchSubjectClasses,
+    fetchSubjects,
+  ]);
 
-  const handleRemoveClass = useCallback(async (classInfoId: number) => {
-    if (!selectedSubject) return;
-    if (!window.confirm('确定要移除该班级关联吗？')) return;
-    try {
-      await api.subjects.removeClass(selectedSubject.id, classInfoId);
-      showToast('success', '已移除班级关联');
-      await fetchSubjectClasses(selectedSubject.id);
-      fetchSubjects();
-    } catch (error: unknown) {
-      logger.error('移除关联失败:', error);
-      showToast('error', (error as Error).message || '移除关联失败');
-    }
-  }, [selectedSubject, showToast, fetchSubjectClasses, fetchSubjects]);
+  const handleRemoveClass = useCallback(
+    async (classInfoId: number) => {
+      if (!selectedSubject) return;
+      if (!window.confirm('确定要移除该班级关联吗？')) return;
+      try {
+        await api.subjects.removeClass(selectedSubject.id, classInfoId);
+        showToast('success', '已移除班级关联');
+        await fetchSubjectClasses(selectedSubject.id);
+        fetchSubjects();
+      } catch (error: unknown) {
+        logger.error('移除关联失败:', error);
+        showToast('error', (error as Error).message || '移除关联失败');
+      }
+    },
+    [selectedSubject, showToast, fetchSubjectClasses, fetchSubjects]
+  );
 
-  const handleOpenModal = useCallback((isEdit = false, subjectData?: Subject) => {
-    if (isEdit && subjectData) {
-      setFormData({
-        id: subjectData.id,
-        name: subjectData.name,
-        code: subjectData.code || '',
-        grade: subjectData.grade || '',
-        description: subjectData.description || '',
-        color: subjectData.color,
-        is_active: subjectData.is_active,
-      });
-    } else {
-      resetForm();
-    }
-    openModal(subjectData || null);
-  }, [setFormData, resetForm, openModal]);
+  const handleOpenModal = useCallback(
+    (isEdit = false, subjectData?: Subject) => {
+      if (isEdit && subjectData) {
+        setFormData({
+          id: subjectData.id,
+          name: subjectData.name,
+          code: subjectData.code || '',
+          grade: subjectData.grade || '',
+          description: subjectData.description || '',
+          color: subjectData.color,
+          is_active: subjectData.is_active,
+        });
+      } else {
+        resetForm();
+      }
+      openModal(subjectData || null);
+    },
+    [setFormData, resetForm, openModal]
+  );
 
   const handleCloseModal = useCallback(() => {
     closeModal();
   }, [closeModal]);
 
-  const onSubmit = useCallback(async (data: FormData) => {
-    try {
-      if (data.id) {
-        await api.subjects.update(data.id, {
-          name: data.name,
-          code: data.code || undefined,
-          grade: data.grade || undefined,
-          description: data.description,
-          color: data.color,
-        });
-        showToast('success', '科目更新成功');
-      } else {
-        await api.subjects.create({
-          name: data.name,
-          code: data.code || undefined,
-          grade: data.grade || undefined,
-          description: data.description,
-          color: data.color,
-        });
-        showToast('success', '科目创建成功');
+  const onSubmit = useCallback(
+    async (data: FormData) => {
+      try {
+        if (data.id) {
+          await api.subjects.update(data.id, {
+            name: data.name,
+            code: data.code || undefined,
+            grade: data.grade || undefined,
+            description: data.description,
+            color: data.color,
+          });
+          showToast('success', '科目更新成功');
+        } else {
+          await api.subjects.create({
+            name: data.name,
+            code: data.code || undefined,
+            grade: data.grade || undefined,
+            description: data.description,
+            color: data.color,
+          });
+          showToast('success', '科目创建成功');
+        }
+        closeModal();
+        fetchSubjects();
+      } catch (error) {
+        logger.error('操作失败:', error);
+        showToast('error', data.id ? '更新科目失败' : '创建科目失败');
       }
-      closeModal();
-      fetchSubjects();
-    } catch (error) {
-      logger.error('操作失败:', error);
-      showToast('error', data.id ? '更新科目失败' : '创建科目失败');
-    }
-  }, [showToast, closeModal, fetchSubjects]);
+    },
+    [showToast, closeModal, fetchSubjects]
+  );
 
-  const handleDelete = useCallback(async (id: number) => {
-    if (!window.confirm('确定要删除这个科目吗？')) return;
-    try {
-      await api.subjects.delete(id);
-      showToast('success', '科目删除成功');
-      fetchSubjects(statusFilter !== 'active', true);
-    } catch (error) {
-      logger.error('删除失败:', error);
-      showToast('error', '删除科目失败');
-    }
-  }, [showToast, fetchSubjects, statusFilter]);
+  const handleDelete = useCallback(
+    async (id: number) => {
+      if (!window.confirm('确定要删除这个科目吗？')) return;
+      try {
+        await api.subjects.delete(id);
+        showToast('success', '科目删除成功');
+        fetchSubjects(statusFilter !== 'active', true);
+      } catch (error) {
+        logger.error('删除失败:', error);
+        showToast('error', '删除科目失败');
+      }
+    },
+    [showToast, fetchSubjects, statusFilter]
+  );
 
-  const handleExport = useCallback(async (format: 'excel' | 'csv'): Promise<Blob> => {
-    const response = await fetch(`/api/subjects/export?include_inactive=${statusFilter !== 'active'}&format=${format}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) {
-      throw new Error('导出失败');
-    }
-    return response.blob();
-  }, [statusFilter]);
+  const handleExport = useCallback(
+    async (format: 'excel' | 'csv'): Promise<Blob> => {
+      const response = await fetch(
+        `/api/subjects/export?include_inactive=${statusFilter !== 'active'}&format=${format}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: getAuthHeaders(),
+        }
+      );
+      if (!response.ok) {
+        throw new Error('导出失败');
+      }
+      return response.blob();
+    },
+    [statusFilter]
+  );
 
-  const handleImportComplete = useCallback((result: { success: boolean }) => {
-    if (result.success) {
-      fetchSubjects();
-    }
-  }, [fetchSubjects]);
+  const handleImportComplete = useCallback(
+    (result: { success: boolean }) => {
+      if (result.success) {
+        fetchSubjects();
+      }
+    },
+    [fetchSubjects]
+  );
 
   // Calculate statistics
   const totalSubjects = subjects.length;
-  const activeSubjects = subjects.filter(s => s.is_active).length;
+  const activeSubjects = subjects.filter((s) => s.is_active).length;
   const totalClassCount = subjects.reduce((sum, s) => sum + (s.class_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
 
   return (
@@ -400,7 +486,9 @@ function SubjectManagementPage() {
               <h1 className='text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text'>
                 科目管理
               </h1>
-              <p className='text-sm text-slate-500 dark:text-slate-400'>管理科目信息、科目代码和班级关联</p>
+              <p className='text-sm text-slate-500 dark:text-slate-400'>
+                管理科目信息、科目代码和班级关联
+              </p>
             </div>
           </div>
           <PermissionButton
@@ -425,7 +513,9 @@ function SubjectManagementPage() {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>科目总数</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{totalSubjects}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {totalSubjects}
+                </p>
               </div>
             </div>
           </div>
@@ -438,7 +528,9 @@ function SubjectManagementPage() {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>启用科目</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{activeSubjects}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {activeSubjects}
+                </p>
               </div>
             </div>
           </div>
@@ -451,7 +543,9 @@ function SubjectManagementPage() {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>班级关联</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{totalClassCount}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {totalClassCount}
+                </p>
               </div>
             </div>
           </div>
@@ -492,14 +586,14 @@ function SubjectManagementPage() {
                 </button>
               </SearchFilter>
               <ImportExportPanel
-                type="subject"
+                type='subject'
                 showExport={true}
                 showImport={true}
                 showTemplate={true}
-                acceptFormats=".json,.xlsx,.xls"
+                acceptFormats='.json,.xlsx,.xls'
                 exportUrl={`/api/subjects/export?include_inactive=${statusFilter !== 'active'}`}
-                importUrl="/api/subjects/import"
-                templateUrl="/api/subjects/template"
+                importUrl='/api/subjects/import'
+                templateUrl='/api/subjects/template'
                 onDataExport={handleExport}
                 onImportComplete={handleImportComplete}
                 permissions={{
@@ -561,11 +655,13 @@ function SubjectManagementPage() {
                           <BookOpen className='w-6 h-6' style={{ color: subject.color }} />
                         </div>
                         <div>
-                          <h3 className={`font-bold text-lg ${
-                            subject.is_active 
-                              ? 'text-slate-800 dark:text-slate-100' 
-                              : 'text-slate-400 dark:text-slate-500 line-through'
-                          }`}>
+                          <h3
+                            className={`font-bold text-lg ${
+                              subject.is_active
+                                ? 'text-slate-800 dark:text-slate-100'
+                                : 'text-slate-400 dark:text-slate-500 line-through'
+                            }`}
+                          >
                             {subject.name}
                           </h3>
                           {subject.code && (
@@ -649,7 +745,10 @@ function SubjectManagementPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={handleCloseModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={handleCloseModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -674,7 +773,10 @@ function SubjectManagementPage() {
               </div>
             </div>
 
-            <form onSubmit={(e) => e.preventDefault()} className='px-6 py-5 space-y-5 flex-1 overflow-y-auto min-h-0'>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className='px-6 py-5 space-y-5 flex-1 overflow-y-auto min-h-0'
+            >
               <div>
                 <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
                   科目名称 <span className='text-red-500'>*</span>
@@ -685,7 +787,9 @@ function SubjectManagementPage() {
                   onChange={handleChangeEvent('name')}
                   placeholder='输入科目名称'
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 ${
-                    errors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-violet-500'
+                    errors.name
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-violet-500'
                   }`}
                 />
                 {errors.name && <p className='mt-1 text-sm text-red-500'>{errors.name}</p>}
@@ -743,7 +847,9 @@ function SubjectManagementPage() {
                       type='button'
                       onClick={() => handleChange('color', color)}
                       className={`w-8 h-8 rounded-lg transition-all hover:scale-110 ${
-                        formData.color === color ? 'ring-2 ring-offset-2 ring-violet-500 scale-110' : ''
+                        formData.color === color
+                          ? 'ring-2 ring-offset-2 ring-violet-500 scale-110'
+                          : ''
                       }`}
                       style={{ backgroundColor: color }}
                     />
@@ -802,7 +908,10 @@ function SubjectManagementPage() {
 
       {/* Class Link Modal */}
       {showClassLinkModal && selectedSubject && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={closeClassLinkModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={closeClassLinkModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -841,7 +950,9 @@ function SubjectManagementPage() {
                 </h4>
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                   <div>
-                    <label className='block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5'>选择班级</label>
+                    <label className='block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5'>
+                      选择班级
+                    </label>
                     <select
                       value={selectedClassId}
                       onChange={(e) => setSelectedClassId(Number(e.target.value))}
@@ -849,22 +960,28 @@ function SubjectManagementPage() {
                     >
                       <option value={0}>请选择班级</option>
                       {allClasses
-                        .filter(c => !subjectClasses.some(sc => sc.class_info_id === c.id))
-                        .map(c => (
-                          <option key={c.id} value={c.id}>{c.name} {c.grade ? `(${c.grade})` : ''}</option>
+                        .filter((c) => !subjectClasses.some((sc) => sc.class_info_id === c.id))
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.grade ? `(${c.grade})` : ''}
+                          </option>
                         ))}
                     </select>
                   </div>
                   <div>
-                    <label className='block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5'>授课教师（可选）</label>
+                    <label className='block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5'>
+                      授课教师（可选）
+                    </label>
                     <select
                       value={selectedTeacherId}
                       onChange={(e) => setSelectedTeacherId(Number(e.target.value))}
                       className='w-full px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm text-slate-800 dark:text-slate-100'
                     >
                       <option value={0}>不指定</option>
-                      {teachers.map(t => (
-                        <option key={t.id} value={t.id}>{t.real_name}</option>
+                      {teachers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.real_name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -908,9 +1025,13 @@ function SubjectManagementPage() {
                             <School className='w-5 h-5 text-white' />
                           </div>
                           <div>
-                            <p className='font-semibold text-slate-800 dark:text-slate-100 text-sm'>{sc.class_name}</p>
+                            <p className='font-semibold text-slate-800 dark:text-slate-100 text-sm'>
+                              {sc.class_name}
+                            </p>
                             {sc.grade && (
-                              <p className='text-xs text-slate-500 dark:text-slate-400'>{sc.grade}</p>
+                              <p className='text-xs text-slate-500 dark:text-slate-400'>
+                                {sc.grade}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -954,12 +1075,15 @@ function SubjectManagementPage() {
 
       {/* Edit Teacher Modal */}
       {editingTeacherLinkId > 0 && selectedSubject && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={() => {
-          setEditingTeacherSubjectId(0);
-          setEditingTeacherClassId(0);
-          setEditingTeacherLinkId(0);
-          setEditingTeacherId(0);
-        }}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={() => {
+            setEditingTeacherSubjectId(0);
+            setEditingTeacherClassId(0);
+            setEditingTeacherLinkId(0);
+            setEditingTeacherId(0);
+          }}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -1005,8 +1129,10 @@ function SubjectManagementPage() {
                   className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-slate-800 dark:text-slate-100'
                 >
                   <option value={0}>不指定教师</option>
-                  {teachers.map(t => (
-                    <option key={t.id} value={t.id}>{t.real_name}</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.real_name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1036,7 +1162,6 @@ function SubjectManagementPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

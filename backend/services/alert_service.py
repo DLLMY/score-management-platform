@@ -232,7 +232,9 @@ class AlertService:
     def mark_all_as_read(self):
         """标记所有告警为已读；失败返回 None（调用方据此返回业务失败，而非伪装"已标记 0 条"）"""
         try:
-            count = Alert.query.filter(Alert.is_read == False).update({"is_read": True, "read_at": datetime.now()})  # noqa: E712, E501
+            count = Alert.query.filter(Alert.is_read == False).update(
+                {"is_read": True, "read_at": datetime.now()}
+            )  # noqa: E712, E501
             db.session.commit()
             return count
         except Exception as e:
@@ -285,7 +287,12 @@ class AlertService:
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             today_count = Alert.query.filter(Alert.created_at >= today).count()
 
-            return {"total": total, "unread": unread, "by_severity": severity_stats, "today_count": today_count}
+            return {
+                "total": total,
+                "unread": unread,
+                "by_severity": severity_stats,
+                "today_count": today_count,
+            }
         except Exception as e:
             log_error(f"获取告警统计失败: {e}")
             db.session.rollback()
@@ -307,10 +314,17 @@ class AlertService:
         extra_data = {"user_id": user_id, "user_name": user_name, "score": score, "reason": reason}
         return self.create_alert("score_abnormal", message, extra_data=extra_data)
 
-    def trigger_score_threshold_alert(self, user_id: int, user_name: str, score: int, threshold_type: str):
+    def trigger_score_threshold_alert(
+        self, user_id: int, user_name: str, score: int, threshold_type: str
+    ):
         """触发积分阈值告警"""
         message = f"积分阈值告警: 用户 {user_name} (ID:{user_id}) 积分 {score}，{threshold_type}"
-        extra_data = {"user_id": user_id, "user_name": user_name, "score": score, "threshold_type": threshold_type}
+        extra_data = {
+            "user_id": user_id,
+            "user_name": user_name,
+            "score": score,
+            "threshold_type": threshold_type,
+        }
         return self.create_alert("score_threshold", message, extra_data=extra_data)
 
     def trigger_system_error_alert(self, error_message: str, error_type: str = "unknown"):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 风险预警服务测试模块
 """
 """
@@ -59,9 +59,7 @@ class TestWarningService:
         """测试计算风险评分"""
 
         with app.app_context():
-            risk_score = WarningService._calculate_risk_score(
-                sample_user, ["测试原因"]
-            )
+            risk_score = WarningService._calculate_risk_score(sample_user, ["测试原因"])
 
             assert isinstance(risk_score, float)
             assert 0 <= risk_score <= 1.0
@@ -106,9 +104,7 @@ class TestWarningService:
         """测试更新预警配置"""
 
         with app.app_context():
-            result = WarningService.update_config(
-                "score_threshold", "40", "测试更新"
-            )
+            result = WarningService.update_config("score_threshold", "40", "测试更新")
 
             assert result is True
 

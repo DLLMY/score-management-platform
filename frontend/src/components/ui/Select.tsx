@@ -7,13 +7,7 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onC
   children: ReactNode;
 }
 
-function Select({ 
-  value, 
-  onChange, 
-  className = '', 
-  children, 
-  ...props 
-}: SelectProps) {
+function Select({ value, onChange, className = '', children, ...props }: SelectProps) {
   const handleChange: ChangeEventHandler<HTMLSelectElement> = (e) => {
     onChange?.(e.target.value);
   };

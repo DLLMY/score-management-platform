@@ -50,7 +50,12 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     if (!res.ok) return null;
     const env = await res.json();
     // M6: 检查业务信封，success===false 时不当作成功数据返回
-    if (env && typeof env === 'object' && 'success' in env && (env as { success?: boolean }).success === false) {
+    if (
+      env &&
+      typeof env === 'object' &&
+      'success' in env &&
+      (env as { success?: boolean }).success === false
+    ) {
       return null;
     }
     return ((env && 'data' in env ? env.data : env) ?? null) as T | null;
@@ -71,7 +76,9 @@ const SeverityBadge: React.FC<{ severity?: string }> = ({ severity }) => {
   const cfg = map[severity || 'info'] || map.info;
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${cfg.color}`}>
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${cfg.color}`}
+    >
       <Icon size={12} />
       {cfg.label}
     </span>
@@ -83,13 +90,23 @@ export const SecurityAuditPage: React.FC = () => {
   const [stats, setStats] = useState<AuditStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [filters, setFilters] = useState<{ event_type: string; severity: string; start_date: string; end_date: string }>({
+  const [filters, setFilters] = useState<{
+    event_type: string;
+    severity: string;
+    start_date: string;
+    end_date: string;
+  }>({
     event_type: '',
     severity: '',
     start_date: '',
     end_date: '',
   });
-  const [pagination, setPagination] = useState<{ page: number; per_page: number; total: number; pages: number }>({
+  const [pagination, setPagination] = useState<{
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+  }>({
     page: 1,
     per_page: 20,
     total: 0,
@@ -106,9 +123,13 @@ export const SecurityAuditPage: React.FC = () => {
     if (filters.start_date) params.set('start_date', filters.start_date);
     if (filters.end_date) params.set('end_date', filters.end_date);
 
-    const data = await fetchJson<{ logs: AuditLog[]; total: number; page: number; per_page: number; pages: number }>(
-      `/api/security/audit-logs?${params.toString()}`
-    );
+    const data = await fetchJson<{
+      logs: AuditLog[];
+      total: number;
+      page: number;
+      per_page: number;
+      pages: number;
+    }>(`/api/security/audit-logs?${params.toString()}`);
     if (data) {
       setLogs(data.logs || []);
       setPagination((prev) => ({ ...prev, total: data.total || 0, pages: data.pages || 1 }));
@@ -117,7 +138,14 @@ export const SecurityAuditPage: React.FC = () => {
       setLoadError(true);
     }
     setLoading(false);
-  }, [filters.event_type, filters.severity, filters.start_date, filters.end_date, pagination.page, pagination.per_page]);
+  }, [
+    filters.event_type,
+    filters.severity,
+    filters.start_date,
+    filters.end_date,
+    pagination.page,
+    pagination.per_page,
+  ]);
 
   const loadStats = useCallback(async () => {
     const data = await fetchJson<AuditStats>('/api/security/audit-stats');
@@ -134,10 +162,11 @@ export const SecurityAuditPage: React.FC = () => {
 
   const totalPages = useMemo(() => Math.max(1, pagination.pages), [pagination.pages]);
 
-  const onFilterChange = (key: keyof typeof filters) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFilters((prev) => ({ ...prev, [key]: e.target.value }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
+  const onFilterChange =
+    (key: keyof typeof filters) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setFilters((prev) => ({ ...prev, [key]: e.target.value }));
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    };
 
   const severityOptions = ['', 'info', 'debug', 'warning', 'error', 'critical'];
 
@@ -147,7 +176,9 @@ export const SecurityAuditPage: React.FC = () => {
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-xl font-bold text-gray-800 dark:text-slate-100'>安全审计</h1>
-          <p className='text-sm text-gray-500 dark:text-slate-400 mt-1'>查看登录失败、权限校验、异常访问等安全事件</p>
+          <p className='text-sm text-gray-500 dark:text-slate-400 mt-1'>
+            查看登录失败、权限校验、异常访问等安全事件
+          </p>
         </div>
         <PermissionButton
           permission='system.settings'
@@ -161,7 +192,10 @@ export const SecurityAuditPage: React.FC = () => {
       </div>
 
       {loadError && (
-        <div role='alert' className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300'>
+        <div
+          role='alert'
+          className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300'
+        >
           <AlertTriangle size={16} className='flex-shrink-0' />
           安全审计日志加载失败，请稍后重试
         </div>
@@ -170,21 +204,39 @@ export const SecurityAuditPage: React.FC = () => {
       {/* 统计概览 */}
       <div className='grid grid-cols-2 lg:grid-cols-4 gap-3'>
         <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
-          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'><Shield size={15} />累计事件</div>
-          <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>{stats?.total ?? '—'}</div>
-        </div>
-        <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
-          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'><Clock size={15} />近 24 小时</div>
-          <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>{stats?.last_24h ?? '—'}</div>
-        </div>
-        <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
-          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'><Clock size={15} />近 7 天</div>
-          <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>{stats?.last_7d ?? '—'}</div>
-        </div>
-        <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
-          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'><AlertTriangle size={15} />警告/错误</div>
+          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'>
+            <Shield size={15} />
+            累计事件
+          </div>
           <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>
-            {(stats?.by_severity?.warning || 0) + (stats?.by_severity?.error || 0) + (stats?.by_severity?.critical || 0)}
+            {stats?.total ?? '—'}
+          </div>
+        </div>
+        <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
+          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'>
+            <Clock size={15} />近 24 小时
+          </div>
+          <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>
+            {stats?.last_24h ?? '—'}
+          </div>
+        </div>
+        <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
+          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'>
+            <Clock size={15} />近 7 天
+          </div>
+          <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>
+            {stats?.last_7d ?? '—'}
+          </div>
+        </div>
+        <div className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
+          <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'>
+            <AlertTriangle size={15} />
+            警告/错误
+          </div>
+          <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>
+            {(stats?.by_severity?.warning || 0) +
+              (stats?.by_severity?.error || 0) +
+              (stats?.by_severity?.critical || 0)}
           </div>
         </div>
       </div>
@@ -209,7 +261,9 @@ export const SecurityAuditPage: React.FC = () => {
             className='px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-100'
           >
             {severityOptions.map((s) => (
-              <option key={s} value={s}>{s === '' ? '全部级别' : s}</option>
+              <option key={s} value={s}>
+                {s === '' ? '全部级别' : s}
+              </option>
             ))}
           </select>
           <input
@@ -244,21 +298,48 @@ export const SecurityAuditPage: React.FC = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className='px-4 py-10 text-center text-gray-400'>加载中...</td></tr>
+                <tr>
+                  <td colSpan={7} className='px-4 py-10 text-center text-gray-400'>
+                    加载中...
+                  </td>
+                </tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan={7}><EmptyState title='暂无安全审计日志' description='当前筛选条件下没有匹配的记录' /></td></tr>
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState
+                      title='暂无安全审计日志'
+                      description='当前筛选条件下没有匹配的记录'
+                    />
+                  </td>
+                </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className='border-t border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30'>
+                  <tr
+                    key={log.id}
+                    className='border-t border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30'
+                  >
                     <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400 whitespace-nowrap'>
                       {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
                     </td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>{log.event_type}</td>
-                    <td className='px-4 py-2.5'><SeverityBadge severity={log.severity} /></td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>{log.user_id ?? '-'}</td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>{log.ip_address || '-'}</td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>{log.request_path || '-'}</td>
-                    <td className='px-4 py-2.5 text-gray-600 dark:text-slate-300 max-w-xs truncate' title={log.event_details}>
+                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
+                      {log.event_type}
+                    </td>
+                    <td className='px-4 py-2.5'>
+                      <SeverityBadge severity={log.severity} />
+                    </td>
+                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
+                      {log.user_id ?? '-'}
+                    </td>
+                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
+                      {log.ip_address || '-'}
+                    </td>
+                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
+                      {log.request_path || '-'}
+                    </td>
+                    <td
+                      className='px-4 py-2.5 text-gray-600 dark:text-slate-300 max-w-xs truncate'
+                      title={log.event_details}
+                    >
                       {log.event_details || '-'}
                     </td>
                   </tr>
@@ -271,22 +352,30 @@ export const SecurityAuditPage: React.FC = () => {
         {/* 分页 */}
         {totalPages > 1 && (
           <div className='px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between'>
-            <div className='text-sm text-gray-500 dark:text-slate-400'>共 {pagination.total} 条记录</div>
+            <div className='text-sm text-gray-500 dark:text-slate-400'>
+              共 {pagination.total} 条记录
+            </div>
             <div className='flex items-center gap-2'>
               <button
                 onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
                 disabled={pagination.page <= 1}
                 className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
               >
-                <ChevronLeft size={15} />上一页
+                <ChevronLeft size={15} />
+                上一页
               </button>
-              <span className='text-sm text-gray-600 dark:text-slate-300'>第 {pagination.page} / {totalPages} 页</span>
+              <span className='text-sm text-gray-600 dark:text-slate-300'>
+                第 {pagination.page} / {totalPages} 页
+              </span>
               <button
-                onClick={() => setPagination((p) => ({ ...p, page: Math.min(totalPages, p.page + 1) }))}
+                onClick={() =>
+                  setPagination((p) => ({ ...p, page: Math.min(totalPages, p.page + 1) }))
+                }
                 disabled={pagination.page >= totalPages}
                 className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
               >
-                下一页<ChevronRight size={15} />
+                下一页
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>

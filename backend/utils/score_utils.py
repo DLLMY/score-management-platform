@@ -6,6 +6,7 @@
 统一改为 SQL 原子表达式 `UPDATE user SET current_score = <expr> WHERE id = ...`，
 由数据库在单语句内完成读取与写入，天然串行化。
 """
+
 from datetime import datetime
 
 from sqlalchemy import func, update
@@ -30,9 +31,7 @@ def atomic_score_update(user_id, delta, min_score=None, max_score=None):
     if max_score is not None:
         expr = func.min(expr, max_score)
     db.session.execute(
-        update(User)
-        .where(User.id == user_id)
-        .values(current_score=expr, updated_at=datetime.now())
+        update(User).where(User.id == user_id).values(current_score=expr, updated_at=datetime.now())
     )
     db.session.flush()
     row = db.session.query(User.current_score).filter_by(id=user_id).first()

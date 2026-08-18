@@ -5,30 +5,42 @@ from utils.permission import requires_permission
 
 ns_study_group = Namespace("study_group", description="学习小组管理")
 
-group_model = ns_study_group.model("StudyGroupInput", {
-    "class_id": fields.Integer(required=True),
-    "name": fields.String(required=True),
-    "leader_id": fields.Integer(),
-    "description": fields.String(),
-    "member_ids": fields.List(fields.Integer()),
-})
+group_model = ns_study_group.model(
+    "StudyGroupInput",
+    {
+        "class_id": fields.Integer(required=True),
+        "name": fields.String(required=True),
+        "leader_id": fields.Integer(),
+        "description": fields.String(),
+        "member_ids": fields.List(fields.Integer()),
+    },
+)
 
-member_model = ns_study_group.model("MemberInput", {
-    "student_id": fields.Integer(required=True),
-})
+member_model = ns_study_group.model(
+    "MemberInput",
+    {
+        "student_id": fields.Integer(required=True),
+    },
+)
 
-score_model = ns_study_group.model("ScoreInput", {
-    "score_change": fields.Float(required=True),
-    "reason": fields.String(),
-})
+score_model = ns_study_group.model(
+    "ScoreInput",
+    {
+        "score_change": fields.Float(required=True),
+        "reason": fields.String(),
+    },
+)
 
 
 @ns_study_group.route("/groups")
 class StudyGroupList(Resource):
-    @ns_study_group.doc("list_groups", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "is_active": {"description": "是否活跃"},
-    })
+    @ns_study_group.doc(
+        "list_groups",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "is_active": {"description": "是否活跃"},
+        },
+    )
     @requires_permission("study_group.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)

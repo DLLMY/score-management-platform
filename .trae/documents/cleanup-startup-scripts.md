@@ -53,7 +53,7 @@ add_rules.py, backup_db.py, clear_login_locks.py, create_indexes.py, create_test
 - `reset_admin_password.py` — 与 scripts/reset_admin_password.py 重复
 
 **保留的 deploy/ 文件：**
-start_server.bat, stop_all.bat, server_deploy.ps1, service_manager.py, 一键部署.py, 所有 .md 文档
+start_server.bat, stop_all.bat, server_deploy.ps1, service_manager.py, one_click_deploy.py, 所有 .md 文档
 
 ### 步骤4：删除重复的配置文件（1个文件）
 

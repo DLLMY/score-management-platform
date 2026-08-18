@@ -8,23 +8,25 @@ import React, { memo, useMemo } from 'react';
 // 自定义深度比较函数（避免引入 lodash）
 function deepEqual(obj1: unknown, obj2: unknown): boolean {
   if (obj1 === obj2) return true;
-  
+
   if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) {
     return obj1 === obj2;
   }
-  
+
   const keys1 = Object.keys(obj1 as Record<string, unknown>);
   const keys2 = Object.keys(obj2 as Record<string, unknown>);
-  
+
   if (keys1.length !== keys2.length) return false;
-  
+
   for (const key of keys1) {
     if (!keys2.includes(key)) return false;
-    if (!deepEqual((obj1 as Record<string, unknown>)[key], (obj2 as Record<string, unknown>)[key])) {
+    if (
+      !deepEqual((obj1 as Record<string, unknown>)[key], (obj2 as Record<string, unknown>)[key])
+    ) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -57,19 +59,19 @@ export function shallowMemo<P extends Record<string, unknown>>(
     if (propsAreEqual) {
       return propsAreEqual(prevProps as P, nextProps as P);
     }
-    
+
     // 浅比较实现
     const prevKeys = Object.keys(prevProps);
     const nextKeys = Object.keys(nextProps);
-    
+
     if (prevKeys.length !== nextKeys.length) return false;
-    
+
     for (const key of prevKeys) {
       if (prevProps[key] !== nextProps[key]) {
         return false;
       }
     }
-    
+
     return true;
   });
 }
@@ -107,11 +109,13 @@ export function filterProps<P extends Record<string, unknown>>(
       }
       return result;
     }, [props]);
-    
+
     return <Component {...(filtered as P)} />;
   };
-  
-  FilteredComponent.displayName = `FilterProps(${Component.displayName || Component.name || 'Component'})`;
+
+  FilteredComponent.displayName = `FilterProps(${
+    Component.displayName || Component.name || 'Component'
+  })`;
   return FilteredComponent;
 }
 
@@ -128,17 +132,17 @@ interface RenderOnChangeProps<T> {
 export function RenderOnChange<T>({ value, children, equalityFn }: RenderOnChangeProps<T>) {
   const prevValueRef = React.useRef<T>(value);
   const [renderValue, setRenderValue] = React.useState(value);
-  
+
   React.useEffect(() => {
     const prev = prevValueRef.current;
     const isEqual = equalityFn ? equalityFn(prev, value) : prev === value;
-    
+
     if (!isEqual) {
       prevValueRef.current = value;
       setRenderValue(value);
     }
   }, [value, equalityFn]);
-  
+
   return <>{children(renderValue)}</>;
 }
 
@@ -147,7 +151,7 @@ const MemoComponents = {
   shallowMemo,
   selectiveMemo,
   filterProps,
-  RenderOnChange
+  RenderOnChange,
 };
 
 export default MemoComponents;

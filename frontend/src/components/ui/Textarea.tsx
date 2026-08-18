@@ -1,6 +1,7 @@
 import { ChangeEventHandler, FocusEventHandler, TextareaHTMLAttributes, useState } from 'react';
 
-interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> {
+interface TextareaProps
+  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> {
   value?: string;
   onChange?: (value: string) => void;
   label?: string;
@@ -43,7 +44,9 @@ function Textarea({
       {label && (
         <label
           htmlFor={props.id}
-          className={`block text-sm font-medium mb-2 ${error ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}
+          className={`block text-sm font-medium mb-2 ${
+            error ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'
+          }`}
         >
           {label}
           {props.required && <span className='text-red-500 ml-1'>*</span>}
@@ -69,8 +72,8 @@ function Textarea({
                 ? 'border-red-400 focus:border-red-500 focus:ring-red-200 dark:focus:ring-red-500/30'
                 : 'border-primary-400 focus:border-primary-500 focus:ring-primary-200 dark:focus:ring-primary-500/30'
               : error
-                ? 'border-red-300 dark:border-red-500'
-                : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+              ? 'border-red-300 dark:border-red-500'
+              : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
           }
         `}
         {...props}

@@ -12,6 +12,7 @@ S1 修复：teacher 角色补授 score.edit（成绩录入闭环）。
 
 用法：python scripts/migrate_teacher_score_edit.py
 """
+
 import os
 import sys
 import sqlite3
@@ -36,7 +37,9 @@ def main():
             print(f"[error] 权限码 {PERM} 不在 permissions 表，中止")
             sys.exit(1)
         # 角色是否存在
-        cur.execute("SELECT DISTINCT role_code FROM role_permission_mappings WHERE role_code=?", (ROLE,))
+        cur.execute(
+            "SELECT DISTINCT role_code FROM role_permission_mappings WHERE role_code=?", (ROLE,)
+        )
         if not cur.fetchone():
             print(f"[warn] 角色 {ROLE} 无任何映射记录，跳过（角色可能未启用）")
         # 幂等：已存在则跳过

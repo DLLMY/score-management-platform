@@ -3,6 +3,7 @@
 风险预测服务测试模块
 覆盖风险特征提取、各类型风险检测、综合风险预测等功能
 """
+
 """
 """
 
@@ -32,8 +33,10 @@ class TestRiskPredictService:
             mock_user.role = "student"
 
             with patch("services.risk_predict_service.get_by_id", return_value=mock_user):
-                with patch("services.risk_predict_service.ScoreRecord.query") as mock_query, \
-                     patch("services.risk_predict_service.User.query") as mock_user_query:
+                with (
+                    patch("services.risk_predict_service.ScoreRecord.query") as mock_query,
+                    patch("services.risk_predict_service.User.query") as mock_user_query,
+                ):
 
                     mock_query.filter.return_value.order_by.return_value.all.return_value = []
                     mock_user_query.filter.return_value.all.return_value = [mock_user]
@@ -67,11 +70,15 @@ class TestRiskPredictService:
             mock_record3.created_at = MagicMock()
 
             with patch("services.risk_predict_service.get_by_id", return_value=mock_user):
-                with patch("services.risk_predict_service.ScoreRecord.query") as mock_query, \
-                     patch("services.risk_predict_service.User.query") as mock_user_query:
+                with (
+                    patch("services.risk_predict_service.ScoreRecord.query") as mock_query,
+                    patch("services.risk_predict_service.User.query") as mock_user_query,
+                ):
 
                     mock_query.filter.return_value.order_by.return_value.all.return_value = [
-                        mock_record1, mock_record2, mock_record3
+                        mock_record1,
+                        mock_record2,
+                        mock_record3,
                     ]
                     mock_user_query.filter.return_value.all.return_value = [mock_user]
 
@@ -279,7 +286,10 @@ class TestRiskPredictService:
     def test_predict_risk_user_not_found(self, app):
         """测试预测风险-用户不存在"""
         with app.app_context():
-            with patch("services.risk_predict_service.RiskPredictService.get_risk_features", return_value=None):
+            with patch(
+                "services.risk_predict_service.RiskPredictService.get_risk_features",
+                return_value=None,
+            ):
                 result = RiskPredictService.predict_risk(999)
 
                 assert "error" in result
@@ -305,7 +315,10 @@ class TestRiskPredictService:
                 "score_volatility": 10.0,
             }
 
-            with patch("services.risk_predict_service.RiskPredictService.get_risk_features", return_value=features):
+            with patch(
+                "services.risk_predict_service.RiskPredictService.get_risk_features",
+                return_value=features,
+            ):
                 result = RiskPredictService.predict_risk(1)
 
                 assert result["user_id"] == 1
@@ -335,7 +348,10 @@ class TestRiskPredictService:
                 "score_volatility": 2.0,
             }
 
-            with patch("services.risk_predict_service.RiskPredictService.get_risk_features", return_value=features):
+            with patch(
+                "services.risk_predict_service.RiskPredictService.get_risk_features",
+                return_value=features,
+            ):
                 result = RiskPredictService.predict_risk(1)
 
                 assert result["overall_risk_level"] == "low"
@@ -380,7 +396,9 @@ class TestRiskPredictService:
             with patch("services.risk_predict_service.User.query") as mock_query:
                 mock_query.filter.return_value.all.return_value = [mock_user1, mock_user2]
 
-                with patch("services.risk_predict_service.RiskPredictService.predict_risk") as mock_predict:
+                with patch(
+                    "services.risk_predict_service.RiskPredictService.predict_risk"
+                ) as mock_predict:
                     mock_predict.side_effect = [mock_result1, mock_result2]
 
                     result = RiskPredictService.predict_batch()
@@ -412,7 +430,10 @@ class TestRiskPredictService:
             with patch("services.risk_predict_service.User.query") as mock_query:
                 mock_query.filter.return_value.all.return_value = [mock_user]
 
-                with patch("services.risk_predict_service.RiskPredictService.get_risk_features", return_value=None):
+                with patch(
+                    "services.risk_predict_service.RiskPredictService.get_risk_features",
+                    return_value=None,
+                ):
                     result = RiskPredictService.train_risk_model(days=30)
 
                     assert result["status"] == "error"
@@ -452,7 +473,9 @@ class TestRiskPredictService:
             with patch("services.risk_predict_service.User.query") as mock_query:
                 mock_query.filter.return_value.all.return_value = [mock_user1, mock_user2]
 
-                with patch("services.risk_predict_service.RiskPredictService.get_risk_features") as mock_get_features:
+                with patch(
+                    "services.risk_predict_service.RiskPredictService.get_risk_features"
+                ) as mock_get_features:
                     mock_get_features.side_effect = [mock_features1, mock_features2]
 
                     result = RiskPredictService.train_risk_model(days=30)
@@ -498,7 +521,10 @@ class TestRiskPredictService:
             with patch("services.risk_predict_service.User.query") as mock_query:
                 mock_query.filter.return_value.all.return_value = [mock_user]
 
-                with patch("services.risk_predict_service.RiskPredictService.predict_risk", return_value=mock_result):
+                with patch(
+                    "services.risk_predict_service.RiskPredictService.predict_risk",
+                    return_value=mock_result,
+                ):
                     result = RiskPredictService.evaluate_risk_model(days=30)
 
                     assert result["status"] == "error"
@@ -553,9 +579,15 @@ class TestRiskPredictService:
             }
 
             with patch("services.risk_predict_service.User.query") as mock_query:
-                mock_query.filter.return_value.all.return_value = [mock_user1, mock_user2, mock_user3]
+                mock_query.filter.return_value.all.return_value = [
+                    mock_user1,
+                    mock_user2,
+                    mock_user3,
+                ]
 
-                with patch("services.risk_predict_service.RiskPredictService.predict_risk") as mock_predict:
+                with patch(
+                    "services.risk_predict_service.RiskPredictService.predict_risk"
+                ) as mock_predict:
                     mock_predict.side_effect = [mock_result1, mock_result2, mock_result3]
 
                     result = RiskPredictService.evaluate_risk_model(days=30)

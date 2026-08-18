@@ -12,6 +12,7 @@ P0-2 迁移：scores.subject 文本列 -> subject_id 外键（指向 subject.id�
 
 幂等：若 scores 已无 subject 列，则视为已完成，直接退出。
 """
+
 import os
 import sys
 import shutil
@@ -30,9 +31,10 @@ sys.path.insert(0, BACKEND_ROOT)
 def get_db_path():
     try:
         from app import app
+
         uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
         if uri.startswith("sqlite:///"):
-            return uri[len("sqlite:///"):]
+            return uri[len("sqlite:///") :]
     except Exception as e:  # pragma: no cover - fallback
         logger.warning("无法通过 app 配置获取 DB 路径: %s，回退到默认路径", e)
     return os.path.join(BACKEND_ROOT, "instance", "score_management.db")
@@ -86,7 +88,9 @@ def main():
             "SELECT COUNT(*) FROM scores WHERE subject_id IS NULL AND subject IS NOT NULL AND subject != ''"
         ).fetchone()[0]
         if orphan_rows > 0:
-            logger.error("存在 %d 行 subject 文本无法映射到 subject 表，中止迁移以免丢数据！", orphan_rows)
+            logger.error(
+                "存在 %d 行 subject 文本无法映射到 subject 表，中止迁移以免丢数据！", orphan_rows
+            )
             samples = conn.execute(
                 "SELECT id, subject FROM scores WHERE subject_id IS NULL AND subject IS NOT NULL AND subject != '' LIMIT 10"
             ).fetchall()
@@ -97,12 +101,13 @@ def main():
             sys.exit(2)
 
         total = conn.execute("SELECT COUNT(*) FROM scores").fetchone()[0]
-        mapped = conn.execute("SELECT COUNT(*) FROM scores WHERE subject_id IS NOT NULL").fetchone()[0]
+        mapped = conn.execute(
+            "SELECT COUNT(*) FROM scores WHERE subject_id IS NOT NULL"
+        ).fetchone()[0]
         logger.info("subject_id 回填完成: %d/%d 行已映射", mapped, total)
 
         # 5. 重建 scores 表（去掉 subject，subject_id NOT NULL + FK）
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE scores_new (
                 id INTEGER NOT NULL,
                 exam_id INTEGER NOT NULL,
@@ -122,10 +127,8 @@ def main():
                 FOREIGN KEY(entered_by) REFERENCES admin (id),
                 FOREIGN KEY(subject_id) REFERENCES subject (id)
             )
-            """
-        )
-        conn.execute(
-            """
+            """)
+        conn.execute("""
             INSERT INTO scores_new (
                 id, exam_id, student_id, subject_id, score, full_score, rank,
                 status, remark, entered_by, entered_at, updated_at
@@ -133,8 +136,7 @@ def main():
             SELECT id, exam_id, student_id, subject_id, score, full_score, rank,
                    status, remark, entered_by, entered_at, updated_at
             FROM scores
-            """
-        )
+            """)
         conn.execute("DROP TABLE scores")
         conn.execute("ALTER TABLE scores_new RENAME TO scores")
 

@@ -124,7 +124,10 @@ def init_mqtt(app):
                     chosen = "websocket"
 
                 app.mqtt_manager = manager
-                print(f"后台线程：默认MQTT管理器已设置: {chosen}, connected={mqtt_service.mqtt_manager.is_connected}", flush=True)
+                print(
+                    f"后台线程：默认MQTT管理器已设置: {chosen}, connected={mqtt_service.mqtt_manager.is_connected}",
+                    flush=True,
+                )
 
         except Exception as e:
             print(f"MQTT启动失败: {e}", flush=True)

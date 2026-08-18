@@ -1,4 +1,5 @@
 """使用bcrypt重置测试账号密码"""
+
 import sys
 import os
 
@@ -14,7 +15,7 @@ with app.app_context():
         {"username": "teacher", "real_name": "测试教师", "role": "teacher"},
         {"username": "student", "real_name": "测试学生", "role": "student"},
     ]
-    
+
     for acc in accounts:
         admin = Admin.query.filter_by(username=acc["username"]).first()
         if admin:
@@ -36,7 +37,7 @@ with app.app_context():
             db.session.commit()
             verify_result = verify_password("123456", new_admin.password)
             print(f"  ✓ {acc['username']}: 账号已创建, 验证结果={verify_result}")
-    
+
     print("\n=== 测试账号密码重置完成 ===")
     print("可用测试账号:")
     print("  - admin / 123456 (管理员)")

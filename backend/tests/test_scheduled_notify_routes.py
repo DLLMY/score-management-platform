@@ -52,7 +52,11 @@ class TestScheduledNotifyRoutes:
             assert ScheduledNotify.query.get(body["id"]) is not None
 
     def test_get_detail(self, client, app, auth_headers):
-        payload = {"text": "详情通知", "scheduled_at": "2026-08-17T21:00:00", "repeat_day_of_week": [0, 2, 4]}
+        payload = {
+            "text": "详情通知",
+            "scheduled_at": "2026-08-17T21:00:00",
+            "repeat_day_of_week": [0, 2, 4],
+        }
         with app.app_context():
             created = client.post("/api/scheduled_notify/", json=payload, headers=auth_headers)
             nid = _json(created)["id"]
@@ -116,47 +120,63 @@ class TestScheduledNotifyRoutes:
         with app.app_context():
             created = client.post("/api/scheduled_notify/", json=payload, headers=auth_headers)
             nid = _json(created)["id"]
-        with patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True), patch(
-            "api.scores.scheduled_notify_routes.ClassTimeChecker"
-        ) as mock_ctc:
+        with (
+            patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True),
+            patch("api.scores.scheduled_notify_routes.ClassTimeChecker") as mock_ctc,
+        ):
             mock_ctc.is_broadcast_blocked.return_value = (False, "", None)
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)
             with app.app_context():
-                resp = client.post("/api/scheduled_notify/%d/trigger" % nid, json={}, headers=auth_headers)
+                resp = client.post(
+                    "/api/scheduled_notify/%d/trigger" % nid, json={}, headers=auth_headers
+                )
         assert resp.status_code == 200
         body = _json(resp)
         assert body["success"] is True
         assert "通知已发送" in body["message"]
         # 核心迁移契约：库内落 NotifyHistory + 状态推进为 sent
         with app.app_context():
-            hist_count = NotifyHistory.query.filter_by(topic="phonebox/remote/notify,phonebox/remote/notify/all").count()
+            hist_count = NotifyHistory.query.filter_by(
+                topic="phonebox/remote/notify,phonebox/remote/notify/all"
+            ).count()
             assert hist_count >= 1
             assert ScheduledNotify.query.get(nid).status == "sent"
 
     def test_trigger_class_time_blocked(self, client, app, auth_headers):
-        payload = {"text": "拦截通知", "scheduled_at": "2026-08-17T20:00:00", "send_mode": "broadcast"}
+        payload = {
+            "text": "拦截通知",
+            "scheduled_at": "2026-08-17T20:00:00",
+            "send_mode": "broadcast",
+        }
         with app.app_context():
             created = client.post("/api/scheduled_notify/", json=payload, headers=auth_headers)
             nid = _json(created)["id"]
-        with patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True), patch(
-            "api.scores.scheduled_notify_routes.ClassTimeChecker"
-        ) as mock_ctc:
+        with (
+            patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True),
+            patch("api.scores.scheduled_notify_routes.ClassTimeChecker") as mock_ctc,
+        ):
             mock_ctc.is_broadcast_blocked.return_value = (True, "上课时间", "GLOBAL_TIME_RULE")
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)
             with app.app_context():
-                resp = client.post("/api/scheduled_notify/%d/trigger" % nid, json={}, headers=auth_headers)
+                resp = client.post(
+                    "/api/scheduled_notify/%d/trigger" % nid, json={}, headers=auth_headers
+                )
         assert resp.status_code == 400
         assert "上课时间" in _json(resp)["message"]
 
     def test_trigger_force_send_no_permission(self, client, app, auth_headers):
-        payload = {"text": "强发通知", "scheduled_at": "2026-08-17T20:00:00", "send_mode": "broadcast"}
+        payload = {
+            "text": "强发通知",
+            "scheduled_at": "2026-08-17T20:00:00",
+            "send_mode": "broadcast",
+        }
         with app.app_context():
             created = client.post("/api/scheduled_notify/", json=payload, headers=auth_headers)
             nid = _json(created)["id"]
-        with patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True), patch(
-            "api.scores.scheduled_notify_routes.ClassTimeChecker"
-        ) as mock_ctc, patch(
-            "api.scores.scheduled_notify_routes.has_permission", return_value=False
+        with (
+            patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True),
+            patch("api.scores.scheduled_notify_routes.ClassTimeChecker") as mock_ctc,
+            patch("api.scores.scheduled_notify_routes.has_permission", return_value=False),
         ):
             mock_ctc.is_broadcast_blocked.return_value = (False, "", None)
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)
@@ -184,9 +204,10 @@ class TestScheduledNotifyRoutes:
             db.session.add(notify)
             db.session.commit()
             nid = notify.id
-        with patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True), patch(
-            "api.scores.scheduled_notify_routes.ClassTimeChecker"
-        ) as mock_ctc:
+        with (
+            patch("api.scores.scheduled_notify_routes.publish_mqtt", return_value=True),
+            patch("api.scores.scheduled_notify_routes.ClassTimeChecker") as mock_ctc,
+        ):
             mock_ctc.is_broadcast_blocked.return_value = (False, "", None)
             mock_ctc.is_notification_allowed.return_value = (True, "", None, None)
             from api.scores.scheduled_notify_routes import process_scheduled_notifications

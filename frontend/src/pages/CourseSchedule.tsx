@@ -20,7 +20,13 @@ import {
   ClipboardList,
   Table,
 } from 'lucide-react';
-import api, { CourseSchedule, ClassPeriod, ClassInfo, Subject, getAuthHeaders } from '../services/api';
+import api, {
+  CourseSchedule,
+  ClassPeriod,
+  ClassInfo,
+  Subject,
+  getAuthHeaders,
+} from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { useForm, useModal, useConfirmDialog } from '../hooks';
 import { PermissionButton } from '../components';
@@ -62,11 +68,11 @@ interface WeekDay {
 const CourseSchedulePage: React.FC = () => {
   const { showToast } = useStableToast();
   const showToastRef = React.useRef(showToast);
-  
+
   React.useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
-  
+
   const [schedules, setSchedules] = useState<CourseSchedule[]>([]);
   const [schedulesError, setSchedulesError] = useState(false);
   const [periods, setPeriods] = useState<ClassPeriod[]>([]);
@@ -85,10 +91,19 @@ const CourseSchedulePage: React.FC = () => {
     total: number;
     success_count: number;
     failed_count: number;
-    messages: Array<{ class_name: string; subject_name: string; action: string; message: string; row_data?: Record<string, unknown>; error_fields?: string[] }>;
+    messages: Array<{
+      class_name: string;
+      subject_name: string;
+      action: string;
+      message: string;
+      row_data?: Record<string, unknown>;
+      error_fields?: string[];
+    }>;
   } | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
-  const [importConfigs, setImportConfigs] = useState<Array<{ id: number; config_name: string }>>([]);
+  const [importConfigs, setImportConfigs] = useState<Array<{ id: number; config_name: string }>>(
+    []
+  );
   const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
   const [conflictStrategy, setConflictStrategy] = useState<'skip' | 'update' | 'error'>('update');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -99,29 +114,32 @@ const CourseSchedulePage: React.FC = () => {
   const { show: showConfirm } = useConfirmDialog();
 
   // 使用 useForm 管理表单状态
-  const {
-    formData,
-    setFormData,
-    resetForm,
-  } = useForm<FormData>({
-    class_info_id: 0,
-    subject_id: 0,
-    day_of_week: 0,
-    period_number: 1,
-    teacher_name: '',
-    classroom: '',
-    description: '',
-    color: '#3B82F6',
-    is_active: true,
-  }, {
-    class_info_id: { required: true },
-    subject_id: { required: true },
-    day_of_week: { required: true },
-    period_number: { required: true },
-  });
+  const { formData, setFormData, resetForm } = useForm<FormData>(
+    {
+      class_info_id: 0,
+      subject_id: 0,
+      day_of_week: 0,
+      period_number: 1,
+      teacher_name: '',
+      classroom: '',
+      description: '',
+      color: '#3B82F6',
+      is_active: true,
+    },
+    {
+      class_info_id: { required: true },
+      subject_id: { required: true },
+      day_of_week: { required: true },
+      period_number: { required: true },
+    }
+  );
 
   // 使用 useModal 管理弹窗状态
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<CourseSchedule | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<CourseSchedule | null>({
     onClose: () => {
       resetForm();
       setEditingSchedule(null);
@@ -129,7 +147,11 @@ const CourseSchedulePage: React.FC = () => {
     },
   });
 
-  const { isOpen: showImportModal, open: openImportModal, close: closeImportModal } = useModal<null>({
+  const {
+    isOpen: showImportModal,
+    open: openImportModal,
+    close: closeImportModal,
+  } = useModal<null>({
     onClose: () => {
       setImportFile(null);
       setImportResult(null);
@@ -150,8 +172,18 @@ const CourseSchedulePage: React.FC = () => {
   ];
 
   const subjectColors = [
-    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899',
-    '#06B6D4', '#84CC16', '#F97316', '#6366F1', '#EC4899', '#14B8A6',
+    '#3B82F6',
+    '#EF4444',
+    '#10B981',
+    '#F59E0B',
+    '#8B5CF6',
+    '#EC4899',
+    '#06B6D4',
+    '#84CC16',
+    '#F97316',
+    '#6366F1',
+    '#EC4899',
+    '#14B8A6',
   ];
 
   const fetchData = useCallback(async (skipCache = false) => {
@@ -176,11 +208,11 @@ const CourseSchedulePage: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
-  
+
   useEffect(() => {
     if (classes.length > 0 && selectedClass === 0) {
       setSelectedClass(classes[0].id);
-      setFormData(prev => ({ ...prev, class_info_id: classes[0].id }));
+      setFormData((prev) => ({ ...prev, class_info_id: classes[0].id }));
     }
   }, [classes, selectedClass, setFormData]);
 
@@ -208,43 +240,52 @@ const CourseSchedulePage: React.FC = () => {
   }, [selectedClass, classes.length, fetchSchedules]);
 
   const filteredSchedules = useMemo(() => {
-    return selectedClass
-      ? schedules.filter(s => s.class_info_id === selectedClass)
-      : schedules;
+    return selectedClass ? schedules.filter((s) => s.class_info_id === selectedClass) : schedules;
   }, [schedules, selectedClass]);
 
-  const getScheduleForCell = useCallback((day: number, period: number): CourseSchedule | undefined => {
-    return filteredSchedules.find(s => s.day_of_week === day && s.period_number === period);
-  }, [filteredSchedules]);
+  const getScheduleForCell = useCallback(
+    (day: number, period: number): CourseSchedule | undefined => {
+      return filteredSchedules.find((s) => s.day_of_week === day && s.period_number === period);
+    },
+    [filteredSchedules]
+  );
 
-  const getPeriodTime = useCallback((periodNumber: number): string => {
-    const period = periods.find(p => parseInt(String(p.period_number), 10) === periodNumber);
-    if (!period) return `${periodNumber}节`;
-    const startHour = parseInt(String(period.start_hour), 10) || 0;
-    const startMinute = parseInt(String(period.start_minute), 10) || 0;
-    const endHour = parseInt(String(period.end_hour), 10) || 0;
-    const endMinute = parseInt(String(period.end_minute), 10) || 0;
-    const start = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
-    const end = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-    return `${start}-${end}`;
-  }, [periods]);
+  const getPeriodTime = useCallback(
+    (periodNumber: number): string => {
+      const period = periods.find((p) => parseInt(String(p.period_number), 10) === periodNumber);
+      if (!period) return `${periodNumber}节`;
+      const startHour = parseInt(String(period.start_hour), 10) || 0;
+      const startMinute = parseInt(String(period.start_minute), 10) || 0;
+      const endHour = parseInt(String(period.end_hour), 10) || 0;
+      const endMinute = parseInt(String(period.end_minute), 10) || 0;
+      const start = `${startHour.toString().padStart(2, '0')}:${startMinute
+        .toString()
+        .padStart(2, '0')}`;
+      const end = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+      return `${start}-${end}`;
+    },
+    [periods]
+  );
 
-  const getSubjectColor = useCallback((subjectId: number): string => {
-    const subject = subjects.find(s => s.id === subjectId);
-    if (subject?.color) return subject.color;
-    return subjectColors[(subjectId - 1) % subjectColors.length];
-  }, [subjects, subjectColors]);
+  const getSubjectColor = useCallback(
+    (subjectId: number): string => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      if (subject?.color) return subject.color;
+      return subjectColors[(subjectId - 1) % subjectColors.length];
+    },
+    [subjects, subjectColors]
+  );
 
   const checkConflicts = useCallback(async (): Promise<ConflictResult | null> => {
     try {
-      const result = await api.courseSchedules.checkConflict({
+      const result = (await api.courseSchedules.checkConflict({
         class_info_id: formData.class_info_id,
         teacher_name: formData.teacher_name || undefined,
         classroom: formData.classroom || undefined,
         day_of_week: formData.day_of_week,
         period_number: formData.period_number,
         exclude_id: editingSchedule?.id,
-      }) as ConflictResult;
+      })) as ConflictResult;
       setConflictResult(result);
       return result;
     } catch (error) {
@@ -253,62 +294,77 @@ const CourseSchedulePage: React.FC = () => {
     }
   }, [formData, editingSchedule]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.class_info_id || !formData.subject_id) {
-      showToast('error', '请选择班级和科目');
-      return;
-    }
-
-    const conflictData = await checkConflicts();
-    if (conflictData?.has_conflict) {
-      const messages = conflictData.conflicts.map(c => c.message).join('\n');
-      showToast('error', `存在冲突：\n${messages}`);
-      return;
-    }
-
-    try {
-      if (editingSchedule) {
-        await api.courseSchedules.update(editingSchedule.id, formData);
-        showToast('success', '课程安排更新成功');
-      } else {
-        await api.courseSchedules.create(formData);
-        showToast('success', '课程安排添加成功');
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!formData.class_info_id || !formData.subject_id) {
+        showToast('error', '请选择班级和科目');
+        return;
       }
-      closeModal();
-      setEditingSchedule(null);
-      setConflictResult(null);
-      setFormData({
-        class_info_id: selectedClass,
-        subject_id: 0,
-        day_of_week: 0,
-        period_number: 1,
-        teacher_id: undefined,
-        teacher_name: '',
-        classroom: '',
-        description: '',
-        color: '#3B82F6',
-        is_active: true,
-      });
-      fetchData();
-    } catch (error: any) {
-      logger.error('保存失败:', error);
-      const errorMessage = error.message || (editingSchedule ? '更新失败' : '添加失败');
-      showToast('error', errorMessage);
-    }
-  }, [formData, editingSchedule, selectedClass, showToast, checkConflicts, fetchData, closeModal, setFormData]);
 
-  const handleDelete = useCallback(async (id: number) => {
-    if (!window.confirm(`确定要删除这个课程安排吗？`)) return;
-    try {
-      await api.courseSchedules.delete(id);
-      showToast('success', '删除成功');
-      fetchData(true);
-    } catch (error) {
-      logger.error('删除失败:', error);
-      showToast('error', '删除失败');
-    }
-  }, [showToast, fetchData, showConfirm]);
+      const conflictData = await checkConflicts();
+      if (conflictData?.has_conflict) {
+        const messages = conflictData.conflicts.map((c) => c.message).join('\n');
+        showToast('error', `存在冲突：\n${messages}`);
+        return;
+      }
+
+      try {
+        if (editingSchedule) {
+          await api.courseSchedules.update(editingSchedule.id, formData);
+          showToast('success', '课程安排更新成功');
+        } else {
+          await api.courseSchedules.create(formData);
+          showToast('success', '课程安排添加成功');
+        }
+        closeModal();
+        setEditingSchedule(null);
+        setConflictResult(null);
+        setFormData({
+          class_info_id: selectedClass,
+          subject_id: 0,
+          day_of_week: 0,
+          period_number: 1,
+          teacher_id: undefined,
+          teacher_name: '',
+          classroom: '',
+          description: '',
+          color: '#3B82F6',
+          is_active: true,
+        });
+        fetchData();
+      } catch (error: any) {
+        logger.error('保存失败:', error);
+        const errorMessage = error.message || (editingSchedule ? '更新失败' : '添加失败');
+        showToast('error', errorMessage);
+      }
+    },
+    [
+      formData,
+      editingSchedule,
+      selectedClass,
+      showToast,
+      checkConflicts,
+      fetchData,
+      closeModal,
+      setFormData,
+    ]
+  );
+
+  const handleDelete = useCallback(
+    async (id: number) => {
+      if (!window.confirm(`确定要删除这个课程安排吗？`)) return;
+      try {
+        await api.courseSchedules.delete(id);
+        showToast('success', '删除成功');
+        fetchData(true);
+      } catch (error) {
+        logger.error('删除失败:', error);
+        showToast('error', '删除失败');
+      }
+    },
+    [showToast, fetchData, showConfirm]
+  );
 
   const [exportFormat, setExportFormat] = useState<'json' | 'excel'>('excel');
   const [exporting, setExporting] = useState(false);
@@ -330,11 +386,14 @@ const CourseSchedulePage: React.FC = () => {
     setImportFile(null);
     setImportResult(null);
     setSelectedConfigId(null);
-    api.importConfig.list({ module_name: 'course_schedule' }).then((res) => {
-      if (res) {
-        setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
-      }
-    }).catch((e) => logger.error(e)); // 导入配置列表加载失败静默：仅影响弹窗下拉选项，主功能不受影响
+    api.importConfig
+      .list({ module_name: 'course_schedule' })
+      .then((res) => {
+        if (res) {
+          setImportConfigs(res.map((c) => ({ id: c.id, config_name: c.config_name })));
+        }
+      })
+      .catch((e) => logger.error(e)); // 导入配置列表加载失败静默：仅影响弹窗下拉选项，主功能不受影响
   }, [openImportModal]);
 
   const closeImportModalWithReset = useCallback(() => {
@@ -346,18 +405,25 @@ const CourseSchedulePage: React.FC = () => {
     }
   }, [closeImportModal]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const fileName = file.name.toLowerCase();
-      if (!fileName.endsWith('.json') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-        showToast('error', '请选择 JSON 或 Excel 格式的文件');
-        return;
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const fileName = file.name.toLowerCase();
+        if (
+          !fileName.endsWith('.json') &&
+          !fileName.endsWith('.xlsx') &&
+          !fileName.endsWith('.xls')
+        ) {
+          showToast('error', '请选择 JSON 或 Excel 格式的文件');
+          return;
+        }
+        setImportFile(file);
+        setImportResult(null);
       }
-      setImportFile(file);
-      setImportResult(null);
-    }
-  }, [showToast]);
+    },
+    [showToast]
+  );
 
   const handleImport = useCallback(async () => {
     if (!importFile) {
@@ -367,7 +433,9 @@ const CourseSchedulePage: React.FC = () => {
 
     setIsImporting(true);
     try {
-      const isExcel = importFile.name.toLowerCase().endsWith('.xlsx') || importFile.name.toLowerCase().endsWith('.xls');
+      const isExcel =
+        importFile.name.toLowerCase().endsWith('.xlsx') ||
+        importFile.name.toLowerCase().endsWith('.xls');
 
       if (isExcel) {
         const formData = new FormData();
@@ -385,7 +453,10 @@ const CourseSchedulePage: React.FC = () => {
         setImportResult(result);
 
         if (result.success) {
-          showToast('success', `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`);
+          showToast(
+            'success',
+            `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+          );
           fetchData();
         } else {
           showToast('error', '导入失败');
@@ -408,7 +479,10 @@ const CourseSchedulePage: React.FC = () => {
         setImportResult(result);
 
         if (result.success) {
-          showToast('success', `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`);
+          showToast(
+            'success',
+            `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+          );
           fetchData();
         } else {
           showToast('error', '导入失败');
@@ -422,47 +496,53 @@ const CourseSchedulePage: React.FC = () => {
     }
   }, [importFile, selectedConfigId, conflictStrategy, showToast, fetchData]);
 
-  const handleEdit = useCallback((schedule: CourseSchedule) => {
-    setEditingSchedule(schedule);
-    const subject = subjects.find(s => s.id === schedule.subject_id);
-    const color = subject?.color || schedule.color || '#3B82F6';
-    setFormData({
-      class_info_id: schedule.class_info_id,
-      subject_id: schedule.subject_id,
-      day_of_week: schedule.day_of_week,
-      period_number: schedule.period_number,
-      teacher_id: schedule.teacher_id,
-      teacher_name: schedule.teacher_name,
-      classroom: schedule.classroom,
-      description: schedule.description,
-      color: color,
-      is_active: schedule.is_active,
-    });
-    setConflictResult(null);
-    openModal();
-  }, [subjects, openModal, setFormData]);
+  const handleEdit = useCallback(
+    (schedule: CourseSchedule) => {
+      setEditingSchedule(schedule);
+      const subject = subjects.find((s) => s.id === schedule.subject_id);
+      const color = subject?.color || schedule.color || '#3B82F6';
+      setFormData({
+        class_info_id: schedule.class_info_id,
+        subject_id: schedule.subject_id,
+        day_of_week: schedule.day_of_week,
+        period_number: schedule.period_number,
+        teacher_id: schedule.teacher_id,
+        teacher_name: schedule.teacher_name,
+        classroom: schedule.classroom,
+        description: schedule.description,
+        color: color,
+        is_active: schedule.is_active,
+      });
+      setConflictResult(null);
+      openModal();
+    },
+    [subjects, openModal, setFormData]
+  );
 
-  const handleAdd = useCallback((day?: number, period?: number) => {
-    setEditingSchedule(null);
-    setConflictResult(null);
-    setFormData({
-      class_info_id: selectedClass || (classes.length > 0 ? classes[0].id : 0),
-      subject_id: 0,
-      day_of_week: day ?? 0,
-      period_number: period ?? 1,
-      teacher_id: undefined,
-      teacher_name: '',
-      classroom: '',
-      description: '',
-      color: '#3B82F6',
-      is_active: true,
-    });
-    openModal();
-  }, [selectedClass, classes, openModal, setFormData]);
+  const handleAdd = useCallback(
+    (day?: number, period?: number) => {
+      setEditingSchedule(null);
+      setConflictResult(null);
+      setFormData({
+        class_info_id: selectedClass || (classes.length > 0 ? classes[0].id : 0),
+        subject_id: 0,
+        day_of_week: day ?? 0,
+        period_number: period ?? 1,
+        teacher_id: undefined,
+        teacher_name: '',
+        classroom: '',
+        description: '',
+        color: '#3B82F6',
+        is_active: true,
+      });
+      openModal();
+    },
+    [selectedClass, classes, openModal, setFormData]
+  );
 
   const handleSubjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const subjectId = parseInt(e.target.value);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       subject_id: subjectId,
       color: getSubjectColor(subjectId),
@@ -470,22 +550,24 @@ const CourseSchedulePage: React.FC = () => {
   };
 
   const handleFormChange = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (conflictResult) {
       setConflictResult(null);
     }
   };
 
   const activePeriods = useMemo(() => {
-    return periods.filter(p => p.is_active).sort((a, b) => a.sort_order - b.sort_order);
+    return periods.filter((p) => p.is_active).sort((a, b) => a.sort_order - b.sort_order);
   }, [periods]);
 
   // Statistics
   const { totalSchedules, uniqueSubjects, uniqueTeachers } = useMemo(() => {
     return {
       totalSchedules: filteredSchedules.length,
-      uniqueSubjects: new Set(filteredSchedules.map(s => s.subject_id)).size,
-      uniqueTeachers: new Set(filteredSchedules.filter(s => s.teacher_name).map(s => s.teacher_name)).size,
+      uniqueSubjects: new Set(filteredSchedules.map((s) => s.subject_id)).size,
+      uniqueTeachers: new Set(
+        filteredSchedules.filter((s) => s.teacher_name).map((s) => s.teacher_name)
+      ).size,
     };
   }, [filteredSchedules]);
 
@@ -494,7 +576,9 @@ const CourseSchedulePage: React.FC = () => {
       {schedulesError && (
         <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>课程表加载失败，当前课表可能不完整，请刷新重试</p>
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            课程表加载失败，当前课表可能不完整，请刷新重试
+          </p>
         </div>
       )}
       {/* Header */}
@@ -513,7 +597,9 @@ const CourseSchedulePage: React.FC = () => {
               <h1 className='text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text'>
                 课程表管理
               </h1>
-              <p className='text-sm text-slate-500 dark:text-slate-400'>管理班级课程安排，支持可视化时间表和冲突检测</p>
+              <p className='text-sm text-slate-500 dark:text-slate-400'>
+                管理班级课程安排，支持可视化时间表和冲突检测
+              </p>
             </div>
           </div>
           <div className='flex items-center gap-3'>
@@ -563,7 +649,9 @@ const CourseSchedulePage: React.FC = () => {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>课程总数</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{totalSchedules}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {totalSchedules}
+                </p>
               </div>
             </div>
           </div>
@@ -576,7 +664,9 @@ const CourseSchedulePage: React.FC = () => {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>涉及科目</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{uniqueSubjects}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {uniqueSubjects}
+                </p>
               </div>
             </div>
           </div>
@@ -589,7 +679,9 @@ const CourseSchedulePage: React.FC = () => {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>授课教师</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{uniqueTeachers}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {uniqueTeachers}
+                </p>
               </div>
             </div>
           </div>
@@ -602,7 +694,9 @@ const CourseSchedulePage: React.FC = () => {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>班级数量</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{classes.length}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {classes.length}
+                </p>
               </div>
             </div>
           </div>
@@ -623,14 +717,21 @@ const CourseSchedulePage: React.FC = () => {
                   <div className='flex items-center gap-3'>
                     <Building2 className='w-5 h-5 text-cyan-500' />
                     <span className='text-slate-700 dark:text-slate-200 font-medium'>
-                      {classes.find(c => c.id === selectedClass)?.name || '选择班级'}
+                      {classes.find((c) => c.id === selectedClass)?.name || '选择班级'}
                     </span>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${showClassDropdown ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                      showClassDropdown ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
                 {showClassDropdown && (
                   <>
-                    <div className='fixed inset-0 z-40' onClick={() => setShowClassDropdown(false)} />
+                    <div
+                      className='fixed inset-0 z-40'
+                      onClick={() => setShowClassDropdown(false)}
+                    />
                     <div className='absolute top-full left-0 mt-2 w-full bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden'>
                       {classes.map((cls) => (
                         <button
@@ -639,7 +740,11 @@ const CourseSchedulePage: React.FC = () => {
                             setSelectedClass(cls.id);
                             setShowClassDropdown(false);
                           }}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 ${selectedClass === cls.id ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400' : 'text-slate-700 dark:text-slate-200'}`}
+                          className={`w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 ${
+                            selectedClass === cls.id
+                              ? 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400'
+                              : 'text-slate-700 dark:text-slate-200'
+                          }`}
                         >
                           <Building2 className='w-4 h-4' />
                           <span className='font-medium'>{cls.name}</span>
@@ -653,7 +758,13 @@ const CourseSchedulePage: React.FC = () => {
               <div className='flex items-center gap-4'>
                 <div className='flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg'>
                   <Clock className='w-4 h-4' />
-                  <span>共 <strong className='text-slate-700 dark:text-slate-200'>{filteredSchedules.length}</strong> 节课程</span>
+                  <span>
+                    共{' '}
+                    <strong className='text-slate-700 dark:text-slate-200'>
+                      {filteredSchedules.length}
+                    </strong>{' '}
+                    节课程
+                  </span>
                 </div>
               </div>
             </div>
@@ -682,8 +793,12 @@ const CourseSchedulePage: React.FC = () => {
                         className='p-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-700/50 dark:to-slate-800 border-b border-slate-200 dark:border-slate-600 text-center text-sm font-semibold min-w-[160px]'
                       >
                         <div className='flex flex-col items-center gap-1'>
-                          <span className='text-xs text-slate-400 uppercase tracking-wider'>{day.shortLabel}</span>
-                          <span className='font-bold text-slate-700 dark:text-white text-base'>{day.label}</span>
+                          <span className='text-xs text-slate-400 uppercase tracking-wider'>
+                            {day.shortLabel}
+                          </span>
+                          <span className='font-bold text-slate-700 dark:text-white text-base'>
+                            {day.label}
+                          </span>
                         </div>
                       </th>
                     ))}
@@ -698,7 +813,10 @@ const CourseSchedulePage: React.FC = () => {
                             <Clock className='w-8 h-8 text-slate-400' />
                           </div>
                           <p className='text-slate-500 dark:text-slate-400'>暂无课程节次设置</p>
-                          <a href='#/class-period-settings' className='text-cyan-500 hover:text-cyan-600 font-medium text-sm'>
+                          <a
+                            href='#/class-period-settings'
+                            className='text-cyan-500 hover:text-cyan-600 font-medium text-sm'
+                          >
                             设置课程节次
                           </a>
                         </div>
@@ -706,9 +824,14 @@ const CourseSchedulePage: React.FC = () => {
                     </tr>
                   ) : (
                     activePeriods.map((period) => (
-                      <tr key={period.id} className='hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors group'>
+                      <tr
+                        key={period.id}
+                        className='hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors group'
+                      >
                         <td className='p-4 border-b border-slate-100 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 sticky left-0 z-10'>
-                          <div className='font-bold text-slate-700 dark:text-slate-200 text-lg'>{period.name}</div>
+                          <div className='font-bold text-slate-700 dark:text-slate-200 text-lg'>
+                            {period.name}
+                          </div>
                           <div className='text-xs text-slate-400 mt-0.5 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md inline-block'>
                             {getPeriodTime(period.period_number)}
                           </div>
@@ -723,9 +846,9 @@ const CourseSchedulePage: React.FC = () => {
                               {schedule ? (
                                 <div
                                   className='group/schedule relative rounded-2xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] border border-gray-100 dark:border-slate-600'
-                                  style={{ 
+                                  style={{
                                     backgroundColor: `${schedule.subject_color}12`,
-                                    borderColor: `${schedule.subject_color}30`
+                                    borderColor: `${schedule.subject_color}30`,
                                   }}
                                   onClick={() => handleEdit(schedule)}
                                 >
@@ -793,7 +916,14 @@ const CourseSchedulePage: React.FC = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={() => { closeModal(); setEditingSchedule(null); setConflictResult(null); }}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={() => {
+            closeModal();
+            setEditingSchedule(null);
+            setConflictResult(null);
+          }}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -810,7 +940,11 @@ const CourseSchedulePage: React.FC = () => {
                   </h3>
                 </div>
                 <button
-                  onClick={() => { closeModal(); setEditingSchedule(null); setConflictResult(null); }}
+                  onClick={() => {
+                    closeModal();
+                    setEditingSchedule(null);
+                    setConflictResult(null);
+                  }}
                   className='p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors'
                 >
                   <X className='w-5 h-5' />
@@ -848,7 +982,9 @@ const CourseSchedulePage: React.FC = () => {
                   >
                     <option value={0}>选择班级</option>
                     {classes.map((cls) => (
-                      <option key={cls.id} value={cls.id}>{cls.name} {cls.grade ? `(${cls.grade})` : ''}</option>
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} {cls.grade ? `(${cls.grade})` : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -862,9 +998,13 @@ const CourseSchedulePage: React.FC = () => {
                     className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-slate-800 dark:text-slate-100'
                   >
                     <option value={0}>选择科目</option>
-                    {subjects.filter(s => s.is_active).map((subject) => (
-                      <option key={subject.id} value={subject.id}>{subject.name}</option>
-                    ))}
+                    {subjects
+                      .filter((s) => s.is_active)
+                      .map((subject) => (
+                        <option key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -880,7 +1020,9 @@ const CourseSchedulePage: React.FC = () => {
                     className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-slate-800 dark:text-slate-100'
                   >
                     {weekDays.map((day) => (
-                      <option key={day.day} value={day.day}>{day.label}</option>
+                      <option key={day.day} value={day.day}>
+                        {day.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -921,7 +1063,9 @@ const CourseSchedulePage: React.FC = () => {
                     >
                       <option value=''>不指定教师</option>
                       {teachers.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -969,7 +1113,11 @@ const CourseSchedulePage: React.FC = () => {
               <div className='flex items-center justify-end gap-3 pt-2'>
                 <button
                   type='button'
-                  onClick={() => { closeModal(); setEditingSchedule(null); setConflictResult(null); }}
+                  onClick={() => {
+                    closeModal();
+                    setEditingSchedule(null);
+                    setConflictResult(null);
+                  }}
                   className='px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors font-medium'
                 >
                   取消
@@ -990,7 +1138,10 @@ const CourseSchedulePage: React.FC = () => {
 
       {/* Import Modal */}
       {showImportModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4' onClick={closeImportModalWithReset}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4'
+          onClick={closeImportModalWithReset}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -1025,7 +1176,9 @@ const CourseSchedulePage: React.FC = () => {
                   <button
                     onClick={async () => {
                       try {
-                        const response = await fetch(api.importConfig.downloadTemplate('course_schedule'));
+                        const response = await fetch(
+                          api.importConfig.downloadTemplate('course_schedule')
+                        );
                         if (!response.ok) throw new Error('下载失败');
                         const blob = await response.blob();
                         const url = window.URL.createObjectURL(blob);
@@ -1052,35 +1205,55 @@ const CourseSchedulePage: React.FC = () => {
               <div className='p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800'>
                 <div className='flex items-center gap-2 mb-3'>
                   <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400' />
-                  <span className='text-sm font-medium text-amber-800 dark:text-amber-300'>必填字段说明</span>
+                  <span className='text-sm font-medium text-amber-800 dark:text-amber-300'>
+                    必填字段说明
+                  </span>
                 </div>
                 <ul className='space-y-1.5 text-sm text-amber-700 dark:text-amber-400'>
-                  <li><span className='font-medium'>班级名称</span>：必须是系统中已存在的班级</li>
-                  <li><span className='font-medium'>科目名称</span>：必须是系统中已存在的科目</li>
-                  <li><span className='font-medium'>星期</span>：周一至周日</li>
-                  <li><span className='font-medium'>节次</span>：数字，如1、2、3</li>
+                  <li>
+                    <span className='font-medium'>班级名称</span>：必须是系统中已存在的班级
+                  </li>
+                  <li>
+                    <span className='font-medium'>科目名称</span>：必须是系统中已存在的科目
+                  </li>
+                  <li>
+                    <span className='font-medium'>星期</span>：周一至周日
+                  </li>
+                  <li>
+                    <span className='font-medium'>节次</span>：数字，如1、2、3
+                  </li>
                 </ul>
-                <p className='mt-2 text-xs text-amber-600 dark:text-amber-500'>提示：下载模板后，请参考"填写说明"工作表了解详细的字段填写规则</p>
+                <p className='mt-2 text-xs text-amber-600 dark:text-amber-500'>
+                  提示：下载模板后，请参考"填写说明"工作表了解详细的字段填写规则
+                </p>
               </div>
 
               {importConfigs.length > 0 && (
                 <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl'>
-                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>选择导入配置</label>
+                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>
+                    选择导入配置
+                  </label>
                   <select
                     value={selectedConfigId || ''}
-                    onChange={(e) => setSelectedConfigId(e.target.value ? parseInt(e.target.value) : null)}
+                    onChange={(e) =>
+                      setSelectedConfigId(e.target.value ? parseInt(e.target.value) : null)
+                    }
                     className='w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500'
                   >
                     <option value=''>使用默认配置</option>
-                    {importConfigs.map(config => (
-                      <option key={config.id} value={config.id}>{config.config_name}</option>
+                    {importConfigs.map((config) => (
+                      <option key={config.id} value={config.id}>
+                        {config.config_name}
+                      </option>
                     ))}
                   </select>
                 </div>
               )}
 
               <div className='p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl'>
-                <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>冲突处理策略</label>
+                <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>
+                  冲突处理策略
+                </label>
                 <div className='space-y-2'>
                   <label className='flex items-center gap-3 p-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl cursor-pointer hover:border-indigo-400 transition-colors'>
                     <input
@@ -1088,12 +1261,18 @@ const CourseSchedulePage: React.FC = () => {
                       name='conflictStrategy'
                       value='update'
                       checked={conflictStrategy === 'update'}
-                      onChange={(e) => setConflictStrategy(e.target.value as 'skip' | 'update' | 'error')}
+                      onChange={(e) =>
+                        setConflictStrategy(e.target.value as 'skip' | 'update' | 'error')
+                      }
                       className='w-4 h-4 text-indigo-600 focus:ring-indigo-500'
                     />
                     <div>
-                      <div className='font-medium text-slate-800 dark:text-slate-100'>更新已存在课程</div>
-                      <div className='text-sm text-slate-500 dark:text-slate-400'>如果同一班级在同一时间已有课程，将更新为新的课程信息</div>
+                      <div className='font-medium text-slate-800 dark:text-slate-100'>
+                        更新已存在课程
+                      </div>
+                      <div className='text-sm text-slate-500 dark:text-slate-400'>
+                        如果同一班级在同一时间已有课程，将更新为新的课程信息
+                      </div>
                     </div>
                   </label>
                   <label className='flex items-center gap-3 p-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl cursor-pointer hover:border-indigo-400 transition-colors'>
@@ -1102,12 +1281,18 @@ const CourseSchedulePage: React.FC = () => {
                       name='conflictStrategy'
                       value='skip'
                       checked={conflictStrategy === 'skip'}
-                      onChange={(e) => setConflictStrategy(e.target.value as 'skip' | 'update' | 'error')}
+                      onChange={(e) =>
+                        setConflictStrategy(e.target.value as 'skip' | 'update' | 'error')
+                      }
                       className='w-4 h-4 text-indigo-600 focus:ring-indigo-500'
                     />
                     <div>
-                      <div className='font-medium text-slate-800 dark:text-slate-100'>跳过已存在课程</div>
-                      <div className='text-sm text-slate-500 dark:text-slate-400'>如果同一班级在同一时间已有课程，将跳过该条记录</div>
+                      <div className='font-medium text-slate-800 dark:text-slate-100'>
+                        跳过已存在课程
+                      </div>
+                      <div className='text-sm text-slate-500 dark:text-slate-400'>
+                        如果同一班级在同一时间已有课程，将跳过该条记录
+                      </div>
                     </div>
                   </label>
                   <label className='flex items-center gap-3 p-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl cursor-pointer hover:border-indigo-400 transition-colors'>
@@ -1116,12 +1301,18 @@ const CourseSchedulePage: React.FC = () => {
                       name='conflictStrategy'
                       value='error'
                       checked={conflictStrategy === 'error'}
-                      onChange={(e) => setConflictStrategy(e.target.value as 'skip' | 'update' | 'error')}
+                      onChange={(e) =>
+                        setConflictStrategy(e.target.value as 'skip' | 'update' | 'error')
+                      }
                       className='w-4 h-4 text-indigo-600 focus:ring-indigo-500'
                     />
                     <div>
-                      <div className='font-medium text-slate-800 dark:text-slate-100'>视为导入错误</div>
-                      <div className='text-sm text-slate-500 dark:text-slate-400'>如果同一班级在同一时间已有课程，将视为导入错误并记录</div>
+                      <div className='font-medium text-slate-800 dark:text-slate-100'>
+                        视为导入错误
+                      </div>
+                      <div className='text-sm text-slate-500 dark:text-slate-400'>
+                        如果同一班级在同一时间已有课程，将视为导入错误并记录
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -1129,7 +1320,8 @@ const CourseSchedulePage: React.FC = () => {
 
               {!importResult ? (
                 <>
-                  <div className='border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-8 text-center hover:border-amber-400 dark:hover:border-amber-500 transition-colors cursor-pointer'
+                  <div
+                    className='border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-8 text-center hover:border-amber-400 dark:hover:border-amber-500 transition-colors cursor-pointer'
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input
@@ -1157,7 +1349,9 @@ const CourseSchedulePage: React.FC = () => {
                           <FileJson className='w-5 h-5 text-white' />
                         </div>
                         <div>
-                          <p className='font-medium text-slate-900 dark:text-slate-100'>{importFile.name}</p>
+                          <p className='font-medium text-slate-900 dark:text-slate-100'>
+                            {importFile.name}
+                          </p>
                           <p className='text-sm text-slate-500 dark:text-slate-400'>
                             {(importFile.size / 1024).toFixed(2)} KB
                           </p>
@@ -1177,11 +1371,19 @@ const CourseSchedulePage: React.FC = () => {
                 </>
               ) : (
                 <div className='space-y-4'>
-                  <div className='flex items-center justify-center gap-4 p-4 rounded-xl'
-                    style={{ backgroundColor: importResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      importResult.success ? 'bg-emerald-500' : 'bg-red-500'
-                    }`}>
+                  <div
+                    className='flex items-center justify-center gap-4 p-4 rounded-xl'
+                    style={{
+                      backgroundColor: importResult.success
+                        ? 'rgba(16, 185, 129, 0.1)'
+                        : 'rgba(239, 68, 68, 0.1)',
+                    }}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        importResult.success ? 'bg-emerald-500' : 'bg-red-500'
+                      }`}
+                    >
                       {importResult.success ? (
                         <Check className='w-6 h-6 text-white' />
                       ) : (
@@ -1193,22 +1395,28 @@ const CourseSchedulePage: React.FC = () => {
                         导入完成
                       </p>
                       <p className='text-sm text-slate-500 dark:text-slate-400'>
-                        总计 {importResult.total} 条 | 成功 {importResult.success_count} 条 | 失败 {importResult.failed_count} 条
+                        总计 {importResult.total} 条 | 成功 {importResult.success_count} 条 | 失败{' '}
+                        {importResult.failed_count} 条
                       </p>
                     </div>
                   </div>
 
                   {importResult.messages.length > 0 && (
                     <div className='max-h-[300px] overflow-y-auto space-y-2'>
-                      <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>导入详情：</p>
+                      <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>
+                        导入详情：
+                      </p>
                       {importResult.messages.map((msg, index) => (
-                        <div key={index} className={`p-3 rounded-lg text-sm ${
-                          msg.action === 'failed'
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : msg.action === 'created'
+                        <div
+                          key={index}
+                          className={`p-3 rounded-lg text-sm ${
+                            msg.action === 'failed'
+                              ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                              : msg.action === 'created'
                               ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
                               : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        }`}>
+                          }`}
+                        >
                           {msg.message}
                         </div>
                       ))}
@@ -1228,9 +1436,9 @@ const CourseSchedulePage: React.FC = () => {
               {importResult && importResult.failed_count && importResult.failed_count > 0 && (
                 <button
                   onClick={() => {
-                    const errors = importResult.messages!
-                      .filter(msg => msg.action === 'failed')
-                      .map(msg => ({
+                    const errors = importResult
+                      .messages!.filter((msg) => msg.action === 'failed')
+                      .map((msg) => ({
                         ...msg,
                         error_fields: msg.error_fields || [],
                       }));
@@ -1238,17 +1446,19 @@ const CourseSchedulePage: React.FC = () => {
                       fetch('/api/export/errors', {
                         method: 'POST',
                         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                        body: JSON.stringify({ errors, module: 'course_schedule' })
-                      }).then(response => response.blob()).then(blob => {
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = '课程表导入错误数据.xlsx';
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                      });
+                        body: JSON.stringify({ errors, module: 'course_schedule' }),
+                      })
+                        .then((response) => response.blob())
+                        .then((blob) => {
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = '课程表导入错误数据.xlsx';
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        });
                     }
                   }}
                   className='flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors font-medium'

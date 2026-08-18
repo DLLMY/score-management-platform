@@ -70,7 +70,9 @@ class ScoreDistributionController:
             "low": low / n,
         }
 
-        valid = all(abs(ratios[k] - self.target_distribution[k]["target_ratio"]) <= 0.05 for k in ratios)
+        valid = all(
+            abs(ratios[k] - self.target_distribution[k]["target_ratio"]) <= 0.05 for k in ratios
+        )
 
         return {
             "valid": valid,
@@ -173,7 +175,9 @@ class ScoreValidator:
             return {
                 "valid": False,
                 "error_type": "excessive_change",
-                "message": (f"单日分数变化({daily_change})超过最大允许幅度(" f"{self.max_daily_change})"),
+                "message": (
+                    f"单日分数变化({daily_change})超过最大允许幅度(" f"{self.max_daily_change})"
+                ),
                 "suggested_score": previous_score + (new_score - previous_score) * 0.5,
             }
 

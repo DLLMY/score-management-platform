@@ -9,6 +9,7 @@ warning_configs.enabled 与全局 is_active 同义不同名。该列无 API/前�
   3. 若 enabled 仍存在则 DROP
 可在系统 Python 3.11 下重复执行。
 """
+
 import os
 import sys
 

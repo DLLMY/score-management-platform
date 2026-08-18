@@ -29,19 +29,27 @@ def main():
     # 支持 sqlite:/// 绝对/相对路径
     if db_path.startswith("sqlite:///"):
         # 去掉协议头，剩下相对 backend 的路径或绝对路径
-        rest = db_path[len("sqlite:///"):]
+        rest = db_path[len("sqlite:///") :]
         if rest.startswith("/"):
             sqlite_file = rest
         else:
-            sqlite_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), rest)
+            sqlite_file = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), rest
+            )
     else:
-        sqlite_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "score_management.db")
+        sqlite_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "instance",
+            "score_management.db",
+        )
 
     if not os.path.exists(sqlite_file):
         print(f"[migrate] 数据库文件不存在: {sqlite_file}")
         sys.exit(1)
 
-    cols = [r[1] for r in sqlite3.connect(sqlite_file).execute("PRAGMA table_info(device)").fetchall()]
+    cols = [
+        r[1] for r in sqlite3.connect(sqlite_file).execute("PRAGMA table_info(device)").fetchall()
+    ]
     targets = {
         "auto_update": "BOOLEAN",
         "ota_status": "VARCHAR(20)",
@@ -66,7 +74,9 @@ def main():
             text("UPDATE device SET auto_update = 1 WHERE auto_update IS NULL")
         )
         db.session.execute(
-            text("UPDATE device SET ota_status = 'idle' WHERE ota_status IS NULL OR ota_status = ''")
+            text(
+                "UPDATE device SET ota_status = 'idle' WHERE ota_status IS NULL OR ota_status = ''"
+            )
         )
         db.session.commit()
         print(f"[migrate] 已同步默认值（auto_update 行数影响: {updated.rowcount}）")

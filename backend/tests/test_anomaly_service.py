@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
+
 try:
     from services.anomaly_service import AnomalyDetector
 except ImportError:
@@ -122,7 +123,9 @@ class TestAnomalyService:
             mock_record.rule_name = "test_rule"
 
             with patch("services.anomaly_service.ScoreRecord.query") as mock_query:
-                mock_query.filter.return_value.order_by.return_value.all.return_value = [mock_record]
+                mock_query.filter.return_value.order_by.return_value.all.return_value = [
+                    mock_record
+                ]
 
                 result = AnomalyService.get_student_score_changes(1)
 
@@ -274,7 +277,9 @@ class TestAnomalyService:
                 with patch("services.anomaly_service.User.query") as mock_query:
                     mock_query.filter.return_value.all.return_value = []
                     with patch("services.anomaly_service.ScoreRecord.query") as mock_score_query:
-                        mock_score_query.filter.return_value.order_by.return_value.all.return_value = []
+                        mock_score_query.filter.return_value.order_by.return_value.all.return_value = (
+                            []
+                        )
 
                         result = AnomalyService.detect_group_anomaly(1)
 
@@ -338,12 +343,24 @@ class TestAnomalyService:
 
             def fake_changes(uid, days):
                 sc = {1: 10, 2: 2, 3: 8}.get(uid, 0)
-                return [{"date": datetime.now(), "score_change": sc, "rule_name": None, "category": None}]
+                return [
+                    {
+                        "date": datetime.now(),
+                        "score_change": sc,
+                        "rule_name": None,
+                        "category": None,
+                    }
+                ]
 
-            with patch.object(AnomalyService, "get_student_score_changes", side_effect=fake_changes):
+            with patch.object(
+                AnomalyService, "get_student_score_changes", side_effect=fake_changes
+            ):
                 with patch("services.anomaly_service.get_by_id", return_value=mock_user):
                     with patch("services.anomaly_service.User.query") as mock_query:
-                        mock_query.filter.return_value.all.return_value = [mock_classmate1, mock_classmate2]
+                        mock_query.filter.return_value.all.return_value = [
+                            mock_classmate1,
+                            mock_classmate2,
+                        ]
                         result = AnomalyService.detect_group_anomaly(1)
 
             serialized = json.dumps(result)  # 必须不抛 TypeError
@@ -368,13 +385,27 @@ class TestAnomalyService:
 
             def fake_changes(uid, days):
                 sc = {1: 10, 2: 2, 3: 8}.get(uid, 0)
-                return [{"date": datetime.now(), "score_change": sc, "rule_name": None, "category": None}]
+                return [
+                    {
+                        "date": datetime.now(),
+                        "score_change": sc,
+                        "rule_name": None,
+                        "category": None,
+                    }
+                ]
 
-            with patch.object(AnomalyService, "get_student_score_changes", side_effect=fake_changes):
+            with patch.object(
+                AnomalyService, "get_student_score_changes", side_effect=fake_changes
+            ):
                 with patch("services.anomaly_service.get_by_id", return_value=mock_user):
                     with patch("services.anomaly_service.User.query") as mock_query:
-                        mock_query.filter.return_value.all.return_value = [mock_classmate1, mock_classmate2]
-                        with patch("services.anomaly_service.ScoreRecord.query") as mock_score_query:
+                        mock_query.filter.return_value.all.return_value = [
+                            mock_classmate1,
+                            mock_classmate2,
+                        ]
+                        with patch(
+                            "services.anomaly_service.ScoreRecord.query"
+                        ) as mock_score_query:
                             mock_score_query.filter.return_value.count.return_value = 0
                             result = AnomalyService.detect_all_anomalies(1)
 
@@ -519,7 +550,9 @@ class TestAnomalyService:
             mock_user.is_active = True
 
             with patch("services.anomaly_service.User.query") as mock_user_query:
-                mock_user_query.filter.return_value.filter.return_value.all.return_value = [mock_user]
+                mock_user_query.filter.return_value.filter.return_value.all.return_value = [
+                    mock_user
+                ]
                 with patch("services.anomaly_service.ScoreRecord.query") as mock_score_query:
                     mock_score_query.filter.return_value.order_by.return_value.all.return_value = []
                     mock_score_query.filter.return_value.count.return_value = 5

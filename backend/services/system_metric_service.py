@@ -33,26 +33,54 @@ def sample_once(app):
             net = psutil.net_io_counters()
 
             rows = [
-                SystemMetric(metric_name="cpu_percent", metric_value=cpu, unit="%", category="system"),
-                SystemMetric(metric_name="memory_percent", metric_value=mem.percent, unit="%", category="system"),
-                SystemMetric(metric_name="disk_percent", metric_value=disk.percent, unit="%", category="system"),
-                SystemMetric(metric_name="net_sent", metric_value=net.bytes_sent, unit="bytes", category="network"),
-                SystemMetric(metric_name="net_recv", metric_value=net.bytes_recv, unit="bytes", category="network"),
+                SystemMetric(
+                    metric_name="cpu_percent", metric_value=cpu, unit="%", category="system"
+                ),
+                SystemMetric(
+                    metric_name="memory_percent",
+                    metric_value=mem.percent,
+                    unit="%",
+                    category="system",
+                ),
+                SystemMetric(
+                    metric_name="disk_percent",
+                    metric_value=disk.percent,
+                    unit="%",
+                    category="system",
+                ),
+                SystemMetric(
+                    metric_name="net_sent",
+                    metric_value=net.bytes_sent,
+                    unit="bytes",
+                    category="network",
+                ),
+                SystemMetric(
+                    metric_name="net_recv",
+                    metric_value=net.bytes_recv,
+                    unit="bytes",
+                    category="network",
+                ),
             ]
             db.session.add_all(rows)
 
             # 清理过期（保留最近 RETENTION_DAYS 天）
             cutoff = datetime.now() - timedelta(days=RETENTION_DAYS)
-            deleted = db.session.query(SystemMetric).filter(SystemMetric.created_at < cutoff).delete()
+            deleted = (
+                db.session.query(SystemMetric).filter(SystemMetric.created_at < cutoff).delete()
+            )
             # S7 修复: 前端性能/错误上报表一并清理（原只清 system_metrics → 两表无限膨胀）
             try:
                 from models import FrontendPerfMetric, FrontendErrorLog
 
                 deleted += (
-                    db.session.query(FrontendPerfMetric).filter(FrontendPerfMetric.created_at < cutoff).delete()
+                    db.session.query(FrontendPerfMetric)
+                    .filter(FrontendPerfMetric.created_at < cutoff)
+                    .delete()
                 )
                 deleted += (
-                    db.session.query(FrontendErrorLog).filter(FrontendErrorLog.created_at < cutoff).delete()
+                    db.session.query(FrontendErrorLog)
+                    .filter(FrontendErrorLog.created_at < cutoff)
+                    .delete()
                 )
             except Exception:
                 pass

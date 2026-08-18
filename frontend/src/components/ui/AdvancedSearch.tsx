@@ -32,13 +32,11 @@ function AdvancedSearch({
       case 'text':
         return (
           <div key={field.id} className='flex-1 min-w-[200px]'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              {field.label}
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>{field.label}</label>
             <input
               type='text'
               placeholder={field.placeholder}
-              value={field.value as string || ''}
+              value={(field.value as string) || ''}
               onChange={(e) => field.onChange?.(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             />
@@ -48,11 +46,9 @@ function AdvancedSearch({
       case 'select':
         return (
           <div key={field.id} className='flex-1 min-w-[200px]'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              {field.label}
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>{field.label}</label>
             <select
-              value={field.value as string || ''}
+              value={(field.value as string) || ''}
               onChange={(e) => field.onChange?.(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             >
@@ -69,13 +65,11 @@ function AdvancedSearch({
       case 'number':
         return (
           <div key={field.id} className='flex-1 min-w-[200px]'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              {field.label}
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>{field.label}</label>
             <input
               type='number'
               placeholder={field.placeholder}
-              value={field.value as number || ''}
+              value={(field.value as number) || ''}
               onChange={(e) => field.onChange?.(parseFloat(e.target.value) || 0)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             />
@@ -85,12 +79,10 @@ function AdvancedSearch({
       case 'date':
         return (
           <div key={field.id} className='flex-1 min-w-[200px]'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              {field.label}
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>{field.label}</label>
             <input
               type='date'
-              value={field.value as string || ''}
+              value={(field.value as string) || ''}
               onChange={(e) => field.onChange?.(e.target.value)}
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             />
@@ -98,12 +90,10 @@ function AdvancedSearch({
         );
 
       case 'dateRange':
-        const range = field.value as { start?: string; end?: string } || {};
+        const range = (field.value as { start?: string; end?: string }) || {};
         return (
           <div key={field.id} className='flex-1 min-w-[250px]'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              {field.label}
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>{field.label}</label>
             <div className='flex gap-2'>
               <input
                 type='date'
@@ -126,9 +116,7 @@ function AdvancedSearch({
       case 'boolean':
         return (
           <div key={field.id} className='flex-1 min-w-[200px]'>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              {field.label}
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>{field.label}</label>
             <select
               value={String(field.value ?? '')}
               onChange={(e) => field.onChange?.(e.target.value === 'true')}
@@ -146,17 +134,13 @@ function AdvancedSearch({
     }
   };
 
-  const hasActiveFilters = fields.some(f => f.value !== undefined && f.value !== '');
+  const hasActiveFilters = fields.some((f) => f.value !== undefined && f.value !== '');
 
   return (
     <div className='flex flex-wrap gap-4 mb-4'>
       {fields.map(renderField)}
 
-      {children && (
-        <div className='mb-4 pt-4 border-t border-gray-200'>
-          {children}
-        </div>
-      )}
+      {children && <div className='mb-4 pt-4 border-t border-gray-200'>{children}</div>}
 
       <div className='flex items-center justify-between pt-4 border-t border-gray-200 w-full'>
         <div className='flex items-center gap-2'>

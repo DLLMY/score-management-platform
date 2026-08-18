@@ -160,7 +160,8 @@ class PerformanceMetrics:
             # 计算缓存命中率
             total_cache_ops = self.cache_metrics["hits"] + self.cache_metrics["misses"]
             cache_hit_rate = round(
-                (self.cache_metrics["hits"] / total_cache_ops * 100) if total_cache_ops > 0 else 0, 2
+                (self.cache_metrics["hits"] / total_cache_ops * 100) if total_cache_ops > 0 else 0,
+                2,
             )
             # 计算总体响应时间统计
             response_times = self.resource_metrics["response_times"]
@@ -247,7 +248,9 @@ class PerformanceMetrics:
         alert = PerformanceAlert(alert_type, message, severity, **details)
         self.alerts.append(alert)
         logger_func = logger.warning if severity == "warning" else logger.error
-        logger_func(f"[Performance Alert] [{severity.upper()}] {alert_type}: {message}", extra=details)
+        logger_func(
+            f"[Performance Alert] [{severity.upper()}] {alert_type}: {message}", extra=details
+        )
 
     def _check_slow_query_alert(self, query_type, duration):
         """检查慢查询告警"""
@@ -264,7 +267,9 @@ class PerformanceMetrics:
 
     def _check_slow_request_alert(self, endpoint, method, duration):
         """检查慢请求告警"""
-        slow_count = sum(1 for r in self.slow_requests if r["endpoint"] == endpoint and r["method"] == method)
+        slow_count = sum(
+            1 for r in self.slow_requests if r["endpoint"] == endpoint and r["method"] == method
+        )
         if slow_count >= self.alert_slow_request_count:
             self._add_alert(
                 "slow_request",
@@ -324,12 +329,16 @@ class PerformanceMetrics:
         if summary["slow_request_count"] > 0:
             slow_requests = self.get_slow_requests(3)
             for req in slow_requests:
-                suggestions.append(f"慢请求: {req['method']} {req['endpoint']} ({req['duration']:.2f}ms)")
+                suggestions.append(
+                    f"慢请求: {req['method']} {req['endpoint']} ({req['duration']:.2f}ms)"
+                )
         # 慢查询建议
         if summary["slow_query_count"] > 0:
             slow_queries = self.get_slow_queries(3)
             for query in slow_queries:
-                suggestions.append(f"慢查询: {query['query_type']} ({query['duration']:.2f}ms, {query['rows']}行)")
+                suggestions.append(
+                    f"慢查询: {query['query_type']} ({query['duration']:.2f}ms, {query['rows']}行)"
+                )
         # 响应时间建议
         avg_response = summary["overall"]["avg_response_time"]
         if avg_response > 200:

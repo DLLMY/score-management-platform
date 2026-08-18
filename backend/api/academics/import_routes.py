@@ -81,7 +81,9 @@ class ImportConfigList(Resource):
 
         configs = query.order_by(ImportConfig.module_name, ImportConfig.config_name).all()
 
-        return APIResponse.success(data=[config.to_dict() for config in configs], total=len(configs))
+        return APIResponse.success(
+            data=[config.to_dict() for config in configs], total=len(configs)
+        )
 
     @ns_import.doc("create_import_config", description="创建导入配置")
     @ns_import.expect(import_config_model)
@@ -184,7 +186,9 @@ class ImportConfigSetDefault(Resource):
         academics_service.set_default_import_config(id)
         config = get_by_id(ImportConfig, id)
 
-        return APIResponse.success(message=f"{config.config_name} 已设置为 {config.module_name} 模块的默认配置")
+        return APIResponse.success(
+            message=f"{config.config_name} 已设置为 {config.module_name} 模块的默认配置"
+        )
 
 
 @ns_import.route("/module-fields/<string:module_name>")
@@ -214,7 +218,12 @@ class ModuleFields(Resource):
                         "required": False,
                         "relation": "admin",
                     },
-                    {"name": "is_active", "label": "是否启用", "type": "boolean", "required": False},
+                    {
+                        "name": "is_active",
+                        "label": "是否启用",
+                        "type": "boolean",
+                        "required": False,
+                    },
                 ],
             },
             "subjects": {
@@ -225,7 +234,12 @@ class ModuleFields(Resource):
                     {"name": "grade", "label": "年级", "type": "string", "required": False},
                     {"name": "description", "label": "描述", "type": "string", "required": False},
                     {"name": "color", "label": "颜色", "type": "string", "required": False},
-                    {"name": "is_active", "label": "是否启用", "type": "boolean", "required": False},
+                    {
+                        "name": "is_active",
+                        "label": "是否启用",
+                        "type": "boolean",
+                        "required": False,
+                    },
                 ],
             },
             "course_schedule": {
@@ -250,7 +264,12 @@ class ModuleFields(Resource):
                     {"name": "teacher_name", "label": "教师", "type": "string", "required": False},
                     {"name": "classroom", "label": "教室", "type": "string", "required": False},
                     {"name": "description", "label": "备注", "type": "string", "required": False},
-                    {"name": "is_active", "label": "是否启用", "type": "boolean", "required": False},
+                    {
+                        "name": "is_active",
+                        "label": "是否启用",
+                        "type": "boolean",
+                        "required": False,
+                    },
                 ],
             },
         }

@@ -83,7 +83,10 @@ interface FormErrors {
   [key: string]: string | undefined;
 }
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+const ICON_MAP: Record<
+  string,
+  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+> = {
   Star,
   Award,
   Medal,
@@ -116,24 +119,31 @@ function RankRuleList() {
     resetForm,
     errors: formErrors,
     setErrors: setFormErrors,
-  } = useForm<FormData>({
-    name: '',
-    min_score: 0,
-    max_score: 100,
-    color: COLORS[0],
-    icon: 'Star',
-    description: '',
-    is_active: true,
-    unlock_min_score: null,
-    weekly_unlock_limit: null,
-  }, {
-    name: { required: true, maxLength: 50 },
-    min_score: { required: true, min: 0, max: 10000 },
-    max_score: { required: true, min: 0, max: 10000 },
-    description: { maxLength: 200 },
-  });
+  } = useForm<FormData>(
+    {
+      name: '',
+      min_score: 0,
+      max_score: 100,
+      color: COLORS[0],
+      icon: 'Star',
+      description: '',
+      is_active: true,
+      unlock_min_score: null,
+      weekly_unlock_limit: null,
+    },
+    {
+      name: { required: true, maxLength: 50 },
+      min_score: { required: true, min: 0, max: 10000 },
+      max_score: { required: true, min: 0, max: 10000 },
+      description: { maxLength: 200 },
+    }
+  );
 
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<RankRule | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<RankRule | null>({
     onClose: () => {
       resetForm();
       setEditingRule(null);
@@ -215,7 +225,8 @@ function RankRuleList() {
 
   const filteredRules = useMemo(() => {
     return rankRules.filter(
-      (rule) => rule && rule.name && rule.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      (rule) =>
+        rule && rule.name && rule.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     );
   }, [rankRules, debouncedSearchTerm]);
 
@@ -357,13 +368,17 @@ function RankRuleList() {
                             {rule.unlock_min_score !== null && (
                               <div className='flex items-center gap-1'>
                                 <span className='text-gray-400'>开门分数:</span>
-                                <span className='font-semibold text-amber-600'>{rule.unlock_min_score}</span>
+                                <span className='font-semibold text-amber-600'>
+                                  {rule.unlock_min_score}
+                                </span>
                               </div>
                             )}
                             {rule.weekly_unlock_limit !== null && (
                               <div className='flex items-center gap-1'>
                                 <span className='text-gray-400'>每周次数:</span>
-                                <span className='font-semibold text-blue-600'>{rule.weekly_unlock_limit}</span>
+                                <span className='font-semibold text-blue-600'>
+                                  {rule.weekly_unlock_limit}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -495,7 +510,9 @@ function RankRuleList() {
                       setFormErrors({ ...formErrors, name: undefined });
                     }
                   }}
-                  className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.name ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                  className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${
+                    formErrors.name ? 'border-red-500/50 focus:ring-red-500/50' : ''
+                  }`}
                   placeholder='如：卓越、优秀、合格'
                 />
                 {formErrors.name && (
@@ -530,7 +547,9 @@ function RankRuleList() {
                         setFormErrors({ ...formErrors, min_score: undefined, range: undefined });
                       }
                     }}
-                    className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.min_score ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                    className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${
+                      formErrors.min_score ? 'border-red-500/50 focus:ring-red-500/50' : ''
+                    }`}
                     placeholder='0'
                   />
                   {formErrors.min_score && (
@@ -554,7 +573,9 @@ function RankRuleList() {
                         setFormErrors({ ...formErrors, max_score: undefined, range: undefined });
                       }
                     }}
-                    className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${formErrors.max_score ? 'border-red-500/50 focus:ring-red-500/50' : ''}`}
+                    className={`w-full px-4 py-3 bg-gray-100/50 border border-gray-200/50 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 ${
+                      formErrors.max_score ? 'border-red-500/50 focus:ring-red-500/50' : ''
+                    }`}
                     placeholder='100'
                   />
                   {formErrors.max_score && (
@@ -614,7 +635,9 @@ function RankRuleList() {
                       type='button'
                       onClick={() => setFormData({ ...formData, color })}
                       className={`w-8 h-8 rounded-full transition-all ${
-                        formData.color === color ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : ''
+                        formData.color === color
+                          ? 'ring-2 ring-offset-2 ring-primary-500 scale-110'
+                          : ''
                       }`}
                       style={{ backgroundColor: color }}
                     />
@@ -623,7 +646,9 @@ function RankRuleList() {
               </div>
 
               <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl mb-5'>
-                <label className='text-sm font-medium text-gray-700 dark:text-slate-300'>启用</label>
+                <label className='text-sm font-medium text-gray-700 dark:text-slate-300'>
+                  启用
+                </label>
                 <ToggleSwitch
                   checked={formData.is_active}
                   onChange={(v) => setFormData({ ...formData, is_active: v })}

@@ -4,7 +4,11 @@ from flask_wtf.csrf import generate_csrf
 from models import Admin
 from utils.security import generate_tokens, verify_password, set_auth_cookies, clear_auth_cookies
 from utils.response import APIResponse
-from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from api.system.security_routes import (
+    check_login_rate_limit,
+    record_failed_login,
+    clear_login_attempts,
+)
 from utils.logger import log_login_attempt
 
 ns_auth = Namespace("auth", description="统一认证接口")
@@ -83,7 +87,13 @@ class Login(Resource):
 
                 csrf_token = generate_csrf()
                 response.set_cookie(
-                    "csrf_token", value=csrf_token, httponly=False, secure=False, samesite="Lax", max_age=3600, path="/"
+                    "csrf_token",
+                    value=csrf_token,
+                    httponly=False,
+                    secure=False,
+                    samesite="Lax",
+                    max_age=3600,
+                    path="/",
                 )
                 response_data["csrf_token"] = csrf_token
 

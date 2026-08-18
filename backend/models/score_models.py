@@ -9,6 +9,8 @@ class ScoreCategory(db.Model):
     color = db.Column(db.String(20), default="#3B82F6")
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
@@ -20,6 +22,8 @@ class Subject(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class ScoreRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, index=True)
@@ -40,6 +44,8 @@ class ScoreRule(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
     category = db.relationship("ScoreCategory", backref="rules")
+
+
 class ScoreRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
@@ -51,6 +57,8 @@ class ScoreRecord(db.Model):
 
     user = db.relationship("User", backref="records")
     rule = db.relationship("ScoreRule", backref="records")
+
+
 class ScoreRankRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
@@ -60,10 +68,16 @@ class ScoreRankRule(db.Model):
     icon = db.Column(db.String(50), default="Award")
     description = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
-    unlock_min_score = db.Column(db.Integer, nullable=True, comment="开门最低分数要求，NULL则使用全局默认值")
-    weekly_unlock_limit = db.Column(db.Integer, nullable=True, comment="每周开门次数限制，NULL则使用全局默认值")
+    unlock_min_score = db.Column(
+        db.Integer, nullable=True, comment="开门最低分数要求，NULL则使用全局默认值"
+    )
+    weekly_unlock_limit = db.Column(
+        db.Integer, nullable=True, comment="每周开门次数限制，NULL则使用全局默认值"
+    )
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class Exam(db.Model):
     __tablename__ = "exams"
 
@@ -102,6 +116,8 @@ class Exam(db.Model):
 
     class_info = db.relationship("ClassInfo", backref=db.backref("exams", lazy=True))
     admin = db.relationship("Admin", backref=db.backref("exams", lazy=True))
+
+
 class Score(db.Model):
     __tablename__ = "scores"
 
@@ -119,7 +135,9 @@ class Score(db.Model):
 
     # R3 修复: (exam, student, subject) 唯一约束——此前仅应用层 check-then-act，并发/重复录入可写重复成绩
     __table_args__ = (
-        db.UniqueConstraint("exam_id", "student_id", "subject_id", name="uq_scores_exam_student_subject"),
+        db.UniqueConstraint(
+            "exam_id", "student_id", "subject_id", name="uq_scores_exam_student_subject"
+        ),
     )
 
     exam = db.relationship("Exam", backref=db.backref("scores", lazy=True))
@@ -142,6 +160,8 @@ class Score(db.Model):
             "entered_at": self.entered_at.isoformat() if self.entered_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
 class ClassPeriod(db.Model):
     """课时表"""
 
@@ -169,13 +189,16 @@ class ClassPeriod(db.Model):
             "start_minute": self.start_minute,
             "end_hour": self.end_hour,
             "end_minute": self.end_minute,
-            "duration": (self.end_hour * 60 + self.end_minute) - (self.start_hour * 60 + self.start_minute),
+            "duration": (self.end_hour * 60 + self.end_minute)
+            - (self.start_hour * 60 + self.start_minute),
             "description": self.description,
             "is_active": self.is_active,
             "sort_order": self.sort_order,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
 class SubjectClass(db.Model):
     """科目-班级关联表"""
 
@@ -183,7 +206,9 @@ class SubjectClass(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False, index=True)
-    class_info_id = db.Column(db.Integer, db.ForeignKey("class_info.id"), nullable=False, index=True)
+    class_info_id = db.Column(
+        db.Integer, db.ForeignKey("class_info.id"), nullable=False, index=True
+    )
     teacher_id = db.Column(db.Integer, db.ForeignKey("admin.id"), index=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -192,13 +217,17 @@ class SubjectClass(db.Model):
     teacher = db.relationship("Admin", backref=db.backref("subject_teachings", lazy=True))
 
     __table_args__ = (db.UniqueConstraint("subject_id", "class_info_id", name="uq_subject_class"),)
+
+
 class CourseSchedule(db.Model):
     """课程时间表"""
 
     __tablename__ = "course_schedules"
 
     id = db.Column(db.Integer, primary_key=True)
-    class_info_id = db.Column(db.Integer, db.ForeignKey("class_info.id"), nullable=False, index=True)
+    class_info_id = db.Column(
+        db.Integer, db.ForeignKey("class_info.id"), nullable=False, index=True
+    )
     subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False, index=True)
     day_of_week = db.Column(db.Integer, nullable=False)
     period_number = db.Column(db.Integer, nullable=False)
@@ -213,6 +242,8 @@ class CourseSchedule(db.Model):
 
     class_info = db.relationship("ClassInfo", backref=db.backref("schedules", lazy=True))
     subject = db.relationship("Subject", backref=db.backref("schedules", lazy=True))
+
+
 class CompositeScore(db.Model):
     """综合评分记录"""
 
@@ -228,6 +259,8 @@ class CompositeScore(db.Model):
     weights = db.Column(db.JSON)
     computed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class WarningConfig(db.Model):
     """预警配置"""
 

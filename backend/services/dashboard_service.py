@@ -41,7 +41,9 @@ class DashboardService:
         today_start = datetime.combine(today, datetime.min.time())
         today_records = ScoreRecord.query.filter(ScoreRecord.created_at >= today_start).count() or 0
 
-        weekly_records = ScoreRecord.query.filter(ScoreRecord.created_at >= last_7_days).count() or 0
+        weekly_records = (
+            ScoreRecord.query.filter(ScoreRecord.created_at >= last_7_days).count() or 0
+        )
 
         category_stats = (
             db.session.query(

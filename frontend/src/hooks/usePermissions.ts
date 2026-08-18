@@ -12,15 +12,15 @@ interface AdminWithRoles {
 }
 
 export function usePermissions() {
-  const { 
-    permissions, 
-    roles, 
-    isLoading, 
-    error, 
-    isAdmin, 
+  const {
+    permissions,
+    roles,
+    isLoading,
+    error,
+    isAdmin,
     isSuperAdmin,
-    hasPermission, 
-    hasAnyPermission, 
+    hasPermission,
+    hasAnyPermission,
     hasAllPermissions,
     loadPermissions,
     reloadPermissions,
@@ -32,8 +32,7 @@ export function usePermissions() {
       try {
         const admin = JSON.parse(adminStr);
         loadPermissions(admin.id);
-      } catch {
-      }
+      } catch {}
     }
   }, [isLoading, loadPermissions]);
 

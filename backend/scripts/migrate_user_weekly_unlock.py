@@ -7,10 +7,13 @@ UnlockValidator 的周开锁限额此前依赖内存属性（模型无对应列�
 用法（须系统 Python 3.11）:
     python scripts/migrate_user_weekly_unlock.py
 """
+
 import os
 import sqlite3
 
-DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db"))
+DB = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db")
+)
 
 
 def main():

@@ -7,9 +7,9 @@ from services.duty_service import duty_service
 
 class TestDutyService:
     def test_create_group(self, app, db_session):
-        result = duty_service.create_group({
-            "class_id": 1, "name": "第一值日组", "day_of_week": "monday", "area": "教室"
-        })
+        result = duty_service.create_group(
+            {"class_id": 1, "name": "第一值日组", "day_of_week": "monday", "area": "教室"}
+        )
         assert result[0]["success"] is True
         assert result[1] == 201
 
@@ -22,19 +22,27 @@ class TestDutyService:
     def test_create_assignment(self, app, db_session):
         group_result = duty_service.create_group({"class_id": 1, "name": "测试组"})
         group_id = group_result[0]["data"]["id"]
-        result = duty_service.create_assignment({
-            "group_id": group_id, "student_id": 1,
-            "date": date.today().isoformat(), "task": "擦黑板"
-        })
+        result = duty_service.create_assignment(
+            {
+                "group_id": group_id,
+                "student_id": 1,
+                "date": date.today().isoformat(),
+                "task": "擦黑板",
+            }
+        )
         assert result[0]["success"] is True
 
     def test_mark_complete(self, app, db_session):
         group_result = duty_service.create_group({"class_id": 1, "name": "完成测试组"})
         group_id = group_result[0]["data"]["id"]
-        assign_result = duty_service.create_assignment({
-            "group_id": group_id, "student_id": 1,
-            "date": date.today().isoformat(), "task": "扫地"
-        })
+        assign_result = duty_service.create_assignment(
+            {
+                "group_id": group_id,
+                "student_id": 1,
+                "date": date.today().isoformat(),
+                "task": "扫地",
+            }
+        )
         assignment_id = assign_result[0]["data"]["id"]
         result = duty_service.mark_complete(assignment_id)
         assert result["success"] is True

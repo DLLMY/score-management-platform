@@ -26,35 +26,41 @@ function BatchActionBar<T = unknown>({
   selectedIds: _selectedIds,
   onClearSelection,
   actions,
-  getItemName = (item: T) => (item as Record<string, unknown>).name as string || '项目',
+  getItemName = (item: T) => ((item as Record<string, unknown>).name as string) || '项目',
 }: BatchActionBarProps<T>) {
   const [showActionMenu, setShowActionMenu] = useState<boolean>(false);
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 
-  const handleAction = useCallback(async (action: BatchAction<T>) => {
-    if (selectedItems.length === 0) return;
+  const handleAction = useCallback(
+    async (action: BatchAction<T>) => {
+      if (selectedItems.length === 0) return;
 
-    if (action.confirmMessage) {
-      const confirmed = window.confirm(
-        `${action.confirmMessage}\n\n已选择 ${selectedItems.length} 项：\n${selectedItems.slice(0, 3).map(getItemName).join('\n')}${selectedItems.length > 3 ? '\n...' : ''}`
-      );
-      if (!confirmed) return;
-    }
+      if (action.confirmMessage) {
+        const confirmed = window.confirm(
+          `${action.confirmMessage}\n\n已选择 ${selectedItems.length} 项：\n${selectedItems
+            .slice(0, 3)
+            .map(getItemName)
+            .join('\n')}${selectedItems.length > 3 ? '\n...' : ''}`
+        );
+        if (!confirmed) return;
+      }
 
-    setLoadingActionId(action.id);
-    try {
-      await action.handler(selectedItems);
-      onClearSelection();
-    } catch (error) {
-      logger.error('批量操作失败:', error);
-    } finally {
-      setLoadingActionId(null);
-      setShowActionMenu(false);
-    }
-  }, [selectedItems, onClearSelection, getItemName]);
+      setLoadingActionId(action.id);
+      try {
+        await action.handler(selectedItems);
+        onClearSelection();
+      } catch (error) {
+        logger.error('批量操作失败:', error);
+      } finally {
+        setLoadingActionId(null);
+        setShowActionMenu(false);
+      }
+    },
+    [selectedItems, onClearSelection, getItemName]
+  );
 
-  const primaryActions = actions.filter(a => !a.variant || a.variant === 'primary');
-  const secondaryActions = actions.filter(a => a.variant && a.variant !== 'primary');
+  const primaryActions = actions.filter((a) => !a.variant || a.variant === 'primary');
+  const secondaryActions = actions.filter((a) => a.variant && a.variant !== 'primary');
 
   return (
     <div className='bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4 animate-in slide-in-from-top-2 duration-200'>
@@ -109,13 +115,11 @@ function BatchActionBar<T = unknown>({
 
               {showActionMenu && (
                 <>
-                  <div
-                    className='fixed inset-0 z-10'
-                    onClick={() => setShowActionMenu(false)}
-                  />
+                  <div className='fixed inset-0 z-10' onClick={() => setShowActionMenu(false)} />
                   <div className='absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 min-w-[160px] z-20'>
                     {secondaryActions.map((action) => {
-                      const isDisabled = action.disabled?.(selectedItems) || loadingActionId !== null;
+                      const isDisabled =
+                        action.disabled?.(selectedItems) || loadingActionId !== null;
                       return (
                         <button
                           key={action.id}

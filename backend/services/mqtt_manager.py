@@ -97,7 +97,12 @@ class MQTTManager:
         ]
         # 控制类 topic（遥测连接收到这些时跳过，交由控制连接处理，避免重复业务派发）
         self._CONTROL_TOPIC_EXACT = ("phonebox/query",)
-        self._CONTROL_TOPIC_PREFIXES = ("score/", "phonebox/unlock/", "phonebox/ota/", "phonebox/points/")
+        self._CONTROL_TOPIC_PREFIXES = (
+            "score/",
+            "phonebox/unlock/",
+            "phonebox/ota/",
+            "phonebox/points/",
+        )
 
     @property
     def state(self):
@@ -135,7 +140,9 @@ class MQTTManager:
                     }
                     # R2: 记录最近一次已知好配置，供重连 / DB 读取失败时回退
                     self._last_known_good = dict(self._config)
-                    print(f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}")
+                    print(
+                        f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}"
+                    )
                     return True
         except Exception as e:
             print(f"[MQTTManager] 从数据库加载配置失败: {e}")
@@ -294,7 +301,12 @@ class MQTTManager:
             with flask_app.app_context():
                 try:
                     db.session.add(
-                        MQTTLog(topic=topic, message=message, direction="receive", timestamp=datetime.now())
+                        MQTTLog(
+                            topic=topic,
+                            message=message,
+                            direction="receive",
+                            timestamp=datetime.now(),
+                        )
                     )
                     db.session.commit()
                 except Exception:
@@ -309,11 +321,16 @@ class MQTTManager:
     def _queue_message(self, topic, message):
         """将消息加入队列，批量处理"""
         with self._queue_lock:
-            self._message_queue.append({"topic": topic, "message": message, "timestamp": time.time()})
+            self._message_queue.append(
+                {"topic": topic, "message": message, "timestamp": time.time()}
+            )
 
         # 检查是否需要立即刷新
         current_time = time.time()
-        if current_time - self._last_flush_time >= self._flush_interval or len(self._message_queue) >= 50:
+        if (
+            current_time - self._last_flush_time >= self._flush_interval
+            or len(self._message_queue) >= 50
+        ):
             self._flush_messages()
 
     def _flush_messages(self):
@@ -349,7 +366,9 @@ class MQTTManager:
                 timestamp = datetime.fromtimestamp(msg["timestamp"])
 
                 # 创建日志记录
-                logs_to_insert.append(MQTTLog(topic=topic, message=message, direction="receive", timestamp=timestamp))
+                logs_to_insert.append(
+                    MQTTLog(topic=topic, message=message, direction="receive", timestamp=timestamp)
+                )
 
                 # 心跳消息单独收集用于更新设备状态
                 if topic == "phonebox/heartbeat":
@@ -423,6 +442,7 @@ class MQTTManager:
                 # 版本协商 + 可能自动推送（无缝 OTA 闭环）
                 try:
                     from services.ota_negotiation_service import try_auto_negotiate
+
                     try_auto_negotiate(device)
                 except Exception as neg_e:
                     print(f"[OTA] 协商跳过（异常）: {neg_e}")
@@ -584,7 +604,9 @@ class MQTTManager:
                     device = Device.query.filter_by(device_id=device_id).first()
                     if not device:
                         # 自动注册新设备
-                        device = Device(device_id=device_id, name=f"设备 {device_id}", status="online")
+                        device = Device(
+                            device_id=device_id, name=f"设备 {device_id}", status="online"
+                        )
                         db.session.add(device)
                         print(f"[设备注册] 新设备自动注册: {device_id}")
 
@@ -630,6 +652,7 @@ class MQTTManager:
                     # 版本协商 + 可能自动推送（无缝 OTA 闭环）
                     try:
                         from services.ota_negotiation_service import try_auto_negotiate
+
                         try_auto_negotiate(device)
                     except Exception as neg_e:
                         print(f"[OTA] 协商跳过（异常）: {neg_e}")
@@ -646,7 +669,9 @@ class MQTTManager:
                             "box_a_status": device.box_a_status,
                             "box_b_status": device.box_b_status,
                             "system_state": device.system_state,
-                            "last_heartbeat": device.last_heartbeat.isoformat() if device.last_heartbeat else None,
+                            "last_heartbeat": (
+                                device.last_heartbeat.isoformat() if device.last_heartbeat else None
+                            ),
                         }
                         send_device_status(device_id, device_data)
                         print(f"设备状态已通过WebSocket发送: {device_id}")
@@ -689,7 +714,9 @@ class MQTTManager:
         else:
             self._reconnect_thread = t
 
-    def _create_and_connect_client(self, suffix, subscriptions, on_connect, on_message, on_disconnect):
+    def _create_and_connect_client(
+        self, suffix, subscriptions, on_connect, on_message, on_disconnect
+    ):
         """创建 paho 客户端、配置回调、异步连接并等待确认。返回 client（已 loop_start）。"""
         cfg = self._get_config()
         broker = cfg.get("broker", self.DEFAULT_CONFIG["broker"])
@@ -827,9 +854,16 @@ class MQTTManager:
                 print(f"[MQTTManager] 发布成功: {topic}", flush=True)
                 return True
             else:
-                error_messages = {1: "协议错误", 2: "无效主题", 3: "消息太大", 4: "权限不足", 5: "服务器不可用"}
+                error_messages = {
+                    1: "协议错误",
+                    2: "无效主题",
+                    3: "消息太大",
+                    4: "权限不足",
+                    5: "服务器不可用",
+                }
                 print(
-                    f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}", flush=True
+                    f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}",
+                    flush=True,
                 )
                 return False
         except Exception as e:

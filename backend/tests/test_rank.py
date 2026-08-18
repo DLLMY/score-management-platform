@@ -7,6 +7,7 @@
 
 依赖 conftest 的 app/client/auth_headers/app_context fixture。
 """
+
 import uuid
 
 import pytest
@@ -46,9 +47,7 @@ class TestRankBoard:
         assert "total_students" in body["data"]
 
     def test_student_ranking_by_class(self, client, auth_headers):
-        resp = client.get(
-            "/api/rank/student?class_name=高三1班&limit=10", headers=auth_headers
-        )
+        resp = client.get("/api/rank/student?class_name=高三1班&limit=10", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.get_json()
         assert body["success"] is True
@@ -58,7 +57,9 @@ class TestRankBoard:
         # 学生 token(type=student) 调 Admin 权限端点（score.view）必须被拒。
         # requires_permission 用 validate_token(token,"access") 校验，type 不匹配返回 None
         # → 端点按“无效令牌”返回 401（与 student 端拒绝 admin token 对称）。
-        token = generate_student_token(rank_student.id, rank_student.name, rank_student.card_id)["token"]
+        token = generate_student_token(rank_student.id, rank_student.name, rank_student.card_id)[
+            "token"
+        ]
         headers = {"Authorization": "Bearer " + token}
         for path in ("/api/rank/class", "/api/rank/student"):
             resp = client.get(path, headers=headers)

@@ -53,7 +53,6 @@ interface ScoreUpdate {
   timestamp: string;
 }
 
-
 // ============================================
 // 2. 全局UI状态 - Global Store
 // ============================================
@@ -101,7 +100,11 @@ export const useGlobalStore = create<GlobalState>()((set) => ({
 // ============================================
 interface ToastState {
   toasts: Toast[];
-  addToast: (message: string, type?: 'success' | 'error' | 'warning' | 'info', duration?: number) => void;
+  addToast: (
+    message: string,
+    type?: 'success' | 'error' | 'warning' | 'info',
+    duration?: number
+  ) => void;
   removeToast: (id: number) => void;
   clearAllToasts: () => void;
   success: (message: string) => void;
@@ -227,12 +230,12 @@ export const useWebSocketStore = create<WebSocketState>()((set, get) => ({
     if (globalSocketInstance && globalSocketInstance.connected) {
       return;
     }
-    
+
     // 如果正在连接中，跳过
     if (isSocketConnecting) {
       return;
     }
-    
+
     // 断开旧连接
     if (globalSocketInstance) {
       globalSocketInstance.disconnect();
@@ -249,9 +252,7 @@ export const useWebSocketStore = create<WebSocketState>()((set, get) => ({
       return Math.min(delay + jitter, MAX_RECONNECT_DELAY);
     };
 
-    const socketUrl = isDevelopment 
-      ? 'http://localhost:5000'
-      : window.location.origin;
+    const socketUrl = isDevelopment ? 'http://localhost:5000' : window.location.origin;
 
     const socketInstance = io(socketUrl, {
       path: '/socket.io',
@@ -261,9 +262,9 @@ export const useWebSocketStore = create<WebSocketState>()((set, get) => ({
       reconnectionDelay: BASE_RECONNECT_DELAY,
       reconnectionDelayMax: MAX_RECONNECT_DELAY,
     });
-    
+
     globalSocketInstance = socketInstance;
-    
+
     socketInstance.on('connect', () => {
       isSocketConnecting = false;
       currentReconnectAttempt = 0;
@@ -282,7 +283,11 @@ export const useWebSocketStore = create<WebSocketState>()((set, get) => ({
       currentReconnectAttempt++;
       if (currentReconnectAttempt <= MAX_RECONNECT_ATTEMPTS) {
         const delay = calculateReconnectionDelay(currentReconnectAttempt);
-        logger.log(`[WebSocket] 连接失败 (${currentReconnectAttempt}/${MAX_RECONNECT_ATTEMPTS}), ${(delay / 1000).toFixed(1)}s后重试: ${error.message}`);
+        logger.log(
+          `[WebSocket] 连接失败 (${currentReconnectAttempt}/${MAX_RECONNECT_ATTEMPTS}), ${(
+            delay / 1000
+          ).toFixed(1)}s后重试: ${error.message}`
+        );
       } else {
         logger.error('[WebSocket] 重连失败超过最大次数，停止重连');
         useToastStore.getState().error('WebSocket连接失败，请刷新页面重试');
@@ -385,29 +390,32 @@ export const usePermissionStore = create<PermissionState>()(
         const now = Date.now();
         const cachedPermissions = localStorage.getItem('user_permissions');
         const cachedRoles = localStorage.getItem('user_roles');
-        
-        if (cachedPermissions && cachedRoles && now - permissionCacheTimestamp < PERMISSION_CACHE_TTL) {
+
+        if (
+          cachedPermissions &&
+          cachedRoles &&
+          now - permissionCacheTimestamp < PERMISSION_CACHE_TTL
+        ) {
           try {
             const permissions = JSON.parse(cachedPermissions);
             const roles = JSON.parse(cachedRoles);
             get().setPermissions(permissions, roles);
             return;
-          } catch {
-          }
+          } catch {}
         }
 
         set({ isLoading: true, error: null });
         try {
           const rbacApi = await import('../services/rbacApi');
           const result = await rbacApi.default.getAdminRoles(adminId);
-          
+
           const permissions = result.permissions || [];
           const roles = result.roles || [];
-          
+
           permissionCacheTimestamp = Date.now();
           localStorage.setItem('user_permissions', JSON.stringify(permissions));
           localStorage.setItem('user_roles', JSON.stringify(roles));
-          
+
           get().setPermissions(permissions, roles);
         } catch (error) {
           logger.error('Failed to load permissions:', error);
@@ -415,14 +423,22 @@ export const usePermissionStore = create<PermissionState>()(
           if (adminStr) {
             try {
               const admin = JSON.parse(adminStr);
-              const defaultPermissions = admin.role === 'admin' 
-                ? ['all'] 
-                : ['student.view', 'class.view', 'subject.view', 'rule.view', 'score.view', 'score.entry'];
+              const defaultPermissions =
+                admin.role === 'admin'
+                  ? ['all']
+                  : [
+                      'student.view',
+                      'class.view',
+                      'subject.view',
+                      'rule.view',
+                      'score.view',
+                      'score.entry',
+                    ];
               const defaultRoles = [admin.role || 'teacher'];
               get().setPermissions(defaultPermissions, defaultRoles);
             } catch {
-              set({ 
-                error: (error as Error).message, 
+              set({
+                error: (error as Error).message,
                 isLoading: false,
                 permissions: [],
                 roles: [],
@@ -431,8 +447,8 @@ export const usePermissionStore = create<PermissionState>()(
               });
             }
           } else {
-            set({ 
-              error: (error as Error).message, 
+            set({
+              error: (error as Error).message,
               isLoading: false,
               permissions: [],
               roles: [],
@@ -464,10 +480,10 @@ export const usePermissionStore = create<PermissionState>()(
       setPermissions: (permissions, roles) => {
         const isSuperAdmin = roles.includes('super_admin');
         const isAdmin = roles.some((r) => ['admin', 'super_admin'].includes(r));
-        set({ 
-          permissions, 
-          roles, 
-          isLoading: false, 
+        set({
+          permissions,
+          roles,
+          isLoading: false,
           error: null,
           isAdmin,
           isSuperAdmin,
@@ -492,10 +508,10 @@ export const usePermissionStore = create<PermissionState>()(
       },
 
       clearPermissions: () => {
-        set({ 
-          permissions: [], 
-          roles: [], 
-          isLoading: false, 
+        set({
+          permissions: [],
+          roles: [],
+          isLoading: false,
           error: null,
           isAdmin: false,
           isSuperAdmin: false,
@@ -539,13 +555,12 @@ export const stores = {
 export const initStores = (): void => {
   useThemeStore.getState().initTheme();
   useGlobalStore.getState().initNetworkListener();
-  
+
   const adminStr = localStorage.getItem('admin');
   if (adminStr) {
     try {
       const admin = JSON.parse(adminStr);
       usePermissionStore.getState().loadPermissions(admin.id);
-    } catch {
-    }
+    } catch {}
   }
 };

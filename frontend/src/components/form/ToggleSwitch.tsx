@@ -46,7 +46,9 @@ export function ToggleSwitch({
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <div
-        className={`absolute top-0.5 ${s.knob} bg-white rounded-full shadow-lg transition-all duration-300 ${
+        className={`absolute top-0.5 ${
+          s.knob
+        } bg-white rounded-full shadow-lg transition-all duration-300 ${
           checked ? s.knobOn : 'left-0.5'
         }`}
       />

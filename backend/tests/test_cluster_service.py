@@ -11,8 +11,10 @@ class TestClusterService(unittest.TestCase):
 
     def test_perform_clustering_empty_data(self):
         """测试空数据分群"""
-        with patch('services.cluster_service.AlgorithmService.get_student_data_for_analysis',
-                return_value=pd.DataFrame()):
+        with patch(
+            "services.cluster_service.AlgorithmService.get_student_data_for_analysis",
+            return_value=pd.DataFrame(),
+        ):
             result = ClusterService.perform_clustering()
 
             assert result["message"] == "没有足够的数据进行分群"
@@ -20,28 +22,41 @@ class TestClusterService(unittest.TestCase):
 
     def test_perform_clustering_with_data(self):
         """测试正常分群"""
-        mock_df = pd.DataFrame({
-            "user_id": [1, 2, 3, 4],
-            "name": ["Alice", "Bob", "Charlie", "David"],
-            "class_name": ["Class A", "Class A", "Class B", "Class B"],
-            "behavior_score": [80, 60, 70, 50],
-            "academic_score": [85, 55, 75, 45],
-        })
+        mock_df = pd.DataFrame(
+            {
+                "user_id": [1, 2, 3, 4],
+                "name": ["Alice", "Bob", "Charlie", "David"],
+                "class_name": ["Class A", "Class A", "Class B", "Class B"],
+                "behavior_score": [80, 60, 70, 50],
+                "academic_score": [85, 55, 75, 45],
+            }
+        )
 
         mock_labels = np.array([0, 1, 0, 1])
         mock_centroids = np.array([[0.5, 0.5], [-0.5, -0.5]])
         mock_cluster_names = {0: "优秀群", 1: "待提升群"}
 
-        with patch('services.cluster_service.AlgorithmService.get_student_data_for_analysis', return_value=mock_df), \
-                          patch('services.cluster_service.AlgorithmService.standardize_data'
-             , return_value=np.array([1.0, -1.0, 0.5, -0.5])), \
-                          patch('services.cluster_service.AlgorithmService.kmeans_cluster'
-             , return_value=(mock_labels, mock_centroids)), \
-                          patch('services.cluster_service.AlgorithmService.determine_cluster_names'
-             , return_value=mock_cluster_names), \
-             patch('services.cluster_service.ClusterService._save_cluster_results'), \
-             patch('services.cluster_service.ClusterService._invalidate_cache'), \
-             patch('services.cluster_service.get_cache_service') as mock_cache:
+        with (
+            patch(
+                "services.cluster_service.AlgorithmService.get_student_data_for_analysis",
+                return_value=mock_df,
+            ),
+            patch(
+                "services.cluster_service.AlgorithmService.standardize_data",
+                return_value=np.array([1.0, -1.0, 0.5, -0.5]),
+            ),
+            patch(
+                "services.cluster_service.AlgorithmService.kmeans_cluster",
+                return_value=(mock_labels, mock_centroids),
+            ),
+            patch(
+                "services.cluster_service.AlgorithmService.determine_cluster_names",
+                return_value=mock_cluster_names,
+            ),
+            patch("services.cluster_service.ClusterService._save_cluster_results"),
+            patch("services.cluster_service.ClusterService._invalidate_cache"),
+            patch("services.cluster_service.get_cache_service") as mock_cache,
+        ):
 
             mock_cache_instance = MagicMock()
             mock_cache.return_value = mock_cache_instance
@@ -56,7 +71,7 @@ class TestClusterService(unittest.TestCase):
 
     def test_invalidate_cache_with_class(self):
         """测试清除指定班级缓存"""
-        with patch('services.cluster_service.get_cache_service') as mock_cache:
+        with patch("services.cluster_service.get_cache_service") as mock_cache:
             mock_cache_instance = MagicMock()
             mock_cache.return_value = mock_cache_instance
 
@@ -66,7 +81,7 @@ class TestClusterService(unittest.TestCase):
 
     def test_invalidate_cache_all(self):
         """测试清除所有缓存"""
-        with patch('services.cluster_service.get_cache_service') as mock_cache:
+        with patch("services.cluster_service.get_cache_service") as mock_cache:
             mock_cache_instance = MagicMock()
             mock_cache.return_value = mock_cache_instance
 
@@ -84,7 +99,7 @@ class TestClusterService(unittest.TestCase):
             "cluster_summary": [],
         }
 
-        with patch('services.cluster_service.get_cache_service') as mock_cache:
+        with patch("services.cluster_service.get_cache_service") as mock_cache:
             mock_cache_instance = MagicMock()
             mock_cache.return_value = mock_cache_instance
             mock_cache_instance.get.return_value = mock_cache_result
@@ -95,8 +110,10 @@ class TestClusterService(unittest.TestCase):
 
     def test_get_cluster_results_no_data(self):
         """测试无分群数据"""
-        with patch('services.cluster_service.get_cache_service') as mock_cache, \
-             patch('services.cluster_service.StudentCluster') as mock_cluster:
+        with (
+            patch("services.cluster_service.get_cache_service") as mock_cache,
+            patch("services.cluster_service.StudentCluster") as mock_cluster,
+        ):
 
             mock_cache_instance = MagicMock()
             mock_cache.return_value = mock_cache_instance
@@ -109,7 +126,7 @@ class TestClusterService(unittest.TestCase):
 
     def test_get_cluster_by_user_not_found(self):
         """测试获取不存在的学生分群"""
-        with patch('services.cluster_service.StudentCluster') as mock_cluster:
+        with patch("services.cluster_service.StudentCluster") as mock_cluster:
             mock_cluster.query.filter_by.return_value.first.return_value = None
 
             result = ClusterService.get_cluster_by_user(999)
@@ -128,7 +145,7 @@ class TestClusterService(unittest.TestCase):
         }
         mock_cluster.updated_at.isoformat.return_value = "2024-01-01T00:00:00"
 
-        with patch('services.cluster_service.StudentCluster') as mock_cluster_class:
+        with patch("services.cluster_service.StudentCluster") as mock_cluster_class:
             mock_cluster_class.query.filter_by.return_value.first.return_value = mock_cluster
 
             result = ClusterService.get_cluster_by_user(1)
@@ -144,7 +161,7 @@ class TestClusterService(unittest.TestCase):
         mock_score2 = MagicMock()
         mock_score2.score = 90
 
-        with patch('services.cluster_service.Score') as mock_score:
+        with patch("services.cluster_service.Score") as mock_score:
             mock_score.query.filter_by.return_value.all.return_value = [mock_score1, mock_score2]
 
             result = ClusterService._get_student_avg_score(1)
@@ -153,7 +170,7 @@ class TestClusterService(unittest.TestCase):
 
     def test_get_student_avg_score_no_scores(self):
         """测试获取学生平均成绩（无成绩）"""
-        with patch('services.cluster_service.Score') as mock_score:
+        with patch("services.cluster_service.Score") as mock_score:
             mock_score.query.filter_by.return_value.all.return_value = []
 
             result = ClusterService._get_student_avg_score(1)
@@ -167,7 +184,7 @@ class TestClusterService(unittest.TestCase):
         mock_score2 = MagicMock()
         mock_score2.score = None
 
-        with patch('services.cluster_service.Score') as mock_score:
+        with patch("services.cluster_service.Score") as mock_score:
             mock_score.query.filter_by.return_value.all.return_value = [mock_score1, mock_score2]
 
             result = ClusterService._get_student_avg_score(1)
@@ -175,5 +192,5 @@ class TestClusterService(unittest.TestCase):
             assert result == 80.0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

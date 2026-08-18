@@ -50,7 +50,9 @@ class FullTextSearch:
             with db.engine.connect() as conn:
                 # 检查FTS表是否存在
                 result = conn.execute(  # noqa: F841
-                    db.text("SELECT name FROM sqlite_master WHERE type='table' AND name='user_search_idx'")
+                    db.text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_search_idx'"
+                    )
                 )
                 if result.fetchone():
                     logger.info("[FullTextSearch] FTS5索引已存在")
@@ -87,7 +89,9 @@ class FullTextSearch:
         try:
             # 使用原生SQL查询避免ORM上下文问题
             result = conn.execute(
-                db.text("SELECT id, name, card_id, phone, class_name FROM user WHERE is_active = 1")  # noqa: F841
+                db.text(
+                    "SELECT id, name, card_id, phone, class_name FROM user WHERE is_active = 1"
+                )  # noqa: F841
             )
             rows = result.fetchall()
             count = 0
@@ -145,7 +149,9 @@ class FullTextSearch:
 
         try:
             with db.engine.connect() as conn:
-                conn.execute(db.text("DELETE FROM user_search_idx WHERE rowid = :id"), {"id": user_id})
+                conn.execute(
+                    db.text("DELETE FROM user_search_idx WHERE rowid = :id"), {"id": user_id}
+                )
                 conn.commit()
             self._invalidate_cache()
         except Exception as e:
@@ -268,7 +274,9 @@ class FullTextSearch:
                 )
             )
 
-        pagination = query.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        pagination = query.order_by(User.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
 
         return {
             "users": [

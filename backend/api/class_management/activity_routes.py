@@ -5,28 +5,37 @@ from utils.permission import requires_permission
 
 ns_activity = Namespace("activity", description="文体活动管理")
 
-activity_model = ns_activity.model("ActivityInput", {
-    "class_id": fields.Integer(required=True),
-    "title": fields.String(required=True),
-    "description": fields.String(),
-    "activity_type": fields.String(),
-    "start_date": fields.String(),
-    "end_date": fields.String(),
-    "location": fields.String(),
-    "organizer": fields.String(),
-})
+activity_model = ns_activity.model(
+    "ActivityInput",
+    {
+        "class_id": fields.Integer(required=True),
+        "title": fields.String(required=True),
+        "description": fields.String(),
+        "activity_type": fields.String(),
+        "start_date": fields.String(),
+        "end_date": fields.String(),
+        "location": fields.String(),
+        "organizer": fields.String(),
+    },
+)
 
-register_model = ns_activity.model("RegisterInput", {
-    "student_id": fields.Integer(required=True),
-})
+register_model = ns_activity.model(
+    "RegisterInput",
+    {
+        "student_id": fields.Integer(required=True),
+    },
+)
 
 
 @ns_activity.route("")
 class ActivityList(Resource):
-    @ns_activity.doc("list_activities", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "is_published": {"description": "是否已发布"},
-    })
+    @ns_activity.doc(
+        "list_activities",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "is_published": {"description": "是否已发布"},
+        },
+    )
     @requires_permission("activity.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)

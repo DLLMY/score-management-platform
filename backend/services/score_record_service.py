@@ -48,7 +48,9 @@ def create_record(data):
         _cfg = _SysCfg.query.first()
         _min_s = _cfg.min_score if _cfg else 0
         _max_s = _cfg.max_score if _cfg else 100
-        ok, final_score = atomic_score_update(user_id, score_change, min_score=_min_s, max_score=_max_s)
+        ok, final_score = atomic_score_update(
+            user_id, score_change, min_score=_min_s, max_score=_max_s
+        )
         if ok:
             user.current_score = final_score
     db.session.commit()
@@ -107,7 +109,9 @@ def commit_batch_score_entry(created_records):
                 )
         except Exception:
             db.session.rollback()
-            errors.extend([{"index": item["index"], "error": "数据库提交失败"} for item in created_records])
+            errors.extend(
+                [{"index": item["index"], "error": "数据库提交失败"} for item in created_records]
+            )
     return results, errors
 
 
@@ -130,7 +134,10 @@ def create_score_entry(data):
 
     before_score = user.current_score or 0
     # 排名计算（与原路由一致，懒导入 rank_routes 缓存/二分查找）
-    from api.scores.rank_routes import _find_rank_by_score_binary_search, _get_active_rank_rules_cached
+    from api.scores.rank_routes import (
+        _find_rank_by_score_binary_search,
+        _get_active_rank_rules_cached,
+    )
 
     before_rules = _get_active_rank_rules_cached()
     before_rank = _find_rank_by_score_binary_search(before_rules, before_score)
@@ -143,7 +150,11 @@ def create_score_entry(data):
     after_rank_name = after_rank.get("name") if after_rank else "无等级"
 
     record = ScoreRecord(
-        student_id=user_id, rule_id=rule_id, score_change=score_change, description=description, operator=operator
+        student_id=user_id,
+        rule_id=rule_id,
+        score_change=score_change,
+        description=description,
+        operator=operator,
     )
     db.session.add(record)
     log_entry = log_operation(

@@ -100,9 +100,7 @@ function renderOptions(options: EntityOption[], props: EntitySelectProps, label:
   );
 }
 
-function EntitySelect(
-  props: EntitySelectProps & { options: EntityOption[]; label: string }
-) {
+function EntitySelect(props: EntitySelectProps & { options: EntityOption[]; label: string }) {
   const { value, onChange, disabled, className, options, label } = props;
 
   // 非可选场景：options 就绪后若 value 为空，自动默认第一项（保持原"默认第一个班级"交互）

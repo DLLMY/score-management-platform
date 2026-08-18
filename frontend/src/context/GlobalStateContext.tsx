@@ -80,11 +80,7 @@ export function GlobalStateProvider({ children }: GlobalStateProviderProps): Rea
     clearAuth,
   };
 
-  return (
-    <GlobalStateContext.Provider value={value}>
-      {children}
-    </GlobalStateContext.Provider>
-  );
+  return <GlobalStateContext.Provider value={value}>{children}</GlobalStateContext.Provider>;
 }
 
 export function useGlobalState(): GlobalStateContextValue {

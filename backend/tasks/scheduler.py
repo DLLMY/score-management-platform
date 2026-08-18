@@ -10,6 +10,7 @@
   2. shutdown_scheduler —— 被 tests/conftest.py 引用（no-op 兼容，测试
      实际关闭的是 service_init 启动的调度器，见其 _ACTIVE_SCHEDULERS）。
 """
+
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -23,7 +24,9 @@ def scheduled_approval_timeout_check(app):
 
         with app.app_context():
             config = SystemConfig.query.first()
-            timeout_hours = config.approval_timeout_hours if config and config.approval_timeout_hours else 24
+            timeout_hours = (
+                config.approval_timeout_hours if config and config.approval_timeout_hours else 24
+            )
 
             timeout_threshold = datetime.now() - timedelta(hours=timeout_hours)
 
@@ -43,7 +46,9 @@ def scheduled_approval_timeout_check(app):
                         "title": approval.title,
                         "description": approval.description,
                         "score_change": approval.score_change,
-                        "created_at": approval.created_at.isoformat() if approval.created_at else None,
+                        "created_at": (
+                            approval.created_at.isoformat() if approval.created_at else None
+                        ),
                         "timeout_hours": timeout_hours,
                         "timestamp": datetime.now().isoformat(),
                     }

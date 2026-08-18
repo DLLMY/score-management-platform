@@ -1,6 +1,15 @@
 from datetime import datetime, timedelta, date
 
-from models import db, User, ClassInfo, Attendance, Approval, HomeworkAssignment, HomeworkSubmission, ScoreRecord
+from models import (
+    db,
+    User,
+    ClassInfo,
+    Attendance,
+    Approval,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    ScoreRecord,
+)
 from services.engagement_service import calculate_engagement
 
 
@@ -31,23 +40,38 @@ class TestEngagementService:
         today = date.today()
         with app.app_context():
             for k in range(10):
-                db.session.add(Attendance(
-                    student_id=sid, class_id=cid,
-                    date=today - timedelta(days=k), status="present",
-                ))
+                db.session.add(
+                    Attendance(
+                        student_id=sid,
+                        class_id=cid,
+                        date=today - timedelta(days=k),
+                        status="present",
+                    )
+                )
             ha = HomeworkAssignment(
-                id=1, class_id=cid, title="作业1",
-                assigned_date=today - timedelta(days=5), due_date=today,
+                id=1,
+                class_id=cid,
+                title="作业1",
+                assigned_date=today - timedelta(days=5),
+                due_date=today,
             )
             db.session.add(ha)
-            db.session.add(HomeworkSubmission(
-                assignment_id=1, student_id=sid, is_submitted=True, is_late=False,
-            ))
+            db.session.add(
+                HomeworkSubmission(
+                    assignment_id=1,
+                    student_id=sid,
+                    is_submitted=True,
+                    is_late=False,
+                )
+            )
             for k in range(5):
-                db.session.add(ScoreRecord(
-                    student_id=sid, score_change=2,
-                    created_at=datetime.now() - timedelta(days=k),
-                ))
+                db.session.add(
+                    ScoreRecord(
+                        student_id=sid,
+                        score_change=2,
+                        created_at=datetime.now() - timedelta(days=k),
+                    )
+                )
             db.session.commit()
 
         with app.app_context():
@@ -58,7 +82,10 @@ class TestEngagementService:
         assert 0 <= result["engagement_score"] <= 100
         assert result["level"] in ("high", "medium", "low")
         assert set(result["components"].keys()) == {
-            "attendance_rate", "homework_rate", "activity_rate", "leave_days",
+            "attendance_rate",
+            "homework_rate",
+            "activity_rate",
+            "leave_days",
         }
         assert result["components"]["attendance_rate"] == 1.0
         assert result["components"]["homework_rate"] == 1.0
@@ -84,10 +111,14 @@ class TestEngagementService:
         today = date.today()
         with app.app_context():
             for k in range(8):
-                db.session.add(Attendance(
-                    student_id=sid, class_id=cid,
-                    date=today - timedelta(days=k), status="present",
-                ))
+                db.session.add(
+                    Attendance(
+                        student_id=sid,
+                        class_id=cid,
+                        date=today - timedelta(days=k),
+                        status="present",
+                    )
+                )
             db.session.commit()
 
         with app.app_context():
@@ -104,20 +135,34 @@ class TestEngagementService:
         today = date.today()
         with app.app_context():
             for k in range(8):
-                db.session.add(Attendance(
-                    student_id=sid, class_id=cid,
-                    date=today - timedelta(days=k), status="present",
-                ))
+                db.session.add(
+                    Attendance(
+                        student_id=sid,
+                        class_id=cid,
+                        date=today - timedelta(days=k),
+                        status="present",
+                    )
+                )
             for k in range(8, 10):
-                db.session.add(Attendance(
-                    student_id=sid, class_id=cid,
-                    date=today - timedelta(days=k), status="absent",
-                ))
-            db.session.add(Approval(
-                student_id=sid, type="leave", leave_type="病假",
-                start_date=today - timedelta(days=9), end_date=today,
-                description="", status="approved",
-            ))
+                db.session.add(
+                    Attendance(
+                        student_id=sid,
+                        class_id=cid,
+                        date=today - timedelta(days=k),
+                        status="absent",
+                    )
+                )
+            db.session.add(
+                Approval(
+                    student_id=sid,
+                    type="leave",
+                    leave_type="病假",
+                    start_date=today - timedelta(days=9),
+                    end_date=today,
+                    description="",
+                    status="approved",
+                )
+            )
             db.session.commit()
 
         with app.app_context():

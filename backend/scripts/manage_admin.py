@@ -68,7 +68,13 @@ def create_admin(username, password, real_name="管理员", phone="", role="admi
             print(f"用户 {username} 已存在")
             return
         print(f"创建管理员用户: {username}")
-        admin = Admin(username=username, password=hash_password(password), role=role, real_name=real_name, phone=phone)
+        admin = Admin(
+            username=username,
+            password=hash_password(password),
+            role=role,
+            real_name=real_name,
+            phone=phone,
+        )
         db.session.add(admin)
         db.session.commit()
         print("管理员创建成功!")
@@ -93,7 +99,9 @@ def list_admins():
         print("-" * 60)
         for admin in admins:
             created_at = admin.created_at.strftime("%Y-%m-%d %H:%M:%S") if admin.created_at else ""
-            print(f"{admin.id:<5} {admin.username:<15} {admin.real_name:<15} {admin.role:<10} {created_at:<20}")
+            print(
+                f"{admin.id:<5} {admin.username:<15} {admin.real_name:<15} {admin.role:<10} {created_at:<20}"
+            )
 
 
 def delete_admin(username):
@@ -118,10 +126,14 @@ def main():
     parser = argparse.ArgumentParser(description="管理员用户管理工具")
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
     init_parser = subparsers.add_parser("init", help="初始化默认管理员")
-    init_parser.add_argument("--password", default=None, help="默认密码(或使用环境变量ADMIN_INIT_PASSWORD)")
+    init_parser.add_argument(
+        "--password", default=None, help="默认密码(或使用环境变量ADMIN_INIT_PASSWORD)"
+    )
     reset_parser = subparsers.add_parser("reset", help="重置管理员密码")
     reset_parser.add_argument("--username", default="admin", help="用户名")
-    reset_parser.add_argument("--password", default=None, help="新密码(或使用环境变量ADMIN_RESET_PASSWORD)")
+    reset_parser.add_argument(
+        "--password", default=None, help="新密码(或使用环境变量ADMIN_RESET_PASSWORD)"
+    )
     create_parser = subparsers.add_parser("create", help="创建新管理员")
     create_parser.add_argument("username", help="用户名")
     create_parser.add_argument("password", help="密码")

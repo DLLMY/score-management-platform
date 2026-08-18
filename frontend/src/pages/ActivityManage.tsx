@@ -150,7 +150,15 @@ function ActivityManage() {
     } finally {
       setSubmitting(false);
     }
-  }, [formData, validateForm, showToast, handleCloseModal, fetchActivities, selectedClassId, submitting]);
+  }, [
+    formData,
+    validateForm,
+    showToast,
+    handleCloseModal,
+    fetchActivities,
+    selectedClassId,
+    submitting,
+  ]);
 
   const handleDelete = useCallback(
     async (id: number) => {
@@ -359,7 +367,11 @@ function ActivityManage() {
                     )}
                     <div className='flex items-center gap-2'>
                       <Users className='w-4 h-4' />
-                      <span>已报名 {activity.registration_count != null ? activity.registration_count : '--'} 人</span>
+                      <span>
+                        已报名{' '}
+                        {activity.registration_count != null ? activity.registration_count : '--'}{' '}
+                        人
+                      </span>
                     </div>
                   </div>
 
@@ -387,7 +399,10 @@ function ActivityManage() {
       </div>
 
       {showModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={handleCloseModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={handleCloseModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -423,9 +438,7 @@ function ActivityManage() {
                   disabled={!!formData.id}
                   emptyPlaceholder='暂无班级'
                 />
-                {formData.id && (
-                  <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>
-                )}
+                {formData.id && <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>}
               </div>
 
               <div>
@@ -438,14 +451,20 @@ function ActivityManage() {
                   onChange={(e) => handleChange('title', e.target.value)}
                   placeholder='输入活动标题'
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all text-slate-800 dark:text-slate-100 ${
-                    formErrors.title ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-violet-500'
+                    formErrors.title
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-violet-500'
                   }`}
                 />
-                {formErrors.title && <p className='mt-1 text-xs text-red-500'>{formErrors.title}</p>}
+                {formErrors.title && (
+                  <p className='mt-1 text-xs text-red-500'>{formErrors.title}</p>
+                )}
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>活动类型</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  活动类型
+                </label>
                 <select
                   value={formData.activity_type}
                   onChange={(e) => handleChange('activity_type', e.target.value)}
@@ -460,7 +479,9 @@ function ActivityManage() {
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>活动描述</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  活动描述
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
@@ -472,7 +493,9 @@ function ActivityManage() {
 
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>开始日期</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    开始日期
+                  </label>
                   <input
                     type='date'
                     value={formData.start_date}
@@ -481,21 +504,29 @@ function ActivityManage() {
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>结束日期</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    结束日期
+                  </label>
                   <input
                     type='date'
                     value={formData.end_date}
                     onChange={(e) => handleChange('end_date', e.target.value)}
                     className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-slate-800 dark:text-slate-100 ${
-                      formErrors.end_date ? 'border-red-500' : 'border-slate-200 dark:border-slate-600'
+                      formErrors.end_date
+                        ? 'border-red-500'
+                        : 'border-slate-200 dark:border-slate-600'
                     }`}
                   />
-                  {formErrors.end_date && <p className='mt-1 text-xs text-red-500'>{formErrors.end_date}</p>}
+                  {formErrors.end_date && (
+                    <p className='mt-1 text-xs text-red-500'>{formErrors.end_date}</p>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>活动地点</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  活动地点
+                </label>
                 <input
                   type='text'
                   value={formData.location}
@@ -506,7 +537,9 @@ function ActivityManage() {
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>主办方</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  主办方
+                </label>
                 <input
                   type='text'
                   value={formData.organizer}
@@ -517,7 +550,9 @@ function ActivityManage() {
               </div>
 
               <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl'>
-                <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>发布活动</label>
+                <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>
+                  发布活动
+                </label>
                 <ToggleSwitch
                   checked={formData.is_published}
                   onChange={(v) => handleChange('is_published', v)}

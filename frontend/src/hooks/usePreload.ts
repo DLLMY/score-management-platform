@@ -4,15 +4,21 @@ import { preloadService, PreloadConfig } from '../services/preloadService';
 export function usePreload(enabled = true) {
   const [isPreloading, setIsPreloading] = useState(false);
 
-  const preloadRoute = useCallback((route: string) => {
-    if (!enabled) return;
-    preloadService.preload(route);
-  }, [enabled]);
+  const preloadRoute = useCallback(
+    (route: string) => {
+      if (!enabled) return;
+      preloadService.preload(route);
+    },
+    [enabled]
+  );
 
-  const preloadOnHover = useCallback((route: string) => {
-    if (!enabled) return;
-    preloadService.preloadOnHover(route);
-  }, [enabled]);
+  const preloadOnHover = useCallback(
+    (route: string) => {
+      if (!enabled) return;
+      preloadService.preloadOnHover(route);
+    },
+    [enabled]
+  );
 
   const registerRoutes = useCallback((configs: PreloadConfig[]) => {
     configs.forEach((config) => preloadService.register(config));

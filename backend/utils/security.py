@@ -81,7 +81,9 @@ SUBACCOUNT_TOKEN_EXPIRES = timedelta(hours=24)
 STUDENT_TOKEN_EXPIRES = timedelta(hours=12)
 
 
-def generate_subaccount_token(subaccount_id: int, username: str, role_type: str, parent_admin_id: int):
+def generate_subaccount_token(
+    subaccount_id: int, username: str, role_type: str, parent_admin_id: int
+):
     """为子账号生成JWT令牌"""
     payload = {
         "sub": str(subaccount_id),
@@ -256,7 +258,14 @@ def validate_status(status: str) -> bool:
 
 def validate_datetime(date_str: str) -> bool:
     """验证日期时间格式"""
-    formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y/%m/%d"]
+    formats = [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d %H:%M",
+        "%Y/%m/%d",
+    ]
     for fmt in formats:
         try:
             datetime.strptime(date_str, fmt)
@@ -369,7 +378,15 @@ def sanitize_input(value: str) -> str:
         return value
 
     # HTML实体编码
-    replacements = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;", "/": "&#x2F;", "\\": "&#x5C;"}
+    replacements = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#x27;",
+        "/": "&#x2F;",
+        "\\": "&#x5C;",
+    }
 
     for old, new in replacements.items():
         value = value.replace(old, new)

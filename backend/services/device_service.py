@@ -13,9 +13,17 @@
 import openpyxl
 from datetime import datetime
 
-from models import db, Device, DeviceGroup, DeviceGroupMapping, ClassInfo, Admin, ScoreRecord, get_by_id
+from models import (
+    db,
+    Device,
+    DeviceGroup,
+    DeviceGroupMapping,
+    ClassInfo,
+    Admin,
+    ScoreRecord,
+    get_by_id,
+)
 from utils.validation import validate_device_id, validate_name
-
 
 # ============ Device 实体事务 ============
 
@@ -123,7 +131,9 @@ def import_devices(file):
         try:
             row_dict = dict(zip(headers, row))
 
-            device_id = row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
+            device_id = (
+                row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
+            )
             name = row_dict.get("设备名称") or row_dict.get("name")
             class_name = row_dict.get("班级名称") or row_dict.get("class_name")
             admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
@@ -135,7 +145,9 @@ def import_devices(file):
             elif not isinstance(device_id, (int, str)) or len(str(device_id).strip()) == 0:
                 row_errors.append({"field": "device_id", "message": "设备标识格式无效"})
             elif len(str(device_id).strip()) > 100:
-                row_errors.append({"field": "device_id", "message": "设备标识长度超过限制（最大100字符）"})
+                row_errors.append(
+                    {"field": "device_id", "message": "设备标识长度超过限制（最大100字符）"}
+                )
             else:
                 device_id_str = str(device_id).strip()
                 is_valid, msg = validate_device_id(device_id_str)
@@ -143,7 +155,9 @@ def import_devices(file):
                     row_errors.append({"field": "device_id", "message": msg})
 
             if name and (not isinstance(name, str) or len(name.strip()) > 200):
-                row_errors.append({"field": "name", "message": "设备名称长度超过限制（最大200字符）"})
+                row_errors.append(
+                    {"field": "name", "message": "设备名称长度超过限制（最大200字符）"}
+                )
             elif name:
                 is_valid, msg = validate_name(name.strip())
                 if not is_valid:
@@ -151,19 +165,28 @@ def import_devices(file):
 
             existing_device = Device.query.filter_by(device_id=str(device_id)).first()
             if existing_device:
-                row_errors.append({"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'})
+                row_errors.append(
+                    {"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'}
+                )
 
             class_info = None
             if class_name:
                 if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                    row_errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
+                    row_errors.append(
+                        {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
+                    )
                 elif len(class_name.strip()) > 100:
-                    row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+                    row_errors.append(
+                        {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
+                    )
                 else:
                     class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
                     if not class_info:
                         row_errors.append(
-                            {"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'}
+                            {
+                                "field": "class_name",
+                                "message": f'班级 "{class_name}" 在系统中不存在',
+                            }
                         )
 
             admin = None
@@ -182,7 +205,10 @@ def import_devices(file):
                         admin = Admin.query.filter(Admin.username == admin_name.strip()).first()
                     if not admin:
                         row_errors.append(
-                            {"field": "admin_name", "message": f'管理员 "{admin_name}" 在系统中不存在'}
+                            {
+                                "field": "admin_name",
+                                "message": f'管理员 "{admin_name}" 在系统中不存在',
+                            }
                         )
                     else:
                         if admin.role not in ["admin", "teacher"]:
@@ -198,7 +224,9 @@ def import_devices(file):
                 messages.append(
                     {
                         "action": "失败",
-                        "message": "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors]),
+                        "message": "; ".join(
+                            [f'{err["field"]}: {err["message"]}' for err in row_errors]
+                        ),
                         "row_data": row_dict,
                         "error_fields": [err["field"] for err in row_errors],
                     }
@@ -215,7 +243,9 @@ def import_devices(file):
 
             db.session.add(new_device)
             success_count += 1
-            messages.append({"action": "成功", "message": f"创建设备 {str(device_id)}", "row_data": row_dict})
+            messages.append(
+                {"action": "成功", "message": f"创建设备 {str(device_id)}", "row_data": row_dict}
+            )
 
         except Exception as e:
             failed_count += 1
@@ -389,7 +419,9 @@ def add_devices_to_group(group_id, device_ids):
             continue
 
         # 检查是否已存在
-        existing = DeviceGroupMapping.query.filter_by(group_id=group_id, device_id=device_id).first()
+        existing = DeviceGroupMapping.query.filter_by(
+            group_id=group_id, device_id=device_id
+        ).first()
         if existing:
             failed.append({"device_id": device_id, "reason": "设备已在分组中"})
             continue

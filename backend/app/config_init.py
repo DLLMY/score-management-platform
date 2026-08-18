@@ -129,7 +129,9 @@ def init_config(app, lightweight=False):
             },
             "host": LazyString(lambda: lambda: __import__("flask").request.host),
             "basePath": "/api",
-            "schemes": LazyString(lambda: ["http", "https"] if __import__("flask").request.is_secure else ["http"]),
+            "schemes": LazyString(
+                lambda: ["http", "https"] if __import__("flask").request.is_secure else ["http"]
+            ),
             "securityDefinitions": {
                 "Bearer": {
                     "type": "apiKey",
@@ -137,7 +139,12 @@ def init_config(app, lightweight=False):
                     "in": "header",
                     "description": "JWT令牌格式: Bearer {token}",
                 },
-                "X-Admin-Id": {"type": "apiKey", "name": "X-Admin-Id", "in": "header", "description": "管理员ID"},
+                "X-Admin-Id": {
+                    "type": "apiKey",
+                    "name": "X-Admin-Id",
+                    "in": "header",
+                    "description": "管理员ID",
+                },
             },
             "security": [{"Bearer": []}],
         }
@@ -167,7 +174,10 @@ def init_config(app, lightweight=False):
         limiter = Limiter(
             get_remote_address,
             app=app,
-            default_limits=[f"{config.RATE_LIMIT_PER_HOUR} per hour", f"{config.RATE_LIMIT_PER_MINUTE} per minute"],
+            default_limits=[
+                f"{config.RATE_LIMIT_PER_HOUR} per hour",
+                f"{config.RATE_LIMIT_PER_MINUTE} per minute",
+            ],
             storage_uri="memory://",
         )
         app.limiter = limiter
@@ -208,8 +218,20 @@ def init_config(app, lightweight=False):
         supports_credentials=True,
         resources={r"/api/*": {"origins": config.CORS_ORIGINS}},
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Admin-Id", "X-CSRFToken", "X-Requested-With"],
-        expose_headers=["X-Cache", "X-Cache-TTL", "X-RateLimit-Limit", "X-RateLimit-Remaining", "Set-Cookie"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "X-Admin-Id",
+            "X-CSRFToken",
+            "X-Requested-With",
+        ],
+        expose_headers=[
+            "X-Cache",
+            "X-Cache-TTL",
+            "X-RateLimit-Limit",
+            "X-RateLimit-Remaining",
+            "Set-Cookie",
+        ],
         max_age=86400,
     )
 

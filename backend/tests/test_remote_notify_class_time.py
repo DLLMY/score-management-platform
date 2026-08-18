@@ -10,18 +10,23 @@
 2. 拦截触发 notify_audit 落库（reason_code=GLOBAL_TIME_RULE / CLASS_IN_SESSION）。
 3. 拥有 all 权限的管理员以 force_send=True 可绕过拦截（success=True，并写 FORCE 审计）。
 """
+
 from services.class_time_checker import ClassTimeChecker
 from models import NotifyAudit, Device, ClassInfo
 
 
-def _patch_allow_blocked(monkeypatch, code="GLOBAL_TIME_RULE",
-                          message="当前处于上课时间（测试），系统自动通知已暂停"):
+def _patch_allow_blocked(
+    monkeypatch, code="GLOBAL_TIME_RULE", message="当前处于上课时间（测试），系统自动通知已暂停"
+):
     """强制 is_notification_allowed 返回拦截（非广播路径）。"""
     monkeypatch.setattr(
         ClassTimeChecker,
         "is_notification_allowed",
         lambda target_class_info_id=None, target_user_id=None, force_send=False: (
-            False, message, code, {"name": "测试上课时段"}
+            False,
+            message,
+            code,
+            {"name": "测试上课时段"},
         ),
     )
 
@@ -66,7 +71,9 @@ class TestRemoteNotifyClassTime:
             ClassTimeChecker,
             "is_broadcast_blocked",
             lambda force_send=False: (
-                True, "当前有班级正在上课，广播通知已暂停", "CLASS_IN_SESSION"
+                True,
+                "当前有班级正在上课，广播通知已暂停",
+                "CLASS_IN_SESSION",
             ),
         )
         resp = client.post(
@@ -82,7 +89,9 @@ class TestRemoteNotifyClassTime:
             cnt = NotifyAudit.query.filter_by(reason_code="CLASS_IN_SESSION").count()
             assert cnt >= 1
 
-    def test_send_to_device_blocked_by_class(self, app, client, auth_headers, monkeypatch, db_session):
+    def test_send_to_device_blocked_by_class(
+        self, app, client, auth_headers, monkeypatch, db_session
+    ):
         """/send_to_device：按设备反查班级，该班上课 -> 拦截。"""
         cls = ClassInfo(name="拦截测试班", grade="高一")
         db_session.add(cls)
@@ -95,8 +104,10 @@ class TestRemoteNotifyClassTime:
             ClassTimeChecker,
             "is_notification_allowed",
             lambda target_class_info_id=None, target_user_id=None, force_send=False: (
-                False, "拦截测试班正在上课，系统自动通知已暂停",
-                "CLASS_IN_SESSION", {"class_name": "拦截测试班"}
+                False,
+                "拦截测试班正在上课，系统自动通知已暂停",
+                "CLASS_IN_SESSION",
+                {"class_name": "拦截测试班"},
             ),
         )
         resp = client.post(
@@ -113,8 +124,12 @@ class TestRemoteNotifyClassTime:
         _patch_allow_blocked(monkeypatch, code="GLOBAL_TIME_RULE")
         resp = client.post(
             "/api/remote_notify/score_change",
-            json={"student_name": "张三", "score_change": -5,
-                  "reason": "违纪", "force_send": False},
+            json={
+                "student_name": "张三",
+                "score_change": -5,
+                "reason": "违纪",
+                "force_send": False,
+            },
             headers=auth_headers,
         )
         data = resp.get_json()

@@ -498,7 +498,9 @@ def validate_request(*validators: Callable) -> Callable:
     return decorator
 
 
-def create_field_validator(field_name: str, validator_func: Callable, source: str = "json") -> Callable:
+def create_field_validator(
+    field_name: str, validator_func: Callable, source: str = "json"
+) -> Callable:
     """
     创建字段校验器
 
@@ -539,7 +541,9 @@ def get_common_fields():
             max_length=ValidationRules.NAME_MAX_LEN,
             description="名称",
         ),
-        "description": fields.String(max_length=ValidationRules.DESCRIPTION_MAX_LEN, description="描述"),
+        "description": fields.String(
+            max_length=ValidationRules.DESCRIPTION_MAX_LEN, description="描述"
+        ),
         "created_at": fields.DateTime(readOnly=True, description="创建时间"),
         "updated_at": fields.DateTime(readOnly=True, description="更新时间"),
     }
@@ -571,9 +575,12 @@ def get_score_fields():
 
     return {
         "score_change": fields.Integer(
-            required=True, description=f"积分变化量 ({ValidationRules.SCORE_MIN}到{ValidationRules.SCORE_MAX})"
+            required=True,
+            description=f"积分变化量 ({ValidationRules.SCORE_MIN}到{ValidationRules.SCORE_MAX})",
         ),
-        "description": fields.String(max_length=ValidationRules.DESCRIPTION_MAX_LEN, description="操作描述"),
+        "description": fields.String(
+            max_length=ValidationRules.DESCRIPTION_MAX_LEN, description="操作描述"
+        ),
     }
 
 

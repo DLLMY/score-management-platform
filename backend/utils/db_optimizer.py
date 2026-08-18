@@ -130,7 +130,9 @@ def profile_query(query_name: str = None):
     return decorator
 
 
-def batch_query(query_func: Callable[[List[int]], List[T]], ids: List[int], batch_size: int = 100) -> List[T]:
+def batch_query(
+    query_func: Callable[[List[int]], List[T]], ids: List[int], batch_size: int = 100
+) -> List[T]:
     """
     批量查询优化
     将大量 ID 查询拆分成小批次，减少数据库压力
@@ -151,7 +153,9 @@ def batch_query(query_func: Callable[[List[int]], List[T]], ids: List[int], batc
     return results
 
 
-def batch_update(model_class, updates: List[Dict[str, Any]], id_field: str = "id", batch_size: int = 100) -> int:
+def batch_update(
+    model_class, updates: List[Dict[str, Any]], id_field: str = "id", batch_size: int = 100
+) -> int:
     """
     批量更新优化
     Args:
@@ -170,7 +174,9 @@ def batch_update(model_class, updates: List[Dict[str, Any]], id_field: str = "id
         for update in batch:
             update_data = {k: v for k, v in update.items() if k != id_field}
             if update_data:
-                count = model_class.query.filter(getattr(model_class, id_field) == update[id_field]).update(update_data)
+                count = model_class.query.filter(
+                    getattr(model_class, id_field) == update[id_field]
+                ).update(update_data)
                 total_updated += count
     db.session.commit()
     return total_updated
@@ -233,7 +239,10 @@ class ConnectionPoolOptimizer:
         pool = db.engine.pool
         # 注意：SQLite 的连接池不支持动态调整
         # 这只是一个示例，实际实现可能需要重启引擎
-        return {"current_size": pool.size(), "message": "Pool size adjustment requires engine restart in SQLite"}
+        return {
+            "current_size": pool.size(),
+            "message": "Pool size adjustment requires engine restart in SQLite",
+        }
 
 
 __all__ = [

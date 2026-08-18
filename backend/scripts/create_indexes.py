@@ -162,7 +162,9 @@ def create_indexes():
                     conn.execute(db.text(sql))
                     conn.commit()
                     indexes_created.append(f"{table_name}.{index_name}")
-                    print("Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str))
+                    print(
+                        "Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str)
+                    )
                 except Exception as e:
                     print("Failed to create index {0}.{1}: {2}".format(table_name, index_name, e))
 

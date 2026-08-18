@@ -138,14 +138,22 @@ function PermissionManagement() {
         api.classes.getAll(),
         api.permissionLogs.getAll(),
       ]);
-      const adminList = Array.isArray(adminsData) ? adminsData : ((adminsData as { admins?: Admin[] })?.admins || []);
+      const adminList = Array.isArray(adminsData)
+        ? adminsData
+        : (adminsData as { admins?: Admin[] })?.admins || [];
       setAdmins(adminList);
-      setClasses(Array.isArray(classesData) ? classesData : ((classesData as { classes?: ClassInfo[] })?.classes || []));
-      setPermissionLogs(Array.isArray(logsData) ? logsData : ((logsData as { logs?: PermissionLog[] })?.logs || []));
-      
+      setClasses(
+        Array.isArray(classesData)
+          ? classesData
+          : (classesData as { classes?: ClassInfo[] })?.classes || []
+      );
+      setPermissionLogs(
+        Array.isArray(logsData) ? logsData : (logsData as { logs?: PermissionLog[] })?.logs || []
+      );
+
       // 批量获取管理员的RBAC角色（并行请求）
       const rolesResults = await Promise.all(
-        adminList.map((admin: Admin) => 
+        adminList.map((admin: Admin) =>
           rbacApi.getAdminRoles(Number(admin.id)).catch(() => ({ roles: [] as string[] }))
         )
       );
@@ -195,20 +203,23 @@ function PermissionManagement() {
     setShowAdminModal(true);
   }, []);
 
-  const handleEditAdmin = useCallback((admin: Admin): void => {
-    setEditingAdmin(admin);
-    const adminRoles = adminRolesMap[admin.id] || [];
-    setAdminFormData({
-      username: admin.username,
-      password: '',
-      real_name: admin.real_name || '',
-      phone: admin.phone || '',
-      role: (adminRoles.length > 0 ? adminRoles[0] : admin.role) as UserRole,
-      roles: adminRoles,
-      class_name: admin.class_name || '',
-    });
-    setShowAdminModal(true);
-  }, [adminRolesMap]);
+  const handleEditAdmin = useCallback(
+    (admin: Admin): void => {
+      setEditingAdmin(admin);
+      const adminRoles = adminRolesMap[admin.id] || [];
+      setAdminFormData({
+        username: admin.username,
+        password: '',
+        real_name: admin.real_name || '',
+        phone: admin.phone || '',
+        role: (adminRoles.length > 0 ? adminRoles[0] : admin.role) as UserRole,
+        roles: adminRoles,
+        class_name: admin.class_name || '',
+      });
+      setShowAdminModal(true);
+    },
+    [adminRolesMap]
+  );
 
   const handleSaveAdmin = useCallback(async (): Promise<void> => {
     if (!adminFormData.username) {
@@ -226,7 +237,10 @@ function PermissionManagement() {
         if (!updateData.password) delete updateData.password;
         const result = await api.admins.update(Number(editingAdmin.id), updateData);
         showToast('success', '管理员更新成功');
-        const updatedAdmin = (result as { admin?: Admin }).admin || { ...editingAdmin, ...updateData };
+        const updatedAdmin = (result as { admin?: Admin }).admin || {
+          ...editingAdmin,
+          ...updateData,
+        };
         setAdmins((prev) => prev.map((a) => (a.id === editingAdmin.id ? updatedAdmin : a)));
       } else {
         const result = await api.admins.create(adminFormData);
@@ -273,9 +287,9 @@ function PermissionManagement() {
   };
 
   const toggleAdminRole = (roleCode: string) => {
-    setSelectedRolesForAdmin(prev => {
+    setSelectedRolesForAdmin((prev) => {
       if (prev.includes(roleCode)) {
-        return prev.filter(r => r !== roleCode);
+        return prev.filter((r) => r !== roleCode);
       } else {
         return [...prev, roleCode];
       }
@@ -287,13 +301,15 @@ function PermissionManagement() {
     try {
       await rbacApi.assignRoles(Number(selectedAdminForRoles.id), selectedRolesForAdmin);
       showToast('success', '角色分配成功');
-      setAdminRolesMap(prev => ({
+      setAdminRolesMap((prev) => ({
         ...prev,
-        [selectedAdminForRoles.id]: selectedRolesForAdmin
+        [selectedAdminForRoles.id]: selectedRolesForAdmin,
       }));
       setShowRoleAssignModal(false);
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '角色分配失败';
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '角色分配失败';
       showToast('error', message);
     }
   };
@@ -401,7 +417,9 @@ function PermissionManagement() {
       setShowRoleModal(false);
       fetchRBACData();
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存角色失败';
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '保存角色失败';
       showToast('error', message);
     }
   };
@@ -415,7 +433,9 @@ function PermissionManagement() {
       showToast('success', '角色删除成功');
       fetchRBACData();
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '删除角色失败';
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '删除角色失败';
       showToast('error', message);
     }
   };
@@ -457,7 +477,9 @@ function PermissionManagement() {
       setShowPermissionModal(false);
       fetchRBACData();
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存权限失败';
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '保存权限失败';
       showToast('error', message);
     }
   };
@@ -471,16 +493,18 @@ function PermissionManagement() {
       showToast('success', '权限删除成功');
       fetchRBACData();
     } catch (error: unknown) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '删除权限失败';
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        '删除权限失败';
       showToast('error', message);
     }
   };
 
   // ========== Permission Toggle ==========
   const togglePermission = (permCode: string) => {
-    setSelectedPermissions(prev => {
+    setSelectedPermissions((prev) => {
       if (prev.includes(permCode)) {
-        return prev.filter(p => p !== permCode);
+        return prev.filter((p) => p !== permCode);
       } else {
         return [...prev, permCode];
       }
@@ -543,7 +567,7 @@ function PermissionManagement() {
   ];
 
   const filteredPermissions = useMemo(() => {
-    return permissions.filter(p => {
+    return permissions.filter((p) => {
       if (permissionFilter.category && p.category !== permissionFilter.category) {
         return false;
       }
@@ -552,7 +576,8 @@ function PermissionManagement() {
         return (
           p.name.toLowerCase().includes(search) ||
           p.code.toLowerCase().includes(search) ||
-          (p.description?.toLowerCase().includes(search) || false)
+          p.description?.toLowerCase().includes(search) ||
+          false
         );
       }
       return true;
@@ -611,8 +636,6 @@ function PermissionManagement() {
               <span>班级管理</span>
             </div>
           </button>
-
-
 
           {/* 角色管理 */}
           <button
@@ -677,12 +700,24 @@ function PermissionManagement() {
               <table className='min-w-full divide-y divide-gray-200'>
                 <thead className='bg-gray-50'>
                   <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>用户</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>角色</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>状态</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>班级</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>电话</th>
-                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>操作</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      用户
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      角色
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      状态
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      班级
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      电话
+                    </th>
+                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
@@ -691,27 +726,38 @@ function PermissionManagement() {
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <div className='flex items-center'>
                           <div className='flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center'>
-                            <span className='text-white font-bold'>{(admin.real_name || admin.username)[0]}</span>
+                            <span className='text-white font-bold'>
+                              {(admin.real_name || admin.username)[0]}
+                            </span>
                           </div>
                           <div className='ml-4'>
-                            <div className='text-sm font-medium text-gray-900'>{admin.real_name}</div>
+                            <div className='text-sm font-medium text-gray-900'>
+                              {admin.real_name}
+                            </div>
                             <div className='text-sm text-gray-500'>{admin.username}</div>
                           </div>
                         </div>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <div className='flex flex-wrap gap-1'>
-                          {adminRolesMap[admin.id]?.map(roleCode => {
-                            const role = roles.find(r => r.role_code === roleCode);
+                          {adminRolesMap[admin.id]?.map((roleCode) => {
+                            const role = roles.find((r) => r.role_code === roleCode);
                             const roleName = role?.role_name || getRoleLabel(roleCode);
                             const colorClass = getRoleBadgeColor(roleCode);
                             return (
-                              <span key={roleCode} className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}`}>
+                              <span
+                                key={roleCode}
+                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}`}
+                              >
                                 {roleName}
                               </span>
                             );
                           }) || (
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(admin.role)}`}>
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
+                                admin.role
+                              )}`}
+                            >
                               {getRoleLabel(admin.role)}
                             </span>
                           )}
@@ -719,22 +765,45 @@ function PermissionManagement() {
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
                         {admin.is_active ? (
-                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800'>启用</span>
+                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800'>
+                            启用
+                          </span>
                         ) : (
-                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600'>禁用</span>
+                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600'>
+                            禁用
+                          </span>
                         )}
                       </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{admin.class_name || '-'}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{admin.phone || '-'}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                        {admin.class_name || '-'}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                        {admin.phone || '-'}
+                      </td>
                       <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                        <PermissionButton permission='system.users' variant='secondary' size='sm' onClick={() => handleEditAdmin(admin)}>
+                        <PermissionButton
+                          permission='system.users'
+                          variant='secondary'
+                          size='sm'
+                          onClick={() => handleEditAdmin(admin)}
+                        >
                           <Edit2 className='w-4 h-4' />
                         </PermissionButton>
-                        <PermissionButton permission='system.roles' variant='outline' size='sm' onClick={() => handleOpenRoleAssign(admin)}>
+                        <PermissionButton
+                          permission='system.roles'
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleOpenRoleAssign(admin)}
+                        >
                           <Crown className='w-4 h-4' />
                         </PermissionButton>
                         {admin.username !== 'admin' && (
-                          <PermissionButton permission='system.users' variant='danger' size='sm' onClick={() => handleDeleteAdmin(admin)}>
+                          <PermissionButton
+                            permission='system.users'
+                            variant='danger'
+                            size='sm'
+                            onClick={() => handleDeleteAdmin(admin)}
+                          >
                             <Trash2 className='w-4 h-4' />
                           </PermissionButton>
                         )}
@@ -764,11 +833,21 @@ function PermissionManagement() {
               <table className='min-w-full divide-y divide-gray-200'>
                 <thead className='bg-gray-50'>
                   <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>班级名称</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>年级</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>描述</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>状态</th>
-                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>操作</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      班级名称
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      年级
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      描述
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      状态
+                    </th>
+                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
@@ -777,8 +856,12 @@ function PermissionManagement() {
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <div className='text-sm font-medium text-gray-900'>{cls.name}</div>
                       </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{cls.grade || '-'}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{cls.description || '-'}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                        {cls.grade || '-'}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                        {cls.description || '-'}
+                      </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
                         {cls.is_active !== false ? (
                           <span className='flex items-center text-green-600'>
@@ -793,10 +876,20 @@ function PermissionManagement() {
                         )}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                        <PermissionButton permission='class.manage' variant='secondary' size='sm' onClick={() => handleEditClass(cls)}>
+                        <PermissionButton
+                          permission='class.manage'
+                          variant='secondary'
+                          size='sm'
+                          onClick={() => handleEditClass(cls)}
+                        >
                           <Edit2 className='w-4 h-4' />
                         </PermissionButton>
-                        <PermissionButton permission='class.manage' variant='danger' size='sm' onClick={() => handleDeleteClass(cls)}>
+                        <PermissionButton
+                          permission='class.manage'
+                          variant='danger'
+                          size='sm'
+                          onClick={() => handleDeleteClass(cls)}
+                        >
                           <Trash2 className='w-4 h-4' />
                         </PermissionButton>
                       </td>
@@ -825,11 +918,21 @@ function PermissionManagement() {
               <table className='min-w-full divide-y divide-gray-200'>
                 <thead className='bg-gray-50'>
                   <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>角色名称</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>角色代码</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>权限数量</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>状态</th>
-                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>操作</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      角色名称
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      角色代码
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      权限数量
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      状态
+                    </th>
+                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
+                      操作
+                    </th>
                   </tr>
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
@@ -837,24 +940,44 @@ function PermissionManagement() {
                     <tr key={role.role_code} className='hover:bg-gray-50'>
                       <td className='px-6 py-4'>
                         <div className='font-medium text-gray-900'>{role.role_name}</div>
-                        {role.description && <div className='text-sm text-gray-500'>{role.description}</div>}
+                        {role.description && (
+                          <div className='text-sm text-gray-500'>{role.description}</div>
+                        )}
                       </td>
-                      <td className='px-6 py-4 text-sm text-gray-500 font-mono'>{role.role_code}</td>
+                      <td className='px-6 py-4 text-sm text-gray-500 font-mono'>
+                        {role.role_code}
+                      </td>
                       <td className='px-6 py-4'>
                         <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800'>
                           {role.permissions?.length || 0}
                         </span>
                       </td>
                       <td className='px-6 py-4'>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${role.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            role.is_active
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
                           {role.is_active ? '启用' : '禁用'}
                         </span>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                        <PermissionButton permission='system.roles' variant='secondary' size='sm' onClick={() => handleOpenEditRole(role)}>
+                        <PermissionButton
+                          permission='system.roles'
+                          variant='secondary'
+                          size='sm'
+                          onClick={() => handleOpenEditRole(role)}
+                        >
                           <Edit2 className='w-4 h-4' />
                         </PermissionButton>
-                        <PermissionButton permission='system.roles' variant='danger' size='sm' onClick={() => handleDeleteRole(role)}>
+                        <PermissionButton
+                          permission='system.roles'
+                          variant='danger'
+                          size='sm'
+                          onClick={() => handleDeleteRole(role)}
+                        >
                           <Trash2 className='w-4 h-4' />
                         </PermissionButton>
                       </td>
@@ -874,17 +997,21 @@ function PermissionManagement() {
             <SearchFilter
               placeholder='搜索权限...'
               value={permissionFilter.search}
-              onChange={value => setPermissionFilter(prev => ({ ...prev, search: value }))}
+              onChange={(value) => setPermissionFilter((prev) => ({ ...prev, search: value }))}
               className='flex-1'
             />
             <select
               value={permissionFilter.category}
-              onChange={e => setPermissionFilter(prev => ({ ...prev, category: e.target.value }))}
+              onChange={(e) =>
+                setPermissionFilter((prev) => ({ ...prev, category: e.target.value }))
+              }
               className='px-3 py-2 border border-gray-300 rounded-lg text-sm'
             >
               <option value=''>全部分类</option>
-              {PERMISSION_CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
+              {PERMISSION_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
               ))}
             </select>
             <PermissionButton permission='system.roles' onClick={handleOpenCreatePermission}>
@@ -898,26 +1025,47 @@ function PermissionManagement() {
               <Card key={category}>
                 <div className='px-4 py-3 border-b border-gray-200'>
                   <h3 className='font-medium text-gray-900'>
-                    {PERMISSION_CATEGORIES.find(c => c.value === category)?.label || category}
+                    {PERMISSION_CATEGORIES.find((c) => c.value === category)?.label || category}
                   </h3>
                 </div>
                 <div className='divide-y divide-gray-200'>
                   {perms.map((permission) => (
-                    <div key={permission.id} className='px-4 py-3 flex items-center justify-between hover:bg-gray-50'>
+                    <div
+                      key={permission.id}
+                      className='px-4 py-3 flex items-center justify-between hover:bg-gray-50'
+                    >
                       <div>
                         <div className='font-medium text-gray-900'>{permission.name}</div>
                         <div className='text-sm text-gray-500 font-mono'>{permission.code}</div>
-                        {permission.description && <div className='text-sm text-gray-400 mt-1'>{permission.description}</div>}
+                        {permission.description && (
+                          <div className='text-sm text-gray-400 mt-1'>{permission.description}</div>
+                        )}
                       </div>
                       <div className='flex items-center gap-3'>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${permission.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            permission.is_active
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
                           {permission.is_active ? '启用' : '禁用'}
                         </span>
                         <div className='flex gap-1'>
-                          <PermissionButton permission='system.roles' variant='secondary' size='sm' onClick={() => handleOpenEditPermission(permission)}>
+                          <PermissionButton
+                            permission='system.roles'
+                            variant='secondary'
+                            size='sm'
+                            onClick={() => handleOpenEditPermission(permission)}
+                          >
                             <Edit2 className='w-4 h-4' />
                           </PermissionButton>
-                          <PermissionButton permission='system.roles' variant='danger' size='sm' onClick={() => handleDeletePermission(permission)}>
+                          <PermissionButton
+                            permission='system.roles'
+                            variant='danger'
+                            size='sm'
+                            onClick={() => handleDeletePermission(permission)}
+                          >
                             <Trash2 className='w-4 h-4' />
                           </PermissionButton>
                         </div>
@@ -940,24 +1088,48 @@ function PermissionManagement() {
               <table className='min-w-full divide-y divide-gray-200'>
                 <thead className='bg-gray-50'>
                   <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>操作</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>目标类型</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>描述</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>IP地址</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>时间</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      操作
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      目标类型
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      描述
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      IP地址
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                      时间
+                    </th>
                   </tr>
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
                   {permissionLogs.map((log) => (
                     <tr key={log.id} className='hover:bg-gray-50'>
                       <td className='px-6 py-4 whitespace-nowrap'>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.action.includes('创建') ? 'bg-green-100 text-green-800' : log.action.includes('删除') ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            log.action.includes('创建')
+                              ? 'bg-green-100 text-green-800'
+                              : log.action.includes('删除')
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
                           {log.action}
                         </span>
                       </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{log.target_type}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{log.description}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono'>{log.ip_address}</td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                        {log.target_type}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                        {log.description}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono'>
+                        {log.ip_address}
+                      </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
                         {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
                       </td>
@@ -972,68 +1144,119 @@ function PermissionManagement() {
 
       {/* ========== Modals ========== */}
       {/* Admin Modal */}
-      <Modal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} title={editingAdmin ? '编辑管理员' : '添加管理员'}>
+      <Modal
+        isOpen={showAdminModal}
+        onClose={() => setShowAdminModal(false)}
+        title={editingAdmin ? '编辑管理员' : '添加管理员'}
+      >
         <div className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>用户名</label>
-            <input type='text' value={adminFormData.username} onChange={(e) => setAdminFormData(prev => ({ ...prev, username: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <input
+              type='text'
+              value={adminFormData.username}
+              onChange={(e) => setAdminFormData((prev) => ({ ...prev, username: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>{editingAdmin ? '新密码（留空不修改）' : '密码'}</label>
-            <input type='password' value={adminFormData.password || ''} onChange={(e) => setAdminFormData(prev => ({ ...prev, password: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              {editingAdmin ? '新密码（留空不修改）' : '密码'}
+            </label>
+            <input
+              type='password'
+              value={adminFormData.password || ''}
+              onChange={(e) => setAdminFormData((prev) => ({ ...prev, password: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>真实姓名</label>
-            <input type='text' value={adminFormData.real_name} onChange={(e) => setAdminFormData(prev => ({ ...prev, real_name: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <input
+              type='text'
+              value={adminFormData.real_name}
+              onChange={(e) => setAdminFormData((prev) => ({ ...prev, real_name: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>电话</label>
-            <input type='text' value={adminFormData.phone} onChange={(e) => setAdminFormData(prev => ({ ...prev, phone: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <input
+              type='text'
+              value={adminFormData.phone}
+              onChange={(e) => setAdminFormData((prev) => ({ ...prev, phone: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-2'>角色（可多选）</label>
             <div className='flex flex-wrap gap-3'>
-              {roles.filter(r => r.is_active).map(role => (
-                <label key={role.role_code} className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={adminFormData.roles.includes(role.role_code)}
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-                      setAdminFormData(prev => ({
-                        ...prev,
-                        roles: isChecked
-                          ? [...prev.roles, role.role_code]
-                          : prev.roles.filter(r => r !== role.role_code),
-                        role: (isChecked ? role.role_code : prev.roles.length > 1 ? prev.role : 'viewer') as UserRole
-                      }));
-                    }}
-                    className='w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-                  />
-                  <span className='text-sm text-gray-700'>{role.role_name}</span>
-                </label>
-              ))}
+              {roles
+                .filter((r) => r.is_active)
+                .map((role) => (
+                  <label
+                    key={role.role_code}
+                    className='flex items-center space-x-2 cursor-pointer'
+                  >
+                    <input
+                      type='checkbox'
+                      checked={adminFormData.roles.includes(role.role_code)}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setAdminFormData((prev) => ({
+                          ...prev,
+                          roles: isChecked
+                            ? [...prev.roles, role.role_code]
+                            : prev.roles.filter((r) => r !== role.role_code),
+                          role: (isChecked
+                            ? role.role_code
+                            : prev.roles.length > 1
+                            ? prev.role
+                            : 'viewer') as UserRole,
+                        }));
+                      }}
+                      className='w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+                    />
+                    <span className='text-sm text-gray-700'>{role.role_name}</span>
+                  </label>
+                ))}
             </div>
-            <div className='text-xs text-gray-500 mt-1'>已选择 {adminFormData.roles.length} 个角色</div>
+            <div className='text-xs text-gray-500 mt-1'>
+              已选择 {adminFormData.roles.length} 个角色
+            </div>
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>班级</label>
-            <select value={adminFormData.class_name} onChange={(e) => setAdminFormData(prev => ({ ...prev, class_name: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg'>
+            <select
+              value={adminFormData.class_name}
+              onChange={(e) =>
+                setAdminFormData((prev) => ({ ...prev, class_name: e.target.value }))
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            >
               <option value=''>无</option>
               {classes.map((cls) => (
-                <option key={cls.id} value={cls.name}>{cls.name}</option>
+                <option key={cls.id} value={cls.name}>
+                  {cls.name}
+                </option>
               ))}
             </select>
           </div>
           <div className='flex justify-end gap-3'>
-            <Button variant='secondary' onClick={() => setShowAdminModal(false)}>取消</Button>
+            <Button variant='secondary' onClick={() => setShowAdminModal(false)}>
+              取消
+            </Button>
             <Button onClick={handleSaveAdmin}>保存</Button>
           </div>
         </div>
       </Modal>
 
       {/* Admin Role Assignment Modal */}
-      <Modal isOpen={showRoleAssignModal} onClose={() => setShowRoleAssignModal(false)} title={`为 ${selectedAdminForRoles?.real_name || selectedAdminForRoles?.username} 分配角色`}>
+      <Modal
+        isOpen={showRoleAssignModal}
+        onClose={() => setShowRoleAssignModal(false)}
+        title={`为 ${selectedAdminForRoles?.real_name || selectedAdminForRoles?.username} 分配角色`}
+      >
         <div className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-2'>选择角色</label>
@@ -1042,66 +1265,134 @@ function PermissionManagement() {
                 <div className='p-4 text-center text-gray-500 text-sm'>暂无角色可选</div>
               ) : (
                 <div className='divide-y divide-gray-100'>
-                  {roles.map(role => (
-                    <label key={role.role_code} className='flex items-center justify-between px-4 py-2 hover:bg-gray-50 cursor-pointer'>
+                  {roles.map((role) => (
+                    <label
+                      key={role.role_code}
+                      className='flex items-center justify-between px-4 py-2 hover:bg-gray-50 cursor-pointer'
+                    >
                       <div>
                         <div className='font-medium text-gray-900 text-sm'>{role.role_name}</div>
                         <div className='text-xs text-gray-500 font-mono'>{role.role_code}</div>
-                        {role.description && <div className='text-xs text-gray-400 mt-1'>{role.description}</div>}
+                        {role.description && (
+                          <div className='text-xs text-gray-400 mt-1'>{role.description}</div>
+                        )}
                       </div>
-                      <input type='checkbox' checked={selectedRolesForAdmin.includes(role.role_code)} onChange={() => toggleAdminRole(role.role_code)} className='w-4 h-4 text-blue-600 rounded' />
+                      <input
+                        type='checkbox'
+                        checked={selectedRolesForAdmin.includes(role.role_code)}
+                        onChange={() => toggleAdminRole(role.role_code)}
+                        className='w-4 h-4 text-blue-600 rounded'
+                      />
                     </label>
                   ))}
                 </div>
               )}
             </div>
-            <div className='text-xs text-gray-500 mt-1'>已选择 {selectedRolesForAdmin.length} 个角色</div>
+            <div className='text-xs text-gray-500 mt-1'>
+              已选择 {selectedRolesForAdmin.length} 个角色
+            </div>
           </div>
           <div className='flex justify-end gap-3'>
-            <Button variant='secondary' onClick={() => setShowRoleAssignModal(false)}>取消</Button>
+            <Button variant='secondary' onClick={() => setShowRoleAssignModal(false)}>
+              取消
+            </Button>
             <Button onClick={handleSaveAdminRoles}>保存分配</Button>
           </div>
         </div>
       </Modal>
 
       {/* Class Modal */}
-      <Modal isOpen={showClassModal} onClose={() => setShowClassModal(false)} title={editingClass ? '编辑班级' : '添加班级'}>
+      <Modal
+        isOpen={showClassModal}
+        onClose={() => setShowClassModal(false)}
+        title={editingClass ? '编辑班级' : '添加班级'}
+      >
         <div className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>班级名称</label>
-            <input type='text' value={classFormData.name} onChange={(e) => setClassFormData(prev => ({ ...prev, name: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <input
+              type='text'
+              value={classFormData.name}
+              onChange={(e) => setClassFormData((prev) => ({ ...prev, name: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>年级</label>
-            <input type='text' value={classFormData.grade} onChange={(e) => setClassFormData(prev => ({ ...prev, grade: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <input
+              type='text'
+              value={classFormData.grade}
+              onChange={(e) => setClassFormData((prev) => ({ ...prev, grade: e.target.value }))}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>描述</label>
-            <textarea value={classFormData.description} onChange={(e) => setClassFormData(prev => ({ ...prev, description: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg' rows={2} />
+            <textarea
+              value={classFormData.description}
+              onChange={(e) =>
+                setClassFormData((prev) => ({ ...prev, description: e.target.value }))
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+              rows={2}
+            />
           </div>
           <div className='flex justify-end gap-3'>
-            <Button variant='secondary' onClick={() => setShowClassModal(false)}>取消</Button>
+            <Button variant='secondary' onClick={() => setShowClassModal(false)}>
+              取消
+            </Button>
             <Button onClick={handleSaveClass}>保存</Button>
           </div>
         </div>
       </Modal>
 
       {/* Role Modal */}
-      <Modal isOpen={showRoleModal} onClose={() => setShowRoleModal(false)} title={isEditingRole ? '编辑角色' : '创建角色'} size='lg'>
+      <Modal
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        title={isEditingRole ? '编辑角色' : '创建角色'}
+        size='lg'
+      >
         <div className='space-y-4'>
           {!isEditingRole && (
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>角色代码 <span className='text-red-500'>*</span></label>
-              <input type='text' value={roleFormData.role_code} onChange={(e) => setRoleFormData(prev => ({ ...prev, role_code: e.target.value }))} placeholder='如: operator' className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                角色代码 <span className='text-red-500'>*</span>
+              </label>
+              <input
+                type='text'
+                value={roleFormData.role_code}
+                onChange={(e) =>
+                  setRoleFormData((prev) => ({ ...prev, role_code: e.target.value }))
+                }
+                placeholder='如: operator'
+                className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+              />
             </div>
           )}
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>角色名称 <span className='text-red-500'>*</span></label>
-            <input type='text' value={roleFormData.role_name} onChange={(e) => setRoleFormData(prev => ({ ...prev, role_name: e.target.value }))} placeholder='如: 运维人员' className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              角色名称 <span className='text-red-500'>*</span>
+            </label>
+            <input
+              type='text'
+              value={roleFormData.role_name}
+              onChange={(e) => setRoleFormData((prev) => ({ ...prev, role_name: e.target.value }))}
+              placeholder='如: 运维人员'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>描述</label>
-            <textarea value={roleFormData.description} onChange={(e) => setRoleFormData(prev => ({ ...prev, description: e.target.value }))} placeholder='角色描述...' rows={2} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <textarea
+              value={roleFormData.description}
+              onChange={(e) =>
+                setRoleFormData((prev) => ({ ...prev, description: e.target.value }))
+              }
+              placeholder='角色描述...'
+              rows={2}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-2'>权限分配</label>
@@ -1110,62 +1401,134 @@ function PermissionManagement() {
                 <div className='p-4 text-center text-gray-500 text-sm'>暂无权限可选</div>
               ) : (
                 <div className='divide-y divide-gray-100'>
-                  {availablePermissions.map(perm => (
-                    <label key={perm.id} className='flex items-center justify-between px-4 py-2 hover:bg-gray-50 cursor-pointer'>
+                  {availablePermissions.map((perm) => (
+                    <label
+                      key={perm.id}
+                      className='flex items-center justify-between px-4 py-2 hover:bg-gray-50 cursor-pointer'
+                    >
                       <div>
                         <div className='font-medium text-gray-900 text-sm'>{perm.name}</div>
                         <div className='text-xs text-gray-500 font-mono'>{perm.code}</div>
                       </div>
-                      <input type='checkbox' checked={selectedPermissions.includes(perm.code)} onChange={() => togglePermission(perm.code)} className='w-4 h-4 text-blue-600 rounded' />
+                      <input
+                        type='checkbox'
+                        checked={selectedPermissions.includes(perm.code)}
+                        onChange={() => togglePermission(perm.code)}
+                        className='w-4 h-4 text-blue-600 rounded'
+                      />
                     </label>
                   ))}
                 </div>
               )}
             </div>
-            <div className='text-xs text-gray-500 mt-1'>已选择 {selectedPermissions.length} 个权限</div>
+            <div className='text-xs text-gray-500 mt-1'>
+              已选择 {selectedPermissions.length} 个权限
+            </div>
           </div>
           <div className='flex items-center gap-2'>
-            <input type='checkbox' id='role-is-active' checked={roleFormData.is_active} onChange={(e) => setRoleFormData(prev => ({ ...prev, is_active: e.target.checked }))} className='w-4 h-4 text-blue-600 rounded' />
-            <label htmlFor='role-is-active' className='text-sm text-gray-700'>启用此角色</label>
+            <input
+              type='checkbox'
+              id='role-is-active'
+              checked={roleFormData.is_active}
+              onChange={(e) =>
+                setRoleFormData((prev) => ({ ...prev, is_active: e.target.checked }))
+              }
+              className='w-4 h-4 text-blue-600 rounded'
+            />
+            <label htmlFor='role-is-active' className='text-sm text-gray-700'>
+              启用此角色
+            </label>
           </div>
           <div className='flex justify-end gap-3'>
-            <Button variant='secondary' onClick={() => setShowRoleModal(false)}>取消</Button>
+            <Button variant='secondary' onClick={() => setShowRoleModal(false)}>
+              取消
+            </Button>
             <Button onClick={handleSaveRole}>保存</Button>
           </div>
         </div>
       </Modal>
 
       {/* Permission Modal */}
-      <Modal isOpen={showPermissionModal} onClose={() => setShowPermissionModal(false)} title={isEditingPermission ? '编辑权限' : '创建权限'}>
+      <Modal
+        isOpen={showPermissionModal}
+        onClose={() => setShowPermissionModal(false)}
+        title={isEditingPermission ? '编辑权限' : '创建权限'}
+      >
         <div className='space-y-4'>
           {!isEditingPermission && (
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>权限代码 <span className='text-red-500'>*</span></label>
-              <input type='text' value={permissionFormData.code} onChange={(e) => setPermissionFormData(prev => ({ ...prev, code: e.target.value }))} placeholder='如: device.create' className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                权限代码 <span className='text-red-500'>*</span>
+              </label>
+              <input
+                type='text'
+                value={permissionFormData.code}
+                onChange={(e) =>
+                  setPermissionFormData((prev) => ({ ...prev, code: e.target.value }))
+                }
+                placeholder='如: device.create'
+                className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+              />
             </div>
           )}
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>权限名称 <span className='text-red-500'>*</span></label>
-            <input type='text' value={permissionFormData.name} onChange={(e) => setPermissionFormData(prev => ({ ...prev, name: e.target.value }))} placeholder='如: 创建设备' className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              权限名称 <span className='text-red-500'>*</span>
+            </label>
+            <input
+              type='text'
+              value={permissionFormData.name}
+              onChange={(e) => setPermissionFormData((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder='如: 创建设备'
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>分类</label>
-            <select value={permissionFormData.category} onChange={(e) => setPermissionFormData(prev => ({ ...prev, category: e.target.value }))} className='w-full px-3 py-2 border border-gray-300 rounded-lg'>
-              {PERMISSION_CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
+            <select
+              value={permissionFormData.category}
+              onChange={(e) =>
+                setPermissionFormData((prev) => ({ ...prev, category: e.target.value }))
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            >
+              {PERMISSION_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
               ))}
             </select>
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>描述</label>
-            <textarea value={permissionFormData.description} onChange={(e) => setPermissionFormData(prev => ({ ...prev, description: e.target.value }))} placeholder='权限描述...' rows={2} className='w-full px-3 py-2 border border-gray-300 rounded-lg' />
+            <textarea
+              value={permissionFormData.description}
+              onChange={(e) =>
+                setPermissionFormData((prev) => ({ ...prev, description: e.target.value }))
+              }
+              placeholder='权限描述...'
+              rows={2}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg'
+            />
           </div>
           <div className='flex items-center gap-2'>
-            <input type='checkbox' id='perm-is-active' checked={permissionFormData.is_active} onChange={(e) => setPermissionFormData(prev => ({ ...prev, is_active: e.target.checked }))} className='w-4 h-4 text-blue-600 rounded' />
-            <label htmlFor='perm-is-active' className='text-sm text-gray-700'>启用此权限</label>
+            <input
+              type='checkbox'
+              id='perm-is-active'
+              checked={permissionFormData.is_active}
+              onChange={(e) =>
+                setPermissionFormData((prev) => ({ ...prev, is_active: e.target.checked }))
+              }
+              className='w-4 h-4 text-blue-600 rounded'
+            />
+            <label htmlFor='perm-is-active' className='text-sm text-gray-700'>
+              启用此权限
+            </label>
           </div>
           <div className='flex justify-end gap-3'>
-            <Button variant='secondary' onClick={() => setShowPermissionModal(false)}>取消</Button>
+            <Button variant='secondary' onClick={() => setShowPermissionModal(false)}>
+              取消
+            </Button>
             <Button onClick={handleSavePermission}>保存</Button>
           </div>
         </div>

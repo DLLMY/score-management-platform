@@ -184,7 +184,11 @@ function reducer(state: State, action: Action): State {
     case 'SET_SEARCH_TERM':
       return { ...state, searchTerm: action.payload, pagination: { ...state.pagination, page: 1 } };
     case 'SET_SELECTED_CLASS':
-      return { ...state, selectedClass: action.payload, pagination: { ...state.pagination, page: 1 } };
+      return {
+        ...state,
+        selectedClass: action.payload,
+        pagination: { ...state.pagination, page: 1 },
+      };
     case 'SET_SHOW_MODAL':
       return { ...state, showModal: action.payload };
     case 'SET_EDITING_USER':
@@ -248,7 +252,7 @@ function reducer(state: State, action: Action): State {
           ...state.pagination,
           total,
           pages,
-          page: (state.pagination.page || 1) > pages ? pages : (state.pagination.page || 1),
+          page: (state.pagination.page || 1) > pages ? pages : state.pagination.page || 1,
         },
       };
     }
@@ -257,9 +261,7 @@ function reducer(state: State, action: Action): State {
     case 'UPDATE_USER':
       return {
         ...state,
-        users: state.users.map((user) =>
-          user.id === action.payload.id ? action.payload : user
-        ),
+        users: state.users.map((user) => (user.id === action.payload.id ? action.payload : user)),
       };
     case 'SET_SHOW_ADVANCED_SEARCH':
       return { ...state, showAdvancedSearch: action.payload };
@@ -283,15 +285,13 @@ function UserList() {
   const showAdvancedSearchRef = useRef(state.showAdvancedSearch);
   const paginationRef = useRef(state.pagination);
   const abortControllerRef = useRef<AbortController | null>(null);
-  
+
   const debouncedSearchTerm = useDebouncedValue(searchTermInput, 300);
-  
+
   const { wrapAsync } = useAppState();
   usePermissions();
 
-  const {
-    addOperation,
-  } = useUndoRedo({ maxHistory: 50 });
+  const { addOperation } = useUndoRedo({ maxHistory: 50 });
 
   const autoSave = useAutoSave({
     key: 'user-form',
@@ -312,26 +312,26 @@ function UserList() {
       searchTermRef.current = debouncedSearchTerm;
       dispatch({ type: 'SET_SEARCH_TERM', payload: debouncedSearchTerm });
       dispatch({ type: 'SET_PAGINATION', payload: { ...paginationRef.current, page: 1 } });
-      setFetchTrigger(prev => prev + 1);
+      setFetchTrigger((prev) => prev + 1);
     }
   }, [debouncedSearchTerm]);
-  
+
   useEffect(() => {
     advancedConditionsRef.current = state.advancedConditions;
   }, [state.advancedConditions]);
-  
+
   useEffect(() => {
     selectedClassRef.current = state.selectedClass;
   }, [state.selectedClass]);
-  
+
   useEffect(() => {
     searchTermRef.current = state.searchTerm;
   }, [state.searchTerm]);
-  
+
   useEffect(() => {
     showAdvancedSearchRef.current = state.showAdvancedSearch;
   }, [state.showAdvancedSearch]);
-  
+
   useEffect(() => {
     paginationRef.current = state.pagination;
   }, [state.pagination]);
@@ -339,8 +339,10 @@ function UserList() {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const data = await api.classes.getAll() as unknown;
-        const classesData = Array.isArray(data) ? data : ((data as { classes?: { id: number; name: string }[] }).classes || []);
+        const data = (await api.classes.getAll()) as unknown;
+        const classesData = Array.isArray(data)
+          ? data
+          : (data as { classes?: { id: number; name: string }[] }).classes || [];
         setClassList(classesData);
       } catch (error) {
         logger.error('Error fetching classes:', error);
@@ -351,13 +353,13 @@ function UserList() {
   }, []);
 
   const classes = useMemo(() => {
-    return classList.map(c => c.name).sort();
+    return classList.map((c) => c.name).sort();
   }, [classList]);
 
   const filteredUsers = state.users;
   const selectedUsersArray = useMemo(() => Array.from(state.selectedUsers), [state.selectedUsers]);
-  const selectedUsersData = useMemo(() => 
-    state.users.filter(user => state.selectedUsers.has(Number(user.id))),
+  const selectedUsersData = useMemo(
+    () => state.users.filter((user) => state.selectedUsers.has(Number(user.id))),
     [state.users, state.selectedUsers]
   );
 
@@ -369,44 +371,49 @@ function UserList() {
     selectedClassRef.current = className;
     dispatch({ type: 'SET_SELECTED_CLASS', payload: className });
     dispatch({ type: 'SET_PAGINATION', payload: { ...paginationRef.current, page: 1 } });
-    setFetchTrigger(prev => prev + 1);
+    setFetchTrigger((prev) => prev + 1);
   }, []);
 
   const handleAdvancedSearch = useCallback(() => {
     dispatch({ type: 'SET_PAGINATION', payload: { ...paginationRef.current, page: 1 } });
-    setFetchTrigger(prev => prev + 1);
+    setFetchTrigger((prev) => prev + 1);
   }, []);
 
   const handlePageChange = useCallback((page: number) => {
     dispatch({ type: 'SET_PAGINATION', payload: { ...paginationRef.current, page } });
-    setFetchTrigger(prev => prev + 1);
+    setFetchTrigger((prev) => prev + 1);
   }, []);
 
   const fetchUsers = useCallback(async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    
+
     dispatch({ type: 'SET_FETCHING', payload: true });
-    
+
     try {
       const { page, per_page } = paginationRef.current;
-      
+
       const apiParams: Record<string, unknown> = {
         page,
         per_page,
         skipCache: true,
         signal: controller.signal,
       };
-      
+
       if (!showAdvancedSearchRef.current) {
-        apiParams.class_id = selectedClassRef.current && selectedClassRef.current !== '' ? Number(selectedClassRef.current) : undefined;
-        apiParams.search = searchTermRef.current && searchTermRef.current !== '' ? searchTermRef.current : undefined;
+        apiParams.class_id =
+          selectedClassRef.current && selectedClassRef.current !== ''
+            ? Number(selectedClassRef.current)
+            : undefined;
+        apiParams.search =
+          searchTermRef.current && searchTermRef.current !== '' ? searchTermRef.current : undefined;
       } else {
-        const { keyword, classId, minScore, maxScore, sortBy, sortOrder } = advancedConditionsRef.current;
+        const { keyword, classId, minScore, maxScore, sortBy, sortOrder } =
+          advancedConditionsRef.current;
         apiParams.class_id = classId ? Number(classId) : undefined;
         apiParams.keyword = keyword || undefined;
         apiParams.min_score = minScore;
@@ -414,23 +421,34 @@ function UserList() {
         apiParams.sort_by = sortBy || 'name';
         apiParams.sort_order = sortOrder || 'asc';
       }
-      
+
       const response = await api.users.getAll(apiParams);
-      
+
       if (response !== null) {
         const data = response as { users?: User[]; total?: number; pages?: number; page?: number };
-        
-        if (Array.isArray(response)) { // 防御分支：后端异常时兜底，非真实总数
+
+        if (Array.isArray(response)) {
+          // 防御分支：后端异常时兜底，非真实总数
           dispatch({ type: 'SET_USERS', payload: response });
-          dispatch({ type: 'SET_PAGINATION', payload: { ...paginationRef.current, total: response.length, pages: Math.ceil(response.length / per_page) } });
+          dispatch({
+            type: 'SET_PAGINATION',
+            payload: {
+              ...paginationRef.current,
+              total: response.length,
+              pages: Math.ceil(response.length / per_page),
+            },
+          });
         } else {
           dispatch({ type: 'SET_USERS', payload: data.users || [] });
-          dispatch({ type: 'SET_PAGINATION', payload: { 
-            ...paginationRef.current, 
-            total: data.total || 0,
-            pages: data.pages || 1,
-            page: data.page || page
-          } });
+          dispatch({
+            type: 'SET_PAGINATION',
+            payload: {
+              ...paginationRef.current,
+              total: data.total || 0,
+              pages: data.pages || 1,
+              page: data.page || page,
+            },
+          });
         }
       }
     } catch (error) {
@@ -449,7 +467,7 @@ function UserList() {
   const fetchRules = useCallback(async () => {
     try {
       const data = await api.rules.getAll();
-      dispatch({ type: 'SET_RULES', payload: Array.isArray(data) ? data : (data.rules || []) });
+      dispatch({ type: 'SET_RULES', payload: Array.isArray(data) ? data : data.rules || [] });
     } catch (error) {
       logger.error('Error fetching rules:', error);
       showToast('error', '积分规则加载失败，快捷评分可能不可用');
@@ -491,7 +509,8 @@ function UserList() {
           mother_phone: (user as unknown as { mother_phone: string }).mother_phone || '',
           guardian_name: user.guardian_name || '',
           guardian_phone: user.guardian_phone || '',
-          guardian_relation: (user as unknown as { guardian_relation: string }).guardian_relation || '',
+          guardian_relation:
+            (user as unknown as { guardian_relation: string }).guardian_relation || '',
           card_id: user.card_id,
           current_score: user.current_score || 0,
         },
@@ -551,7 +570,7 @@ function UserList() {
       setFormErrors({});
 
       const isEditing = !!state.editingUser;
-      
+
       await wrapAsync(
         isEditing ? `update-user-${state.editingUser!.id}` : 'create-user',
         async () => {
@@ -575,7 +594,9 @@ function UserList() {
             handleCloseModal();
             addOperation({
               type: isEditing ? 'update' : 'create',
-              description: isEditing ? `更新用户: ${state.formData.name}` : `创建用户: ${state.formData.name}`,
+              description: isEditing
+                ? `更新用户: ${state.formData.name}`
+                : `创建用户: ${state.formData.name}`,
             });
           },
           onError: (error) => {
@@ -590,8 +611,8 @@ function UserList() {
   const handleDelete = useCallback(
     async (userId: number) => {
       if (!window.confirm('确定要删除该学生吗？此操作不可恢复。')) return; // 删除确认（单条，批量删除已有确认）
-      const deletedUser = state.users.find(u => u.id === userId);
-      
+      const deletedUser = state.users.find((u) => u.id === userId);
+
       await wrapAsync(
         `delete-user-${userId}`,
         async () => {
@@ -607,12 +628,12 @@ function UserList() {
               addOperation({
                 type: 'delete',
                 description: `删除用户: ${deletedUser.name}`,
-              undo: async () => {
-                const created = await api.users.create({ ...deletedUser });
-                // 后端返回 {user:{...}}，需解包内层 user，否则 ADD_USER 按 payload.id 匹配会失败
-                const restored = ((created as { user?: User }).user ?? created) as User;
-                dispatch({ type: 'ADD_USER', payload: restored });
-              },
+                undo: async () => {
+                  const created = await api.users.create({ ...deletedUser });
+                  // 后端返回 {user:{...}}，需解包内层 user，否则 ADD_USER 按 payload.id 匹配会失败
+                  const restored = ((created as { user?: User }).user ?? created) as User;
+                  dispatch({ type: 'ADD_USER', payload: restored });
+                },
               });
             }
           },
@@ -630,77 +651,85 @@ function UserList() {
     dispatch({ type: 'SET_SHOW_QUICK_SCORE_MODAL', payload: true });
   }, []);
 
-  const handleQuickScore = useCallback(async (rule: Rule) => {
-    if (!state.quickScoreUser) return;
+  const handleQuickScore = useCallback(
+    async (rule: Rule) => {
+      if (!state.quickScoreUser) return;
 
-    const userId = Number(state.quickScoreUser.id);
-    const scoreChange = rule.score;
-    const action = scoreChange > 0 ? '加分' : '减分';
+      const userId = Number(state.quickScoreUser.id);
+      const scoreChange = rule.score;
+      const action = scoreChange > 0 ? '加分' : '减分';
 
-    try {
-      await wrapAsync(
-        `quick-score-${userId}`,
-        async () => {
-          await withOptimisticUpdate(
-            { userId, scoreChange },
-            () =>
-              api.records.create({
-                user_id: Number(userId),
-                rule_id: rule.id,
-                score_change: scoreChange,
-                description: rule.name,
-                operator: '管理员',
-              }),
-            {
-              update: () => {
-                dispatch({
-                  type: 'UPDATE_USER_SCORE',
-                  payload: { userId, scoreChange },
-                });
-              },
-              revert: () => {
-                dispatch({
-                  type: 'UPDATE_USER_SCORE',
-                  payload: { userId, scoreChange: -scoreChange },
-                });
-              },
-              onSuccess: () => {
-                showToast('success', `${action}成功: ${rule.name} (${scoreChange > 0 ? '+' : ''}${scoreChange}分)`);
-                dispatch({ type: 'SET_SHOW_QUICK_SCORE_MODAL', payload: false });
-                dispatch({ type: 'SET_QUICK_SCORE_USER', payload: null });
-                addOperation({
-                  type: 'update',
-                  description: `${state.quickScoreUser?.name} ${action} ${Math.abs(scoreChange)}分`,
-                  undo: async () => {
-                    await api.records.create({
-                      user_id: Number(userId),
-                      rule_id: rule.id,
-                      score_change: -scoreChange,
-                      description: `撤销${rule.name}`,
-                      operator: '管理员',
-                    });
-                    dispatch({
-                      type: 'UPDATE_USER_SCORE',
-                      payload: { userId, scoreChange: -scoreChange },
-                    });
-                  },
-                });
-              },
-              onError: (error) => {
-                showToast('error', '评分失败: ' + error.message);
-              },
-            }
-          );
-        },
-        {
-          message: '评分中...',
-          type: 'local',
-        }
-      );
-    } catch (error) {
-      logger.error('Optimistic update failed:', error);
-    }
-  }, [state.quickScoreUser, showToast, addOperation, wrapAsync]);
+      try {
+        await wrapAsync(
+          `quick-score-${userId}`,
+          async () => {
+            await withOptimisticUpdate(
+              { userId, scoreChange },
+              () =>
+                api.records.create({
+                  user_id: Number(userId),
+                  rule_id: rule.id,
+                  score_change: scoreChange,
+                  description: rule.name,
+                  operator: '管理员',
+                }),
+              {
+                update: () => {
+                  dispatch({
+                    type: 'UPDATE_USER_SCORE',
+                    payload: { userId, scoreChange },
+                  });
+                },
+                revert: () => {
+                  dispatch({
+                    type: 'UPDATE_USER_SCORE',
+                    payload: { userId, scoreChange: -scoreChange },
+                  });
+                },
+                onSuccess: () => {
+                  showToast(
+                    'success',
+                    `${action}成功: ${rule.name} (${scoreChange > 0 ? '+' : ''}${scoreChange}分)`
+                  );
+                  dispatch({ type: 'SET_SHOW_QUICK_SCORE_MODAL', payload: false });
+                  dispatch({ type: 'SET_QUICK_SCORE_USER', payload: null });
+                  addOperation({
+                    type: 'update',
+                    description: `${state.quickScoreUser?.name} ${action} ${Math.abs(
+                      scoreChange
+                    )}分`,
+                    undo: async () => {
+                      await api.records.create({
+                        user_id: Number(userId),
+                        rule_id: rule.id,
+                        score_change: -scoreChange,
+                        description: `撤销${rule.name}`,
+                        operator: '管理员',
+                      });
+                      dispatch({
+                        type: 'UPDATE_USER_SCORE',
+                        payload: { userId, scoreChange: -scoreChange },
+                      });
+                    },
+                  });
+                },
+                onError: (error) => {
+                  showToast('error', '评分失败: ' + error.message);
+                },
+              }
+            );
+          },
+          {
+            message: '评分中...',
+            type: 'local',
+          }
+        );
+      } catch (error) {
+        logger.error('Optimistic update failed:', error);
+      }
+    },
+    [state.quickScoreUser, showToast, addOperation, wrapAsync]
+  );
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedUsersArray.length === 0) return;
@@ -708,13 +737,13 @@ function UserList() {
     await wrapAsync(
       'batch-delete-users',
       async () => {
-        await Promise.all(selectedUsersArray.map(id => api.users.delete(id)));
+        await Promise.all(selectedUsersArray.map((id) => api.users.delete(id)));
       },
       {
         message: '批量删除中...',
         type: 'local',
         onSuccess: () => {
-          selectedUsersArray.forEach(id => {
+          selectedUsersArray.forEach((id) => {
             dispatch({ type: 'DELETE_USER', payload: id });
           });
           dispatch({ type: 'CLEAR_USER_SELECTION' });
@@ -731,51 +760,64 @@ function UserList() {
     );
   }, [selectedUsersArray, showToast, wrapAsync, addOperation]);
 
-  const handleBatchScore = useCallback(async (scoreChange: number) => {
-    if (selectedUsersArray.length === 0) return;
+  const handleBatchScore = useCallback(
+    async (scoreChange: number) => {
+      if (selectedUsersArray.length === 0) return;
 
-    await wrapAsync(
-      'batch-score-users',
-      async () => {
-        await Promise.all(selectedUsersArray.map(id => 
-          api.records.create({
-            user_id: Number(id),
-            rule_id: 1,
-            score_change: scoreChange,
-            description: '批量调整积分',
-            operator: '管理员',
-          })
-        ));
-      },
-      {
-        message: '批量评分中...',
-        type: 'local',
-        onSuccess: () => {
-          selectedUsersArray.forEach(id => {
-            dispatch({
-              type: 'UPDATE_USER_SCORE',
-              payload: { userId: id, scoreChange },
+      await wrapAsync(
+        'batch-score-users',
+        async () => {
+          await Promise.all(
+            selectedUsersArray.map((id) =>
+              api.records.create({
+                user_id: Number(id),
+                rule_id: 1,
+                score_change: scoreChange,
+                description: '批量调整积分',
+                operator: '管理员',
+              })
+            )
+          );
+        },
+        {
+          message: '批量评分中...',
+          type: 'local',
+          onSuccess: () => {
+            selectedUsersArray.forEach((id) => {
+              dispatch({
+                type: 'UPDATE_USER_SCORE',
+                payload: { userId: id, scoreChange },
+              });
             });
-          });
-          dispatch({ type: 'CLEAR_USER_SELECTION' });
-          const action = scoreChange > 0 ? '加分' : '减分';
-          showToast('success', `成功为 ${selectedUsersArray.length} 名学生${action} ${Math.abs(scoreChange)}分`);
-          addOperation({
-            type: 'batch',
-            description: `批量${action} ${selectedUsersArray.length} 名学生 ${Math.abs(scoreChange)}分`,
-          });
-        },
-        onError: (error) => {
-          showToast('error', '批量评分失败: ' + error.message);
-        },
-      }
-    );
-  }, [selectedUsersArray, showToast, wrapAsync, addOperation]);
+            dispatch({ type: 'CLEAR_USER_SELECTION' });
+            const action = scoreChange > 0 ? '加分' : '减分';
+            showToast(
+              'success',
+              `成功为 ${selectedUsersArray.length} 名学生${action} ${Math.abs(scoreChange)}分`
+            );
+            addOperation({
+              type: 'batch',
+              description: `批量${action} ${selectedUsersArray.length} 名学生 ${Math.abs(
+                scoreChange
+              )}分`,
+            });
+          },
+          onError: (error) => {
+            showToast('error', '批量评分失败: ' + error.message);
+          },
+        }
+      );
+    },
+    [selectedUsersArray, showToast, wrapAsync, addOperation]
+  );
 
   // 导出：fetch + blob 下载（带鉴权头），失败明确提示；此前仅调用 api.export.users() 返回 URL 字符串，点击无任何反应
   const handleExport = useCallback(async () => {
     try {
-      const res = await fetch(api.export.users(), { headers: getAuthHeaders(), credentials: 'include' });
+      const res = await fetch(api.export.users(), {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error(`导出失败(${res.status})`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -800,96 +842,106 @@ function UserList() {
     dispatch({ type: 'CLEAR_USER_SELECTION' });
   }, []);
 
-  const batchActions = useMemo(() => [
-    {
-      id: 'batch-delete',
-      label: '批量删除',
-      icon: <Trash2 className='w-4 h-4' />,
-      variant: 'danger' as const,
-      handler: handleBatchDelete,
-      confirmMessage: '确定要删除选中的学生吗？此操作不可恢复。',
-    },
-    {
-      id: 'batch-add-score',
-      label: '批量加分',
-      icon: <Zap className='w-4 h-4' />,
-      variant: 'primary' as const,
-      handler: () => handleBatchScore(5),
-      confirmMessage: '确定要为选中的学生加5分吗？',
-    },
-    {
-      id: 'batch-subtract-score',
-      label: '批量减分',
-      icon: <Zap className='w-4 h-4' />,
-      variant: 'secondary' as const,
-      handler: () => handleBatchScore(-5),
-      confirmMessage: '确定要为选中的学生减5分吗？',
-    },
-  ], [handleBatchDelete, handleBatchScore]);
+  const batchActions = useMemo(
+    () => [
+      {
+        id: 'batch-delete',
+        label: '批量删除',
+        icon: <Trash2 className='w-4 h-4' />,
+        variant: 'danger' as const,
+        handler: handleBatchDelete,
+        confirmMessage: '确定要删除选中的学生吗？此操作不可恢复。',
+      },
+      {
+        id: 'batch-add-score',
+        label: '批量加分',
+        icon: <Zap className='w-4 h-4' />,
+        variant: 'primary' as const,
+        handler: () => handleBatchScore(5),
+        confirmMessage: '确定要为选中的学生加5分吗？',
+      },
+      {
+        id: 'batch-subtract-score',
+        label: '批量减分',
+        icon: <Zap className='w-4 h-4' />,
+        variant: 'secondary' as const,
+        handler: () => handleBatchScore(-5),
+        confirmMessage: '确定要为选中的学生减5分吗？',
+      },
+    ],
+    [handleBatchDelete, handleBatchScore]
+  );
 
-  const advancedSearchFields = useMemo(() => [
-    {
-      id: 'keyword',
-      label: '关键词',
-      type: 'text' as const,
-      placeholder: '搜索姓名、卡号或手机号',
-      value: state.advancedConditions.keyword,
-      onChange: (value: unknown) => dispatch({ 
-        type: 'SET_ADVANCED_CONDITIONS', 
-        payload: { ...state.advancedConditions, keyword: value as string } 
-      }),
-    },
-    {
-      id: 'classId',
-      label: '班级',
-      type: 'select' as const,
-      options: classList.map(c => ({ value: String(c.id), label: c.name })),
-      value: state.advancedConditions.classId,
-      onChange: (value: unknown) => dispatch({ 
-        type: 'SET_ADVANCED_CONDITIONS', 
-        payload: { ...state.advancedConditions, classId: value as string } 
-      }),
-    },
-    {
-      id: 'minScore',
-      label: '最低积分',
-      type: 'number' as const,
-      placeholder: '最低积分',
-      value: state.advancedConditions.minScore,
-      onChange: (value: unknown) => dispatch({ 
-        type: 'SET_ADVANCED_CONDITIONS', 
-        payload: { ...state.advancedConditions, minScore: value as number } 
-      }),
-    },
-    {
-      id: 'maxScore',
-      label: '最高积分',
-      type: 'number' as const,
-      placeholder: '最高积分',
-      value: state.advancedConditions.maxScore,
-      onChange: (value: unknown) => dispatch({ 
-        type: 'SET_ADVANCED_CONDITIONS', 
-        payload: { ...state.advancedConditions, maxScore: value as number } 
-      }),
-    },
-  ], [state.advancedConditions, classes]);
+  const advancedSearchFields = useMemo(
+    () => [
+      {
+        id: 'keyword',
+        label: '关键词',
+        type: 'text' as const,
+        placeholder: '搜索姓名、卡号或手机号',
+        value: state.advancedConditions.keyword,
+        onChange: (value: unknown) =>
+          dispatch({
+            type: 'SET_ADVANCED_CONDITIONS',
+            payload: { ...state.advancedConditions, keyword: value as string },
+          }),
+      },
+      {
+        id: 'classId',
+        label: '班级',
+        type: 'select' as const,
+        options: classList.map((c) => ({ value: String(c.id), label: c.name })),
+        value: state.advancedConditions.classId,
+        onChange: (value: unknown) =>
+          dispatch({
+            type: 'SET_ADVANCED_CONDITIONS',
+            payload: { ...state.advancedConditions, classId: value as string },
+          }),
+      },
+      {
+        id: 'minScore',
+        label: '最低积分',
+        type: 'number' as const,
+        placeholder: '最低积分',
+        value: state.advancedConditions.minScore,
+        onChange: (value: unknown) =>
+          dispatch({
+            type: 'SET_ADVANCED_CONDITIONS',
+            payload: { ...state.advancedConditions, minScore: value as number },
+          }),
+      },
+      {
+        id: 'maxScore',
+        label: '最高积分',
+        type: 'number' as const,
+        placeholder: '最高积分',
+        value: state.advancedConditions.maxScore,
+        onChange: (value: unknown) =>
+          dispatch({
+            type: 'SET_ADVANCED_CONDITIONS',
+            payload: { ...state.advancedConditions, maxScore: value as number },
+          }),
+      },
+    ],
+    [state.advancedConditions, classes]
+  );
 
   if (state.isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className='space-y-6'>
+        <div className='flex items-center justify-between'>
           <div>
-            <div className="h-8 bg-gray-200 rounded w-48 animate-pulse" />
-            <div className="h-4 bg-gray-200 rounded w-64 mt-2 animate-pulse" />
+            <div className='h-8 bg-gray-200 rounded w-48 animate-pulse' />
+            <div className='h-4 bg-gray-200 rounded w-64 mt-2 animate-pulse' />
           </div>
-          <div className="flex gap-2">
-            <div className="h-10 bg-gray-200 rounded w-28 animate-pulse" />
-            <div className="h-10 bg-gray-200 rounded w-28 animate-pulse" />
-            <div className="h-10 bg-gray-200 rounded w-28 animate-pulse" />
+          <div className='flex gap-2'>
+            <div className='h-10 bg-gray-200 rounded w-28 animate-pulse' />
+            <div className='h-10 bg-gray-200 rounded w-28 animate-pulse' />
+            <div className='h-10 bg-gray-200 rounded w-28 animate-pulse' />
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="h-12 bg-gray-200 rounded mb-4 animate-pulse" />
+        <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-4'>
+          <div className='h-12 bg-gray-200 rounded mb-4 animate-pulse' />
           <TableSkeleton rows={8} columns={6} />
         </div>
       </div>
@@ -905,7 +957,7 @@ function UserList() {
         actionLabel='重试'
         onAction={() => {
           dispatch({ type: 'SET_ERROR', payload: null });
-          setFetchTrigger(prev => prev + 1);
+          setFetchTrigger((prev) => prev + 1);
         }}
       />
     );
@@ -913,33 +965,37 @@ function UserList() {
 
   if (filteredUsers.length === 0) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className='space-y-6'>
+        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">学生管理</h1>
-            <p className="text-gray-500 mt-1">管理学生信息和积分</p>
+            <h1 className='text-2xl font-bold text-gray-900'>学生管理</h1>
+            <p className='text-gray-500 mt-1'>管理学生信息和积分</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <PermissionButton permission='student.edit' variant='secondary' onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}>
-              <Upload className="w-4 h-4 mr-2" />
+          <div className='flex flex-wrap items-center gap-3'>
+            <PermissionButton
+              permission='student.edit'
+              variant='secondary'
+              onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}
+            >
+              <Upload className='w-4 h-4 mr-2' />
               导入学生
             </PermissionButton>
             <PermissionButton permission='student.edit' variant='secondary' onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
+              <Download className='w-4 h-4 mr-2' />
               导出学生
             </PermissionButton>
             <PermissionButton permission='student.edit' onClick={() => handleOpenModal()}>
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className='w-4 h-4 mr-2' />
               添加学生
             </PermissionButton>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <SearchFilter 
-            value={state.searchTerm} 
-            onChange={handleSearch} 
-            placeholder="搜索学生姓名、卡号或手机号" 
+        <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-4'>
+          <SearchFilter
+            value={state.searchTerm}
+            onChange={handleSearch}
+            placeholder='搜索学生姓名、卡号或手机号'
             loading={state.isFetching}
             autoSearch={false}
           />
@@ -961,46 +1017,50 @@ function UserList() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className='space-y-6'>
+      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">学生管理</h1>
-          <p className="text-gray-500 mt-1">管理学生信息和积分</p>
+          <h1 className='text-2xl font-bold text-gray-900'>学生管理</h1>
+          <p className='text-gray-500 mt-1'>管理学生信息和积分</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <PermissionButton permission='student.edit' variant='secondary' onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}>
-            <Upload className="w-4 h-4 mr-2" />
+        <div className='flex flex-wrap items-center gap-3'>
+          <PermissionButton
+            permission='student.edit'
+            variant='secondary'
+            onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}
+          >
+            <Upload className='w-4 h-4 mr-2' />
             导入学生
           </PermissionButton>
           <PermissionButton permission='student.edit' variant='secondary' onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
+            <Download className='w-4 h-4 mr-2' />
             导出学生
           </PermissionButton>
           <PermissionButton permission='student.edit' onClick={() => handleOpenModal()}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className='w-4 h-4 mr-2' />
             添加学生
           </PermissionButton>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <SearchFilter 
-            value={state.searchTerm} 
-            onChange={handleSearch} 
-            placeholder="搜索学生姓名、卡号或手机号" 
+      <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-4'>
+        <div className='flex flex-wrap items-center gap-4'>
+          <SearchFilter
+            value={state.searchTerm}
+            onChange={handleSearch}
+            placeholder='搜索学生姓名、卡号或手机号'
             loading={state.isFetching}
             autoSearch={false}
           />
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+          <div className='flex items-center gap-2'>
+            <Filter className='w-4 h-4 text-gray-400' />
             <select
               value={state.selectedClass}
               onChange={(e) => handleClassChange(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+              className='px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50'
               disabled={state.isFetching}
             >
-              <option value="">全部班级</option>
+              <option value=''>全部班级</option>
               {classList.map((cls) => (
                 <option key={cls.id} value={String(cls.id)}>
                   {cls.name}
@@ -1009,32 +1069,34 @@ function UserList() {
             </select>
           </div>
           <button
-            onClick={() => dispatch({ type: 'SET_SHOW_ADVANCED_SEARCH', payload: !state.showAdvancedSearch })}
+            onClick={() =>
+              dispatch({ type: 'SET_SHOW_ADVANCED_SEARCH', payload: !state.showAdvancedSearch })
+            }
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
               state.showAdvancedSearch
                 ? 'bg-primary-50 text-primary-700 border border-primary-200'
                 : 'bg-white text-gray-600 border border-gray-200 hover:border-primary-300'
             }`}
           >
-            <Filter className="w-4 h-4" />
-            <span className="font-medium">高级筛选</span>
+            <Filter className='w-4 h-4' />
+            <span className='font-medium'>高级筛选</span>
             {state.showAdvancedSearch ? (
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className='w-4 h-4' />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className='w-4 h-4' />
             )}
           </button>
         </div>
         {state.showAdvancedSearch && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className='mt-4 pt-4 border-t border-gray-200'>
             <AdvancedSearch
-            fields={advancedSearchFields}
-            onSearch={handleAdvancedSearch}
-            onReset={() => {
-              dispatch({ type: 'SET_ADVANCED_CONDITIONS', payload: {} });
-              handleAdvancedSearch();
-            }}
-          />
+              fields={advancedSearchFields}
+              onSearch={handleAdvancedSearch}
+              onReset={() => {
+                dispatch({ type: 'SET_ADVANCED_CONDITIONS', payload: {} });
+                handleAdvancedSearch();
+              }}
+            />
           </div>
         )}
       </div>
@@ -1049,39 +1111,51 @@ function UserList() {
         />
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+      <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
+        <div className='overflow-x-auto'>
+          <table className='w-full'>
+            <thead className='bg-gray-50 border-b border-gray-200'>
               <tr>
-                <th className="px-4 py-3 text-left">
+                <th className='px-4 py-3 text-left'>
                   <button
                     onClick={() => {
-                      const allSelected = filteredUsers.every(user => state.selectedUsers.has(Number(user.id)));
+                      const allSelected = filteredUsers.every((user) =>
+                        state.selectedUsers.has(Number(user.id))
+                      );
                       if (allSelected) {
                         dispatch({ type: 'CLEAR_USER_SELECTION' });
                       } else {
-                        const allIds = new Set(filteredUsers.map(u => Number(u.id)));
+                        const allIds = new Set(filteredUsers.map((u) => Number(u.id)));
                         dispatch({ type: 'SET_SELECTED_USERS', payload: allIds });
                       }
                     }}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    className='p-1 hover:bg-gray-100 rounded transition-colors'
                   >
-                    {filteredUsers.every(user => state.selectedUsers.has(Number(user.id))) ? (
-                      <CheckSquare className="w-5 h-5 text-primary-500" />
+                    {filteredUsers.every((user) => state.selectedUsers.has(Number(user.id))) ? (
+                      <CheckSquare className='w-5 h-5 text-primary-500' />
                     ) : (
-                      <Square className="w-5 h-5 text-gray-400" />
+                      <Square className='w-5 h-5 text-gray-400' />
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">学生信息</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">班级</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">当前积分</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  学生信息
+                </th>
+                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  班级
+                </th>
+                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  状态
+                </th>
+                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  当前积分
+                </th>
+                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                  操作
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className='divide-y divide-gray-200'>
               {filteredUsers.map((user) => (
                 <UserTableRow
                   key={user.id}
@@ -1097,7 +1171,7 @@ function UserList() {
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200">
+        <div className='px-4 py-3 border-t border-gray-200'>
           <Pagination
             currentPage={state.pagination.page}
             totalPages={state.pagination.pages}
@@ -1113,81 +1187,98 @@ function UserList() {
         onClose={handleCloseModal}
         title={state.editingUser ? '编辑学生' : '添加学生'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className='space-y-4'>
           {autoSave.hasUnsavedChanges && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
-              <span className="text-sm text-blue-700">有未保存的更改，自动保存中...</span>
+            <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between'>
+              <span className='text-sm text-blue-700'>有未保存的更改，自动保存中...</span>
             </div>
           )}
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>姓名 *</label>
             <input
-              type="text"
+              type='text'
               value={state.formData.name}
-              onChange={(e) => dispatch({ type: 'SET_FORM_DATA', payload: { name: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="请输入学生姓名"
+              onChange={(e) =>
+                dispatch({ type: 'SET_FORM_DATA', payload: { name: e.target.value } })
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+              placeholder='请输入学生姓名'
             />
-            {formErrors.name && <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>}
+            {formErrors.name && <p className='mt-1 text-sm text-red-600'>{formErrors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">性别</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>性别</label>
             <select
               value={state.formData.gender}
-              onChange={(e) => dispatch({ type: 'SET_FORM_DATA', payload: { gender: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              onChange={(e) =>
+                dispatch({ type: 'SET_FORM_DATA', payload: { gender: e.target.value } })
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             >
-              <option value="男">男</option>
-              <option value="女">女</option>
+              <option value='男'>男</option>
+              <option value='女'>女</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">班级 *</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>班级 *</label>
             <select
               value={state.formData.class_name}
-              onChange={(e) => dispatch({ type: 'SET_FORM_DATA', payload: { class_name: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              onChange={(e) =>
+                dispatch({ type: 'SET_FORM_DATA', payload: { class_name: e.target.value } })
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             >
-              <option value="">请选择班级</option>
+              <option value=''>请选择班级</option>
               {classes.map((className) => (
                 <option key={className} value={className}>
                   {className}
                 </option>
               ))}
             </select>
-            {formErrors.class_name && <p className="mt-1 text-sm text-red-600">{formErrors.class_name}</p>}
+            {formErrors.class_name && (
+              <p className='mt-1 text-sm text-red-600'>{formErrors.class_name}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">卡号 *</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>卡号 *</label>
             <input
-              type="text"
+              type='text'
               value={state.formData.card_id}
-              onChange={(e) => dispatch({ type: 'SET_FORM_DATA', payload: { card_id: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="请输入卡号"
+              onChange={(e) =>
+                dispatch({ type: 'SET_FORM_DATA', payload: { card_id: e.target.value } })
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+              placeholder='请输入卡号'
             />
-            {formErrors.card_id && <p className="mt-1 text-sm text-red-600">{formErrors.card_id}</p>}
+            {formErrors.card_id && (
+              <p className='mt-1 text-sm text-red-600'>{formErrors.card_id}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">初始积分</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>初始积分</label>
             <input
-              type="number"
+              type='number'
               value={state.formData.current_score}
-              onChange={(e) => dispatch({ type: 'SET_FORM_DATA', payload: { current_score: parseInt(e.target.value) || 0 } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              onChange={(e) =>
+                dispatch({
+                  type: 'SET_FORM_DATA',
+                  payload: { current_score: parseInt(e.target.value) || 0 },
+                })
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent'
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={handleCloseModal}>
+          <div className='flex justify-end gap-3 pt-4'>
+            <Button type='button' variant='secondary' onClick={handleCloseModal}>
               取消
             </Button>
-            <Button type="submit" disabled={state.isFetching}>
+            <Button type='submit' disabled={state.isFetching}>
               {state.editingUser ? '更新' : '创建'}
             </Button>
           </div>
@@ -1197,10 +1288,10 @@ function UserList() {
       <Modal
         isOpen={state.showImportModal}
         onClose={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: false })}
-        title="导入学生"
+        title='导入学生'
       >
         <ImportExportPanel
-           type="user"
+          type='user'
           onImportComplete={() => {
             fetchUsers();
             dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: false });
@@ -1217,42 +1308,47 @@ function UserList() {
         title={`快速评分 - ${state.quickScoreUser?.name || ''}`}
       >
         {state.quickScoreUser && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                <UserIcon className="w-6 h-6 text-primary-600" />
+          <div className='space-y-4'>
+            <div className='flex items-center gap-4 p-4 bg-gray-50 rounded-lg'>
+              <div className='w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center'>
+                <UserIcon className='w-6 h-6 text-primary-600' />
               </div>
               <div>
-                <p className="font-medium text-gray-900">{state.quickScoreUser.name}</p>
-                <p className="text-sm text-gray-500">
-                  班级: {state.quickScoreUser.class_name || '未分配'} | 
-                  当前积分: <span className="font-bold text-primary-600">{state.quickScoreUser.current_score}</span>
+                <p className='font-medium text-gray-900'>{state.quickScoreUser.name}</p>
+                <p className='text-sm text-gray-500'>
+                  班级: {state.quickScoreUser.class_name || '未分配'} | 当前积分:{' '}
+                  <span className='font-bold text-primary-600'>
+                    {state.quickScoreUser.current_score}
+                  </span>
                 </p>
               </div>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">选择评分规则</h3>
-              <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto">
+              <h3 className='text-sm font-medium text-gray-700 mb-3'>选择评分规则</h3>
+              <div className='grid grid-cols-1 gap-2 max-h-80 overflow-y-auto'>
                 {state.rules.map((rule) => (
                   <button
                     key={rule.id}
                     onClick={() => handleQuickScore(rule)}
                     className={`w-full text-left px-4 py-3 rounded-lg border transition-all hover:border-primary-300 ${
-                      rule.score > 0 
-                        ? 'border-green-200 hover:bg-green-50' 
+                      rule.score > 0
+                        ? 'border-green-200 hover:bg-green-50'
                         : 'border-red-200 hover:bg-red-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className='flex items-center justify-between'>
                       <div>
-                        <p className="font-medium text-gray-900">{rule.name}</p>
-                        <p className="text-sm text-gray-500">{rule.description || '无描述'}</p>
+                        <p className='font-medium text-gray-900'>{rule.name}</p>
+                        <p className='text-sm text-gray-500'>{rule.description || '无描述'}</p>
                       </div>
-                      <span className={`font-bold text-lg ${
-                        rule.score > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {rule.score > 0 ? '+' : ''}{rule.score}
+                      <span
+                        className={`font-bold text-lg ${
+                          rule.score > 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {rule.score > 0 ? '+' : ''}
+                        {rule.score}
                       </span>
                     </div>
                   </button>

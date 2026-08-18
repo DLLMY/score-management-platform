@@ -10,6 +10,7 @@
 设计原则：NotificationService 与既有 routes 的读取逻辑（current_app.config.get）保持不变，
 持久化只落在"加载"与"保存"两个切点上。
 """
+
 from flask import current_app
 from models import db
 from models.notification_config import NotificationConfig

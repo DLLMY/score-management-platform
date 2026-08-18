@@ -14,12 +14,24 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 ns_course_schedule = Namespace("course-schedules", description="课程表相关操作")
 
 ns_course_schedule.parser = ns_course_schedule.parser()
-ns_course_schedule.parser.add_argument("class_info_id", type=int, location="args", required=False, help="班级ID")
-ns_course_schedule.parser.add_argument("day_of_week", type=int, location="args", required=False, help="星期")
-ns_course_schedule.parser.add_argument("period_number", type=int, location="args", required=False, help="节次编号")
-ns_course_schedule.parser.add_argument("is_active", type=bool, location="args", required=False, help="是否启用")
-ns_course_schedule.parser.add_argument("teacher_name", type=str, location="args", required=False, help="教师姓名")
-ns_course_schedule.parser.add_argument("classroom", type=str, location="args", required=False, help="教室")
+ns_course_schedule.parser.add_argument(
+    "class_info_id", type=int, location="args", required=False, help="班级ID"
+)
+ns_course_schedule.parser.add_argument(
+    "day_of_week", type=int, location="args", required=False, help="星期"
+)
+ns_course_schedule.parser.add_argument(
+    "period_number", type=int, location="args", required=False, help="节次编号"
+)
+ns_course_schedule.parser.add_argument(
+    "is_active", type=bool, location="args", required=False, help="是否启用"
+)
+ns_course_schedule.parser.add_argument(
+    "teacher_name", type=str, location="args", required=False, help="教师姓名"
+)
+ns_course_schedule.parser.add_argument(
+    "classroom", type=str, location="args", required=False, help="教室"
+)
 
 course_schedule_model = ns_course_schedule.model(
     "CourseSchedule",
@@ -75,7 +87,8 @@ def get_period_info(period_number):
         return {
             "name": period.name,
             "time": (
-                f"{period.start_hour:02d}:{period.start_minute:02d} - " f"{period.end_hour:02d}:{period.end_minute:02d}"
+                f"{period.start_hour:02d}:{period.start_minute:02d} - "
+                f"{period.end_hour:02d}:{period.end_minute:02d}"
             ),
         }
     return {"name": f"第{period_number}节", "time": ""}
@@ -106,7 +119,9 @@ def check_conflicts(class_info_id, day_of_week, period_number, exclude_id=None):
                 "type": "class",
                 "message": f"该班级此时段已有课程：{subject_name}",
                 "schedule_id": class_conflict.id,
-                "conflicting_class_name": class_conflict.class_info.name if class_conflict.class_info else "",
+                "conflicting_class_name": (
+                    class_conflict.class_info.name if class_conflict.class_info else ""
+                ),
                 "conflicting_subject_name": subject_name,
                 "conflicting_teacher_name": class_conflict.teacher_name,
                 "conflicting_classroom": class_conflict.classroom,
@@ -116,7 +131,9 @@ def check_conflicts(class_info_id, day_of_week, period_number, exclude_id=None):
     return conflicts
 
 
-def check_teacher_conflicts(teacher_name, day_of_week, period_number, exclude_id=None, exclude_class_id=None):
+def check_teacher_conflicts(
+    teacher_name, day_of_week, period_number, exclude_id=None, exclude_class_id=None
+):
     """检查教师时间冲突"""
     conflicts = []
 
@@ -153,7 +170,9 @@ def check_teacher_conflicts(teacher_name, day_of_week, period_number, exclude_id
     return conflicts
 
 
-def check_classroom_conflicts(classroom, day_of_week, period_number, exclude_id=None, exclude_class_id=None):
+def check_classroom_conflicts(
+    classroom, day_of_week, period_number, exclude_id=None, exclude_class_id=None
+):
     """检查教室时间冲突"""
     conflicts = []
 
@@ -218,7 +237,9 @@ class CourseScheduleList(Resource):
         admin = get_current_admin()
         allowed_classes = get_allowed_classes(admin.id) if admin else None
         if allowed_classes is not None:
-            class_ids = [c.id for c in ClassInfo.query.filter(ClassInfo.name.in_(allowed_classes)).all()]
+            class_ids = [
+                c.id for c in ClassInfo.query.filter(ClassInfo.name.in_(allowed_classes)).all()
+            ]
             query = query.filter(CourseSchedule.class_info_id.in_(class_ids))
 
         if class_info_id:
@@ -290,7 +311,9 @@ class CourseScheduleList(Resource):
 
         # 检查时间冲突
         conflicts = []
-        conflicts.extend(check_conflicts(data["class_info_id"], data["day_of_week"], data["period_number"]))
+        conflicts.extend(
+            check_conflicts(data["class_info_id"], data["day_of_week"], data["period_number"])
+        )
 
         teacher_id = data.get("teacher_id")
         teacher_name = data.get("teacher_name")
@@ -304,11 +327,15 @@ class CourseScheduleList(Resource):
                 return APIResponse.bad_request(message=f'教师ID "{teacher_id}" 在系统中不存在')
 
         if teacher_name:
-            conflicts.extend(check_teacher_conflicts(teacher_name, data["day_of_week"], data["period_number"]))
+            conflicts.extend(
+                check_teacher_conflicts(teacher_name, data["day_of_week"], data["period_number"])
+            )
 
         classroom = data.get("classroom")
         if classroom:
-            conflicts.extend(check_classroom_conflicts(classroom, data["day_of_week"], data["period_number"]))
+            conflicts.extend(
+                check_classroom_conflicts(classroom, data["day_of_week"], data["period_number"])
+            )
 
         if conflicts:
             return APIResponse.bad_request(message="存在时间冲突", errors=conflicts)
@@ -449,7 +476,11 @@ class CourseScheduleResource(Resource):
         ):
 
             conflicts = []
-            conflicts.extend(check_conflicts(new_class_info_id, new_day_of_week, new_period_number, exclude_id=id))
+            conflicts.extend(
+                check_conflicts(
+                    new_class_info_id, new_day_of_week, new_period_number, exclude_id=id
+                )
+            )
 
             if new_teacher_name:
                 conflicts.extend(
@@ -479,14 +510,22 @@ class CourseScheduleResource(Resource):
         # 如果教师或教室发生变化，检查冲突
         if new_teacher_name != schedule.teacher_name:
             teacher_conflicts = check_teacher_conflicts(
-                new_teacher_name, new_day_of_week, new_period_number, exclude_id=id, exclude_class_id=new_class_info_id
+                new_teacher_name,
+                new_day_of_week,
+                new_period_number,
+                exclude_id=id,
+                exclude_class_id=new_class_info_id,
             )
             if teacher_conflicts:
                 return APIResponse.bad_request(message="教师时间冲突", errors=teacher_conflicts)
 
         if new_classroom != schedule.classroom:
             classroom_conflicts = check_classroom_conflicts(
-                new_classroom, new_day_of_week, new_period_number, exclude_id=id, exclude_class_id=new_class_info_id
+                new_classroom,
+                new_day_of_week,
+                new_period_number,
+                exclude_id=id,
+                exclude_class_id=new_class_info_id,
             )
             if classroom_conflicts:
                 return APIResponse.bad_request(message="教室时间冲突", errors=classroom_conflicts)
@@ -733,15 +772,27 @@ class CourseScheduleConflictCheck(Resource):
         conflicts = []
 
         if class_info_id and day_of_week is not None and period_number:
-            conflicts.extend(check_conflicts(class_info_id, day_of_week, period_number, exclude_id=exclude_id))
+            conflicts.extend(
+                check_conflicts(class_info_id, day_of_week, period_number, exclude_id=exclude_id)
+            )
 
         if teacher_name and day_of_week is not None and period_number:
-            conflicts.extend(check_teacher_conflicts(teacher_name, day_of_week, period_number, exclude_id=exclude_id))
+            conflicts.extend(
+                check_teacher_conflicts(
+                    teacher_name, day_of_week, period_number, exclude_id=exclude_id
+                )
+            )
 
         if classroom and day_of_week is not None and period_number:
-            conflicts.extend(check_classroom_conflicts(classroom, day_of_week, period_number, exclude_id=exclude_id))
+            conflicts.extend(
+                check_classroom_conflicts(
+                    classroom, day_of_week, period_number, exclude_id=exclude_id
+                )
+            )
 
-        return APIResponse.success(data={"has_conflict": len(conflicts) > 0, "conflicts": conflicts})
+        return APIResponse.success(
+            data={"has_conflict": len(conflicts) > 0, "conflicts": conflicts}
+        )
 
 
 @ns_course_schedule.route("/export")
@@ -794,7 +845,9 @@ class CourseScheduleExport(Resource):
 
         filename_prefix = f'course_schedules_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
         if class_info_id and class_info:
-            filename_prefix = f'course_schedule_{class_info.name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+            filename_prefix = (
+                f'course_schedule_{class_info.name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+            )
 
         if export_format == "excel":
             wb = Workbook()
@@ -806,7 +859,10 @@ class CourseScheduleExport(Resource):
             header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
             header_alignment = Alignment(horizontal="center", vertical="center")
             thin_border = Border(
-                left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
             )
 
             # 写入表头
@@ -847,7 +903,9 @@ class CourseScheduleExport(Resource):
             # 调整列宽
             column_widths = [15, 10, 12, 10, 8, 15, 12, 12, 30, 10, 20]
             for i, width in enumerate(column_widths, 1):
-                ws.column_dimensions[chr(64 + i) if i <= 26 else f"A{chr(64 + i - 26)}"].width = width
+                ws.column_dimensions[chr(64 + i) if i <= 26 else f"A{chr(64 + i - 26)}"].width = (
+                    width
+                )
 
             buf = io.BytesIO()
             wb.save(buf)
@@ -872,7 +930,10 @@ class CourseScheduleExport(Resource):
             buf.seek(0)
 
             return send_file(
-                buf, mimetype="application/json", as_attachment=True, download_name=f"{filename_prefix}.json"
+                buf,
+                mimetype="application/json",
+                as_attachment=True,
+                download_name=f"{filename_prefix}.json",
             )
 
 
@@ -892,7 +953,9 @@ class CourseScheduleImport(Resource):
             config = get_by_id(ImportConfig, config_id)
         else:
             config = ImportConfig.query.filter(
-                ImportConfig.module_name == "course_schedule", ImportConfig.is_default, ImportConfig.is_active
+                ImportConfig.module_name == "course_schedule",
+                ImportConfig.is_default,
+                ImportConfig.is_active,
             ).first()
 
         default_mappings = [
@@ -910,8 +973,18 @@ class CourseScheduleImport(Resource):
                 "required": True,
                 "relation": "subject",
             },
-            {"source_field": "星期", "target_field": "day_of_week", "field_type": "string", "required": True},
-            {"source_field": "节次", "target_field": "period_number", "field_type": "integer", "required": True},
+            {
+                "source_field": "星期",
+                "target_field": "day_of_week",
+                "field_type": "string",
+                "required": True,
+            },
+            {
+                "source_field": "节次",
+                "target_field": "period_number",
+                "field_type": "integer",
+                "required": True,
+            },
             {"source_field": "教师", "target_field": "teacher_name", "field_type": "string"},
             {"source_field": "教室", "target_field": "classroom", "field_type": "string"},
             {"source_field": "备注", "target_field": "description", "field_type": "string"},
@@ -983,11 +1056,18 @@ class CourseScheduleImport(Resource):
                         if source_val is None:
                             if mapping.get("required"):
                                 break
-                            source_val = mapping.get("default_value", default_values.get(target_field))
+                            source_val = mapping.get(
+                                "default_value", default_values.get(target_field)
+                            )
 
                         if field_type == "boolean":
                             if isinstance(source_val, str):
-                                mapped_item[target_field] = source_val in ["是", "true", "True", "1"]
+                                mapped_item[target_field] = source_val in [
+                                    "是",
+                                    "true",
+                                    "True",
+                                    "1",
+                                ]
                             else:
                                 mapped_item[target_field] = bool(source_val)
                         elif field_type == "integer":
@@ -1048,39 +1128,58 @@ class CourseScheduleImport(Resource):
             if not class_name:
                 row_errors.append({"field": "class_name", "message": "班级名称不能为空"})
             elif not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                row_errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
+                row_errors.append(
+                    {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
+                )
             elif len(class_name.strip()) > 100:
-                row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+                row_errors.append(
+                    {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
+                )
 
             if not subject_name:
                 row_errors.append({"field": "subject_name", "message": "科目名称不能为空"})
             elif not isinstance(subject_name, str) or len(subject_name.strip()) == 0:
-                row_errors.append({"field": "subject_name", "message": "科目名称格式无效，必须为非空字符串"})
+                row_errors.append(
+                    {"field": "subject_name", "message": "科目名称格式无效，必须为非空字符串"}
+                )
             elif len(subject_name.strip()) > 50:
-                row_errors.append({"field": "subject_name", "message": "科目名称长度超过限制（最大50字符）"})
+                row_errors.append(
+                    {"field": "subject_name", "message": "科目名称长度超过限制（最大50字符）"}
+                )
 
             if day_of_week is None:
                 row_errors.append({"field": "day_of_week", "message": "星期不能为空"})
             elif isinstance(day_of_week, str):
                 if day_of_week not in day_text_map:
                     row_errors.append(
-                        {"field": "day_of_week", "message": f'星期值 "{day_of_week}" 无效，只能是"周一"到"周日"'}
+                        {
+                            "field": "day_of_week",
+                            "message": f'星期值 "{day_of_week}" 无效，只能是"周一"到"周日"',
+                        }
                     )
             elif not isinstance(day_of_week, int) or day_of_week < 0 or day_of_week > 6:
-                row_errors.append({"field": "day_of_week", "message": "星期值无效，必须为0-6之间的整数"})
+                row_errors.append(
+                    {"field": "day_of_week", "message": "星期值无效，必须为0-6之间的整数"}
+                )
 
             if period_number is None:
                 row_errors.append({"field": "period_number", "message": "节次不能为空"})
             elif not isinstance(period_number, int):
                 row_errors.append({"field": "period_number", "message": "节次格式无效，必须为整数"})
             elif period_number < 1 or (max_period > 0 and period_number > max_period):
-                row_errors.append({"field": "period_number", "message": f"节次值无效，必须在1-{max_period}之间"})
+                row_errors.append(
+                    {"field": "period_number", "message": f"节次值无效，必须在1-{max_period}之间"}
+                )
 
             if teacher_name:
                 if not isinstance(teacher_name, str) or len(teacher_name.strip()) == 0:
-                    row_errors.append({"field": "teacher_name", "message": "教师姓名格式无效，必须为非空字符串"})
+                    row_errors.append(
+                        {"field": "teacher_name", "message": "教师姓名格式无效，必须为非空字符串"}
+                    )
                 elif len(teacher_name.strip()) > 50:
-                    row_errors.append({"field": "teacher_name", "message": "教师姓名长度超过限制（最大50字符）"})
+                    row_errors.append(
+                        {"field": "teacher_name", "message": "教师姓名长度超过限制（最大50字符）"}
+                    )
                 else:
                     admin = Admin.query.filter(Admin.real_name == teacher_name.strip()).first()
                     if not admin:
@@ -1095,9 +1194,13 @@ class CourseScheduleImport(Resource):
 
             if classroom:
                 if not isinstance(classroom, str) or len(classroom.strip()) == 0:
-                    row_errors.append({"field": "classroom", "message": "教室名称格式无效，必须为非空字符串"})
+                    row_errors.append(
+                        {"field": "classroom", "message": "教室名称格式无效，必须为非空字符串"}
+                    )
                 elif len(classroom.strip()) > 50:
-                    row_errors.append({"field": "classroom", "message": "教室名称长度超过限制（最大50字符）"})
+                    row_errors.append(
+                        {"field": "classroom", "message": "教室名称长度超过限制（最大50字符）"}
+                    )
 
             return row_errors
 
@@ -1111,16 +1214,30 @@ class CourseScheduleImport(Resource):
                 if class_name:
                     class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
                     if not class_info:
-                        row_errors.append({"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'})
+                        row_errors.append(
+                            {
+                                "field": "class_name",
+                                "message": f'班级 "{class_name}" 在系统中不存在',
+                            }
+                        )
 
                 if subject_name:
-                    subject = Subject.query.filter_by(name=subject_name.strip()).first()  # noqa: F841
+                    subject = Subject.query.filter_by(
+                        name=subject_name.strip()
+                    ).first()  # noqa: F841
                     if not subject:
-                        row_errors.append({"field": "subject_name", "message": f'科目 "{subject_name}" 在系统中不存在'})
+                        row_errors.append(
+                            {
+                                "field": "subject_name",
+                                "message": f'科目 "{subject_name}" 在系统中不存在',
+                            }
+                        )
 
                 if row_errors:
                     failed_count += 1
-                    error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
+                    error_msg = "; ".join(
+                        [f'{err["field"]}: {err["message"]}' for err in row_errors]
+                    )
                     messages.append(
                         {
                             "class_name": class_name or "未知",
@@ -1156,10 +1273,14 @@ class CourseScheduleImport(Resource):
                 conflicts.extend(check_conflicts(class_info.id, day_of_week, period_number))
 
                 if teacher_name:
-                    conflicts.extend(check_teacher_conflicts(teacher_name, day_of_week, period_number))
+                    conflicts.extend(
+                        check_teacher_conflicts(teacher_name, day_of_week, period_number)
+                    )
 
                 if classroom:
-                    conflicts.extend(check_classroom_conflicts(classroom, day_of_week, period_number))
+                    conflicts.extend(
+                        check_classroom_conflicts(classroom, day_of_week, period_number)
+                    )
 
                 if conflicts:
                     conflict_messages = [c["message"] for c in conflicts]
@@ -1176,7 +1297,12 @@ class CourseScheduleImport(Resource):
                         }
                     )
                     errors.append(
-                        {"row": row_idx, "message": error_msg, "row_data": item, "error_fields": ["conflict"]}
+                        {
+                            "row": row_idx,
+                            "message": error_msg,
+                            "row_data": item,
+                            "error_fields": ["conflict"],
+                        }
                     )
                     continue
 
@@ -1237,7 +1363,12 @@ class CourseScheduleImport(Resource):
                             }
                         )
                         errors.append(
-                            {"row": row_idx, "message": error_msg, "row_data": item, "error_fields": ["conflict"]}
+                            {
+                                "row": row_idx,
+                                "message": error_msg,
+                                "row_data": item,
+                                "error_fields": ["conflict"],
+                            }
                         )
                         continue
                 else:
@@ -1278,7 +1409,14 @@ class CourseScheduleImport(Resource):
                         "error_fields": ["system"],
                     }
                 )
-                errors.append({"row": row_idx, "message": error_msg, "row_data": item, "error_fields": ["system"]})
+                errors.append(
+                    {
+                        "row": row_idx,
+                        "message": error_msg,
+                        "row_data": item,
+                        "error_fields": ["system"],
+                    }
+                )
 
         academics_service.apply_course_schedule_import(creates, updates)
 

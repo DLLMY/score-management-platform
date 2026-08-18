@@ -85,13 +85,17 @@ mqtt_subscribe_model = ns_mqtt.model(
     },
 )
 
-mqtt_unlock_model = ns_mqtt.model("MQTTUnlock", {"box_id": fields.String(description="Box ID (A/B)")})
+mqtt_unlock_model = ns_mqtt.model(
+    "MQTTUnlock", {"box_id": fields.String(description="Box ID (A/B)")}
+)
 
 mqtt_command_model = ns_mqtt.model(
     "MQTTCommand",
     {
         "device_id": fields.String(description="Device ID, broadcast to all if empty"),
-        "command": fields.String(required=True, description="Command type: open_door, open_phonebox, restart"),
+        "command": fields.String(
+            required=True, description="Command type: open_door, open_phonebox, restart"
+        ),
         "params": fields.Raw(description="Command parameters (optional)"),
     },
 )
@@ -152,7 +156,9 @@ class MQTTPublish(Resource):
 
         @limiter.limit(RateLimitStrategy.MQTT_PUBLISH)
         def _do_publish(topic, message):
-            return publish_mqtt(topic, json.dumps(message) if isinstance(message, dict) else str(message))
+            return publish_mqtt(
+                topic, json.dumps(message) if isinstance(message, dict) else str(message)
+            )
 
         data = ns_mqtt.payload
         topic = data.get("topic")
@@ -162,10 +168,14 @@ class MQTTPublish(Resource):
             return APIResponse.error(message="topic and message are required", status_code=400)
 
         if len(topic) > 200:
-            return APIResponse.error(message="Topic length cannot exceed 200 characters", status_code=400)
+            return APIResponse.error(
+                message="Topic length cannot exceed 200 characters", status_code=400
+            )
 
         if len(message) > 10000:
-            return APIResponse.error(message="Message content cannot exceed 10000 characters", status_code=400)
+            return APIResponse.error(
+                message="Message content cannot exceed 10000 characters", status_code=400
+            )
 
         result = _do_publish(topic, message)
         if result:
@@ -197,7 +207,9 @@ class MQTTConnect(Resource):
         try:
             if mqtt_manager.is_connected:
                 print("MQTT already connected, no need to reconnect")
-                return APIResponse.success(data={"status": "connected"}, message="MQTT already connected")
+                return APIResponse.success(
+                    data={"status": "connected"}, message="MQTT already connected"
+                )
 
             config_dict = None
 
@@ -227,15 +239,28 @@ class MQTTConnect(Resource):
                 # P2-7 修复: username/password 不再回退硬编码 "phoneboxtest"/"123456"，缺省置空
                 config_dict = {
                     "broker": data.get(
-                        "broker", config_dict["broker"] if config_dict else "nc5233fc.ala.cn-hangzhou.emqxsl.cn"
+                        "broker",
+                        (
+                            config_dict["broker"]
+                            if config_dict
+                            else "nc5233fc.ala.cn-hangzhou.emqxsl.cn"
+                        ),
                     ),
                     "port": data.get("port", config_dict["port"] if config_dict else 8883),
-                    "client_id": data.get("client_id", config_dict["client_id"] if config_dict else "score_backend"),
-                    "username": data.get("username", config_dict["username"] if config_dict else ""),
-                    "password": data.get("password", config_dict["password"] if config_dict else ""),
+                    "client_id": data.get(
+                        "client_id", config_dict["client_id"] if config_dict else "score_backend"
+                    ),
+                    "username": data.get(
+                        "username", config_dict["username"] if config_dict else ""
+                    ),
+                    "password": data.get(
+                        "password", config_dict["password"] if config_dict else ""
+                    ),
                     "ssl": data.get("ssl", config_dict["ssl"] if config_dict else True),
                     "timeout": data.get("timeout", config_dict["timeout"] if config_dict else 10),
-                    "keepalive": data.get("keepalive", config_dict["keepalive"] if config_dict else 60),
+                    "keepalive": data.get(
+                        "keepalive", config_dict["keepalive"] if config_dict else 60
+                    ),
                     "transport": data.get("transport", "tcp"),
                     "ws_path": data.get("ws_path", "/mqtt"),
                 }
@@ -308,7 +333,9 @@ class MQTTSubscribe(Resource):
         if result:
             return APIResponse.success(message=f"Subscribed successfully: {topic}")
         else:
-            return APIResponse.error(message="Subscribe failed, MQTT not connected", status_code=500)
+            return APIResponse.error(
+                message="Subscribe failed, MQTT not connected", status_code=500
+            )
 
 
 @ns_mqtt.route("/unsubscribe")
@@ -331,7 +358,9 @@ class MQTTUnsubscribe(Resource):
         if result:
             return APIResponse.success(message=f"Unsubscribed successfully: {topic}")
         else:
-            return APIResponse.error(message="Unsubscribe failed, MQTT not connected", status_code=500)
+            return APIResponse.error(
+                message="Unsubscribe failed, MQTT not connected", status_code=500
+            )
 
 
 @ns_mqtt.route("/unlock")
@@ -389,7 +418,9 @@ class MQTTCommand(Resource):
 
             valid_commands = ["open_door", "open_phonebox", "restart"]
             if command not in valid_commands:
-                return APIResponse.error(message=f"Invalid command type, supported: {valid_commands}", status_code=400)
+                return APIResponse.error(
+                    message=f"Invalid command type, supported: {valid_commands}", status_code=400
+                )
 
             message = {"command": command, "timestamp": datetime.now().isoformat()}
             if params:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 成绩预测服务测试模块
 """
 """
@@ -40,7 +40,7 @@ class TestScorePredictService:
                     student_id=sample_user.id,
                     rule_id=1,
                     score_change=5 if i % 2 == 0 else -3,
-                    description="测试记录"
+                    description="测试记录",
                 )
                 db_session.add(record)
             db_session.commit()
@@ -99,10 +99,7 @@ class TestScorePredictService:
         with app.app_context():
             for i in range(10):
                 record = ScoreRecord(
-                    student_id=sample_user.id,
-                    rule_id=1,
-                    score_change=5,
-                    description="测试记录"
+                    student_id=sample_user.id, rule_id=1, score_change=5, description="测试记录"
                 )
                 db_session.add(record)
             db_session.commit()
@@ -146,9 +143,7 @@ class TestScorePredictService:
         """测试获取指定班级成绩分布"""
 
         with app.app_context():
-            result = ScorePredictService.get_score_distribution(
-                class_name="测试班级"
-            )
+            result = ScorePredictService.get_score_distribution(class_name="测试班级")
 
             assert result["class_name"] == "测试班级"
 

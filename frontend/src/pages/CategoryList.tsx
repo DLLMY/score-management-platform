@@ -51,17 +51,24 @@ function CategoryList() {
     resetForm,
     errors: formErrors,
     setErrors: setFormErrors,
-  } = useForm<FormData>({
-    name: '',
-    description: '',
-    color: COLORS[0],
-    is_active: true,
-  }, {
-    name: { required: true, maxLength: 50 },
-    description: { maxLength: 200 },
-  });
+  } = useForm<FormData>(
+    {
+      name: '',
+      description: '',
+      color: COLORS[0],
+      is_active: true,
+    },
+    {
+      name: { required: true, maxLength: 50 },
+      description: { maxLength: 200 },
+    }
+  );
 
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<Category | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<Category | null>({
     onClose: () => {
       resetForm();
       setEditingCategory(null);
@@ -165,7 +172,7 @@ function CategoryList() {
           </button>
           <div className='hidden md:block'>
             <ImportExportPanel
-              type="category"
+              type='category'
               onImportComplete={() => fetchCategories()}
               permissions={{
                 import: 'category.manage',
@@ -362,7 +369,9 @@ function CategoryList() {
                       setFormErrors({ ...formErrors, name: undefined });
                     }
                   }}
-                  className={`form-input ${formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-input ${
+                    formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   placeholder='请输入分类名称'
                 />
                 {formErrors.name && (
@@ -383,7 +392,9 @@ function CategoryList() {
                       setFormErrors({ ...formErrors, description: undefined });
                     }
                   }}
-                  className={`form-input resize-none ${formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-input resize-none ${
+                    formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   rows={3}
                   placeholder='请输入分类描述'
                 />
@@ -416,7 +427,9 @@ function CategoryList() {
                   <input
                     type='text'
                     value={formData.color}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, color: e.target.value })}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setFormData({ ...formData, color: e.target.value })
+                    }
                     className='form-input w-32 font-mono text-sm'
                     placeholder='#3B82F6'
                   />
@@ -437,9 +450,7 @@ function CategoryList() {
                 <Button variant='outline' onClick={closeModal}>
                   取消
                 </Button>
-                <Button type='submit'>
-                  {editingCategory ? '保存修改' : '添加分类'}
-                </Button>
+                <Button type='submit'>{editingCategory ? '保存修改' : '添加分类'}</Button>
               </div>
             </form>
           </div>

@@ -68,7 +68,9 @@ class RankRuleList(Resource):
         # 清除排名规则缓存
         get_cache_service().invalidate_by_tag("rank_rules")
 
-        return APIResponse.success(data={"rule_id": rule.id}, message="排名规则创建成功", status_code=201)
+        return APIResponse.success(
+            data={"rule_id": rule.id}, message="排名规则创建成功", status_code=201
+        )
 
 
 @ns_rank.route("/<int:id>")
@@ -141,7 +143,9 @@ def _get_active_rank_rules_cached():
     if cached_rules is not None:
         return cached_rules
 
-    rules = ScoreRankRule.query.filter_by(is_active=True).order_by(ScoreRankRule.min_score.desc()).all()
+    rules = (
+        ScoreRankRule.query.filter_by(is_active=True).order_by(ScoreRankRule.min_score.desc()).all()
+    )
 
     # 转换为字典列表便于缓存
     rules_data = [

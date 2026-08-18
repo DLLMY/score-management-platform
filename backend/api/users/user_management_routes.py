@@ -17,7 +17,10 @@ ns_user_management = Namespace("user-management", description="用户管理增�
 
 blacklist_request = ns_user_management.model(
     "BlacklistRequest",
-    {"reason": fields.String(description="禁用原因"), "until": fields.DateTime(description="禁用截止时间（可选）")},
+    {
+        "reason": fields.String(description="禁用原因"),
+        "until": fields.DateTime(description="禁用截止时间（可选）"),
+    },
 )
 
 unlock_limit_request = ns_user_management.model(
@@ -78,7 +81,9 @@ class UserBlacklist(Resource):
                         "card_id": u.card_id,
                         "class_name": u.class_name,
                         "blacklist_reason": u.blacklist_reason,
-                        "blacklist_until": u.blacklist_until.isoformat() if u.blacklist_until else None,
+                        "blacklist_until": (
+                            u.blacklist_until.isoformat() if u.blacklist_until else None
+                        ),
                         "current_score": u.current_score,
                         "created_at": u.created_at.isoformat() if u.created_at else None,
                     }
@@ -233,7 +238,9 @@ class UserStatusList(Resource):
                         "is_blacklisted": u.is_blacklisted,
                         "daily_unlock_limit": u.daily_unlock_limit,
                         "today_unlock_count": u.today_unlock_count,
-                        "last_unlock_date": u.last_unlock_date.isoformat() if u.last_unlock_date else None,
+                        "last_unlock_date": (
+                            u.last_unlock_date.isoformat() if u.last_unlock_date else None
+                        ),
                     }
                     for u in users
                 ],

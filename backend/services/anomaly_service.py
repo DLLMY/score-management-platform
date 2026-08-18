@@ -8,10 +8,22 @@ import numpy as np
 # (空行)
 CACHE_PREFIX = "anomaly:"
 ANOMALY_TYPES = {
-    "sudden_change": {"name": "突变异常", "threshold": 3, "description": "单次积分变化超过3个标准差"},
+    "sudden_change": {
+        "name": "突变异常",
+        "threshold": 3,
+        "description": "单次积分变化超过3个标准差",
+    },
     "trend_anomaly": {"name": "趋势异常", "window": 5, "description": "连续5天以上同向变化"},
-    "group_anomaly": {"name": "群体异常", "threshold": 5, "description": "短时间内大量用户出现相同异常"},
-    "frequency_anomaly": {"name": "频率异常", "threshold": 10, "description": "单日积分变动次数超过阈值"},
+    "group_anomaly": {
+        "name": "群体异常",
+        "threshold": 5,
+        "description": "短时间内大量用户出现相同异常",
+    },
+    "frequency_anomaly": {
+        "name": "频率异常",
+        "threshold": 10,
+        "description": "单日积分变动次数超过阈值",
+    },
 }
 
 
@@ -69,7 +81,9 @@ class AnomalyDetector:
         for i, score in enumerate(scores):
             is_anomaly, z_score = self.detect_zscore(score)
             if is_anomaly:
-                anomalies.append({"index": i, "value": score, "z_score": z_score, "type": "sudden_change"})
+                anomalies.append(
+                    {"index": i, "value": score, "z_score": z_score, "type": "sudden_change"}
+                )
         return anomalies
 
 
@@ -88,7 +102,9 @@ class AnomalyService:
         """
         start_date = datetime.now() - timedelta(days=days)
         records = (
-            ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date)
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date
+            )
             .order_by(ScoreRecord.created_at.asc())
             .all()
         )
@@ -198,7 +214,9 @@ class AnomalyService:
         if not changes:
             return {"has_anomaly": False, "deviation": 0}
         user_total = sum((c["score_change"] for c in changes))
-        classmates = User.query.filter(User.class_name == user.class_name, User.id != user_id, User.is_active).all()
+        classmates = User.query.filter(
+            User.class_name == user.class_name, User.id != user_id, User.is_active
+        ).all()
         if not classmates:
             return {"has_anomaly": False, "deviation": 0}
         classmate_totals = []
@@ -236,7 +254,9 @@ class AnomalyService:
             dict: 频率异常信息
         """
         start_date = datetime.now() - timedelta(days=days)
-        count = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date).count()
+        count = ScoreRecord.query.filter(
+            ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date
+        ).count()
         threshold = ANOMALY_TYPES["frequency_anomaly"]["threshold"]
         is_anomaly = count > threshold
         return {
@@ -261,7 +281,12 @@ class AnomalyService:
             "user_id": user_id,
             "has_anomaly": False,
             "anomalies": [],
-            "summary": {"sudden_change": 0, "trend_anomaly": False, "group_anomaly": False, "frequency_anomaly": False},
+            "summary": {
+                "sudden_change": 0,
+                "trend_anomaly": False,
+                "group_anomaly": False,
+                "frequency_anomaly": False,
+            },
         }
         sudden_changes = AnomalyService.detect_sudden_change(user_id, days)
         result["summary"]["sudden_change"] = len(sudden_changes)
@@ -325,11 +350,19 @@ class AnomalyService:
         for anomaly in anomalies:
             if anomaly["type"] == "sudden_change":
                 suggestions.append(
-                    {"type": "调查", "priority": "high", "message": "检测到积分突变，建议核查该记录的真实性"}
+                    {
+                        "type": "调查",
+                        "priority": "high",
+                        "message": "检测到积分突变，建议核查该记录的真实性",
+                    }
                 )
             elif anomaly["type"] == "trend_anomaly":
                 suggestions.append(
-                    {"type": "关注", "priority": "medium", "message": "积分持续变化，建议关注学生近期表现"}
+                    {
+                        "type": "关注",
+                        "priority": "medium",
+                        "message": "积分持续变化，建议关注学生近期表现",
+                    }
                 )
             elif anomaly["type"] == "group_anomaly":
                 suggestions.append(
@@ -341,7 +374,11 @@ class AnomalyService:
                 )
             elif anomaly["type"] == "frequency_anomaly":
                 suggestions.append(
-                    {"type": "设备检查", "priority": "low", "message": "积分频率异常，建议检查设备是否正常"}
+                    {
+                        "type": "设备检查",
+                        "priority": "low",
+                        "message": "积分频率异常，建议检查设备是否正常",
+                    }
                 )
         return suggestions
 

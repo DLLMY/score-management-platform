@@ -14,19 +14,20 @@ export interface UseModalResult<T = null> {
   updateData: (data: Partial<T>) => void;
 }
 
-export function useModal<T = null>(
-  options: UseModalOptions<T> = {}
-): UseModalResult<T> {
+export function useModal<T = null>(options: UseModalOptions<T> = {}): UseModalResult<T> {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<T>(null as T);
 
   const { onOpen: onOpenCallback, onClose: onCloseCallback } = options;
-  
-  const open = useCallback((modalData?: T) => {
-    setData(modalData ?? (null as T));
-    setIsOpen(true);
-    onOpenCallback?.(modalData ?? (null as T));
-  }, [onOpenCallback]);
+
+  const open = useCallback(
+    (modalData?: T) => {
+      setData(modalData ?? (null as T));
+      setIsOpen(true);
+      onOpenCallback?.(modalData ?? (null as T));
+    },
+    [onOpenCallback]
+  );
 
   const close = useCallback(() => {
     setIsOpen(false);

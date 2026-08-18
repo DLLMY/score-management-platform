@@ -6,6 +6,7 @@
 设计对齐 attribution/engagement 批量标准模式：
 单生异常隔离进 failed_students，不影响其余学生与整体响应。
 """
+
 from unittest import mock
 
 import numpy as np
@@ -24,10 +25,15 @@ def _seed_users(app, users=((1, "A"), (2, "B"))):
     """seed 一批学生（role=student）。"""
     with app.app_context():
         for sid, name in users:
-            db.session.add(User(
-                id=sid, name=name, card_id="CARD_%d" % sid,
-                class_name="边界班", role="student",
-            ))
+            db.session.add(
+                User(
+                    id=sid,
+                    name=name,
+                    card_id="CARD_%d" % sid,
+                    class_name="边界班",
+                    role="student",
+                )
+            )
         db.session.commit()
 
 
@@ -35,10 +41,14 @@ def _seed_all_negative_scores(app, sid):
     """全负积分流水：构造风险极端输入。"""
     with app.app_context():
         for k in range(6):
-            db.session.add(ScoreRecord(
-                user_id=sid, score_change=-2,
-                created_at=datetime.combine(date.today(), datetime.min.time()) - timedelta(days=k),
-            ))
+            db.session.add(
+                ScoreRecord(
+                    user_id=sid,
+                    score_change=-2,
+                    created_at=datetime.combine(date.today(), datetime.min.time())
+                    - timedelta(days=k),
+                )
+            )
         db.session.commit()
 
 
@@ -106,7 +116,9 @@ class TestScorePredictBatchIsolation:
             return fake[user_id]
 
         with app.app_context():
-            with mock.patch.object(ScorePredictService, "predict_exam_score", side_effect=side_effect):
+            with mock.patch.object(
+                ScorePredictService, "predict_exam_score", side_effect=side_effect
+            ):
                 res = ScorePredictService.predict_batch("边界班", 30)
         assert res["failed"] == 1
         assert len(res["failed_students"]) == 1
@@ -125,7 +137,12 @@ class TestPredictionBatchIsolation:
         _seed_users(app)
         fake = {
             1: {"trend": "rising", "slope": 0.5, "predicted_scores": [80, 85], "current_score": 80},
-            2: {"trend": "falling", "slope": -2.0, "predicted_scores": [80, 70], "current_score": 80},
+            2: {
+                "trend": "falling",
+                "slope": -2.0,
+                "predicted_scores": [80, 70],
+                "current_score": 80,
+            },
         }
 
         def side_effect(user_id, days=7):
@@ -134,7 +151,9 @@ class TestPredictionBatchIsolation:
             return fake[user_id]
 
         with app.app_context():
-            with mock.patch.object(PredictionService, "predict_future_scores", side_effect=side_effect):
+            with mock.patch.object(
+                PredictionService, "predict_future_scores", side_effect=side_effect
+            ):
                 res = PredictionService.predict_batch("边界班", 7)
         assert res["failed"] == 1
         assert len(res["failed_students"]) == 1
@@ -152,12 +171,28 @@ class TestCompositeWeightSensitivity:
     def _two_students_data():
         """A 行为高学术低；B 行为低学术高。"""
         return [
-            {"user_id": 1, "name": "A", "class_name": "边界班",
-             "behavior": 90, "academic": 50, "unlock_count": 0,
-             "behavior_norm": 0.9, "academic_norm": 0.1, "compliance_norm": 0.5},
-            {"user_id": 2, "name": "B", "class_name": "边界班",
-             "behavior": 50, "academic": 90, "unlock_count": 1,
-             "behavior_norm": 0.1, "academic_norm": 0.9, "compliance_norm": 0.5},
+            {
+                "user_id": 1,
+                "name": "A",
+                "class_name": "边界班",
+                "behavior": 90,
+                "academic": 50,
+                "unlock_count": 0,
+                "behavior_norm": 0.9,
+                "academic_norm": 0.1,
+                "compliance_norm": 0.5,
+            },
+            {
+                "user_id": 2,
+                "name": "B",
+                "class_name": "边界班",
+                "behavior": 50,
+                "academic": 90,
+                "unlock_count": 1,
+                "behavior_norm": 0.1,
+                "academic_norm": 0.9,
+                "compliance_norm": 0.5,
+            },
         ]
 
     def test_calculate_scores_weight_sensitivity(self):

@@ -72,7 +72,9 @@ def verify_request_signature():
 
             secret_key = current_app.config.get("API_SECRET_KEY", "default-secret-key")
             sign_string = f"{request.method}{request.path}{timestamp}{request.get_data()}"
-            expected_signature = hmac.new(secret_key.encode(), sign_string.encode(), hashlib.sha256).hexdigest()
+            expected_signature = hmac.new(
+                secret_key.encode(), sign_string.encode(), hashlib.sha256
+            ).hexdigest()
 
             if not hmac.compare_digest(signature, expected_signature):
                 log_security_event("invalid_signature", "warning", details="签名验证失败")
@@ -119,7 +121,9 @@ def rate_limit(max_requests=100, window_minutes=1):
     return decorator
 
 
-def log_security_event(event_type, severity="info", user_id=None, user_type="unknown", details=None):
+def log_security_event(
+    event_type, severity="info", user_id=None, user_type="unknown", details=None
+):
     """
     记录安全审计日志
     （F17：落库委托 services.security_service，本函数保留供本模块装饰器调用）
@@ -201,7 +205,9 @@ class SecurityAuditLogs(Resource):
         if start_date:
             query = query.filter(SecurityAudit.created_at >= datetime.fromisoformat(start_date))
         if end_date:
-            query = query.filter(SecurityAudit.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1))
+            query = query.filter(
+                SecurityAudit.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1)
+            )
         if user_id:
             query = query.filter(SecurityAudit.user_id == int(user_id))
 
@@ -278,9 +284,17 @@ class SecurityAuditStats(Resource):
             stats["by_type"][event_type] = count
 
         top_ips = (
-            db.session.query(SecurityAudit.ip_address, db.func.count(SecurityAudit.id).label("count"))
-            .filter(SecurityAudit.created_at >= last_24h, SecurityAudit.severity.in_(["warning", "error", "critical"]))
-            .filter(SecurityAudit.created_at >= last_24h, SecurityAudit.severity.in_(["warning", "error", "critical"]))
+            db.session.query(
+                SecurityAudit.ip_address, db.func.count(SecurityAudit.id).label("count")
+            )
+            .filter(
+                SecurityAudit.created_at >= last_24h,
+                SecurityAudit.severity.in_(["warning", "error", "critical"]),
+            )
+            .filter(
+                SecurityAudit.created_at >= last_24h,
+                SecurityAudit.severity.in_(["warning", "error", "critical"]),
+            )
             .order_by(db.text("count DESC"))
             .limit(10)
             .all()
@@ -311,7 +325,9 @@ class SuspiciousIPs(Resource):
             db.session.query(
                 SecurityAudit.ip_address,
                 db.func.count(SecurityAudit.id).label("event_count"),
-                db.func.count(db.func.nullif(SecurityAudit.response_status, 200)).label("error_count"),
+                db.func.count(db.func.nullif(SecurityAudit.response_status, 200)).label(
+                    "error_count"
+                ),
             )
             .filter(SecurityAudit.created_at >= last_1h)
             .group_by(SecurityAudit.ip_address)
@@ -325,7 +341,9 @@ class SuspiciousIPs(Resource):
                     "ip_address": ip,
                     "event_count": event_count,
                     "error_count": error_count,
-                    "error_rate": round(error_count / event_count * 100, 1) if event_count > 0 else 0,
+                    "error_rate": (
+                        round(error_count / event_count * 100, 1) if event_count > 0 else 0
+                    ),
                 }
                 for ip, event_count, error_count in suspicious_ips
             ],
@@ -361,7 +379,11 @@ class RateLimitStatus(Resource):
         return {
             "ip_address": ip,
             "endpoints": [
-                {"endpoint": r.endpoint, "request_count": r.request_count, "window_start": r.window_start.isoformat()}
+                {
+                    "endpoint": r.endpoint,
+                    "request_count": r.request_count,
+                    "window_start": r.window_start.isoformat(),
+                }
                 for r in records
             ],
             "total_requests": sum(r.request_count for r in records),

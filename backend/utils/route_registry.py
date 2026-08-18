@@ -75,7 +75,9 @@ def check_route_duplicates(app: Flask) -> bool:
         view_func = app.view_functions.get(rule.endpoint)
         view_func_name = view_func.__name__ if view_func else "unknown"
 
-        route_registry.register(endpoint=rule.endpoint, rule=rule.rule, view_func_name=view_func_name)
+        route_registry.register(
+            endpoint=rule.endpoint, rule=rule.rule, view_func_name=view_func_name
+        )
 
     return route_registry.print_report()
 

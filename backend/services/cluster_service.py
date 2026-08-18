@@ -132,12 +132,17 @@ class ClusterService:
         with db_session_scope():
             for i, (_, row) in enumerate(df.iterrows()):
                 label = labels[i]
-                cluster = StudentCluster(student_id=row["user_id"],
+                cluster = StudentCluster(
+                    student_id=row["user_id"],
                     cluster_label=cluster_names[label],
                     cluster_score=float(row.get("academic_score", 0)),
                     features={
-                        "behavior_score": float(features_std[i][0]) if len(features_std[i]) > 0 else 0,
-                        "academic_score": float(features_std[i][1]) if len(features_std[i]) > 1 else 0,
+                        "behavior_score": (
+                            float(features_std[i][0]) if len(features_std[i]) > 0 else 0
+                        ),
+                        "academic_score": (
+                            float(features_std[i][1]) if len(features_std[i]) > 1 else 0
+                        ),
                         "cluster_name": cluster_names[label],
                     },
                     updated_at=datetime.now(),
@@ -159,9 +164,9 @@ class ClusterService:
         cached_result = cache_svc.get(cache_key) if cache_svc else None
         if cached_result is not None:
             return cached_result
-        query = StudentCluster.query.join(
-            User, StudentCluster.student_id == User.id
-        ).filter(User.is_active)
+        query = StudentCluster.query.join(User, StudentCluster.student_id == User.id).filter(
+            User.is_active
+        )
         if class_name:
             query = query.filter(User.class_name == class_name)
         clusters = query.all()
@@ -248,7 +253,9 @@ class ClusterService:
         if not cluster:
             return None
         cluster_name = (
-            cluster.features.get("cluster_name", cluster.cluster_label) if cluster.features else cluster.cluster_label
+            cluster.features.get("cluster_name", cluster.cluster_label)
+            if cluster.features
+            else cluster.cluster_label
         )
         features = cluster.features or {}
         return {

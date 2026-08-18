@@ -21,7 +21,9 @@ class HomeworkSubmission(db.Model):
     __tablename__ = "homework_submission"
 
     id = db.Column(db.Integer, primary_key=True)
-    assignment_id = db.Column(db.Integer, db.ForeignKey("homework_assignment.id"), nullable=False, index=True)
+    assignment_id = db.Column(
+        db.Integer, db.ForeignKey("homework_assignment.id"), nullable=False, index=True
+    )
     student_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     is_submitted = db.Column(db.Boolean, default=False)
     submitted_at = db.Column(db.DateTime, nullable=True)

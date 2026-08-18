@@ -14,6 +14,7 @@ from services.notify_template_service import (
 )
 import json
 
+
 def _resolve_class_from_device(device_id):
     if not device_id:
         return None
@@ -109,7 +110,11 @@ class TemplateList(Resource):
     @requires_permission("notification.view")
     def get(self):
         """获取所有模板列表"""
-        templates = NotifyTemplate.query.filter_by(is_active=True).order_by(NotifyTemplate.usage_count.desc()).all()
+        templates = (
+            NotifyTemplate.query.filter_by(is_active=True)
+            .order_by(NotifyTemplate.usage_count.desc())
+            .all()
+        )
         return [serialize_template(t) for t in templates]
 
     @ns_notify_template.expect(template_model)
@@ -119,7 +124,9 @@ class TemplateList(Resource):
         """创建新模板"""
         data = ns_notify_template.payload
         # 从 token 获取当前管理员，避免审计链丢失真实责任人；无 token 时兜底种子管理员
-        _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        _admin_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         template = create_template(data, _admin_id)
         return serialize_template(template)
 
@@ -163,7 +170,9 @@ class TemplateUse(Resource):
         template = NotifyTemplate.query.get_or_404(id)
         data = ns_notify_template.payload or {}
         force_send = bool(data.get("force_send", False))
-        _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        _admin_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         if force_send and not has_permission(g.current_user, "notification.force_send"):
             return APIResponse.error(message="无强制发送权限（需 notification.force_send）")
         # 构建消息
@@ -191,23 +200,38 @@ class TemplateUse(Resource):
         else:
             topics = ["phonebox/remote/notify"]
         # 上课时间拦截（广播按全校+任意班级；指定设备按班级课表反查）
-        cls_id = _resolve_class_from_device(device_id) if (send_mode == "device" and device_id) else None
+        cls_id = (
+            _resolve_class_from_device(device_id) if (send_mode == "device" and device_id) else None
+        )
         if cls_id:
             allowed, check_message, reason_code, _ = ClassTimeChecker.is_notification_allowed(
                 target_class_info_id=cls_id, force_send=force_send
             )
         else:
-            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=force_send)
+            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(
+                force_send=force_send
+            )
             allowed = not blocked
         if not allowed:
             ClassTimeChecker.log_notify_audit(
-                "notify_template", cls_id, _admin_id, {"id": id}, reason_code or "GLOBAL_TIME_RULE",
-                check_message, force_send=False,
+                "notify_template",
+                cls_id,
+                _admin_id,
+                {"id": id},
+                reason_code or "GLOBAL_TIME_RULE",
+                check_message,
+                force_send=False,
             )
             return APIResponse.error(message=f"上课时间，模板通知已暂停: {check_message}")
         if force_send:
             ClassTimeChecker.log_notify_audit(
-                "notify_template", cls_id, _admin_id, {"id": id}, "FORCE", "强制发送模板通知", force_send=True
+                "notify_template",
+                cls_id,
+                _admin_id,
+                {"id": id},
+                "FORCE",
+                "强制发送模板通知",
+                force_send=True,
             )
 
         try:

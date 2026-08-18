@@ -5,20 +5,26 @@ from utils.permission import requires_permission
 
 ns_mental_health = Namespace("mental_health", description="心理健康管理")
 
-record_model = ns_mental_health.model("MentalHealthInput", {
-    "student_id": fields.Integer(required=True),
-    "mood_level": fields.Integer(),
-    "stress_level": fields.Integer(),
-    "sleep_hours": fields.Float(),
-    "notes": fields.String(),
-})
+record_model = ns_mental_health.model(
+    "MentalHealthInput",
+    {
+        "student_id": fields.Integer(required=True),
+        "mood_level": fields.Integer(),
+        "stress_level": fields.Integer(),
+        "sleep_hours": fields.Float(),
+        "notes": fields.String(),
+    },
+)
 
 
 @ns_mental_health.route("/records")
 class MentalHealthList(Resource):
-    @ns_mental_health.doc("list_records", params={
-        "student_id": {"description": "学生ID", "type": int},
-    })
+    @ns_mental_health.doc(
+        "list_records",
+        params={
+            "student_id": {"description": "学生ID", "type": int},
+        },
+    )
     @requires_permission("mental_health.view")
     def get(self):
         student_id = request.args.get("student_id", type=int)
@@ -33,10 +39,13 @@ class MentalHealthList(Resource):
 
 @ns_mental_health.route("/alerts")
 class MentalHealthAlerts(Resource):
-    @ns_mental_health.doc("list_alerts", params={
-        "student_id": {"description": "学生ID", "type": int},
-        "is_resolved": {"description": "是否已解决"},
-    })
+    @ns_mental_health.doc(
+        "list_alerts",
+        params={
+            "student_id": {"description": "学生ID", "type": int},
+            "is_resolved": {"description": "是否已解决"},
+        },
+    )
     @requires_permission("mental_health.view")
     def get(self):
         student_id = request.args.get("student_id", type=int)

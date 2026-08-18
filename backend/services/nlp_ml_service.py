@@ -17,7 +17,13 @@ from sklearn.model_selection import (
     cross_val_score,
     StratifiedKFold,
 )
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+)
 from sklearn.svm import SVC
 from sklearn.ensemble import (
     RandomForestClassifier,
@@ -326,7 +332,9 @@ class FeatureEngineeringService:
         if not GENSIM_INSTALLED:
             return None
         tokenized_texts = [jieba.lcut(text) for text in texts]
-        tagged_docs = [TaggedDocument(words=tokens, tags=[str(i)]) for i, tokens in enumerate(tokenized_texts)]
+        tagged_docs = [
+            TaggedDocument(words=tokens, tags=[str(i)]) for i, tokens in enumerate(tokenized_texts)
+        ]
         self.d2v_model = Doc2Vec(
             tagged_docs,
             vector_size=vector_size,
@@ -344,12 +352,8 @@ class FeatureEngineeringService:
     def build_bert_features(self, texts, model_name="bert-base-chinese", max_length=64):
         if not TRANSFORMERS_INSTALLED:
             return None
-        self.bert_tokenizer = BertTokenizer.from_pretrained(
-            model_name, revision="main"  # nosec
-        )
-        self.bert_model = BertModel.from_pretrained(
-            model_name, revision="main"  # nosec
-        )
+        self.bert_tokenizer = BertTokenizer.from_pretrained(model_name, revision="main")  # nosec
+        self.bert_model = BertModel.from_pretrained(model_name, revision="main")  # nosec
         self.bert_model.eval()
         features = []
         for text in texts:
@@ -678,7 +682,9 @@ class NLPMLTrainingService:
                 random_state=42,
                 subsample=0.8,
             ),
-            MLAlgorithmType.ADA_BOOST: AdaBoostClassifier(n_estimators=150, learning_rate=0.8, random_state=42),
+            MLAlgorithmType.ADA_BOOST: AdaBoostClassifier(
+                n_estimators=150, learning_rate=0.8, random_state=42
+            ),
             MLAlgorithmType.EXTRA_TREES: ExtraTreesClassifier(
                 n_estimators=300,
                 max_depth=25,
@@ -751,7 +757,9 @@ class NLPMLTrainingService:
         # BERT: 预训练Transformer模型（CPU环境使用轻量级模式）
         if BERT_INSTALLED:
             try:
-                self.models[MLAlgorithmType.BERT] = _SklearnBertWrapper(model_path="models/bert", use_quantization=True)
+                self.models[MLAlgorithmType.BERT] = _SklearnBertWrapper(
+                    model_path="models/bert", use_quantization=True
+                )
             except Exception as e:
                 print(f"[NLPMLTrainingService] BERT初始化失败: {e}")
 
@@ -899,7 +907,9 @@ class NLPMLTrainingService:
             return None
         weighted_results = []
         for rule_id, data in rule_confidences.items():
-            avg_confidence = data["total_confidence"] / data["total_weight"] if data["total_weight"] > 0 else 0
+            avg_confidence = (
+                data["total_confidence"] / data["total_weight"] if data["total_weight"] > 0 else 0
+            )
             weighted_score = avg_confidence * (data["votes"] / len(predictions))
             weighted_results.append((rule_id, weighted_score, data["votes"], avg_confidence))
         weighted_results.sort(key=lambda x: x[1], reverse=True)
@@ -974,7 +984,9 @@ class NLPMLTrainingService:
             indices = importances.argsort()[::-1][:top_n]
             return [
                 {
-                    "feature": (feature_names[idx] if idx < len(feature_names) else f"feature_{idx}"),
+                    "feature": (
+                        feature_names[idx] if idx < len(feature_names) else f"feature_{idx}"
+                    ),
                     "importance": round(float(importances[idx]), 6),
                     "rank": i + 1,
                 }
@@ -1126,7 +1138,9 @@ class NLPMLTrainingService:
             MLAlgorithmType.VOTING,
             MLAlgorithmType.STACKING,
         ]:
-            model, tuning_info = self._optimize_hyperparameters(algorithm, X_train, y_train, tuning_method)
+            model, tuning_info = self._optimize_hyperparameters(
+                algorithm, X_train, y_train, tuning_method
+            )
         else:
             tuning_info = {}
         if algorithm == MLAlgorithmType.MLP:
@@ -1235,13 +1249,17 @@ class NLPMLTrainingService:
         min_test_samples = max(num_classes, 10)
         test_size_ratio = min_test_samples / len(texts)
         if test_size_ratio > 0.5:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.5, random_state=42
+            )
         elif len(texts) >= min_test_samples * 2:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=test_size_ratio, random_state=42, stratify=y
             )
         else:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
         with db_session_scope():
             training_record = NLPModelTraining(
                 model_name=f'{algorithm}_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}',
@@ -1308,13 +1326,17 @@ class NLPMLTrainingService:
         min_test_samples = max(num_classes, 10)
         test_size_ratio = min_test_samples / len(texts)
         if test_size_ratio > 0.5:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.5, random_state=42
+            )
         elif len(texts) >= min_test_samples * 2:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=test_size_ratio, random_state=42, stratify=y
             )
         else:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
         results = []
         best_algorithm = None
         best_f1 = 0.0
@@ -1361,7 +1383,9 @@ class NLPMLTrainingService:
                 status="completed",
                 algorithm_type=f"auto_{best_algorithm}",
                 training_data_size=len(texts),
-                accuracy=results[MLAlgorithmType.all().index(best_algorithm)]["evaluation"]["accuracy"],
+                accuracy=results[MLAlgorithmType.all().index(best_algorithm)]["evaluation"][
+                    "accuracy"
+                ],
                 f1_score=best_f1,
                 trained_at=datetime.now(),
             )
@@ -1372,7 +1396,9 @@ class NLPMLTrainingService:
             "success": True,
             "results": results,
             "best_algorithm": best_algorithm,
-            "best_algorithm_name": (MLAlgorithmType.get_name(best_algorithm) if best_algorithm else None),
+            "best_algorithm_name": (
+                MLAlgorithmType.get_name(best_algorithm) if best_algorithm else None
+            ),
             "best_f1": best_f1,
             "training_data_count": len(texts),
             "message": f"自动选择最佳算法: {best_algo_name}",
@@ -1717,7 +1743,9 @@ class NLPMLTrainingService:
                 "count": count,
                 "percentage": round(count / total_samples * 100, 2),
                 "rule_description": (
-                    rule_id_map[rule_id].behavior_description if rule_id in rule_id_map else "Unknown"
+                    rule_id_map[rule_id].behavior_description
+                    if rule_id in rule_id_map
+                    else "Unknown"
                 ),
             }
             for rule_id, count in label_distribution.most_common()
@@ -1732,7 +1760,9 @@ class NLPMLTrainingService:
                 "total_samples": total_samples,
                 "model_bias": "无法分析，模型未加载",
             }
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
@@ -1756,7 +1786,9 @@ class NLPMLTrainingService:
             "per_class_metrics": per_class_metrics,
             "mean_f1": round(mean_f1, 4),
             "std_f1": round(std_f1, 4),
-            "bias_indicator": ("高偏差" if std_f1 > 0.3 else "中等偏差" if std_f1 > 0.15 else "低偏差"),
+            "bias_indicator": (
+                "高偏差" if std_f1 > 0.3 else "中等偏差" if std_f1 > 0.15 else "低偏差"
+            ),
         }
 
     def cross_validation_detailed(self, algorithm=None, cv=5):
@@ -1800,7 +1832,9 @@ class NLPMLTrainingService:
             all_y_true.extend(y_test)
             all_y_pred.extend(y_pred)
         overall_accuracy = accuracy_score(all_y_true, all_y_pred)
-        overall_precision = precision_score(all_y_true, all_y_pred, average="weighted", zero_division=0)
+        overall_precision = precision_score(
+            all_y_true, all_y_pred, average="weighted", zero_division=0
+        )
         overall_recall = recall_score(all_y_true, all_y_pred, average="weighted", zero_division=0)
         overall_f1 = f1_score(all_y_true, all_y_pred, average="weighted", zero_division=0)
         return {

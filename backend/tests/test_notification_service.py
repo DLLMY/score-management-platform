@@ -2,6 +2,7 @@
 
 from unittest.mock import patch, MagicMock
 import json
+
 try:
     from services.notification_service import NotificationService
 except ImportError:
@@ -37,9 +38,7 @@ class TestNotificationService:
             from services.notification_service import NotificationService
 
             with patch("models.get_by_id", return_value=None):
-                result = NotificationService.send_wechat_notification(
-                    1, "template_id", {}
-                )
+                result = NotificationService.send_wechat_notification(1, "template_id", {})
 
                 assert result["success"] is False
                 assert "用户不存在" in result["message"]
@@ -52,9 +51,7 @@ class TestNotificationService:
             mock_user.parent_info = None
 
             with patch("models.get_by_id", return_value=mock_user):
-                result = NotificationService.send_wechat_notification(
-                    1, "template_id", {}
-                )
+                result = NotificationService.send_wechat_notification(1, "template_id", {})
 
                 assert result["success"] is False
                 assert "家长openid不存在" in result["message"]
@@ -70,9 +67,7 @@ class TestNotificationService:
                 with patch.object(
                     NotificationService, "_get_wechat_access_token", return_value="test_token"
                 ):
-                    result = NotificationService.send_wechat_notification(
-                        1, "template_id", {}
-                    )
+                    result = NotificationService.send_wechat_notification(1, "template_id", {})
 
                     assert result["success"] is False
                     assert "家长openid不存在" in result["message"]
@@ -88,9 +83,7 @@ class TestNotificationService:
                 with patch.object(
                     NotificationService, "_get_wechat_access_token", return_value=None
                 ):
-                    result = NotificationService.send_wechat_notification(
-                        1, "template_id", {}
-                    )
+                    result = NotificationService.send_wechat_notification(1, "template_id", {})
 
                     assert result["success"] is False
                     assert "获取access_token失败" in result["message"]
@@ -143,9 +136,7 @@ class TestNotificationService:
                         }
                         mock_post.return_value = mock_response
 
-                        result = NotificationService.send_wechat_notification(
-                            1, "template_id", {}
-                        )
+                        result = NotificationService.send_wechat_notification(1, "template_id", {})
 
                         assert result["success"] is False
                         assert "invalid template" in result["message"]
@@ -205,9 +196,7 @@ class TestNotificationService:
 
             config = {"provider": "aliyun", "access_key_id": "test"}
 
-            result = NotificationService._send_aliyun_sms(
-                "13800138000", "test", config
-            )
+            result = NotificationService._send_aliyun_sms("13800138000", "test", config)
 
             assert result["success"] is False
             assert "阿里云短信配置不完整" in result["message"]
@@ -218,9 +207,7 @@ class TestNotificationService:
 
             config = {"provider": "tencent"}
 
-            result = NotificationService._send_tencent_sms(
-                "13800138000", "test", config
-            )
+            result = NotificationService._send_tencent_sms("13800138000", "test", config)
 
             assert result["success"] is False
             assert "待实现" in result["message"]

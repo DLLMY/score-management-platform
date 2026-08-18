@@ -66,7 +66,10 @@ function StudentLogin() {
         <div className='bg-white rounded-3xl shadow-xl border border-gray-200/50 p-6'>
           <form onSubmit={handleSubmit} className='space-y-5'>
             {error && (
-              <div className='bg-red-500/20 border border-red-500/40 text-red-500 px-4 py-3 rounded-xl text-sm flex items-center gap-2' role='alert'>
+              <div
+                className='bg-red-500/20 border border-red-500/40 text-red-500 px-4 py-3 rounded-xl text-sm flex items-center gap-2'
+                role='alert'
+              >
                 <AlertCircle className='w-5 h-5 flex-shrink-0' />
                 {error}
               </div>

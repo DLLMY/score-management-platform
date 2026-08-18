@@ -10,6 +10,7 @@
 
 注意：单条 create 用 APIResponse.success → 200（与 subject create 的 201 区分）。
 """
+
 import pytest
 from datetime import date
 
@@ -39,16 +40,23 @@ def seeded_exam(app):
         exam_id = exam.id
 
         score = Score(
-            exam_id=exam_id, student_id=stu1_id, subject_id=subj1_id,
-            score=90.0, full_score=100, status="pending",
+            exam_id=exam_id,
+            student_id=stu1_id,
+            subject_id=subj1_id,
+            score=90.0,
+            full_score=100,
+            status="pending",
         )
         db.session.add(score)
         db.session.commit()
         score_id = score.id
     return {
-        "subj1_id": subj1_id, "subj2_id": subj2_id,
-        "stu1_id": stu1_id, "stu2_id": stu2_id,
-        "exam_id": exam_id, "score_id": score_id,
+        "subj1_id": subj1_id,
+        "subj2_id": subj2_id,
+        "stu1_id": stu1_id,
+        "stu2_id": stu2_id,
+        "exam_id": exam_id,
+        "score_id": score_id,
     }
 
 
@@ -126,7 +134,9 @@ class TestExamRoutes:
     def test_publish_exam_not_draft(self, client, app, auth_headers, seeded_exam):
         with app.app_context():
             resp = client.post(
-                "/api/exams", json={"name": "已关闭考试", "date": "2026-06-01", "status": "closed"}, headers=auth_headers
+                "/api/exams",
+                json={"name": "已关闭考试", "date": "2026-06-01", "status": "closed"},
+                headers=auth_headers,
             )
             closed_id = resp.get_json()["data"]["id"]
             r2 = client.post(f"/api/exams/{closed_id}/publish", headers=auth_headers)
@@ -167,20 +177,31 @@ class TestScoreRoutes:
         with app.app_context():
             resp = client.post(
                 "/api/scores",
-                json={"exam_id": exam_id, "student_id": stu2, "subject_id": subj2, "score": 85, "full_score": 100},
+                json={
+                    "exam_id": exam_id,
+                    "student_id": stu2,
+                    "subject_id": subj2,
+                    "score": 85,
+                    "full_score": 100,
+                },
                 headers=auth_headers,
             )
             assert resp.status_code == 200
             body = resp.get_json()
             assert body["data"]["score"] == 85
-            assert Score.query.filter_by(exam_id=exam_id, student_id=stu2, subject_id=subj2).first() is not None
+            assert (
+                Score.query.filter_by(exam_id=exam_id, student_id=stu2, subject_id=subj2).first()
+                is not None
+            )
 
     def test_create_score_missing_subject(self, client, app, auth_headers, seeded_exam):
         exam_id = seeded_exam["exam_id"]
         stu2 = seeded_exam["stu2_id"]
         with app.app_context():
             resp = client.post(
-                "/api/scores", json={"exam_id": exam_id, "student_id": stu2, "score": 85}, headers=auth_headers
+                "/api/scores",
+                json={"exam_id": exam_id, "student_id": stu2, "score": 85},
+                headers=auth_headers,
             )
             assert resp.status_code == 400
 
@@ -189,7 +210,9 @@ class TestScoreRoutes:
         subj2 = seeded_exam["subj2_id"]
         with app.app_context():
             resp = client.post(
-                "/api/scores", json={"exam_id": 999999, "student_id": stu2, "subject_id": subj2, "score": 85}, headers=auth_headers
+                "/api/scores",
+                json={"exam_id": 999999, "student_id": stu2, "subject_id": subj2, "score": 85},
+                headers=auth_headers,
             )
             assert resp.status_code == 400
 
@@ -198,11 +221,15 @@ class TestScoreRoutes:
         subj2 = seeded_exam["subj2_id"]
         with app.app_context():
             r = client.post(
-                "/api/exams", json={"name": "已关闭", "date": "2026-06-01", "status": "closed"}, headers=auth_headers
+                "/api/exams",
+                json={"name": "已关闭", "date": "2026-06-01", "status": "closed"},
+                headers=auth_headers,
             )
             closed_id = r.get_json()["data"]["id"]
             resp = client.post(
-                "/api/scores", json={"exam_id": closed_id, "student_id": stu2, "subject_id": subj2, "score": 85}, headers=auth_headers
+                "/api/scores",
+                json={"exam_id": closed_id, "student_id": stu2, "subject_id": subj2, "score": 85},
+                headers=auth_headers,
             )
             assert resp.status_code == 400
 
@@ -212,7 +239,9 @@ class TestScoreRoutes:
         subj2 = seeded_exam["subj2_id"]
         with app.app_context():
             resp = client.post(
-                "/api/scores", json={"exam_id": exam_id, "student_id": stu2, "subject_id": subj2, "score": 150}, headers=auth_headers
+                "/api/scores",
+                json={"exam_id": exam_id, "student_id": stu2, "subject_id": subj2, "score": 150},
+                headers=auth_headers,
             )
             assert resp.status_code == 400
 
@@ -222,7 +251,9 @@ class TestScoreRoutes:
         subj1 = seeded_exam["subj1_id"]
         with app.app_context():
             resp = client.post(
-                "/api/scores", json={"exam_id": exam_id, "student_id": stu1, "subject_id": subj1, "score": 80}, headers=auth_headers
+                "/api/scores",
+                json={"exam_id": exam_id, "student_id": stu1, "subject_id": subj1, "score": 80},
+                headers=auth_headers,
             )
             assert resp.status_code == 400
 
@@ -257,7 +288,11 @@ class TestScoreRoutes:
 
     def test_batch_create_scores_empty(self, client, app, auth_headers, seeded_exam):
         with app.app_context():
-            resp = client.post("/api/scores/batch", json={"exam_id": seeded_exam["exam_id"], "scores": []}, headers=auth_headers)
+            resp = client.post(
+                "/api/scores/batch",
+                json={"exam_id": seeded_exam["exam_id"], "scores": []},
+                headers=auth_headers,
+            )
             assert resp.status_code == 400
 
     def test_batch_create_scores_student_not_found(self, client, app, auth_headers, seeded_exam):
@@ -266,7 +301,10 @@ class TestScoreRoutes:
         with app.app_context():
             resp = client.post(
                 "/api/scores/batch",
-                json={"exam_id": exam_id, "scores": [{"student_id": 999999, "subject_id": subj1, "score": 70}]},
+                json={
+                    "exam_id": exam_id,
+                    "scores": [{"student_id": 999999, "subject_id": subj1, "score": 70}],
+                },
                 headers=auth_headers,
             )
             assert resp.status_code == 200
@@ -278,7 +316,11 @@ class TestScoreRoutes:
     def test_update_score(self, client, app, auth_headers, seeded_exam):
         score_id = seeded_exam["score_id"]
         with app.app_context():
-            resp = client.put(f"/api/scores/{score_id}", json={"score": 95, "remark": "进步"}, headers=auth_headers)
+            resp = client.put(
+                f"/api/scores/{score_id}",
+                json={"score": 95, "remark": "进步"},
+                headers=auth_headers,
+            )
             assert resp.status_code == 200
             body = resp.get_json()
             assert body["data"]["score"] == 95
@@ -326,7 +368,9 @@ class TestScoreRoutes:
     def test_confirm_all_scores(self, client, app, auth_headers, seeded_exam):
         exam_id = seeded_exam["exam_id"]
         with app.app_context():
-            resp = client.post("/api/scores/confirm-all", json={"exam_id": exam_id}, headers=auth_headers)
+            resp = client.post(
+                "/api/scores/confirm-all", json={"exam_id": exam_id}, headers=auth_headers
+            )
             assert resp.status_code == 200
             body = resp.get_json()
             assert body["data"]["updated"] == 1

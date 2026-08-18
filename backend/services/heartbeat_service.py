@@ -44,7 +44,9 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
     """
     timeout_threshold = datetime.now() - timedelta(seconds=timeout_seconds)
 
-    logger.info(f"开始检查心跳超时设备，超时阈值: {timeout_threshold}, 超时时间: {timeout_seconds}秒")
+    logger.info(
+        f"开始检查心跳超时设备，超时阈值: {timeout_threshold}, 超时时间: {timeout_seconds}秒"
+    )
 
     timeout_devices = Device.query.filter(
         Device.last_heartbeat.isnot(None),
@@ -59,7 +61,10 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
     for device in timeout_devices:
         # F9-A: 心跳超时告警统一写入 alert 表，来源标记为 'device'
         existing_alert = Alert.query.filter_by(
-            device_id=device.device_id, alert_type="heartbeat_timeout", is_resolved=False, source="device"
+            device_id=device.device_id,
+            alert_type="heartbeat_timeout",
+            is_resolved=False,
+            source="device",
         ).first()
 
         if not existing_alert:
@@ -160,11 +165,16 @@ def get_device_heartbeat_status(device_id: str = None) -> dict:
                 "device_id": device.device_id,
                 "name": device.name,
                 "status": device.status,
-                "last_heartbeat": device.last_heartbeat.isoformat() if device.last_heartbeat else None,
+                "last_heartbeat": (
+                    device.last_heartbeat.isoformat() if device.last_heartbeat else None
+                ),
                 "heartbeat_timeout": device.heartbeat_timeout,
                 "is_timeout": (
                     device.last_heartbeat is not None
-                    and ((now - device.last_heartbeat).total_seconds() > (device.heartbeat_timeout or 60))
+                    and (
+                        (now - device.last_heartbeat).total_seconds()
+                        > (device.heartbeat_timeout or 60)
+                    )
                 ),
                 "last_error": device.last_error,
                 "alert_enabled": device.alert_enabled,

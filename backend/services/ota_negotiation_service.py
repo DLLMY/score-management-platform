@@ -72,6 +72,7 @@ def compare_versions(v1, v2):
 
     非数字片段按 0 处理；长度不齐时短侧补 0。
     """
+
     def parse(v):
         parts = []
         for x in str(v).split("."):
@@ -254,7 +255,7 @@ def can_auto_push(device):
     if in_quiet_window():
         return False
 
-    status = (getattr(device, "ota_status", None) or "idle")
+    status = getattr(device, "ota_status", None) or "idle"
     last = getattr(device, "last_ota_push_at", None)
 
     if status == "upgrading":
@@ -305,8 +306,12 @@ def schedule_auto_push(device, firmware, extra_delay=0):
     t.daemon = True
     _ota_timers[device_id] = t
     t.start()
-    logger.info("[OTA协商] 已为设备 %s 调度自动推送（约 %.1fs 后）版本 %s",
-                device_id, delay, firmware.version)
+    logger.info(
+        "[OTA协商] 已为设备 %s 调度自动推送（约 %.1fs 后）版本 %s",
+        device_id,
+        delay,
+        firmware.version,
+    )
 
 
 def _execute_push(device_id, firmware_id):
@@ -369,8 +374,12 @@ def _execute_push(device_id, firmware_id):
             if sig:
                 payload["signature"] = sig
             mqtt_manager.publish_ota_command(device_id, payload)
-            logger.info("[OTA协商] 自动推送指令已发往 %s -> %s（签名:%s）",
-                        device_id, firmware.version, "有" if sig else "无")
+            logger.info(
+                "[OTA协商] 自动推送指令已发往 %s -> %s（签名:%s）",
+                device_id,
+                firmware.version,
+                "有" if sig else "无",
+            )
     except Exception as e:
         logger.error("[OTA协商] 执行推送异常 %s: %s", device_id, e)
 
@@ -397,7 +406,9 @@ def try_auto_negotiate(device):
     if decision["action"] == "upgrade":
         schedule_auto_push(device, decision["firmware"])
     else:
-        logger.debug("[OTA协商] 设备 %s 决策=%s", getattr(device, "device_id", "?"), decision["action"])
+        logger.debug(
+            "[OTA协商] 设备 %s 决策=%s", getattr(device, "device_id", "?"), decision["action"]
+        )
 
 
 def negotiate_all_devices(stage_percent=None, batch_size=None):
@@ -411,7 +422,11 @@ def negotiate_all_devices(stage_percent=None, batch_size=None):
     from app import app
     from models import Device
 
-    pct = stage_percent if stage_percent is not None else (OTA_STAGE_PERCENT if OTA_STAGED_ROLLOUT else 100)
+    pct = (
+        stage_percent
+        if stage_percent is not None
+        else (OTA_STAGE_PERCENT if OTA_STAGED_ROLLOUT else 100)
+    )
     pct = max(0, min(100, int(pct)))
     bs = batch_size if batch_size is not None else OTA_STAGE_BATCH_SIZE
 
@@ -432,9 +447,19 @@ def negotiate_all_devices(stage_percent=None, batch_size=None):
         schedule_auto_push(d, fw, extra_delay=extra_delay)
         scheduled += 1
 
-    logger.info("[OTA协商] 全量扫描完成：checked=%d eligible=%d scheduled=%d (pct=%d)",
-                checked, len(eligible), scheduled, pct)
-    return {"checked": checked, "eligible": len(eligible), "scheduled": scheduled, "stage_percent": pct}
+    logger.info(
+        "[OTA协商] 全量扫描完成：checked=%d eligible=%d scheduled=%d (pct=%d)",
+        checked,
+        len(eligible),
+        scheduled,
+        pct,
+    )
+    return {
+        "checked": checked,
+        "eligible": len(eligible),
+        "scheduled": scheduled,
+        "stage_percent": pct,
+    }
 
 
 def _plan_rollout(eligible, stage_percent, batch_size):

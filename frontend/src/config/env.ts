@@ -16,8 +16,7 @@ const metaEnv: AnyRecord | undefined =
   typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
 
 // 浏览器环境中 process 不一定存在，typeof 守卫确保安全。
-const procEnv: AnyRecord =
-  typeof process !== 'undefined' ? (process as any).env : {};
+const procEnv: AnyRecord = typeof process !== 'undefined' ? (process as any).env : {};
 
 export const isDevelopment: boolean = metaEnv
   ? Boolean(metaEnv.DEV) || metaEnv.MODE === 'development'

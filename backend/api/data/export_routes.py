@@ -18,7 +18,9 @@ export_format_model = ns_export.model(
     "ExportFormat",
     {
         "format": fields.String(required=True, description="导出格式：excel 或 pdf"),
-        "type": fields.String(required=True, description="导出类型：users/rules/devices/records/summary"),
+        "type": fields.String(
+            required=True, description="导出类型：users/rules/devices/records/summary"
+        ),
     },
 )
 
@@ -144,7 +146,9 @@ class ExportData(Resource):
                 # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
                 # S3 修复: 班主任仅可导出自己班级的积分记录
                 _cn, _ci = _admin_scope()
-                records_q = ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
+                records_q = ScoreRecord.query.options(
+                    joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule)
+                )
                 if _cn is not None:
                     records_q = records_q.join(User, ScoreRecord.student_id == User.id).filter(
                         User.class_name.in_(_cn)
@@ -154,14 +158,16 @@ class ExportData(Resource):
                     {
                         "id": r.id,
                         "user_id": r.student_id,
-                "student_id": r.student_id,
+                        "student_id": r.student_id,
                         "student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "card_id": r.user.card_id if r.user else None,
                         "score_change": r.score_change,
                         "rule_id": r.rule_id,
                         "rule_name": r.rule.name if r.rule else None,
-                        "category_name": r.rule.category.name if r.rule and r.rule.category else None,
+                        "category_name": (
+                            r.rule.category.name if r.rule and r.rule.category else None
+                        ),
                         "description": r.description,
                         "created_at": r.created_at.isoformat() if r.created_at else None,
                         "operator": r.operator,
@@ -472,7 +478,9 @@ class ExportSummary(Resource):
                 users_count, rules_count, devices_count, online_devices, records_count
             )
             filename = f"summary_{timestamp}.pdf"
-            return send_file(output, mimetype="application/pdf", as_attachment=True, download_name=filename)
+            return send_file(
+                output, mimetype="application/pdf", as_attachment=True, download_name=filename
+            )
         except Exception as e:
             return APIResponse.server_error(message=f"导出失败: {str(e)}")
 

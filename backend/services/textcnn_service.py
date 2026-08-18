@@ -4,6 +4,7 @@ TextCNN意图分类器服务
 使用纯Python numpy实现的轻量级卷积神经网络。
 用于意图分类和语义相似度计算。
 """
+
 import os
 import sys
 import numpy as np

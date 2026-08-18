@@ -165,8 +165,12 @@ class PermissionList(Resource):
         if Permission.query.filter_by(code=data["code"]).first():
             return APIResponse.error(message="权限代码已存在", status_code=409)
         permission = create_permission(data)
-        log_permission_action("创建权限", "permission", permission.id, f"创建权限: {data['code']} ({data['name']})")
-        return APIResponse.success(data={"id": permission.id}, message="权限创建成功", status_code=201)
+        log_permission_action(
+            "创建权限", "permission", permission.id, f"创建权限: {data['code']} ({data['name']})"
+        )
+        return APIResponse.success(
+            data={"id": permission.id}, message="权限创建成功", status_code=201
+        )
 
 
 @ns_rbac.route("/permissions/<string:code>")
@@ -224,7 +228,9 @@ class PermissionResource(Resource):
 
 @ns_rbac.route("/roles")
 class RoleList(Resource):
-    @ns_rbac.doc("list_roles_with_permissions", description="获取角色列表（含权限）", security="Bearer")
+    @ns_rbac.doc(
+        "list_roles_with_permissions", description="获取角色列表（含权限）", security="Bearer"
+    )
     @ns_rbac.response(200, "成功")
     @requires_permission("system.roles")
     def get(self):
@@ -236,7 +242,9 @@ class RoleList(Resource):
         # 获取所有角色代码
         role_codes = [rp.role_code for rp in role_permissions]
         # 批量获取权限映射（1次查询）
-        permission_mappings = RolePermissionMapping.query.filter(RolePermissionMapping.role_code.in_(role_codes)).all()
+        permission_mappings = RolePermissionMapping.query.filter(
+            RolePermissionMapping.role_code.in_(role_codes)
+        ).all()
         # 构建权限映射字典
         perm_map = {}
         for pm in permission_mappings:
@@ -245,7 +253,8 @@ class RoleList(Resource):
             perm_map[pm.role_code].append(pm.permission_code)
         # 批量获取角色层级关系（1次查询）
         hierarchies = RoleHierarchy.query.filter(
-            (RoleHierarchy.parent_role_code.in_(role_codes)) | (RoleHierarchy.child_role_code.in_(role_codes))
+            (RoleHierarchy.parent_role_code.in_(role_codes))
+            | (RoleHierarchy.child_role_code.in_(role_codes))
         ).all()
         # 构建父子角色映射
         parent_map = {}
@@ -289,7 +298,10 @@ class RoleList(Resource):
             return APIResponse.error(message="角色代码已存在", status_code=409)
         role = create_role(data)
         log_permission_action(
-            "创建角色", "role", None, f"创建角色: {data['role_code']} ({data.get('role_name', data['role_code'])})"
+            "创建角色",
+            "role",
+            None,
+            f"创建角色: {data['role_code']} ({data.get('role_name', data['role_code'])})",
         )
         return APIResponse.success(message="角色创建成功", status_code=201)
 
@@ -297,7 +309,9 @@ class RoleList(Resource):
 @ns_rbac.route("/roles/<string:role_code>")
 @ns_rbac.param("role_code", "角色代码")
 class RoleResource(Resource):
-    @ns_rbac.doc("get_role_with_permissions", description="获取角色详情（含权限）", security="Bearer")
+    @ns_rbac.doc(
+        "get_role_with_permissions", description="获取角色详情（含权限）", security="Bearer"
+    )
     @ns_rbac.response(200, "成功")
     @ns_rbac.response(404, "角色不存在")
     @requires_permission("system.roles")
@@ -378,7 +392,11 @@ class AdminRoleList(Resource):
         role_codes = [ar.role_code for ar in admin_roles]
         if not role_codes and _admin.role:
             role_codes = [_admin.role]
-        if _admin.role in ["admin", "super_admin"] or "admin" in role_codes or "super_admin" in role_codes:
+        if (
+            _admin.role in ["admin", "super_admin"]
+            or "admin" in role_codes
+            or "super_admin" in role_codes
+        ):
             all_permissions = {"all"}
         else:
             all_permissions = set()
@@ -403,7 +421,8 @@ class AdminRoleList(Resource):
     @ns_rbac.doc("assign_roles", description="为管理员分配角色", security="Bearer")
     @ns_rbac.expect(
         ns_rbac.model(
-            "AssignRoles", {"role_codes": fields.List(fields.String, required=True, description="角色代码列表")}
+            "AssignRoles",
+            {"role_codes": fields.List(fields.String, required=True, description="角色代码列表")},
         )
     )
     @ns_rbac.response(200, "成功")
@@ -447,7 +466,9 @@ class AdminRoleResource(Resource):
     @requires_permission("system.roles")
     def delete(self, admin_id, role_code):
         """移除管理员的单个角色"""
-        admin_role = AdminRole.query.filter_by(admin_id=admin_id, role_code=role_code).first_or_404()
+        admin_role = AdminRole.query.filter_by(
+            admin_id=admin_id, role_code=role_code
+        ).first_or_404()
         remove_admin_role(admin_role)
         return APIResponse.success(message="角色移除成功")
 
@@ -461,12 +482,15 @@ class RolePermissionList(Resource):
     def get(self, role_code):
         """获取角色的所有权限"""
         mappings = RolePermissionMapping.query.filter_by(role_code=role_code).all()
-        return APIResponse.success(data={"role_code": role_code, "permissions": [m.permission_code for m in mappings]})
+        return APIResponse.success(
+            data={"role_code": role_code, "permissions": [m.permission_code for m in mappings]}
+        )
 
     @ns_rbac.doc("set_role_permissions", description="设置角色的权限", security="Bearer")
     @ns_rbac.expect(
         ns_rbac.model(
-            "SetPermissions", {"permissions": fields.List(fields.String, required=True, description="权限代码列表")}
+            "SetPermissions",
+            {"permissions": fields.List(fields.String, required=True, description="权限代码列表")},
         )
     )
     @ns_rbac.response(200, "成功")
@@ -491,7 +515,9 @@ class RolePermissionResource(Resource):
         """为角色添加单个权限"""
         RolePermission.query.filter_by(role_code=role_code).first_or_404()
         Permission.query.filter_by(code=permission_code).first_or_404()
-        existing = RolePermissionMapping.query.filter_by(role_code=role_code, permission_code=permission_code).first()
+        existing = RolePermissionMapping.query.filter_by(
+            role_code=role_code, permission_code=permission_code
+        ).first()
         if existing:
             return APIResponse.success(message="权限已分配")
         add_role_permission(role_code, permission_code)
@@ -551,7 +577,9 @@ class CheckPermission(Resource):
         if not admin:
             return APIResponse.error(message="管理员不存在", status_code=404)
         has_perm = check_admin_permission(admin, permission)
-        return APIResponse.success(data={"has_permission": has_perm, "admin_id": admin_id, "permission": permission})
+        return APIResponse.success(
+            data={"has_permission": has_perm, "admin_id": admin_id, "permission": permission}
+        )
 
 
 def get_inherited_permissions(role_code, visited=None):
@@ -605,8 +633,6 @@ def check_admin_permission(admin, permission_code):
         if permission_code in inherited:
             return True
     return False
-
-
 
 
 def init_default_permissions():

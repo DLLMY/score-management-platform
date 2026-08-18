@@ -86,11 +86,14 @@ function AdvancedSearchFilter({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleChange = useCallback((updates: Partial<SearchCondition>) => {
-    const newConditions = { ...localConditions, ...updates };
-    setLocalConditions(newConditions);
-    onChange(newConditions);
-  }, [localConditions, onChange]);
+  const handleChange = useCallback(
+    (updates: Partial<SearchCondition>) => {
+      const newConditions = { ...localConditions, ...updates };
+      setLocalConditions(newConditions);
+      onChange(newConditions);
+    },
+    [localConditions, onChange]
+  );
 
   const handleSearch = useCallback(() => {
     onChange(localConditions);
@@ -113,12 +116,15 @@ function AdvancedSearchFilter({
     }
   }, [saveName, localConditions, onSaveSearch]);
 
-  const handleLoadSearch = useCallback((search: SavedSearch) => {
-    setLocalConditions(search.conditions);
-    onChange(search.conditions);
-    onSearch();
-    setShowSavedDropdown(false);
-  }, [onChange, onSearch]);
+  const handleLoadSearch = useCallback(
+    (search: SavedSearch) => {
+      setLocalConditions(search.conditions);
+      onChange(search.conditions);
+      onSearch();
+      setShowSavedDropdown(false);
+    },
+    [onChange, onSearch]
+  );
 
   const activeFiltersCount = [
     localConditions.dateFrom || localConditions.dateTo,
@@ -189,7 +195,9 @@ function AdvancedSearchFilter({
               {activeFiltersCount}
             </span>
           )}
-          <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          />
         </button>
 
         {/* 搜索按钮 */}
@@ -200,9 +208,25 @@ function AdvancedSearchFilter({
         >
           {loading ? (
             <>
-              <svg className="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className='w-4 h-4 animate-spin'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                ></circle>
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                ></path>
               </svg>
               <span>搜索中...</span>
             </>
@@ -242,10 +266,7 @@ function AdvancedSearchFilter({
                       key={search.id}
                       className='flex items-center justify-between p-3 hover:bg-gray-50 group'
                     >
-                      <button
-                        onClick={() => handleLoadSearch(search)}
-                        className='flex-1 text-left'
-                      >
+                      <button onClick={() => handleLoadSearch(search)} className='flex-1 text-left'>
                         <div className='text-sm font-medium text-gray-700'>{search.name}</div>
                         <div className='text-xs text-gray-400'>
                           {new Date(search.createdAt).toLocaleDateString()}
@@ -268,9 +289,7 @@ function AdvancedSearchFilter({
               )}
 
               {savedSearches.length === 0 && (
-                <div className='p-4 text-center text-sm text-gray-400'>
-                  暂无保存的搜索条件
-                </div>
+                <div className='p-4 text-center text-sm text-gray-400'>暂无保存的搜索条件</div>
               )}
             </div>
           )}
@@ -286,7 +305,7 @@ function AdvancedSearchFilter({
               <>
                 <div>
                   <label className='block text-xs font-medium text-gray-500 mb-1'>
-                    {dateFields.find(f => f.value === 'date')?.label || '开始日期'}
+                    {dateFields.find((f) => f.value === 'date')?.label || '开始日期'}
                   </label>
                   <div className='relative'>
                     <Calendar className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
@@ -300,7 +319,7 @@ function AdvancedSearchFilter({
                 </div>
                 <div>
                   <label className='block text-xs font-medium text-gray-500 mb-1'>
-                    {dateFields.find(f => f.value === 'dateTo')?.label || '结束日期'}
+                    {dateFields.find((f) => f.value === 'dateTo')?.label || '结束日期'}
                   </label>
                   <div className='relative'>
                     <Calendar className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
@@ -380,7 +399,11 @@ function AdvancedSearchFilter({
                   <input
                     type='number'
                     value={localConditions.minScore ?? ''}
-                    onChange={(e) => handleChange({ minScore: e.target.value ? Number(e.target.value) : undefined })}
+                    onChange={(e) =>
+                      handleChange({
+                        minScore: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
                     placeholder='0'
                     className='w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
                   />
@@ -390,7 +413,11 @@ function AdvancedSearchFilter({
                   <input
                     type='number'
                     value={localConditions.maxScore ?? ''}
-                    onChange={(e) => handleChange({ maxScore: e.target.value ? Number(e.target.value) : undefined })}
+                    onChange={(e) =>
+                      handleChange({
+                        maxScore: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
                     placeholder='1000'
                     className='w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
                   />

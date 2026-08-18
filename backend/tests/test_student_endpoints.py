@@ -13,6 +13,7 @@
 注意：conftest 的 sample_user.card_id 由 uuid4() 生成可能含连字符，会被本端点的
 validate_card_id 拒绝，因此本文件自建 card_id 合规（纯字母数字）的学生 fixture。
 """
+
 import uuid
 from datetime import datetime, timedelta
 
@@ -96,7 +97,9 @@ class TestStudentProtected:
 
     def test_admin_token_rejected_on_student_endpoint(self, client, auth_headers):
         # admin token 的 type=access，requires_student 校验 type=student 必然拒绝
-        resp = client.get("/api/student/me", headers={"Authorization": auth_headers["Authorization"]})
+        resp = client.get(
+            "/api/student/me", headers={"Authorization": auth_headers["Authorization"]}
+        )
         assert resp.status_code == 401
 
     def test_me_with_student_token(self, client, student_user):
@@ -130,8 +133,8 @@ class TestStudentRecords:
     def test_records_pagination_and_shape(self, client, student_user, app_context):
         for i in range(3):
             db.session.add(
-            ScoreRecord(
-                student_id=student_user.id,
+                ScoreRecord(
+                    student_id=student_user.id,
                     score_change=10 - i,
                     description=f"record {i}",
                     operator="tester",
@@ -195,8 +198,10 @@ class TestStudentNotifications:
         db.session.commit()
 
         token = self._login(client, student_user)
-        resp = client.get("/api/student/notifications?page=1&page_size=10",
-                          headers={"Authorization": "Bearer " + token})
+        resp = client.get(
+            "/api/student/notifications?page=1&page_size=10",
+            headers={"Authorization": "Bearer " + token},
+        )
         assert resp.status_code == 200
         body = resp.get_json()
         assert body["success"] is True
@@ -253,7 +258,12 @@ class TestStudentLeaves:
         token = self._login(client, student_user)
         resp = client.post(
             "/api/student/leaves",
-            json={"leave_type": "personal", "start_date": "2026-08-12", "end_date": "2026-08-13", "reason": "家事"},
+            json={
+                "leave_type": "personal",
+                "start_date": "2026-08-12",
+                "end_date": "2026-08-13",
+                "reason": "家事",
+            },
             headers={"Authorization": "Bearer " + token},
             content_type="application/json",
         )

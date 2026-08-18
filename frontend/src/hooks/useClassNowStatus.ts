@@ -38,7 +38,7 @@ const DEFAULT_INTERVAL_MS = 60_000;
  */
 export function useClassNowStatus(
   classInfoId?: number,
-  options?: { scope?: BlockScope; enabled?: boolean; intervalMs?: number; deviceId?: string },
+  options?: { scope?: BlockScope; enabled?: boolean; intervalMs?: number; deviceId?: string }
 ): ClassNowStatusResult {
   const deviceId = options?.deviceId;
   const scope: BlockScope = options?.scope ?? (classInfoId || deviceId ? 'class' : 'broadcast');
@@ -122,10 +122,14 @@ export function useClassNowStatus(
     }
 
     if (scope === 'class' && !status.in_session) {
-      return status.period ? `目标班级当前${status.period.name}未排课，可正常下发` : '目标班级当前不在上课，可正常下发';
+      return status.period
+        ? `目标班级当前${status.period.name}未排课，可正常下发`
+        : '目标班级当前不在上课，可正常下发';
     }
 
-    return status.period ? `当前${status.period.name}（非上课），可正常下发` : '当前非上课时间，可正常下发';
+    return status.period
+      ? `当前${status.period.name}（非上课），可正常下发`
+      : '当前非上课时间，可正常下发';
   })();
 
   return { status, loading, error, blocked, label, refresh: fetchStatus };

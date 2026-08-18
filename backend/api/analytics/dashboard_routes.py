@@ -30,7 +30,9 @@ class DashboardStats(Resource):
             stats = {
                 "total_students": data.get("total_students", 0) if isinstance(data, dict) else 0,
                 "total_subjects": data.get("total_subjects", 0) if isinstance(data, dict) else 0,
-                "total_score_records": data.get("total_records", 0) if isinstance(data, dict) else 0,
+                "total_score_records": (
+                    data.get("total_records", 0) if isinstance(data, dict) else 0
+                ),
                 "today_records": data.get("today_records", 0) if isinstance(data, dict) else 0,
                 "positive_ratio": data.get("positive_ratio", 0) if isinstance(data, dict) else 0,
             }

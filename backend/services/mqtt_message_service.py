@@ -30,8 +30,12 @@ class MQTTMessageService:
 
         for rule in time_rules:
             if rule.day_of_week == -1 or rule.day_of_week == datetime.now().weekday():
-                start_time = datetime.now().replace(hour=rule.start_hour, minute=rule.start_minute, second=0)
-                end_time = datetime.now().replace(hour=rule.end_hour, minute=rule.end_minute, second=0)
+                start_time = datetime.now().replace(
+                    hour=rule.start_hour, minute=rule.start_minute, second=0
+                )
+                end_time = datetime.now().replace(
+                    hour=rule.end_hour, minute=rule.end_minute, second=0
+                )
                 current_time = datetime.now().replace(hour=hour, minute=minute, second=0)
 
                 if start_time <= current_time <= end_time:
@@ -213,7 +217,9 @@ class MQTTMessageService:
                         )
                     except Exception:
                         check_time = None
-                in_session, info = ClassTimeChecker.check_class_in_session(class_info_id, check_time)
+                in_session, info = ClassTimeChecker.check_class_in_session(
+                    class_info_id, check_time
+                )
                 if in_session:
                     msg = (
                         f"{info['class_name']}正在第{info['period_number']}节"
@@ -396,10 +402,13 @@ class MQTTMessageService:
             with db_session_scope():
                 from models import Approval
 
-                approval = Approval(student_id=user.id,
+                approval = Approval(
+                    student_id=user.id,
                     type="score_add",
                     title="Device score add request",
-                    description=(f"Device {device_id} requests to add +{amount} " f"points for {user.name}"),
+                    description=(
+                        f"Device {device_id} requests to add +{amount} " f"points for {user.name}"
+                    ),
                     score_change=amount,
                     status="pending",
                 )
@@ -452,10 +461,14 @@ class MQTTMessageService:
         else:
             with db_session_scope():
 
-                approval = Approval(student_id=user.id,
+                approval = Approval(
+                    student_id=user.id,
                     type="score_sub",
                     title="Device score subtract request",
-                    description=(f"Device {device_id} requests to subtract -{amount} " f"points from {user.name}"),
+                    description=(
+                        f"Device {device_id} requests to subtract -{amount} "
+                        f"points from {user.name}"
+                    ),
                     score_change=-amount,
                     status="pending",
                 )
@@ -546,7 +559,8 @@ class MQTTMessageService:
                             new_score = user.current_score or 0
                         actual_change = new_score - (user.current_score or 0)
 
-                        record = ScoreRecord(student_id=user_id,
+                        record = ScoreRecord(
+                            student_id=user_id,
                             rule_id=rule_id,
                             score_change=actual_change,
                             description=description or rule.name,
@@ -568,6 +582,7 @@ class MQTTMessageService:
                     # R4: MQTT 加分后触发综合评分重算（低频卡片操作，单学生聚合查询，失败不影响主流程）
                     try:
                         from services.composite_score_service import CompositeScoreService
+
                         CompositeScoreService.recalculate_user_score(user_id)
                     except Exception:
                         pass
@@ -582,14 +597,18 @@ class MQTTMessageService:
                     }
                     publish_mqtt(response_topic, json.dumps(response))
         elif rule_name:
-            rule = ScoreRule.query.filter(ScoreRule.name.like(f"%{rule_name}%"), ScoreRule.is_active).first()
+            rule = ScoreRule.query.filter(
+                ScoreRule.name.like(f"%{rule_name}%"), ScoreRule.is_active
+            ).first()
             if not rule:
                 matching_rules = ScoreRule.query.filter(ScoreRule.name.like(f"%{rule_name}%")).all()
                 if matching_rules:
                     rule_names = [r.name for r in matching_rules]
                     response = {
                         "success": False,
-                        "message": (f'No enabled rule matching "{rule_name}". ' f"Available: {rule_names}"),
+                        "message": (
+                            f'No enabled rule matching "{rule_name}". ' f"Available: {rule_names}"
+                        ),
                         "msg_id": msg_id,
                     }
                 else:
@@ -625,7 +644,8 @@ class MQTTMessageService:
                             new_score = user.current_score or 0
                         actual_change = new_score - (user.current_score or 0)
 
-                        record = ScoreRecord(student_id=user_id,
+                        record = ScoreRecord(
+                            student_id=user_id,
                             rule_id=rule.id,
                             score_change=actual_change,
                             description=description or rule.name,
@@ -674,7 +694,8 @@ class MQTTMessageService:
                     new_score = user.current_score or 0
                 actual_change = new_score - (user.current_score or 0)
 
-                record = ScoreRecord(student_id=user_id,
+                record = ScoreRecord(
+                    student_id=user_id,
                     score_change=actual_change,
                     description=description or "MQTT score adjustment",
                     operator=operator,
@@ -759,6 +780,7 @@ class MQTTMessageService:
         成 rules=[]（表现为设备偶发收不到规则）。这里显式设 busy_timeout 并重试几次规避。
         """
         from models import ScoreRule
+
         # busy_timeout 为连接级优化，规避洪流下读查询撞 SQLite 写锁被静默吞。
         # 无 app context 环境(如部分单测)下 db.session.execute 会抛 RuntimeError，跳过即可，
         # 不影响查询正确性；生产 MQTT 派发路径自带 app context，PRAGMA 正常生效。
@@ -836,7 +858,9 @@ class MQTTMessageService:
             # 畸形负载静默丢弃会让设备业务请求无声消失——留痕
             import logging
 
-            logging.getLogger(__name__).warning(f"MQTT消息JSON解析失败, topic={topic}, payload前120字={message[:120]}")
+            logging.getLogger(__name__).warning(
+                f"MQTT消息JSON解析失败, topic={topic}, payload前120字={message[:120]}"
+            )
             return
 
         if topic == "phonebox/query":

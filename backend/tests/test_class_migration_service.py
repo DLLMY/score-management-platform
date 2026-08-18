@@ -1,4 +1,5 @@
 from models import ClassInfo
+
 #!/usr/bin/env python3
 """
 """
@@ -8,6 +9,7 @@ from models import ClassInfo
 
 from unittest.mock import MagicMock
 import uuid
+
 try:
     from services.class_migration_service import ClassMigrationService
 except ImportError:
@@ -68,8 +70,12 @@ class TestClassMigrationService:
         """测试分析包含用户的数据"""
 
         with app.app_context():
-            user1 = User(name="用户1", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name="初一(1)班")
-            user2 = User(name="用户2", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name="初一(2)班")
+            user1 = User(
+                name="用户1", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name="初一(1)班"
+            )
+            user2 = User(
+                name="用户2", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name="初一(2)班"
+            )
             db.session.add_all([user1, user2])
             db.session.commit()
 
@@ -90,7 +96,7 @@ class TestClassMigrationService:
                 username=f"test_admin_{uuid.uuid4()}",
                 password=hash_password("password"),
                 real_name="测试管理员",
-                class_name="初一(1)班"
+                class_name="初一(1)班",
             )
             db.session.add(admin)
             db.session.commit()
@@ -178,7 +184,9 @@ class TestClassMigrationService:
 
         with app.app_context():
             class_name = f"初一(1)班_{str(uuid.uuid4())[:8]}"
-            user = User(name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name=class_name)
+            user = User(
+                name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name=class_name
+            )
             class_info = ClassInfo(name=class_name, grade="初一", is_active=True)
             db.session.add_all([user, class_info])
             db.session.commit()
@@ -195,7 +203,9 @@ class TestClassMigrationService:
         """测试迁移用户-班级不存在"""
 
         with app.app_context():
-            user = User(name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name="不存在的班级")
+            user = User(
+                name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name="不存在的班级"
+            )
             db.session.add(user)
             db.session.commit()
 
@@ -211,8 +221,7 @@ class TestClassMigrationService:
 
         with app.app_context():
             Admin.query.filter(
-                Admin.class_name.isnot(None),
-                Admin.primary_class_id.is_(None)
+                Admin.class_name.isnot(None), Admin.primary_class_id.is_(None)
             ).delete()
             db.session.commit()
 
@@ -232,7 +241,7 @@ class TestClassMigrationService:
                 username=f"test_admin_{str(uuid.uuid4())}",
                 password=hash_password("password"),
                 real_name="测试管理员",
-                class_name=class_name
+                class_name=class_name,
             )
             class_info = ClassInfo(name=class_name, grade="初一", is_active=True)
             db.session.add_all([admin, class_info])
@@ -254,7 +263,7 @@ class TestClassMigrationService:
                 username=f"test_admin_{str(uuid.uuid4())}",
                 password=hash_password("password"),
                 real_name="测试管理员",
-                class_name="不存在的班级"
+                class_name="不存在的班级",
             )
             db.session.add(admin)
             db.session.commit()
@@ -291,7 +300,7 @@ class TestClassMigrationService:
                 username=f"test_admin_{str(uuid.uuid4())}",
                 password=hash_password("password"),
                 real_name="测试管理员",
-                primary_class_id=class_info.id
+                primary_class_id=class_info.id,
             )
             db.session.add(admin)
             db.session.commit()
@@ -299,7 +308,7 @@ class TestClassMigrationService:
             subaccount = SubAccount(
                 parent_admin_id=admin.id,
                 username=f"test_sub_{str(uuid.uuid4())}",
-                password=hash_password("password")
+                password=hash_password("password"),
             )
             db.session.add(subaccount)
             db.session.commit()
@@ -329,12 +338,14 @@ class TestClassMigrationService:
 
         with app.app_context():
             class_name = f"初一(1)班_{str(uuid.uuid4())[:8]}"
-            user = User(name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name=class_name)
+            user = User(
+                name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name=class_name
+            )
             admin = Admin(
                 username=f"test_admin_{str(uuid.uuid4())}",
                 password=hash_password("password"),
                 real_name="测试管理员",
-                class_name=class_name
+                class_name=class_name,
             )
             db.session.add_all([user, admin])
             db.session.commit()
@@ -381,7 +392,7 @@ class TestClassMigrationService:
                 name="测试用户",
                 card_id=f"TEST{str(uuid.uuid4())[:8]}",
                 class_name=class_name,
-                class_info_id=class_info.id
+                class_info_id=class_info.id,
             )
             db.session.add(user)
             db.session.commit()
@@ -397,10 +408,7 @@ class TestClassMigrationService:
         """测试迁移用户-空班级名称"""
 
         with app.app_context():
-            User.query.filter(
-                User.class_name.isnot(None),
-                User.class_info_id.is_(None)
-            ).delete()
+            User.query.filter(User.class_name.isnot(None), User.class_info_id.is_(None)).delete()
             db.session.commit()
 
             user = User(name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:8]}", class_name="")
@@ -421,7 +429,7 @@ class TestClassMigrationService:
                 username=f"test_admin_empty_{str(uuid.uuid4())[:8]}",
                 password=hash_password("password"),
                 real_name="测试管理员",
-                class_name=""
+                class_name="",
             )
             db.session.add(admin)
             db.session.commit()
@@ -443,7 +451,7 @@ class TestClassMigrationService:
                 username=f"parent_admin_{str(uuid.uuid4())[:8]}",
                 password=hash_password("password"),
                 real_name="父级管理员",
-                primary_class_id=None
+                primary_class_id=None,
             )
             db.session.add(parent_admin)
             db.session.commit()
@@ -451,7 +459,7 @@ class TestClassMigrationService:
             subaccount = SubAccount(
                 parent_admin_id=parent_admin.id,
                 username=f"test_sub_{str(uuid.uuid4())[:8]}",
-                password=hash_password("password")
+                password=hash_password("password"),
             )
             db.session.add(subaccount)
             db.session.commit()

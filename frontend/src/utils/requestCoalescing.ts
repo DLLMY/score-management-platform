@@ -41,11 +41,7 @@ class RequestCoalescer {
     return `${method}:${url}:${paramsStr}:${bodyStr}`;
   }
 
-  coalesce<T>(
-    config: RequestConfig,
-    fetcher: () => Promise<T>,
-    ttl: number = 5000
-  ): Promise<T> {
+  coalesce<T>(config: RequestConfig, fetcher: () => Promise<T>, ttl: number = 5000): Promise<T> {
     const key = this.getRequestKey(config);
 
     const cached = this.cache.get(key);
@@ -64,20 +60,22 @@ class RequestCoalescer {
     const resolvers: ((data: unknown) => void)[] = [];
     const rejectors: ((error: unknown) => void)[] = [];
 
-    const promise = fetcher().then(
-      (data) => {
-        this.cache.set(key, { data, timestamp: Date.now(), ttl });
-        
-        resolvers.forEach((resolve) => resolve(data));
-        return data;
-      },
-      (error) => {
-        rejectors.forEach((reject) => reject(error));
-        throw error;
-      }
-    ).finally(() => {
-      this.pendingRequests.delete(key);
-    });
+    const promise = fetcher()
+      .then(
+        (data) => {
+          this.cache.set(key, { data, timestamp: Date.now(), ttl });
+
+          resolvers.forEach((resolve) => resolve(data));
+          return data;
+        },
+        (error) => {
+          rejectors.forEach((reject) => reject(error));
+          throw error;
+        }
+      )
+      .finally(() => {
+        this.pendingRequests.delete(key);
+      });
 
     this.pendingRequests.set(key, {
       promise,

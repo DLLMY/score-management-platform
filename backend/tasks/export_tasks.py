@@ -113,7 +113,9 @@ def export_exam_scores(self, exam_id=None, class_id=None):
         from models import Score, Exam
 
         with app.app_context():
-            query = Score.query.join(User, Score.student_id == User.id).outerjoin(Exam, Score.exam_id == Exam.id)
+            query = Score.query.join(User, Score.student_id == User.id).outerjoin(
+                Exam, Score.exam_id == Exam.id
+            )
             conditions = []
             if exam_id:
                 conditions.append(Score.exam_id == exam_id)

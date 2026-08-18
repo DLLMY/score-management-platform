@@ -129,7 +129,9 @@ class BackupManager:
             db_path = self._get_db_path()
 
             # 创建备份的备份（以防恢复失败）
-            backup_before_restore = self.backup_dir / f'pre_restore_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db'
+            backup_before_restore = (
+                self.backup_dir / f'pre_restore_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db'
+            )
             if db_path.exists():
                 shutil.copy2(db_path, backup_before_restore)
 
@@ -238,7 +240,11 @@ class BackupManager:
                 "message": f"已清理 {deleted_count} 个过期备份文件",
             }
         except Exception as e:
-            return {"success": False, "deleted_count": deleted_count, "message": f"清理失败: {str(e)}"}
+            return {
+                "success": False,
+                "deleted_count": deleted_count,
+                "message": f"清理失败: {str(e)}",
+            }
 
     def get_backup_stats(self) -> Dict[str, Any]:
         """
@@ -279,7 +285,9 @@ class BackupScheduler:
 
         now = datetime.now()
         scheduled_time = datetime.strptime(self.schedule_time, "%H:%M")
-        scheduled_datetime = datetime(now.year, now.month, now.day, scheduled_time.hour, scheduled_time.minute)
+        scheduled_datetime = datetime(
+            now.year, now.month, now.day, scheduled_time.hour, scheduled_time.minute
+        )
 
         # 如果今天的定时时间已经过了，检查是否是新的一天
         if now >= scheduled_datetime:

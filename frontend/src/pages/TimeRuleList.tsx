@@ -1,6 +1,16 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
-import { Plus, Edit2, Trash2, Clock, AlertCircle, Save, X, Search, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Clock,
+  AlertCircle,
+  Save,
+  X,
+  Search,
+  AlertTriangle,
+} from 'lucide-react';
 import api from '../services/api';
 import { useForm, useModal } from '../hooks';
 import { useStableToast } from '../hooks/useStableToast';
@@ -71,22 +81,29 @@ const TimeRuleList: React.FC = () => {
     resetForm,
     errors: formErrors,
     setErrors: setFormErrors,
-  } = useForm<FormData>({
-    name: '',
-    description: '',
-    day_of_week: -1,
-    start_hour: 8,
-    start_minute: 0,
-    end_hour: 12,
-    end_minute: 0,
-    is_active: true,
-    allow_unlock: false,
-  }, {
-    name: { required: true, maxLength: 50 },
-    description: { maxLength: 200 },
-  });
+  } = useForm<FormData>(
+    {
+      name: '',
+      description: '',
+      day_of_week: -1,
+      start_hour: 8,
+      start_minute: 0,
+      end_hour: 12,
+      end_minute: 0,
+      is_active: true,
+      allow_unlock: false,
+    },
+    {
+      name: { required: true, maxLength: 50 },
+      description: { maxLength: 200 },
+    }
+  );
 
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<TimeRule | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<TimeRule | null>({
     onClose: () => {
       resetForm();
       setEditingRule(null);
@@ -215,7 +232,7 @@ const TimeRuleList: React.FC = () => {
 
   const filteredRules = useMemo(() => {
     const keyword = debouncedSearchTerm.toLowerCase();
-    return rules.filter(rule => {
+    return rules.filter((rule) => {
       if (statusFilter !== 'all') {
         const isActive = statusFilter === 'active';
         if (rule.is_active !== isActive) return false;
@@ -233,7 +250,9 @@ const TimeRuleList: React.FC = () => {
       {loadError && (
         <div className='flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>时间规则加载失败，当前列表可能不完整，请刷新重试</p>
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            时间规则加载失败，当前列表可能不完整，请刷新重试
+          </p>
         </div>
       )}
       <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
@@ -326,12 +345,18 @@ const TimeRuleList: React.FC = () => {
                       <td className='px-6 py-4'>
                         <div className='flex items-center gap-2'>
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${rule.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              rule.is_active
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}
                           >
                             {rule.is_active ? '启用' : '禁用'}
                           </span>
                           <span
-                            className={`badge ${rule.allow_unlock ? 'badge-success' : 'badge-danger'}`}
+                            className={`badge ${
+                              rule.allow_unlock ? 'badge-success' : 'badge-danger'
+                            }`}
                           >
                             {rule.allow_unlock ? '允许开锁' : '禁止开锁'}
                           </span>
@@ -367,10 +392,7 @@ const TimeRuleList: React.FC = () => {
       </div>
 
       {showModal && (
-        <div
-          className='modal-overlay'
-          onClick={closeModal}
-        >
+        <div className='modal-overlay' onClick={closeModal}>
           <div className='modal-content max-w-md' onClick={(e) => e.stopPropagation()}>
             <div className='modal-header'>
               <div className='flex items-center gap-3'>
@@ -411,7 +433,9 @@ const TimeRuleList: React.FC = () => {
                       setFormErrors({ ...formErrors, name: undefined });
                     }
                   }}
-                  className={`form-input ${formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-input ${
+                    formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   placeholder='如：上午上课'
                 />
                 {formErrors.name && (
@@ -432,7 +456,9 @@ const TimeRuleList: React.FC = () => {
                       setFormErrors({ ...formErrors, description: undefined });
                     }
                   }}
-                  className={`form-textarea ${formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-textarea ${
+                    formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   placeholder='规则描述'
                   rows={2}
                 />
@@ -473,7 +499,9 @@ const TimeRuleList: React.FC = () => {
                           setFormErrors({ ...formErrors, start_hour: undefined, time: undefined });
                         }
                       }}
-                      className={`form-select flex-1 ${formErrors.start_hour ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                      className={`form-select flex-1 ${
+                        formErrors.start_hour ? 'border-danger-300 focus:ring-danger-500' : ''
+                      }`}
                     >
                       {Array.from({ length: 24 }, (_, i) => (
                         <option key={i} value={i}>
@@ -487,10 +515,16 @@ const TimeRuleList: React.FC = () => {
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                         setFormData({ ...formData, start_minute: parseInt(e.target.value) });
                         if (formErrors.start_minute || formErrors.time) {
-                          setFormErrors({ ...formErrors, start_minute: undefined, time: undefined });
+                          setFormErrors({
+                            ...formErrors,
+                            start_minute: undefined,
+                            time: undefined,
+                          });
                         }
                       }}
-                      className={`form-select flex-1 ${formErrors.start_minute ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                      className={`form-select flex-1 ${
+                        formErrors.start_minute ? 'border-danger-300 focus:ring-danger-500' : ''
+                      }`}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                         <option key={m} value={m}>
@@ -517,7 +551,9 @@ const TimeRuleList: React.FC = () => {
                           setFormErrors({ ...formErrors, end_hour: undefined, time: undefined });
                         }
                       }}
-                      className={`form-select flex-1 ${formErrors.end_hour ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                      className={`form-select flex-1 ${
+                        formErrors.end_hour ? 'border-danger-300 focus:ring-danger-500' : ''
+                      }`}
                     >
                       {Array.from({ length: 25 }, (_, i) => (
                         <option key={i} value={i}>
@@ -534,7 +570,9 @@ const TimeRuleList: React.FC = () => {
                           setFormErrors({ ...formErrors, end_minute: undefined, time: undefined });
                         }
                       }}
-                      className={`form-select flex-1 ${formErrors.end_minute ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                      className={`form-select flex-1 ${
+                        formErrors.end_minute ? 'border-danger-300 focus:ring-danger-500' : ''
+                      }`}
                     >
                       {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                         <option key={m} value={m}>
@@ -566,19 +604,33 @@ const TimeRuleList: React.FC = () => {
                   <button
                     type='button'
                     onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${formData.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      formData.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
                   >
-                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${formData.is_active ? 'left-6' : 'left-0.5'}`} />
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                        formData.is_active ? 'left-6' : 'left-0.5'
+                      }`}
+                    />
                   </button>
                   <span className='text-sm text-gray-700'>启用规则</span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <button
                     type='button'
-                    onClick={() => setFormData({ ...formData, allow_unlock: !formData.allow_unlock })}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${formData.allow_unlock ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                    onClick={() =>
+                      setFormData({ ...formData, allow_unlock: !formData.allow_unlock })
+                    }
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      formData.allow_unlock ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
                   >
-                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${formData.allow_unlock ? 'left-6' : 'left-0.5'}`} />
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                        formData.allow_unlock ? 'left-6' : 'left-0.5'
+                      }`}
+                    />
                   </button>
                   <span className='text-sm text-gray-700'>允许开锁</span>
                 </div>

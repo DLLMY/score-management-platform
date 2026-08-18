@@ -38,7 +38,7 @@ export async function openCacheDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      
+
       // 创建缓存存储对象
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'key' });
@@ -64,20 +64,20 @@ interface CacheEntry {
 export async function setCache(key: string, data: unknown, ttl: number = 60000): Promise<void> {
   try {
     const db = await openCacheDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       const entry: CacheEntry = {
         key,
         data,
         timestamp: Date.now(),
         expiry: Date.now() + ttl,
       };
-      
+
       const request = store.put(entry);
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(new Error('Failed to set cache'));
     });
@@ -92,20 +92,20 @@ export async function setCache(key: string, data: unknown, ttl: number = 60000):
 export async function getCache(key: string): Promise<{ data: unknown; fromCache: boolean } | null> {
   try {
     const db = await openCacheDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get(key);
-      
+
       request.onsuccess = () => {
         const entry = request.result as CacheEntry | undefined;
-        
+
         if (!entry) {
           resolve(null);
           return;
         }
-        
+
         // 检查是否过期
         if (entry.expiry < Date.now()) {
           // 删除过期缓存
@@ -113,13 +113,13 @@ export async function getCache(key: string): Promise<{ data: unknown; fromCache:
           resolve(null);
           return;
         }
-        
+
         resolve({
           data: entry.data,
           fromCache: true,
         });
       };
-      
+
       request.onerror = () => reject(new Error('Failed to get cache'));
     });
   } catch (error) {
@@ -134,12 +134,12 @@ export async function getCache(key: string): Promise<{ data: unknown; fromCache:
 export async function deleteCache(key: string): Promise<void> {
   try {
     const db = await openCacheDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.delete(key);
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(new Error('Failed to delete cache'));
     });
@@ -154,12 +154,12 @@ export async function deleteCache(key: string): Promise<void> {
 export async function clearCache(): Promise<void> {
   try {
     const db = await openCacheDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.clear();
-      
+
       request.onsuccess = () => resolve();
       request.onerror = () => reject(new Error('Failed to clear cache'));
     });
@@ -174,12 +174,12 @@ export async function clearCache(): Promise<void> {
 export async function deleteCacheByPattern(pattern: string): Promise<void> {
   try {
     const db = await openCacheDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.openCursor();
-      
+
       request.onsuccess = () => {
         const cursor = request.result;
         if (cursor) {
@@ -192,7 +192,7 @@ export async function deleteCacheByPattern(pattern: string): Promise<void> {
           resolve();
         }
       };
-      
+
       request.onerror = () => reject(new Error('Failed to delete cache by pattern'));
     });
   } catch (error) {
@@ -207,14 +207,14 @@ export async function cleanupExpiredCache(): Promise<void> {
   try {
     const db = await openCacheDB();
     const now = Date.now();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const index = store.index('expiry');
       const range = IDBKeyRange.upperBound(now);
       const request = index.openCursor(range);
-      
+
       request.onsuccess = () => {
         const cursor = request.result;
         if (cursor) {
@@ -224,7 +224,7 @@ export async function cleanupExpiredCache(): Promise<void> {
           resolve();
         }
       };
-      
+
       request.onerror = () => reject(new Error('Failed to cleanup cache'));
     });
   } catch (error) {
@@ -238,19 +238,19 @@ export async function cleanupExpiredCache(): Promise<void> {
 export async function getCacheStats(): Promise<{ count: number; size: number }> {
   try {
     const db = await openCacheDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const countRequest = store.count();
-      
+
       countRequest.onsuccess = () => {
         resolve({
           count: countRequest.result,
           size: 0, // 无法准确计算
         });
       };
-      
+
       countRequest.onerror = () => reject(new Error('Failed to get cache stats'));
     });
   } catch (error) {

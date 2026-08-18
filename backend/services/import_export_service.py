@@ -12,13 +12,20 @@ from models import db, User, ScoreRule, ScoreCategory
 def create_user_row(name, gender, class_name, phone, card_id):
     """复刻 ImportUsers 行级 User 建模 + add（不提交，由路由统一提交/回滚）。"""
     new_user = User(
-        name=name, gender=gender, class_name=class_name, phone=phone, card_id=card_id, current_score=0
+        name=name,
+        gender=gender,
+        class_name=class_name,
+        phone=phone,
+        card_id=card_id,
+        current_score=0,
     )
     db.session.add(new_user)
     return new_user
 
 
-def create_score_rule_row(name, description, category_id, score, is_active, daily_limit, min_interval):
+def create_score_rule_row(
+    name, description, category_id, score, is_active, daily_limit, min_interval
+):
     """复刻 ImportRules 行级 ScoreRule 建模 + add（不提交）。"""
     new_rule = ScoreRule(
         name=name,

@@ -1,5 +1,14 @@
 import { useEffect, useState, memo, MouseEventHandler } from 'react';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp, LucideIcon } from 'lucide-react';
+import {
+  X,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  LucideIcon,
+} from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -81,17 +90,35 @@ const Toast = memo<ToastProps>(({ message, onClose }) => {
   };
 
   return (
-    <div className={`fixed top-6 right-6 z-50 w-full max-w-sm ${isClosing ? 'animate-slide-out' : 'animate-slide-in'}`}>
+    <div
+      className={`fixed top-6 right-6 z-50 w-full max-w-sm ${
+        isClosing ? 'animate-slide-out' : 'animate-slide-in'
+      }`}
+    >
       <div
-        className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border ${style.bg} ${style.border} ${isClosing ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+        className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border ${style.bg} ${
+          style.border
+        } ${isClosing ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
       >
-        <div className={`w-10 h-10 rounded-lg ${style.iconBg} flex items-center justify-center flex-shrink-0 animate-bounce-in`}>
+        <div
+          className={`w-10 h-10 rounded-lg ${style.iconBg} flex items-center justify-center flex-shrink-0 animate-bounce-in`}
+        >
           <Icon className='w-5 h-5' />
         </div>
-        
+
         <div className='flex-1 min-w-0'>
           <div className='flex items-start justify-between gap-2'>
-            <span className={`font-semibold ${type === 'success' ? 'text-green-800' : type === 'error' ? 'text-red-800' : type === 'warning' ? 'text-amber-800' : 'text-blue-800'}`}>
+            <span
+              className={`font-semibold ${
+                type === 'success'
+                  ? 'text-green-800'
+                  : type === 'error'
+                  ? 'text-red-800'
+                  : type === 'warning'
+                  ? 'text-amber-800'
+                  : 'text-blue-800'
+              }`}
+            >
               {message.text || style.defaultMessage}
             </span>
             <button
@@ -101,17 +128,21 @@ const Toast = memo<ToastProps>(({ message, onClose }) => {
               <X className='w-4 h-4 text-gray-400 hover:text-gray-600' />
             </button>
           </div>
-          
+
           {(message.details || message.errorFields) && (
             <div className='mt-2'>
               <button
                 onClick={() => setShowDetails(!showDetails)}
                 className='flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors'
               >
-                {showDetails ? <ChevronUp className='w-4 h-4' /> : <ChevronDown className='w-4 h-4' />}
+                {showDetails ? (
+                  <ChevronUp className='w-4 h-4' />
+                ) : (
+                  <ChevronDown className='w-4 h-4' />
+                )}
                 {showDetails ? '收起详情' : '查看详情'}
               </button>
-              
+
               {showDetails && (
                 <div className='mt-2 pl-2 border-l-2 border-gray-200 animate-fade-in'>
                   {message.errorFields && message.errorFields.length > 0 && (
@@ -119,7 +150,10 @@ const Toast = memo<ToastProps>(({ message, onClose }) => {
                       <div className='text-xs font-medium text-gray-500 mb-1'>错误字段：</div>
                       <div className='flex flex-wrap gap-1'>
                         {message.errorFields.map((field, idx) => (
-                          <span key={idx} className='px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-xs'>
+                          <span
+                            key={idx}
+                            className='px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-xs'
+                          >
                             {field}
                           </span>
                         ))}

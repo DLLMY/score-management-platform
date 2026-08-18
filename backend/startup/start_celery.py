@@ -82,7 +82,9 @@ def main():
         default="default,notification,mqtt,export",
         help="Comma-separated list of queues to consume",
     )
-    parser.add_argument("-c", "--concurrency", type=int, default=4, help="Number of worker processes")
+    parser.add_argument(
+        "-c", "--concurrency", type=int, default=4, help="Number of worker processes"
+    )
     args = parser.parse_args()
     processes = []
     if args.worker or args.all:

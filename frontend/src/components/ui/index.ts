@@ -10,5 +10,11 @@ export { default as Modal } from './Modal';
 export { default as Select } from './Select';
 export { default as Switch } from './Switch';
 export { default as Textarea } from './Textarea';
-export { Skeleton, CardSkeleton, TableSkeleton, DashboardSkeleton, CategoryCardSkeleton } from './Skeleton';
+export {
+  Skeleton,
+  CardSkeleton,
+  TableSkeleton,
+  DashboardSkeleton,
+  CategoryCardSkeleton,
+} from './Skeleton';
 export { default as Pagination } from './Pagination';

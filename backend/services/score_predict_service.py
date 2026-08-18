@@ -82,8 +82,12 @@ class ScorePredictService:
             features["negative_rate"] = round(negative_count / len(score_changes), 2)
 
             # 连续天数特征
-            features["max_consecutive_positive"] = ScorePredictService._max_consecutive_positive(score_changes)
-            features["max_consecutive_negative"] = ScorePredictService._max_consecutive_negative(score_changes)
+            features["max_consecutive_positive"] = ScorePredictService._max_consecutive_positive(
+                score_changes
+            )
+            features["max_consecutive_negative"] = ScorePredictService._max_consecutive_negative(
+                score_changes
+            )
 
             # 最近7天特征
             recent_changes = score_changes[-7:] if len(score_changes) >= 7 else score_changes
@@ -91,7 +95,11 @@ class ScorePredictService:
             features["recent_trend"] = (
                 "rising"
                 if np.mean(recent_changes) > features["avg_daily_change"] * 1.2
-                else ("falling" if np.mean(recent_changes) < features["avg_daily_change"] * 0.8 else "stable")
+                else (
+                    "falling"
+                    if np.mean(recent_changes) < features["avg_daily_change"] * 0.8
+                    else "stable"
+                )
             )
         else:
             features["avg_daily_change"] = 0.0
@@ -448,7 +456,9 @@ class ScorePredictService:
         # 归一化权重
         total_weight = sum(feature_importance.values())
         if total_weight > 0:
-            feature_importance = {k: round(v / total_weight, 2) for k, v in feature_importance.items()}
+            feature_importance = {
+                k: round(v / total_weight, 2) for k, v in feature_importance.items()
+            }
 
         return {
             "status": "success",

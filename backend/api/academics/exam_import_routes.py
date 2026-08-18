@@ -156,7 +156,9 @@ class ValidateImportFile(Resource):
             validation = ScoreImportHelper.validate_headers(headers)
 
             if not validation["valid"]:
-                return APIResponse.error(message="文件格式验证失败", errors=validation["errors"], status_code=400)
+                return APIResponse.error(
+                    message="文件格式验证失败", errors=validation["errors"], status_code=400
+                )
 
             data_preview = []
             card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
@@ -165,7 +167,9 @@ class ValidateImportFile(Resource):
 
             for i, row_data in enumerate(parsed_rows[:5]):
                 card_id = row_data.get(headers[card_id_idx]) if card_id_idx >= 0 else None
-                subject = row_data.get(headers[subject_idx]) if subject_idx >= 0 else None  # noqa: F841
+                subject = (
+                    row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
+                )  # noqa: F841
                 score_val = row_data.get(headers[score_idx]) if score_idx >= 0 else None
 
                 student = User.query.filter_by(card_id=str(card_id)).first() if card_id else None
@@ -228,7 +232,9 @@ class PreviewImportData(Resource):
 
             validation = ScoreImportHelper.validate_headers(headers)
             if not validation["valid"]:
-                return APIResponse.error(message="文件格式错误", errors=validation["errors"], status_code=400)
+                return APIResponse.error(
+                    message="文件格式错误", errors=validation["errors"], status_code=400
+                )
 
             card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
             subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
@@ -245,9 +251,13 @@ class PreviewImportData(Resource):
                     if card_id_idx >= 0 and row_data.get(headers[card_id_idx])
                     else None
                 )
-                subject = row_data.get(headers[subject_idx]) if subject_idx >= 0 else None  # noqa: F841
+                subject = (
+                    row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
+                )  # noqa: F841
                 score_val = (
-                    ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx])) if score_idx >= 0 else None
+                    ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
+                    if score_idx >= 0
+                    else None
                 )
                 full_score = (
                     ScoreImportHelper.parse_score_value(row_data.get(headers[full_score_idx]))
@@ -282,7 +292,9 @@ class PreviewImportData(Resource):
                 if not is_valid:
                     errors.append(f"行{i+2}: {student.name}-{subject} - {msg}")
 
-                existing_score = Score.query.filter_by(exam_id=exam_id, student_id=student.id, subject_id=subject_id).first()
+                existing_score = Score.query.filter_by(
+                    exam_id=exam_id, student_id=student.id, subject_id=subject_id
+                ).first()
 
                 results.append(
                     {
@@ -355,7 +367,9 @@ class ExecuteImport(Resource):
 
             validation = ScoreImportHelper.validate_headers(headers)
             if not validation["valid"]:
-                return APIResponse.error(message="文件格式错误", errors=validation["errors"], status_code=400)
+                return APIResponse.error(
+                    message="文件格式错误", errors=validation["errors"], status_code=400
+                )
 
             result = academics_service.execute_score_import(
                 exam_id=exam_id,
@@ -397,10 +411,14 @@ class DownloadTemplate(Resource):
         # 获取学生列表
         if class_id:
             # 如果指定了班级，获取该班级所有学生
-            students = User.query.filter_by(class_id=class_id, role="student").order_by(User.card_id).all()
+            students = (
+                User.query.filter_by(class_id=class_id, role="student").order_by(User.card_id).all()
+            )
         else:
             # 如果没有指定班级，获取所有学生（用于全校考试）
-            students = User.query.filter_by(role="student").order_by(User.class_name, User.card_id).all()
+            students = (
+                User.query.filter_by(role="student").order_by(User.class_name, User.card_id).all()
+            )
 
         wb = openpyxl.Workbook()
 
@@ -413,7 +431,9 @@ class DownloadTemplate(Resource):
 
         # --- 填写说明表 ---
         notes_header_style = openpyxl.styles.Font(bold=True, size=12, color="FFFFFF")
-        notes_header_fill = openpyxl.styles.PatternFill(start_color="4A90D9", end_color="4A90D9", fill_type="solid")
+        notes_header_fill = openpyxl.styles.PatternFill(
+            start_color="4A90D9", end_color="4A90D9", fill_type="solid"
+        )
         notes_header_alignment = openpyxl.styles.Alignment(horizontal="center", vertical="center")
 
         notes_data = [
@@ -448,13 +468,21 @@ class DownloadTemplate(Resource):
             sheet_notes.cell(row=11, column=1, value=f"考试名称: {exam.name}")
             sheet_notes.cell(row=12, column=1, value=f'考试科目: {", ".join(exam.subjects)}')
             if exam.start_time:
-                sheet_notes.cell(row=13, column=1, value=f'开始时间: {exam.start_time.strftime("%Y-%m-%d %H:%M")}')
+                sheet_notes.cell(
+                    row=13,
+                    column=1,
+                    value=f'开始时间: {exam.start_time.strftime("%Y-%m-%d %H:%M")}',
+                )
             if exam.end_time:
-                sheet_notes.cell(row=14, column=1, value=f'结束时间: {exam.end_time.strftime("%Y-%m-%d %H:%M")}')
+                sheet_notes.cell(
+                    row=14, column=1, value=f'结束时间: {exam.end_time.strftime("%Y-%m-%d %H:%M")}'
+                )
 
         # --- 成绩导入表 ---
         header_style = openpyxl.styles.Font(bold=True, size=11, color="FFFFFF")
-        header_fill = openpyxl.styles.PatternFill(start_color="4A90D9", end_color="4A90D9", fill_type="solid")
+        header_fill = openpyxl.styles.PatternFill(
+            start_color="4A90D9", end_color="4A90D9", fill_type="solid"
+        )
         header_alignment = openpyxl.styles.Alignment(horizontal="center", vertical="center")
 
         headers = ["学号", "姓名", "班级", "科目", "分数", "满分", "备注"]
@@ -520,7 +548,9 @@ class DownloadTemplate(Resource):
         # 绿色 - 优秀（90分以上）
         green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
         green_font = Font(color="006100")
-        green_rule = CellIsRule(operator="greaterThan", formula=["90"], fill=green_fill, font=green_font)
+        green_rule = CellIsRule(
+            operator="greaterThan", formula=["90"], fill=green_fill, font=green_font
+        )
 
         sheet_data.conditional_formatting.add("E2:E1000", red_rule)
         sheet_data.conditional_formatting.add("E2:E1000", green_rule)
@@ -558,7 +588,9 @@ class ImportHistory(Resource):
         if exam_id:
             query = query.filter_by(exam_id=exam_id)
 
-        pagination = query.order_by(Score.entered_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        pagination = query.order_by(Score.entered_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
 
         results = []
         for score in pagination.items:

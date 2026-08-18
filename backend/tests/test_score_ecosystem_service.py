@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 积分生态系统服务测试模块
 """
 """
 
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
+
 try:
     from services.score_ecosystem_service import ScoreEcosystem
 except ImportError:
@@ -266,7 +267,9 @@ class TestScoreEcosystem:
                 mock_get_by_id.return_value = mock_user
 
                 with patch("services.score_ecosystem_service.ScoreRecord.query") as mock_query:
-                    mock_query.filter.return_value.order_by.return_value.first.return_value = mock_record
+                    mock_query.filter.return_value.order_by.return_value.first.return_value = (
+                        mock_record
+                    )
 
                     result = ecosystem.get_user_balance(1)
 

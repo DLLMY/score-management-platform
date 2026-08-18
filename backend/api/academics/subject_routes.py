@@ -286,7 +286,9 @@ class SubjectClasses(Resource):
         if not class_info:
             return APIResponse.error(message="班级不存在", status_code=404)
 
-        link_id = academics_service.create_subject_class(id, data["class_info_id"], data.get("teacher_id"))
+        link_id = academics_service.create_subject_class(
+            id, data["class_info_id"], data.get("teacher_id")
+        )
 
         link = get_by_id(SubjectClass, link_id)
         subject = Subject.query.get(id)
@@ -391,7 +393,9 @@ class SubjectExport(Resource):
             class_links = SubjectClass.query.filter(SubjectClass.subject_id.in_(subject_ids)).all()
 
             # 批量获取所有班级信息（1次查询）
-            class_info_ids = list(set(link.class_info_id for link in class_links if link.class_info_id))
+            class_info_ids = list(
+                set(link.class_info_id for link in class_links if link.class_info_id)
+            )
             class_info_map = {}
             if class_info_ids:
                 class_infos = ClassInfo.query.filter(ClassInfo.id.in_(class_info_ids)).all()
@@ -443,7 +447,17 @@ class SubjectExport(Resource):
                 )
 
         if export_format == "excel":
-            headers = ["科目名称", "科目代码", "年级", "描述", "颜色", "是否启用", "关联班级", "创建时间", "更新时间"]
+            headers = [
+                "科目名称",
+                "科目代码",
+                "年级",
+                "描述",
+                "颜色",
+                "是否启用",
+                "关联班级",
+                "创建时间",
+                "更新时间",
+            ]
             flat_data = []
             for item in export_data:
                 class_teacher_str = ""
@@ -477,7 +491,17 @@ class SubjectExport(Resource):
                 download_name=filename,
             )
         elif export_format == "csv":
-            headers = ["科目名称", "科目代码", "年级", "描述", "颜色", "是否启用", "关联班级", "创建时间", "更新时间"]
+            headers = [
+                "科目名称",
+                "科目代码",
+                "年级",
+                "描述",
+                "颜色",
+                "是否启用",
+                "关联班级",
+                "创建时间",
+                "更新时间",
+            ]
             flat_data = []
             for item in export_data:
                 class_teacher_str = ""
@@ -497,7 +521,9 @@ class SubjectExport(Resource):
                     }
                 )
 
-            csv_buf = excel_export_service.export_to_csv(data=flat_data, headers=headers, filename="subjects_export")
+            csv_buf = excel_export_service.export_to_csv(
+                data=flat_data, headers=headers, filename="subjects_export"
+            )
 
             csv_content = csv_buf.getvalue()
             if isinstance(csv_content, str):
@@ -509,10 +535,17 @@ class SubjectExport(Resource):
                 f'subjects_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
             )
             return send_file(
-                io.BytesIO(csv_content), mimetype="text/csv; charset=utf-8", as_attachment=True, download_name=filename
+                io.BytesIO(csv_content),
+                mimetype="text/csv; charset=utf-8",
+                as_attachment=True,
+                download_name=filename,
             )
         else:
-            output = {"export_time": datetime.now().isoformat(), "total": len(export_data), "data": export_data}
+            output = {
+                "export_time": datetime.now().isoformat(),
+                "total": len(export_data),
+                "data": export_data,
+            }
 
             json_str = json.dumps(output, ensure_ascii=False, indent=2)
             buf = io.BytesIO(json_str.encode("utf-8"))
@@ -533,7 +566,16 @@ class SubjectTemplate(Resource):
     @requires_permission("score.view")
     def get(self):
         """下载科目导入模板"""
-        headers = ["科目名称", "科目代码", "年级", "描述", "颜色", "是否启用", "班级名称", "教师姓名"]
+        headers = [
+            "科目名称",
+            "科目代码",
+            "年级",
+            "描述",
+            "颜色",
+            "是否启用",
+            "班级名称",
+            "教师姓名",
+        ]
         sample_data = [
             {
                 "科目名称": "数学",
@@ -548,7 +590,10 @@ class SubjectTemplate(Resource):
         ]
 
         buf = excel_export_service.export_to_excel(
-            data=sample_data, headers=headers, filename="subjects_template", sheet_name="科目导入模板"
+            data=sample_data,
+            headers=headers,
+            filename="subjects_template",
+            sheet_name="科目导入模板",
         )
 
         filename = excel_export_service._sanitize_filename("subjects_import_template.xlsx")
@@ -574,25 +619,56 @@ class SubjectImport(Resource):
         if config_id:
             config = get_by_id(ImportConfig, config_id)
         else:
-            config = ImportConfig.query.filter(ImportConfig.import_type == "subjects", ImportConfig.is_active).first()
+            config = ImportConfig.query.filter(
+                ImportConfig.import_type == "subjects", ImportConfig.is_active
+            ).first()
 
         default_mappings = [
-            {"source_field": "科目名称", "target_field": "name", "field_type": "string", "required": True},
+            {
+                "source_field": "科目名称",
+                "target_field": "name",
+                "field_type": "string",
+                "required": True,
+            },
             {"source_field": "科目代码", "target_field": "code", "field_type": "string"},
             {"source_field": "年级", "target_field": "grade", "field_type": "string"},
             {"source_field": "描述", "target_field": "description", "field_type": "string"},
             {"source_field": "颜色", "target_field": "color", "field_type": "string"},
             {"source_field": "是否启用", "target_field": "is_active", "field_type": "boolean"},
-            {"source_field": "班级名称", "target_field": "class_name", "field_type": "string", "relation": "class"},
-            {"source_field": "班级ID", "target_field": "class_id", "field_type": "integer", "relation": "class"},
-            {"source_field": "教师姓名", "target_field": "teacher_name", "field_type": "string", "relation": "admin"},
-            {"source_field": "教师ID", "target_field": "teacher_id", "field_type": "integer", "relation": "admin"},
+            {
+                "source_field": "班级名称",
+                "target_field": "class_name",
+                "field_type": "string",
+                "relation": "class",
+            },
+            {
+                "source_field": "班级ID",
+                "target_field": "class_id",
+                "field_type": "integer",
+                "relation": "class",
+            },
+            {
+                "source_field": "教师姓名",
+                "target_field": "teacher_name",
+                "field_type": "string",
+                "relation": "admin",
+            },
+            {
+                "source_field": "教师ID",
+                "target_field": "teacher_id",
+                "field_type": "integer",
+                "relation": "admin",
+            },
         ]
 
         config_data = config.config_data if config else {}
-        field_mappings = config_data.get("field_mappings", default_mappings) if config_data else default_mappings
+        field_mappings = (
+            config_data.get("field_mappings", default_mappings) if config_data else default_mappings
+        )
         validation_rules = config_data.get("validation_rules", []) if config_data else []
-        conflict_strategy = config_data.get("conflict_strategy", "update") if config_data else "update"
+        conflict_strategy = (
+            config_data.get("conflict_strategy", "update") if config_data else "update"
+        )
         default_values = config_data.get("default_values", {}) if config_data else {}
 
         import_list = []
@@ -616,7 +692,9 @@ class SubjectImport(Resource):
                     elif isinstance(json_data, dict) and "data" in json_data:
                         import_list = json_data["data"]
                     else:
-                        return APIResponse.error(message="JSON格式错误：应为数组或包含data字段的对象", status_code=400)
+                        return APIResponse.error(
+                            message="JSON格式错误：应为数组或包含data字段的对象", status_code=400
+                        )
                 except (json.JSONDecodeError, UnicodeDecodeError) as e:
                     return APIResponse.error(message=f"JSON解析失败: {str(e)}", status_code=400)
             elif filename.endswith(".xlsx") or filename.endswith(".xls"):
@@ -624,7 +702,9 @@ class SubjectImport(Resource):
                 parse_result = excel_import_service.parse_excel_file(file_content)
 
                 if not parse_result.get("success"):
-                    return APIResponse.error(message=parse_result.get("error", "文件解析失败"), status_code=400)
+                    return APIResponse.error(
+                        message=parse_result.get("error", "文件解析失败"), status_code=400
+                    )
 
                 headers = parse_result.get("headers", [])
                 parsed_rows = parse_result.get("data", [])
@@ -646,11 +726,18 @@ class SubjectImport(Resource):
                             if mapping.get("required"):
                                 row_has_required = False
                                 break
-                            source_val = mapping.get("default_value", default_values.get(target_field))
+                            source_val = mapping.get(
+                                "default_value", default_values.get(target_field)
+                            )
 
                         if field_type == "boolean":
                             if isinstance(source_val, str):
-                                mapped_item[target_field] = source_val in ["是", "true", "True", "1"]
+                                mapped_item[target_field] = source_val in [
+                                    "是",
+                                    "true",
+                                    "True",
+                                    "1",
+                                ]
                             else:
                                 mapped_item[target_field] = bool(source_val)
                         else:
@@ -658,12 +745,17 @@ class SubjectImport(Resource):
 
                     if not row_has_required:
                         import_list.append(
-                            {"__error__": True, "__message__": f'第{row_idx + 2}行: 缺少必填字段"科目名称"'}
+                            {
+                                "__error__": True,
+                                "__message__": f'第{row_idx + 2}行: 缺少必填字段"科目名称"',
+                            }
                         )
                     elif mapped_item.get("name"):
                         import_list.append(mapped_item)
             else:
-                return APIResponse.error(message="仅支持 .xlsx、.xls 或 .json 格式", status_code=400)
+                return APIResponse.error(
+                    message="仅支持 .xlsx、.xls 或 .json 格式", status_code=400
+                )
         elif "application/json" in content_type:
             data = request.json
             if not data or "data" not in data:

@@ -5,31 +5,43 @@ from utils.permission import requires_permission
 
 ns_homework = Namespace("homework", description="作业检查管理")
 
-homework_model = ns_homework.model("HomeworkInput", {
-    "class_id": fields.Integer(required=True),
-    "subject_id": fields.Integer(),
-    "title": fields.String(required=True),
-    "description": fields.String(),
-    "assigned_date": fields.String(),
-    "due_date": fields.String(required=True),
-})
+homework_model = ns_homework.model(
+    "HomeworkInput",
+    {
+        "class_id": fields.Integer(required=True),
+        "subject_id": fields.Integer(),
+        "title": fields.String(required=True),
+        "description": fields.String(),
+        "assigned_date": fields.String(),
+        "due_date": fields.String(required=True),
+    },
+)
 
-submission_model = ns_homework.model("SubmissionInput", {
-    "student_id": fields.Integer(required=True),
-})
+submission_model = ns_homework.model(
+    "SubmissionInput",
+    {
+        "student_id": fields.Integer(required=True),
+    },
+)
 
-check_model = ns_homework.model("CheckInput", {
-    "notes": fields.String(),
-})
+check_model = ns_homework.model(
+    "CheckInput",
+    {
+        "notes": fields.String(),
+    },
+)
 
 
 @ns_homework.route("/assignments")
 class HomeworkList(Resource):
-    @ns_homework.doc("list_homework", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "subject_id": {"description": "科目ID", "type": int},
-        "is_completed": {"description": "是否完成"},
-    })
+    @ns_homework.doc(
+        "list_homework",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "subject_id": {"description": "科目ID", "type": int},
+            "is_completed": {"description": "是否完成"},
+        },
+    )
     @requires_permission("homework.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)

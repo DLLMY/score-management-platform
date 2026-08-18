@@ -32,13 +32,14 @@ class PerformanceBenchmark {
   private calculatePercentile(values: number[], percentile: number): number {
     if (values.length === 0) return 0;
     const sorted = [...values].sort((a, b) => a - b);
-    const index = Math.min(Math.floor(sorted.length * percentile / 100), sorted.length - 1);
+    const index = Math.min(Math.floor((sorted.length * percentile) / 100), sorted.length - 1);
     return sorted[index];
   }
 
   private calculateStdDev(values: number[], mean: number): number {
     if (values.length < 2) return 0;
-    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
+    const variance =
+      values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
     return Math.sqrt(variance);
   }
 
@@ -86,11 +87,7 @@ class PerformanceBenchmark {
     return result;
   }
 
-  runSyncBenchmark(
-    name: string,
-    fn: () => unknown,
-    iterations: number = 1000
-  ): BenchmarkResult {
+  runSyncBenchmark(name: string, fn: () => unknown, iterations: number = 1000): BenchmarkResult {
     const times: number[] = [];
     let failures = 0;
 
@@ -134,16 +131,25 @@ class PerformanceBenchmark {
     const endTime = performance.now();
     const duration = Math.round((endTime - this.startTime) * 100) / 100;
 
-    const avgTimes = this.results.map(r => r.avgTime);
-    const p95Times = this.results.map(r => r.p95Time);
-    const successRates = this.results.map(r => r.successRate);
+    const avgTimes = this.results.map((r) => r.avgTime);
+    const p95Times = this.results.map((r) => r.p95Time);
+    const successRates = this.results.map((r) => r.successRate);
 
     const summary = {
-      overallAvgTime: Math.round(avgTimes.reduce((a, b) => a + b, 0) / avgTimes.length * 100) / 100,
-      overallP95Time: Math.round(p95Times.reduce((a, b) => a + b, 0) / p95Times.length * 100) / 100,
-      overallSuccessRate: Math.round(successRates.reduce((a, b) => a + b, 0) / successRates.length * 100) / 100,
-      fastestTest: this.results.length > 0 ? this.results.reduce((a, b) => a.avgTime < b.avgTime ? a : b).name : '',
-      slowestTest: this.results.length > 0 ? this.results.reduce((a, b) => a.avgTime > b.avgTime ? a : b).name : '',
+      overallAvgTime:
+        Math.round((avgTimes.reduce((a, b) => a + b, 0) / avgTimes.length) * 100) / 100,
+      overallP95Time:
+        Math.round((p95Times.reduce((a, b) => a + b, 0) / p95Times.length) * 100) / 100,
+      overallSuccessRate:
+        Math.round((successRates.reduce((a, b) => a + b, 0) / successRates.length) * 100) / 100,
+      fastestTest:
+        this.results.length > 0
+          ? this.results.reduce((a, b) => (a.avgTime < b.avgTime ? a : b)).name
+          : '',
+      slowestTest:
+        this.results.length > 0
+          ? this.results.reduce((a, b) => (a.avgTime > b.avgTime ? a : b)).name
+          : '',
     };
 
     return {
@@ -167,7 +173,7 @@ class PerformanceBenchmark {
     lines.push('📋 详细结果');
     lines.push('='.repeat(70));
 
-    report.results.forEach(result => {
+    report.results.forEach((result) => {
       lines.push(`\n📍 ${result.name}`);
       lines.push(`   ├─ 迭代次数: ${result.iterations}`);
       lines.push(`   ├─ 成功率: ${result.successRate}%`);
@@ -184,7 +190,7 @@ class PerformanceBenchmark {
     lines.push(`\n📊 整体平均耗时: ${report.summary.overallAvgTime}ms`);
     lines.push(`📊 整体P95耗时: ${report.summary.overallP95Time}ms`);
     lines.push(`📊 整体成功率: ${report.summary.overallSuccessRate}%`);
-    
+
     if (report.summary.fastestTest) {
       lines.push(`\n⚡ 最快测试: ${report.summary.fastestTest}`);
       lines.push(`🐌 最慢测试: ${report.summary.slowestTest}`);
@@ -205,25 +211,44 @@ class PerformanceBenchmark {
     logger.log('🎯 开始前端性能基准测试');
     logger.log('='.repeat(70));
 
-    await this.runSyncBenchmark('JSON序列化/反序列化', () => {
-      const data = { a: 1, b: 'test', c: [1, 2, 3], d: { e: true } };
-      return JSON.parse(JSON.stringify(data));
-    }, 10000);
+    await this.runSyncBenchmark(
+      'JSON序列化/反序列化',
+      () => {
+        const data = { a: 1, b: 'test', c: [1, 2, 3], d: { e: true } };
+        return JSON.parse(JSON.stringify(data));
+      },
+      10000
+    );
 
-    await this.runSyncBenchmark('数组过滤操作', () => {
-      const arr = Array.from({ length: 1000 }, (_, i) => ({ id: i, value: Math.random() }));
-      return arr.filter(item => item.value > 0.5);
-    }, 1000);
+    await this.runSyncBenchmark(
+      '数组过滤操作',
+      () => {
+        const arr = Array.from({ length: 1000 }, (_, i) => ({ id: i, value: Math.random() }));
+        return arr.filter((item) => item.value > 0.5);
+      },
+      1000
+    );
 
-    await this.runSyncBenchmark('数组排序操作', () => {
-      const arr = Array.from({ length: 1000 }, () => Math.random());
-      return arr.sort((a, b) => a - b);
-    }, 500);
+    await this.runSyncBenchmark(
+      '数组排序操作',
+      () => {
+        const arr = Array.from({ length: 1000 }, () => Math.random());
+        return arr.sort((a, b) => a - b);
+      },
+      500
+    );
 
-    await this.runSyncBenchmark('字符串处理', () => {
-      const str = 'test string repeat '.repeat(100);
-      return str.split(' ').map(s => s.toUpperCase()).join('-');
-    }, 1000);
+    await this.runSyncBenchmark(
+      '字符串处理',
+      () => {
+        const str = 'test string repeat '.repeat(100);
+        return str
+          .split(' ')
+          .map((s) => s.toUpperCase())
+          .join('-');
+      },
+      1000
+    );
 
     logger.log('\n' + '='.repeat(70));
     logger.log('✅ 前端性能基准测试完成');

@@ -1,4 +1,5 @@
 from unittest.mock import patch
+
 try:
     from services.nlp_optimizer import NLPCache
 except ImportError:

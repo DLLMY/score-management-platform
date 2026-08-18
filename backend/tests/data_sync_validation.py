@@ -11,7 +11,26 @@ from typing import Dict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import db, User, ScoreCategory, ScoreRule, ScoreRecord, Device, Approval, Admin, OperationLog, SystemConfig, MQTTConfig, ClassInfo, Subject, Exam, Score, CourseSchedule, ScoreRankRule, TimeRule
+from models import (
+    db,
+    User,
+    ScoreCategory,
+    ScoreRule,
+    ScoreRecord,
+    Device,
+    Approval,
+    Admin,
+    OperationLog,
+    SystemConfig,
+    MQTTConfig,
+    ClassInfo,
+    Subject,
+    Exam,
+    Score,
+    CourseSchedule,
+    ScoreRankRule,
+    TimeRule,
+)
 
 
 def get_db_model_fields(model) -> Dict[str, str]:
@@ -40,7 +59,8 @@ def get_db_model_fields(model) -> Dict[str, str]:
 def read_frontend_types() -> Dict[str, Dict[str, str]]:
     """读取前端TypeScript类型定义"""
     type_file = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "../frontend/src/types/index.ts"
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "../frontend/src/types/index.ts",
     )
 
     if not os.path.exists(type_file):
@@ -79,9 +99,15 @@ def read_frontend_types() -> Dict[str, Dict[str, str]]:
                     current_fields[field_name] = field_type.lower()
                 elif field_type == "ID":
                     current_fields[field_name] = "id"
-                elif field_type.startswith("ID") or field_type.startswith("number") or field_type.startswith("string"):
+                elif (
+                    field_type.startswith("ID")
+                    or field_type.startswith("number")
+                    or field_type.startswith("string")
+                ):
                     current_fields[field_name] = (
-                        "id" if "ID" in field_type else ("number" if "number" in field_type.lower() else "string")
+                        "id"
+                        if "ID" in field_type
+                        else ("number" if "number" in field_type.lower() else "string")
                     )
                 elif field_type.startswith("'") or field_type.startswith('"'):
                     current_fields[field_name] = "string"
@@ -94,7 +120,9 @@ def read_frontend_types() -> Dict[str, Dict[str, str]]:
     return types
 
 
-def compare_models(db_fields: Dict[str, str], frontend_fields: Dict[str, str], model_name: str) -> Dict:
+def compare_models(
+    db_fields: Dict[str, str], frontend_fields: Dict[str, str], model_name: str
+) -> Dict:
     """比较数据库模型和前端类型"""
     db_keys = set(db_fields.keys())
     frontend_keys = set(frontend_fields.keys())
@@ -116,7 +144,9 @@ def compare_models(db_fields: Dict[str, str], frontend_fields: Dict[str, str], m
             db_is_id = db_type in ["number"]
             fe_is_id = frontend_type in ["id", "number"]
             if not (db_is_id and fe_is_id):
-                type_mismatches.append({"field": field, "db_type": db_type, "frontend_type": frontend_type})
+                type_mismatches.append(
+                    {"field": field, "db_type": db_type, "frontend_type": frontend_type}
+                )
             continue
 
         # 外键字段特殊处理：以_id结尾的字段（排除业务ID如card_id、device_id、client_id）
@@ -124,7 +154,9 @@ def compare_models(db_fields: Dict[str, str], frontend_fields: Dict[str, str], m
             db_is_num = db_type in ["number"]
             fe_is_id = frontend_type in ["id", "number"]
             if not (db_is_num and fe_is_id):
-                type_mismatches.append({"field": field, "db_type": db_type, "frontend_type": frontend_type})
+                type_mismatches.append(
+                    {"field": field, "db_type": db_type, "frontend_type": frontend_type}
+                )
             continue
 
         # 日期类型特殊处理：数据库是datetime，前端是string（JSON传输时日期转为字符串）
@@ -165,7 +197,9 @@ def compare_models(db_fields: Dict[str, str], frontend_fields: Dict[str, str], m
         )
 
         if not type_compatible:
-            type_mismatches.append({"field": field, "db_type": db_type, "frontend_type": frontend_type})
+            type_mismatches.append(
+                {"field": field, "db_type": db_type, "frontend_type": frontend_type}
+            )
 
     # 过滤掉允许的差异
     # 数据库内部字段（外键、密码、内部状态等）
@@ -300,12 +334,17 @@ def check_data_integrity() -> Dict:
 
     # 检查User表
     user_count = User.query.count()
-    users_without_class = User.query.filter(User.class_name.is_(None) | (User.class_name == "")).count()
+    users_without_class = User.query.filter(
+        User.class_name.is_(None) | (User.class_name == "")
+    ).count()
 
     # 检查ScoreRecord表
     record_count = ScoreRecord.query.count()
     records_without_user = (
-        db.session.query(ScoreRecord).outerjoin(User, ScoreRecord.student_id == User.id).filter(User.id.is_(None)).count()
+        db.session.query(ScoreRecord)
+        .outerjoin(User, ScoreRecord.student_id == User.id)
+        .filter(User.id.is_(None))
+        .count()
     )
 
     # 检查Device表
@@ -320,7 +359,11 @@ def check_data_integrity() -> Dict:
     approvals_pending = Approval.query.filter_by(status="pending").count()
 
     results = {
-        "user": {"total": user_count, "without_class": users_without_class, "has_issues": users_without_class > 0},
+        "user": {
+            "total": user_count,
+            "without_class": users_without_class,
+            "has_issues": users_without_class > 0,
+        },
         "score_record": {
             "total": record_count,
             "orphaned": records_without_user,
@@ -333,7 +376,9 @@ def check_data_integrity() -> Dict:
         },
         "admin": {"total": admin_count, "has_issues": admin_count == 0},
         "approval": {"total": approval_count, "pending": approvals_pending, "has_issues": False},
-        "overall_healthy": (users_without_class == 0 and records_without_user == 0 and admin_count > 0),
+        "overall_healthy": (
+            users_without_class == 0 and records_without_user == 0 and admin_count > 0
+        ),
     }
 
     return results
@@ -484,7 +529,9 @@ def print_report(report: Dict):
             if result["type_mismatches"]:
                 print("  类型不匹配:")
                 for mismatch in result["type_mismatches"]:
-                    print(f"    - {mismatch['field']}: DB={mismatch['db_type']}, FE={mismatch['frontend_type']}")
+                    print(
+                        f"    - {mismatch['field']}: DB={mismatch['db_type']}, FE={mismatch['frontend_type']}"
+                    )
 
 
 if __name__ == "__main__":
@@ -496,7 +543,9 @@ if __name__ == "__main__":
         print_report(report)
 
         # 保存报告到文件
-        report_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data_sync_validation_report.json")
+        report_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "../data_sync_validation_report.json"
+        )
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
 

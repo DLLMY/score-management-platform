@@ -17,7 +17,8 @@ const weekDays = [
   { value: '6', label: '周日' },
 ];
 
-const formatTime = (h: number, m: number) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+const formatTime = (h: number, m: number) =>
+  `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
 const emptyWindow = (): UnlockWindow => ({
   day: -1,
@@ -99,7 +100,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
     try {
       const data = await api.phoneBoxPolicy.update(
         { allow_self_unlock: allowSelfUnlock, unlock_windows: windows },
-        classInfoId,
+        classInfoId
       );
       setPolicy(data);
       showToast('success', '策略已保存');
@@ -202,10 +203,16 @@ const PhoneBoxPolicyInner: React.FC = () => {
             <div className='flex items-center justify-between mb-3'>
               <div className='flex items-center gap-2'>
                 <Zap className='w-5 h-5 text-amber-500' />
-                <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>一键临时放行</h2>
+                <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>
+                  一键临时放行
+                </h2>
               </div>
               {policy?.override_active ? (
-                <Badge variant='success'>{policy.override_until ? `放行中（至 ${policy.override_until.slice(11, 16)}）` : '放行中'}</Badge>
+                <Badge variant='success'>
+                  {policy.override_until
+                    ? `放行中（至 ${policy.override_until.slice(11, 16)}）`
+                    : '放行中'}
+                </Badge>
               ) : (
                 <Badge variant='default'>未放行</Badge>
               )}
@@ -239,7 +246,9 @@ const PhoneBoxPolicyInner: React.FC = () => {
           <Card className='p-5'>
             <div className='flex items-center justify-between'>
               <div>
-                <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>自助开箱总开关</h2>
+                <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>
+                  自助开箱总开关
+                </h2>
                 <p className='text-sm text-gray-500 dark:text-slate-400 mt-1'>
                   关闭后本班学生任何时段都无法自助开箱（管理员远程开锁不受影响）。
                 </p>
@@ -253,7 +262,9 @@ const PhoneBoxPolicyInner: React.FC = () => {
             <div className='flex items-center justify-between mb-3'>
               <div className='flex items-center gap-2'>
                 <Clock className='w-5 h-5 text-primary-600' />
-                <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>预设允许时段</h2>
+                <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>
+                  预设允许时段
+                </h2>
               </div>
               <Button variant='outline' onClick={() => setWindows((ws) => [...ws, emptyWindow()])}>
                 <Plus className='w-4 h-4 mr-1' /> 添加时段
@@ -270,7 +281,10 @@ const PhoneBoxPolicyInner: React.FC = () => {
             ) : (
               <div className='space-y-3'>
                 {windows.map((w, idx) => (
-                  <div key={idx} className='flex items-center gap-3 flex-wrap bg-gray-50 dark:bg-slate-800 rounded-lg p-3'>
+                  <div
+                    key={idx}
+                    className='flex items-center gap-3 flex-wrap bg-gray-50 dark:bg-slate-800 rounded-lg p-3'
+                  >
                     <Select
                       value={String(w.day)}
                       onChange={(v) => updateWindow(idx, { day: parseInt(v, 10) })}
@@ -301,7 +315,10 @@ const PhoneBoxPolicyInner: React.FC = () => {
                         updateWindow(idx, { end_hour: h, end_minute: m });
                       }}
                     />
-                    <Button variant='ghost' onClick={() => setWindows((ws) => ws.filter((_, i) => i !== idx))}>
+                    <Button
+                      variant='ghost'
+                      onClick={() => setWindows((ws) => ws.filter((_, i) => i !== idx))}
+                    >
                       <Trash2 className='w-4 h-4 text-red-500' />
                     </Button>
                   </div>

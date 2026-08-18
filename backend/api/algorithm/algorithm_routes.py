@@ -495,7 +495,9 @@ class RuleRecommend(Resource):
         class_name = request.args.get("class_name")
         days = int(request.args.get("days", 30))
         try:
-            result = RuleRecommendationService.get_all_recommendations(class_name, days)  # noqa: F841
+            result = RuleRecommendationService.get_all_recommendations(
+                class_name, days
+            )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))
@@ -515,7 +517,9 @@ class NewRuleRecommend(Resource):
         class_name = request.args.get("class_name")
         days = int(request.args.get("days", 30))
         try:
-            result = RuleRecommendationService.find_new_rule_opportunities(class_name, days)  # noqa: F841
+            result = RuleRecommendationService.find_new_rule_opportunities(
+                class_name, days
+            )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))
@@ -535,7 +539,9 @@ class RuleOptimization(Resource):
         class_name = request.args.get("class_name")
         days = int(request.args.get("days", 30))
         try:
-            result = RuleRecommendationService.suggest_rule_optimizations(class_name, days)  # noqa: F841
+            result = RuleRecommendationService.suggest_rule_optimizations(
+                class_name, days
+            )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))
@@ -555,7 +561,9 @@ class RuleCombination(Resource):
         class_name = request.args.get("class_name")
         days = int(request.args.get("days", 30))
         try:
-            result = RuleRecommendationService.suggest_rule_combinations(class_name, days)  # noqa: F841
+            result = RuleRecommendationService.suggest_rule_combinations(
+                class_name, days
+            )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
             return APIResponse.error(message=str(e))
@@ -1177,7 +1185,9 @@ class AlgorithmAll(Resource):
             statistics = AlgorithmService().get_statistics()
             clusters = ClusterService().get_clusters()
             warnings = WarningService().get_warnings()
-            return APIResponse.success(data={"statistics": statistics, "clusters": clusters, "warnings": warnings})
+            return APIResponse.success(
+                data={"statistics": statistics, "clusters": clusters, "warnings": warnings}
+            )
         except Exception as e:
             return APIResponse.error(message=str(e))
 
@@ -1260,7 +1270,17 @@ def _build_export_rows(tab, class_name, days):
     """
     if tab == "engagement":
         res = EngagementService.batch_rank(class_name, days)
-        headers = ["排名", "姓名", "班级", "参与度", "等级", "出勤率", "作业率", "活跃度", "请假天数"]
+        headers = [
+            "排名",
+            "姓名",
+            "班级",
+            "参与度",
+            "等级",
+            "出勤率",
+            "作业率",
+            "活跃度",
+            "请假天数",
+        ]
         rows = []
         for s in res.get("students", []):
             comp = s.get("components", {}) or {}
@@ -1306,9 +1326,7 @@ def _build_export_rows(tab, class_name, days):
         headers = ["姓名", "班级", "总体风险", "风险分", "风险因素"]
         rows = []
         for r in res.get("results", []):
-            factors = "、".join(
-                f.get("description", "") for f in (r.get("risk_factors") or [])[:3]
-            )
+            factors = "、".join(f.get("description", "") for f in (r.get("risk_factors") or [])[:3])
             rows.append(
                 [
                     r.get("name"),
@@ -1325,8 +1343,12 @@ def _build_export_rows(tab, class_name, days):
 
 @ns_algorithm.route("/export")
 class AlgorithmExport(Resource):
-    @ns_algorithm.doc("get_algorithm_export", description="导出算法分析结果为 Excel（参与度/归因/风险）")
-    @ns_algorithm.param("tab", "导出类型: engagement(参与度排名) / attribution(班级归因) / risk(风险评估)")
+    @ns_algorithm.doc(
+        "get_algorithm_export", description="导出算法分析结果为 Excel（参与度/归因/风险）"
+    )
+    @ns_algorithm.param(
+        "tab", "导出类型: engagement(参与度排名) / attribution(班级归因) / risk(风险评估)"
+    )
     @ns_algorithm.param("class_name", "班级名称(可选，为空导出全部)")
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "Excel 文件流")

@@ -129,51 +129,61 @@ function dataReducer(state: DashboardState, action: DashboardAction): DashboardS
   }
 }
 
-const AnimatedNumber = memo(({ value, className = '', decimals = 0 }: { value: number; className?: string; decimals?: number }) => {
-  const [displayValue, setDisplayValue] = useState(value);
-  const animationRef = useRef<number | null>(null);
+const AnimatedNumber = memo(
+  ({
+    value,
+    className = '',
+    decimals = 0,
+  }: {
+    value: number;
+    className?: string;
+    decimals?: number;
+  }) => {
+    const [displayValue, setDisplayValue] = useState(value);
+    const animationRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-
-    const duration = 300;
-    const startTime = Date.now();
-    const startValue = displayValue;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-
-      const currentValue = startValue + (value - startValue) * easeOut;
-      setDisplayValue(Math.round(currentValue * Math.pow(10, decimals)) / Math.pow(10, decimals));
-
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        setDisplayValue(value);
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-
-    return () => {
+    useEffect(() => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-    };
-  }, [value, decimals]);
 
-  return (
-    <span className={className}>
-      {typeof displayValue === 'number' 
-        ? displayValue.toLocaleString(undefined, { maximumFractionDigits: decimals })
-        : '0'}
-    </span>
-  );
-});
+      const duration = 300;
+      const startTime = Date.now();
+      const startValue = displayValue;
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+
+        const currentValue = startValue + (value - startValue) * easeOut;
+        setDisplayValue(Math.round(currentValue * Math.pow(10, decimals)) / Math.pow(10, decimals));
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          setDisplayValue(value);
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+
+      return () => {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+      };
+    }, [value, decimals]);
+
+    return (
+      <span className={className}>
+        {typeof displayValue === 'number'
+          ? displayValue.toLocaleString(undefined, { maximumFractionDigits: decimals })
+          : '0'}
+      </span>
+    );
+  }
+);
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -188,13 +198,25 @@ interface StatCardProps {
 }
 
 const StatCard = memo(
-  ({ icon: Icon, label, value, subValue, trend, gradient, description, isAlgorithm = false, 'aria-label': ariaLabel }: StatCardProps) => {
+  ({
+    icon: Icon,
+    label,
+    value,
+    subValue,
+    trend,
+    gradient,
+    description,
+    isAlgorithm = false,
+    'aria-label': ariaLabel,
+  }: StatCardProps) => {
     return (
       <div
         className={`group relative overflow-hidden rounded-xl p-3 bg-white border border-gray-200/60 shadow-sm hover:shadow-md transition-colors duration-150 ${
-          isAlgorithm ? 'border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/40 to-transparent' : ''
+          isAlgorithm
+            ? 'border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/40 to-transparent'
+            : ''
         }`}
-        role="listitem"
+        role='listitem'
         aria-label={ariaLabel}
       >
         <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${gradient}`} />
@@ -208,7 +230,9 @@ const StatCard = memo(
                 <Icon className='w-4.5 h-4.5 text-white' />
               </div>
               <div className='flex flex-col'>
-                <span className='text-sm font-semibold text-gray-800 whitespace-nowrap'>{label}</span>
+                <span className='text-sm font-semibold text-gray-800 whitespace-nowrap'>
+                  {label}
+                </span>
                 {description && <span className='text-[11px] text-gray-500'>{description}</span>}
               </div>
             </div>
@@ -308,8 +332,10 @@ function Dashboard(): React.ReactElement {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const data = await api.classes.getAll() as unknown;
-        const classesData = Array.isArray(data) ? data : ((data as { classes?: { id: number; name: string }[] }).classes || []);
+        const data = (await api.classes.getAll()) as unknown;
+        const classesData = Array.isArray(data)
+          ? data
+          : (data as { classes?: { id: number; name: string }[] }).classes || [];
         setClassList(classesData);
       } catch (error) {
         logger.error('获取班级列表失败:', error);
@@ -329,7 +355,7 @@ function Dashboard(): React.ReactElement {
   }, [state.users, selectedClass]);
 
   const classes = useMemo(() => {
-    return classList.map(c => c.name).sort();
+    return classList.map((c) => c.name).sort();
   }, [classList]);
 
   const classGroups = useMemo(() => {
@@ -354,7 +380,7 @@ function Dashboard(): React.ReactElement {
   const fetchUsers = useCallback(async (): Promise<User[] | null> => {
     try {
       const usersData = await api.users.getAll({ per_page: 100 });
-      return Array.isArray(usersData) ? usersData : ((usersData as { users?: User[] })?.users || []);
+      return Array.isArray(usersData) ? usersData : (usersData as { users?: User[] })?.users || [];
     } catch (e) {
       logger.error('获取用户数据失败:', e);
       return null; // 失败返回 null，调用方保留旧数据而非用空数组覆盖
@@ -364,7 +390,9 @@ function Dashboard(): React.ReactElement {
   const fetchRecords = useCallback(async (): Promise<unknown[] | null> => {
     try {
       const recordsData = await api.records.getAll({ per_page: 20 });
-      return Array.isArray(recordsData) ? recordsData : ((recordsData as { records?: unknown[] })?.records || []);
+      return Array.isArray(recordsData)
+        ? recordsData
+        : (recordsData as { records?: unknown[] })?.records || [];
     } catch (e) {
       logger.error('获取记录数据失败:', e);
       return null; // 失败返回 null，调用方保留旧数据而非用空数组覆盖
@@ -387,7 +415,7 @@ function Dashboard(): React.ReactElement {
       const notificationsData = await api.notifications.getAll({ per_page: 5 });
       return Array.isArray(notificationsData)
         ? notificationsData
-        : ((notificationsData as { notifications?: Notification[] })?.notifications || []);
+        : (notificationsData as { notifications?: Notification[] })?.notifications || [];
     } catch (e) {
       logger.error('获取通知数据失败:', e);
       return null;
@@ -419,16 +447,13 @@ function Dashboard(): React.ReactElement {
   const lastFetchTimeRef = useRef(0);
   const timeoutIdsRef = useRef<number[]>([]);
   const mountedRef = useRef(true);
-  
+
   // 使用节流限制刷新频率（最少间隔 1 秒）
-  const throttledRefresh = useThrottledCallback(
-    async () => {
-      if (fetchDataRef.current) {
-        await fetchDataRef.current(true);
-      }
-    },
-    1000
-  );
+  const throttledRefresh = useThrottledCallback(async () => {
+    if (fetchDataRef.current) {
+      await fetchDataRef.current(true);
+    }
+  }, 1000);
 
   const getOnlineCount = useCallback((devices: Device[] | null): number => {
     if (!devices || !Array.isArray(devices)) {
@@ -439,132 +464,132 @@ function Dashboard(): React.ReactElement {
   }, []);
 
   const fetchHighPriorityData = useCallback(async (): Promise<void> => {
+    try {
+      const [dashboardData, usersList, deviceList] = await Promise.all([
+        api.dashboard.getData().catch(() => null),
+        fetchUsers(),
+        fetchDevices(),
+      ]);
+
+      const sortedUsers =
+        usersList !== null
+          ? [...usersList].sort((a, b) => (b.current_score || 0) - (a.current_score || 0))
+          : null;
+      if (sortedUsers !== null) {
+        dispatch({ type: 'SET_USERS', payload: sortedUsers });
+      }
+
+      if (deviceList !== null) {
+        dispatch({ type: 'SET_DEVICES', payload: deviceList });
+      }
+
+      if (dashboardData) {
+        setDashboardError(false);
+        dispatch({
+          type: 'SET_STATISTICS',
+          payload: {
+            totalUsers: dashboardData.total_users,
+            totalRecords: dashboardData.today_records,
+            totalScore: Math.round(dashboardData.avg_score * dashboardData.total_users),
+            onlineDevices: dashboardData.online_devices,
+          },
+        });
+      } else {
+        setDashboardError(true); // 接口失败：数值可能不完整，显示警示条而非伪装
+        dispatch({
+          type: 'SET_STATISTICS',
+          payload: {
+            totalUsers: (usersList ?? []).length,
+            totalRecords: 0,
+            totalScore: (usersList ?? []).reduce((sum, u) => sum + (u.current_score || 0), 0),
+            onlineDevices: deviceList !== null ? getOnlineCount(deviceList) : 0,
+          },
+        });
+      }
+
+      dispatch({ type: 'SET_LOADING', payload: false });
+      // 仅接口成功才记录"最后更新"，失败时保持 null（显示 —）
+      if (dashboardData) {
+        dispatch({ type: 'SET_LAST_UPDATE', payload: new Date() });
+      }
+    } catch (error) {
+      logger.error('获取高优先级数据失败:', error);
+      setDashboardError(true);
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [fetchUsers, fetchDevices, getOnlineCount]);
+
+  const fetchMediumPriorityData = useCallback(async (): Promise<void> => {
+    try {
+      const [recordsList, notificationsList] = await Promise.all([
+        fetchRecords(),
+        fetchNotifications(),
+      ]);
+
+      if (recordsList !== null) {
+        dispatch({ type: 'SET_RECORDS', payload: recordsList });
+      }
+
+      if (notificationsList !== null) {
+        dispatch({ type: 'SET_NOTIFICATIONS', payload: notificationsList });
+      }
+    } catch (error) {
+      logger.error('获取中优先级数据失败:', error);
+      setDashboardError(true);
+    }
+  }, [fetchRecords, fetchNotifications]);
+
+  const fetchLowPriorityData = useCallback(async (): Promise<void> => {
+    try {
+      const algorithmData = await fetchAlgorithmData();
+      dispatch({ type: 'SET_ALGORITHM_DATA', payload: algorithmData });
+    } catch (error) {
+      logger.error('获取低优先级数据失败:', error);
+      setDashboardError(true);
+    }
+  }, [fetchAlgorithmData]);
+
+  const clearTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach((id) => clearTimeout(id));
+    timeoutIdsRef.current = [];
+  }, []);
+
+  const fetchData = useCallback(
+    async (manualRefresh = false) => {
+      const now = Date.now();
+      if (!manualRefresh && now - lastFetchTimeRef.current < REFRESH_INTERVAL) {
+        return;
+      }
+      lastFetchTimeRef.current = now;
+
+      clearTimeouts();
+
+      if (manualRefresh) {
+        dispatch({ type: 'SET_REFRESHING', payload: true });
+      }
+
       try {
-        const [dashboardData, usersList, deviceList] = await Promise.all([
-          api.dashboard.getData().catch(() => null),
-          fetchUsers(),
-          fetchDevices(),
-        ]);
+        await Promise.all([fetchHighPriorityData(), fetchMediumPriorityData()]);
 
-        const sortedUsers = usersList !== null ? [...usersList].sort((a, b) => (b.current_score || 0) - (a.current_score || 0)) : null;
-        if (sortedUsers !== null) {
-          dispatch({ type: 'SET_USERS', payload: sortedUsers });
-        }
-
-        if (deviceList !== null) {
-          dispatch({ type: 'SET_DEVICES', payload: deviceList });
-        }
-
-        if (dashboardData) {
-          setDashboardError(false);
-          dispatch({
-            type: 'SET_STATISTICS',
-            payload: {
-              totalUsers: dashboardData.total_users,
-              totalRecords: dashboardData.today_records,
-              totalScore: Math.round(dashboardData.avg_score * dashboardData.total_users),
-              onlineDevices: dashboardData.online_devices,
-            },
-          });
-        } else {
-          setDashboardError(true); // 接口失败：数值可能不完整，显示警示条而非伪装
-          dispatch({
-            type: 'SET_STATISTICS',
-            payload: {
-              totalUsers: (usersList ?? []).length,
-              totalRecords: 0,
-              totalScore: (usersList ?? []).reduce((sum, u) => sum + (u.current_score || 0), 0),
-              onlineDevices: deviceList !== null ? getOnlineCount(deviceList) : 0,
-            },
-          });
-        }
-
-        dispatch({ type: 'SET_LOADING', payload: false });
-        // 仅接口成功才记录"最后更新"，失败时保持 null（显示 —）
-        if (dashboardData) {
-          dispatch({ type: 'SET_LAST_UPDATE', payload: new Date() });
+        if (mountedRef.current) {
+          const lowTimeout = window.setTimeout(() => {
+            if (mountedRef.current) {
+              fetchLowPriorityData();
+            }
+          }, 300);
+          timeoutIdsRef.current.push(lowTimeout);
         }
       } catch (error) {
-        logger.error('获取高优先级数据失败:', error);
+        logger.error('获取数据失败:', error);
         setDashboardError(true);
-        dispatch({ type: 'SET_LOADING', payload: false });
+      } finally {
+        if (mountedRef.current) {
+          dispatch({ type: 'SET_REFRESHING', payload: false });
+        }
       }
-    }, [fetchUsers, fetchDevices, getOnlineCount]);
-
-    const fetchMediumPriorityData = useCallback(async (): Promise<void> => {
-      try {
-        const [recordsList, notificationsList] = await Promise.all([
-          fetchRecords(),
-          fetchNotifications(),
-        ]);
-
-        if (recordsList !== null) {
-          dispatch({ type: 'SET_RECORDS', payload: recordsList });
-        }
-
-        if (notificationsList !== null) {
-          dispatch({ type: 'SET_NOTIFICATIONS', payload: notificationsList });
-        }
-      } catch (error) {
-        logger.error('获取中优先级数据失败:', error);
-        setDashboardError(true);
-      }
-    }, [fetchRecords, fetchNotifications]);
-
-    const fetchLowPriorityData = useCallback(async (): Promise<void> => {
-      try {
-        const algorithmData = await fetchAlgorithmData();
-        dispatch({ type: 'SET_ALGORITHM_DATA', payload: algorithmData });
-      } catch (error) {
-        logger.error('获取低优先级数据失败:', error);
-        setDashboardError(true);
-      }
-    }, [fetchAlgorithmData]);
-
-    const clearTimeouts = useCallback(() => {
-      timeoutIdsRef.current.forEach((id) => clearTimeout(id));
-      timeoutIdsRef.current = [];
-    }, []);
-
-    const fetchData = useCallback(
-      async (manualRefresh = false) => {
-        const now = Date.now();
-        if (!manualRefresh && now - lastFetchTimeRef.current < REFRESH_INTERVAL) {
-          return;
-        }
-        lastFetchTimeRef.current = now;
-
-        clearTimeouts();
-
-        if (manualRefresh) {
-          dispatch({ type: 'SET_REFRESHING', payload: true });
-        }
-
-        try {
-          await Promise.all([
-            fetchHighPriorityData(),
-            fetchMediumPriorityData(),
-          ]);
-
-          if (mountedRef.current) {
-            const lowTimeout = window.setTimeout(() => {
-              if (mountedRef.current) {
-                fetchLowPriorityData();
-              }
-            }, 300);
-            timeoutIdsRef.current.push(lowTimeout);
-          }
-        } catch (error) {
-          logger.error('获取数据失败:', error);
-          setDashboardError(true);
-        } finally {
-          if (mountedRef.current) {
-            dispatch({ type: 'SET_REFRESHING', payload: false });
-          }
-        }
-      },
-      [fetchHighPriorityData, fetchMediumPriorityData, fetchLowPriorityData, clearTimeouts]
-    );
+    },
+    [fetchHighPriorityData, fetchMediumPriorityData, fetchLowPriorityData, clearTimeouts]
+  );
 
   useEffect(() => {
     fetchDataRef.current = fetchData;
@@ -714,10 +739,10 @@ function Dashboard(): React.ReactElement {
   };
 
   const CLUSTER_COLORS: Record<string, { bg: string; text: string; light: string }> = {
-    '全面优秀型': { bg: 'bg-blue-500', text: 'text-blue-600', light: 'bg-blue-50' },
-    '遵纪但学业吃力型': { bg: 'bg-yellow-500', text: 'text-yellow-600', light: 'bg-yellow-50' },
-    '聪明但散漫型': { bg: 'bg-orange-500', text: 'text-orange-600', light: 'bg-orange-50' },
-    '双困型': { bg: 'bg-red-500', text: 'text-red-600', light: 'bg-red-50' },
+    全面优秀型: { bg: 'bg-blue-500', text: 'text-blue-600', light: 'bg-blue-50' },
+    遵纪但学业吃力型: { bg: 'bg-yellow-500', text: 'text-yellow-600', light: 'bg-yellow-50' },
+    聪明但散漫型: { bg: 'bg-orange-500', text: 'text-orange-600', light: 'bg-orange-50' },
+    双困型: { bg: 'bg-red-500', text: 'text-red-600', light: 'bg-red-50' },
   };
 
   const UserCard = memo(({ user, globalIndex }: { user: User; globalIndex: number }) => {
@@ -754,7 +779,11 @@ function Dashboard(): React.ReactElement {
 
         <div className='flex items-center gap-3.5'>
           <div
-            className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${getRankColor(globalIndex)} flex items-center justify-center shadow-md overflow-hidden transition-all duration-300 ${isHovered ? 'scale-110 rotate-3' : ''}`}
+            className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${getRankColor(
+              globalIndex
+            )} flex items-center justify-center shadow-md overflow-hidden transition-all duration-300 ${
+              isHovered ? 'scale-110 rotate-3' : ''
+            }`}
           >
             {globalIndex < 3 ? (
               <span className='text-base'>
@@ -769,22 +798,34 @@ function Dashboard(): React.ReactElement {
             <div className='flex items-center justify-between mb-1'>
               <p className='font-semibold text-gray-900 text-sm truncate'>{user.name}</p>
               <span
-                className={`text-xl font-bold ${getScoreColor(score)} flex items-center gap-1 transition-all duration-300 ${isHovered ? 'scale-110' : ''}`}
+                className={`text-xl font-bold ${getScoreColor(
+                  score
+                )} flex items-center gap-1 transition-all duration-300 ${
+                  isHovered ? 'scale-110' : ''
+                }`}
               >
                 {score}
                 <span className='text-xs text-gray-500'>分</span>
               </span>
             </div>
             <div className='flex items-center justify-between mt-1.5'>
-              <span className='text-xs text-gray-500 whitespace-nowrap font-medium'>{user.class_name || '未分班'}</span>
+              <span className='text-xs text-gray-500 whitespace-nowrap font-medium'>
+                {user.class_name || '未分班'}
+              </span>
               <div className='flex items-center gap-1.5'>
                 {clusterColors && cluster && (
-                  <span className={`text-xs px-2.5 py-1 rounded-full ${clusterColors.light} ${clusterColors.text} font-medium whitespace-nowrap shadow-sm`}>
+                  <span
+                    className={`text-xs px-2.5 py-1 rounded-full ${clusterColors.light} ${clusterColors.text} font-medium whitespace-nowrap shadow-sm`}
+                  >
                     {cluster.cluster_name}
                   </span>
                 )}
                 <span
-                  className={`text-xs px-2.5 py-1 rounded-full bg-gradient-to-r ${level.color} text-white flex items-center gap-1 transition-all duration-300 ${isHovered ? 'scale-105 shadow-md' : ''} whitespace-nowrap`}
+                  className={`text-xs px-2.5 py-1 rounded-full bg-gradient-to-r ${
+                    level.color
+                  } text-white flex items-center gap-1 transition-all duration-300 ${
+                    isHovered ? 'scale-105 shadow-md' : ''
+                  } whitespace-nowrap`}
                 >
                   <span className='text-xs'>{level.icon}</span>
                   <span className='font-semibold'>{level.text}</span>
@@ -821,16 +862,16 @@ function Dashboard(): React.ReactElement {
         <div className='flex items-center gap-2.5'>
           <div
             className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 ${
-              isOnline
-                ? 'bg-green-500/10 text-green-500'
-                : 'bg-red-500/10 text-red-500'
+              isOnline ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
             } ${isHovered ? 'scale-110' : ''}`}
           >
             {isOnline ? <Wifi className='w-5 h-5' /> : <Wifi className='w-5 h-5 opacity-50' />}
           </div>
 
           <div className='flex-1 min-w-0'>
-            <p className='text-sm font-semibold text-gray-900 truncate'>{device.device_name || device.name || device.device_id}</p>
+            <p className='text-sm font-semibold text-gray-900 truncate'>
+              {device.device_name || device.name || device.device_id}
+            </p>
             <p className='text-xs text-gray-500'>{device.device_id}</p>
           </div>
 
@@ -864,9 +905,7 @@ function Dashboard(): React.ReactElement {
           </div>
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
-              isConnected
-                ? 'bg-green-100 text-green-700'
-                : 'bg-red-100 text-red-700'
+              isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
             }`}
           >
             <Radio className={`w-4 h-4 ${isConnected ? 'animate-pulse' : ''}`} />
@@ -875,24 +914,34 @@ function Dashboard(): React.ReactElement {
           <button
             onClick={handleRefresh}
             disabled={state.isRefreshing}
-            aria-label="刷新数据"
+            aria-label='刷新数据'
             aria-busy={state.isRefreshing}
             className='flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50'
           >
-            <RefreshCw className={`w-4 h-4 ${state.isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+            <RefreshCw
+              className={`w-4 h-4 ${state.isRefreshing ? 'animate-spin' : ''}`}
+              aria-hidden='true'
+            />
             刷新
           </button>
         </div>
       </div>
 
       {dashboardError && (
-        <div role='alert' className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'>
+        <div
+          role='alert'
+          className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'
+        >
           <AlertTriangle className='w-4 h-4 flex-shrink-0' />
           部分统计数据加载失败，当前数值可能不完整，请点击「刷新」重试
         </div>
       )}
 
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4' role="list" aria-label="统计数据卡片">
+      <div
+        className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'
+        role='list'
+        aria-label='统计数据卡片'
+      >
         <StatCard
           icon={Users}
           label='总用户数'
@@ -938,7 +987,7 @@ function Dashboard(): React.ReactElement {
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                aria-label="筛选班级"
+                aria-label='筛选班级'
                 className='px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500'
               >
                 <option value=''>全部班级</option>
@@ -954,8 +1003,12 @@ function Dashboard(): React.ReactElement {
                 <UserCard key={user.id} user={user} globalIndex={index} />
               ))}
               {filteredUsers.length === 0 && (
-                <div className='text-center py-12 text-gray-500' role="status" aria-label="空列表状态">
-                  <Users className='w-12 h-12 mx-auto mb-3 text-gray-300' aria-hidden="true" />
+                <div
+                  className='text-center py-12 text-gray-500'
+                  role='status'
+                  aria-label='空列表状态'
+                >
+                  <Users className='w-12 h-12 mx-auto mb-3 text-gray-300' aria-hidden='true' />
                   <p>暂无用户数据</p>
                 </div>
               )}
@@ -993,13 +1046,28 @@ function Dashboard(): React.ReactElement {
             </div>
             <div className='p-4 space-y-3 max-h-72 overflow-y-auto'>
               {state.notifications.slice(0, 5).map((notification) => (
-                <div key={notification.id} className='p-3 bg-gray-50/50 rounded-lg hover:bg-gray-50 transition-colors'>
+                <div
+                  key={notification.id}
+                  className='p-3 bg-gray-50/50 rounded-lg hover:bg-gray-50 transition-colors'
+                >
                   <div className='flex items-start gap-2'>
-                    <div className={`w-2 h-2 rounded-full mt-1.5 ${notification.priority === 'high' || notification.priority === 'urgent' ? 'bg-red-500' : notification.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                    <div
+                      className={`w-2 h-2 rounded-full mt-1.5 ${
+                        notification.priority === 'high' || notification.priority === 'urgent'
+                          ? 'bg-red-500'
+                          : notification.priority === 'medium'
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                    />
                     <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-gray-900 truncate'>{notification.title}</p>
+                      <p className='text-sm font-medium text-gray-900 truncate'>
+                        {notification.title}
+                      </p>
                       <p className='text-xs text-gray-500 mt-0.5'>{notification.content}</p>
-                      <p className='text-xs text-gray-400 mt-1'>{formatDate(notification.created_at as string)}</p>
+                      <p className='text-xs text-gray-400 mt-1'>
+                        {formatDate(notification.created_at as string)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1046,7 +1114,9 @@ function Dashboard(): React.ReactElement {
                 </div>
                 <div className='text-center p-4 bg-orange-50/50 rounded-lg'>
                   <div className='text-2xl font-bold text-orange-600'>
-                    {state.algorithmData.warnings ? state.algorithmData.warnings.total_risk_count : '—'}
+                    {state.algorithmData.warnings
+                      ? state.algorithmData.warnings.total_risk_count
+                      : '—'}
                   </div>
                   <div className='text-xs text-gray-500 mt-1'>风险预警</div>
                 </div>
@@ -1071,12 +1141,17 @@ function Dashboard(): React.ReactElement {
             {classGroups.length > 0 ? (
               <div className='space-y-3'>
                 {classGroups.map((group) => (
-                  <div key={group.class_name} className='flex items-center justify-between p-3 bg-gray-50/50 rounded-lg'>
+                  <div
+                    key={group.class_name}
+                    className='flex items-center justify-between p-3 bg-gray-50/50 rounded-lg'
+                  >
                     <div className='flex items-center gap-2'>
                       <Building2 className='w-4 h-4 text-indigo-400' />
                       <span className='text-sm font-medium text-gray-900'>{group.class_name}</span>
                     </div>
-                    <span className='text-sm font-bold text-indigo-600'>{group.students.length} 人</span>
+                    <span className='text-sm font-bold text-indigo-600'>
+                      {group.students.length} 人
+                    </span>
                   </div>
                 ))}
               </div>

@@ -21,7 +21,9 @@ class CultureItem(db.Model):
     __tablename__ = "culture_item"
 
     id = db.Column(db.Integer, primary_key=True)
-    record_id = db.Column(db.Integer, db.ForeignKey("culture_record.id"), nullable=False, index=True)
+    record_id = db.Column(
+        db.Integer, db.ForeignKey("culture_record.id"), nullable=False, index=True
+    )
     item_type = db.Column(db.String(50))
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)

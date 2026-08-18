@@ -130,7 +130,9 @@ class AccuracyConfig:
     error_analysis_enabled: bool = True
     error_threshold: float = 0.1
     ensemble_enabled: bool = True
-    ensemble_methods: List[str] = field(default_factory=lambda: ["logistic", "svm", "random_forest"])
+    ensemble_methods: List[str] = field(
+        default_factory=lambda: ["logistic", "svm", "random_forest"]
+    )
     ensemble_voting: str = "soft"
     adaptive_threshold_enabled: bool = True
     threshold_adjustment_rate: float = 0.05
@@ -147,13 +149,19 @@ class NLPAlgorithmOptimizer:
         """根据策略应用优化配置"""
         if self.strategy == OptimizationStrategy.ACCURACY_FIRST:
             self.intent_classifier = IntentClassifierConfig(
-                tfidf_max_features=1500, tfidf_ngram_range=(1, 5), lr_max_iter=3000, confidence_threshold=0.8
+                tfidf_max_features=1500,
+                tfidf_ngram_range=(1, 5),
+                lr_max_iter=3000,
+                confidence_threshold=0.8,
             )
             self.bm25 = BM25Config(k1=1.5, b=0.75)
             self.performance = PerformanceConfig(cache_ttl=600, batch_size=50)
         elif self.strategy == OptimizationStrategy.SPEED_FIRST:
             self.intent_classifier = IntentClassifierConfig(
-                tfidf_max_features=500, tfidf_ngram_range=(1, 3), lr_max_iter=1000, confidence_threshold=0.6
+                tfidf_max_features=500,
+                tfidf_ngram_range=(1, 3),
+                lr_max_iter=1000,
+                confidence_threshold=0.6,
             )
             self.bm25 = BM25Config(k1=2.0, b=0.5)
             self.performance = PerformanceConfig(cache_ttl=180, batch_size=200)
@@ -201,7 +209,9 @@ class NLPAlgorithmOptimizer:
                 optimized_params["tfidf_max_features"] = max(
                     optimized_params.get("tfidf_max_features", 1000) - 100, 300
                 )
-                optimized_params["cache_ttl"] = min(optimized_params.get("cache_ttl", 300) + 60, 600)
+                optimized_params["cache_ttl"] = min(
+                    optimized_params.get("cache_ttl", 300) + 60, 600
+                )
         return optimized_params
 
 

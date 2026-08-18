@@ -26,15 +26,15 @@ const useNetworkStatus = (): NetworkStatus => {
   });
 
   const updateConnectionInfo = useCallback(() => {
-    const nav = navigator as unknown as { 
-      connection?: NetworkConnection; 
-      mozConnection?: NetworkConnection; 
+    const nav = navigator as unknown as {
+      connection?: NetworkConnection;
+      mozConnection?: NetworkConnection;
       webkitConnection?: NetworkConnection;
     };
     const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
-    
+
     if (connection) {
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
         connectionType: (connection.effectiveType as NetworkStatus['connectionType']) || 'unknown',
         effectiveType: connection.effectiveType || null,
@@ -46,11 +46,11 @@ const useNetworkStatus = (): NetworkStatus => {
 
   useEffect(() => {
     const handleOnline = () => {
-      setStatus(prev => ({ ...prev, isOnline: true }));
+      setStatus((prev) => ({ ...prev, isOnline: true }));
     };
 
     const handleOffline = () => {
-      setStatus(prev => ({ ...prev, isOnline: false }));
+      setStatus((prev) => ({ ...prev, isOnline: false }));
     };
 
     const handleConnectionChange = () => {
@@ -59,14 +59,14 @@ const useNetworkStatus = (): NetworkStatus => {
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    const nav = navigator as unknown as { 
-      connection?: NetworkConnection; 
-      mozConnection?: NetworkConnection; 
+
+    const nav = navigator as unknown as {
+      connection?: NetworkConnection;
+      mozConnection?: NetworkConnection;
       webkitConnection?: NetworkConnection;
     };
     const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
-    
+
     if (connection) {
       connection.addEventListener('change', handleConnectionChange);
       updateConnectionInfo();
@@ -75,7 +75,7 @@ const useNetworkStatus = (): NetworkStatus => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      
+
       if (connection) {
         connection.removeEventListener('change', handleConnectionChange);
       }

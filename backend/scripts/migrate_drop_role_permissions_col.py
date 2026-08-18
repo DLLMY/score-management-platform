@@ -34,6 +34,7 @@ P0-3 已在前置代码改动中完成「RBAC 双源清理」：
   python scripts/migrate_drop_role_permissions_col.py <db_path> # 指定库
   python scripts/migrate_drop_role_permissions_col.py --check-only  # 仅报告，不改
 """
+
 import os
 import sqlite3
 import sys
@@ -65,7 +66,9 @@ def migrate(db_path, check_only=False):
     actions = []
 
     # 1) 删除 role_permission.permissions 冗余列
-    if table_exists(cur, "role_permission") and column_exists(cur, "role_permission", "permissions"):
+    if table_exists(cur, "role_permission") and column_exists(
+        cur, "role_permission", "permissions"
+    ):
         if check_only:
             print("[check] role_permission.permissions 列仍存在于数据库，需要 DROP")
         else:

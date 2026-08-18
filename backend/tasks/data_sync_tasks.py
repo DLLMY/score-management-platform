@@ -56,7 +56,9 @@ class DataSyncScheduler:
                         logger.info("Data consistency check: all good")
                     # 每天凌晨执行一次修复
                     now = datetime.now()
-                    if now.hour == fix_hour and (last_fix_date is None or last_fix_date != now.date()):
+                    if now.hour == fix_hour and (
+                        last_fix_date is None or last_fix_date != now.date()
+                    ):
                         logger.info("Running scheduled data fix...")
                         service = ClassMigrationService()
                         service.run_full_migration()
@@ -74,7 +76,9 @@ class DataSyncScheduler:
                 checker = DataConsistencyChecker()
                 result = checker.check_all()  # noqa: F841
                 if not result["healthy"]:
-                    logger.warning(f"Initial check: {result['total_issues']} data consistency issues found")
+                    logger.warning(
+                        f"Initial check: {result['total_issues']} data consistency issues found"
+                    )
                 else:
                     logger.info("Initial check: data is consistent")
         except Exception as e:

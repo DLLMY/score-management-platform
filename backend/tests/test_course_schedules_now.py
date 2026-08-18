@@ -6,6 +6,7 @@
 1. 不带 class_info_id 时返回全局上课状态、当前节次与 in_session 字段结构。
 2. 带 class_info_id 时，按班级课表反查命中上课返回 in_session=True 及班级/科目信息。
 """
+
 from services.class_time_checker import ClassTimeChecker
 
 
@@ -43,9 +44,7 @@ class TestCourseScheduleNow:
                 },
             ),
         )
-        resp = client.get(
-            "/api/course-schedules/now?class_info_id=1", headers=auth_headers
-        )
+        resp = client.get("/api/course-schedules/now?class_info_id=1", headers=auth_headers)
         body = resp.get_json()
         assert body["success"] is True
         data = body["data"]
@@ -66,9 +65,7 @@ class TestCourseScheduleNow:
             "check_class_in_session",
             lambda class_info_id, check_time=None: (False, None),
         )
-        resp = client.get(
-            "/api/course-schedules/now?class_info_id=1", headers=auth_headers
-        )
+        resp = client.get("/api/course-schedules/now?class_info_id=1", headers=auth_headers)
         body = resp.get_json()
         assert body["success"] is True
         data = body["data"]

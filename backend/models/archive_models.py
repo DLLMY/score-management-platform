@@ -28,6 +28,8 @@ class ScoreArchive(db.Model):
     student = db.relationship("User", backref=db.backref("score_archives", lazy=True))
     admin = db.relationship("Admin", backref=db.backref("score_archives", lazy=True))
     subject_rel = db.relationship("Subject", backref=db.backref("score_archive_records", lazy=True))
+
+
 class AttendanceArchive(db.Model):
     """考勤历史归档表（P1）：结构与 attendance 一致，额外增加 archived_at 标记归档时间。"""
 
@@ -45,6 +47,8 @@ class AttendanceArchive(db.Model):
     notes = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.now)
     archived_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class OperationLogArchive(db.Model):
     """操作日志归档"""
 

@@ -34,7 +34,8 @@ type VitalsCallback = (vitals: Vitals) => void;
 
 const observers: VitalsCallback[] = [];
 
-type ReportingServiceType = typeof import('../services/performanceReportingService').performanceReportingService;
+type ReportingServiceType =
+  typeof import('../services/performanceReportingService').performanceReportingService;
 
 let reportingService: ReportingServiceType | null = null;
 
@@ -45,7 +46,7 @@ const lazyLoadReportingService = (): ReportingServiceType => {
   return reportingService!;
 };
 
-export const observeVitals = (callback: VitalsCallback): () => void => {
+export const observeVitals = (callback: VitalsCallback): (() => void) => {
   observers.push(callback);
   return () => {
     const index = observers.indexOf(callback);

@@ -36,9 +36,9 @@ def calculate_next_send(notify):
                         days_ahead.append(day - current_weekday + 7)
                 days_ahead = sorted(days_ahead)
                 next_day_offset = days_ahead[0]
-                next_time = now.replace(hour=hours, minute=minutes, second=0, microsecond=0) + timedelta(
-                    days=next_day_offset
-                )
+                next_time = now.replace(
+                    hour=hours, minute=minutes, second=0, microsecond=0
+                ) + timedelta(days=next_day_offset)
             else:
                 next_time = notify.scheduled_at + timedelta(weeks=notify.repeat_interval)
         else:
@@ -84,9 +84,13 @@ def create_scheduled_notify(data, admin_id=None):
         repeat_type=data.get("repeat_type", "once"),
         repeat_interval=data.get("repeat_interval", 1),
         repeat_day_of_week=(
-            json.dumps(data.get("repeat_day_of_week", [])) if data.get("repeat_day_of_week") else None
+            json.dumps(data.get("repeat_day_of_week", []))
+            if data.get("repeat_day_of_week")
+            else None
         ),
-        repeat_end_at=datetime.fromisoformat(data.get("repeat_end_at")) if data.get("repeat_end_at") else None,
+        repeat_end_at=(
+            datetime.fromisoformat(data.get("repeat_end_at")) if data.get("repeat_end_at") else None
+        ),
         next_send_at=scheduled_at,
         status="pending",
         created_by=admin_id or 1,
@@ -114,12 +118,16 @@ def update_scheduled_notify(notify, data):
     notify.send_mode = data.get("send_mode", notify.send_mode)
     notify.device_id = data.get("device_id", notify.device_id)
     notify.scheduled_at = (
-        datetime.fromisoformat(data.get("scheduled_at")) if data.get("scheduled_at") else notify.scheduled_at
+        datetime.fromisoformat(data.get("scheduled_at"))
+        if data.get("scheduled_at")
+        else notify.scheduled_at
     )
     notify.repeat_type = data.get("repeat_type", notify.repeat_type)
     notify.repeat_interval = data.get("repeat_interval", notify.repeat_interval)
     notify.repeat_end_at = (
-        datetime.fromisoformat(data.get("repeat_end_at")) if data.get("repeat_end_at") else notify.repeat_end_at
+        datetime.fromisoformat(data.get("repeat_end_at"))
+        if data.get("repeat_end_at")
+        else notify.repeat_end_at
     )
     notify.next_send_at = notify.scheduled_at
     notify.status = "pending"

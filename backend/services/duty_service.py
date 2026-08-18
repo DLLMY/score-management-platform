@@ -128,7 +128,9 @@ class DutyService:
             "date": assignment.date.isoformat() if assignment.date else None,
             "task": assignment.task,
             "is_completed": assignment.is_completed,
-            "completed_at": assignment.completed_at.isoformat() if assignment.completed_at else None,
+            "completed_at": (
+                assignment.completed_at.isoformat() if assignment.completed_at else None
+            ),
         }
 
 

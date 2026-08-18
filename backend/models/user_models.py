@@ -21,7 +21,9 @@ class User(db.Model):
     guardian_phone = db.Column(db.String(20))
     guardian_relation = db.Column(db.String(50))
     card_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    current_score = db.Column(db.Float, default=0, index=True)  # R7: Float 支持 0.5 分变动（原 Integer 截断与流水不一致）
+    current_score = db.Column(
+        db.Float, default=0, index=True
+    )  # R7: Float 支持 0.5 分变动（原 Integer 截断与流水不一致）
     is_blacklisted = db.Column(db.Boolean, default=False, index=True)
     blacklist_reason = db.Column(db.String(500))
     blacklist_until = db.Column(db.DateTime)
@@ -35,6 +37,8 @@ class User(db.Model):
     role = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  # R7
+
+
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -63,6 +67,8 @@ class Admin(db.Model):
             self._password = bcrypt.hashpw(value.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         else:
             self._password = value
+
+
 class SubAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     parent_admin_id = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=False, index=True)
@@ -89,6 +95,8 @@ class SubAccount(db.Model):
             self._password = bcrypt.hashpw(value.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         else:
             self._password = value
+
+
 class RolePermission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     role_code = db.Column(db.String(50), unique=True, nullable=False, index=True)
@@ -97,6 +105,8 @@ class RolePermission(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class PermissionLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     operator_id = db.Column(db.Integer)
@@ -107,6 +117,8 @@ class PermissionLog(db.Model):
     description = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class AdminRole(db.Model):
     """管理员角色关联表"""
 
@@ -118,6 +130,8 @@ class AdminRole(db.Model):
     assigned_at = db.Column(db.DateTime, default=datetime.now)
 
     admin = db.relationship("Admin", backref=db.backref("role_links", lazy=True))
+
+
 class Permission(db.Model):
     """权限定义表"""
 
@@ -131,6 +145,8 @@ class Permission(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class RolePermissionMapping(db.Model):
     """角色-权限映射表"""
 
@@ -140,6 +156,8 @@ class RolePermissionMapping(db.Model):
     role_code = db.Column(db.String(50), index=True)
     permission_code = db.Column(db.String(100), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class RoleHierarchy(db.Model):
     """角色继承层级表"""
 
@@ -149,6 +167,8 @@ class RoleHierarchy(db.Model):
     parent_role_code = db.Column(db.String(50), index=True)
     child_role_code = db.Column(db.String(50), index=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class SecurityAudit(db.Model):
     """安全审计日志"""
 
@@ -166,6 +186,8 @@ class SecurityAudit(db.Model):
     response_status = db.Column(db.Integer)
     event_details = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class LoginAttempt(db.Model):
     """登录尝试记录"""
 

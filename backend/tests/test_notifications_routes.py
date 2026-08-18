@@ -26,6 +26,7 @@ def _get_notification(app, nid):
 
 # ----------------------------- 只读 GET -----------------------------
 
+
 def test_list_notifications_empty(client, auth_headers):
     resp = client.get("/api/notifications/", headers=auth_headers)
     assert resp.status_code == 200
@@ -43,9 +44,24 @@ def test_list_notifications_fields(client, auth_headers, db_session, sample_user
     assert body["total"] >= 1
     item = body["notifications"][0]
     # F9-B 合并后字段必须存在，前后端字段不错位
-    for key in ("id", "user_id", "student_id", "user_name", "title", "content",
-                "type", "status", "phone", "recipient_type", "priority",
-                "is_read", "read_at", "extra_data", "created_at", "sent_at"):
+    for key in (
+        "id",
+        "user_id",
+        "student_id",
+        "user_name",
+        "title",
+        "content",
+        "type",
+        "status",
+        "phone",
+        "recipient_type",
+        "priority",
+        "is_read",
+        "read_at",
+        "extra_data",
+        "created_at",
+        "sent_at",
+    ):
         assert key in item
     assert item["recipient_type"] == "user"
 
@@ -80,6 +96,7 @@ def test_get_user_notifications(client, auth_headers, db_session, sample_user):
 
 # ----------------------------- 写入：create -----------------------------
 
+
 def test_create_notification_201(client, auth_headers, app, db_session, sample_user):
     resp, nid = _create(client, auth_headers, user_id=sample_user.id, title="创建", content="内容")
     assert resp.status_code == 201
@@ -95,6 +112,7 @@ def test_create_notification_201(client, auth_headers, app, db_session, sample_u
 
 
 # ----------------------------- 写入：update -----------------------------
+
 
 def test_update_notification(client, auth_headers, app, db_session, sample_user):
     _, nid = _create(client, auth_headers, user_id=sample_user.id, title="旧标题", content="旧内容")
@@ -123,6 +141,7 @@ def test_update_notification_404(client, auth_headers):
 
 # ----------------------------- 写入：delete -----------------------------
 
+
 def test_delete_notification(client, auth_headers, app, db_session, sample_user):
     _, nid = _create(client, auth_headers, user_id=sample_user.id, title="删除", content="内容")
     resp = client.delete(f"/api/notifications/{nid}", headers=auth_headers)
@@ -132,6 +151,7 @@ def test_delete_notification(client, auth_headers, app, db_session, sample_user)
 
 
 # ----------------------------- 写入：mark read -----------------------------
+
 
 def test_mark_notification_read(client, auth_headers, app, db_session, sample_user):
     _, nid = _create(client, auth_headers, user_id=sample_user.id, title="已读", content="内容")
@@ -145,6 +165,7 @@ def test_mark_notification_read(client, auth_headers, app, db_session, sample_us
 
 
 # ----------------------------- 写入：send -----------------------------
+
 
 def test_send_notification(client, auth_headers, app, db_session, sample_user):
     resp = client.post(
@@ -162,6 +183,7 @@ def test_send_notification(client, auth_headers, app, db_session, sample_user):
 
 
 # ----------------------------- 写入：batch -----------------------------
+
 
 def test_batch_send_by_user_ids(client, auth_headers, db_session, sample_user):
     resp = client.post(
@@ -189,7 +211,12 @@ def test_batch_send_by_class_id(client, auth_headers, db_session, sample_class):
     db_session.commit()
     resp = client.post(
         "/api/notifications/batch",
-        json={"title": "班通知", "content": "内容", "class_id": sample_class.id, "force_send": True},
+        json={
+            "title": "班通知",
+            "content": "内容",
+            "class_id": sample_class.id,
+            "force_send": True,
+        },
         headers=auth_headers,
     )
     assert resp.status_code == 200

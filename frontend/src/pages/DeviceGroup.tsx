@@ -94,7 +94,7 @@ const COLOR_OPTIONS = [
 
 function DeviceGroupPage() {
   const { showToast } = useStableToast();
-  
+
   // State
   const [groups, setGroups] = useState<DeviceGroup[]>([]);
   const [stats, setStats] = useState<GroupStats[]>([]);
@@ -105,44 +105,63 @@ function DeviceGroupPage() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   // 数据加载失败标记（分组/统计/设备任一失败置位）
   const [loadError, setLoadError] = useState<boolean>(false);
-  
+
   // Selected devices for adding to group (device.device_id 业务键)
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
-  
+
   // 使用 useConfirmDialog 管理确认对话框
   useConfirmDialog();
-  
+
   // 使用 useForm 管理表单状态
   const {
     formData: groupForm,
     setFormData: setGroupForm,
     resetForm: resetGroupForm,
-  } = useForm<FormData>({
-    name: '',
-    description: '',
-    location: '',
-    icon: 'Layers',
-    color: '#3B82F6',
-    sort_order: 0,
-  }, {
-    name: { required: true, minLength: 1, maxLength: 50 },
-  });
-  
+  } = useForm<FormData>(
+    {
+      name: '',
+      description: '',
+      location: '',
+      icon: 'Layers',
+      color: '#3B82F6',
+      sort_order: 0,
+    },
+    {
+      name: { required: true, minLength: 1, maxLength: 50 },
+    }
+  );
+
   // 使用 useModal 管理弹窗状态
-  const { isOpen: showCreateModal, open: openCreateModal, close: closeCreateModal } = useModal<null>({
+  const {
+    isOpen: showCreateModal,
+    open: openCreateModal,
+    close: closeCreateModal,
+  } = useModal<null>({
     onClose: () => resetGroupForm(),
   });
-  
-  const { isOpen: showEditModal, open: openEditModal, close: closeEditModal } = useModal<DeviceGroup | null>({
+
+  const {
+    isOpen: showEditModal,
+    open: openEditModal,
+    close: closeEditModal,
+  } = useModal<DeviceGroup | null>({
     onClose: () => resetGroupForm(),
   });
-  
-  const { isOpen: showDevicesModal, open: openDevicesModal, close: closeDevicesModal } = useModal<DeviceGroup | null>({});
-  
-  const { isOpen: showAddDevicesModal, open: openAddDevicesModal, close: closeAddDevicesModal } = useModal<DeviceGroup | null>({
+
+  const {
+    isOpen: showDevicesModal,
+    open: openDevicesModal,
+    close: closeDevicesModal,
+  } = useModal<DeviceGroup | null>({});
+
+  const {
+    isOpen: showAddDevicesModal,
+    open: openAddDevicesModal,
+    close: closeAddDevicesModal,
+  } = useModal<DeviceGroup | null>({
     onClose: () => setSelectedDeviceIds([]),
   });
-  
+
   // Fetch functions
   const fetchGroups = useCallback(async () => {
     try {
@@ -154,7 +173,7 @@ function DeviceGroupPage() {
       setLoadError(true);
     }
   }, []);
-  
+
   const fetchStats = useCallback(async () => {
     try {
       const data = await api.deviceGroup.getStats();
@@ -165,7 +184,7 @@ function DeviceGroupPage() {
       setLoadError(true);
     }
   }, []);
-  
+
   const fetchGroupDevices = useCallback(async (groupId: number) => {
     try {
       const data = await api.deviceGroup.getById(groupId);
@@ -177,7 +196,7 @@ function DeviceGroupPage() {
       setLoadError(true);
     }
   }, []);
-  
+
   const fetchAllDevices = useCallback(async () => {
     try {
       const data = await api.devices.getAll();
@@ -188,13 +207,13 @@ function DeviceGroupPage() {
       setLoadError(true);
     }
   }, []);
-  
+
   const loadData = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([fetchGroups(), fetchStats()]);
     setIsRefreshing(false);
   }, [fetchGroups, fetchStats]);
-  
+
   // Initial load
   useEffect(() => {
     const loadInitialData = async () => {
@@ -204,14 +223,14 @@ function DeviceGroupPage() {
     };
     loadInitialData();
   }, [loadData]);
-  
+
   // Handlers
   const handleCreateGroup = async () => {
     if (!groupForm.name.trim()) {
       showToast('error', '请输入分组名称');
       return;
     }
-    
+
     try {
       await api.deviceGroup.create(groupForm);
       showToast('success', '分组创建成功');
@@ -226,39 +245,51 @@ function DeviceGroupPage() {
       });
       await loadData();
     } catch (error: unknown) {
-      showToast('error', (error as { response?: { data?: { message?: string } } }).response?.data?.message || '创建失败');
+      showToast(
+        'error',
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+          '创建失败'
+      );
     }
   };
-  
+
   const handleUpdateGroup = async () => {
     if (!selectedGroup) return;
     if (!groupForm.name.trim()) {
       showToast('error', '请输入分组名称');
       return;
     }
-    
+
     try {
       await api.deviceGroup.update(selectedGroup.id, groupForm);
       showToast('success', '分组更新成功');
       closeEditModal();
       await loadData();
     } catch (error: unknown) {
-      showToast('error', (error as { response?: { data?: { message?: string } } }).response?.data?.message || '更新失败');
+      showToast(
+        'error',
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+          '更新失败'
+      );
     }
   };
-  
+
   const handleDeleteGroup = async (group: DeviceGroup) => {
     if (!window.confirm(`确定要删除分组"${group.name}"吗？`)) return;
-    
+
     try {
       await api.deviceGroup.delete(group.id);
       showToast('success', '分组删除成功');
       await loadData();
     } catch (error: unknown) {
-      showToast('error', (error as { response?: { data?: { message?: string } } }).response?.data?.message || '删除失败');
+      showToast(
+        'error',
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+          '删除失败'
+      );
     }
   };
-  
+
   const handleOpenEditModal = (group: DeviceGroup) => {
     setSelectedGroup(group);
     setGroupForm({
@@ -271,13 +302,13 @@ function DeviceGroupPage() {
     });
     openEditModal(group);
   };
-  
+
   const handleOpenDevicesModal = async (group: DeviceGroup) => {
     setSelectedGroup(group);
     await fetchGroupDevices(group.id);
     openDevicesModal(group);
   };
-  
+
   const handleOpenAddDevicesModal = async (group: DeviceGroup) => {
     setSelectedGroup(group);
     await fetchGroupDevices(group.id);
@@ -285,13 +316,13 @@ function DeviceGroupPage() {
     setSelectedDeviceIds([]);
     openAddDevicesModal(group);
   };
-  
+
   const handleAddDevicesToGroup = async () => {
     if (!selectedGroup || selectedDeviceIds.length === 0) {
       showToast('error', '请选择要添加的设备');
       return;
     }
-    
+
     try {
       const result = await api.deviceGroup.addDevices(selectedGroup.id, selectedDeviceIds);
       showToast('success', `成功添加 ${result.added_count} 个设备`);
@@ -301,29 +332,37 @@ function DeviceGroupPage() {
       closeAddDevicesModal();
       await loadData();
     } catch (error: unknown) {
-      showToast('error', (error as { response?: { data?: { message?: string } } }).response?.data?.message || '添加失败');
+      showToast(
+        'error',
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+          '添加失败'
+      );
     }
   };
-  
+
   const handleRemoveDevicesFromGroup = async (deviceIds: string[]) => {
     if (!selectedGroup || deviceIds.length === 0) return;
-    
+
     try {
       await api.deviceGroup.removeDevices(selectedGroup.id, deviceIds);
       showToast('success', `成功移除 ${deviceIds.length} 个设备`);
       await fetchGroupDevices(selectedGroup.id);
       await loadData();
     } catch (error: unknown) {
-      showToast('error', (error as { response?: { data?: { message?: string } } }).response?.data?.message || '移除失败');
+      showToast(
+        'error',
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+          '移除失败'
+      );
     }
   };
-  
+
   // Get group stats（防御：stats 在异步加载完前是 []，万一后端返回非数组也保底）
   const getGroupStats = (groupId: number): GroupStats | undefined => {
     if (!Array.isArray(stats)) return undefined;
     return stats.find((s) => s && s.group_id === groupId);
   };
-  
+
   // Render
   if (isLoading) {
     return (
@@ -332,7 +371,7 @@ function DeviceGroupPage() {
       </div>
     );
   }
-  
+
   return (
     <div className='space-y-6'>
       {loadError && (
@@ -350,12 +389,7 @@ function DeviceGroupPage() {
           <p className='text-gray-500 mt-1'>管理和组织您的设备分组</p>
         </div>
         <div className='flex flex-wrap gap-3'>
-          <Button
-            variant='outline'
-            icon={RefreshCw}
-            onClick={loadData}
-            disabled={isRefreshing}
-          >
+          <Button variant='outline' icon={RefreshCw} onClick={loadData} disabled={isRefreshing}>
             {isRefreshing ? '刷新中...' : '刷新'}
           </Button>
           <PermissionButton
@@ -368,7 +402,7 @@ function DeviceGroupPage() {
           </PermissionButton>
         </div>
       </div>
-      
+
       {/* Stats Overview */}
       <div className='grid grid-cols-1 md:grid-cols-4 gap-4 mb-6'>
         <div className='bg-white rounded-lg shadow p-4'>
@@ -414,7 +448,7 @@ function DeviceGroupPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Group List */}
       {!Array.isArray(groups) || groups.length === 0 ? (
         <EmptyState
@@ -426,7 +460,7 @@ function DeviceGroupPage() {
         />
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {groups.map(group => {
+          {groups.map((group) => {
             const groupStat = getGroupStats(group.id);
             return (
               <div
@@ -453,28 +487,35 @@ function DeviceGroupPage() {
                       {group.is_active ? '启用' : '禁用'}
                     </Badge>
                   </div>
-                  
+
                   {group.description && (
-                    <p className='text-sm text-gray-600 mb-3 line-clamp-2'>
-                      {group.description}
-                    </p>
+                    <p className='text-sm text-gray-600 mb-3 line-clamp-2'>{group.description}</p>
                   )}
-                  
+
                   <div className='flex items-center justify-between text-sm'>
                     <div className='flex items-center space-x-4'>
                       <span className='text-gray-500'>
-                        设备: <span className='font-medium text-gray-700'>{groupStat ? (groupStat.total_devices || 0) : '--'}</span>
+                        设备:{' '}
+                        <span className='font-medium text-gray-700'>
+                          {groupStat ? groupStat.total_devices || 0 : '--'}
+                        </span>
                       </span>
                       <span className='text-green-600'>
-                        在线: <span className='font-medium'>{groupStat ? (groupStat.online_devices || 0) : '--'}</span>
+                        在线:{' '}
+                        <span className='font-medium'>
+                          {groupStat ? groupStat.online_devices || 0 : '--'}
+                        </span>
                       </span>
                       <span className='text-red-600'>
-                        离线: <span className='font-medium'>{groupStat ? (groupStat.offline_devices || 0) : '--'}</span>
+                        离线:{' '}
+                        <span className='font-medium'>
+                          {groupStat ? groupStat.offline_devices || 0 : '--'}
+                        </span>
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className='border-t border-gray-100 px-4 py-3 flex justify-end space-x-2'>
                   <PermissionButton
                     permission='device-group.view'
@@ -520,98 +561,88 @@ function DeviceGroupPage() {
           })}
         </div>
       )}
-      
+
       {/* Create Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={closeCreateModal}
-        title='创建设备分组'
-      >
+      <Modal isOpen={showCreateModal} onClose={closeCreateModal} title='创建设备分组'>
         <div className='space-y-4'>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              分组名称 *
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>分组名称 *</label>
             <input
               type='text'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               value={groupForm.name}
-              onChange={e => setGroupForm({ ...groupForm, name: e.target.value })}
+              onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
               placeholder='请输入分组名称'
             />
           </div>
-          
+
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              描述
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>描述</label>
             <textarea
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               rows={3}
               value={groupForm.description}
-              onChange={e => setGroupForm({ ...groupForm, description: e.target.value })}
+              onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
               placeholder='请输入分组描述（可选）'
             />
           </div>
-          
+
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              位置
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>位置</label>
             <input
               type='text'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               value={groupForm.location}
-              onChange={e => setGroupForm({ ...groupForm, location: e.target.value })}
+              onChange={(e) => setGroupForm({ ...groupForm, location: e.target.value })}
               placeholder='如：一楼教室、实验室A'
             />
           </div>
-          
+
           <div className='grid grid-cols-2 gap-4'>
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                图标
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>图标</label>
               <select
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                 value={groupForm.icon}
-                onChange={e => setGroupForm({ ...groupForm, icon: e.target.value })}
+                onChange={(e) => setGroupForm({ ...groupForm, icon: e.target.value })}
               >
-                {ICON_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {ICON_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                颜色
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>颜色</label>
               <select
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                 value={groupForm.color}
-                onChange={e => setGroupForm({ ...groupForm, color: e.target.value })}
+                onChange={(e) => setGroupForm({ ...groupForm, color: e.target.value })}
               >
-                {COLOR_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {COLOR_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
-          
+
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              排序
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>排序</label>
             <input
               type='number'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               value={groupForm.sort_order}
-              onChange={e => setGroupForm({ ...groupForm, sort_order: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setGroupForm({ ...groupForm, sort_order: parseInt(e.target.value) || 0 })
+              }
             />
           </div>
         </div>
-        
+
         <div className='flex justify-end space-x-3 mt-6'>
           <Button variant='outline' onClick={closeCreateModal}>
             取消
@@ -621,95 +652,85 @@ function DeviceGroupPage() {
           </Button>
         </div>
       </Modal>
-      
+
       {/* Edit Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={closeEditModal}
-        title='编辑设备分组'
-      >
+      <Modal isOpen={showEditModal} onClose={closeEditModal} title='编辑设备分组'>
         <div className='space-y-4'>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              分组名称 *
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>分组名称 *</label>
             <input
               type='text'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               value={groupForm.name}
-              onChange={e => setGroupForm({ ...groupForm, name: e.target.value })}
+              onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
             />
           </div>
-          
+
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              描述
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>描述</label>
             <textarea
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               rows={3}
               value={groupForm.description}
-              onChange={e => setGroupForm({ ...groupForm, description: e.target.value })}
+              onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
             />
           </div>
-          
+
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              位置
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>位置</label>
             <input
               type='text'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               value={groupForm.location}
-              onChange={e => setGroupForm({ ...groupForm, location: e.target.value })}
+              onChange={(e) => setGroupForm({ ...groupForm, location: e.target.value })}
             />
           </div>
-          
+
           <div className='grid grid-cols-2 gap-4'>
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                图标
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>图标</label>
               <select
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                 value={groupForm.icon}
-                onChange={e => setGroupForm({ ...groupForm, icon: e.target.value })}
+                onChange={(e) => setGroupForm({ ...groupForm, icon: e.target.value })}
               >
-                {ICON_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {ICON_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                颜色
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>颜色</label>
               <select
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                 value={groupForm.color}
-                onChange={e => setGroupForm({ ...groupForm, color: e.target.value })}
+                onChange={(e) => setGroupForm({ ...groupForm, color: e.target.value })}
               >
-                {COLOR_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {COLOR_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
-          
+
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              排序
-            </label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>排序</label>
             <input
               type='number'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               value={groupForm.sort_order}
-              onChange={e => setGroupForm({ ...groupForm, sort_order: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setGroupForm({ ...groupForm, sort_order: parseInt(e.target.value) || 0 })
+              }
             />
           </div>
         </div>
-        
+
         <div className='flex justify-end space-x-3 mt-6'>
           <Button variant='outline' onClick={closeEditModal}>
             取消
@@ -719,7 +740,7 @@ function DeviceGroupPage() {
           </Button>
         </div>
       </Modal>
-      
+
       {/* Devices Modal */}
       <Modal
         isOpen={showDevicesModal}
@@ -740,24 +761,26 @@ function DeviceGroupPage() {
           />
         ) : (
           <div className='space-y-2'>
-            {groupDevices.map(mapping => (
+            {groupDevices.map((mapping) => (
               <div
                 key={mapping.id}
                 className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'
               >
                 <div className='flex items-center'>
-                  <div className={`w-2 h-2 rounded-full mr-3 ${
-                    mapping.device?.is_online ? 'bg-green-500'
-                    : mapping.device && mapping.device.is_online === false ? 'bg-red-500'
-                    : 'bg-gray-400'
-                  }`} />
+                  <div
+                    className={`w-2 h-2 rounded-full mr-3 ${
+                      mapping.device?.is_online
+                        ? 'bg-green-500'
+                        : mapping.device && mapping.device.is_online === false
+                        ? 'bg-red-500'
+                        : 'bg-gray-400'
+                    }`}
+                  />
                   <div>
                     <p className='font-medium text-gray-800'>
                       {mapping.device?.name || '未知设备'}
                     </p>
-                    <p className='text-sm text-gray-500'>
-                      {mapping.device?.device_id}
-                    </p>
+                    <p className='text-sm text-gray-500'>{mapping.device?.device_id}</p>
                   </div>
                 </div>
                 <Button
@@ -773,7 +796,7 @@ function DeviceGroupPage() {
           </div>
         )}
       </Modal>
-      
+
       {/* Add Devices Modal */}
       <Modal
         isOpen={showAddDevicesModal}
@@ -786,14 +809,14 @@ function DeviceGroupPage() {
             选择要添加到此分组的设备。未分组的设备将优先显示。
           </p>
         </div>
-        
+
         <div className='max-h-96 overflow-y-auto space-y-2'>
           {devices.length === 0 ? (
             <p className='text-center text-gray-500 py-8'>暂无可添加的设备</p>
           ) : (
-            devices.map(device => {
+            devices.map((device) => {
               // 检查设备是否已在分组中（device_id 为业务键）
-              const isInGroup = groupDevices.some(gd => gd.device_id === device.device_id);
+              const isInGroup = groupDevices.some((gd) => gd.device_id === device.device_id);
               const isSelected = selectedDeviceIds.includes(device.device_id);
 
               return (
@@ -803,14 +826,14 @@ function DeviceGroupPage() {
                     isInGroup
                       ? 'bg-gray-100 opacity-50'
                       : isSelected
-                        ? 'bg-blue-50 border border-blue-200'
-                        : 'bg-gray-50 hover:bg-gray-100'
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-gray-50 hover:bg-gray-100'
                   }`}
                   onClick={() => {
                     if (!isInGroup) {
-                      setSelectedDeviceIds(prev =>
+                      setSelectedDeviceIds((prev) =>
                         isSelected
-                          ? prev.filter(id => id !== device.device_id)
+                          ? prev.filter((id) => id !== device.device_id)
                           : [...prev, device.device_id]
                       );
                     }
@@ -824,29 +847,29 @@ function DeviceGroupPage() {
                       disabled={isInGroup}
                       className='w-4 h-4 text-blue-600 rounded mr-3'
                     />
-                    <div className={`w-2 h-2 rounded-full mr-3 ${
-                      device.is_online ? 'bg-green-500'
-                      : device.is_online === false ? 'bg-red-500'
-                      : 'bg-gray-400'
-                    }`} />
+                    <div
+                      className={`w-2 h-2 rounded-full mr-3 ${
+                        device.is_online
+                          ? 'bg-green-500'
+                          : device.is_online === false
+                          ? 'bg-red-500'
+                          : 'bg-gray-400'
+                      }`}
+                    />
                     <div>
                       <p className='font-medium text-gray-800'>{device.name}</p>
                       <p className='text-sm text-gray-500'>{device.device_id}</p>
                     </div>
                   </div>
-                  {isInGroup && (
-                    <Badge variant='default'>已在分组中</Badge>
-                  )}
+                  {isInGroup && <Badge variant='default'>已在分组中</Badge>}
                 </div>
               );
             })
           )}
         </div>
-        
+
         <div className='flex justify-between items-center mt-4 pt-4 border-t'>
-          <p className='text-sm text-gray-500'>
-            已选择: {selectedDeviceIds.length} 个设备
-          </p>
+          <p className='text-sm text-gray-500'>已选择: {selectedDeviceIds.length} 个设备</p>
           <div className='flex space-x-3'>
             <Button variant='outline' onClick={closeAddDevicesModal}>
               取消

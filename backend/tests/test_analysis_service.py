@@ -1,4 +1,5 @@
 import pytest
+
 try:
     from services.analysis_service import analysis_service
 except ImportError:
@@ -38,7 +39,7 @@ class TestAnalysisService:
                     user_id=sample_user.id,
                     rule_id=1,
                     score_change=10 if i % 2 == 0 else -5,
-                    description="测试记录"
+                    description="测试记录",
                 )
                 db_session.add(record)
             db_session.commit()
@@ -78,7 +79,7 @@ class TestAnalysisService:
                 rule_id=1,
                 score_change=-10,
                 description="开锁",
-                created_at=datetime.now()
+                created_at=datetime.now(),
             )
             db_session.add(record)
             db_session.commit()
@@ -101,9 +102,7 @@ class TestAnalysisService:
         """测试班级排名排序选项"""
 
         with app.app_context():
-            result = analysis_service.get_class_ranking(
-                sort_by="avg_score", order="desc"
-            )
+            result = analysis_service.get_class_ranking(sort_by="avg_score", order="desc")
 
             assert "ranking" in result
 
@@ -120,9 +119,7 @@ class TestAnalysisService:
         """测试获取指定班级学生排名"""
 
         with app.app_context():
-            result = analysis_service.get_student_ranking(
-                class_name="测试班级"
-            )
+            result = analysis_service.get_student_ranking(class_name="测试班级")
 
             assert result["class_name"] == "测试班级"
 
@@ -130,9 +127,7 @@ class TestAnalysisService:
         """测试学生排名排序选项"""
 
         with app.app_context():
-            result = analysis_service.get_student_ranking(
-                sort_by="unlock_count", order="desc"
-            )
+            result = analysis_service.get_student_ranking(sort_by="unlock_count", order="desc")
 
             assert "ranking" in result
 
@@ -156,9 +151,7 @@ class TestAnalysisService:
         """测试班级对比分析 - 不同周期"""
 
         with app.app_context():
-            result = analysis_service.get_class_compare(
-                ["测试班级"], period="7d"
-            )
+            result = analysis_service.get_class_compare(["测试班级"], period="7d")
 
             assert result["period"] == "7d"
             assert result["days"] == 7

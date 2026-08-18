@@ -19,7 +19,12 @@ def _json(resp):
 
 
 def test_create_sub_account(client, app, auth_headers):
-    payload = {"parent_admin_id": 1, "username": "sub_admin_1", "password": "secret123", "real_name": "测试子账号"}
+    payload = {
+        "parent_admin_id": 1,
+        "username": "sub_admin_1",
+        "password": "secret123",
+        "real_name": "测试子账号",
+    }
     with app.app_context():
         resp = client.post("/api/sub-accounts/", json=payload, headers=auth_headers)
     assert resp.status_code == 201
@@ -79,8 +84,12 @@ def test_sub_account_login(client, app, auth_headers):
     payload = {"parent_admin_id": 1, "username": "sub_admin_5", "password": "secret123"}
     with app.app_context():
         client.post("/api/sub-accounts/", json=payload, headers=auth_headers)
-        ok = client.post("/api/sub-accounts/login", json={"username": "sub_admin_5", "password": "secret123"})
-        bad = client.post("/api/sub-accounts/login", json={"username": "sub_admin_5", "password": "wrong"})
+        ok = client.post(
+            "/api/sub-accounts/login", json={"username": "sub_admin_5", "password": "secret123"}
+        )
+        bad = client.post(
+            "/api/sub-accounts/login", json={"username": "sub_admin_5", "password": "wrong"}
+        )
     assert ok.status_code == 200
     assert _json(ok)["success"] is True
     assert _json(ok)["data"]["token"]

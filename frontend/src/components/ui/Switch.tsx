@@ -8,13 +8,7 @@ interface SwitchProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-function Switch({ 
-  checked, 
-  onChange, 
-  label, 
-  disabled = false,
-  size = 'md'
-}: SwitchProps) {
+function Switch({ checked, onChange, label, disabled = false, size = 'md' }: SwitchProps) {
   const handleClick: MouseEventHandler<HTMLButtonElement> = () => {
     if (!disabled) {
       onChange(!checked);
@@ -52,7 +46,9 @@ function Switch({
         />
       </button>
       {label && (
-        <span className={`text-sm ${checked ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500'}`}>
+        <span
+          className={`text-sm ${checked ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500'}`}
+        >
           {label}
         </span>
       )}

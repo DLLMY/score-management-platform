@@ -60,9 +60,7 @@ def cascade_delete_related_records(
         # 自引用表由 _visited 阻断循环
         if child_col.nullable and nullable_action == "set_null":
             db.session.execute(
-                _sa_update(child_table)
-                .where(child_col == pk_value)
-                .values({child_col.name: None})
+                _sa_update(child_table).where(child_col == pk_value).values({child_col.name: None})
             )
             continue
 
@@ -72,9 +70,7 @@ def cascade_delete_related_records(
             if child_pk_cols:
                 child_pk = child_pk_cols[0]
                 child_ids = (
-                    db.session.execute(
-                        _sa_select(child_pk).where(child_col == pk_value)
-                    )
+                    db.session.execute(_sa_select(child_pk).where(child_col == pk_value))
                     .scalars()
                     .all()
                 )
@@ -107,68 +103,6 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def get_by_id(model_class, obj_id):
     """通用的按ID查询方法"""
     if obj_id is None:
@@ -176,142 +110,125 @@ def get_by_id(model_class, obj_id):
     return model_class.query.get(obj_id)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # 班主任工作台 - 座次表
 
 from models.seating import SeatingChart, SeatingSeat  # noqa: E402,F401
-
-
 
 # 班主任工作台 - 值日生表
 
 from models.duty import DutyGroup, DutyAssignment  # noqa: E402,F401
 
-
-
 # 班主任工作台 - 班委名单
 
 from models.committee import ClassCommittee, CommitteeTerm  # noqa: E402,F401
-
-
 
 # 班主任工作台 - 家长联系
 
 from models.parent import ParentContact, ContactLog  # noqa: E402,F401
 
-
-
 # 班主任工作台 - 作业检查
 
 from models.homework import HomeworkAssignment, HomeworkSubmission  # noqa: E402,F401
-
-
 
 # 班主任工作台 - 考勤管理
 
 from models.attendance import Attendance  # noqa: E402,F401
 
-
-
 # 班主任工作台 - 学习小组
 
 from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore  # noqa: E402,F401
-
-
 
 # 班主任工作台 - 心理健康
 
 from models.mental_health import MentalHealthRecord  # noqa: E402,F401
 
-
-
 # 班主任工作台 - 文体活动
 
 from models.activity import Activity, ActivityRegistration  # noqa: E402,F401
-
-
 
 # 班主任工作台 - 班级文化
 
 from models.culture import CultureRecord, CultureItem  # noqa: E402,F401
 
-
-
 # 班主任工作台 - 学法指导
 
 from models.study_guide import StudyGuide, ImprovementPlan  # noqa: E402,F401
-
-
 
 # 通知配置（单行持久化，替代 current_app.config 内存实现）
 
 from models.notification_config import NotificationConfig  # noqa: E402,F401
 
-
-
 # === F16 拆包：以下为新增子模块再导出（保持 from models import X 兼容）===
-from models.user_models import User, Admin, SubAccount, RolePermission, PermissionLog, AdminRole, Permission, RolePermissionMapping, RoleHierarchy, SecurityAudit, LoginAttempt  # noqa: E402,F401
-from models.score_models import ScoreCategory, Subject, ScoreRule, ScoreRecord, ScoreRankRule, Exam, Score, ClassPeriod, SubjectClass, CourseSchedule, CompositeScore, WarningConfig  # noqa: E402,F401
-from models.device_models import MQTTLog, MQTTConfig, ProcessedMessage, PhoneBoxPolicy, Device, DeviceHeartbeat, FirmwareVersion, DeviceFirmwareUpdate, DeviceGroup, DeviceGroupMapping  # noqa: E402,F401
-from models.system_models import OperationLog, SystemConfig, TimeRule, ClassInfo, AdminClass, ImportConfig, FrontendPerfMetric, FrontendErrorLog, SystemMetric, RateLimitRecord  # noqa: E402,F401
-from models.notify_models import Notification, Approval, NotifyAudit, ScheduledNotify, NotifyTemplate, NotifyHistory  # noqa: E402,F401
+from models.user_models import (
+    User,
+    Admin,
+    SubAccount,
+    RolePermission,
+    PermissionLog,
+    AdminRole,
+    Permission,
+    RolePermissionMapping,
+    RoleHierarchy,
+    SecurityAudit,
+    LoginAttempt,
+)  # noqa: E402,F401
+from models.score_models import (
+    ScoreCategory,
+    Subject,
+    ScoreRule,
+    ScoreRecord,
+    ScoreRankRule,
+    Exam,
+    Score,
+    ClassPeriod,
+    SubjectClass,
+    CourseSchedule,
+    CompositeScore,
+    WarningConfig,
+)  # noqa: E402,F401
+from models.device_models import (
+    MQTTLog,
+    MQTTConfig,
+    ProcessedMessage,
+    PhoneBoxPolicy,
+    Device,
+    DeviceHeartbeat,
+    FirmwareVersion,
+    DeviceFirmwareUpdate,
+    DeviceGroup,
+    DeviceGroupMapping,
+)  # noqa: E402,F401
+from models.system_models import (
+    OperationLog,
+    SystemConfig,
+    TimeRule,
+    ClassInfo,
+    AdminClass,
+    ImportConfig,
+    FrontendPerfMetric,
+    FrontendErrorLog,
+    SystemMetric,
+    RateLimitRecord,
+)  # noqa: E402,F401
+from models.notify_models import (
+    Notification,
+    Approval,
+    NotifyAudit,
+    ScheduledNotify,
+    NotifyTemplate,
+    NotifyHistory,
+)  # noqa: E402,F401
 from models.alert_models import Alert, StudentCluster  # noqa: E402,F401
-from models.archive_models import ScoreArchive, AttendanceArchive, OperationLogArchive  # noqa: E402,F401
-from models.nlp_models import NLPScoringRule, NLPBehaviorKeyword, NLPMatchResult, NLPRuleUsage, NLPModelTraining, NLPCorrection  # noqa: E402,F401
+from models.archive_models import (
+    ScoreArchive,
+    AttendanceArchive,
+    OperationLogArchive,
+)  # noqa: E402,F401
+from models.nlp_models import (
+    NLPScoringRule,
+    NLPBehaviorKeyword,
+    NLPMatchResult,
+    NLPRuleUsage,
+    NLPModelTraining,
+    NLPCorrection,
+)  # noqa: E402,F401

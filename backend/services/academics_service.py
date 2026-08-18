@@ -8,6 +8,7 @@ get_or_404（404 语义）、请求级校验、缓存失效、操作日志、跨
 - 第 1 子批（admin_classes + exam_import）：assign_class_to_admin / remove_class_from_admin / execute_score_import
 - 后续子批（subject / exam / course_schedule / import）追加方法，不回改既有方法。
 """
+
 import re
 from datetime import datetime
 
@@ -129,7 +130,9 @@ class AcademicsService:
                     if card_id_idx >= 0 and row_data.get(headers[card_id_idx])
                     else None
                 )
-                subject = row_data.get(headers[subject_idx]) if subject_idx >= 0 else None  # noqa: F841
+                subject = (
+                    row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
+                )  # noqa: F841
                 subject_id = _resolve_subject_id(subject, None)
                 score_val = (
                     ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
@@ -215,7 +218,6 @@ class AcademicsService:
             "errors": errors[:50],
         }
 
-
     # ------------------------------------------------------------------
     # 第 2 子批：subject（科目 / 科目-班级关联 / 排序 / 导入）
     # ------------------------------------------------------------------
@@ -265,7 +267,9 @@ class AcademicsService:
 
     def create_subject_class(self, subject_id, class_info_id, teacher_id):
         """新增科目-班级关联。重复/班级存在校验由路由层完成；返回新关联 id。"""
-        link = SubjectClass(subject_id=subject_id, class_info_id=class_info_id, teacher_id=teacher_id)
+        link = SubjectClass(
+            subject_id=subject_id, class_info_id=class_info_id, teacher_id=teacher_id
+        )
         with db_session_scope():
             db.session.add(link)
             db.session.flush()
@@ -290,9 +294,7 @@ class AcademicsService:
                 if subject:
                     subject.sort_order = item.get("order", 0)
 
-    def execute_subject_import(
-        self, import_list, validation_rules, conflict_strategy
-    ):
+    def execute_subject_import(self, import_list, validation_rules, conflict_strategy):
         """执行科目批量导入写入，返回统计 dict。
 
         路由负责 config 解析与文件解析（import_list 为已映射的列表，可能含 __error__ 哨兵项）。
@@ -315,11 +317,23 @@ class AcademicsService:
 
                     if rule_type == "required" and value is None:
                         errors.append(message)
-                    elif rule_type == "max_length" and value and len(str(value)) > params.get("max", 100):
+                    elif (
+                        rule_type == "max_length"
+                        and value
+                        and len(str(value)) > params.get("max", 100)
+                    ):
                         errors.append(message)
-                    elif rule_type == "min_length" and value and len(str(value)) < params.get("min", 1):
+                    elif (
+                        rule_type == "min_length"
+                        and value
+                        and len(str(value)) < params.get("min", 1)
+                    ):
                         errors.append(message)
-                    elif rule_type == "regex" and value and not re.match(params.get("pattern", ""), str(value)):
+                    elif (
+                        rule_type == "regex"
+                        and value
+                        and not re.match(params.get("pattern", ""), str(value))
+                    ):
                         errors.append(message)
                 return errors
 
@@ -372,12 +386,16 @@ class AcademicsService:
                     else:
                         admin = Admin.query.filter(Admin.real_name == teacher_name.strip()).first()
                         if not admin:
-                            admin = Admin.query.filter(Admin.username == teacher_name.strip()).first()
+                            admin = Admin.query.filter(
+                                Admin.username == teacher_name.strip()
+                            ).first()
                         if not admin:
                             validation_errors.append(f'教师 "{teacher_name}" 在系统中不存在')
                         else:
                             if admin.role not in ["admin", "teacher"]:
-                                validation_errors.append(f'用户 "{teacher_name}" 的角色不是管理员或教师，无法担任授课教师')
+                                validation_errors.append(
+                                    f'用户 "{teacher_name}" 的角色不是管理员或教师，无法担任授课教师'
+                                )
                             resolved_teacher_id = admin.id
                 elif teacher_id:
                     if not isinstance(teacher_id, (int, str)):
@@ -426,7 +444,13 @@ class AcademicsService:
                                 "message": f'验证失败: {", ".join(errors)}',
                                 "row_data": item,
                                 "error_fields": list(
-                                    set([rule["field"] for rule in validation_rules if item.get(rule["field"]) is None])
+                                    set(
+                                        [
+                                            rule["field"]
+                                            for rule in validation_rules
+                                            if item.get(rule["field"]) is None
+                                        ]
+                                    )
                                 ),
                             }
                         )
@@ -443,7 +467,12 @@ class AcademicsService:
                                 "action": "failed",
                                 "message": f'关联验证失败: {", ".join(relation_errors)}',
                                 "row_data": item,
-                                "error_fields": ["class_name", "class_id", "teacher_name", "teacher_id"],
+                                "error_fields": [
+                                    "class_name",
+                                    "class_id",
+                                    "teacher_name",
+                                    "teacher_id",
+                                ],
                             }
                         )
                         continue
@@ -464,7 +493,9 @@ class AcademicsService:
                         elif conflict_strategy == "update":
                             existing.code = resolved_item.get("code", existing.code)
                             existing.grade = resolved_item.get("grade", existing.grade)
-                            existing.description = resolved_item.get("description", existing.description)
+                            existing.description = resolved_item.get(
+                                "description", existing.description
+                            )
                             existing.color = resolved_item.get("color", existing.color)
                             existing.is_active = resolved_item.get("is_active", existing.is_active)
                             existing.updated_at = datetime.now()
@@ -500,7 +531,8 @@ class AcademicsService:
 
                     if subject_id and resolved_item.get("_class_id"):
                         existing_link = SubjectClass.query.filter(
-                            SubjectClass.subject_id == subject_id, SubjectClass.class_info_id == resolved_item["_class_id"]
+                            SubjectClass.subject_id == subject_id,
+                            SubjectClass.class_info_id == resolved_item["_class_id"],
                         ).first()
                         if existing_link:
                             if resolved_item.get("_teacher_id"):
@@ -548,7 +580,6 @@ class AcademicsService:
             "messages": messages,
         }
 
-
     # ------------------------------------------------------------------
     # 第 3 子批：exam / score（考试与成绩写入路径）
     # ------------------------------------------------------------------
@@ -581,7 +612,17 @@ class AcademicsService:
             exam = get_by_id(Exam, exam_id)
             if exam is None:
                 return
-            for key in ["name", "description", "date", "subjects", "start_time", "end_time", "importance", "class_id", "status"]:
+            for key in [
+                "name",
+                "description",
+                "date",
+                "subjects",
+                "start_time",
+                "end_time",
+                "importance",
+                "class_id",
+                "status",
+            ]:
                 if key in data:
                     if key in ("start_time", "end_time"):
                         setattr(exam, key, parse_datetime(data[key]))
@@ -620,7 +661,9 @@ class AcademicsService:
             exam.updated_at = datetime.now()
             return exam.id
 
-    def create_score(self, exam_id, student_id, subject_id, score_val, full_score, status, remark, entered_by):
+    def create_score(
+        self, exam_id, student_id, subject_id, score_val, full_score, status, remark, entered_by
+    ):
         """创建单条成绩。科目解析/考试存在/已关闭禁录/分数范围/冲突检测（请求级）由路由层完成。
 
         返回新成绩 id；唯一约束冲突由 db_session_scope 回滚并上抛 IntegrityError，路由捕获后回 400。
@@ -867,9 +910,9 @@ class AcademicsService:
             config = get_by_id(ImportConfig, config_id)
             if config is None:
                 return
-            ImportConfig.query.filter_by(
-                module_name=config.module_name, is_default=True
-            ).update({"is_default": False})
+            ImportConfig.query.filter_by(module_name=config.module_name, is_default=True).update(
+                {"is_default": False}
+            )
             config.is_default = True
             config.updated_at = datetime.now()
             return config.id

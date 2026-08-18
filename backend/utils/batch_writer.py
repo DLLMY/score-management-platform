@@ -113,7 +113,12 @@ class BatchWriter:
         if self._is_shutdown:
             logger.warning("[BatchWriter] 批量写入器已关闭，拒绝新消息")
             return False
-        msg_data = {"data": message, "priority": priority, "timestamp": time.time(), "retry_count": 0}
+        msg_data = {
+            "data": message,
+            "priority": priority,
+            "timestamp": time.time(),
+            "retry_count": 0,
+        }
         with self._queue_lock:
             self._queue.append(msg_data)
             self._stats["total_received"] += 1
@@ -223,7 +228,9 @@ class BatchWriter:
                 with self._queue_lock:
                     self._queue.append(msg)
                     self._stats["total_retried"] += 1
-                logger.info(f"[BatchWriter] 消息重试 ({msg['retry_count']}/{self._config.max_retries})")
+                logger.info(
+                    f"[BatchWriter] 消息重试 ({msg['retry_count']}/{self._config.max_retries})"
+                )
             else:
                 # 超过最大重试次数，丢弃
                 self._update_stats_on_failure()
@@ -328,7 +335,9 @@ class MQTTLogBatchWriter(BatchWriter):
                     timestamp = datetime.fromtimestamp(timestamp)
                 elif not isinstance(timestamp, datetime):
                     timestamp = datetime.now()
-                logs.append(MQTTLog(topic=topic, message=message, direction=direction, timestamp=timestamp))
+                logs.append(
+                    MQTTLog(topic=topic, message=message, direction=direction, timestamp=timestamp)
+                )
             if logs:
                 db.session.add_all(logs)
                 db.session.commit()

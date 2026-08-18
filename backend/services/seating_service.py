@@ -78,7 +78,11 @@ class SeatingService:
 
         if strategy == "height_vision":
             sorted_students = sorted(
-                students, key=lambda s: (getattr(s, "height", 150) or 150, -(getattr(s, "vision_score", 5) or 5))
+                students,
+                key=lambda s: (
+                    getattr(s, "height", 150) or 150,
+                    -(getattr(s, "vision_score", 5) or 5),
+                ),
             )
         elif strategy == "score_tier":
             sorted_students = sorted(students, key=lambda s: -(s.current_score or 0))
@@ -102,10 +106,17 @@ class SeatingService:
             return {"success": False, "message": "座位不存在"}, 404
         seat.student_id = student_id
         db.session.commit()
-        return {"success": True, "data": {"id": seat.id, "row": seat_row, "col": seat_col, "student_id": student_id}}
+        return {
+            "success": True,
+            "data": {"id": seat.id, "row": seat_row, "col": seat_col, "student_id": student_id},
+        }
 
     def _build_chart_response(self, chart):
-        seats = SeatingSeat.query.filter_by(chart_id=chart.id).order_by(SeatingSeat.row, SeatingSeat.col).all()
+        seats = (
+            SeatingSeat.query.filter_by(chart_id=chart.id)
+            .order_by(SeatingSeat.row, SeatingSeat.col)
+            .all()
+        )
         return {
             "id": chart.id,
             "name": chart.name,

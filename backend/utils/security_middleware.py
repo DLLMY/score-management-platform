@@ -152,7 +152,9 @@ def log_security_event(event_type, details):
     client_ip = request.remote_addr if request else "unknown"
     user_agent = request.headers.get("User-Agent", "unknown") if request else "unknown"
 
-    message = f"[SECURITY] {event_type} | IP: {client_ip} | UA: {user_agent[:50]} | Details: {details}"
+    message = (
+        f"[SECURITY] {event_type} | IP: {client_ip} | UA: {user_agent[:50]} | Details: {details}"
+    )
 
     if event_type in ["SQL_INJECTION", "XSS_ATTEMPT", "INVALID_JSON", "RATE_LIMIT_EXCEEDED"]:
         log_error(message)

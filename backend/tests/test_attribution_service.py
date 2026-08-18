@@ -6,6 +6,7 @@
 - 边界：学生不存在
 - 路由：GET /api/algorithm/attribution/<id> 返回 200 与 data
 """
+
 from datetime import datetime, timedelta
 
 from services.attribution_service import AttributionService
@@ -75,7 +76,17 @@ def test_attribute_single_factor_negative():
 # DB 包装层集成
 # ----------------------------------------------------------------------
 def test_analyze_integration(db_session):
-    from models import Attendance, ClassInfo, Exam, HomeworkAssignment, HomeworkSubmission, Score, ScoreRecord, Subject, User
+    from models import (
+        Attendance,
+        ClassInfo,
+        Exam,
+        HomeworkAssignment,
+        HomeworkSubmission,
+        Score,
+        ScoreRecord,
+        Subject,
+        User,
+    )
 
     now = datetime.now()
     # 父表：班级、作业（Attendance.class_id / HomeworkSubmission.assignment_id 为 NOT NULL 外键）
@@ -111,20 +122,49 @@ def test_analyze_integration(db_session):
 
     # 行为积分：前期日均约 +1（days 35-39 各 +1 → 5/5=1.0），近期日均约 +2（days 1-9 各 +2）
     for d in range(35, 40):
-        db_session.add(ScoreRecord(student_id=uid, score_change=1, created_at=now - timedelta(days=d)))
+        db_session.add(
+            ScoreRecord(student_id=uid, score_change=1, created_at=now - timedelta(days=d))
+        )
     for d in range(1, 10):
-        db_session.add(ScoreRecord(student_id=uid, score_change=2, created_at=now - timedelta(days=d)))
+        db_session.add(
+            ScoreRecord(student_id=uid, score_change=2, created_at=now - timedelta(days=d))
+        )
 
     # 出勤：前期 5 天全勤；近期 7 天全勤 + 1 天缺勤
     for d in range(35, 40):
-        db_session.add(Attendance(student_id=uid, class_id=cid, date=(now - timedelta(days=d)).date(), status="present"))
+        db_session.add(
+            Attendance(
+                student_id=uid,
+                class_id=cid,
+                date=(now - timedelta(days=d)).date(),
+                status="present",
+            )
+        )
     for d in range(1, 8):
-        db_session.add(Attendance(student_id=uid, class_id=cid, date=(now - timedelta(days=d)).date(), status="present"))
-    db_session.add(Attendance(student_id=uid, class_id=cid, date=(now - timedelta(days=2)).date(), status="absent"))
+        db_session.add(
+            Attendance(
+                student_id=uid,
+                class_id=cid,
+                date=(now - timedelta(days=d)).date(),
+                status="present",
+            )
+        )
+    db_session.add(
+        Attendance(
+            student_id=uid, class_id=cid, date=(now - timedelta(days=2)).date(), status="absent"
+        )
+    )
 
     # 作业：近期 5 天提交（前期无提交记录 → hw_before=None）
     for d in range(1, 6):
-        db_session.add(HomeworkSubmission(student_id=uid, assignment_id=aid, is_submitted=True, submitted_at=now - timedelta(days=d)))
+        db_session.add(
+            HomeworkSubmission(
+                student_id=uid,
+                assignment_id=aid,
+                is_submitted=True,
+                submitted_at=now - timedelta(days=d),
+            )
+        )
     db_session.commit()
 
     r = AttributionService.analyze_score_attribution(uid, 30)

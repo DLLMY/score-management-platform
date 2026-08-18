@@ -9,6 +9,7 @@
 - 敏感度系数（SENSITIVITY）仅用于相对权重与文案，非因果推断，结果应理解为
   “相关性归因”而非“因果归因”。
 """
+
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -94,9 +95,15 @@ class AttributionService:
         if abs(total_signed) < eps:
             # 各维度影响相互抵消或均未变化：等分到 total_change（保证贡献度和=净变化）
             n = max(len(impacts), 1)
-            direction = "neutral" if abs(total_change) < eps else ("positive" if total_change > 0 else "negative")
+            direction = (
+                "neutral"
+                if abs(total_change) < eps
+                else ("positive" if total_change > 0 else "negative")
+            )
             for key, (before, after) in factor_values.items():
-                delta = (0.0 if after is None else float(after)) - (0.0 if before is None else float(before))
+                delta = (0.0 if after is None else float(after)) - (
+                    0.0 if before is None else float(before)
+                )
                 factors.append(
                     {
                         "key": key,
@@ -113,7 +120,11 @@ class AttributionService:
                 after = 0.0 if after is None else float(after)
                 delta = after - before
                 contribution = total_change * impacts[key] / total_signed
-                direction = "positive" if contribution > eps else ("negative" if contribution < -eps else "neutral")
+                direction = (
+                    "positive"
+                    if contribution > eps
+                    else ("negative" if contribution < -eps else "neutral")
+                )
                 factors.append(
                     {
                         "key": key,
@@ -158,7 +169,9 @@ class AttributionService:
     def _summarize(total_change: float, factors: List[Dict]) -> str:
         if not factors:
             return "成绩波动较小，各维度无明显变化"
-        direction_word = "上升" if total_change > 0 else ("下降" if total_change < 0 else "基本持平")
+        direction_word = (
+            "上升" if total_change > 0 else ("下降" if total_change < 0 else "基本持平")
+        )
         top = factors[0]
         return (
             f"成绩较前期{direction_word} {abs(total_change):.1f} 分，"
@@ -214,7 +227,12 @@ class AttributionService:
 
         result = AttributionService.attribute_score_change(score_before, score_after, factor_values)
         result["confidence"] = AttributionService._confidence(
-            score_before, score_after, exam_counts, behavior_before is not None, att_before is not None, hw_after is not None
+            score_before,
+            score_after,
+            exam_counts,
+            behavior_before is not None,
+            att_before is not None,
+            hw_after is not None,
         )
         result["user_id"] = user_id
         result["name"] = user.name
@@ -295,14 +313,11 @@ class AttributionService:
     @staticmethod
     def _avg_daily_points(user_id, start, end):
         """返回窗口内行为积分日均分值；无记录返回 None。"""
-        rows = (
-            ScoreRecord.query.filter(
-                ScoreRecord.student_id == user_id,
-                ScoreRecord.created_at >= start,
-                ScoreRecord.created_at < end,
-            )
-            .all()
-        )
+        rows = ScoreRecord.query.filter(
+            ScoreRecord.student_id == user_id,
+            ScoreRecord.created_at >= start,
+            ScoreRecord.created_at < end,
+        ).all()
         if not rows:
             return None
         total = sum(r.score_change for r in rows)
@@ -314,14 +329,11 @@ class AttributionService:
         """返回窗口内出勤率（present/late 计为出勤）；无记录返回 None。"""
         start_d = start.date()
         end_d = end.date()
-        rows = (
-            Attendance.query.filter(
-                Attendance.student_id == user_id,
-                Attendance.date >= start_d,
-                Attendance.date < end_d,
-            )
-            .all()
-        )
+        rows = Attendance.query.filter(
+            Attendance.student_id == user_id,
+            Attendance.date >= start_d,
+            Attendance.date < end_d,
+        ).all()
         if not rows:
             return None
         attended = sum(1 for r in rows if r.status in ("present", "late", "early"))
@@ -330,14 +342,11 @@ class AttributionService:
     @staticmethod
     def _homework_rate(user_id, start, end):
         """返回窗口内作业提交率（按已提交记录计）；无记录返回 None。"""
-        rows = (
-            HomeworkSubmission.query.filter(
-                HomeworkSubmission.student_id == user_id,
-                HomeworkSubmission.submitted_at >= start,
-                HomeworkSubmission.submitted_at < end,
-            )
-            .all()
-        )
+        rows = HomeworkSubmission.query.filter(
+            HomeworkSubmission.student_id == user_id,
+            HomeworkSubmission.submitted_at >= start,
+            HomeworkSubmission.submitted_at < end,
+        ).all()
         if not rows:
             return None
         submitted = sum(1 for r in rows if r.is_submitted)

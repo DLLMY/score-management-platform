@@ -32,7 +32,9 @@ def main():
             print(f"[{'OK' if exists else 'MISSING'}] table {model.__tablename__}")
             if not exists:
                 sys.exit(1)
-    print("[migrate] 运维中心表创建完成（frontend_perf_metrics / frontend_error_logs / system_metrics）")
+    print(
+        "[migrate] 运维中心表创建完成（frontend_perf_metrics / frontend_error_logs / system_metrics）"
+    )
 
 
 if __name__ == "__main__":

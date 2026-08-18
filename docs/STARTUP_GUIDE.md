@@ -176,7 +176,7 @@ docker-compose up -d
 | `stop_all.bat` | 停止所有服务 |
 | `server_deploy.ps1` | PowerShell 部署脚本 |
 | `service_manager.py` | 服务管理器 |
-| `一键部署.py` | Python 一键部署脚本 |
+| `one_click_deploy.py` | Python 一键部署脚本 |
 
 ## 🔍 故障排查
 

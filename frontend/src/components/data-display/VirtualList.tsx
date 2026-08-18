@@ -27,13 +27,10 @@ function VirtualList<T>({
   const [scrollTop, setScrollTop] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const calculatedHeight = useMemo<number>(
-    () => {
-      const totalHeight = items.length * itemHeight;
-      return autoHeight ? Math.min(totalHeight, containerHeight) : containerHeight;
-    },
-    [items.length, itemHeight, containerHeight, autoHeight]
-  );
+  const calculatedHeight = useMemo<number>(() => {
+    const totalHeight = items.length * itemHeight;
+    return autoHeight ? Math.min(totalHeight, containerHeight) : containerHeight;
+  }, [items.length, itemHeight, containerHeight, autoHeight]);
 
   const visibleCount = useMemo<number>(
     () => Math.ceil(calculatedHeight / itemHeight),
@@ -99,9 +96,7 @@ function VirtualList<T>({
         className={`scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${className}`}
       >
         {items.map((item, index) => (
-          <div key={keyExtractor(item)}>
-            {renderItem(item, index)}
-          </div>
+          <div key={keyExtractor(item)}>{renderItem(item, index)}</div>
         ))}
       </div>
     );

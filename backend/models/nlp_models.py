@@ -49,6 +49,8 @@ class NLPScoringRule(db.Model):
             self._behavior_tags = json.dumps(value, ensure_ascii=False)
         else:
             self._behavior_tags = value
+
+
 class NLPBehaviorKeyword(db.Model):
     """NLP行为关键词"""
 
@@ -89,6 +91,8 @@ class NLPBehaviorKeyword(db.Model):
             self._synonyms = json.dumps(list(value), ensure_ascii=False)
         else:
             self._synonyms = str(value)
+
+
 class NLPMatchResult(db.Model):
     """NLP匹配结果"""
 
@@ -105,6 +109,8 @@ class NLPMatchResult(db.Model):
     score_change = db.Column(db.Float, default=0)
     is_manual_correction = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class NLPRuleUsage(db.Model):
     """NLP规则使用记录"""
 
@@ -120,6 +126,8 @@ class NLPRuleUsage(db.Model):
     score_change = db.Column(db.Float)
     is_manual_correction = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class NLPModelTraining(db.Model):
     """NLP模型训练记录"""
 
@@ -139,6 +147,8 @@ class NLPModelTraining(db.Model):
     error_message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     trained_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class NLPCorrection(db.Model):
     """NLP纠错记录"""
 
@@ -154,12 +164,12 @@ class NLPCorrection(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
     # 自学习纠错相关字段（与 api/nlp_routes.py、services/nlp_enhanced_service.py 对齐）
-    original_text = db.Column(db.String(1000), nullable=True)   # 被纠正的原始输入文本
-    field_type = db.Column(db.String(50), nullable=True)        # name / intent / score
-    original_value = db.Column(db.String(500), nullable=True)    # 原预测值
-    corrected_value = db.Column(db.String(500), nullable=True)   # 用户纠正后的值
-    status = db.Column(db.String(50), default="pending")         # pending / approved / learned / rejected
-    confidence_after = db.Column(db.Float, nullable=True)        # 纠正后置信度
-    learn_count = db.Column(db.Integer, default=0)               # 被归纳学习引用的次数
-    last_learned_at = db.Column(db.DateTime, nullable=True)      # 最近一次被归纳学习的时间
-    verified_at = db.Column(db.DateTime, nullable=True)          # 审核/确认时间
+    original_text = db.Column(db.String(1000), nullable=True)  # 被纠正的原始输入文本
+    field_type = db.Column(db.String(50), nullable=True)  # name / intent / score
+    original_value = db.Column(db.String(500), nullable=True)  # 原预测值
+    corrected_value = db.Column(db.String(500), nullable=True)  # 用户纠正后的值
+    status = db.Column(db.String(50), default="pending")  # pending / approved / learned / rejected
+    confidence_after = db.Column(db.Float, nullable=True)  # 纠正后置信度
+    learn_count = db.Column(db.Integer, default=0)  # 被归纳学习引用的次数
+    last_learned_at = db.Column(db.DateTime, nullable=True)  # 最近一次被归纳学习的时间
+    verified_at = db.Column(db.DateTime, nullable=True)  # 审核/确认时间

@@ -1,7 +1,12 @@
 from flask import request, g
 from flask_restx import Namespace, Resource, fields
 from models import Notification, User
-from utils.permission import requires_permission, has_permission, get_current_admin, get_allowed_classes
+from utils.permission import (
+    requires_permission,
+    has_permission,
+    get_current_admin,
+    get_allowed_classes,
+)
 
 from utils.response import APIResponse
 from services.notification_service import (
@@ -45,10 +50,11 @@ class NotificationList(Resource):
         admin = get_current_admin()
         allowed = get_allowed_classes(admin.id) if admin else None
         if allowed is not None:
-            query = query.join(User, Notification.student_id == User.id).filter(User.class_name.in_(allowed))
-        pagination = (
-            query.order_by(Notification.created_at.desc())
-            .paginate(page=page, per_page=per_page, error_out=False)
+            query = query.join(User, Notification.student_id == User.id).filter(
+                User.class_name.in_(allowed)
+            )
+        pagination = query.order_by(Notification.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
         )
 
         return {
@@ -86,7 +92,9 @@ class NotificationList(Resource):
     def post(self):
         data = ns_notifications.payload
         notification = create_user_notification(data)
-        return APIResponse.success(data={"notification_id": notification.id}, message="通知创建成功", status_code=201)
+        return APIResponse.success(
+            data={"notification_id": notification.id}, message="通知创建成功", status_code=201
+        )
 
 
 @ns_notifications.route("/<int:id>")
@@ -153,12 +161,16 @@ class NotificationSend(Resource):
     def post(self):
         data = request.get_json()
         notification = send_notification(data)
-        return APIResponse.success(data={"notification_id": notification.id}, message="通知发送成功")
+        return APIResponse.success(
+            data={"notification_id": notification.id}, message="通知发送成功"
+        )
 
 
 @ns_notifications.route("/batch")
 class NotificationBatch(Resource):
-    @ns_notifications.doc("batch_send_notifications", description="群发通知（按学生列表 user_ids 或班级 class_id）")
+    @ns_notifications.doc(
+        "batch_send_notifications", description="群发通知（按学生列表 user_ids 或班级 class_id）"
+    )
     @requires_permission("notification.send")
     def post(self):
         data = request.get_json() or {}
@@ -175,17 +187,28 @@ class NotificationBatch(Resource):
 
         # 上课时间全局时段拦截（群发按广播处理）；force_send 需 notification.force_send 权限
         if force_send and not has_permission(g.current_user, "notification.force_send"):
-            return APIResponse.error(message="无强制发送权限（需 notification.force_send）", status_code=403)
+            return APIResponse.error(
+                message="无强制发送权限（需 notification.force_send）", status_code=403
+            )
         from services.class_time_checker import ClassTimeChecker
 
         blocked, message, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=force_send)
         if blocked:
-            admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
-            ClassTimeChecker.log_notify_audit(
-                "BATCH_NOTIFY", class_id, admin_id, {"title": title},
-                reason_code or "GLOBAL_TIME_RULE", message, force_send=False,
+            admin_id = (
+                getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
             )
-            return APIResponse.error(message=f"上课时间，群发通知已暂停: {message}", status_code=403)
+            ClassTimeChecker.log_notify_audit(
+                "BATCH_NOTIFY",
+                class_id,
+                admin_id,
+                {"title": title},
+                reason_code or "GLOBAL_TIME_RULE",
+                message,
+                force_send=False,
+            )
+            return APIResponse.error(
+                message=f"上课时间，群发通知已暂停: {message}", status_code=403
+            )
 
         target_ids = list(user_ids) if user_ids else []
         if class_id:

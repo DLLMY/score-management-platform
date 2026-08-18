@@ -83,4 +83,6 @@ def create_migration():
         return APIResponse.error(message="Migration name cannot be empty", status_code=400)
     manager = get_migration_manager()
     version_id = manager.create_migration(name, description)
-    return APIResponse.success(message=f"Migration {version_id}_{name} created", data={"version_id": version_id})
+    return APIResponse.success(
+        message=f"Migration {version_id}_{name} created", data={"version_id": version_id}
+    )

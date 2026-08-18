@@ -207,7 +207,8 @@ class RuleExecutionEngine:
                     score_change = rule.get("score", 0)
                     confidence = rule_item.get("confidence", 0)
 
-                    record = ScoreRecord(student_id=user_context["user_id"],
+                    record = ScoreRecord(
+                        student_id=user_context["user_id"],
                         rule_id=rule["id"],
                         score_change=score_change,
                         reason=(f'规则自动应用: {rule["name"]} ' f"(置信度: {confidence:.3f})"),
@@ -260,7 +261,9 @@ class RuleExecutionEngine:
         """基于行为类型生成规则推荐"""
         recommendations = []
 
-        rules = ScoreRule.query.filter(ScoreRule.rule_type == behavior_type, ScoreRule.is_active).all()
+        rules = ScoreRule.query.filter(
+            ScoreRule.rule_type == behavior_type, ScoreRule.is_active
+        ).all()
 
         for rule in rules:
             recommendations.append(

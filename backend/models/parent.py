@@ -21,7 +21,9 @@ class ContactLog(db.Model):
     __tablename__ = "contact_log"
 
     id = db.Column(db.Integer, primary_key=True)
-    parent_id = db.Column(db.Integer, db.ForeignKey("parent_contact.id"), nullable=False, index=True)
+    parent_id = db.Column(
+        db.Integer, db.ForeignKey("parent_contact.id"), nullable=False, index=True
+    )
     contact_type = db.Column(db.String(20))
     content = db.Column(db.Text)
     contact_time = db.Column(db.DateTime, default=datetime.now)

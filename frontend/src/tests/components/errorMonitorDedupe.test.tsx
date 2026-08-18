@@ -18,8 +18,20 @@ describe('errorMonitor dedupe', () => {
 
     const { errorMonitor } = await import('../../utils/errorMonitor');
     // 构造同 key 错误（同 type/url/method/status/message）
-    const err1 = { type: 'api_error', message: '请求超时，请检查网络或稍后重试', url: '/api/devices', method: 'GET', status: 504 };
-    const err2 = { type: 'api_error', message: '请求超时，请检查网络或稍后重试', url: '/api/devices', method: 'GET', status: 504 };
+    const err1 = {
+      type: 'api_error',
+      message: '请求超时，请检查网络或稍后重试',
+      url: '/api/devices',
+      method: 'GET',
+      status: 504,
+    };
+    const err2 = {
+      type: 'api_error',
+      message: '请求超时，请检查网络或稍后重试',
+      url: '/api/devices',
+      method: 'GET',
+      status: 504,
+    };
 
     errorMonitor.reportError(err1 as never);
     errorMonitor.reportError(err2 as never); // 30s 内重复 → 去重跳过
@@ -34,8 +46,20 @@ describe('errorMonitor dedupe', () => {
     }));
 
     const { errorMonitor } = await import('../../utils/errorMonitor');
-    errorMonitor.reportError({ type: 'api_error', message: '超时A', url: '/api/a', method: 'GET', status: 504 } as never);
-    errorMonitor.reportError({ type: 'api_error', message: '超时B', url: '/api/b', method: 'GET', status: 504 } as never);
+    errorMonitor.reportError({
+      type: 'api_error',
+      message: '超时A',
+      url: '/api/a',
+      method: 'GET',
+      status: 504,
+    } as never);
+    errorMonitor.reportError({
+      type: 'api_error',
+      message: '超时B',
+      url: '/api/b',
+      method: 'GET',
+      status: 504,
+    } as never);
 
     expect(reportSpy).toHaveBeenCalledTimes(2);
   });
@@ -47,12 +71,24 @@ describe('errorMonitor dedupe', () => {
     }));
 
     const { errorMonitor } = await import('../../utils/errorMonitor');
-    errorMonitor.reportError({ type: 'api_error', message: '超时', url: '/api/devices', method: 'GET', status: 504 } as never);
+    errorMonitor.reportError({
+      type: 'api_error',
+      message: '超时',
+      url: '/api/devices',
+      method: 'GET',
+      status: 504,
+    } as never);
 
     // 模拟时间前进 31s，绕过去重窗口
     vi.useFakeTimers();
     vi.advanceTimersByTime(31000);
-    errorMonitor.reportError({ type: 'api_error', message: '超时', url: '/api/devices', method: 'GET', status: 504 } as never);
+    errorMonitor.reportError({
+      type: 'api_error',
+      message: '超时',
+      url: '/api/devices',
+      method: 'GET',
+      status: 504,
+    } as never);
     vi.useRealTimers();
 
     expect(reportSpy).toHaveBeenCalledTimes(2);

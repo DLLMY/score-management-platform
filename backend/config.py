@@ -88,9 +88,9 @@ class Config:
     # ========== Redis 自动拉起配置 ==========
     # 后端启动时若本机未运行 Redis，是否自动拉起一个本地 redis-server 子进程。
     # 仅对 localhost/127.0.0.1 生效；生产环境(env=production)默认关闭，开发环境默认开启。
-    REDIS_AUTO_START = os.getenv(
-        "REDIS_AUTO_START", "true" if env != "production" else "false"
-    ).lower() == "true"
+    REDIS_AUTO_START = (
+        os.getenv("REDIS_AUTO_START", "true" if env != "production" else "false").lower() == "true"
+    )
     # 自定义 redis-server 可执行文件路径；留空则按 项目根/redis/redis-server(.exe) →
     # C:\Redis\redis-server.exe → PATH 顺序自动探测。
     REDIS_SERVER_COMMAND = os.getenv("REDIS_SERVER_COMMAND", "")
@@ -213,7 +213,9 @@ class Config:
         RATE_LIMIT_PER_MINUTE = 200
         RATE_LIMIT_PER_HOUR = 5000
     # ========== CORS配置 ==========
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(", ")
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(
+        ", "
+    )
     # ========== 安全配置 ==========
     PASSWORD_MIN_LENGTH = 6
     PASSWORD_MAX_LENGTH = 128
@@ -301,23 +303,41 @@ class Config:
         # 检查SECRET_KEY是否通过环境变量设置（生产环境必须设置）
         if env == "production" and not os.getenv("FLASK_SECRET_KEY"):
             warnings.append(
-                {"type": "security", "message": "生产环境FLASK_SECRET_KEY未通过环境变量设置，使用自动生成的临时密钥"}
+                {
+                    "type": "security",
+                    "message": "生产环境FLASK_SECRET_KEY未通过环境变量设置，使用自动生成的临时密钥",
+                }
             )
         # 检查JWT_SECRET_KEY是否通过环境变量设置（生产环境必须设置）
         if env == "production" and not os.getenv("JWT_SECRET_KEY"):
             warnings.append(
-                {"type": "security", "message": "生产环境JWT_SECRET_KEY未通过环境变量设置，使用自动生成的临时密钥"}
+                {
+                    "type": "security",
+                    "message": "生产环境JWT_SECRET_KEY未通过环境变量设置，使用自动生成的临时密钥",
+                }
             )
         # 检查CORS配置
         if "*" in cls.CORS_ORIGINS:
-            warnings.append({"type": "security", "message": "CORS配置允许所有来源，生产环境建议设置具体域名"})
+            warnings.append(
+                {"type": "security", "message": "CORS配置允许所有来源，生产环境建议设置具体域名"}
+            )
         # 检查备份配置
         if not cls.BACKUP_ENABLED:
-            warnings.append({"type": "recommendation", "message": "备份功能未启用，建议启用定期备份"})
+            warnings.append(
+                {"type": "recommendation", "message": "备份功能未启用，建议启用定期备份"}
+            )
         # 检查Redis连接
         if cls.REDIS_HOST == "localhost":
-            warnings.append({"type": "recommendation", "message": "Redis使用localhost，生产环境建议使用远程Redis"})
-        return {"valid": len([w for w in warnings if w["type"] == "security"]) == 0, "warnings": warnings}
+            warnings.append(
+                {
+                    "type": "recommendation",
+                    "message": "Redis使用localhost，生产环境建议使用远程Redis",
+                }
+            )
+        return {
+            "valid": len([w for w in warnings if w["type"] == "security"]) == 0,
+            "warnings": warnings,
+        }
 
     @classmethod
     def get_summary(cls) -> dict:

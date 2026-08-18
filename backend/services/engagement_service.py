@@ -9,7 +9,6 @@ from models import (
     User,
 )
 
-
 # 出勤状态权重：迟到半价、请假(准假)视为正常出勤、缺勤 0
 ATTENDANCE_WEIGHT = {
     "present": 1.0,
@@ -160,16 +159,15 @@ def calculate_engagement(user_id, days=30, end_date=None):
             "days": days,
             "engagement_score": 0.0,
             "level": "low",
-            "factors": [
-                {"name": "暂无行为数据", "value": 0.0, "weight": 0.0, "contribution": 0.0}
-            ],
+            "factors": [{"name": "暂无行为数据", "value": 0.0, "weight": 0.0, "contribution": 0.0}],
             "components": {
                 "attendance_rate": None,
                 "homework_rate": None,
                 "activity_rate": (float(activity_rate) if activity_rate is not None else None),
                 "leave_days": int(leave_days),
             },
-            "description": "该学生在近 %d 天内暂无出勤、作业或积分行为记录，无法计算参与度。" % days,
+            "description": "该学生在近 %d 天内暂无出勤、作业或积分行为记录，无法计算参与度。"
+            % days,
             "has_data": False,
         }
 
@@ -204,7 +202,11 @@ def calculate_engagement(user_id, days=30, end_date=None):
             }
         )
 
-    level = "high" if engagement_score >= LEVEL_HIGH else ("medium" if engagement_score >= LEVEL_MEDIUM else "low")
+    level = (
+        "high"
+        if engagement_score >= LEVEL_HIGH
+        else ("medium" if engagement_score >= LEVEL_MEDIUM else "low")
+    )
 
     description = "参与度指数 %s（%s），由出勤、作业提交与积分活跃度综合评估。" % (
         engagement_score,
@@ -218,9 +220,15 @@ def calculate_engagement(user_id, days=30, end_date=None):
         "level": level,
         "factors": factors,
         "components": {
-            "attendance_rate": (round(float(attendance_rate), 3) if attendance_rate is not None else None),
-            "homework_rate": (round(float(homework_rate), 3) if homework_rate is not None else None),
-            "activity_rate": (round(float(activity_rate), 3) if activity_rate is not None else None),
+            "attendance_rate": (
+                round(float(attendance_rate), 3) if attendance_rate is not None else None
+            ),
+            "homework_rate": (
+                round(float(homework_rate), 3) if homework_rate is not None else None
+            ),
+            "activity_rate": (
+                round(float(activity_rate), 3) if activity_rate is not None else None
+            ),
             "leave_days": int(leave_days),
         },
         "description": description,
@@ -265,14 +273,10 @@ def weekly_trend(user_id, weeks=8):
                     else None
                 ),
                 "homework_rate": (
-                    float(comp["homework_rate"])
-                    if comp.get("homework_rate") is not None
-                    else None
+                    float(comp["homework_rate"]) if comp.get("homework_rate") is not None else None
                 ),
                 "activity_rate": (
-                    float(comp["activity_rate"])
-                    if comp.get("activity_rate") is not None
-                    else None
+                    float(comp["activity_rate"]) if comp.get("activity_rate") is not None else None
                 ),
                 "leave_days": int(comp.get("leave_days", 0)),
             }

@@ -221,7 +221,11 @@ def init_default_permissions():
         {"code": "class.view", "name": "查看班级", "category": "academic"},
         {"code": "class.manage", "name": "管理班级", "category": "academic"},
         # 班主任工作台（座次/值日/班委/家长联系 共用 class.edit 把关写操作）
-        {"code": "class.edit", "name": "编辑班级事务(座次/值日/班委/家长联系)", "category": "班主任工作台"},
+        {
+            "code": "class.edit",
+            "name": "编辑班级事务(座次/值日/班委/家长联系)",
+            "category": "班主任工作台",
+        },
         {"code": "homework.view", "name": "查看作业", "category": "班主任工作台"},
         {"code": "homework.edit", "name": "布置作业", "category": "班主任工作台"},
         {"code": "homework.check", "name": "检查作业", "category": "班主任工作台"},
@@ -289,7 +293,13 @@ def init_default_roles():
             "role_code": "super_admin",
             "role_name": "超级管理员",
             "description": "拥有所有权限",
-            "permissions": ["all", "system.backup", "system.cache", "system.monitor", "notification.force_send"],
+            "permissions": [
+                "all",
+                "system.backup",
+                "system.cache",
+                "system.monitor",
+                "notification.force_send",
+            ],
         },
         {
             "role_code": "admin",
@@ -493,6 +503,8 @@ def init_default_roles():
                 role_code=role_data["role_code"], permission_code=perm_code
             ).first()
             if not mapping_exists:
-                mapping = RolePermissionMapping(role_code=role_data["role_code"], permission_code=perm_code)
+                mapping = RolePermissionMapping(
+                    role_code=role_data["role_code"], permission_code=perm_code
+                )
                 db.session.add(mapping)
     db.session.commit()

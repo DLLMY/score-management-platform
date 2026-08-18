@@ -10,6 +10,7 @@
 - 复用既有 batch 接口（batch_rank / predict_batch / batch_analyze），
   与算法 Tab 数据口径完全一致。
 """
+
 from collections import defaultdict
 from datetime import datetime
 
@@ -134,7 +135,8 @@ def summary_to_rows(summary: dict) -> list:
         rows.append(
             [
                 "参与度等级分布",
-                "高:%d 中:%d 低:%d" % (dist.get("high", 0), dist.get("medium", 0), dist.get("low", 0)),
+                "高:%d 中:%d 低:%d"
+                % (dist.get("high", 0), dist.get("medium", 0), dist.get("low", 0)),
             ]
         )
         rows.append(["参与度有效人数", "%d/%d" % (p.get("valid_students", 0), p.get("total", 0))])

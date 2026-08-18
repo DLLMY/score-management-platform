@@ -52,14 +52,20 @@ def check_rule_limits(user_id, rule_id):
 
     if rule.min_interval > 0:
         # F1 修复: 补 .first()，原 Query 恒真导致 last_record.created_at 抛 AttributeError → 刷卡 500
-        last_record = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id).order_by(
-            ScoreRecord.created_at.desc()
-        ).first()
+        last_record = (
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id
+            )
+            .order_by(ScoreRecord.created_at.desc())
+            .first()
+        )
 
         if last_record:
             time_since_last = datetime.now() - last_record.created_at
             if time_since_last.total_seconds() < rule.min_interval * 60:
-                remaining_minutes = int((rule.min_interval * 60 - time_since_last.total_seconds()) / 60)
+                remaining_minutes = int(
+                    (rule.min_interval * 60 - time_since_last.total_seconds()) / 60
+                )
                 return False, f"请等待{remaining_minutes}分钟后再操作"
 
     return True, None

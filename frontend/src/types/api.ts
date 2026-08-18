@@ -24,7 +24,7 @@ import {
 // API端点类型
 // ============================================
 
-export type ApiEndpoint = 
+export type ApiEndpoint =
   | '/users'
   | '/users/:id'
   | '/rules'
@@ -106,15 +106,19 @@ export interface ScoreApi {
   createRule: (data: ScoreRuleCreateRequest) => Promise<ApiResponse<ScoreRule>>;
   updateRule: (id: ID, data: ScoreRuleUpdateRequest) => Promise<ApiResponse<ScoreRule>>;
   deleteRule: (id: ID) => Promise<ApiResponse>;
-  
+
   getCategories: () => Promise<ListResponse<ScoreCategory>>;
   createCategory: (data: ScoreCategoryCreateRequest) => Promise<ApiResponse<ScoreCategory>>;
   updateCategory: (id: ID, data: ScoreCategoryUpdateRequest) => Promise<ApiResponse<ScoreCategory>>;
   deleteCategory: (id: ID) => Promise<ApiResponse>;
-  
+
   getRecords: (userId?: ID) => Promise<ListResponse<ScoreRecord>>;
   addScore: (userId: ID, ruleId: ID, description?: string) => Promise<ApiResponse<ScoreRecord>>;
-  subtractScore: (userId: ID, ruleId: ID, description?: string) => Promise<ApiResponse<ScoreRecord>>;
+  subtractScore: (
+    userId: ID,
+    ruleId: ID,
+    description?: string
+  ) => Promise<ApiResponse<ScoreRecord>>;
 }
 
 export interface ScoreRuleCreateRequest {
@@ -278,7 +282,10 @@ export interface ScoreDistributionResponse {
 
 export interface ExportApi {
   exportUsers: (format: 'xlsx' | 'csv' | 'json') => Promise<ApiResponse<{ url: string }>>;
-  exportRecords: (format: 'xlsx' | 'csv' | 'json', userId?: ID) => Promise<ApiResponse<{ url: string }>>;
+  exportRecords: (
+    format: 'xlsx' | 'csv' | 'json',
+    userId?: ID
+  ) => Promise<ApiResponse<{ url: string }>>;
   importUsers: (file: File) => Promise<ApiResponse<{ imported: number; errors: string[] }>>;
   importRecords: (file: File) => Promise<ApiResponse<{ imported: number; errors: string[] }>>;
 }
@@ -303,9 +310,13 @@ export interface ApiService {
 // 请求拦截器类型
 // ============================================
 
-export type RequestInterceptor = (config: ApiRequestConfig) => ApiRequestConfig | Promise<ApiRequestConfig>;
+export type RequestInterceptor = (
+  config: ApiRequestConfig
+) => ApiRequestConfig | Promise<ApiRequestConfig>;
 
-export type ResponseInterceptor<T = unknown> = (response: ApiResponse<T>) => ApiResponse<T> | Promise<ApiResponse<T>>;
+export type ResponseInterceptor<T = unknown> = (
+  response: ApiResponse<T>
+) => ApiResponse<T> | Promise<ApiResponse<T>>;
 
 export type ErrorInterceptor = (error: Error) => void | Promise<void>;
 

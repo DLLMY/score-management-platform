@@ -37,7 +37,9 @@ def record_failed_login(username, ip_address, max_attempts=5, lockout_minutes=15
     record = LoginAttempt.query.filter_by(username=username).first()
 
     if not record:
-        record = LoginAttempt(username=username, ip_address=ip_address, attempt_count=1, last_attempt_at=now)
+        record = LoginAttempt(
+            username=username, ip_address=ip_address, attempt_count=1, last_attempt_at=now
+        )
         db.session.add(record)
     else:
         record.attempt_count += 1
@@ -63,12 +65,16 @@ def increment_rate_limit_request(record):
 
 def create_rate_limit_record(ip_address, endpoint, now):
     """复刻 rate_limit 装饰器无记录分支的新建 + commit。"""
-    new_record = RateLimitRecord(ip_address=ip_address, endpoint=endpoint, request_count=1, window_start=now)
+    new_record = RateLimitRecord(
+        ip_address=ip_address, endpoint=endpoint, request_count=1, window_start=now
+    )
     db.session.add(new_record)
     db.session.commit()
 
 
-def log_security_event(event_type, severity="info", user_id=None, user_type="unknown", details=None):
+def log_security_event(
+    event_type, severity="info", user_id=None, user_type="unknown", details=None
+):
     """记录安全审计日志（失败回滚防脏 session 污染后续请求）。"""
     try:
         audit = SecurityAudit(

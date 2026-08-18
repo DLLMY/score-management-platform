@@ -18,7 +18,13 @@ class SecurityConfig:
         print("⚠️  生产环境建议通过 CORS_ORIGINS 环境变量设置具体域名")
         print("=" * 60 + "\n", file=sys.stderr)
     CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    CORS_HEADERS = ["Content-Type", "Authorization", "X-Admin-Id", "X-CSRFToken", "X-Requested-With"]
+    CORS_HEADERS = [
+        "Content-Type",
+        "Authorization",
+        "X-Admin-Id",
+        "X-CSRFToken",
+        "X-Requested-With",
+    ]
     RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "30"))
     RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
     PASSWORD_MIN_LENGTH = 6
@@ -71,9 +77,7 @@ class SecurityConfig:
     @classmethod
     def get_csp_header(cls) -> str:
         """获取Content Security Policy头"""
-        return (
-            "default-src 'sel'; script-src 'sel'; style-src 'sel' 'unsafe-inline'; img-src 'sel' data:; font-src 'self'"
-        )
+        return "default-src 'sel'; script-src 'sel'; style-src 'sel' 'unsafe-inline'; img-src 'sel' data:; font-src 'self'"
 
     @classmethod
     def validate_file_upload(cls, filename: str, content_type: str, size: int) -> tuple[bool, str]:

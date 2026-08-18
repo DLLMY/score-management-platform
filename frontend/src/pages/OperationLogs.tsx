@@ -65,7 +65,7 @@ const OperationLogs: React.FC = () => {
       if (filters.operation_type) params.operation_type = filters.operation_type;
       if (filters.target_type) params.target_type = filters.target_type;
       if (debouncedOperator) params.operator = debouncedOperator;
-      
+
       const data = await api.operationLogs.getAll(params);
       setLogs(data.data || []);
       setPagination((prev) => ({
@@ -78,7 +78,13 @@ const OperationLogs: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.per_page, filters.operation_type, filters.target_type, debouncedOperator]);
+  }, [
+    pagination.page,
+    pagination.per_page,
+    filters.operation_type,
+    filters.target_type,
+    debouncedOperator,
+  ]);
 
   useEffect(() => {
     loadLogs();
@@ -173,7 +179,9 @@ const OperationLogs: React.FC = () => {
               <label className='block text-sm font-medium text-gray-700 mb-1'>操作类型</label>
               <select
                 value={filters.operation_type}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange('operation_type', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  handleFilterChange('operation_type', e.target.value)
+                }
                 className='w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500'
               >
                 <option value=''>全部</option>
@@ -190,7 +198,9 @@ const OperationLogs: React.FC = () => {
               <label className='block text-sm font-medium text-gray-700 mb-1'>目标类型</label>
               <select
                 value={filters.target_type}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange('target_type', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  handleFilterChange('target_type', e.target.value)
+                }
                 className='w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500'
               >
                 <option value=''>全部</option>
@@ -207,7 +217,9 @@ const OperationLogs: React.FC = () => {
               <input
                 type='text'
                 value={filters.operator}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleFilterChange('operator', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  handleFilterChange('operator', e.target.value)
+                }
                 placeholder='搜索操作者'
                 className='w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500'
               />
@@ -287,7 +299,9 @@ const OperationLogs: React.FC = () => {
                         </td>
                         <td className='px-6 py-4 whitespace-nowrap'>
                           <span className='text-sm text-gray-500'>
-                            {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
+                            {log.created_at
+                              ? new Date(log.created_at).toLocaleString('zh-CN')
+                              : '--'}
                           </span>
                         </td>
                       </tr>

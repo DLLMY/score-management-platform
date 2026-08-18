@@ -43,6 +43,7 @@ nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883, TLS, phoneboxtest/123456），
   * box_id / mark 均带本运行时间戳，天然隔离上一轮被 TaskStop 杀残的设备进程（其连接若残留
     也不会命中本运行的唯一 topic）。finally 中 loop_stop+disconnect 防止本运行残留设备。
 """
+
 import atexit
 import json
 import os
@@ -74,16 +75,20 @@ RUN_TS = int(time.time())
 E2E_BOX = "E2EZ%d" % RUN_TS
 
 _lock = threading.Lock()
-_sub_mid = {}            # mid -> topic，用于关联 SUBACK
-_received = []          # [(topic, payload), ...] 设备实时收到的回包
-client = None            # 订阅者（收包）连接：仅订阅 + 收包，杜绝发包饿死收包 loop
-pub_client = None        # 发布者（发包）连接：仅发包，与收包连接物理分离
+_sub_mid = {}  # mid -> topic，用于关联 SUBACK
+_received = []  # [(topic, payload), ...] 设备实时收到的回包
+client = None  # 订阅者（收包）连接：仅订阅 + 收包，杜绝发包饿死收包 loop
+pub_client = None  # 发布者（发包）连接：仅发包，与收包连接物理分离
 
 
 def _on_connect(c, userdata, flags, rc):
     print(f"[DEVICE] connected rc={rc}")
-    for t in ("score/rules/result", "phonebox/unlock/%s" % E2E_BOX,
-              "score/add/result/#", "score/undo/result/#"):
+    for t in (
+        "score/rules/result",
+        "phonebox/unlock/%s" % E2E_BOX,
+        "score/add/result/#",
+        "score/undo/result/#",
+    ):
         try:
             _res, mid = c.subscribe(t, qos=1)
         except Exception as e:
@@ -133,15 +138,17 @@ def _wait_response(prefix, predicate=None, timeout=45, gap=0.4, clear_first=Fals
     return None
 
 
-def _request_response(topic, data, resp_prefix, predicate=None,
-                      max_attempts=60, gap=1.5, clear_first=True):
+def _request_response(
+    topic, data, resp_prefix, predicate=None, max_attempts=60, gap=1.5, clear_first=True
+):
     """持续重发请求直到内存中收到匹配回包（洪流下后端响应偶发丢弃，故重试；score/add 幂等）。
     返回回包 payload 或 None（绝不返回不可解包的对象，调用方负责判 None）。"""
     resp = None
     for i in range(max_attempts):
         _publish(topic, data)
-        pl = _wait_response(resp_prefix, predicate, timeout=gap + 0.5,
-                            gap=0.3, clear_first=(i == 0 and clear_first))
+        pl = _wait_response(
+            resp_prefix, predicate, timeout=gap + 0.5, gap=0.3, clear_first=(i == 0 and clear_first)
+        )
         if pl:
             resp = pl
             break
@@ -172,7 +179,8 @@ def _cleanup_sandbox():
         con.execute("DELETE FROM processed_message WHERE client_id LIKE 'e2eC%'")
         con.execute("DELETE FROM score_record WHERE user_id=?", (SANDBOX_USER_ID,))
         con.execute("DELETE FROM user WHERE id=?", (SANDBOX_USER_ID,))
-        con.commit(); con.close()
+        con.commit()
+        con.close()
         print(f"[CLEANUP] sandbox user {SANDBOX_USER_ID} + its records removed")
     except Exception as e:
         print(f"[WARN] 沙箱清理失败(可忽略): {e}")
@@ -204,38 +212,60 @@ def main():
 
     # ---- Test A: score/rules/query -> score/rules/result ----
     mark_a = "E2EA_%d" % RUN_TS
-    pl_a = _request_response("score/rules/query", {"request_id": mark_a},
-                             "score/rules/result",
-                             predicate=lambda p: isinstance(p.get("rules"), list))
+    pl_a = _request_response(
+        "score/rules/query",
+        {"request_id": mark_a},
+        "score/rules/result",
+        predicate=lambda p: isinstance(p.get("rules"), list),
+    )
     ok_a = bool(pl_a) and len(pl_a.get("rules", [])) > 0
     if pl_a:
-        print(f"[DEBUG][A 回包] success={pl_a.get('success')} count={pl_a.get('count')} "
-              f"msg={pl_a.get('message')} rules_len={len(pl_a.get('rules', []))}")
-    results.append(("A.score/rules/query->result", ok_a,
-                    f"rules={len(pl_a.get('rules', [])) if pl_a else 0} "
-                    f"success={pl_a.get('success') if pl_a else None} "
-                    f"msg={pl_a.get('message') if pl_a else 'no response'}"))
+        print(
+            f"[DEBUG][A 回包] success={pl_a.get('success')} count={pl_a.get('count')} "
+            f"msg={pl_a.get('message')} rules_len={len(pl_a.get('rules', []))}"
+        )
+    results.append(
+        (
+            "A.score/rules/query->result",
+            ok_a,
+            f"rules={len(pl_a.get('rules', [])) if pl_a else 0} "
+            f"success={pl_a.get('success') if pl_a else None} "
+            f"msg={pl_a.get('message') if pl_a else 'no response'}",
+        )
+    )
 
     # ---- Test B: phonebox/query (真实用户 2026001) -> phonebox/unlock/<唯一box> ----
     # 注意：后端 publish_unlock_result 回包 result 为字符串 "true"/"false"（非布尔），
     # 故判定以"在精确订阅 topic 上收到含 result 字段的回包"为准，证明端到端链路通。
     mark_b = "E2EB_%d" % RUN_TS
-    pl_b = _request_response("phonebox/query",
-                             {"box_id": E2E_BOX, "card_id": "2026001", "_mark": mark_b},
-                             "phonebox/unlock/%s" % E2E_BOX,
-                             predicate=lambda p: isinstance(p, dict) and "result" in p)
+    pl_b = _request_response(
+        "phonebox/query",
+        {"box_id": E2E_BOX, "card_id": "2026001", "_mark": mark_b},
+        "phonebox/unlock/%s" % E2E_BOX,
+        predicate=lambda p: isinstance(p, dict) and "result" in p,
+    )
     ok_b = bool(pl_b)
-    detail_b = ("result=%s reason=%s" % (pl_b.get("result"), pl_b.get("reason"))) if pl_b else "no response"
+    detail_b = (
+        ("result=%s reason=%s" % (pl_b.get("result"), pl_b.get("reason")))
+        if pl_b
+        else "no response"
+    )
     results.append(("B.phonebox/query->unlock/%s" % E2E_BOX, ok_b, detail_b))
 
     # ---- Test C1: score/add 不存在用户 -> score/add/result/e2eC1 ----
     mark_c1 = "e2eC1_%d" % RUN_TS
-    pl_c1 = _request_response("score/add",
-                              {"msg_id": mark_c1, "client_id": "e2eC1", "user_id": 999999, "score_change": 5},
-                              "score/add/result/e2eC1",
-                              predicate=lambda p: p.get("msg_id") == mark_c1)
+    pl_c1 = _request_response(
+        "score/add",
+        {"msg_id": mark_c1, "client_id": "e2eC1", "user_id": 999999, "score_change": 5},
+        "score/add/result/e2eC1",
+        predicate=lambda p: p.get("msg_id") == mark_c1,
+    )
     ok_c1 = bool(pl_c1) and (pl_c1.get("success") is False)
-    detail_c1 = ("success=%s msg=%s" % (pl_c1.get("success"), pl_c1.get("message"))) if pl_c1 else "no response"
+    detail_c1 = (
+        ("success=%s msg=%s" % (pl_c1.get("success"), pl_c1.get("message")))
+        if pl_c1
+        else "no response"
+    )
     results.append(("C1.score/add(bogus)->result", ok_c1, detail_c1))
 
     # ---- Test C2: score/add 沙箱用户 -> undo 往返 ----
@@ -243,16 +273,21 @@ def main():
     _cleanup_sandbox()  # 起始硬清理，保证基线纯净
     con = sqlite3.connect(DB, timeout=30)
     con.execute("PRAGMA busy_timeout=30000")
-    con.execute("INSERT INTO user (id,name,card_id,current_score) VALUES (?,?,?,?)",
-                (SANDBOX_USER_ID, "MQTT_E2E_SANDBOX", SANDBOX_CARD, 80))
-    con.commit(); con.close()
+    con.execute(
+        "INSERT INTO user (id,name,card_id,current_score) VALUES (?,?,?,?)",
+        (SANDBOX_USER_ID, "MQTT_E2E_SANDBOX", SANDBOX_CARD, 80),
+    )
+    con.commit()
+    con.close()
     print(f"[SETUP] sandbox user {SANDBOX_USER_ID} inserted (score=80)")
 
     # add（msg_id 幂等，洪流下重发安全），等回包取权威 undo_code
-    pl_add = _request_response("score/add",
-                               {"msg_id": mark_c2, "client_id": "e2eC2", "user_id": SANDBOX_USER_ID, "score_change": 5},
-                               "score/add/result/e2eC2",
-                               predicate=lambda p: p.get("msg_id") == mark_c2 and p.get("undo_code"))
+    pl_add = _request_response(
+        "score/add",
+        {"msg_id": mark_c2, "client_id": "e2eC2", "user_id": SANDBOX_USER_ID, "score_change": 5},
+        "score/add/result/e2eC2",
+        predicate=lambda p: p.get("msg_id") == mark_c2 and p.get("undo_code"),
+    )
     undo_code = pl_add.get("undo_code") if pl_add else None
     db_score = _db_get("SELECT current_score FROM user WHERE id=?", (SANDBOX_USER_ID,))
     ok_add = bool(undo_code) and (db_score and db_score[0] == 85)
@@ -271,13 +306,23 @@ def main():
                 break
         ok_undo = reverted
         ok_c2 = ok_add and ok_undo
-        results.append(("C2.score/add->undo 往返", ok_c2,
-                        f"add new_score={db_score[0]} (期望85), undo_code={undo_code}, "
-                        f"undo new_score={score_after_undo} (期望80)"))
+        results.append(
+            (
+                "C2.score/add->undo 往返",
+                ok_c2,
+                f"add new_score={db_score[0]} (期望85), undo_code={undo_code}, "
+                f"undo new_score={score_after_undo} (期望80)",
+            )
+        )
     else:
-        results.append(("C2.score/add->undo 往返", False,
-                        f"未取到权威 undo_code 或 add 未生效: undo_code={undo_code}, "
-                        f"db_score={db_score[0] if db_score else None} (期望85)"))
+        results.append(
+            (
+                "C2.score/add->undo 往返",
+                False,
+                f"未取到权威 undo_code 或 add 未生效: undo_code={undo_code}, "
+                f"db_score={db_score[0] if db_score else None} (期望85)",
+            )
+        )
 
     # 汇总
     print("\n==================== MQTT 端到端真机结果 (设备实时收后端回包) ====================")

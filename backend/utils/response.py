@@ -13,7 +13,15 @@ class APIResponse:
         return response, status_code
 
     @staticmethod
-    def error(message="操作失败", code=-1, status_code=400, error_code=None, errors=None, data=None, **kwargs):
+    def error(
+        message="操作失败",
+        code=-1,
+        status_code=400,
+        error_code=None,
+        errors=None,
+        data=None,
+        **kwargs,
+    ):
         response = {"success": False, "code": code, "message": message}
         if error_code:
             response["error_code"] = error_code
@@ -52,9 +60,17 @@ class APIResponse:
         return APIResponse.error(message, code=-1, status_code=403, error_code=error_code)
 
     @staticmethod
-    def bad_request(message="请求参数错误", errors=None, error_code="BAD_REQUEST", data=None, **kwargs):
+    def bad_request(
+        message="请求参数错误", errors=None, error_code="BAD_REQUEST", data=None, **kwargs
+    ):
         return APIResponse.error(
-            message, code=-1, status_code=400, error_code=error_code, errors=errors, data=data, **kwargs
+            message,
+            code=-1,
+            status_code=400,
+            error_code=error_code,
+            errors=errors,
+            data=data,
+            **kwargs,
         )
 
     @staticmethod

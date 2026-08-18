@@ -9,7 +9,7 @@ import { ToastProvider } from '../../context/ToastContext';
 
 export const mockLocalStorage = () => {
   const store: Record<string, string> = {};
-  
+
   Object.defineProperty(window, 'localStorage', {
     value: {
       getItem: jest.fn((key: string) => store[key] || null),
@@ -20,7 +20,7 @@ export const mockLocalStorage = () => {
         delete store[key];
       }),
       clear: jest.fn(() => {
-        Object.keys(store).forEach(key => delete store[key]);
+        Object.keys(store).forEach((key) => delete store[key]);
       }),
       key: jest.fn((index: number) => Object.keys(store)[index] || null),
       length: Object.defineProperty({}, 'value', {
@@ -31,19 +31,16 @@ export const mockLocalStorage = () => {
     },
     writable: true,
   });
-  
+
   return store;
 };
 
-export const renderWithProviders = (
-  ui: React.ReactElement,
-  options?: RenderOptions
-) => {
+export const renderWithProviders = (ui: React.ReactElement, options?: RenderOptions) => {
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <BrowserRouter>
       <ToastProvider>{children}</ToastProvider>
     </BrowserRouter>
   );
-  
+
   return render(ui, { wrapper: Wrapper, ...options });
 };

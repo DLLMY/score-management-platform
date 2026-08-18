@@ -14,7 +14,6 @@ except ImportError:
     pass
 
 
-
 class TestWolService:
     """WOL唤醒服务测试"""
 

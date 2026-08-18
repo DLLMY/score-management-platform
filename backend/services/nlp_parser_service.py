@@ -1,7 +1,15 @@
 import re
 import jieba
 from datetime import datetime
-from models import NLPScoringRule, NLPBehaviorKeyword, NLPMatchResult, NLPRuleUsage, User, get_by_id, db
+from models import (
+    NLPScoringRule,
+    NLPBehaviorKeyword,
+    NLPMatchResult,
+    NLPRuleUsage,
+    User,
+    get_by_id,
+    db,
+)
 from utils.db_session import db_session_scope
 
 
@@ -108,7 +116,9 @@ class NLPParserService:
             match = pattern.search(text)
             if match:
                 name = match.group(1)
-                if 2 <= len(name) <= 4 and not any(char in "同学上课昨天今天刚才为给对让是" for char in name):
+                if 2 <= len(name) <= 4 and not any(
+                    char in "同学上课昨天今天刚才为给对让是" for char in name
+                ):
                     existing_user = User.query.filter_by(name=name).first()
                     if existing_user:
                         return name, existing_user.id
@@ -293,7 +303,9 @@ class NLPParserService:
                     "match_pattern": rule.match_pattern,
                     "priority": rule.priority,
                     "usage_count": (rule.usage_count if hasattr(rule, "usage_count") else 0),
-                    "accuracy_rate": (rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0),
+                    "accuracy_rate": (
+                        rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0
+                    ),
                 }
             )
 
@@ -356,7 +368,9 @@ class NLPParserService:
             intent = manual_correction.get("intent", parse_result["intent"])
             score_value = manual_correction.get("score_value", 0)
             behavior_tags = manual_correction.get("behavior_tags", [])
-            behavior_description = manual_correction.get("behavior_description", parse_result["behavior"])
+            behavior_description = manual_correction.get(
+                "behavior_description", parse_result["behavior"]
+            )
 
             rule = NLPScoringRule.query.filter(
                 NLPScoringRule.behavior_keyword == behavior_description[:100],

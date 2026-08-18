@@ -6,6 +6,7 @@
 - 受保护端点使用 utils.permission.requires_student 校验
 - 即使学生令牌误发到 Admin 端点，也会被 requires_permission 的 type=access 校验拒绝
 """
+
 from flask_restx import Namespace, Resource, fields
 from flask import request, g
 from datetime import datetime
@@ -15,7 +16,11 @@ from utils.permission import requires_student
 from utils.response import APIResponse
 from utils.logger import log_login_attempt
 from utils.datetime_utils import parse_date
-from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from api.system.security_routes import (
+    check_login_rate_limit,
+    record_failed_login,
+    clear_login_attempts,
+)
 from services.attendance_service import attendance_service
 from services.engagement_service import calculate_engagement, EngagementService
 from services.risk_predict_service import RiskPredictService
@@ -363,12 +368,16 @@ class StudentPhoneboxUnlock(Resource):
                 "dispatched": dispatched,
             },
             message=(
-                "开箱指令已下发" if allowed
+                "开箱指令已下发"
+                if allowed
                 else (
                     "开箱请求被拒绝：" + _unlock_reason_text(unlock_block_reason)
                     if unlock_block_reason
-                    else ("班主任已关闭本班自助开箱" if decision == phonebox_policy.POLICY_BLOCK
-                          else "本班暂未开放自助开箱，请联系老师")
+                    else (
+                        "班主任已关闭本班自助开箱"
+                        if decision == phonebox_policy.POLICY_BLOCK
+                        else "本班暂未开放自助开箱，请联系老师"
+                    )
                 )
             ),
             status_code=200 if allowed else 403,
@@ -461,7 +470,9 @@ def _build_score_trend(user_id, weeks):
 
 @ns_student.route("/insights")
 class StudentInsights(Resource):
-    @ns_student.doc("student_insights", description="获取当前学生的算法洞察聚合（参与度+风险+积分趋势）")
+    @ns_student.doc(
+        "student_insights", description="获取当前学生的算法洞察聚合（参与度+风险+积分趋势）"
+    )
     @ns_student.param("days", "参与度/风险统计天数，默认30")
     @ns_student.param("weeks", "积分趋势周数，默认8")
     @requires_student
@@ -487,13 +498,22 @@ class StudentInsights(Resource):
             engagement = calculate_engagement(uid, days)
         except Exception as e:  # noqa: BLE001
             # 诚实失败：error 标记 + 数值置 None（前端即使忽略 error，也不会误读为"低参与度 0 分"）
-            engagement = {"has_data": False, "engagement_score": None, "level": None, "error": "参与度计算失败: %s" % e}
+            engagement = {
+                "has_data": False,
+                "engagement_score": None,
+                "level": None,
+                "error": "参与度计算失败: %s" % e,
+            }
 
         # 风险
         try:
             risk = RiskPredictService.predict_risk(uid, days)
         except Exception as e:  # noqa: BLE001
-            risk = {"overall_risk_level": None, "overall_risk_score": None, "error": "风险评估失败: %s" % e}
+            risk = {
+                "overall_risk_level": None,
+                "overall_risk_score": None,
+                "error": "风险评估失败: %s" % e,
+            }
 
         # 积分趋势
         try:
@@ -505,7 +525,13 @@ class StudentInsights(Resource):
         try:
             participation_trend = EngagementService.weekly_trend(uid, weeks)
         except Exception as e:  # noqa: BLE001
-            participation_trend = {"user_id": uid, "weeks": weeks, "trend": None, "series": [], "error": "参与度周趋势计算失败: %s" % e}
+            participation_trend = {
+                "user_id": uid,
+                "weeks": weeks,
+                "trend": None,
+                "series": [],
+                "error": "参与度周趋势计算失败: %s" % e,
+            }
 
         return APIResponse.success(
             data={

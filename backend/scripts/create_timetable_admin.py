@@ -8,6 +8,7 @@
 - 运行前自动备份数据库。
 - 结束后用 has_permission 验证 timetable.rule.manage 等关键权限。
 """
+
 import os
 import sys
 import shutil
@@ -55,7 +56,10 @@ def main():
             created = True
             print("[create] new admin username=%s id=%s" % (args.username, u.id))
         else:
-            print("[skip] admin username=%s already exists (id=%s), keep password unchanged" % (args.username, u.id))
+            print(
+                "[skip] admin username=%s already exists (id=%s), keep password unchanged"
+                % (args.username, u.id)
+            )
 
         link = AdminRole.query.filter_by(admin_id=u.id, role_code=ROLE_CODE).first()
         if link is None:
@@ -80,7 +84,14 @@ def main():
         print("  notification.force_send (应为 False): %s" % perm_force)
         print("  all (应为 False): %s" % perm_all)
 
-        ok = perm_timetable and perm_period and perm_schedule and perm_student and not perm_force and not perm_all
+        ok = (
+            perm_timetable
+            and perm_period
+            and perm_schedule
+            and perm_student
+            and not perm_force
+            and not perm_all
+        )
         print("[result] %s" % ("OK — 账号可管理时间规则且无越权" if ok else "WARN — 请检查权限"))
 
 

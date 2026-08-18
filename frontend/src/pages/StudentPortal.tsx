@@ -1,8 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, RefreshCw, Award, History, Bell, CalendarDays, Smartphone, Send, Trophy, TrendingUp, ShieldAlert, Target } from 'lucide-react';
+import {
+  LogOut,
+  RefreshCw,
+  Award,
+  History,
+  Bell,
+  CalendarDays,
+  Smartphone,
+  Send,
+  Trophy,
+  TrendingUp,
+  ShieldAlert,
+  Target,
+} from 'lucide-react';
 import { useStableToast } from '../hooks/useStableToast';
-import api, { StudentInfo, ScoreRecordItem, NotificationItem, LeaveItem, PhoneboxUnlockResult, MyRankResult, StudentInsight } from '../services/api';
+import api, {
+  StudentInfo,
+  ScoreRecordItem,
+  NotificationItem,
+  LeaveItem,
+  PhoneboxUnlockResult,
+  MyRankResult,
+  StudentInsight,
+} from '../services/api';
 
 type TabKey = 'score' | 'notifications' | 'leaves' | 'phonebox' | 'rank' | 'growth';
 
@@ -32,7 +53,12 @@ function StudentPortal() {
 
   // 请假
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
-  const [leaveForm, setLeaveForm] = useState({ leave_type: 'personal', start_date: '', end_date: '', reason: '' });
+  const [leaveForm, setLeaveForm] = useState({
+    leave_type: 'personal',
+    start_date: '',
+    end_date: '',
+    reason: '',
+  });
 
   // 手机箱
   const [unlockRes, setUnlockRes] = useState<PhoneboxUnlockResult | null>(null);
@@ -218,7 +244,10 @@ function StudentPortal() {
 
       <main className='p-4 max-w-3xl mx-auto space-y-4'>
         {error && (
-          <div className='bg-red-500/20 border border-red-500/40 text-red-500 px-4 py-3 rounded-xl text-sm flex items-center gap-2' role='alert'>
+          <div
+            className='bg-red-500/20 border border-red-500/40 text-red-500 px-4 py-3 rounded-xl text-sm flex items-center gap-2'
+            role='alert'
+          >
             {error}
           </div>
         )}
@@ -327,7 +356,9 @@ function StudentPortal() {
                 {notifications.map((n) => (
                   <li key={n.id} className='py-3'>
                     <div className='flex items-center justify-between'>
-                      <p className='text-sm font-medium text-gray-800 dark:text-gray-100'>{n.title || '通知'}</p>
+                      <p className='text-sm font-medium text-gray-800 dark:text-gray-100'>
+                        {n.title || '通知'}
+                      </p>
                       {n.status && (
                         <span className='text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500'>
                           {n.status}
@@ -335,7 +366,9 @@ function StudentPortal() {
                       )}
                     </div>
                     <p className='text-sm text-gray-600 dark:text-gray-300 mt-1'>{n.content}</p>
-                    <p className='text-xs text-gray-400 mt-1'>{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</p>
+                    <p className='text-xs text-gray-400 mt-1'>
+                      {n.created_at ? new Date(n.created_at).toLocaleString() : ''}
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -413,7 +446,11 @@ function StudentPortal() {
                             : 'bg-amber-500/20 text-amber-500'
                         }`}
                       >
-                        {lv.status === 'approved' ? '已通过' : lv.status === 'rejected' ? '已拒绝' : '待审批'}
+                        {lv.status === 'approved'
+                          ? '已通过'
+                          : lv.status === 'rejected'
+                          ? '已拒绝'
+                          : '待审批'}
                       </span>
                     </li>
                   ))}
@@ -441,7 +478,9 @@ function StudentPortal() {
             {unlockRes && (
               <div
                 className={`mt-3 px-4 py-3 rounded-xl text-sm ${
-                  unlockRes.allowed ? 'bg-green-500/20 text-green-600' : 'bg-amber-500/20 text-amber-600'
+                  unlockRes.allowed
+                    ? 'bg-green-500/20 text-green-600'
+                    : 'bg-amber-500/20 text-amber-600'
                 }`}
               >
                 {unlockRes.allowed
@@ -485,13 +524,17 @@ function StudentPortal() {
                       }`}
                     >
                       <div className='flex items-center gap-3 min-w-0'>
-                        <span className='text-sm font-bold text-gray-400 w-6 text-center'>{idx + 1}</span>
+                        <span className='text-sm font-bold text-gray-400 w-6 text-center'>
+                          {idx + 1}
+                        </span>
                         <span className='text-sm text-gray-800 dark:text-gray-100 truncate'>
                           {item.name}
                           {item.user_id === student?.id ? '（我）' : ''}
                         </span>
                       </div>
-                      <span className='text-sm font-semibold text-amber-500'>{item.current_score}</span>
+                      <span className='text-sm font-semibold text-amber-500'>
+                        {item.current_score}
+                      </span>
                     </li>
                   ))}
                 </ol>
@@ -512,21 +555,21 @@ function StudentPortal() {
                   {growthLoading
                     ? '...'
                     : insights?.engagement?.error
-                      ? '!'
-                      : insights?.engagement?.has_data
-                        ? insights.engagement.engagement_score
-                        : '—'}
+                    ? '!'
+                    : insights?.engagement?.has_data
+                    ? insights.engagement.engagement_score
+                    : '—'}
                 </div>
                 <span className='text-white/80 text-sm mb-1'>
                   {insights?.engagement?.error
                     ? '加载失败'
                     : insights?.engagement?.level === 'high'
-                      ? '高参与'
-                      : insights?.engagement?.level === 'medium'
-                        ? '中参与'
-                        : insights?.engagement?.level === 'low'
-                          ? '低参与'
-                          : '暂无数据'}
+                    ? '高参与'
+                    : insights?.engagement?.level === 'medium'
+                    ? '中参与'
+                    : insights?.engagement?.level === 'low'
+                    ? '低参与'
+                    : '暂无数据'}
                 </span>
               </div>
               <div className='text-white/70 text-xs mt-1'>
@@ -538,7 +581,9 @@ function StudentPortal() {
 
             {insights?.engagement?.has_data && (
               <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
-                <div className='text-sm font-semibold text-gray-800 dark:text-white mb-3'>参与度构成</div>
+                <div className='text-sm font-semibold text-gray-800 dark:text-white mb-3'>
+                  参与度构成
+                </div>
                 <div className='space-y-3'>
                   {(insights.engagement.components?.attendance_rate != null ||
                     insights.engagement.components?.homework_rate != null ||
@@ -548,12 +593,19 @@ function StudentPortal() {
                         <div>
                           <div className='flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1'>
                             <span>出勤率</span>
-                            <span>{Math.round(insights.engagement.components.attendance_rate * 100)}%</span>
+                            <span>
+                              {Math.round(insights.engagement.components.attendance_rate * 100)}%
+                            </span>
                           </div>
                           <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700'>
                             <div
                               className='h-2 rounded-full bg-purple-500'
-                              style={{ width: `${Math.min(100, Math.max(0, insights.engagement.components.attendance_rate * 100))}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.max(0, insights.engagement.components.attendance_rate * 100)
+                                )}%`,
+                              }}
                             />
                           </div>
                         </div>
@@ -562,12 +614,19 @@ function StudentPortal() {
                         <div>
                           <div className='flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1'>
                             <span>作业提交率</span>
-                            <span>{Math.round(insights.engagement.components.homework_rate * 100)}%</span>
+                            <span>
+                              {Math.round(insights.engagement.components.homework_rate * 100)}%
+                            </span>
                           </div>
                           <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700'>
                             <div
                               className='h-2 rounded-full bg-blue-500'
-                              style={{ width: `${Math.min(100, Math.max(0, insights.engagement.components.homework_rate * 100))}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.max(0, insights.engagement.components.homework_rate * 100)
+                                )}%`,
+                              }}
                             />
                           </div>
                         </div>
@@ -576,12 +635,19 @@ function StudentPortal() {
                         <div>
                           <div className='flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1'>
                             <span>积分活跃度</span>
-                            <span>{Math.round(insights.engagement.components.activity_rate * 100)}%</span>
+                            <span>
+                              {Math.round(insights.engagement.components.activity_rate * 100)}%
+                            </span>
                           </div>
                           <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700'>
                             <div
                               className='h-2 rounded-full bg-emerald-500'
-                              style={{ width: `${Math.min(100, Math.max(0, insights.engagement.components.activity_rate * 100))}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.max(0, insights.engagement.components.activity_rate * 100)
+                                )}%`,
+                              }}
                             />
                           </div>
                         </div>
@@ -597,9 +663,13 @@ function StudentPortal() {
               <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
                 <div className='flex items-center gap-2 font-semibold text-gray-800 dark:text-white mb-1'>
                   <TrendingUp className='w-4 h-4' /> 参与度周趋势
-                  <span className='text-xs px-2 py-0.5 rounded-full font-medium bg-gray-400 text-white'>加载失败</span>
+                  <span className='text-xs px-2 py-0.5 rounded-full font-medium bg-gray-400 text-white'>
+                    加载失败
+                  </span>
                 </div>
-                <p className='text-xs text-gray-500 dark:text-slate-400'>趋势计算失败，请稍后刷新重试</p>
+                <p className='text-xs text-gray-500 dark:text-slate-400'>
+                  趋势计算失败，请稍后刷新重试
+                </p>
               </div>
             ) : insights?.participation_trend?.series?.length ? (
               <div className='bg-white dark:bg-slate-800 rounded-2xl p-4 shadow'>
@@ -610,22 +680,24 @@ function StudentPortal() {
                       insights.participation_trend.trend === 'up'
                         ? 'bg-emerald-500 text-white'
                         : insights.participation_trend.trend === 'down'
-                          ? 'bg-red-500 text-white'
-                          : 'bg-violet-500 text-white'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-violet-500 text-white'
                     }`}
                   >
                     {insights.participation_trend.trend === 'up'
                       ? '上升'
                       : insights.participation_trend.trend === 'down'
-                        ? '下降'
-                        : '平稳'}
+                      ? '下降'
+                      : '平稳'}
                   </span>
                 </div>
                 {(() => {
                   const series = insights.participation_trend.series;
                   const valid = series.filter((p) => p.has_data !== false);
                   if (!valid.length) {
-                    return <p className='text-sm text-gray-400 py-6 text-center'>暂无参与度趋势数据</p>;
+                    return (
+                      <p className='text-sm text-gray-400 py-6 text-center'>暂无参与度趋势数据</p>
+                    );
                   }
                   const W = 340;
                   const H = 140;
@@ -633,17 +705,25 @@ function StudentPortal() {
                   const min = Math.min(0, ...valid.map((p) => p.engagement_score));
                   const max = Math.max(100, ...valid.map((p) => p.engagement_score));
                   const span = Math.max(1, max - min);
-                  const x = (i: number) => PAD + (i * (W - PAD * 2)) / Math.max(1, series.length - 1);
+                  const x = (i: number) =>
+                    PAD + (i * (W - PAD * 2)) / Math.max(1, series.length - 1);
                   const y = (v: number) => H - PAD - ((v - min) / span) * (H - PAD * 2);
-                  const pts = series.map((p, i) => `${x(i).toFixed(1)},${y(p.engagement_score).toFixed(1)}`);
+                  const pts = series.map(
+                    (p, i) => `${x(i).toFixed(1)},${y(p.engagement_score).toFixed(1)}`
+                  );
                   const color =
                     insights.participation_trend.trend === 'up'
                       ? '#10b981'
                       : insights.participation_trend.trend === 'down'
-                        ? '#ef4444'
-                        : '#8b5cf6';
+                      ? '#ef4444'
+                      : '#8b5cf6';
                   return (
-                    <svg viewBox={`0 0 ${W} ${H}`} className='w-full h-auto' role='img' aria-label='参与度周趋势'>
+                    <svg
+                      viewBox={`0 0 ${W} ${H}`}
+                      className='w-full h-auto'
+                      role='img'
+                      aria-label='参与度周趋势'
+                    >
                       {[0, 25, 50, 75, 100].map((g) => (
                         <g key={g}>
                           <line
@@ -661,16 +741,38 @@ function StudentPortal() {
                         </g>
                       ))}
                       <polygon
-                        points={`${PAD},${y(min)} ${pts.join(' ')} ${x(series.length - 1)},${y(min)}`}
+                        points={`${PAD},${y(min)} ${pts.join(' ')} ${x(series.length - 1)},${y(
+                          min
+                        )}`}
                         fill={color}
                         opacity='0.12'
                       />
-                      <polyline points={pts.join(' ')} fill='none' stroke={color} strokeWidth='2.5' strokeLinejoin='round' strokeLinecap='round' />
+                      <polyline
+                        points={pts.join(' ')}
+                        fill='none'
+                        stroke={color}
+                        strokeWidth='2.5'
+                        strokeLinejoin='round'
+                        strokeLinecap='round'
+                      />
                       {series.map((p, i) => (
-                        <circle key={i} cx={x(i)} cy={y(p.engagement_score)} r={p.has_data === false ? 2.5 : 3.5} fill={color} />
+                        <circle
+                          key={i}
+                          cx={x(i)}
+                          cy={y(p.engagement_score)}
+                          r={p.has_data === false ? 2.5 : 3.5}
+                          fill={color}
+                        />
                       ))}
                       {series.map((p, i) => (
-                        <text key={`l${i}`} x={x(i)} y={H - 2} fontSize='8' fill='#9ca3af' textAnchor='middle'>
+                        <text
+                          key={`l${i}`}
+                          x={x(i)}
+                          y={H - 2}
+                          fontSize='8'
+                          fill='#9ca3af'
+                          textAnchor='middle'
+                        >
                           {p.week_label || `W${p.week_index + 1}`}
                         </text>
                       ))}
@@ -686,10 +788,10 @@ function StudentPortal() {
                 insights?.risk?.error
                   ? 'bg-gray-50 dark:bg-slate-800'
                   : insights?.risk?.overall_risk_level === 'high'
-                    ? 'bg-red-50 dark:bg-red-500/10'
-                    : insights?.risk?.overall_risk_level === 'medium'
-                      ? 'bg-amber-50 dark:bg-amber-500/10'
-                      : 'bg-emerald-50 dark:bg-emerald-500/10'
+                  ? 'bg-red-50 dark:bg-red-500/10'
+                  : insights?.risk?.overall_risk_level === 'medium'
+                  ? 'bg-amber-50 dark:bg-amber-500/10'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10'
               }`}
             >
               <div className='flex items-center gap-2 font-semibold mb-2 text-gray-800 dark:text-white'>
@@ -699,29 +801,34 @@ function StudentPortal() {
                     加载失败
                   </span>
                 ) : (
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    insights?.risk?.overall_risk_level === 'high'
-                      ? 'bg-red-500 text-white'
-                      : insights?.risk?.overall_risk_level === 'medium'
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      insights?.risk?.overall_risk_level === 'high'
+                        ? 'bg-red-500 text-white'
+                        : insights?.risk?.overall_risk_level === 'medium'
                         ? 'bg-amber-500 text-white'
                         : 'bg-emerald-500 text-white'
-                  }`}
-                >
-                  {insights?.risk?.overall_risk_level === 'high'
-                    ? '高风险'
-                    : insights?.risk?.overall_risk_level === 'medium'
+                    }`}
+                  >
+                    {insights?.risk?.overall_risk_level === 'high'
+                      ? '高风险'
+                      : insights?.risk?.overall_risk_level === 'medium'
                       ? '中风险'
                       : '低风险'}
-                </span>
+                  </span>
                 )}
               </div>
               {insights?.risk?.error ? (
-                <p className='text-xs text-gray-500 dark:text-slate-400'>风险评估失败，请稍后刷新重试</p>
+                <p className='text-xs text-gray-500 dark:text-slate-400'>
+                  风险评估失败，请稍后刷新重试
+                </p>
               ) : insights?.risk?.intervention_suggestions?.length ? (
                 <ul className='space-y-1'>
                   {insights.risk.intervention_suggestions.slice(0, 3).map((s, i) => (
-                    <li key={i} className='text-xs text-gray-600 dark:text-slate-300 flex items-start gap-1.5'>
+                    <li
+                      key={i}
+                      className='text-xs text-gray-600 dark:text-slate-300 flex items-start gap-1.5'
+                    >
                       <span className='text-gray-400'>·</span>
                       {s}
                     </li>
@@ -751,13 +858,18 @@ function StudentPortal() {
                     const h = Math.max(4, (Math.abs(pt.score_change || 0) / maxAbs) * 96);
                     const positive = (pt.score_change || 0) >= 0;
                     return (
-                      <div key={pt.week_index} className='flex flex-col items-center justify-end flex-1 gap-1'>
+                      <div
+                        key={pt.week_index}
+                        className='flex flex-col items-center justify-end flex-1 gap-1'
+                      >
                         <span className='text-[10px] text-gray-400 font-medium'>
                           {(pt.score_change || 0) >= 0 ? '+' : ''}
                           {pt.score_change ?? 0}
                         </span>
                         <div
-                          className={`w-full max-w-[18px] rounded-t ${positive ? 'bg-emerald-400' : 'bg-red-400'}`}
+                          className={`w-full max-w-[18px] rounded-t ${
+                            positive ? 'bg-emerald-400' : 'bg-red-400'
+                          }`}
                           style={{ height: `${h}px` }}
                           title={`第${pt.week_index}周 ${pt.score_change ?? 0}`}
                         />

@@ -52,16 +52,10 @@ function EmptyState({
 
   return (
     <div className='flex flex-col items-center justify-center py-16 px-4'>
-      <div className='mb-4'>
-        {config.icon}
-      </div>
-      <h3 className='text-lg font-semibold text-gray-900 mb-2'>
-        {config.title}
-      </h3>
-      <p className='text-sm text-gray-500 text-center max-w-md mb-6'>
-        {config.description}
-      </p>
-      
+      <div className='mb-4'>{config.icon}</div>
+      <h3 className='text-lg font-semibold text-gray-900 mb-2'>{config.title}</h3>
+      <p className='text-sm text-gray-500 text-center max-w-md mb-6'>{config.description}</p>
+
       {(action || secondaryAction) && (
         <div className='flex gap-3'>
           {action && (
@@ -106,7 +100,7 @@ const presets: EmptyStatePresets = {
       action={onCreate ? { label: '添加学生', onClick: onCreate } : undefined}
     />
   ),
-  
+
   NoRules: (onCreate) => (
     <EmptyState
       type='noData'
@@ -116,7 +110,7 @@ const presets: EmptyStatePresets = {
       action={onCreate ? { label: '创建规则', onClick: onCreate } : undefined}
     />
   ),
-  
+
   NoRecords: (onCreate) => (
     <EmptyState
       type='noData'
@@ -126,7 +120,7 @@ const presets: EmptyStatePresets = {
       action={onCreate ? { label: '添加记录', onClick: onCreate } : undefined}
     />
   ),
-  
+
   NoDevices: (onCreate) => (
     <EmptyState
       type='noData'
@@ -136,19 +130,16 @@ const presets: EmptyStatePresets = {
       action={onCreate ? { label: '添加设备', onClick: onCreate } : undefined}
     />
   ),
-  
+
   NoResults: (onReset) => (
     <EmptyState
       type='noResults'
       action={onReset ? { label: '清除筛选', onClick: onReset } : undefined}
     />
   ),
-  
+
   Error: (onRetry) => (
-    <EmptyState
-      type='error'
-      action={onRetry ? { label: '重试', onClick: onRetry } : undefined}
-    />
+    <EmptyState type='error' action={onRetry ? { label: '重试', onClick: onRetry } : undefined} />
   ),
 };
 

@@ -1,10 +1,12 @@
 """
 WebSocket Service Test Cases
 """
+
 # 测试WebSocket实时通信服务的核心功能
 """
 """
 from unittest.mock import patch, MagicMock
+
 try:
     from services.websocket_service import WebSocketService
 except ImportError:
@@ -254,7 +256,7 @@ class TestWebSocketServiceCompatibility:
 
         mock_sio = MagicMock()
 
-        with patch.object(websocket_service, 'register_handlers') as mock_register:
+        with patch.object(websocket_service, "register_handlers") as mock_register:
             register_handlers(mock_sio)
             mock_register.assert_called_once_with(mock_sio)
 
@@ -262,7 +264,7 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-发送通知"""
         from services.websocket_service import send_notification
 
-        with patch.object(websocket_service, 'send_notification') as mock_send:
+        with patch.object(websocket_service, "send_notification") as mock_send:
             send_notification("info", "test", {"data": "test"})
             mock_send.assert_called_once_with("info", "test", {"data": "test"})
 
@@ -270,7 +272,7 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-发送设备状态"""
         from services.websocket_service import send_device_status
 
-        with patch.object(websocket_service, 'send_device_status') as mock_send:
+        with patch.object(websocket_service, "send_device_status") as mock_send:
             send_device_status("device1", {"status": "online"})
             mock_send.assert_called_once_with("device1", {"status": "online"})
 
@@ -278,7 +280,7 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-发送积分更新"""
         from services.websocket_service import send_score_update
 
-        with patch.object(websocket_service, 'send_score_update') as mock_send:
+        with patch.object(websocket_service, "send_score_update") as mock_send:
             send_score_update(1, {"score": 100})
             mock_send.assert_called_once_with(1, {"score": 100})
 
@@ -286,7 +288,7 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-发送告警"""
         from services.websocket_service import send_alert
 
-        with patch.object(websocket_service, 'send_alert') as mock_send:
+        with patch.object(websocket_service, "send_alert") as mock_send:
             send_alert("warning", {"level": "high"})
             mock_send.assert_called_once_with("warning", {"level": "high"})
 
@@ -294,7 +296,7 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-广播系统消息"""
         from services.websocket_service import broadcast_system_message
 
-        with patch.object(websocket_service, 'broadcast_system_message') as mock_send:
+        with patch.object(websocket_service, "broadcast_system_message") as mock_send:
             broadcast_system_message("startup", "System started")
             mock_send.assert_called_once_with("startup", "System started", None)
 
@@ -302,7 +304,7 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-发送到房间"""
         from services.websocket_service import send_to_room
 
-        with patch.object(websocket_service, 'send_to_room') as mock_send:
+        with patch.object(websocket_service, "send_to_room") as mock_send:
             send_to_room("room1", "event", {"data": "test"})
             mock_send.assert_called_once_with("room1", "event", {"data": "test"})
 
@@ -310,6 +312,6 @@ class TestWebSocketServiceCompatibility:
         """测试兼容接口-发送到用户"""
         from services.websocket_service import send_to_user
 
-        with patch.object(websocket_service, 'send_to_user') as mock_send:
+        with patch.object(websocket_service, "send_to_user") as mock_send:
             send_to_user(123, "event", {"data": "test"})
             mock_send.assert_called_once_with(123, "event", {"data": "test"})

@@ -9,7 +9,6 @@ except ImportError:
     pass
 
 
-
 class TestRuleRecommendationService:
     """规则推荐服务测试"""
 
@@ -29,12 +28,7 @@ class TestRuleRecommendationService:
 
         with app.app_context():
             for i in range(10):
-                record = ScoreRecord(
-                    user_id=1,
-                    rule_id=1,
-                    score_change=5,
-                    description="测试"
-                )
+                record = ScoreRecord(user_id=1, rule_id=1, score_change=5, description="测试")
                 db.session.add(record)
             db.session.commit()
 
@@ -53,10 +47,7 @@ class TestRuleRecommendationService:
             for i in range(14):
                 score_change = 5 if i < 7 else 15
                 record = ScoreRecord(
-                    user_id=1,
-                    rule_id=1,
-                    score_change=score_change,
-                    description="测试"
+                    user_id=1, rule_id=1, score_change=score_change, description="测试"
                 )
                 db.session.add(record)
             db.session.commit()
@@ -74,10 +65,7 @@ class TestRuleRecommendationService:
             for i in range(14):
                 score_change = 15 if i < 7 else 5
                 record = ScoreRecord(
-                    user_id=1,
-                    rule_id=1,
-                    score_change=score_change,
-                    description="测试"
+                    user_id=1, rule_id=1, score_change=score_change, description="测试"
                 )
                 db.session.add(record)
             db.session.commit()
@@ -150,11 +138,7 @@ class TestRuleRecommendationService:
 
         with app.app_context():
             for i in range(100):
-                record = ScoreRecord(
-                    user_id=i % 10 + 1,
-                    score_change=5,
-                    description="训练数据"
-                )
+                record = ScoreRecord(user_id=i % 10 + 1, score_change=5, description="训练数据")
                 db.session.add(record)
             db.session.commit()
 
@@ -182,7 +166,7 @@ class TestRuleRecommendationService:
                     user_id=i % 10 + 1,
                     rule_id=sample_rule.id,
                     score_change=5,
-                    description="评估数据"
+                    description="评估数据",
                 )
                 db.session.add(record)
             db.session.commit()

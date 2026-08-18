@@ -21,6 +21,7 @@
 以 flask.g 为作用域做请求级缓存，避免同一请求内对同一 id 反复查库
 （列表接口逐行序列化时命中率很高）。无 app context 时退化为无缓存直查。
 """
+
 from flask import g, has_app_context
 
 from models import ClassInfo, Subject, User

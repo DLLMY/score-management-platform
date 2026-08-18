@@ -28,10 +28,24 @@ import {
 } from 'lucide-react';
 import api, { Alert, Heartbeat, ClassInfo } from '../services/api';
 import { Device } from '../types';
-import { Button, Modal, Badge, Select, EmptyState, SearchFilter, PermissionButton } from '../components';
+import {
+  Button,
+  Modal,
+  Badge,
+  Select,
+  EmptyState,
+  SearchFilter,
+  PermissionButton,
+} from '../components';
 import { useStableToast } from '../hooks/useStableToast';
 import { useWebSocketStore } from '../stores';
-import { useDebouncedValue, useThrottledCallback, useForm, useModal, useConfirmDialog } from '../hooks';
+import {
+  useDebouncedValue,
+  useThrottledCallback,
+  useForm,
+  useModal,
+  useConfirmDialog,
+} from '../hooks';
 
 interface DeviceStats {
   total: number;
@@ -137,7 +151,9 @@ const getSystemStateText = (state: number | undefined): string => {
   return states[state || 0] || `未知(${state})`;
 };
 
-const getSignalStrength = (signal: number | null): { text: string; color: string; level: string } => {
+const getSignalStrength = (
+  signal: number | null
+): { text: string; color: string; level: string } => {
   if (!signal) return { text: '-', color: 'bg-gray-500', level: 'poor' };
   if (signal >= -50) return { text: '强', color: 'bg-green-500', level: 'excellent' };
   if (signal >= -70) return { text: '中', color: 'bg-yellow-500', level: 'good' };
@@ -189,9 +205,12 @@ function DeviceManagement() {
     errors: newDeviceErrors,
     handleChange: handleNewDeviceChange,
     resetForm: resetNewDeviceForm,
-  } = useForm<NewDeviceForm>({ device_id: '', name: '' }, {
-    device_id: { required: true, minLength: 1 },
-  });
+  } = useForm<NewDeviceForm>(
+    { device_id: '', name: '' },
+    {
+      device_id: { required: true, minLength: 1 },
+    }
+  );
 
   const {
     formData: bindForm,
@@ -217,25 +236,41 @@ function DeviceManagement() {
     resetForm: resetBulkOtaForm,
   } = useForm<OTAForm>({ firmware_url: '', version: '', force: false });
 
-  const { isOpen: showAddModal, open: openAddModal, close: closeAddModal } = useModal<null>({
+  const {
+    isOpen: showAddModal,
+    open: openAddModal,
+    close: closeAddModal,
+  } = useModal<null>({
     onClose: () => resetNewDeviceForm(),
   });
 
-  const { isOpen: showBindModal, open: openBindModal, close: closeBindModal } = useModal<Device | null>({
+  const {
+    isOpen: showBindModal,
+    open: openBindModal,
+    close: closeBindModal,
+  } = useModal<Device | null>({
     onClose: () => {
       setSelectedDevice(null);
       resetBindForm();
     },
   });
 
-  const { isOpen: showControlModal, open: openControlModalInternal, close: closeControlModal } = useModal<Device | null>({
+  const {
+    isOpen: showControlModal,
+    open: openControlModalInternal,
+    close: closeControlModal,
+  } = useModal<Device | null>({
     onClose: () => {
       setSelectedDevice(null);
       setControlAction('');
     },
   });
 
-  const { isOpen: showSettingsModal, open: openSettingsModalInternal, close: closeSettingsModal } = useModal<Device | null>({
+  const {
+    isOpen: showSettingsModal,
+    open: openSettingsModalInternal,
+    close: closeSettingsModal,
+  } = useModal<Device | null>({
     onClose: () => {
       setSelectedDevice(null);
       resetDeviceSettings();
@@ -249,7 +284,11 @@ function DeviceManagement() {
     },
   });
 
-  const { isOpen: showBulkOTAModal, open: openBulkOTAModal, close: closeBulkOTAModal } = useModal<null>({
+  const {
+    isOpen: showBulkOTAModal,
+    open: openBulkOTAModal,
+    close: closeBulkOTAModal,
+  } = useModal<null>({
     onClose: () => resetBulkOtaForm(),
   });
 
@@ -271,14 +310,19 @@ function DeviceManagement() {
     total?: number;
     success_count?: number;
     failed_count?: number;
-    messages?: Array<{ action: string; message: string; row_data?: Record<string, unknown>; error_fields?: string[] }>;
+    messages?: Array<{
+      action: string;
+      message: string;
+      row_data?: Record<string, unknown>;
+      error_fields?: string[];
+    }>;
   } | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
-  
+
   // 防抖搜索 - 延迟 300ms 更新搜索词
   const [searchInput, setSearchInput] = useState<string>('');
   const debouncedSearchTerm = useDebouncedValue(searchInput, 300);
-  
+
   // 节流刷新 - 限制刷新频率（最少间隔 1 秒）
   const loadDevicesRef = useRef<typeof loadDevices | null>(null);
   const throttledRefresh = useThrottledCallback(async () => {
@@ -301,14 +345,27 @@ function DeviceManagement() {
         ]);
         setDevices(devicesData.devices || []);
         // 映射后端返回的字段到前端期望的字段
-        const rawStats = statsData as { total_devices?: number; online_devices?: number; offline_devices?: number; today_heartbeats?: number };
+        const rawStats = statsData as {
+          total_devices?: number;
+          online_devices?: number;
+          offline_devices?: number;
+          today_heartbeats?: number;
+        };
         setStats({
           total: rawStats.total_devices || 0,
           online: rawStats.online_devices || 0,
           offline: rawStats.offline_devices || 0,
           today_heartbeats: rawStats.today_heartbeats || 0,
         });
-        const rawAdvanced = advancedStatsData as { total_devices?: number; online_devices?: number; offline_devices?: number; error_devices?: number; online_rate?: number; avg_signal_strength?: number; critical_alerts?: number };
+        const rawAdvanced = advancedStatsData as {
+          total_devices?: number;
+          online_devices?: number;
+          offline_devices?: number;
+          error_devices?: number;
+          online_rate?: number;
+          avg_signal_strength?: number;
+          critical_alerts?: number;
+        };
         setAdvancedStats({
           total: rawAdvanced.total_devices || 0,
           online: rawAdvanced.online_devices || 0,
@@ -340,45 +397,47 @@ function DeviceManagement() {
     [showToast]
   );
 
-  const handleExport = useCallback(async (format: 'excel' | 'pdf') => {
-    try {
-      const apiUrl = format === 'pdf'
-        ? '/api/export/devices?format=pdf'
-        : '/api/export/devices?format=excel';
+  const handleExport = useCallback(
+    async (format: 'excel' | 'pdf') => {
+      try {
+        const apiUrl =
+          format === 'pdf' ? '/api/export/devices?format=pdf' : '/api/export/devices?format=excel';
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        credentials: 'include',
-      });
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-      if (!response.ok) {
-        throw new Error('导出失败');
-      }
-
-      const blob = await response.blob();
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `devices.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match) {
-          filename = match[1];
+        if (!response.ok) {
+          throw new Error('导出失败');
         }
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `devices.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (match) {
+            filename = match[1];
+          }
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        showToast('success', '导出成功');
+      } catch (err) {
+        showToast('error', '导出失败: ' + (err as Error).message);
       }
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      showToast('success', '导出成功');
-    } catch (err) {
-      showToast('error', '导出失败: ' + (err as Error).message);
-    }
-  }, [showToast]);
+    },
+    [showToast]
+  );
 
   const openImportModal = useCallback((): void => {
     setShowImportModal(true);
@@ -412,7 +471,10 @@ function DeviceManagement() {
       const result = await api.devices.import(formData);
       setImportResult(result);
       if (result.success) {
-        showToast('success', `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`);
+        showToast(
+          'success',
+          `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+        );
         loadDevices(true);
       } else {
         showToast('error', '导入失败');
@@ -427,8 +489,8 @@ function DeviceManagement() {
   const handleExportErrors = useCallback((): void => {
     if (!importResult?.messages) return;
     const errors = importResult.messages
-      .filter(msg => msg.action === '失败')
-      .map(msg => ({
+      .filter((msg) => msg.action === '失败')
+      .map((msg) => ({
         ...msg,
         error_fields: msg.error_fields || [],
       }));
@@ -441,7 +503,11 @@ function DeviceManagement() {
     try {
       const classesData = await api.classes.getAll();
       // API返回格式是 { classes: [...] }，需要提取数组
-      setClasses(Array.isArray(classesData) ? classesData : ((classesData as { classes?: ClassInfo[] })?.classes || []));
+      setClasses(
+        Array.isArray(classesData)
+          ? classesData
+          : (classesData as { classes?: ClassInfo[] })?.classes || []
+      );
     } catch {
       // M5: 加载失败给用户提示，不静默
       showToast('error', '加载班级列表失败');
@@ -451,11 +517,13 @@ function DeviceManagement() {
       const adminsData = await api.admins.getAll();
       // M7: 数组赋值防护
       const adminList = Array.isArray(adminsData) ? adminsData : [];
-      setAdmins(adminList.map((admin) => ({
-        id: Number(admin.id),
-        real_name: admin.real_name || admin.username,
-        username: admin.username,
-      })));
+      setAdmins(
+        adminList.map((admin) => ({
+          id: Number(admin.id),
+          real_name: admin.real_name || admin.username,
+          username: admin.username,
+        }))
+      );
     } catch {
       showToast('error', '加载管理员列表失败');
     }
@@ -531,21 +599,24 @@ function DeviceManagement() {
     }
   }, [newDevice, showToast, closeAddModal, loadDevices]);
 
-  const handleDeleteDevice = useCallback(async (id: number) => {
-    if (!window.confirm(`确定要删除这个设备吗？此操作无法撤销。`)) return;
+  const handleDeleteDevice = useCallback(
+    async (id: number) => {
+      if (!window.confirm(`确定要删除这个设备吗？此操作无法撤销。`)) return;
 
-    try {
-      await api.devices.delete(id);
-      setDevices((prev) => prev.filter((d) => d.id !== id));
-      setStats((prev) => ({
-        ...prev,
-        total: Math.max(0, (prev.total || 0) - 1),
-      }));
-      showToast('success', '设备删除成功');
-    } catch (error) {
-      showToast('error', '删除设备失败: ' + (error as Error).message);
-    }
-  }, [showConfirm, showToast]);
+      try {
+        await api.devices.delete(id);
+        setDevices((prev) => prev.filter((d) => d.id !== id));
+        setStats((prev) => ({
+          ...prev,
+          total: Math.max(0, (prev.total || 0) - 1),
+        }));
+        showToast('success', '设备删除成功');
+      } catch (error) {
+        showToast('error', '删除设备失败: ' + (error as Error).message);
+      }
+    },
+    [showConfirm, showToast]
+  );
 
   const handleViewDetail = useCallback(async (device: Device) => {
     setSelectedDevice(device);
@@ -578,12 +649,15 @@ function DeviceManagement() {
     }
   }, [selectedDevice, bindForm, showToast, loadDevices, closeBindModal]);
 
-  const handleOpenBindModal = useCallback((device: Device) => {
-    setSelectedDevice(device);
-    handleBindChange('class_id', (device.class_info_id || '').toString());
-    handleBindChange('admin_id', (device.admin_id || '').toString());
-    openBindModal(device);
-  }, [handleBindChange, openBindModal]);
+  const handleOpenBindModal = useCallback(
+    (device: Device) => {
+      setSelectedDevice(device);
+      handleBindChange('class_id', (device.class_info_id || '').toString());
+      handleBindChange('admin_id', (device.admin_id || '').toString());
+      openBindModal(device);
+    },
+    [handleBindChange, openBindModal]
+  );
 
   const handleRemoteControl = useCallback(async () => {
     if (!selectedDevice || !controlAction) return;
@@ -622,21 +696,27 @@ function DeviceManagement() {
     }
   }, [bulkOtaForm, showToast, closeBulkOTAModal]);
 
-  const handleResolveAlert = useCallback(async (deviceId: string, alertId: number) => {
-    try {
-      await api.devices.resolveAlert(deviceId, alertId);
-      showToast('success', '告警已解决');
-      loadDevices(true);
-    } catch (error) {
-      showToast('error', `操作失败: ${(error as Error).message}`);
-    }
-  }, [showToast, loadDevices]);
+  const handleResolveAlert = useCallback(
+    async (deviceId: string, alertId: number) => {
+      try {
+        await api.devices.resolveAlert(deviceId, alertId);
+        showToast('success', '告警已解决');
+        loadDevices(true);
+      } catch (error) {
+        showToast('error', `操作失败: ${(error as Error).message}`);
+      }
+    },
+    [showToast, loadDevices]
+  );
 
   const handleUpdateSettings = useCallback(async () => {
     if (!selectedDevice) return;
 
     try {
-      await api.devices.updateSettings(selectedDevice.id, deviceSettings as unknown as Record<string, unknown>);
+      await api.devices.updateSettings(
+        selectedDevice.id,
+        deviceSettings as unknown as Record<string, unknown>
+      );
       showToast('success', '设备设置已更新');
       closeSettingsModal();
       loadDevices(true); // M3: 保存后立即刷新列表（含设备名/状态），避免等轮询
@@ -645,18 +725,24 @@ function DeviceManagement() {
     }
   }, [selectedDevice, deviceSettings, showToast, closeSettingsModal, loadDevices]);
 
-  const openControlModal = useCallback((device: Device) => {
-    setSelectedDevice(device);
-    openControlModalInternal(device);
-  }, [openControlModalInternal]);
+  const openControlModal = useCallback(
+    (device: Device) => {
+      setSelectedDevice(device);
+      openControlModalInternal(device);
+    },
+    [openControlModalInternal]
+  );
 
-  const openSettingsModal = useCallback((device: Device) => {
-    setSelectedDevice(device);
-    handleDeviceSettingsChange('alert_enabled', device.alert_enabled !== false);
-    handleDeviceSettingsChange('heartbeat_timeout', device.heartbeat_timeout || 30);
-    handleDeviceSettingsChange('name', device.name || '');
-    openSettingsModalInternal(device);
-  }, [handleDeviceSettingsChange, openSettingsModalInternal]);
+  const openSettingsModal = useCallback(
+    (device: Device) => {
+      setSelectedDevice(device);
+      handleDeviceSettingsChange('alert_enabled', device.alert_enabled !== false);
+      handleDeviceSettingsChange('heartbeat_timeout', device.heartbeat_timeout || 30);
+      handleDeviceSettingsChange('name', device.name || '');
+      openSettingsModalInternal(device);
+    },
+    [handleDeviceSettingsChange, openSettingsModalInternal]
+  );
 
   const statsDisplay = useMemo(
     () => ({
@@ -684,7 +770,11 @@ function DeviceManagement() {
       const deviceId = (device.device_id || '').toLowerCase();
       const deviceName = (device.name || '').toLowerCase();
       const className = (device.class_name || '').toLowerCase();
-      return deviceId.includes(searchLower) || deviceName.includes(searchLower) || className.includes(searchLower);
+      return (
+        deviceId.includes(searchLower) ||
+        deviceName.includes(searchLower) ||
+        className.includes(searchLower)
+      );
     });
   }, [devicesWithSignal, debouncedSearchTerm]);
 
@@ -706,7 +796,9 @@ function DeviceManagement() {
             <button
               onClick={() => setActiveTab('list')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                activeTab === 'list'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               设备列表
@@ -714,7 +806,9 @@ function DeviceManagement() {
             <button
               onClick={() => setActiveTab('monitor')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'monitor' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                activeTab === 'monitor'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               实时监控
@@ -749,7 +843,11 @@ function DeviceManagement() {
             </PermissionButton>
           )}
           {activeTab === 'list' && (
-            <PermissionButton permission='device.edit' onClick={() => openBulkOTAModal()} variant='primary'>
+            <PermissionButton
+              permission='device.edit'
+              onClick={() => openBulkOTAModal()}
+              variant='primary'
+            >
               <Activity className='w-4 h-4 mr-2' />
               批量OTA升级
             </PermissionButton>
@@ -762,13 +860,17 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-blue-100 text-sm'>设备总数</p>
-              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : statsDisplay.total}</p>
+              <p className='text-3xl font-bold mt-1'>
+                {initialLoading || statsError ? '--' : statsDisplay.total}
+              </p>
             </div>
             <Server className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-blue-200'>
-              <span>在线率: {advancedStats.online_rate != null ? `${advancedStats.online_rate}%` : '--'}</span>
+              <span>
+                在线率: {advancedStats.online_rate != null ? `${advancedStats.online_rate}%` : '--'}
+              </span>
             </div>
           )}
         </div>
@@ -777,14 +879,21 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-green-100 text-sm'>在线设备</p>
-              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : statsDisplay.online}</p>
+              <p className='text-3xl font-bold mt-1'>
+                {initialLoading || statsError ? '--' : statsDisplay.online}
+              </p>
             </div>
             <Wifi className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-green-200'>
               <Activity className='w-4 h-4' />
-              <span>平均信号: {advancedStats.avg_signal_strength != null ? `${advancedStats.avg_signal_strength} dBm` : '--'}</span>
+              <span>
+                平均信号:{' '}
+                {advancedStats.avg_signal_strength != null
+                  ? `${advancedStats.avg_signal_strength} dBm`
+                  : '--'}
+              </span>
             </div>
           )}
         </div>
@@ -793,13 +902,17 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-red-100 text-sm'>离线设备</p>
-              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : statsDisplay.offline}</p>
+              <p className='text-3xl font-bold mt-1'>
+                {initialLoading || statsError ? '--' : statsDisplay.offline}
+              </p>
             </div>
             <WifiOff className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-red-200'>
-              <span>故障: {advancedStats.error_devices != null ? advancedStats.error_devices : '--'}</span>
+              <span>
+                故障: {advancedStats.error_devices != null ? advancedStats.error_devices : '--'}
+              </span>
             </div>
           )}
         </div>
@@ -808,13 +921,17 @@ function DeviceManagement() {
           <div className='flex items-center justify-between'>
             <div>
               <p className='text-yellow-100 text-sm'>未处理告警</p>
-              <p className='text-3xl font-bold mt-1'>{initialLoading || statsError ? '--' : alerts.length}</p>
+              <p className='text-3xl font-bold mt-1'>
+                {initialLoading || statsError ? '--' : alerts.length}
+              </p>
             </div>
             <AlertTriangle className='w-10 h-10 text-white/50' />
           </div>
           {advancedStats && (
             <div className='mt-2 flex items-center gap-2 text-sm text-yellow-200'>
-              <span>严重: {advancedStats.critical_alerts != null ? advancedStats.critical_alerts : '--'}</span>
+              <span>
+                严重: {advancedStats.critical_alerts != null ? advancedStats.critical_alerts : '--'}
+              </span>
             </div>
           )}
         </div>
@@ -869,18 +986,38 @@ function DeviceManagement() {
                 <table className='w-full'>
                   <thead>
                     <tr className='bg-gray-50'>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>设备ID</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>设备名称</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>状态</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>所属班级</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>绑定班主任</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>信号强度</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>运行时长</th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        设备ID
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        设备名称
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        状态
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        所属班级
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        绑定班主任
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        信号强度
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        运行时长
+                      </th>
                       <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>A箱</th>
                       <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>B箱</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>系统状态</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>最后心跳</th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>操作</th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        系统状态
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        最后心跳
+                      </th>
+                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
+                        操作
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -893,24 +1030,37 @@ function DeviceManagement() {
                     ) : (
                       filteredDevices.map((device) => (
                         <tr key={device.device_id} className='border-b hover:bg-gray-50'>
-                          <td className='px-4 py-3 text-sm font-medium text-blue-600'>{device.device_id}</td>
+                          <td className='px-4 py-3 text-sm font-medium text-blue-600'>
+                            {device.device_id}
+                          </td>
                           <td className='px-4 py-3 text-sm'>{device.name}</td>
                           <td className='px-4 py-3'>
-                            <Badge variant={device.is_online ? 'success' : 'danger'} className='flex items-center'>
-                              {device.is_online ? <Wifi className='w-3 h-3 mr-1' /> : <WifiOff className='w-3 h-3 mr-1' />}
+                            <Badge
+                              variant={device.is_online ? 'success' : 'danger'}
+                              className='flex items-center'
+                            >
+                              {device.is_online ? (
+                                <Wifi className='w-3 h-3 mr-1' />
+                              ) : (
+                                <WifiOff className='w-3 h-3 mr-1' />
+                              )}
                               {device.is_online ? '在线' : '离线'}
                             </Badge>
                           </td>
                           <td className='px-4 py-3'>
                             <div className='flex items-center gap-1'>
                               <Building2 className='w-3 h-3 text-gray-400' />
-                              <span className='text-sm'>{device.class_name || <span className='text-gray-400'>未绑定</span>}</span>
+                              <span className='text-sm'>
+                                {device.class_name || <span className='text-gray-400'>未绑定</span>}
+                              </span>
                             </div>
                           </td>
                           <td className='px-4 py-3'>
                             <div className='flex items-center gap-1'>
                               <Users className='w-3 h-3 text-gray-400' />
-                              <span className='text-sm'>{device.admin_name || <span className='text-gray-400'>未绑定</span>}</span>
+                              <span className='text-sm'>
+                                {device.admin_name || <span className='text-gray-400'>未绑定</span>}
+                              </span>
                             </div>
                           </td>
                           <td className='px-4 py-3'>
@@ -926,34 +1076,81 @@ function DeviceManagement() {
                           </td>
                           <td className='px-4 py-3 text-sm'>{formatUptime(device.uptime)}</td>
                           <td className='px-4 py-3'>
-                            <Badge variant={device.box_a_status === 'opened' ? 'warning' : device.box_a_status === 'closed' ? 'success' : 'default'}>
-                              {device.box_a_status === 'opened' ? '打开' : device.box_a_status === 'closed' ? '关闭' : '未知'}
+                            <Badge
+                              variant={
+                                device.box_a_status === 'opened'
+                                  ? 'warning'
+                                  : device.box_a_status === 'closed'
+                                  ? 'success'
+                                  : 'default'
+                              }
+                            >
+                              {device.box_a_status === 'opened'
+                                ? '打开'
+                                : device.box_a_status === 'closed'
+                                ? '关闭'
+                                : '未知'}
                             </Badge>
                           </td>
                           <td className='px-4 py-3'>
-                            <Badge variant={device.box_b_status === 'opened' ? 'warning' : device.box_b_status === 'closed' ? 'success' : 'default'}>
-                              {device.box_b_status === 'opened' ? '打开' : device.box_b_status === 'closed' ? '关闭' : '未知'}
+                            <Badge
+                              variant={
+                                device.box_b_status === 'opened'
+                                  ? 'warning'
+                                  : device.box_b_status === 'closed'
+                                  ? 'success'
+                                  : 'default'
+                              }
+                            >
+                              {device.box_b_status === 'opened'
+                                ? '打开'
+                                : device.box_b_status === 'closed'
+                                ? '关闭'
+                                : '未知'}
                             </Badge>
                           </td>
-                          <td className='px-4 py-3 text-sm'>{getSystemStateText(device.system_state)}</td>
+                          <td className='px-4 py-3 text-sm'>
+                            {getSystemStateText(device.system_state)}
+                          </td>
                           <td className='px-4 py-3'>
                             <div className='flex items-center gap-1 text-sm'>
                               <Clock className='w-3 h-3 text-gray-400' />
-                              {device.last_heartbeat ? new Date(device.last_heartbeat).toLocaleTimeString('zh-CN') : '-'}
+                              {device.last_heartbeat
+                                ? new Date(device.last_heartbeat).toLocaleTimeString('zh-CN')
+                                : '-'}
                             </div>
                           </td>
                           <td className='px-4 py-3'>
                             <div className='flex gap-2'>
-                              <Button variant='secondary' size='sm' onClick={() => handleViewDetail(device)}>
+                              <Button
+                                variant='secondary'
+                                size='sm'
+                                onClick={() => handleViewDetail(device)}
+                              >
                                 <Eye className='w-4 h-4' />
                               </Button>
-                              <PermissionButton permission='device.edit' variant='primary' size='sm' onClick={() => handleOpenBindModal(device)}>
+                              <PermissionButton
+                                permission='device.edit'
+                                variant='primary'
+                                size='sm'
+                                onClick={() => handleOpenBindModal(device)}
+                              >
                                 <Link className='w-4 h-4' />
                               </PermissionButton>
-                              <PermissionButton permission='device.edit' variant='secondary' size='sm' onClick={() => openSettingsModal(device)}>
+                              <PermissionButton
+                                permission='device.edit'
+                                variant='secondary'
+                                size='sm'
+                                onClick={() => openSettingsModal(device)}
+                              >
                                 <Edit2 className='w-4 h-4' />
                               </PermissionButton>
-                              <PermissionButton permission='device.edit' variant='danger' size='sm' onClick={() => handleDeleteDevice(device.id)}>
+                              <PermissionButton
+                                permission='device.edit'
+                                variant='danger'
+                                size='sm'
+                                onClick={() => handleDeleteDevice(device.id)}
+                              >
                                 <Trash2 className='w-4 h-4' />
                               </PermissionButton>
                             </div>
@@ -978,7 +1175,9 @@ function DeviceManagement() {
             <div className='card-body'>
               <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
                 <div className='text-center p-4 bg-green-50 rounded-lg'>
-                  <p className='text-2xl font-bold text-green-600'>{signalDistribution.excellent}</p>
+                  <p className='text-2xl font-bold text-green-600'>
+                    {signalDistribution.excellent}
+                  </p>
                   <p className='text-sm text-gray-600'>优秀 (-50dBm以上)</p>
                 </div>
                 <div className='text-center p-4 bg-blue-50 rounded-lg'>
@@ -1014,14 +1213,22 @@ function DeviceManagement() {
                     <div
                       key={device.device_id}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        device.is_online ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
+                        device.is_online
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
                       }`}
                     >
                       <div className='flex items-center justify-between'>
                         <div className='flex items-center gap-3'>
-                          <div className={`w-3 h-3 rounded-full ${device.is_online ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              device.is_online ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                            }`}
+                          />
                           <div>
-                            <p className='font-medium text-gray-900'>{device.name || device.device_id}</p>
+                            <p className='font-medium text-gray-900'>
+                              {device.name || device.device_id}
+                            </p>
                             <p className='text-sm text-gray-500'>{device.device_id}</p>
                           </div>
                         </div>
@@ -1036,14 +1243,37 @@ function DeviceManagement() {
                       </div>
                       <div className='mt-3 flex items-center justify-between text-sm'>
                         <div className='flex items-center gap-4 text-gray-500'>
-                          <span>A箱: {device.box_a_status === 'opened' ? '打开' : device.box_a_status === 'closed' ? '关闭' : '未知'}</span>
-                          <span>B箱: {device.box_b_status === 'opened' ? '打开' : device.box_b_status === 'closed' ? '关闭' : '未知'}</span>
+                          <span>
+                            A箱:{' '}
+                            {device.box_a_status === 'opened'
+                              ? '打开'
+                              : device.box_a_status === 'closed'
+                              ? '关闭'
+                              : '未知'}
+                          </span>
+                          <span>
+                            B箱:{' '}
+                            {device.box_b_status === 'opened'
+                              ? '打开'
+                              : device.box_b_status === 'closed'
+                              ? '关闭'
+                              : '未知'}
+                          </span>
                         </div>
                         <div className='flex items-center gap-2'>
-                          <Button variant='secondary' size='sm' onClick={() => openControlModal(device)} disabled={!device.is_online}>
+                          <Button
+                            variant='secondary'
+                            size='sm'
+                            onClick={() => openControlModal(device)}
+                            disabled={!device.is_online}
+                          >
                             <Settings className='w-3 h-3' />
                           </Button>
-                          <Button variant='secondary' size='sm' onClick={() => openSettingsModal(device)}>
+                          <Button
+                            variant='secondary'
+                            size='sm'
+                            onClick={() => openSettingsModal(device)}
+                          >
                             <Bell className='w-3 h-3' />
                           </Button>
                         </div>
@@ -1086,12 +1316,20 @@ function DeviceManagement() {
                         <div className='flex items-start gap-3'>
                           {getSeverityIcon(alert.severity)}
                           <div>
-                            <p className='font-medium text-gray-900'>{alert.device_name || alert.device_id}</p>
+                            <p className='font-medium text-gray-900'>
+                              {alert.device_name || alert.device_id}
+                            </p>
                             <p className='text-sm text-gray-600'>{alert.message}</p>
-                            <p className='text-xs text-gray-400 mt-1'>{formatTime(alert.created_at)}</p>
+                            <p className='text-xs text-gray-400 mt-1'>
+                              {formatTime(alert.created_at)}
+                            </p>
                           </div>
                         </div>
-                        <Button variant='success' size='sm' onClick={() => handleResolveAlert(alert.device_id, alert.id)}>
+                        <Button
+                          variant='success'
+                          size='sm'
+                          onClick={() => handleResolveAlert(alert.device_id, alert.id)}
+                        >
                           <CheckCircle className='w-3 h-3' />
                         </Button>
                       </div>
@@ -1127,7 +1365,9 @@ function DeviceManagement() {
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               placeholder='输入设备ID'
             />
-            {newDeviceErrors.device_id && <p className='text-sm text-red-500 mt-1'>{newDeviceErrors.device_id}</p>}
+            {newDeviceErrors.device_id && (
+              <p className='text-sm text-red-500 mt-1'>{newDeviceErrors.device_id}</p>
+            )}
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>设备名称</label>
@@ -1169,7 +1409,9 @@ function DeviceManagement() {
               </div>
               <div>
                 <p className='text-sm text-gray-500'>信号强度</p>
-                <p className='font-medium'>{selectedDevice.wifi_signal ? `${selectedDevice.wifi_signal} dBm` : '-'}</p>
+                <p className='font-medium'>
+                  {selectedDevice.wifi_signal ? `${selectedDevice.wifi_signal} dBm` : '-'}
+                </p>
               </div>
               <div>
                 <p className='text-sm text-gray-500'>运行时长</p>
@@ -1178,19 +1420,45 @@ function DeviceManagement() {
               <div>
                 <p className='text-sm text-gray-500'>最后心跳</p>
                 <p className='font-medium'>
-                  {selectedDevice.last_heartbeat ? new Date(selectedDevice.last_heartbeat).toLocaleString('zh-CN') : '-'}
+                  {selectedDevice.last_heartbeat
+                    ? new Date(selectedDevice.last_heartbeat).toLocaleString('zh-CN')
+                    : '-'}
                 </p>
               </div>
               <div>
                 <p className='text-sm text-gray-500'>A箱状态</p>
-                <Badge variant={selectedDevice.box_a_status === 'opened' ? 'warning' : selectedDevice.box_a_status === 'closed' ? 'success' : 'default'}>
-                  {selectedDevice.box_a_status === 'opened' ? '打开' : selectedDevice.box_a_status === 'closed' ? '关闭' : '未知'}
+                <Badge
+                  variant={
+                    selectedDevice.box_a_status === 'opened'
+                      ? 'warning'
+                      : selectedDevice.box_a_status === 'closed'
+                      ? 'success'
+                      : 'default'
+                  }
+                >
+                  {selectedDevice.box_a_status === 'opened'
+                    ? '打开'
+                    : selectedDevice.box_a_status === 'closed'
+                    ? '关闭'
+                    : '未知'}
                 </Badge>
               </div>
               <div>
                 <p className='text-sm text-gray-500'>B箱状态</p>
-                <Badge variant={selectedDevice.box_b_status === 'opened' ? 'warning' : selectedDevice.box_b_status === 'closed' ? 'success' : 'default'}>
-                  {selectedDevice.box_b_status === 'opened' ? '打开' : selectedDevice.box_b_status === 'closed' ? '关闭' : '未知'}
+                <Badge
+                  variant={
+                    selectedDevice.box_b_status === 'opened'
+                      ? 'warning'
+                      : selectedDevice.box_b_status === 'closed'
+                      ? 'success'
+                      : 'default'
+                  }
+                >
+                  {selectedDevice.box_b_status === 'opened'
+                    ? '打开'
+                    : selectedDevice.box_b_status === 'closed'
+                    ? '关闭'
+                    : '未知'}
                 </Badge>
               </div>
             </div>
@@ -1202,10 +1470,27 @@ function DeviceManagement() {
                   <p className='text-sm text-gray-500 text-center py-4'>暂无心跳记录</p>
                 ) : (
                   heartbeats.map((h) => (
-                    <div key={h.id} className='flex items-center justify-between text-sm p-2 bg-gray-50 rounded'>
-                      <span>{h.timestamp ? new Date(h.timestamp).toLocaleString('zh-CN') : '--'}</span>
-                      <Badge variant={h.status === 'online' ? 'success' : h.status === 'offline' ? 'danger' : 'default'}>
-                        {h.status === 'online' ? '在线' : h.status === 'offline' ? '离线' : (h.status || '未知')}
+                    <div
+                      key={h.id}
+                      className='flex items-center justify-between text-sm p-2 bg-gray-50 rounded'
+                    >
+                      <span>
+                        {h.timestamp ? new Date(h.timestamp).toLocaleString('zh-CN') : '--'}
+                      </span>
+                      <Badge
+                        variant={
+                          h.status === 'online'
+                            ? 'success'
+                            : h.status === 'offline'
+                            ? 'danger'
+                            : 'default'
+                        }
+                      >
+                        {h.status === 'online'
+                          ? '在线'
+                          : h.status === 'offline'
+                          ? '离线'
+                          : h.status || '未知'}
                       </Badge>
                     </div>
                   ))
@@ -1282,7 +1567,9 @@ function DeviceManagement() {
             <button
               onClick={() => setControlAction('restart')}
               className={`p-4 rounded-lg border-2 transition-all ${
-                controlAction === 'restart' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                controlAction === 'restart'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
               }`}
             >
               <RefreshCw className='w-6 h-6 mx-auto mb-2 text-blue-600' />
@@ -1292,7 +1579,9 @@ function DeviceManagement() {
             <button
               onClick={() => setControlAction('unlock_a')}
               className={`p-4 rounded-lg border-2 transition-all ${
-                controlAction === 'unlock_a' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                controlAction === 'unlock_a'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300'
               }`}
             >
               <Unlock className='w-6 h-6 mx-auto mb-2 text-green-600' />
@@ -1302,7 +1591,9 @@ function DeviceManagement() {
             <button
               onClick={() => setControlAction('unlock_b')}
               className={`p-4 rounded-lg border-2 transition-all ${
-                controlAction === 'unlock_b' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                controlAction === 'unlock_b'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300'
               }`}
             >
               <Unlock className='w-6 h-6 mx-auto mb-2 text-green-600' />
@@ -1312,7 +1603,9 @@ function DeviceManagement() {
             <button
               onClick={() => setControlAction('status')}
               className={`p-4 rounded-lg border-2 transition-all ${
-                controlAction === 'status' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                controlAction === 'status'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
               }`}
             >
               <Monitor className='w-6 h-6 mx-auto mb-2 text-blue-600' />
@@ -1356,15 +1649,21 @@ function DeviceManagement() {
                 onChange={(e) => handleDeviceSettingsChange('alert_enabled', e.target.checked)}
                 className='w-4 h-4 text-blue-600 rounded'
               />
-              <span className='text-sm text-gray-600'>{deviceSettings.alert_enabled ? '已启用' : '已禁用'}</span>
+              <span className='text-sm text-gray-600'>
+                {deviceSettings.alert_enabled ? '已启用' : '已禁用'}
+              </span>
             </label>
           </div>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>心跳超时时间（秒）</label>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              心跳超时时间（秒）
+            </label>
             <input
               type='number'
               value={deviceSettings.heartbeat_timeout}
-              onChange={(e) => handleDeviceSettingsChange('heartbeat_timeout', parseInt(e.target.value) || 30)}
+              onChange={(e) =>
+                handleDeviceSettingsChange('heartbeat_timeout', parseInt(e.target.value) || 30)
+              }
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               min='10'
               max='300'
@@ -1389,7 +1688,9 @@ function DeviceManagement() {
         }
       >
         <div className='space-y-4'>
-          <p className='text-sm text-gray-600'>设备必须在线才能执行OTA升级。升级过程中设备将自动下载固件并重启。</p>
+          <p className='text-sm text-gray-600'>
+            设备必须在线才能执行OTA升级。升级过程中设备将自动下载固件并重启。
+          </p>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>固件下载URL *</label>
             <input
@@ -1498,15 +1799,21 @@ function DeviceManagement() {
         <div className='space-y-4'>
           <div className='grid grid-cols-3 gap-4 mb-4'>
             <div className='bg-yellow-50 p-3 rounded-lg text-center'>
-              <p className='text-2xl font-bold text-yellow-600'>{otaProgressData.summary.in_progress_count}</p>
+              <p className='text-2xl font-bold text-yellow-600'>
+                {otaProgressData.summary.in_progress_count}
+              </p>
               <p className='text-sm text-yellow-600'>进行中</p>
             </div>
             <div className='bg-green-50 p-3 rounded-lg text-center'>
-              <p className='text-2xl font-bold text-green-600'>{otaProgressData.summary.completed_count}</p>
+              <p className='text-2xl font-bold text-green-600'>
+                {otaProgressData.summary.completed_count}
+              </p>
               <p className='text-sm text-green-600'>已完成</p>
             </div>
             <div className='bg-red-50 p-3 rounded-lg text-center'>
-              <p className='text-2xl font-bold text-red-600'>{otaProgressData.summary.failed_count}</p>
+              <p className='text-2xl font-bold text-red-600'>
+                {otaProgressData.summary.failed_count}
+              </p>
               <p className='text-sm text-red-600'>失败</p>
             </div>
           </div>
@@ -1518,7 +1825,9 @@ function DeviceManagement() {
                 <div key={item.id} className='border border-gray-200 rounded-lg p-4'>
                   <div className='flex items-center justify-between mb-2'>
                     <div>
-                      <p className='font-medium text-gray-900'>{item.device_name || item.device_id}</p>
+                      <p className='font-medium text-gray-900'>
+                        {item.device_name || item.device_id}
+                      </p>
                       <p className='text-sm text-gray-500 font-mono'>{item.device_id}</p>
                     </div>
                     <div className='text-right'>
@@ -1526,7 +1835,9 @@ function DeviceManagement() {
                     </div>
                   </div>
                   <div className='flex items-center gap-4 text-sm text-gray-600'>
-                    <span>{item.from_version || '未知'} → {item.to_version}</span>
+                    <span>
+                      {item.from_version || '未知'} → {item.to_version}
+                    </span>
                     <span>开始时间: {formatTime(item.started_at)}</span>
                   </div>
                 </div>
@@ -1542,7 +1853,9 @@ function DeviceManagement() {
         onClose={closeImportModal}
         footer={
           <>
-            <Button variant='secondary' onClick={closeImportModal}>取消</Button>
+            <Button variant='secondary' onClick={closeImportModal}>
+              取消
+            </Button>
             <Button onClick={handleImport} disabled={!importFile || isImporting}>
               {isImporting ? '导入中...' : '开始导入'}
             </Button>
@@ -1550,7 +1863,10 @@ function DeviceManagement() {
         }
       >
         <div className='space-y-4'>
-          <div className='border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer' onClick={() => document.getElementById('device-import-file')?.click()}>
+          <div
+            className='border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer'
+            onClick={() => document.getElementById('device-import-file')?.click()}
+          >
             <input
               id='device-import-file'
               type='file'
@@ -1561,9 +1877,7 @@ function DeviceManagement() {
             <FileSpreadsheet className='w-12 h-12 mx-auto text-gray-400 mb-3' />
             <p className='text-gray-600'>点击或拖拽文件到此处上传</p>
             <p className='text-sm text-gray-400 mt-1'>支持 .xlsx, .xls 格式</p>
-            {importFile && (
-              <p className='text-sm text-green-600 mt-2'>已选择: {importFile.name}</p>
-            )}
+            {importFile && <p className='text-sm text-green-600 mt-2'>已选择: {importFile.name}</p>}
           </div>
 
           <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
@@ -1590,11 +1904,15 @@ function DeviceManagement() {
                       <div className='text-sm text-gray-500'>总数</div>
                     </div>
                     <div className='text-center'>
-                      <div className='text-xl font-bold text-green-600'>{importResult.success_count}</div>
+                      <div className='text-xl font-bold text-green-600'>
+                        {importResult.success_count}
+                      </div>
                       <div className='text-sm text-gray-500'>成功</div>
                     </div>
                     <div className='text-center'>
-                      <div className='text-xl font-bold text-red-600'>{importResult.failed_count}</div>
+                      <div className='text-xl font-bold text-red-600'>
+                        {importResult.failed_count}
+                      </div>
                       <div className='text-sm text-gray-500'>失败</div>
                     </div>
                   </div>
@@ -1603,14 +1921,28 @@ function DeviceManagement() {
                       <div className='flex items-center justify-between mb-2'>
                         <p className='text-sm font-medium text-gray-700'>详细信息：</p>
                         {importResult.failed_count && importResult.failed_count > 0 && (
-                          <Button size='sm' variant='secondary' onClick={handleExportErrors} className='ml-2'>
+                          <Button
+                            size='sm'
+                            variant='secondary'
+                            onClick={handleExportErrors}
+                            className='ml-2'
+                          >
                             <Download className='w-3 h-3 mr-1' />
                             导出错误数据
                           </Button>
                         )}
                       </div>
                       {importResult.messages.map((msg, idx) => (
-                        <p key={idx} className={`text-xs ${msg.action === '成功' ? 'text-green-600' : msg.action === '警告' ? 'text-yellow-600' : 'text-red-600'}`}>
+                        <p
+                          key={idx}
+                          className={`text-xs ${
+                            msg.action === '成功'
+                              ? 'text-green-600'
+                              : msg.action === '警告'
+                              ? 'text-yellow-600'
+                              : 'text-red-600'
+                          }`}
+                        >
                           [{msg.action}] {msg.message}
                         </p>
                       ))}

@@ -107,7 +107,10 @@ class ExcelExportService:
         header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center")
         thin_border = Border(
-            left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
         )
         for col_idx, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_idx, value=header)
@@ -167,7 +170,10 @@ class ExcelExportService:
         header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center")
         thin_border = Border(
-            left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
         )
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
@@ -252,14 +258,22 @@ class ExcelImportService:
             ws = wb.active
             rows = list(ws.iter_rows(min_row=1, values_only=True))
             if not rows:
-                return {"success": False, "error": "文件为空", "total_rows": 0, "data": [], "headers": []}
+                return {
+                    "success": False,
+                    "error": "文件为空",
+                    "total_rows": 0,
+                    "data": [],
+                    "headers": [],
+                }
             headers = [str(h).strip() if h else f"列{i+1}" for i, h in enumerate(rows[0])]
             data_rows = rows[1:]
             parsed_data = []
             errors = []
             empty_rows = 0
             for row_idx, row in enumerate(data_rows, start=2):
-                if all(cell is None or (isinstance(cell, str) and not cell.strip()) for cell in row):
+                if all(
+                    cell is None or (isinstance(cell, str) and not cell.strip()) for cell in row
+                ):
                     empty_rows += 1
                     continue
                 row_dict = {}
@@ -276,7 +290,13 @@ class ExcelImportService:
                 "errors": errors,
             }
         except Exception as e:
-            return {"success": False, "error": f"文件解析失败: {str(e)}", "total_rows": 0, "data": [], "headers": []}
+            return {
+                "success": False,
+                "error": f"文件解析失败: {str(e)}",
+                "total_rows": 0,
+                "data": [],
+                "headers": [],
+            }
 
     @staticmethod
     def validate_required_fields(
@@ -309,7 +329,9 @@ class ExcelImportService:
                 value = row.get(field, "")
                 if value is None or str(value).strip() == "":
                     label = field_labels.get(field, field)
-                    row_errors.append({"row": idx, "field": field, "message": f"{label}不能为空", "value": value})
+                    row_errors.append(
+                        {"row": idx, "field": field, "message": f"{label}不能为空", "value": value}
+                    )
             if row_errors:
                 errors.extend(row_errors)
                 invalid_count += 1

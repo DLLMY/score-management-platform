@@ -1,7 +1,9 @@
 import requests
 
 r = requests.post(
-    "http://localhost:5000/api/admins/login", json={"username": "admin", "password": "123456"}, timeout=30
+    "http://localhost:5000/api/admins/login",
+    json={"username": "admin", "password": "123456"},
+    timeout=30,
 )
 token = r.json()["access_token"]
 
@@ -45,7 +47,10 @@ rules = [
 
 for rule in rules:
     r2 = requests.post(
-        "http://localhost:5000/api/nlp/rules", json=rule, headers={"Authorization": f"Bearer {token}"}, timeout=30
+        "http://localhost:5000/api/nlp/rules",
+        json=rule,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30,
     )
     print(f"添加规则: {rule['behavior_keyword']} -> {r2.json().get('message', '未知')}")
 
@@ -57,7 +62,9 @@ r3 = requests.post(
     timeout=30,
 )
 result = r3.json()["data"]
-print(f"意图: {result['intent']}, 置信度: {result['confidence']*100}%, 匹配规则数: {len(result['matched_rules'])}")
+print(
+    f"意图: {result['intent']}, 置信度: {result['confidence']*100}%, 匹配规则数: {len(result['matched_rules'])}"
+)
 if result["matched_rules"]:
     for rule in result["matched_rules"]:
         print(f"  - {rule['behavior_keyword']}: {rule['score_value']}分")

@@ -1,7 +1,9 @@
 """Tests for NLP ML Service"""
+
 from unittest.mock import patch, MagicMock
 import numpy as np
 import os
+
 try:
     from services.nlp_ml_service import MLAlgorithmType
 except ImportError:
@@ -347,7 +349,7 @@ class TestNLPMLTrainingService:
     def test_train_without_data(self, app):
         """Test _train_without_data"""
         with app.app_context():
-            with patch('models.NLPModelTraining') as mock_training:
+            with patch("models.NLPModelTraining") as mock_training:
                 mock_training.return_value = MagicMock()
 
                 service = NLPMLTrainingService()
@@ -364,7 +366,7 @@ class TestNLPMLTrainingService:
 
             service = NLPMLTrainingService()
 
-            with patch.object(service, '_load_model', return_value=(None, None)):
+            with patch.object(service, "_load_model", return_value=(None, None)):
                 result = service.predict("测试文本")
 
                 assert result is None
@@ -382,8 +384,8 @@ class TestNLPMLTrainingService:
             mock_vectorizer = MagicMock()
             mock_vectorizer.transform.return_value = np.array([[1.0, 0.5]])
 
-            with patch.object(service, '_load_model', return_value=(mock_model, mock_vectorizer)):
-                with patch.object(service, '_get_best_algorithm', return_value=MLAlgorithmType.SVM):
+            with patch.object(service, "_load_model", return_value=(mock_model, mock_vectorizer)):
+                with patch.object(service, "_get_best_algorithm", return_value=MLAlgorithmType.SVM):
                     result = service.predict("测试文本")
 
                     assert result is not None
@@ -396,7 +398,7 @@ class TestNLPMLTrainingService:
 
             service = NLPMLTrainingService()
 
-            with patch.object(service, 'predict_with_multiple_models', return_value=[]):
+            with patch.object(service, "predict_with_multiple_models", return_value=[]):
                 result = service.ensemble_predict("测试文本")
 
                 assert result is None
@@ -413,7 +415,9 @@ class TestNLPMLTrainingService:
                 {"rule_id": 2, "confidence": 0.7, "algorithm": "svm"},
             ]
 
-            with patch.object(service, 'predict_with_multiple_models', return_value=mock_predictions):
+            with patch.object(
+                service, "predict_with_multiple_models", return_value=mock_predictions
+            ):
                 result = service.ensemble_predict("测试文本")
 
                 assert result is not None
@@ -434,7 +438,7 @@ class TestNLPMLTrainingService:
         model = SVC(kernel="linear")
         model.fit(X, y)
 
-        with patch('services.nlp_ml_service.MODEL_DIR', str(tmp_path)):
+        with patch("services.nlp_ml_service.MODEL_DIR", str(tmp_path)):
             model_path = service._save_model("test_algo", model, vectorizer)
 
             assert model_path is not None
@@ -450,7 +454,7 @@ class TestNLPMLTrainingService:
 
         service = NLPMLTrainingService()
 
-        with patch('services.nlp_ml_service.MODEL_DIR', str(tmp_path)):
+        with patch("services.nlp_ml_service.MODEL_DIR", str(tmp_path)):
             loaded_model, loaded_vectorizer = service._load_model("non_existent")
 
             assert loaded_model is None
@@ -462,16 +466,13 @@ class TestSklearnWrappers:
 
     def test_textcnn_wrapper_init(self):
         """Test _SklearnTextCNNWrapper initialization"""
-        with patch('services.textcnn_service.TextCNNClassifier') as mock_cnn:
+        with patch("services.textcnn_service.TextCNNClassifier") as mock_cnn:
             mock_cnn.return_value = MagicMock()
 
             from services.nlp_ml_service import _SklearnTextCNNWrapper
 
             wrapper = _SklearnTextCNNWrapper(
-                embedding_dim=64,
-                max_len=32,
-                num_filters=32,
-                filter_sizes=[2, 3]
+                embedding_dim=64, max_len=32, num_filters=32, filter_sizes=[2, 3]
             )
 
             assert wrapper.embedding_dim == 64
@@ -481,7 +482,7 @@ class TestSklearnWrappers:
 
     def test_textcnn_wrapper_fit_predict(self):
         """Test _SklearnTextCNNWrapper fit and predict"""
-        with patch('services.textcnn_service.TextCNNClassifier') as mock_cnn_class:
+        with patch("services.textcnn_service.TextCNNClassifier") as mock_cnn_class:
             mock_cnn = MagicMock()
             mock_cnn.predict_intent.return_value = ("label1", 0.9)
             mock_cnn.forward.return_value = {"probabilities": [[0.1, 0.9]]}
@@ -504,7 +505,7 @@ class TestSklearnWrappers:
 
     def test_bert_wrapper_init_unavailable(self):
         """Test _SklearnBertWrapper initialization when bert is unavailable"""
-        with patch('services.bert_service.BertNLPService') as mock_bert:
+        with patch("services.bert_service.BertNLPService") as mock_bert:
             mock_bert.side_effect = Exception("BERT not available")
 
             from services.nlp_ml_service import _SklearnBertWrapper

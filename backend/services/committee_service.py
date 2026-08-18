@@ -67,7 +67,9 @@ class CommitteeService:
 
     def create_term(self, data):
         if data.get("is_current"):
-            CommitteeTerm.query.filter_by(class_id=data["class_id"], is_current=True).update({"is_current": False})
+            CommitteeTerm.query.filter_by(class_id=data["class_id"], is_current=True).update(
+                {"is_current": False}
+            )
         term = CommitteeTerm(
             class_id=data["class_id"],
             term_name=data["term_name"],

@@ -81,7 +81,12 @@ class AnalysisService:
             .first()
         )
 
-        top_students = User.query.filter_by(class_name=class_name).order_by(User.current_score.desc()).limit(5).all()
+        top_students = (
+            User.query.filter_by(class_name=class_name)
+            .order_by(User.current_score.desc())
+            .limit(5)
+            .all()
+        )
 
         last_7_days = datetime.now() - timedelta(days=7)
 
@@ -106,17 +111,23 @@ class AnalysisService:
             "min_score": float(stats.min_score) if stats else 0,
             "weekly_record_count": weekly_stats.count if weekly_stats else 0,
             "weekly_total_change": (float(weekly_stats.total_change) if weekly_stats else 0),
-            "top_students": [{"id": u.id, "name": u.name, "current_score": u.current_score} for u in top_students],
+            "top_students": [
+                {"id": u.id, "name": u.name, "current_score": u.current_score} for u in top_students
+            ],
         }
 
     @staticmethod
     def get_unlock_stats(start_date=None, end_date=None, device_id=None, class_name=None):
-        query = ScoreRecord.query.options(joinedload(ScoreRecord.user)).filter(ScoreRecord.description.like("%开锁%"))
+        query = ScoreRecord.query.options(joinedload(ScoreRecord.user)).filter(
+            ScoreRecord.description.like("%开锁%")
+        )
 
         if start_date:
             query = query.filter(ScoreRecord.created_at >= datetime.fromisoformat(start_date))
         if end_date:
-            query = query.filter(ScoreRecord.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1))
+            query = query.filter(
+                ScoreRecord.created_at <= datetime.fromisoformat(end_date) + timedelta(days=1)
+            )
 
         if class_name:
             query = query.join(User).filter(User.class_name == class_name)
@@ -367,7 +378,10 @@ class AnalysisService:
             )
 
             top_students = (
-                User.query.filter_by(class_name=class_name).order_by(User.current_score.desc()).limit(5).all()
+                User.query.filter_by(class_name=class_name)
+                .order_by(User.current_score.desc())
+                .limit(5)
+                .all()
             )
 
             compare_data.append(
@@ -375,14 +389,32 @@ class AnalysisService:
                     "class_name": class_name,
                     "student_count": (class_stats.student_count if class_stats else 0),
                     "total_score": (float(class_stats.total_score) if class_stats else 0),
-                    "avg_score": (round(float(class_stats.avg_score), 2) if class_stats and class_stats.avg_score is not None else 0),
-                    "max_score": (float(class_stats.max_score) if class_stats and class_stats.max_score is not None else 0),
-                    "min_score": (float(class_stats.min_score) if class_stats and class_stats.min_score is not None else 0),
+                    "avg_score": (
+                        round(float(class_stats.avg_score), 2)
+                        if class_stats and class_stats.avg_score is not None
+                        else 0
+                    ),
+                    "max_score": (
+                        float(class_stats.max_score)
+                        if class_stats and class_stats.max_score is not None
+                        else 0
+                    ),
+                    "min_score": (
+                        float(class_stats.min_score)
+                        if class_stats and class_stats.min_score is not None
+                        else 0
+                    ),
                     "period_records": (period_records.total_records if period_records else 0),
-                    "period_total_change": (float(period_records.total_change) if period_records else 0),
+                    "period_total_change": (
+                        float(period_records.total_change) if period_records else 0
+                    ),
                     "period_total_add": (float(period_records.total_add) if period_records else 0),
-                    "period_total_subtract": (abs(float(period_records.total_subtract)) if period_records else 0),
-                    "period_active_students": (period_records.active_students if period_records else 0),
+                    "period_total_subtract": (
+                        abs(float(period_records.total_subtract)) if period_records else 0
+                    ),
+                    "period_active_students": (
+                        period_records.active_students if period_records else 0
+                    ),
                     "unlock_count": (unlock_stats.unlock_count if unlock_stats else 0),
                     "unlock_cost": (abs(float(unlock_stats.unlock_cost)) if unlock_stats else 0),
                     "avg_daily_records": round(

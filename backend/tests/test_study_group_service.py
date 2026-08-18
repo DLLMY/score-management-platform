@@ -6,10 +6,9 @@ from services.study_group_service import study_group_service
 
 class TestStudyGroupService:
     def test_create_group(self, app, db_session):
-        result = study_group_service.create_group({
-            "class_id": 1, "name": "第一学习小组",
-            "member_ids": [10, 11, 12]
-        })
+        result = study_group_service.create_group(
+            {"class_id": 1, "name": "第一学习小组", "member_ids": [10, 11, 12]}
+        )
         assert result[0]["success"] is True
         assert result[0]["data"]["member_count"] == 3
 
@@ -33,9 +32,9 @@ class TestStudyGroupService:
         assert result["data"]["new_score"] == 10
 
     def test_remove_member(self, app, db_session):
-        create_result = study_group_service.create_group({
-            "class_id": 1, "name": "移除测试组", "member_ids": [10]
-        })
+        create_result = study_group_service.create_group(
+            {"class_id": 1, "name": "移除测试组", "member_ids": [10]}
+        )
         group_id = create_result[0]["data"]["id"]
         result = study_group_service.remove_member(group_id, 10)
         assert result["success"] is True

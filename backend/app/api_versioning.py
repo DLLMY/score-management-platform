@@ -48,7 +48,9 @@ class APIVersionManager:
 
         @app.route("/api/versions")
         def list_versions():
-            return jsonify({"versions": list(self.versions.keys()), "current": "v1", "latest": "v1"})
+            return jsonify(
+                {"versions": list(self.versions.keys()), "current": "v1", "latest": "v1"}
+            )
 
         @app.route("/api")
         def api_root():
@@ -124,6 +126,7 @@ def register_v1_routes(api, app):
     # 文件下载蓝图（普通 Blueprint，需独立注册）
     try:
         from api.data.download_routes import download_bp
+
         # 开发模式 debug reloader 会执行两次 create_app → 第二次注册名冲突。
         # 幂等注册：已注册则跳过（此前 except: pass 吞掉冲突，路由实际已在首次注册成功）
         if "download" not in app.blueprints:
@@ -216,6 +219,7 @@ def register_v1_routes(api, app):
 
     try:
         from api.system.diagnostics_routes import ns_diagnostics
+
         api.add_namespace(ns_diagnostics)
     except Exception as e:
         logger.warning(f"diagnostics 命名空间注册失败: {e}")
@@ -223,11 +227,13 @@ def register_v1_routes(api, app):
     # 角色与权限相关命名空间（已迁移至 api.users 包）
     try:
         from api.users.sub_accounts_routes import ns_sub_accounts
+
         api.add_namespace(ns_sub_accounts)
     except Exception as e:
         logger.warning(f"sub_accounts 命名空间注册失败: {e}")
     try:
         from api.users.role_permissions_routes import ns_role_permissions
+
         api.add_namespace(ns_role_permissions)
     except Exception as e:
         logger.warning(f"role_permissions 命名空间注册失败: {e}")

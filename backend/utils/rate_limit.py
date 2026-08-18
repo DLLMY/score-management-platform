@@ -39,7 +39,10 @@ def get_rate_limit_config(limit_name: str, default_value: str) -> str:
 
 default_limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=[get_rate_limit_config("daily", "200 per day"), get_rate_limit_config("hourly", "50 per hour")],
+    default_limits=[
+        get_rate_limit_config("daily", "200 per day"),
+        get_rate_limit_config("hourly", "50 per hour"),
+    ],
     storage_uri="memory://",  # 使用内存存储（生产环境应使用Redis）
     strategy="fixed-window",  # 固定窗口策略
     headers_enabled=True,  # 启用限流响应头
@@ -245,7 +248,11 @@ def get_dynamic_limit(user_role=None, endpoint=None):
         限流字符串
     """
     # 管理员拥有更高的限流额度
-    admin_multiplier = {"admin": 2.0, "teacher": 1.5, "student": 1.0}  # 管理员2倍额度  # 教师1.5倍额度  # 学生标准额度
+    admin_multiplier = {
+        "admin": 2.0,
+        "teacher": 1.5,
+        "student": 1.0,
+    }  # 管理员2倍额度  # 教师1.5倍额度  # 学生标准额度
     # 根据端点类型调整基础额度
     base_limits = {"query": 30, "create": 20, "update": 20, "delete": 10}
     base = base_limits.get(endpoint, 30)

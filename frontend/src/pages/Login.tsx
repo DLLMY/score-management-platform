@@ -57,8 +57,8 @@ function Login() {
   // 如果还在检查认证状态，显示加载中
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500'></div>
       </div>
     );
   }
@@ -86,7 +86,7 @@ function Login() {
       const result = await api.auth.login({ username, password });
 
       const userData = result.user;
-      
+
       if (userData && isAdmin(userData)) {
         localStorage.setItem('admin', JSON.stringify(userData));
       } else if (userData) {
@@ -207,7 +207,10 @@ function Login() {
 
     return (
       <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
-        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in' onClick={onClose} />
+        <div
+          className='fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in'
+          onClick={onClose}
+        />
         <div className='relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-scale-in'>
           <div className='flex items-center gap-3 mb-6'>
             <div className='w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center'>
@@ -221,7 +224,10 @@ function Login() {
 
           <form onSubmit={handleChangePassword} className='space-y-5'>
             {changePasswordError && (
-              <div className='bg-red-500/20 border border-red-500/40 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2' role="alert">
+              <div
+                className='bg-red-500/20 border border-red-500/40 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2'
+                role='alert'
+              >
                 <AlertCircle className='w-5 h-5 flex-shrink-0' />
                 {changePasswordError}
               </div>
@@ -330,7 +336,10 @@ function Login() {
           >
             积分管理平台
           </h1>
-          <p className='text-sm sm:text-base text-gray-500 animate-fade-in' style={{ animationDelay: '200ms' }}>
+          <p
+            className='text-sm sm:text-base text-gray-500 animate-fade-in'
+            style={{ animationDelay: '200ms' }}
+          >
             请登录以继续
           </p>
         </div>
@@ -346,8 +355,13 @@ function Login() {
 
           <form onSubmit={handleSubmit} className='space-y-5 sm:space-y-6'>
             {error && (
-              <div className='bg-red-500/20 border border-red-500/40 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-shake' role="alert" aria-live="polite" aria-label="登录错误提示">
-                <AlertCircle className='w-5 h-5 flex-shrink-0' aria-hidden="true" />
+              <div
+                className='bg-red-500/20 border border-red-500/40 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-shake'
+                role='alert'
+                aria-live='polite'
+                aria-label='登录错误提示'
+              >
+                <AlertCircle className='w-5 h-5 flex-shrink-0' aria-hidden='true' />
                 {error}
               </div>
             )}
@@ -365,7 +379,9 @@ function Login() {
                   }`}
                 />
                 <div
-                  className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${usernameFocused ? 'text-primary-500 scale-110' : 'text-gray-400'}`}
+                  className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                    usernameFocused ? 'text-primary-500 scale-110' : 'text-gray-400'
+                  }`}
                 >
                   <User className='w-4 h-4 sm:w-5 sm:h-5' />
                 </div>
@@ -377,7 +393,7 @@ function Login() {
                   onFocus={handleUsernameFocus}
                   onBlur={handleUsernameBlur}
                   autoComplete='username'
-                  aria-label="用户名"
+                  aria-label='用户名'
                   aria-required={true}
                   aria-invalid={!!formErrors.username}
                   className={`w-full pl-11 sm:pl-12 pr-4 py-3 sm:py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none transition-all ${
@@ -406,7 +422,9 @@ function Login() {
                   }`}
                 />
                 <div
-                  className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${passwordFocused ? 'text-primary-500 scale-110' : 'text-gray-400'}`}
+                  className={`absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                    passwordFocused ? 'text-primary-500 scale-110' : 'text-gray-400'
+                  }`}
                 >
                   <Lock className='w-4 h-4 sm:w-5 sm:h-5' />
                 </div>
@@ -418,7 +436,7 @@ function Login() {
                   onFocus={handlePasswordFocus}
                   onBlur={handlePasswordBlur}
                   autoComplete='current-password'
-                  aria-label="密码"
+                  aria-label='密码'
                   aria-required={true}
                   aria-invalid={!!formErrors.password}
                   className={`w-full pl-11 sm:pl-12 pr-4 py-3 sm:py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none transition-all ${
@@ -437,7 +455,7 @@ function Login() {
             <button
               type='submit'
               disabled={loading}
-              aria-label="登录"
+              aria-label='登录'
               aria-busy={loading}
               className='relative w-full bg-gradient-to-r from-primary-500 via-blue-500 to-accent-600 text-white py-3 sm:py-3.5 px-6 rounded-xl font-semibold text-sm sm:text-base hover:shadow-2xl hover:shadow-primary-500/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-primary-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-primary-500/30 overflow-hidden'
             >
@@ -460,10 +478,7 @@ function Login() {
         </div>
       </div>
 
-      <ForceChangePasswordModal
-        isOpen={showForceChangePassword}
-        onClose={handleCloseModal}
-      />
+      <ForceChangePasswordModal isOpen={showForceChangePassword} onClose={handleCloseModal} />
     </div>
   );
 }

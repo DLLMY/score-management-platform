@@ -8,6 +8,7 @@
 
 依赖 conftest 的 client / auth_headers（super_admin）/ app_context fixture。
 """
+
 import uuid
 
 import pytest
@@ -50,9 +51,7 @@ def exam_with_scores(app_context, klass, students):
     db.session.add_all([math, chinese])
     db.session.commit()
     for i, s in enumerate(students):
-        db.session.add(
-            Score(exam_id=e.id, student_id=s.id, subject_id=math.id, score=90 - i * 5)
-        )
+        db.session.add(Score(exam_id=e.id, student_id=s.id, subject_id=math.id, score=90 - i * 5))
         db.session.add(
             Score(exam_id=e.id, student_id=s.id, subject_id=chinese.id, score=85 + i * 3)
         )

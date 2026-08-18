@@ -168,7 +168,9 @@ def get_devices_for_admin(admin):
         return Device.query
     class_ids = get_admin_class_ids(admin.id)
     if class_ids:
-        return Device.query.filter((Device.class_info_id.in_(class_ids)) | (Device.admin_id == admin.id))
+        return Device.query.filter(
+            (Device.class_info_id.in_(class_ids)) | (Device.admin_id == admin.id)
+        )
 
     return Device.query.filter(Device.admin_id == admin.id)
 
@@ -211,7 +213,9 @@ class DeviceList(Resource):
         if class_id:
             query = query.filter(Device.class_info_id == class_id)
 
-        pagination = query.order_by(Device.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        pagination = query.order_by(Device.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
         devices = pagination.items
 
         return APIResponse.success(
@@ -224,7 +228,9 @@ class DeviceList(Resource):
                         "status": d.status,
                         # is_online 以 last_heartbeat 时效性为准（status 字段可能陈旧，无心跳仍显示 online）
                         "is_online": is_device_online(d),
-                        "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+                        "last_heartbeat": (
+                            d.last_heartbeat.isoformat() if d.last_heartbeat else None
+                        ),
                         "wifi_signal": d.wifi_signal,
                         "uptime": d.uptime,
                         "box_a_status": d.box_a_status,
@@ -290,7 +296,9 @@ class DeviceResource(Resource):
                 "status": device.status,
                 # is_online 以 last_heartbeat 时效性为准（避免无心跳却显示在线）
                 "is_online": is_device_online(device),
-                "last_heartbeat": device.last_heartbeat.isoformat() if device.last_heartbeat else None,
+                "last_heartbeat": (
+                    device.last_heartbeat.isoformat() if device.last_heartbeat else None
+                ),
                 "wifi_signal": device.wifi_signal,
                 "uptime": device.uptime,
                 "box_a_status": device.box_a_status,
@@ -465,7 +473,9 @@ class DeviceStats(Resource):
             DeviceHeartbeat.received_at >= datetime.combine(today, datetime.min.time())
         ).count()
 
-        recent_heartbeats = DeviceHeartbeat.query.order_by(DeviceHeartbeat.received_at.desc()).limit(100).all()
+        recent_heartbeats = (
+            DeviceHeartbeat.query.order_by(DeviceHeartbeat.received_at.desc()).limit(100).all()
+        )
 
         result = {
             "total_devices": total,
@@ -500,9 +510,9 @@ class OnlineDevices(Resource):
         获取所有当前在线的设备列表。
         响应由 cached_api 统一缓存（Redis，TTL 30s）。
         """
-        devices = (
-            Device.query.options(joinedload(Device.class_info), joinedload(Device.admin)).all()
-        )
+        devices = Device.query.options(
+            joinedload(Device.class_info), joinedload(Device.admin)
+        ).all()
         online_devices = [d for d in devices if d.is_online]
         return [
             {
@@ -636,7 +646,9 @@ class DevicesByClass(Resource):
 
         获取绑定到指定班级的所有设备。
         """
-        devices = Device.query.filter_by(class_info_id=class_id).options(joinedload(Device.admin)).all()
+        devices = (
+            Device.query.filter_by(class_info_id=class_id).options(joinedload(Device.admin)).all()
+        )
         return [
             {
                 "id": d.id,
@@ -666,7 +678,9 @@ class DevicesByAdmin(Resource):
 
         获取绑定到指定管理员的所有设备。
         """
-        devices = Device.query.filter_by(admin_id=admin_id).options(joinedload(Device.class_info)).all()
+        devices = (
+            Device.query.filter_by(admin_id=admin_id).options(joinedload(Device.class_info)).all()
+        )
         return [
             {
                 "id": d.id,
@@ -745,7 +759,9 @@ class DeviceAlerts(Resource):
                 "page": page,
                 "per_page": per_page,
                 "pages": pagination.pages,
-                "unresolved_count": Alert.query.filter_by(source="device", is_resolved=False).count(),
+                "unresolved_count": Alert.query.filter_by(
+                    source="device", is_resolved=False
+                ).count(),
             }
         )
 
@@ -755,7 +771,9 @@ class DeviceAlerts(Resource):
 @ns_devices.param("alert_id", "告警ID")
 class ResolveDeviceAlertAlt(Resource):
 
-    @ns_devices.doc("resolve_device_alert_alt", description="解决设备告警（备用路径）", security="Bearer")
+    @ns_devices.doc(
+        "resolve_device_alert_alt", description="解决设备告警（备用路径）", security="Bearer"
+    )
     @ns_devices.response(200, "成功")
     @requires_permission("device.edit")
     def post(self, id, alert_id):
@@ -817,7 +835,11 @@ class DeviceRemoteControl(Resource):
     @ns_devices.expect(
         ns_devices.model(
             "RemoteControl",
-            {"action": fields.String(required=True, description="操作类型：restart/reboot/unlock_a/unlock_b")},
+            {
+                "action": fields.String(
+                    required=True, description="操作类型：restart/reboot/unlock_a/unlock_b"
+                )
+            },
         )
     )
     @ns_devices.response(200, "成功")
@@ -931,14 +953,22 @@ class DeviceAdvancedStats(Resource):
         offline = total - online - error
 
         # 无信号数据时保持 None（前端显示 '--'），0 dBm 会被误读为"极强信号"
-        avg_signal = db.session.query(func.avg(Device.wifi_signal)).filter(Device.wifi_signal.isnot(None)).scalar()
+        avg_signal = (
+            db.session.query(func.avg(Device.wifi_signal))
+            .filter(Device.wifi_signal.isnot(None))
+            .scalar()
+        )
 
         alert_count = Alert.query.filter_by(source="device", is_resolved=False).count()
-        critical_alerts = Alert.query.filter_by(source="device", is_resolved=False, severity="critical").count()
+        critical_alerts = Alert.query.filter_by(
+            source="device", is_resolved=False, severity="critical"
+        ).count()
 
         today = datetime.now().date()
         today_start = datetime.combine(today, datetime.min.time())
-        today_heartbeats = DeviceHeartbeat.query.filter(DeviceHeartbeat.received_at >= today_start).count()
+        today_heartbeats = DeviceHeartbeat.query.filter(
+            DeviceHeartbeat.received_at >= today_start
+        ).count()
 
         devices_with_signal = Device.query.filter(Device.wifi_signal.isnot(None)).all()
 
@@ -1056,7 +1086,9 @@ class BatchDeviceControl(Resource):
         action = data.get("action")
 
         if not device_ids:
-            return APIResponse.success(data={"total": 0, "online_count": 0, "offline_count": 0, "results": []})
+            return APIResponse.success(
+                data={"total": 0, "online_count": 0, "offline_count": 0, "results": []}
+            )
 
         devices = Device.query.filter(Device.id.in_(device_ids)).all()
         device_map = {d.id: d for d in devices}
@@ -1100,7 +1132,12 @@ class BatchDeviceControl(Resource):
                     )
             else:
                 results.append(
-                    {"device_id": device_id, "device_name": device.name, "success": False, "message": "设备不在线"}
+                    {
+                        "device_id": device_id,
+                        "device_name": device.name,
+                        "success": False,
+                        "message": "设备不在线",
+                    }
                 )
 
         return APIResponse.success(
@@ -1187,7 +1224,9 @@ class DeviceOTAUpgradeAll(Resource):
 @ns_devices.route("/bulk-ota-upgrade")
 class DeviceBulkOTAUpgrade(Resource):
 
-    @ns_devices.doc("device_bulk_ota_upgrade", description="批量OTA固件升级（别名）", security="Bearer")
+    @ns_devices.doc(
+        "device_bulk_ota_upgrade", description="批量OTA固件升级（别名）", security="Bearer"
+    )
     @ns_devices.expect(ota_upgrade_model)
     @ns_devices.response(200, "成功")
     @requires_permission("device.edit")
@@ -1268,7 +1307,9 @@ class DeviceExport(Resource):
                         "status": device.status,
                         "is_online": is_device_online(device),
                         "last_heartbeat": (
-                            device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S") if device.last_heartbeat else ""
+                            device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
+                            if device.last_heartbeat
+                            else ""
                         ),
                         "wifi_signal": device.wifi_signal,
                         "uptime": device.uptime,
@@ -1279,8 +1320,16 @@ class DeviceExport(Resource):
                         "class_name": device.class_info.name if device.class_info else "",
                         "admin_id": device.admin_id,
                         "admin_name": device.admin.name if device.admin else "",
-                        "created_at": device.created_at.strftime("%Y-%m-%d %H:%M:%S") if device.created_at else "",
-                        "updated_at": device.updated_at.strftime("%Y-%m-%d %H:%M:%S") if device.updated_at else "",
+                        "created_at": (
+                            device.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                            if device.created_at
+                            else ""
+                        ),
+                        "updated_at": (
+                            device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                            if device.updated_at
+                            else ""
+                        ),
                     }
                     device_list.append(device_data)
 
@@ -1313,7 +1362,9 @@ class DeviceExport(Resource):
                 sheet.append(headers)
 
                 header_font = openpyxl.styles.Font(bold=True, color="FFFFFF")
-                header_fill = openpyxl.styles.PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
+                header_fill = openpyxl.styles.PatternFill(
+                    start_color="4A5568", end_color="4A5568", fill_type="solid"
+                )
                 for col in range(1, len(headers) + 1):
                     cell = sheet.cell(row=1, column=col)
                     cell.font = header_font
@@ -1325,12 +1376,24 @@ class DeviceExport(Resource):
                         device.name,
                         device.status,
                         "是" if is_device_online(device) else "否",
-                        device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S") if device.last_heartbeat else "",
+                        (
+                            device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
+                            if device.last_heartbeat
+                            else ""
+                        ),
                         device.wifi_signal,
                         device.class_info.name if device.class_info else "",
                         device.admin.name if device.admin else "",
-                        device.created_at.strftime("%Y-%m-%d %H:%M:%S") if device.created_at else "",
-                        device.updated_at.strftime("%Y-%m-%d %H:%M:%S") if device.updated_at else "",
+                        (
+                            device.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                            if device.created_at
+                            else ""
+                        ),
+                        (
+                            device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                            if device.updated_at
+                            else ""
+                        ),
                     ]
                     sheet.append(row_data)
 

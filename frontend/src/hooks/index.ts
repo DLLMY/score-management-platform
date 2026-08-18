@@ -17,22 +17,22 @@ export { useForm } from './useForm';
 export { useModal, useConfirmDialog } from './useModal';
 export { useAutoSave } from './useAutoSave';
 export { useUndoRedo, useConfirmDialog as useConfirmDialogV2 } from './useUndoRedo';
-export { 
-  shallowEqual, 
-  deepEqual, 
-  useShallowCompare, 
-  useDeepCompare, 
+export {
+  shallowEqual,
+  deepEqual,
+  useShallowCompare,
+  useDeepCompare,
   useDeepCompareMemo,
   useShallowCompareMemo,
   usePrevious,
   useChangeDetector,
-  createUseCompareHook 
+  createUseCompareHook,
 } from './useShallowCompare';
-export { 
-  useDebouncedValue, 
-  useDebouncedCallback, 
-  useThrottledValue, 
+export {
+  useDebouncedValue,
+  useDebouncedCallback,
+  useThrottledValue,
   useThrottledCallback,
   useDelayedValue,
-  useAccumulatedValue 
+  useAccumulatedValue,
 } from './useDebouncedValue';

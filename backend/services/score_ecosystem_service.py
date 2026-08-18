@@ -126,7 +126,8 @@ class ScoreEcosystem:
         user.current_score = self.apply_bounds((user.current_score or 0) + score_change)
 
         with db_session_scope():
-            record = ScoreRecord(student_id=user_id,
+            record = ScoreRecord(
+                student_id=user_id,
                 rule_id=behavior_type,
                 score_change=score_change,
                 description=f"积分获取: {self.earning_rules[behavior_type]['description']}",
@@ -161,7 +162,8 @@ class ScoreEcosystem:
         user.current_score = self.apply_bounds(new_score)
 
         with db_session_scope():
-            record = ScoreRecord(student_id=user_id,
+            record = ScoreRecord(
+                student_id=user_id,
                 rule_id=spending_type,
                 score_change=-total_cost,
                 description=f'积分消费: {calculation["description"]} x {amount}',
@@ -208,11 +210,17 @@ class ScoreEcosystem:
         if not user:
             return {"success": False, "error": "用户不存在"}
 
-        last_earned = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.score_change > 0).order_by(
-            ScoreRecord.created_at.desc()
-        ).first()
+        last_earned = (
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id, ScoreRecord.score_change > 0
+            )
+            .order_by(ScoreRecord.created_at.desc())
+            .first()
+        )
 
-        validity = self.check_score_validity(last_earned.created_at if last_earned else datetime.now())
+        validity = self.check_score_validity(
+            last_earned.created_at if last_earned else datetime.now()
+        )
 
         return {
             "success": True,

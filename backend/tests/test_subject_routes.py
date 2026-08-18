@@ -7,6 +7,7 @@
 - 科目批量导入（JSON 路径：创建 + 关联班级 + 统计 dict）
 - 各类请求级错误（重复名称/代码 400、班级不存在 404、导入格式错误 400）
 """
+
 import pytest
 
 from models import db, Admin, ClassInfo, Subject, SubjectClass
@@ -55,9 +56,7 @@ class TestSubjectRoutes:
 
     def test_create_subject_duplicate_name(self, client, app, auth_headers, seeded_subjects):
         with app.app_context():
-            resp = client.post(
-                "/api/subjects", json={"name": "数学"}, headers=auth_headers
-            )
+            resp = client.post("/api/subjects", json={"name": "数学"}, headers=auth_headers)
             assert resp.status_code == 400
 
     def test_create_subject_duplicate_code(self, client, app, auth_headers, seeded_subjects):
@@ -106,9 +105,7 @@ class TestSubjectRoutes:
             assert resp.status_code == 400
 
     def test_update_subject_not_found(self, client, app, auth_headers, seeded_subjects):
-        resp = client.put(
-            "/api/subjects/999999", json={"name": "x"}, headers=auth_headers
-        )
+        resp = client.put("/api/subjects/999999", json={"name": "x"}, headers=auth_headers)
         assert resp.status_code == 404
 
     # ---- 删除 ----
@@ -164,7 +161,11 @@ class TestSubjectRoutes:
         with app.app_context():
             resp = client.post(
                 f"/api/subjects/{subj_id}/classes",
-                json={"subject_id": subj_id, "class_info_id": 999999, "teacher_id": seeded_subjects["teacher_id"]},
+                json={
+                    "subject_id": subj_id,
+                    "class_info_id": 999999,
+                    "teacher_id": seeded_subjects["teacher_id"],
+                },
                 headers=auth_headers,
             )
             assert resp.status_code == 404
@@ -206,11 +207,12 @@ class TestSubjectRoutes:
                 json={"subject_id": subj_id, "class_info_id": cls_id, "teacher_id": teacher_id},
                 headers=auth_headers,
             )
-            resp = client.delete(
-                f"/api/subjects/{subj_id}/classes/{cls_id}", headers=auth_headers
-            )
+            resp = client.delete(f"/api/subjects/{subj_id}/classes/{cls_id}", headers=auth_headers)
             assert resp.status_code == 200
-            assert SubjectClass.query.filter_by(subject_id=subj_id, class_info_id=cls_id).first() is None
+            assert (
+                SubjectClass.query.filter_by(subject_id=subj_id, class_info_id=cls_id).first()
+                is None
+            )
 
     # ---- 批量排序 ----
     def test_update_subject_order(self, client, app, auth_headers, seeded_subjects):
@@ -248,12 +250,12 @@ class TestSubjectRoutes:
             assert body["failed_count"] == 0
             new_subj = Subject.query.filter_by(name="物理").first()
             assert new_subj is not None
-            link = SubjectClass.query.filter_by(subject_id=new_subj.id, class_info_id=cls_id).first()
+            link = SubjectClass.query.filter_by(
+                subject_id=new_subj.id, class_info_id=cls_id
+            ).first()
             assert link is not None
 
     def test_import_subject_invalid_format(self, client, app, auth_headers, seeded_subjects):
         with app.app_context():
-            resp = client.post(
-                "/api/subjects/import", json={"foo": 1}, headers=auth_headers
-            )
+            resp = client.post("/api/subjects/import", json={"foo": 1}, headers=auth_headers)
             assert resp.status_code == 400

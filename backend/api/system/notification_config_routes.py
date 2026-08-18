@@ -50,7 +50,9 @@ class NotificationConfig(Resource):
             "sms_access_key_id": current_app.config.get("SMS_CONFIG", {}).get("access_key_id", ""),
             "sms_sign_name": current_app.config.get("SMS_CONFIG", {}).get("sign_name", ""),
             "sms_template_code": current_app.config.get("SMS_CONFIG", {}).get("template_code", ""),
-            "enable_wechat_notification": current_app.config.get("ENABLE_WECHAT_NOTIFICATION", True),
+            "enable_wechat_notification": current_app.config.get(
+                "ENABLE_WECHAT_NOTIFICATION", True
+            ),
             "enable_sms_notification": current_app.config.get("ENABLE_SMS_NOTIFICATION", False),
         }
 
@@ -169,7 +171,8 @@ class TestSmsNotification(Resource):
             return APIResponse.error(message="请提供手机号", status_code=400)
 
         result = NotificationService.send_sms_notification(  # noqa: F841
-            phone=phone, message=f'【测试消息】这是一条测试短信，发送时间：{datetime.now().strftime("%Y-%m-%d %H:%M")}'
+            phone=phone,
+            message=f'【测试消息】这是一条测试短信，发送时间：{datetime.now().strftime("%Y-%m-%d %H:%M")}',
         )
 
         if result.get("success"):

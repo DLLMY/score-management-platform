@@ -11,6 +11,7 @@ P0-1 补遗迁移：nlp_rule_usages.user_id → student_id（幂等）
   python scripts/migrate_nlp_rule_usage_student_id.py            # 执行
   python scripts/migrate_nlp_rule_usage_student_id.py --check-only  # 仅报告
 """
+
 import os
 import sqlite3
 import sys

@@ -141,7 +141,10 @@ class TestUserImportRoutes:
     def test_import_file_no_file(self, client, app, auth_headers):
         """缺少 file → 400。"""
         resp = client.post(
-            "/api/users/import-file", data={}, headers=auth_headers, content_type="multipart/form-data"
+            "/api/users/import-file",
+            data={},
+            headers=auth_headers,
+            content_type="multipart/form-data",
         )
         assert resp.status_code == 400
 
@@ -163,7 +166,5 @@ class TestUserImportRoutes:
 
     def test_toggle_active_not_found(self, client, app, auth_headers):
         """不存在用户 → 404。"""
-        resp = client.post(
-            "/api/user-management/user/999999/toggle-active", headers=auth_headers
-        )
+        resp = client.post("/api/user-management/user/999999/toggle-active", headers=auth_headers)
         assert resp.status_code == 404

@@ -37,6 +37,7 @@ P0-6 预警合并迁移脚本（幂等 / 单事务 / 可逆）
   python scripts/migrate_merge_alerts.py            # 执行
   python scripts/migrate_merge_alerts.py --check-only  # 仅报告状态不修改
 """
+
 import os
 import sqlite3
 import sys
@@ -48,9 +49,7 @@ CHECK_ONLY = "--check-only" in sys.argv
 
 
 def table_exists(conn, name):
-    cur = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
-    )
+    cur = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,))
     return cur.fetchone() is not None
 
 
@@ -119,13 +118,14 @@ def main():
         # 2) 合并 mental_health_alert -> alert(source='mental')
         if has_mha:
             if not has_mha_bak:
-                conn.execute("CREATE TABLE mental_health_alert_bak AS SELECT * FROM mental_health_alert")
+                conn.execute(
+                    "CREATE TABLE mental_health_alert_bak AS SELECT * FROM mental_health_alert"
+                )
                 print("[ok] 已建库内备份 mental_health_alert_bak")
             else:
                 print("[info] mental_health_alert_bak 已存在，跳过备份")
             if count_source(conn, "mental") == 0:
-                conn.execute(
-                    """
+                conn.execute("""
                     INSERT INTO alert (
                         student_id, alert_type, severity, message,
                         is_resolved, resolved_at, created_at, source
@@ -134,8 +134,7 @@ def main():
                         student_id, alert_type, CAST(severity AS TEXT), message,
                         is_resolved, resolved_at, created_at, 'mental'
                     FROM mental_health_alert
-                    """
-                )
+                    """)
                 copied = conn.execute("SELECT changes()").fetchone()[0]
                 print(f"[ok] 已拷贝 {copied} 条心理预警到 alert(source='mental')")
             else:
@@ -152,8 +151,7 @@ def main():
             else:
                 print("[info] risk_warnings_bak 已存在，跳过备份")
             if count_source(conn, "risk") == 0:
-                conn.execute(
-                    """
+                conn.execute("""
                     INSERT INTO alert (
                         student_id, alert_type, severity, message, is_read,
                         source, is_resolved, resolved_at, created_at,
@@ -164,8 +162,7 @@ def main():
                         'risk', is_resolved, resolved_at, created_at,
                         risk_level, risk_score, recommended_action, status, acknowledged_at
                     FROM risk_warnings
-                    """
-                )
+                    """)
                 copied = conn.execute("SELECT changes()").fetchone()[0]
                 print(f"[ok] 已拷贝 {copied} 条风险预警到 alert(source='risk')")
             else:
@@ -176,7 +173,9 @@ def main():
 
         remain_mental = count_source(conn, "mental")
         remain_risk = count_source(conn, "risk")
-        print(f"[done] 合并完成：alert(source='mental')={remain_mental}, alert(source='risk')={remain_risk}")
+        print(
+            f"[done] 合并完成：alert(source='mental')={remain_mental}, alert(source='risk')={remain_risk}"
+        )
     except Exception as e:
         conn.rollback()
         print(f"[error] 迁移失败已回滚: {e}")

@@ -61,7 +61,10 @@ class AttendanceService:
                 return {"success": False, "message": f"第 {i+1} 条记录格式错误"}, 400
             missing = [k for k in ("class_id", "student_id") if not data.get(k)]
             if missing:
-                return {"success": False, "message": f"第 {i+1} 条记录缺少必填字段: " + ", ".join(missing)}, 400
+                return {
+                    "success": False,
+                    "message": f"第 {i+1} 条记录缺少必填字段: " + ", ".join(missing),
+                }, 400
             if not require_class(data["class_id"]) or not require_student(data["student_id"]):
                 return {"success": False, "message": f"第 {i+1} 条记录班级或学生不存在"}, 400
         admin = get_current_admin()
@@ -89,7 +92,9 @@ class AttendanceService:
         if admin and admin.role not in ("admin", "super_admin"):
             allowed = get_allowed_classes(admin.id)
             if allowed:
-                query = query.join(User, Approval.student_id == User.id).filter(User.class_name.in_(allowed))
+                query = query.join(User, Approval.student_id == User.id).filter(
+                    User.class_name.in_(allowed)
+                )
             else:
                 query = query.filter(False)
         if student_id:

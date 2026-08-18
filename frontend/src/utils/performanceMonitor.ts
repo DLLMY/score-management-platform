@@ -73,7 +73,9 @@ class PerformanceMonitor {
 
   private updateApiStats(entry: PerformanceEntry): void {
     this.stats.totalRequests++;
-    this.stats.avgResponseTime = (this.stats.avgResponseTime * (this.stats.totalRequests - 1) + entry.duration) / this.stats.totalRequests;
+    this.stats.avgResponseTime =
+      (this.stats.avgResponseTime * (this.stats.totalRequests - 1) + entry.duration) /
+      this.stats.totalRequests;
     this.stats.maxResponseTime = Math.max(this.stats.maxResponseTime, entry.duration);
     this.stats.minResponseTime = Math.min(this.stats.minResponseTime, entry.duration);
 
@@ -114,7 +116,9 @@ class PerformanceMonitor {
   }
 
   getSlowRequests(): PerformanceEntry[] {
-    return this.entries.filter((e) => e.duration > this.slowThreshold).sort((a, b) => b.duration - a.duration);
+    return this.entries
+      .filter((e) => e.duration > this.slowThreshold)
+      .sort((a, b) => b.duration - a.duration);
   }
 
   subscribe(listener: (stats: PerformanceStats) => void): () => void {

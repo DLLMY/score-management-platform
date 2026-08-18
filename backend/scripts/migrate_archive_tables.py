@@ -18,6 +18,7 @@
   --execute 会修改热表（DELETE 冷数据），必须在维护窗口、且已完整备份后执行。
   脚本按 id 分批（BATCH）提交，单批失败可定位断点；归档前请确认已执行本仓库备份策略。
 """
+
 import argparse
 import os
 import sys
@@ -32,10 +33,32 @@ RETENTION_DAYS = int(os.getenv("ARCHIVE_RETENTION_DAYS", "365"))
 BATCH = 2000
 
 # 归档列（与模型一致，含 archived_at 由脚本写入）
-_SCORE_COLS = ["id", "exam_id", "student_id", "subject_id", "score",
-               "full_score", "status", "remark", "entered_by", "entered_at", "updated_at"]
-_ATT_COLS = ["id", "class_id", "student_id", "date", "period", "status",
-             "arrive_time", "leave_time", "recorded_by", "notes", "created_at"]
+_SCORE_COLS = [
+    "id",
+    "exam_id",
+    "student_id",
+    "subject_id",
+    "score",
+    "full_score",
+    "status",
+    "remark",
+    "entered_by",
+    "entered_at",
+    "updated_at",
+]
+_ATT_COLS = [
+    "id",
+    "class_id",
+    "student_id",
+    "date",
+    "period",
+    "status",
+    "arrive_time",
+    "leave_time",
+    "recorded_by",
+    "notes",
+    "created_at",
+]
 
 
 def ensure_tables():
@@ -59,11 +82,15 @@ def _in_clause(ids):
 def dry_run(cutoff):
     with app.app_context():
         n_scores = db.session.execute(
-            db.text("SELECT COUNT(*) FROM scores WHERE entered_at IS NOT NULL AND entered_at < :cutoff"),
+            db.text(
+                "SELECT COUNT(*) FROM scores WHERE entered_at IS NOT NULL AND entered_at < :cutoff"
+            ),
             {"cutoff": cutoff},
         ).scalar()
         n_att = db.session.execute(
-            db.text("SELECT COUNT(*) FROM attendance WHERE created_at IS NOT NULL AND created_at < :cutoff"),
+            db.text(
+                "SELECT COUNT(*) FROM attendance WHERE created_at IS NOT NULL AND created_at < :cutoff"
+            ),
             {"cutoff": cutoff},
         ).scalar()
         print(f"[dry-run] 归档窗口截止: {cutoff.date()} (RETENTION_DAYS={RETENTION_DAYS})")
@@ -83,21 +110,27 @@ def execute(cutoff):
     with app.app_context():
         # ---- scores 归档 ----
         while True:
-            ids = [r[0] for r in db.session.execute(
-                db.text(
-                    "SELECT id FROM scores "
-                    "WHERE entered_at IS NOT NULL AND entered_at < :cutoff "
-                    "ORDER BY id LIMIT :lim"
-                ),
-                {"cutoff": cutoff, "lim": BATCH},
-            ).fetchall()]
+            ids = [
+                r[0]
+                for r in db.session.execute(
+                    db.text(
+                        "SELECT id FROM scores "
+                        "WHERE entered_at IS NOT NULL AND entered_at < :cutoff "
+                        "ORDER BY id LIMIT :lim"
+                    ),
+                    {"cutoff": cutoff, "lim": BATCH},
+                ).fetchall()
+            ]
             if not ids:
                 break
             in_clause = _in_clause(ids)
-            db.session.execute(db.text(
-                f"INSERT INTO scores_archive ({score_cols_sql}, archived_at) "
-                f"SELECT {score_cols_sql}, :now FROM scores WHERE id IN ({in_clause})"
-            ), {"now": now})
+            db.session.execute(
+                db.text(
+                    f"INSERT INTO scores_archive ({score_cols_sql}, archived_at) "
+                    f"SELECT {score_cols_sql}, :now FROM scores WHERE id IN ({in_clause})"
+                ),
+                {"now": now},
+            )
             db.session.execute(db.text(f"DELETE FROM scores WHERE id IN ({in_clause})"))
             db.session.commit()
             total_scores += len(ids)
@@ -105,21 +138,27 @@ def execute(cutoff):
 
         # ---- attendance 归档 ----
         while True:
-            ids = [r[0] for r in db.session.execute(
-                db.text(
-                    "SELECT id FROM attendance "
-                    "WHERE created_at IS NOT NULL AND created_at < :cutoff "
-                    "ORDER BY id LIMIT :lim"
-                ),
-                {"cutoff": cutoff, "lim": BATCH},
-            ).fetchall()]
+            ids = [
+                r[0]
+                for r in db.session.execute(
+                    db.text(
+                        "SELECT id FROM attendance "
+                        "WHERE created_at IS NOT NULL AND created_at < :cutoff "
+                        "ORDER BY id LIMIT :lim"
+                    ),
+                    {"cutoff": cutoff, "lim": BATCH},
+                ).fetchall()
+            ]
             if not ids:
                 break
             in_clause = _in_clause(ids)
-            db.session.execute(db.text(
-                f"INSERT INTO attendance_archive ({att_cols_sql}, archived_at) "
-                f"SELECT {att_cols_sql}, :now FROM attendance WHERE id IN ({in_clause})"
-            ), {"now": now})
+            db.session.execute(
+                db.text(
+                    f"INSERT INTO attendance_archive ({att_cols_sql}, archived_at) "
+                    f"SELECT {att_cols_sql}, :now FROM attendance WHERE id IN ({in_clause})"
+                ),
+                {"now": now},
+            )
             db.session.execute(db.text(f"DELETE FROM attendance WHERE id IN ({in_clause})"))
             db.session.commit()
             total_att += len(ids)
@@ -131,7 +170,9 @@ def execute(cutoff):
 def main():
     ap = argparse.ArgumentParser(description="成绩/考勤历史冷归档（建表 + dry-run + execute）")
     ap.add_argument("--dry-run", action="store_true", help="报告可归档行数，不移动数据")
-    ap.add_argument("--execute", action="store_true", help="真正归档早于 RETENTION 的历史数据（需维护窗口）")
+    ap.add_argument(
+        "--execute", action="store_true", help="真正归档早于 RETENTION 的历史数据（需维护窗口）"
+    )
     args = ap.parse_args()
 
     cutoff = datetime.now() - timedelta(days=RETENTION_DAYS)

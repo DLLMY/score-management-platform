@@ -21,7 +21,7 @@ export function Pagination({
     const maxVisible = 5;
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     let end = Math.min(totalPages, start + maxVisible - 1);
-    
+
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
     }
@@ -50,21 +50,23 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
-      <div className="text-sm text-gray-600">
+    <div className='flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200'>
+      <div className='text-sm text-gray-600'>
         显示 {startItem} - {endItem} 条，共 {totalItems} 条记录
       </div>
-      <div className="flex items-center gap-1">
+      <div className='flex items-center gap-1'>
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className='px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
         >
           上一页
         </button>
         {getPageNumbers().map((page, index) =>
           page === -1 ? (
-            <span key={index} className="px-2 text-gray-400">...</span>
+            <span key={index} className='px-2 text-gray-400'>
+              ...
+            </span>
           ) : (
             <button
               key={page}
@@ -82,7 +84,7 @@ export function Pagination({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className='px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
         >
           下一页
         </button>

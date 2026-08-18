@@ -19,7 +19,7 @@ export const createRouteComponent = <P extends {} = {}>(
 
   const WrappedComponent: React.FC<P> = (props) => (
     <Suspense fallback={fallback || defaultFallback}>
-      <LazyComponent {...props as any} />
+      <LazyComponent {...(props as any)} />
     </Suspense>
   );
 
@@ -40,7 +40,7 @@ export const createLazyComponent = <P extends {} = {}>(
 
   const WrappedComponent: React.FC<P & { fallback?: ReactNode }> = (props) => {
     const { fallback, ...restProps } = props as any;
-    
+
     return (
       <Suspense fallback={fallback || defaultFallback}>
         <LazyComponent {...restProps} />
@@ -56,10 +56,10 @@ export const createLazyComponent = <P extends {} = {}>(
  * 默认加载回退组件
  */
 const defaultFallback: ReactNode = (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50">
-    <div className="flex flex-col items-center">
-      <div className="w-10 h-10 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mb-3"></div>
-      <p className="text-sm text-gray-500">加载中...</p>
+  <div className='min-h-screen flex items-center justify-center bg-gray-50'>
+    <div className='flex flex-col items-center'>
+      <div className='w-10 h-10 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mb-3'></div>
+      <p className='text-sm text-gray-500'>加载中...</p>
     </div>
   </div>
 );
@@ -105,16 +105,13 @@ export interface RouteConfig {
   component: () => Promise<{ default: ComponentType<any> }>;
 }
 
-export const preloadOnNavigation = (
-  path: string,
-  routes: RouteConfig[]
-): void => {
+export const preloadOnNavigation = (path: string, routes: RouteConfig[]): void => {
   const currentRoute = routes.find((r) => r.path === path);
   if (!currentRoute) return;
 
   // 获取可能的下一个路由（根据业务逻辑）
   const nextRoutes = getNextRoutes(path, routes);
-  
+
   nextRoutes.forEach((route) => {
     preloadComponent(route.component);
   });
@@ -165,7 +162,7 @@ export const createOptimizedLazyComponent = <P extends {} = {}>(
   const WrappedComponent: React.FC<P> = (props) => {
     return (
       <Suspense fallback={defaultFallback}>
-        <LazyComponent {...props as any} />
+        <LazyComponent {...(props as any)} />
       </Suspense>
     );
   };

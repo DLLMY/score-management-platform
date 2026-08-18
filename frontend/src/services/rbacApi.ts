@@ -48,15 +48,18 @@ export interface RoleHierarchy {
 
 const rbacApi = {
   // ========== Permission APIs ==========
-  
+
   /**
    * 获取权限列表
    */
-  getPermissions: async (params?: { category?: string; is_active?: boolean }): Promise<Permission[]> => {
+  getPermissions: async (params?: {
+    category?: string;
+    is_active?: boolean;
+  }): Promise<Permission[]> => {
     const queryParams = new URLSearchParams();
     if (params?.category) queryParams.append('category', params.category);
     if (params?.is_active !== undefined) queryParams.append('is_active', String(params.is_active));
-    
+
     const query = queryParams.toString();
     const url = `/api/rbac/permissions${query ? `?${query}` : ''}`;
     return request(url) as Promise<Permission[]>;
@@ -152,7 +155,9 @@ const rbacApi = {
    * 获取管理员的角色和权限
    */
   getAdminRoles: async (adminId: number): Promise<AdminWithRoles> => {
-    return request(`/api/rbac/admin-roles/${adminId}`, { skipCache: true }) as Promise<AdminWithRoles>;
+    return request(`/api/rbac/admin-roles/${adminId}`, {
+      skipCache: true,
+    }) as Promise<AdminWithRoles>;
   },
 
   /**
@@ -169,14 +174,18 @@ const rbacApi = {
    * 为管理员添加单个角色
    */
   addAdminRole: async (adminId: number, roleCode: string): Promise<void> => {
-    return request(`/api/rbac/admin-roles/${adminId}/${roleCode}`, { method: 'POST' }) as Promise<void>;
+    return request(`/api/rbac/admin-roles/${adminId}/${roleCode}`, {
+      method: 'POST',
+    }) as Promise<void>;
   },
 
   /**
    * 移除管理员的单个角色
    */
   removeAdminRole: async (adminId: number, roleCode: string): Promise<void> => {
-    return request(`/api/rbac/admin-roles/${adminId}/${roleCode}`, { method: 'DELETE' }) as Promise<void>;
+    return request(`/api/rbac/admin-roles/${adminId}/${roleCode}`, {
+      method: 'DELETE',
+    }) as Promise<void>;
   },
 
   // ========== Role-Permission APIs ==========
@@ -202,14 +211,18 @@ const rbacApi = {
    * 为角色添加单个权限
    */
   addRolePermission: async (roleCode: string, permissionCode: string): Promise<void> => {
-    return request(`/api/rbac/role-permissions/${roleCode}/${permissionCode}`, { method: 'POST' }) as Promise<void>;
+    return request(`/api/rbac/role-permissions/${roleCode}/${permissionCode}`, {
+      method: 'POST',
+    }) as Promise<void>;
   },
 
   /**
    * 移除角色的单个权限
    */
   removeRolePermission: async (roleCode: string, permissionCode: string): Promise<void> => {
-    return request(`/api/rbac/role-permissions/${roleCode}/${permissionCode}`, { method: 'DELETE' }) as Promise<void>;
+    return request(`/api/rbac/role-permissions/${roleCode}/${permissionCode}`, {
+      method: 'DELETE',
+    }) as Promise<void>;
   },
 
   // ========== Role Hierarchy APIs ==========
@@ -227,7 +240,9 @@ const rbacApi = {
    * 检查当前用户的权限
    */
   checkPermission: async (permission: string): Promise<{ has_permission: boolean }> => {
-    return request(`/api/rbac/check?permission=${permission}`) as Promise<{ has_permission: boolean }>;
+    return request(`/api/rbac/check?permission=${permission}`) as Promise<{
+      has_permission: boolean;
+    }>;
   },
 };
 

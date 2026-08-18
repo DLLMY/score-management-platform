@@ -98,7 +98,9 @@ class OperationLogStats(Resource):
         unlock_b_count = query.filter(OperationLog.description.ilike("%开B箱%")).count()
 
         by_type = (
-            db.session.query(OperationLog.operation_type, func.count(OperationLog.id).label("count"))
+            db.session.query(
+                OperationLog.operation_type, func.count(OperationLog.id).label("count")
+            )
             .filter(
                 OperationLog.created_at <= datetime.fromisoformat(end_time) if end_time else True,
             )
@@ -110,11 +112,19 @@ class OperationLogStats(Resource):
             db.session.query(
                 func.date(OperationLog.created_at).label("date"),
                 func.count(OperationLog.id).label("count"),
-                func.sum(db.case((OperationLog.description.ilike("%成功%"), 1), else_=0)).label("success"),
-                func.sum(db.case((OperationLog.description.ilike("%失败%"), 1), else_=0)).label("failure"),
+                func.sum(db.case((OperationLog.description.ilike("%成功%"), 1), else_=0)).label(
+                    "success"
+                ),
+                func.sum(db.case((OperationLog.description.ilike("%失败%"), 1), else_=0)).label(
+                    "failure"
+                ),
             )
             .filter(
-                OperationLog.created_at >= datetime.fromisoformat(start_time) if start_time else True,
+                (
+                    OperationLog.created_at >= datetime.fromisoformat(start_time)
+                    if start_time
+                    else True
+                ),
                 OperationLog.created_at <= datetime.fromisoformat(end_time) if end_time else True,
             )
             .group_by(func.date(OperationLog.created_at))

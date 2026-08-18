@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 评分分布服务测试模块
 """
 """
 
 from unittest.mock import MagicMock, patch
+
 try:
     from services.score_distribution_service import ScoreDistributionController
 except ImportError:
@@ -161,7 +162,12 @@ class TestScoreDistributionController:
             mock_user4.current_score = 65
 
             with patch("services.score_distribution_service.User.query") as mock_query:
-                mock_query.filter.return_value.all.return_value = [mock_user1, mock_user2, mock_user3, mock_user4]
+                mock_query.filter.return_value.all.return_value = [
+                    mock_user1,
+                    mock_user2,
+                    mock_user3,
+                    mock_user4,
+                ]
 
                 result = controller.get_distribution_statistics("一班")
 

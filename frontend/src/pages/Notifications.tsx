@@ -27,9 +27,19 @@ function Notifications() {
   const [filterType, setFilterType] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [showSendModal, setShowSendModal] = useState<boolean>(false);
-  const [sendForm, setSendForm] = useState<SendForm>({ title: '', message: '', type: 'info', priority: 'medium' });
+  const [sendForm, setSendForm] = useState<SendForm>({
+    title: '',
+    message: '',
+    type: 'info',
+    priority: 'medium',
+  });
   const [sending, setSending] = useState<boolean>(false);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, per_page: 20, total: 0, pages: 0 });
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    per_page: 20,
+    total: 0,
+    pages: 0,
+  });
 
   // 使用 useMemo 缓存 adminId，避免重复读取 localStorage
   const adminId = useMemo((): number | undefined => {
@@ -47,7 +57,14 @@ function Notifications() {
     const seq = ++loadSeqRef.current;
     try {
       setLoading(true);
-      const params: { admin_id?: number; page: number; per_page: number; is_read?: string; type?: string; priority?: string } = {
+      const params: {
+        admin_id?: number;
+        page: number;
+        per_page: number;
+        is_read?: string;
+        type?: string;
+        priority?: string;
+      } = {
         admin_id: adminId,
         page: pagination.page,
         per_page: pagination.per_page,
@@ -70,7 +87,15 @@ function Notifications() {
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [pagination.page, pagination.per_page, filterStatus, filterType, filterPriority, adminId, showToast]);
+  }, [
+    pagination.page,
+    pagination.per_page,
+    filterStatus,
+    filterType,
+    filterPriority,
+    adminId,
+    showToast,
+  ]);
 
   useEffect(() => {
     loadNotifications();
@@ -80,7 +105,9 @@ function Notifications() {
     async (id: number): Promise<void> => {
       try {
         await api.adminNotifications.markRead(id);
-        setNotifications((prev: AdminNotification[]) => prev.map((n: AdminNotification) => (n.id === id ? { ...n, is_read: true } : n)));
+        setNotifications((prev: AdminNotification[]) =>
+          prev.map((n: AdminNotification) => (n.id === id ? { ...n, is_read: true } : n))
+        );
         showToast('success', '已标记为已读');
       } catch (error) {
         logger.error('标记已读失败:', error);
@@ -93,7 +120,9 @@ function Notifications() {
   const handleMarkAllRead = useCallback(async (): Promise<void> => {
     try {
       const result = await api.adminNotifications.markAllRead(adminId);
-      setNotifications((prev: AdminNotification[]) => prev.map((n: AdminNotification) => ({ ...n, is_read: true })));
+      setNotifications((prev: AdminNotification[]) =>
+        prev.map((n: AdminNotification) => ({ ...n, is_read: true }))
+      );
       showToast('success', result.message || '全部已读');
     } catch (error) {
       logger.error('全部已读失败:', error);
@@ -106,7 +135,9 @@ function Notifications() {
       if (!window.confirm('确定要删除这条通知吗？')) return;
       try {
         await api.adminNotifications.delete(id);
-        setNotifications((prev: AdminNotification[]) => prev.filter((n: AdminNotification) => n.id !== id));
+        setNotifications((prev: AdminNotification[]) =>
+          prev.filter((n: AdminNotification) => n.id !== id)
+        );
         // M4: 总数同步减一 + 末页分页回退（防删除后页码越界）
         setPagination((prev: Pagination) => {
           const total = Math.max(0, prev.total - 1);
@@ -134,7 +165,11 @@ function Notifications() {
         // M4: 后端返回 data: {notification} 则前置插入；否则重新拉取保证列表与总数一致
         if (result && result.notification) {
           setNotifications((prev: AdminNotification[]) => [result.notification, ...prev]);
-          setPagination((prev: Pagination) => ({ ...prev, total: prev.total + 1, pages: Math.max(1, Math.ceil((prev.total + 1) / prev.per_page)) }));
+          setPagination((prev: Pagination) => ({
+            ...prev,
+            total: prev.total + 1,
+            pages: Math.max(1, Math.ceil((prev.total + 1) / prev.per_page)),
+          }));
         } else {
           loadNotifications();
         }
@@ -243,16 +278,20 @@ function Notifications() {
     return pagination.pages || Math.ceil(pagination.total / pagination.per_page);
   }, [pagination.total, pagination.per_page, pagination.pages]);
 
-  const handleFilterChange = (field: 'status' | 'type' | 'priority') => (e: ChangeEvent<HTMLSelectElement>): void => {
-    if (field === 'status') setFilterStatus(e.target.value);
-    if (field === 'type') setFilterType(e.target.value);
-    if (field === 'priority') setFilterPriority(e.target.value);
-    setPagination((prev: Pagination) => ({ ...prev, page: 1 }));
-  };
+  const handleFilterChange =
+    (field: 'status' | 'type' | 'priority') =>
+    (e: ChangeEvent<HTMLSelectElement>): void => {
+      if (field === 'status') setFilterStatus(e.target.value);
+      if (field === 'type') setFilterType(e.target.value);
+      if (field === 'priority') setFilterPriority(e.target.value);
+      setPagination((prev: Pagination) => ({ ...prev, page: 1 }));
+    };
 
-  const handleFormChange = (field: keyof SendForm) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
-    setSendForm((prev: SendForm) => ({ ...prev, [field]: e.target.value }));
-  };
+  const handleFormChange =
+    (field: keyof SendForm) =>
+    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
+      setSendForm((prev: SendForm) => ({ ...prev, [field]: e.target.value }));
+    };
 
   const unreadCount = useMemo(() => {
     return notifications.filter((n) => !n.is_read).length;
@@ -277,7 +316,11 @@ function Notifications() {
               全部已读
             </Button>
           )}
-          <PermissionButton permission='notification.send' onClick={() => setShowSendModal(true)} size='sm'>
+          <PermissionButton
+            permission='notification.send'
+            onClick={() => setShowSendModal(true)}
+            size='sm'
+          >
             <Bell className='w-4 h-4' />
             发送通知
           </PermissionButton>
@@ -338,7 +381,8 @@ function Notifications() {
           <div className='flex flex-col items-center justify-center py-12'>
             <Bell className='w-12 h-12 text-gray-300 mb-4' />
             <p className='text-gray-500'>暂无通知</p>
-            <p className='text-gray-400 text-sm mt-1'>点击右上角「发送通知」给师生下发消息</p> {/* L3: 空态引导 */}
+            <p className='text-gray-400 text-sm mt-1'>点击右上角「发送通知」给师生下发消息</p>{' '}
+            {/* L3: 空态引导 */}
           </div>
         ) : (
           <div className='space-y-3'>
@@ -353,23 +397,35 @@ function Notifications() {
               >
                 <div className='flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3'>
                   <div className='flex items-start gap-3 flex-1 w-full'>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      notification.type === 'success' ? 'bg-green-100' :
-                      notification.type === 'warning' ? 'bg-amber-100' :
-                      notification.type === 'error' ? 'bg-red-100' : 'bg-blue-100'
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        notification.type === 'success'
+                          ? 'bg-green-100'
+                          : notification.type === 'warning'
+                          ? 'bg-amber-100'
+                          : notification.type === 'error'
+                          ? 'bg-red-100'
+                          : 'bg-blue-100'
+                      }`}
+                    >
                       {getTypeIcon(notification.type)}
                     </div>
                     <div className='flex-1'>
                       <div className='flex flex-wrap items-center gap-2 mb-1'>
-                        <h4 className='font-medium text-gray-900 text-sm sm:text-base'>{notification.title}</h4>
+                        <h4 className='font-medium text-gray-900 text-sm sm:text-base'>
+                          {notification.title}
+                        </h4>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(notification.type)}`}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
+                            notification.type
+                          )}`}
                         >
                           {getTypeLabel(notification.type)}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(notification.priority)}`}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
+                            notification.priority
+                          )}`}
                         >
                           {getPriorityLabel(notification.priority)}
                         </span>
@@ -377,7 +433,9 @@ function Notifications() {
                           <span className='w-2 h-2 bg-blue-500 rounded-full animate-pulse' />
                         )}
                       </div>
-                      <p className='text-sm text-gray-600 mb-2 hidden sm:block'>{notification.message}</p>
+                      <p className='text-sm text-gray-600 mb-2 hidden sm:block'>
+                        {notification.message}
+                      </p>
                       <div className='flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500'>
                         <span>{formatTime(notification.created_at)}</span>
                         {notification.read_at && (
@@ -422,7 +480,9 @@ function Notifications() {
                 variant='outline'
                 size='sm'
                 disabled={pagination.page <= 1}
-                onClick={() => setPagination((prev: Pagination) => ({ ...prev, page: prev.page - 1 }))}
+                onClick={() =>
+                  setPagination((prev: Pagination) => ({ ...prev, page: prev.page - 1 }))
+                }
               >
                 上一页
               </Button>
@@ -433,7 +493,9 @@ function Notifications() {
                 variant='outline'
                 size='sm'
                 disabled={pagination.page >= totalPages}
-                onClick={() => setPagination((prev: Pagination) => ({ ...prev, page: prev.page + 1 }))}
+                onClick={() =>
+                  setPagination((prev: Pagination) => ({ ...prev, page: prev.page + 1 }))
+                }
               >
                 下一页
               </Button>
@@ -442,7 +504,14 @@ function Notifications() {
         )}
       </Card>
 
-      <Modal isOpen={showSendModal} onClose={() => { setShowSendModal(false); setSendForm({ title: '', message: '', type: 'info', priority: 'medium' }); }} title='发送通知'>
+      <Modal
+        isOpen={showSendModal}
+        onClose={() => {
+          setShowSendModal(false);
+          setSendForm({ title: '', message: '', type: 'info', priority: 'medium' });
+        }}
+        title='发送通知'
+      >
         <form onSubmit={handleSendNotification} className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>通知标题</label>
@@ -491,7 +560,14 @@ function Notifications() {
             />
           </div>
           <div className='flex gap-3 pt-4 border-t border-gray-100'>
-            <Button variant='outline' onClick={() => { setShowSendModal(false); setSendForm({ title: '', message: '', type: 'info', priority: 'medium' }); }} disabled={sending}>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setShowSendModal(false);
+                setSendForm({ title: '', message: '', type: 'info', priority: 'medium' });
+              }}
+              disabled={sending}
+            >
               取消
             </Button>
             <Button type='submit' disabled={sending}>

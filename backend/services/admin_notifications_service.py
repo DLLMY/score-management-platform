@@ -48,14 +48,16 @@ def mark_all_read(admin_id=None):
             admin_id=admin_id, recipient_type="admin", is_read=False
         ).update({"is_read": True, "read_at": datetime.now()})
     else:
-        count = Notification.query.filter_by(
-            recipient_type="admin", is_read=False
-        ).update({"is_read": True, "read_at": datetime.now()})
+        count = Notification.query.filter_by(recipient_type="admin", is_read=False).update(
+            {"is_read": True, "read_at": datetime.now()}
+        )
     db.session.commit()
     return count
 
 
-def create_admin_notification(title, message, notify_type="info", priority="medium", admin_id=None, extra_data=None):
+def create_admin_notification(
+    title, message, notify_type="info", priority="medium", admin_id=None, extra_data=None
+):
     """复刻路由模块 create_admin_notification 帮助函数（供 approvals/records 跨模块调用）。
 
     向指定管理员（或全部管理员）写入通知并统一提交，返回创建的通知对象列表。

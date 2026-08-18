@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 
 interface LoadingState {
   isLoading: boolean;
@@ -85,9 +92,7 @@ export function GlobalStateProvider({ children }: GlobalStateProviderProps) {
   return (
     <LoadingContext.Provider value={{ state: loadingState, show: showLoading, hide: hideLoading }}>
       <ErrorContext.Provider value={{ state: errorState, clear: clearError }}>
-        <NetworkContext.Provider value={networkState}>
-          {children}
-        </NetworkContext.Provider>
+        <NetworkContext.Provider value={networkState}>{children}</NetworkContext.Provider>
       </ErrorContext.Provider>
     </LoadingContext.Provider>
   );
@@ -99,10 +104,10 @@ export function GlobalLoading(): JSX.Element | null {
   if (!state.isLoading) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-700">{state.message}</p>
+    <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-50'>
+      <div className='bg-white rounded-lg p-6 shadow-xl flex flex-col items-center'>
+        <div className='w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4'></div>
+        <p className='text-gray-700'>{state.message}</p>
       </div>
     </div>
   );
@@ -114,20 +119,20 @@ export function GlobalErrorBoundary(): JSX.Element | null {
   if (!state.hasError) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 shadow-xl max-w-md">
-        <div className="flex items-center mb-4">
-          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
-            <span className="text-red-500 text-xl">⚠️</span>
+    <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-50'>
+      <div className='bg-white rounded-lg p-6 shadow-xl max-w-md'>
+        <div className='flex items-center mb-4'>
+          <div className='w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3'>
+            <span className='text-red-500 text-xl'>⚠️</span>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">发生错误</h3>
-            <p className="text-sm text-gray-500">{state.error?.message || '未知错误'}</p>
+            <h3 className='text-lg font-semibold text-gray-800'>发生错误</h3>
+            <p className='text-sm text-gray-500'>{state.error?.message || '未知错误'}</p>
           </div>
         </div>
         <button
           onClick={clear}
-          className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          className='w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors'
         >
           关闭
         </button>
@@ -142,10 +147,12 @@ export function NetworkStatusIndicator(): JSX.Element | null {
   if (isOnline && !isReconnecting) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50">
-      <div className="flex items-center">
-        <div className={`w-3 h-3 rounded-full mr-2 ${isOnline ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-        <span className="text-sm text-gray-700">
+    <div className='fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50'>
+      <div className='flex items-center'>
+        <div
+          className={`w-3 h-3 rounded-full mr-2 ${isOnline ? 'bg-yellow-500' : 'bg-red-500'}`}
+        ></div>
+        <span className='text-sm text-gray-700'>
           {isReconnecting ? '正在重连...' : '网络已断开'}
         </span>
       </div>

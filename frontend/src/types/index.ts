@@ -19,7 +19,18 @@ export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export type DeviceStatus = 'online' | 'offline' | 'error' | 'maintenance';
 
-export type UserRole = 'admin' | 'super_admin' | 'teacher' | 'subject_teacher' | 'head_teacher' | 'dashboard' | 'dashboard_viewer' | 'viewer' | 'student' | 'parent' | 'guest';
+export type UserRole =
+  | 'admin'
+  | 'super_admin'
+  | 'teacher'
+  | 'subject_teacher'
+  | 'head_teacher'
+  | 'dashboard'
+  | 'dashboard_viewer'
+  | 'viewer'
+  | 'student'
+  | 'parent'
+  | 'guest';
 
 // ============================================
 // 用户相关类型

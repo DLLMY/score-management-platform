@@ -278,7 +278,7 @@ python app.py  # 查看控制台输出
 │   ├── public/              # 静态资源
 │   └── package.json         # 依赖配置
 │
-└── phonebox.ino             # ESP32固件
+└── firmware/phonebox.ino      # ESP32固件
 ```
 
 ---

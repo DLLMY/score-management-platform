@@ -165,10 +165,7 @@ class QueryOptimizer:
         from models import User
 
         users = User.query.order_by(User.current_score.desc()).limit(limit).all()
-        return [
-            {"id": u.id, "name": u.name, "current_score": u.current_score}
-            for u in users
-        ]
+        return [{"id": u.id, "name": u.name, "current_score": u.current_score} for u in users]
 
     @staticmethod
     def get_score_stats():
@@ -305,8 +302,12 @@ def optimize_statistics_query(user_id=None, class_name=None, start_date=None, en
 
     query = db.session.query(
         func.count(ScoreRecord.id).label("total_records"),
-        func.sum(case((ScoreRecord.score_change > 0, ScoreRecord.score_change), else_=0)).label("total_add"),
-        func.sum(case((ScoreRecord.score_change < 0, ScoreRecord.score_change), else_=0)).label("total_subtract"),
+        func.sum(case((ScoreRecord.score_change > 0, ScoreRecord.score_change), else_=0)).label(
+            "total_add"
+        ),
+        func.sum(case((ScoreRecord.score_change < 0, ScoreRecord.score_change), else_=0)).label(
+            "total_subtract"
+        ),
     )
     if user_id:
         query = query.filter(ScoreRecord.student_id == user_id)
@@ -376,9 +377,15 @@ def optimize_search_query(search_term, admin_role=None, allowed_classes=None, pa
     if search_term:
         search_pattern = f"%{search_term}%"
         query = query.filter(
-            db.or_(User.name.like(search_pattern), User.card_id.like(search_pattern), User.phone.like(search_pattern))
+            db.or_(
+                User.name.like(search_pattern),
+                User.card_id.like(search_pattern),
+                User.phone.like(search_pattern),
+            )
         )
-    pagination = query.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    pagination = query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
     return {
         "users": [
             {
@@ -398,7 +405,6 @@ def optimize_search_query(search_term, admin_role=None, allowed_classes=None, pa
         "per_page": per_page,
         "pages": pagination.pages,
     }
-
 
 
 class CacheManager:

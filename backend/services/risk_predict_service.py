@@ -153,7 +153,9 @@ class RiskPredictService:
             features["negative_rate"] = round(negative_count / len(score_changes), 2)
 
             # 连续无正向积分天数
-            features["no_positive_days"] = RiskPredictService._count_consecutive_no_positive(score_changes)
+            features["no_positive_days"] = RiskPredictService._count_consecutive_no_positive(
+                score_changes
+            )
 
             # 日均解锁次数（简化为记录数）
             features["daily_record_count"] = round(len(records) / days, 2)
@@ -162,7 +164,9 @@ class RiskPredictService:
             if len(cumulative_scores) >= 14:
                 earlier_avg = np.mean(cumulative_scores[:-7])
                 recent_avg = np.mean(cumulative_scores[-7:])
-                features["score_decline_rate"] = round((recent_avg - earlier_avg) / (earlier_avg + 1), 2)
+                features["score_decline_rate"] = round(
+                    (recent_avg - earlier_avg) / (earlier_avg + 1), 2
+                )
             else:
                 features["score_decline_rate"] = 0.0
         else:
@@ -236,14 +240,11 @@ class RiskPredictService:
             s_date = start_date.date() if isinstance(start_date, datetime) else start_date
             e_date = end_date.date() if isinstance(end_date, datetime) else end_date
 
-            records = (
-                Attendance.query.filter(
-                    Attendance.student_id == user_id,
-                    Attendance.date >= s_date,
-                    Attendance.date <= e_date,
-                )
-                .all()
-            )
+            records = Attendance.query.filter(
+                Attendance.student_id == user_id,
+                Attendance.date >= s_date,
+                Attendance.date <= e_date,
+            ).all()
             total = len(records)
             if total == 0:
                 return None, 0, 0, 0, 0
@@ -781,7 +782,9 @@ class RiskPredictService:
         feature_distributions["volatility"] = {
             "avg": round(np.mean(volatilities), 2),
             "std": round(np.std(volatilities), 2),
-            "high_volatility_ratio": round(sum(1 for v in volatilities if v > 5) / len(volatilities), 4),
+            "high_volatility_ratio": round(
+                sum(1 for v in volatilities if v > 5) / len(volatilities), 4
+            ),
         }
 
         # 正负向率分布
@@ -805,7 +808,9 @@ class RiskPredictService:
         feature_distributions["class_rank"] = {
             "avg_percentile": round(np.mean(percentiles), 2),
             "std_percentile": round(np.std(percentiles), 2),
-            "low_percentile_ratio": round(sum(1 for p in percentiles if p < 30) / len(percentiles), 4),
+            "low_percentile_ratio": round(
+                sum(1 for p in percentiles if p < 30) / len(percentiles), 4
+            ),
         }
 
         # 计算最优阈值（基于数据分布）
@@ -922,9 +927,15 @@ class RiskPredictService:
         }
 
         # 各风险类型的检测率
-        academic_high = sum(1 for r in results if r["risk_details"]["academic"]["risk_level"] == "high")
-        behavior_high = sum(1 for r in results if r["risk_details"]["behavior"]["risk_level"] == "high")
-        attendance_high = sum(1 for r in results if r["risk_details"]["attendance"]["risk_level"] == "high")
+        academic_high = sum(
+            1 for r in results if r["risk_details"]["academic"]["risk_level"] == "high"
+        )
+        behavior_high = sum(
+            1 for r in results if r["risk_details"]["behavior"]["risk_level"] == "high"
+        )
+        attendance_high = sum(
+            1 for r in results if r["risk_details"]["attendance"]["risk_level"] == "high"
+        )
 
         detection_rates = {
             "academic_high_risk": round(academic_high / len(results), 4),

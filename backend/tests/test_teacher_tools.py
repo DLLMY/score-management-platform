@@ -14,6 +14,7 @@
 
 依赖 conftest 的 client / auth_headers（super_admin，持所有权限）/ app_context fixture。
 """
+
 import uuid
 import pytest
 
@@ -74,7 +75,9 @@ class TestBatchScore:
 
     def test_batch_missing_exam_id(self, client, auth_headers):
         resp = client.post(
-            "/api/scores/batch", headers=auth_headers, json={"scores": [{"student_id": 1, "subject": "x", "score": 1}]}
+            "/api/scores/batch",
+            headers=auth_headers,
+            json={"scores": [{"student_id": 1, "subject": "x", "score": 1}]},
         )
         assert resp.status_code == 400
 
@@ -113,7 +116,10 @@ class TestBatchScore:
         resp = client.post(
             "/api/scores/batch",
             headers=auth_headers,
-            json={"exam_id": exam.id, "scores": [{"student_id": s.id, "subject": "数学", "score": "abc"}]},
+            json={
+                "exam_id": exam.id,
+                "scores": [{"student_id": s.id, "subject": "数学", "score": "abc"}],
+            },
         )
         assert resp.status_code == 200
         body = resp.get_json()

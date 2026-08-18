@@ -1,5 +1,13 @@
 from datetime import datetime
-from models import NLPScoringRule, NLPRuleUsage, NLPMatchResult, NLPModelTraining, NLPBehaviorKeyword, get_by_id, db
+from models import (
+    NLPScoringRule,
+    NLPRuleUsage,
+    NLPMatchResult,
+    NLPModelTraining,
+    NLPBehaviorKeyword,
+    get_by_id,
+    db,
+)
 from utils.db_session import db_session_scope
 
 
@@ -170,7 +178,9 @@ class NLPRuleManagementService:
     def get_rule_statistics(self):
         """获取规则统计信息"""
         total_rules = NLPScoringRule.query.filter(NLPScoringRule.is_active).count()
-        add_rules = NLPScoringRule.query.filter(NLPScoringRule.score_type == "add", NLPScoringRule.is_active).count()
+        add_rules = NLPScoringRule.query.filter(
+            NLPScoringRule.score_type == "add", NLPScoringRule.is_active
+        ).count()
         deduct_rules = NLPScoringRule.query.filter(
             NLPScoringRule.score_type == "deduct", NLPScoringRule.is_active
         ).count()
@@ -243,10 +253,14 @@ class NLPRuleManagementService:
                         NLPMatchResult.matched_rule_id == rule.id,
                         NLPMatchResult.is_manual_correction,
                     ).count()
-                    total_usage = NLPMatchResult.query.filter(NLPMatchResult.matched_rule_id == rule.id).count()
+                    total_usage = NLPMatchResult.query.filter(
+                        NLPMatchResult.matched_rule_id == rule.id
+                    ).count()
                     if total_usage > 0:
                         rule.accuracy_rate = correct_usage / total_usage
-                    rule.usage_count = NLPRuleUsage.query.filter(NLPRuleUsage.rule_id == rule.id).count()
+                    rule.usage_count = NLPRuleUsage.query.filter(
+                        NLPRuleUsage.rule_id == rule.id
+                    ).count()
 
             with db_session_scope():
                 pass
@@ -372,15 +386,31 @@ class NLPRuleManagementService:
 
     def _calculate_precision(self, match_results):
         """计算精确率"""
-        true_positive = sum(1 for r in match_results if not r.is_manual_correction and r.intent != "unknown")
-        false_positive = sum(1 for r in match_results if r.is_manual_correction and r.intent != "unknown")
-        return true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0.0
+        true_positive = sum(
+            1 for r in match_results if not r.is_manual_correction and r.intent != "unknown"
+        )
+        false_positive = sum(
+            1 for r in match_results if r.is_manual_correction and r.intent != "unknown"
+        )
+        return (
+            true_positive / (true_positive + false_positive)
+            if (true_positive + false_positive) > 0
+            else 0.0
+        )
 
     def _calculate_recall(self, match_results):
         """计算召回率"""
-        true_positive = sum(1 for r in match_results if not r.is_manual_correction and r.intent != "unknown")
-        false_negative = sum(1 for r in match_results if r.is_manual_correction and r.intent == "unknown")
-        return true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0.0
+        true_positive = sum(
+            1 for r in match_results if not r.is_manual_correction and r.intent != "unknown"
+        )
+        false_negative = sum(
+            1 for r in match_results if r.is_manual_correction and r.intent == "unknown"
+        )
+        return (
+            true_positive / (true_positive + false_negative)
+            if (true_positive + false_negative) > 0
+            else 0.0
+        )
 
     def _calculate_f1(self, precision, recall):
         """计算F1分数"""

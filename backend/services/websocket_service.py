@@ -4,11 +4,11 @@ WebSocket实时通信服务
 使用Flask-SocketIO实现设备状态、通知等实时推送。
 提供 WebSocketService 类（面向对象封装）与模块级兼容函数（委托给单例）。
 """
+
 import json
 from flask_socketio import emit, join_room, leave_room
 from flask import request
 from threading import Lock
-
 
 NOTIFICATION_EVENT = "notification"
 DEVICE_STATUS_EVENT = "device_status"

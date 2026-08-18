@@ -14,7 +14,6 @@ except ImportError:
     pass
 
 
-
 class TestAlertService:
     """告警服务测试"""
 
@@ -67,7 +66,7 @@ class TestAlertService:
                 "测试设备离线",
                 device_id="test_device",
                 device_name="测试设备",
-                suppress=False
+                suppress=False,
             )
 
             assert alert is not None
@@ -88,7 +87,7 @@ class TestAlertService:
                 "score_abnormal",
                 "积分异常",
                 extra_data={"user_id": 1, "score": 100},
-                suppress=False
+                suppress=False,
             )
 
             assert alert is not None
@@ -110,16 +109,8 @@ class TestAlertService:
         from services.alert_service import alert_service
 
         with app.app_context():
-            alert_service.create_alert(
-                "device_offline",
-                "测试告警1",
-                suppress=False
-            )
-            alert_service.create_alert(
-                "system_error",
-                "测试告警2",
-                suppress=False
-            )
+            alert_service.create_alert("device_offline", "测试告警1", suppress=False)
+            alert_service.create_alert("system_error", "测试告警2", suppress=False)
 
             alerts = alert_service.get_alerts(limit=10)
 
@@ -147,11 +138,7 @@ class TestAlertService:
         """测试根据ID获取告警"""
 
         with app.app_context():
-            alert = alert_service.create_alert(
-                "device_offline",
-                "测试告警",
-                suppress=False
-            )
+            alert = alert_service.create_alert("device_offline", "测试告警", suppress=False)
 
             found = alert_service.get_alert_by_id(alert.id)
 
@@ -162,11 +149,7 @@ class TestAlertService:
         """测试标记告警为已读"""
 
         with app.app_context():
-            alert = alert_service.create_alert(
-                "device_offline",
-                "测试告警",
-                suppress=False
-            )
+            alert = alert_service.create_alert("device_offline", "测试告警", suppress=False)
 
             result = alert_service.mark_as_read(alert.id)
 
@@ -198,11 +181,7 @@ class TestAlertService:
         """测试删除告警"""
 
         with app.app_context():
-            alert = alert_service.create_alert(
-                "device_offline",
-                "测试告警",
-                suppress=False
-            )
+            alert = alert_service.create_alert("device_offline", "测试告警", suppress=False)
 
             result = alert_service.delete_alert(alert.id)
 
@@ -266,9 +245,7 @@ class TestAlertService:
         """测试触发积分异常告警"""
 
         with app.app_context():
-            alert = alert_service.trigger_score_abnormal_alert(
-                1, "张三", 100, "测试原因"
-            )
+            alert = alert_service.trigger_score_abnormal_alert(1, "张三", 100, "测试原因")
 
             assert alert is not None
             assert alert.alert_type == "score_abnormal"
@@ -277,9 +254,7 @@ class TestAlertService:
         """测试触发积分阈值告警"""
 
         with app.app_context():
-            alert = alert_service.trigger_score_threshold_alert(
-                1, "张三", 50, "低于下限"
-            )
+            alert = alert_service.trigger_score_threshold_alert(1, "张三", 50, "低于下限")
 
             assert alert is not None
             assert alert.alert_type == "score_threshold"
@@ -290,9 +265,7 @@ class TestAlertService:
         service = AlertService()
 
         with app.app_context():
-            alert = service.trigger_system_error_alert(
-                "测试错误", "test"
-            )
+            alert = service.trigger_system_error_alert("测试错误", "test")
 
             assert alert is not None
             assert alert.alert_type == "system_error"
@@ -301,9 +274,7 @@ class TestAlertService:
         """测试触发系统警告告警"""
 
         with app.app_context():
-            alert = alert_service.trigger_system_warning_alert(
-                "测试警告"
-            )
+            alert = alert_service.trigger_system_warning_alert("测试警告")
 
             assert alert is not None
             assert alert.alert_type == "system_warning"
@@ -312,9 +283,7 @@ class TestAlertService:
         """测试触发MQTT断开告警"""
 
         with app.app_context():
-            alert = alert_service.trigger_mqtt_disconnect_alert(
-                "client1"
-            )
+            alert = alert_service.trigger_mqtt_disconnect_alert("client1")
 
             assert alert is not None
             assert alert.alert_type == "mqtt_disconnect"

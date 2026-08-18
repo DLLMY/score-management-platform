@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 预测服务测试模块
 """
 """
@@ -85,7 +85,10 @@ class TestPredictionService:
             mock_record2.score_change = -5
 
             with patch("services.prediction_service.ScoreRecord.query") as mock_query:
-                mock_query.filter.return_value.order_by.return_value.all.return_value = [mock_record1, mock_record2]
+                mock_query.filter.return_value.order_by.return_value.all.return_value = [
+                    mock_record1,
+                    mock_record2,
+                ]
 
                 history = PredictionService.get_student_score_history(1)
 
@@ -97,7 +100,10 @@ class TestPredictionService:
     def test_predict_future_scores_insufficient_data(self, app):
         """测试预测未来积分-数据不足"""
         with app.app_context():
-            with patch("services.prediction_service.PredictionService.get_student_score_history", return_value=[]):
+            with patch(
+                "services.prediction_service.PredictionService.get_student_score_history",
+                return_value=[],
+            ):
                 result = PredictionService.predict_future_scores(1)
 
                 assert result["trend"] == "insufficient_data"
@@ -113,15 +119,20 @@ class TestPredictionService:
             for i in range(14):
                 change = 2 + i * 0.5
                 cumulative += change
-                history.append({
-                    "date": (current_time - timedelta(days=13-i)).isoformat(),
-                    "score_change": change,
-                    "cumulative_score": cumulative,
-                    "rule_name": None,
-                    "category": None,
-                })
+                history.append(
+                    {
+                        "date": (current_time - timedelta(days=13 - i)).isoformat(),
+                        "score_change": change,
+                        "cumulative_score": cumulative,
+                        "rule_name": None,
+                        "category": None,
+                    }
+                )
 
-            with patch("services.prediction_service.PredictionService.get_student_score_history", return_value=history):
+            with patch(
+                "services.prediction_service.PredictionService.get_student_score_history",
+                return_value=history,
+            ):
                 result = PredictionService.predict_future_scores(1, days=7)
 
                 assert result["user_id"] == 1
@@ -178,7 +189,9 @@ class TestPredictionService:
             with patch("services.prediction_service.User.query") as mock_query:
                 mock_query.filter.return_value.all.return_value = [mock_user1, mock_user2]
 
-                with patch("services.prediction_service.PredictionService.predict_future_scores") as mock_predict:
+                with patch(
+                    "services.prediction_service.PredictionService.predict_future_scores"
+                ) as mock_predict:
                     mock_predict.side_effect = [mock_prediction1, mock_prediction2]
 
                     result = PredictionService.predict_batch()
@@ -207,7 +220,10 @@ class TestPredictionService:
                 ]
             }
 
-            with patch("services.prediction_service.PredictionService.predict_batch", return_value=mock_batch_result):
+            with patch(
+                "services.prediction_service.PredictionService.predict_batch",
+                return_value=mock_batch_result,
+            ):
                 risk_students = PredictionService.get_risk_students()
 
                 assert len(risk_students) == 0
@@ -244,7 +260,10 @@ class TestPredictionService:
                 ]
             }
 
-            with patch("services.prediction_service.PredictionService.predict_batch", return_value=mock_batch_result):
+            with patch(
+                "services.prediction_service.PredictionService.predict_batch",
+                return_value=mock_batch_result,
+            ):
                 risk_students = PredictionService.get_risk_students(threshold=-5)
 
                 assert len(risk_students) == 1

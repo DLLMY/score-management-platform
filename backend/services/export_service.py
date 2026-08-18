@@ -29,7 +29,9 @@ class ExportService:
     """数据导出服务"""
 
     @staticmethod
-    def export_to_excel(data: List[Dict[str, Any]], headers: List[str], filename: str = None) -> io.BytesIO:
+    def export_to_excel(
+        data: List[Dict[str, Any]], headers: List[str], filename: str = None
+    ) -> io.BytesIO:
         """
         导出数据到Excel格式
 
@@ -117,7 +119,17 @@ class ExportService:
         Returns:
             Excel文件的字节流
         """
-        headers = ["ID", "规则名称", "描述", "分类", "分数", "是否启用", "每日上限", "最小间隔", "创建时间"]
+        headers = [
+            "ID",
+            "规则名称",
+            "描述",
+            "分类",
+            "分数",
+            "是否启用",
+            "每日上限",
+            "最小间隔",
+            "创建时间",
+        ]
         data = []
         for rule in rules:
             data.append(
@@ -146,7 +158,17 @@ class ExportService:
         Returns:
             Excel文件的字节流
         """
-        headers = ["ID", "设备标识", "设备名称", "状态", "是否在线", "WiFi信号", "班级", "管理员", "创建时间"]
+        headers = [
+            "ID",
+            "设备标识",
+            "设备名称",
+            "状态",
+            "是否在线",
+            "WiFi信号",
+            "班级",
+            "管理员",
+            "创建时间",
+        ]
         data = []
         for device in devices:
             data.append(
@@ -181,7 +203,7 @@ class ExportService:
             "用户姓名",
             "卡片ID",
             "积分变化",
-                        "规则ID",
+            "规则ID",
             "规则名称",
             "分类",
             "描述",
@@ -197,7 +219,7 @@ class ExportService:
                     "用户姓名": record.get("user_name", ""),
                     "卡片ID": record.get("card_id", ""),
                     "积分变化": record.get("score_change", 0),
-                                        "规则ID": record.get("rule_id", ""),
+                    "规则ID": record.get("rule_id", ""),
                     "规则名称": record.get("rule_name", ""),
                     "分类": record.get("category_name", ""),
                     "描述": record.get("description", ""),
@@ -209,7 +231,11 @@ class ExportService:
 
     @staticmethod
     def export_to_pdf(
-        title: str, data: List[Dict[str, Any]], headers: List[str], filename: str = None, page_size: str = "A4"
+        title: str,
+        data: List[Dict[str, Any]],
+        headers: List[str],
+        filename: str = None,
+        page_size: str = "A4",
     ) -> io.BytesIO:
         """
         导出数据到PDF格式
@@ -229,16 +255,30 @@ class ExportService:
         output = io.BytesIO()
         pagesize = A4 if page_size == "A4" else letter
         doc = SimpleDocTemplate(
-            output, pagesize=pagesize, rightMargin=inch, leftMargin=inch, topMargin=inch, bottomMargin=inch
+            output,
+            pagesize=pagesize,
+            rightMargin=inch,
+            leftMargin=inch,
+            topMargin=inch,
+            bottomMargin=inch,
         )
         elements = []
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontSize=18, alignment=1, spaceAfter=12)
+        title_style = ParagraphStyle(
+            "TitleStyle", parent=styles["Heading1"], fontSize=18, alignment=1, spaceAfter=12
+        )
         elements.append(Paragraph(title, title_style))
         time_style = ParagraphStyle(
-            "TimeStyle", parent=styles["Normal"], fontSize=10, alignment=1, textColor=colors.grey, spaceAfter=20
+            "TimeStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            alignment=1,
+            textColor=colors.grey,
+            spaceAfter=20,
         )
-        elements.append(Paragraph(f"生成时间: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}", time_style))
+        elements.append(
+            Paragraph(f"生成时间: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}", time_style)
+        )
         table_data = [headers]
         for row_data in data:
             row = []
@@ -266,7 +306,9 @@ class ExportService:
         col_widths = [1.5 * inch] + [2 * inch] * (len(headers) - 1)
         table._argW = col_widths
         elements.append(table)
-        stats_style = ParagraphStyle("StatsStyle", parent=styles["Normal"], fontSize=10, alignment=0, spaceBefore=20)
+        stats_style = ParagraphStyle(
+            "StatsStyle", parent=styles["Normal"], fontSize=10, alignment=0, spaceBefore=20
+        )
         elements.append(Paragraph(f"总记录数: {len(data)}", stats_style))
         doc.build(elements)
         output.seek(0)
@@ -330,7 +372,9 @@ class ExportService:
         return ExportService.export_to_pdf(title, data, headers)
 
     @staticmethod
-    def export_devices_to_pdf(devices: List[Dict[str, Any]], title: str = "设备列表报告") -> io.BytesIO:
+    def export_devices_to_pdf(
+        devices: List[Dict[str, Any]], title: str = "设备列表报告"
+    ) -> io.BytesIO:
         """
         导出设备数据到PDF
 
@@ -359,7 +403,9 @@ class ExportService:
         return ExportService.export_to_pdf(title, data, headers)
 
     @staticmethod
-    def export_records_to_pdf(records: List[Dict[str, Any]], title: str = "积分记录报告") -> io.BytesIO:
+    def export_records_to_pdf(
+        records: List[Dict[str, Any]], title: str = "积分记录报告"
+    ) -> io.BytesIO:
         """
         导出积分记录数据到PDF
 
@@ -370,7 +416,16 @@ class ExportService:
         Returns:
             PDF文件的字节流
         """
-        headers = ["ID", "用户姓名", "卡片ID", "积分变化", "操作后积分", "规则名称", "描述", "操作时间"]
+        headers = [
+            "ID",
+            "用户姓名",
+            "卡片ID",
+            "积分变化",
+            "操作后积分",
+            "规则名称",
+            "描述",
+            "操作时间",
+        ]
         data = []
         for record in records:
             data.append(
@@ -379,7 +434,7 @@ class ExportService:
                     "用户姓名": record.get("user_name", ""),
                     "卡片ID": record.get("card_id", ""),
                     "积分变化": record.get("score_change", 0),
-                                        "规则名称": record.get("rule_name", ""),
+                    "规则名称": record.get("rule_name", ""),
                     "描述": record.get("description", ""),
                     "操作时间": record.get("created_at", ""),
                 }
@@ -413,16 +468,30 @@ class ExportService:
             raise ImportError("reportlab模块未安装，请执行 pip install reportlab")
         output = io.BytesIO()
         doc = SimpleDocTemplate(
-            output, pagesize=A4, rightMargin=inch, leftMargin=inch, topMargin=inch, bottomMargin=inch
+            output,
+            pagesize=A4,
+            rightMargin=inch,
+            leftMargin=inch,
+            topMargin=inch,
+            bottomMargin=inch,
         )
         elements = []
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontSize=20, alignment=1, spaceAfter=12)
+        title_style = ParagraphStyle(
+            "TitleStyle", parent=styles["Heading1"], fontSize=20, alignment=1, spaceAfter=12
+        )
         elements.append(Paragraph(title, title_style))
         time_style = ParagraphStyle(
-            "TimeStyle", parent=styles["Normal"], fontSize=10, alignment=1, textColor=colors.grey, spaceAfter=24
+            "TimeStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            alignment=1,
+            textColor=colors.grey,
+            spaceAfter=24,
         )
-        elements.append(Paragraph(f"生成时间: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}", time_style))
+        elements.append(
+            Paragraph(f"生成时间: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}", time_style)
+        )
         summary_data = [
             ["数据类别", "数量"],
             ["学生总数", str(users_count)],
@@ -430,7 +499,10 @@ class ExportService:
             ["设备总数", str(devices_count)],
             ["在线设备数", str(online_devices)],
             ["积分记录数", str(records_count)],
-            ["设备在线率", f"{online_devices/devices_count*100:.1f}%" if devices_count > 0 else "0%"],
+            [
+                "设备在线率",
+                f"{online_devices/devices_count*100:.1f}%" if devices_count > 0 else "0%",
+            ],
         ]  # noqa: E501
         summary_table = Table(summary_data, colWidths=[3 * inch, 2 * inch])
         summary_style = TableStyle(
@@ -452,17 +524,16 @@ class ExportService:
         output.seek(0)
         return output
 
-
     @staticmethod
     def export_to_csv(data: List[Dict[str, Any]], headers: List[str], filepath: str = None):
         """导出数据为 CSV（兼容旧测试接口）。有 filepath 则写文件并返回路径，否则返回 CSV 字符串。
         只输出 headers 指定的列，容忍传入 dict 含多余字段。"""
         import csv as _csv
         import io as _io
+
         # 投影为仅含 headers 列的字典，避免 DictWriter 因多余字段报错
         projected = [
-            {h: (row.get(h, "") if isinstance(row, dict) else "") for h in headers}
-            for row in data
+            {h: (row.get(h, "") if isinstance(row, dict) else "") for h in headers} for row in data
         ]
         if filepath:
             with open(filepath, "w", encoding="utf-8-sig", newline="") as f:
@@ -481,8 +552,13 @@ class ExportService:
         """导出用户为 CSV 字符串。测试数据使用英文键，映射到中文表头。"""
         headers = ["ID", "姓名", "卡号", "班级", "当前积分", "状态", "创建时间"]
         key_map = {
-            "ID": "id", "姓名": "name", "卡号": "card_id", "班级": "class_name",
-            "当前积分": "current_score", "状态": "status", "创建时间": "created_at",
+            "ID": "id",
+            "姓名": "name",
+            "卡号": "card_id",
+            "班级": "class_name",
+            "当前积分": "current_score",
+            "状态": "status",
+            "创建时间": "created_at",
         }
         mapped = [
             {h: (u.get(key_map[h], "") if isinstance(u, dict) else "") for h in headers}
@@ -495,8 +571,13 @@ class ExportService:
         """导出积分记录为 CSV 字符串。测试数据使用英文键，映射到中文表头。"""
         headers = ["用户ID", "用户名", "规则ID", "规则名", "积分变化", "描述", "时间"]
         key_map = {
-            "用户ID": "user_id", "用户名": "user_name", "规则ID": "rule_id",
-            "规则名": "rule_name", "积分变化": "score_change", "描述": "description", "时间": "created_at",
+            "用户ID": "user_id",
+            "用户名": "user_name",
+            "规则ID": "rule_id",
+            "规则名": "rule_name",
+            "积分变化": "score_change",
+            "描述": "description",
+            "时间": "created_at",
         }
         mapped = [
             {h: (r.get(key_map[h], "") if isinstance(r, dict) else "") for h in headers}
@@ -509,8 +590,13 @@ class ExportService:
         """导出考试成绩为 CSV 字符串。测试数据使用英文键，映射到中文表头。"""
         headers = ["学生ID", "学生姓名", "考试ID", "考试名", "科目", "分数", "时间"]
         key_map = {
-            "学生ID": "student_id", "学生姓名": "student_name", "考试ID": "exam_id",
-            "考试名": "exam_name", "科目": "subject", "分数": "score", "时间": "created_at",
+            "学生ID": "student_id",
+            "学生姓名": "student_name",
+            "考试ID": "exam_id",
+            "考试名": "exam_name",
+            "科目": "subject",
+            "分数": "score",
+            "时间": "created_at",
         }
         mapped = [
             {h: (s.get(key_map[h], "") if isinstance(s, dict) else "") for h in headers}

@@ -107,13 +107,10 @@ function CultureBoard() {
     })
     .sort((a, b) => a.display_order - b.display_order);
 
-  const groupedRecords = categories.slice(1).reduce(
-    (acc, cat) => {
-      acc[cat] = filteredRecords.filter((r) => r.category === cat);
-      return acc;
-    },
-    {} as Record<string, CultureRecord[]>
-  );
+  const groupedRecords = categories.slice(1).reduce((acc, cat) => {
+    acc[cat] = filteredRecords.filter((r) => r.category === cat);
+    return acc;
+  }, {} as Record<string, CultureRecord[]>);
 
   const handleOpenCreate = useCallback(() => {
     setFormData(defaultForm);
@@ -224,9 +221,12 @@ function CultureBoard() {
     [records, showToast, fetchRecords]
   );
 
-  const handleChange = useCallback((field: keyof CultureFormData, value: string | number | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  const handleChange = useCallback(
+    (field: keyof CultureFormData, value: string | number | boolean) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const renderRecordCard = (record: CultureRecord, index: number) => (
     <div
@@ -237,12 +237,16 @@ function CultureBoard() {
       <div className='flex items-start justify-between mb-2'>
         <div className='flex items-center gap-3'>
           <div
-            className={`w-9 h-9 rounded-xl bg-gradient-to-br ${categoryColors[record.category || '其他']} flex items-center justify-center shadow-md`}
+            className={`w-9 h-9 rounded-xl bg-gradient-to-br ${
+              categoryColors[record.category || '其他']
+            } flex items-center justify-center shadow-md`}
           >
             {categoryIcons[record.category || '其他']}
           </div>
           {record.title && (
-            <h4 className='font-semibold text-slate-800 dark:text-slate-100 line-clamp-1'>{record.title}</h4>
+            <h4 className='font-semibold text-slate-800 dark:text-slate-100 line-clamp-1'>
+              {record.title}
+            </h4>
           )}
         </div>
         <div className='flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity'>
@@ -279,7 +283,11 @@ function CultureBoard() {
 
       {record.image_url && (
         <div className='mb-3 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700'>
-          <img src={record.image_url} alt={record.title || ''} className='w-full h-32 object-cover' />
+          <img
+            src={record.image_url}
+            alt={record.title || ''}
+            className='w-full h-32 object-cover'
+          />
         </div>
       )}
 
@@ -290,7 +298,9 @@ function CultureBoard() {
       )}
 
       <div className='mt-3 flex items-center gap-2'>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${categoryBg[record.category || '其他']}`}>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full ${categoryBg[record.category || '其他']}`}
+        >
           {record.category || '未分类'}
         </span>
         {!record.is_active && (
@@ -391,7 +401,9 @@ function CultureBoard() {
                     >
                       {categoryIcons[cat]}
                     </div>
-                    <h3 className='text-lg font-semibold text-slate-800 dark:text-slate-100'>{cat}</h3>
+                    <h3 className='text-lg font-semibold text-slate-800 dark:text-slate-100'>
+                      {cat}
+                    </h3>
                     <span className='text-sm text-slate-400'>({catRecords.length})</span>
                   </div>
                   <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
@@ -405,7 +417,10 @@ function CultureBoard() {
       </div>
 
       {showModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={handleCloseModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={handleCloseModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -441,13 +456,13 @@ function CultureBoard() {
                   disabled={!!formData.id}
                   emptyPlaceholder='暂无班级'
                 />
-                {formData.id && (
-                  <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>
-                )}
+                {formData.id && <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>}
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>分类</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  分类
+                </label>
                 <select
                   value={formData.category}
                   onChange={(e) => handleChange('category', e.target.value)}
@@ -461,7 +476,9 @@ function CultureBoard() {
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>标题</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  标题
+                </label>
                 <input
                   type='text'
                   value={formData.title}
@@ -481,10 +498,14 @@ function CultureBoard() {
                   placeholder='输入内容'
                   rows={4}
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all resize-none text-slate-800 dark:text-slate-100 ${
-                    formErrors.content ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-emerald-500'
+                    formErrors.content
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-emerald-500'
                   }`}
                 />
-                {formErrors.content && <p className='mt-1 text-xs text-red-500'>{formErrors.content}</p>}
+                {formErrors.content && (
+                  <p className='mt-1 text-xs text-red-500'>{formErrors.content}</p>
+                )}
               </div>
 
               <div>
@@ -504,7 +525,9 @@ function CultureBoard() {
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>排序</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  排序
+                </label>
                 <input
                   type='number'
                   value={formData.display_order}
@@ -515,7 +538,9 @@ function CultureBoard() {
               </div>
 
               <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl'>
-                <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>启用状态</label>
+                <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>
+                  启用状态
+                </label>
                 <ToggleSwitch
                   checked={formData.is_active}
                   onChange={(v) => handleChange('is_active', v)}

@@ -1,6 +1,21 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent } from 'react';
-import { User, Mail, Phone, Shield, Globe, Calendar, Edit2, Save, Check, ChevronRight, Key, RefreshCw, LucideIcon, AlertTriangle } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Phone,
+  Shield,
+  Globe,
+  Calendar,
+  Edit2,
+  Save,
+  Check,
+  ChevronRight,
+  Key,
+  RefreshCw,
+  LucideIcon,
+  AlertTriangle,
+} from 'lucide-react';
 import { Card, Modal, Button, Skeleton } from '../components';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
@@ -108,9 +123,7 @@ function Profile() {
         email: data.email || '',
         department: data.class_name || '',
         role: data.role || '',
-        joinedAt: data.created_at
-          ? new Date(data.created_at).toLocaleDateString('zh-CN')
-          : '',
+        joinedAt: data.created_at ? new Date(data.created_at).toLocaleDateString('zh-CN') : '',
         // lastLogin：后端无 Profile 专用登录时间字段，保持空（渲染为"暂无记录"），不伪造
       }));
       setLoadError(false);
@@ -229,13 +242,21 @@ function Profile() {
                 <Skeleton variant='text' width={120} height={14} className='bg-white/20' />
               </div>
             </div>
-            <Skeleton variant='rectangular' width={100} height={40} className='bg-white/30 rounded-lg' />
+            <Skeleton
+              variant='rectangular'
+              width={100}
+              height={40}
+              className='bg-white/30 rounded-lg'
+            />
           </div>
         </div>
 
         <div className='flex gap-2 mb-6 bg-white rounded-xl p-1'>
           {tabs.map((tab: Tab) => (
-            <button key={tab.id} className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600'>
+            <button
+              key={tab.id}
+              className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600'
+            >
               <Skeleton variant='circular' width={16} height={16} className='bg-gray-300' />
               <Skeleton variant='text' width={50} height={14} />
             </button>
@@ -265,7 +286,9 @@ function Profile() {
       {loadError && (
         <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>个人信息加载失败，当前展示可能不完整，请刷新重试</p>
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            个人信息加载失败，当前展示可能不完整，请刷新重试
+          </p>
         </div>
       )}
       <div className='flex items-center gap-4 mb-7'>
@@ -447,7 +470,9 @@ function Profile() {
                 >
                   <div className='flex items-center gap-4'>
                     <div
-                      className={`w-2 h-2 rounded-full ${record.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+                      className={`w-2 h-2 rounded-full ${
+                        record.status === 'success' ? 'bg-green-500' : 'bg-red-500'
+                      }`}
                     />
                     <div>
                       <p className='font-medium text-gray-800'>{record.time}</p>
@@ -457,7 +482,9 @@ function Profile() {
                   <div className='text-right'>
                     <p className='text-sm text-gray-600'>{record.device}</p>
                     <p
-                      className={`text-xs ${record.status === 'success' ? 'text-green-600' : 'text-red-600'}`}
+                      className={`text-xs ${
+                        record.status === 'success' ? 'text-green-600' : 'text-red-600'
+                      }`}
                     >
                       {record.status === 'success' ? '成功' : '失败'}
                     </p>
@@ -477,7 +504,9 @@ function Profile() {
               <input
                 type='text'
                 value={editForm.real_name}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleEditFormChange('real_name', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  handleEditFormChange('real_name', e.target.value)
+                }
                 className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               />
             </div>
@@ -486,7 +515,9 @@ function Profile() {
               <input
                 type='tel'
                 value={editForm.phone}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleEditFormChange('phone', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  handleEditFormChange('phone', e.target.value)
+                }
                 className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               />
             </div>
@@ -495,24 +526,19 @@ function Profile() {
               <input
                 type='text'
                 value={editForm.class_name}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleEditFormChange('class_name', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  handleEditFormChange('class_name', e.target.value)
+                }
                 className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               />
             </div>
           </div>
           <div className='flex gap-3 pt-4 border-t border-gray-100'>
             {/* S1: 本人资料编辑，无需权限门控 */}
-            <Button
-              variant='outline'
-              onClick={() => setShowEditModal(false)}
-              disabled={saving}
-            >
+            <Button variant='outline' onClick={() => setShowEditModal(false)} disabled={saving}>
               取消
             </Button>
-            <Button
-              type='submit'
-              disabled={saving}
-            >
+            <Button type='submit' disabled={saving}>
               {saving ? (
                 <RefreshCw className='w-4 h-4 animate-spin' />
               ) : (
@@ -526,7 +552,10 @@ function Profile() {
 
       <Modal
         isOpen={showPasswordModal}
-        onClose={() => { setShowPasswordModal(false); setPasswordForm({ old_password: '', new_password: '', confirm_password: '' }); }} /* L7: 关闭重置 */
+        onClose={() => {
+          setShowPasswordModal(false);
+          setPasswordForm({ old_password: '', new_password: '', confirm_password: '' });
+        }} /* L7: 关闭重置 */
         title='修改密码'
       >
         <form onSubmit={handlePasswordSubmit} className='space-y-5'>
@@ -535,7 +564,9 @@ function Profile() {
             <input
               type='password'
               value={passwordForm.old_password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordFormChange('old_password', e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                handlePasswordFormChange('old_password', e.target.value)
+              }
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               placeholder='请输入当前密码'
             />
@@ -545,7 +576,9 @@ function Profile() {
             <input
               type='password'
               value={passwordForm.new_password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordFormChange('new_password', e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                handlePasswordFormChange('new_password', e.target.value)
+              }
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               placeholder='请输入新密码（至少6位）'
             />
@@ -555,7 +588,9 @@ function Profile() {
             <input
               type='password'
               value={passwordForm.confirm_password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordFormChange('confirm_password', e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                handlePasswordFormChange('confirm_password', e.target.value)
+              }
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               placeholder='请再次输入新密码'
             />
@@ -564,15 +599,15 @@ function Profile() {
             {/* S1: profile.change-password 后端无此码；改密为本人操作，无需权限门控 */}
             <Button
               variant='outline'
-              onClick={() => { setShowPasswordModal(false); setPasswordForm({ old_password: '', new_password: '', confirm_password: '' }); }} /* L7: 关闭重置 */
+              onClick={() => {
+                setShowPasswordModal(false);
+                setPasswordForm({ old_password: '', new_password: '', confirm_password: '' });
+              }} /* L7: 关闭重置 */
               disabled={saving}
             >
               取消
             </Button>
-            <Button
-              type='submit'
-              disabled={saving}
-            >
+            <Button type='submit' disabled={saving}>
               {saving ? (
                 <RefreshCw className='w-4 h-4 animate-spin' />
               ) : (

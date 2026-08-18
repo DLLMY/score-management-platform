@@ -55,14 +55,23 @@ function Approvals() {
   const loadApprovals = useCallback(async () => {
     try {
       setLoading(true);
-      const params: Record<string, unknown> = { page: pagination.page, per_page: pagination.per_page };
+      const params: Record<string, unknown> = {
+        page: pagination.page,
+        per_page: pagination.per_page,
+      };
       if (filterStatus) params.status = filterStatus;
       const data = await api.approvals.getAll(params);
       // API返回格式是 { approvals: [...], pagination: { total } }
-      const approvalsList = Array.isArray(data) ? data : ((data as { approvals?: Approval[] })?.approvals || []);
+      const approvalsList = Array.isArray(data)
+        ? data
+        : (data as { approvals?: Approval[] })?.approvals || [];
       setApprovals(approvalsList);
       // total 用后端 pagination.total（此前用当前页长度冒充导致分页栏隐藏无法翻页）
-      setPagination((prev) => ({ ...prev, total: (data as { pagination?: { total?: number } }).pagination?.total ?? approvalsList.length }));
+      setPagination((prev) => ({
+        ...prev,
+        total:
+          (data as { pagination?: { total?: number } }).pagination?.total ?? approvalsList.length,
+      }));
     } catch (error) {
       showToast('error', '加载审批失败');
     } finally {
@@ -268,17 +277,23 @@ function Approvals() {
                 <div className='flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3'>
                   <div className='flex-1 w-full'>
                     <div className='flex flex-wrap items-center gap-2 mb-2'>
-                      <h4 className='font-medium text-gray-900 text-sm sm:text-base'>{approval.title}</h4>
+                      <h4 className='font-medium text-gray-900 text-sm sm:text-base'>
+                        {approval.title}
+                      </h4>
                       {getStatusBadge(approval.status)}
                       <span className='px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium'>
                         {getTypeLabel(approval.type)}
                       </span>
                     </div>
-                    <p className='text-sm text-gray-600 mb-2 hidden sm:block'>{approval.description}</p>
+                    <p className='text-sm text-gray-600 mb-2 hidden sm:block'>
+                      {approval.description}
+                    </p>
                     {approval.score_change !== null && approval.score_change !== undefined && (
                       <p className='text-sm font-medium mb-2'>
                         积分变化:{' '}
-                        <span className={approval.score_change >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        <span
+                          className={approval.score_change >= 0 ? 'text-green-600' : 'text-red-600'}
+                        >
                           {approval.score_change >= 0 ? '+' : ''}
                           {approval.score_change}
                         </span>
@@ -291,7 +306,11 @@ function Approvals() {
                       </div>
                       <div className='flex items-center gap-1'>
                         <Clock className='w-3 h-3' />
-                        <span>{approval.created_at ? new Date(approval.created_at).toLocaleString('zh-CN') : '--'}</span>
+                        <span>
+                          {approval.created_at
+                            ? new Date(approval.created_at).toLocaleString('zh-CN')
+                            : '--'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -343,7 +362,9 @@ function Approvals() {
               >
                 上一页
               </Button>
-              <span className='text-sm text-gray-600'>第 {pagination.page} 页 / 共 {totalPages} 页</span>
+              <span className='text-sm text-gray-600'>
+                第 {pagination.page} 页 / 共 {totalPages} 页
+              </span>
               <Button
                 variant='outline'
                 size='sm'
@@ -373,7 +394,9 @@ function Approvals() {
             <label className='block text-sm font-medium text-gray-700 mb-1'>申请类型</label>
             <select
               value={createForm.type}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) => setCreateForm({ ...createForm, type: e.target.value as CreateForm['type'] })}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                setCreateForm({ ...createForm, type: e.target.value as CreateForm['type'] })
+              }
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
             >
               <option value='score_adjust'>积分调整</option>
@@ -386,7 +409,9 @@ function Approvals() {
             <input
               type='text'
               value={createForm.title}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setCreateForm({ ...createForm, title: e.target.value })}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setCreateForm({ ...createForm, title: e.target.value })
+              }
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
               placeholder='请输入申请标题'
               required
@@ -408,14 +433,20 @@ function Approvals() {
             <label className='block text-sm font-medium text-gray-700 mb-1'>申请说明</label>
             <textarea
               value={createForm.description}
-              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setCreateForm({ ...createForm, description: e.target.value })}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                setCreateForm({ ...createForm, description: e.target.value })
+              }
               className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[100px]'
               placeholder='请输入申请说明'
               required
             />
           </div>
           <div className='flex gap-3 pt-4 border-t border-gray-100'>
-            <Button variant='outline' onClick={() => setShowCreateModal(false)} disabled={actionLoading}>
+            <Button
+              variant='outline'
+              onClick={() => setShowCreateModal(false)}
+              disabled={actionLoading}
+            >
               取消
             </Button>
             <Button type='submit' disabled={actionLoading}>
@@ -427,12 +458,19 @@ function Approvals() {
       </Modal>
 
       {selectedApproval && (
-        <Modal isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} title='申请详情' size='md'>
+        <Modal
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          title='申请详情'
+          size='md'
+        >
           <div className='space-y-4'>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className='text-xs font-medium text-gray-500'>申请标题</label>
-                <p className='font-medium text-gray-900 text-sm sm:text-base'>{selectedApproval.title}</p>
+                <p className='font-medium text-gray-900 text-sm sm:text-base'>
+                  {selectedApproval.title}
+                </p>
               </div>
               <div>
                 <label className='text-xs font-medium text-gray-500'>状态</label>
@@ -440,36 +478,53 @@ function Approvals() {
               </div>
               <div>
                 <label className='text-xs font-medium text-gray-500'>申请类型</label>
-                <p className='text-gray-900 text-sm sm:text-base'>{getTypeLabel(selectedApproval.type)}</p>
+                <p className='text-gray-900 text-sm sm:text-base'>
+                  {getTypeLabel(selectedApproval.type)}
+                </p>
               </div>
               <div>
                 <label className='text-xs font-medium text-gray-500'>用户</label>
-                <p className='text-gray-900 text-sm sm:text-base'>{selectedApproval.user_name || `用户 ${selectedApproval.user_id}`}</p>
-              </div>
-            </div>
-            {selectedApproval.score_change !== null && selectedApproval.score_change !== undefined && (
-              <div>
-                <label className='text-xs font-medium text-gray-500'>积分变化</label>
-                <p className='text-xl font-bold mt-1'>
-                  <span className={selectedApproval.score_change >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {selectedApproval.score_change >= 0 ? '+' : ''}
-                    {selectedApproval.score_change}
-                  </span>
+                <p className='text-gray-900 text-sm sm:text-base'>
+                  {selectedApproval.user_name || `用户 ${selectedApproval.user_id}`}
                 </p>
               </div>
-            )}
+            </div>
+            {selectedApproval.score_change !== null &&
+              selectedApproval.score_change !== undefined && (
+                <div>
+                  <label className='text-xs font-medium text-gray-500'>积分变化</label>
+                  <p className='text-xl font-bold mt-1'>
+                    <span
+                      className={
+                        selectedApproval.score_change >= 0 ? 'text-green-600' : 'text-red-600'
+                      }
+                    >
+                      {selectedApproval.score_change >= 0 ? '+' : ''}
+                      {selectedApproval.score_change}
+                    </span>
+                  </p>
+                </div>
+              )}
             <div>
               <label className='text-xs font-medium text-gray-500'>申请说明</label>
-              <p className='text-gray-700 mt-1 whitespace-pre-wrap'>{selectedApproval.description}</p>
+              <p className='text-gray-700 mt-1 whitespace-pre-wrap'>
+                {selectedApproval.description}
+              </p>
             </div>
             <div>
               <label className='text-xs font-medium text-gray-500'>申请时间</label>
-              <p className='text-gray-700 mt-1'>{selectedApproval.created_at ? new Date(selectedApproval.created_at).toLocaleString('zh-CN') : '--'}</p>
+              <p className='text-gray-700 mt-1'>
+                {selectedApproval.created_at
+                  ? new Date(selectedApproval.created_at).toLocaleString('zh-CN')
+                  : '--'}
+              </p>
             </div>
             {selectedApproval.approve_time && (
               <div>
                 <label className='text-xs font-medium text-gray-500'>审批时间</label>
-                <p className='text-gray-700 mt-1'>{new Date(selectedApproval.approve_time).toLocaleString('zh-CN')}</p>
+                <p className='text-gray-700 mt-1'>
+                  {new Date(selectedApproval.approve_time).toLocaleString('zh-CN')}
+                </p>
               </div>
             )}
             {selectedApproval.comment && (
@@ -490,7 +545,11 @@ function Approvals() {
                   <X className='w-4 h-4' />
                   拒绝申请
                 </PermissionButton>
-                <PermissionButton permission='score.approve' onClick={() => handleApprove(selectedApproval.id)} disabled={actionLoading}>
+                <PermissionButton
+                  permission='score.approve'
+                  onClick={() => handleApprove(selectedApproval.id)}
+                  disabled={actionLoading}
+                >
                   <Check className='w-4 h-4' />
                   通过申请
                 </PermissionButton>

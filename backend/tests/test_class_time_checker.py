@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 上课时间检查器测试模块
 """
 """
@@ -64,9 +64,12 @@ class TestClassTimeChecker:
 
         # 插入覆盖当前时刻的节次窗口，使 _current_period 命中
         period = ClassPeriod(
-            period_number=1, name="第1节",
-            start_hour=now.hour, start_minute=0,
-            end_hour=now.hour, end_minute=59,
+            period_number=1,
+            name="第1节",
+            start_hour=now.hour,
+            start_minute=0,
+            end_hour=now.hour,
+            end_minute=59,
             is_active=True,
         )
         db_session.add(period)
@@ -81,8 +84,11 @@ class TestClassTimeChecker:
         db_session.commit()
 
         sched = CourseSchedule(
-            class_info_id=cls.id, subject_id=subj.id,
-            day_of_week=day, period_number=1, is_active=True,
+            class_info_id=cls.id,
+            subject_id=subj.id,
+            day_of_week=day,
+            period_number=1,
+            is_active=True,
         )
         db_session.add(sched)
         db_session.commit()
@@ -104,22 +110,22 @@ class TestClassTimeChecker:
             result = ClassTimeChecker.get_today_class_schedule()
 
             assert isinstance(result, dict)
-            assert 'today' in result
-            assert 'all' in result
-            assert 'today_date' in result
-            assert 'today_day' in result
-            assert 'is_during_class' in result
-            assert isinstance(result['today'], list)
-            assert isinstance(result['all'], list)
+            assert "today" in result
+            assert "all" in result
+            assert "today_date" in result
+            assert "today_day" in result
+            assert "is_during_class" in result
+            assert isinstance(result["today"], list)
+            assert isinstance(result["all"], list)
 
     def test_format_day(self):
         """测试星期格式化"""
-        assert ClassTimeChecker._format_day(-1) == '每天'
-        assert ClassTimeChecker._format_day(0) == '周一'
-        assert ClassTimeChecker._format_day(1) == '周二'
-        assert ClassTimeChecker._format_day(6) == '周日'
-        assert ClassTimeChecker._format_day(7) == '未知'
-        assert ClassTimeChecker._format_day(-2) == '未知'
+        assert ClassTimeChecker._format_day(-1) == "每天"
+        assert ClassTimeChecker._format_day(0) == "周一"
+        assert ClassTimeChecker._format_day(1) == "周二"
+        assert ClassTimeChecker._format_day(6) == "周日"
+        assert ClassTimeChecker._format_day(7) == "未知"
+        assert ClassTimeChecker._format_day(-2) == "未知"
 
     def test_get_next_class_structure(self, app):
         """测试获取下一节课返回结构"""
@@ -130,8 +136,8 @@ class TestClassTimeChecker:
 
     def test_class_time_checker_methods_exist(self):
         """测试上课时间检查器方法存在性"""
-        assert hasattr(ClassTimeChecker, 'is_during_class_time')
-        assert hasattr(ClassTimeChecker, 'is_notification_allowed')
-        assert hasattr(ClassTimeChecker, 'get_today_class_schedule')
-        assert hasattr(ClassTimeChecker, '_format_day')
-        assert hasattr(ClassTimeChecker, 'get_next_class')
+        assert hasattr(ClassTimeChecker, "is_during_class_time")
+        assert hasattr(ClassTimeChecker, "is_notification_allowed")
+        assert hasattr(ClassTimeChecker, "get_today_class_schedule")
+        assert hasattr(ClassTimeChecker, "_format_day")
+        assert hasattr(ClassTimeChecker, "get_next_class")

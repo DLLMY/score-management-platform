@@ -1,5 +1,4 @@
-
-BASE_URL = 'http://127.0.0.1:5000'
+BASE_URL = "http://127.0.0.1:5000"
 
 
 def test_login_and_debug():
@@ -7,14 +6,13 @@ def test_login_and_debug():
     print("测试登录和调试")
     print("=" * 60)
 
-    response = requests.post(f"{BASE_URL}/api/auth/login", json={
-        'username': 'admin',
-        'password': '123456'
-    }, timeout=10)
+    response = requests.post(
+        f"{BASE_URL}/api/auth/login", json={"username": "admin", "password": "123456"}, timeout=10
+    )
 
     if response.status_code == 200:
         data = response.json()
-        token = data.get('access_token')
+        token = data.get("access_token")
         print(f"获取Token成功: {token[:20]}...")
 
         print("\n" + "=" * 60)
@@ -48,5 +46,6 @@ def test_login_and_debug():
     else:
         print(f"登录失败: {response.text}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_login_and_debug()

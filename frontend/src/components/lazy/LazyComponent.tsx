@@ -26,21 +26,21 @@ export const createLazyComponent = <P extends Record<string, unknown> = Record<s
 
   const WrappedComponent: React.FC<P & LazyComponentProps> = (props) => {
     const { loading: customLoading, error: customError, ...restProps } = props;
-    
+
     const loadingElement = customLoading || options.loading || (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin"></div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin'></div>
       </div>
     );
 
     const errorElement = customError || options.error || (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="text-6xl mb-4">⚠️</div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">组件加载失败</h2>
-        <p className="text-gray-500 dark:text-slate-400">请刷新页面重试</p>
+      <div className='min-h-screen flex flex-col items-center justify-center p-4'>
+        <div className='text-6xl mb-4'>⚠️</div>
+        <h2 className='text-xl font-bold text-gray-800 dark:text-white mb-2'>组件加载失败</h2>
+        <p className='text-gray-500 dark:text-slate-400'>请刷新页面重试</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          className='mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors'
         >
           刷新页面
         </button>
@@ -50,7 +50,7 @@ export const createLazyComponent = <P extends Record<string, unknown> = Record<s
     return (
       <Suspense fallback={loadingElement}>
         <ErrorBoundary fallback={errorElement}>
-          <LazyComponent {...restProps as P} />
+          <LazyComponent {...(restProps as P)} />
         </ErrorBoundary>
       </Suspense>
     );

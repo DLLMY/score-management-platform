@@ -5,11 +5,7 @@ interface SkeletonProps {
 }
 
 function Skeleton({ className = '' }: SkeletonProps) {
-  return (
-    <div
-      className={`animate-pulse bg-gray-200 rounded-lg ${className}`}
-    />
-  );
+  return <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />;
 }
 
 interface SkeletonTextProps {
@@ -23,7 +19,7 @@ function SkeletonText({ rows = 1, className = '' }: SkeletonTextProps) {
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="animate-pulse bg-gray-200 rounded mb-2 last:mb-0"
+          className='animate-pulse bg-gray-200 rounded mb-2 last:mb-0'
           style={{
             height: '16px',
             width: `${80 - i * 10}%`,
@@ -45,12 +41,8 @@ function SkeletonAvatar({ size = 'md', className = '' }: SkeletonAvatarProps) {
     md: 'w-12 h-12',
     lg: 'w-16 h-16',
   };
-  
-  return (
-    <div
-      className={`animate-pulse bg-gray-200 rounded-full ${sizes[size]} ${className}`}
-    />
-  );
+
+  return <div className={`animate-pulse bg-gray-200 rounded-full ${sizes[size]} ${className}`} />;
 }
 
 interface SkeletonCardProps {
@@ -60,12 +52,12 @@ interface SkeletonCardProps {
 function SkeletonCard({ className = '' }: SkeletonCardProps) {
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-4 ${className}`}>
-      <div className="flex items-center gap-4">
-        <SkeletonAvatar size="md" />
-        <div className="flex-1">
+      <div className='flex items-center gap-4'>
+        <SkeletonAvatar size='md' />
+        <div className='flex-1'>
           <SkeletonText rows={2} />
         </div>
-        <Skeleton className="w-16 h-8" />
+        <Skeleton className='w-16 h-8' />
       </div>
     </div>
   );
@@ -80,7 +72,7 @@ function SkeletonList({ count = 5, className = '' }: SkeletonListProps) {
   return (
     <div className={className}>
       {Array.from({ length: count }).map((_, i) => (
-        <SkeletonCard key={i} className="mb-3 last:mb-0" />
+        <SkeletonCard key={i} className='mb-3 last:mb-0' />
       ))}
     </div>
   );

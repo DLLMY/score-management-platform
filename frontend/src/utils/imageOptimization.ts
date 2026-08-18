@@ -8,16 +8,14 @@
  * @param src 原始图片路径
  * @returns 优化后的图片URL
  */
-export const getOptimizedImageUrl = (
-  src: string
-): string => {
+export const getOptimizedImageUrl = (src: string): string => {
   if (!src) return src;
-  
+
   // 如果已经是WebP格式，直接返回
   if (src.toLowerCase().endsWith('.webp')) {
     return src;
   }
-  
+
   // 尝试转换为WebP格式
   const ext = src.split('.').pop()?.toLowerCase();
   if (ext && ['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
@@ -25,7 +23,7 @@ export const getOptimizedImageUrl = (
     const basePath = src.substring(0, src.length - ext.length);
     return `${basePath}webp`;
   }
-  
+
   return src;
 };
 
@@ -51,13 +49,13 @@ export const getResponsiveImage = (
   }
 ): ResponsiveImageConfig => {
   const srcSetParts: string[] = [];
-  
+
   Object.entries(breakpoints).forEach(([key, width]) => {
     const sizeSuffix = key === 'sm' ? '' : `-${key}`;
     const url = getOptimizedImageUrl(src);
     srcSetParts.push(`${url}${sizeSuffix} ${width}w`);
   });
-  
+
   return {
     src: getOptimizedImageUrl(src),
     srcSet: srcSetParts.join(', '),
@@ -86,12 +84,13 @@ export const generatePlaceholder = (
  */
 export const supportsWebP = (): Promise<boolean> => {
   if (typeof window === 'undefined') return Promise.resolve(false);
-  
+
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(true);
     img.onerror = () => resolve(false);
-    img.src = 'data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAABBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==';
+    img.src =
+      'data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAABBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==';
   });
 };
 
@@ -120,12 +119,8 @@ export const getImageDimensions = (src: string): Promise<{ width: number; height
  */
 export const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>): void => {
   const target = e.currentTarget;
-  const fallbackSrc = generatePlaceholder(
-    target.width || 100,
-    target.height || 100,
-    '#e5e7eb'
-  );
-  
+  const fallbackSrc = generatePlaceholder(target.width || 100, target.height || 100, '#e5e7eb');
+
   if (target.src !== fallbackSrc) {
     target.src = fallbackSrc;
   }

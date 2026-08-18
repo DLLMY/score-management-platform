@@ -4,7 +4,14 @@
  */
 
 import { LucideIcon } from 'lucide-react';
-import { ReactNode, MouseEventHandler, SelectHTMLAttributes, TextareaHTMLAttributes, InputHTMLAttributes, ButtonHTMLAttributes } from 'react';
+import {
+  ReactNode,
+  MouseEventHandler,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+  InputHTMLAttributes,
+  ButtonHTMLAttributes,
+} from 'react';
 
 // ==================== 基础UI组件 ====================
 
@@ -24,9 +31,24 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 // Input组件
-export type InputType = 'text' | 'password' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'datetime-local' | 'time' | 'month' | 'week' | 'file' | 'color';
+export type InputType =
+  | 'text'
+  | 'password'
+  | 'email'
+  | 'number'
+  | 'tel'
+  | 'url'
+  | 'search'
+  | 'date'
+  | 'datetime-local'
+  | 'time'
+  | 'month'
+  | 'week'
+  | 'file'
+  | 'color';
 
-export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'type'> {
+export interface InputProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'type'> {
   type?: InputType;
   value?: string;
   onChange?: (value: string) => void;
@@ -38,13 +60,15 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
 }
 
 // Select组件
-export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'value'> {
+export interface SelectProps
+  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'value'> {
   value?: string;
   onChange?: (value: string) => void;
 }
 
 // Textarea组件
-export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> {
+export interface TextareaProps
+  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> {
   value?: string;
   onChange?: (value: string) => void;
   label?: string;

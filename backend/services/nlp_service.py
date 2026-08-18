@@ -220,7 +220,9 @@ class NLPService:
                 "cache_layer": "none",
             }
 
-    def parse_batch(self, texts: List[str], parser_type: Optional[NLPParserType] = None) -> List[Dict[str, Any]]:
+    def parse_batch(
+        self, texts: List[str], parser_type: Optional[NLPParserType] = None
+    ) -> List[Dict[str, Any]]:
         if not texts:
             return []
 

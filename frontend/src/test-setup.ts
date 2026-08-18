@@ -47,7 +47,8 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
       return [];
     }
   }
-  globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+  globalThis.IntersectionObserver =
+    IntersectionObserverStub as unknown as typeof IntersectionObserver;
 }
 
 // scrollIntoView（jsdom 未实现 → 组件调用抛错）

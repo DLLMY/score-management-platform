@@ -227,7 +227,10 @@ class ErrorMonitor {
       });
 
       if (this.isDev) {
-        this.originalConsoleError(`[ErrorMonitor] [${errorData.type}] ${errorData.message}`, errorData);
+        this.originalConsoleError(
+          `[ErrorMonitor] [${errorData.type}] ${errorData.message}`,
+          errorData
+        );
       }
     } finally {
       this.isReporting = false;

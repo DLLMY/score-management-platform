@@ -24,12 +24,12 @@ const defaultConfig: CacheWarmupConfig = {
     { key: 'score_rules', url: '/api/rules', priority: 'high' },
     { key: 'categories', url: '/api/score-categories', priority: 'high' },
     { key: 'subjects', url: '/api/subjects', priority: 'high' },
-    
+
     // 中优先级 - 常用数据
     { key: 'class_periods', url: '/api/class-periods', priority: 'medium' },
     { key: 'time_rules', url: '/api/time-rules', priority: 'medium' },
     { key: 'users', url: '/api/users?page=1&per_page=20', priority: 'medium' },
-    
+
     // 低优先级 - 配置数据
     { key: 'system_config', url: '/api/system/config', priority: 'low' },
     { key: 'rank_rules', url: '/api/rank-rules', priority: 'low' },
@@ -133,7 +133,9 @@ class CacheWarmupService {
   /**
    * 按优先级分组
    */
-  private groupByPriority(endpoints: CacheWarmupConfig['endpoints']): Record<string, typeof endpoints> {
+  private groupByPriority(
+    endpoints: CacheWarmupConfig['endpoints']
+  ): Record<string, typeof endpoints> {
     return endpoints.reduce((acc, endpoint) => {
       if (!acc[endpoint.priority]) {
         acc[endpoint.priority] = [];
@@ -149,9 +151,7 @@ class CacheWarmupService {
   private async fetchEndpoints(endpoints: CacheWarmupConfig['endpoints']): Promise<void> {
     if (!endpoints || endpoints.length === 0) return;
 
-    await Promise.all(
-      endpoints.map((endpoint) => this.fetchEndpoint(endpoint))
-    );
+    await Promise.all(endpoints.map((endpoint) => this.fetchEndpoint(endpoint)));
   }
 
   /**

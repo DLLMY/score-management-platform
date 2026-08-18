@@ -4,6 +4,7 @@
 - 重复执行安全：列已存在则跳过。
 - 运行前建议先备份 instance/*.db（见下方 cp 命令）。
 """
+
 import os
 import sys
 

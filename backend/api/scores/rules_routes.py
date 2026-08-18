@@ -81,7 +81,9 @@ class RuleList(Resource):
             query = query.filter(ScoreRule.category_id == category_id)
         if is_active is not None:
             query = query.filter(ScoreRule.is_active == (is_active.lower() == "true"))
-        pagination = query.order_by(ScoreRule.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        pagination = query.order_by(ScoreRule.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
         result = {  # noqa: F841
             "rules": [
                 {
@@ -426,9 +428,27 @@ RULE_TEMPLATES = [
         "name": "纪律管理",
         "description": "日常纪律和行为规范相关规则",
         "rules": [
-            {"name": "迟到", "description": "上课或集会迟到", "score": -2, "daily_limit": 0, "min_interval": 0},
-            {"name": "早退", "description": "未经允许提前离开", "score": -3, "daily_limit": 0, "min_interval": 0},
-            {"name": "旷课", "description": "无故缺课或逃课", "score": -10, "daily_limit": 0, "min_interval": 0},
+            {
+                "name": "迟到",
+                "description": "上课或集会迟到",
+                "score": -2,
+                "daily_limit": 0,
+                "min_interval": 0,
+            },
+            {
+                "name": "早退",
+                "description": "未经允许提前离开",
+                "score": -3,
+                "daily_limit": 0,
+                "min_interval": 0,
+            },
+            {
+                "name": "旷课",
+                "description": "无故缺课或逃课",
+                "score": -10,
+                "daily_limit": 0,
+                "min_interval": 0,
+            },
             {
                 "name": "打架斗殴",
                 "description": "与同学发生肢体冲突",
@@ -436,7 +456,13 @@ RULE_TEMPLATES = [
                 "daily_limit": 0,
                 "min_interval": 0,
             },
-            {"name": "说脏话", "description": "使用不文明语言", "score": -3, "daily_limit": 0, "min_interval": 0},
+            {
+                "name": "说脏话",
+                "description": "使用不文明语言",
+                "score": -3,
+                "daily_limit": 0,
+                "min_interval": 0,
+            },
         ],
     },
     {
@@ -458,7 +484,13 @@ RULE_TEMPLATES = [
                 "daily_limit": 0,
                 "min_interval": 0,
             },
-            {"name": "个人卫生差", "description": "个人卫生不达标", "score": -2, "daily_limit": 0, "min_interval": 0},
+            {
+                "name": "个人卫生差",
+                "description": "个人卫生不达标",
+                "score": -2,
+                "daily_limit": 0,
+                "min_interval": 0,
+            },
         ],
     },
     {
@@ -501,8 +533,20 @@ RULE_TEMPLATES = [
                 "daily_limit": 5,
                 "min_interval": 0,
             },
-            {"name": "考试满分", "description": "考试获得满分", "score": 10, "daily_limit": 10, "min_interval": 0},
-            {"name": "考试作弊", "description": "在考试中作弊", "score": -20, "daily_limit": 0, "min_interval": 0},
+            {
+                "name": "考试满分",
+                "description": "考试获得满分",
+                "score": 10,
+                "daily_limit": 10,
+                "min_interval": 0,
+            },
+            {
+                "name": "考试作弊",
+                "description": "在考试中作弊",
+                "score": -20,
+                "daily_limit": 0,
+                "min_interval": 0,
+            },
         ],
     },
 ]
@@ -598,13 +642,17 @@ class RuleStatistics(Resource):
             rule_stats[stat.rule_id] = {
                 "usage_count": stat.usage_count,
                 "last_used_at": stat.last_used_at.isoformat() if stat.last_used_at else None,
-                "total_score_change": float(stat.total_score_change) if stat.total_score_change else 0,
+                "total_score_change": (
+                    float(stat.total_score_change) if stat.total_score_change else 0
+                ),
             }
         # 获取规则详情并关联统计
         rules = ScoreRule.query.all()
         result = []  # noqa: F841
         for rule in rules:
-            stat = rule_stats.get(rule.id, {"usage_count": 0, "last_used_at": None, "total_score_change": 0})
+            stat = rule_stats.get(
+                rule.id, {"usage_count": 0, "last_used_at": None, "total_score_change": 0}
+            )
             result.append(
                 {
                     "id": rule.id,
@@ -632,7 +680,9 @@ class RuleStatistics(Resource):
                     "active_rules": sum(1 for r in result if r["is_active"]),
                     "total_usage_count": total_usage,
                     "total_score_change": total_score,
-                    "most_used_rule": result[0]["name"] if result and result[0]["usage_count"] > 0 else None,
+                    "most_used_rule": (
+                        result[0]["name"] if result and result[0]["usage_count"] > 0 else None
+                    ),
                 },
             }
         )

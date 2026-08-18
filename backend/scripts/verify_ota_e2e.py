@@ -50,6 +50,7 @@
   收包连接只订阅+收包，发包连接只发包，两条物理分离连接根除高延迟下收包饿死；
   回包到达内存即判定，绝不依赖易被写锁拖死的 mqtt_log 全表扫描。
 """
+
 import atexit
 import hashlib
 import hmac
@@ -70,23 +71,23 @@ import paho.mqtt.client as mqtt
 BROKER = os.getenv("MQTT_BROKER", "nc5233fc.ala.cn-hangzhou.emqxsl.cn")
 PORT = int(os.getenv("MQTT_PORT", "8883"))
 USE_TLS = os.getenv("MQTT_SSL", "true" if PORT == 8883 else "false").lower() == "true"
-CA_CERT = os.getenv("MQTT_CA_CERT", "")               # 可选：EMQX Cloud CA 证书路径，设置后启用严格校验
+CA_CERT = os.getenv("MQTT_CA_CERT", "")  # 可选：EMQX Cloud CA 证书路径，设置后启用严格校验
 USER = os.getenv("MQTT_USER", "phoneboxtest")
 PASS = os.getenv("MQTT_PASS", "123456")
-SECRET = os.getenv("OTA_SIGNING_SECRET", "")          # 设备侧验签密钥（须与后端一致）
+SECRET = os.getenv("OTA_SIGNING_SECRET", "")  # 设备侧验签密钥（须与后端一致）
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:5000").rstrip("/")
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS = os.getenv("ADMIN_PASS", "123456")
 DEVICE_ID = os.getenv("DEVICE_ID") or ("E2E_OTA_%d" % int(time.time()))
-FIRMWARE_ID = os.getenv("FIRMWARE_ID")                 # 可选，缺省取首个 active
+FIRMWARE_ID = os.getenv("FIRMWARE_ID")  # 可选，缺省取首个 active
 
 RUN_TS = int(time.time())
 _lock = threading.Lock()
-_sub_mid = {}            # mid -> topic（关联 SUBACK）
-_received = []          # [(topic, payload)] 设备实时收到的 OTA 指令
-_status_reported = []   # 设备已发出的状态回报（topic, payload）
-client = None            # 收包连接
-pub_client = None        # 发包连接
+_sub_mid = {}  # mid -> topic（关联 SUBACK）
+_received = []  # [(topic, payload)] 设备实时收到的 OTA 指令
+_status_reported = []  # 设备已发出的状态回报（topic, payload）
+client = None  # 收包连接
+pub_client = None  # 发包连接
 
 
 # ============================================================
@@ -95,8 +96,7 @@ pub_client = None        # 发包连接
 def _on_connect(c, userdata, flags, rc):
     print(f"[DEVICE] connected rc={rc}")
     # 专属 topic + 广播 topic + 状态回报回执（验证后端收到状态）
-    for t in ("phonebox/ota/%s" % DEVICE_ID, "phonebox/ota",
-              "phonebox/ota/%s/status" % DEVICE_ID):
+    for t in ("phonebox/ota/%s" % DEVICE_ID, "phonebox/ota", "phonebox/ota/%s/status" % DEVICE_ID):
         try:
             _res, mid = c.subscribe(t, qos=1)
         except Exception as e:
@@ -130,7 +130,9 @@ def _verify_signature(payload):
     url = payload.get("url") or payload.get("download_url")
     if not SECRET:
         # 两端均未配置密钥：后端签名应为空串，设备跳过校验仅告警
-        return (sig == ""), ("未配置密钥, 跳过验签(仅告警)" if sig == "" else "未配置密钥但收到非空签名!")
+        return (sig == ""), (
+            "未配置密钥, 跳过验签(仅告警)" if sig == "" else "未配置密钥但收到非空签名!"
+        )
     if not sig:
         return False, "缺少签名(可能被伪造/广播)"
     msg = f"{fw_id}:{version}:{url}".encode("utf-8")
@@ -165,7 +167,9 @@ def _http(method, path, token=None, data=None, timeout=15):
 
 
 def _login():
-    st, body = _http("POST", "/api/auth/login", data={"username": ADMIN_USER, "password": ADMIN_PASS})
+    st, body = _http(
+        "POST", "/api/auth/login", data={"username": ADMIN_USER, "password": ADMIN_PASS}
+    )
     if st != 200 or not body.get("success"):
         raise RuntimeError("登录失败 HTTP %s: %s" % (st, body.get("message")))
     return body["access_token"]
@@ -215,28 +219,37 @@ def main():
             pub_client.tls_set(ca_certs=CA_CERT, cert_reqs=ssl.CERT_REQUIRED)
             print(f"[TLS] 启用严格校验 (ca={CA_CERT})")
         else:
-            client.tls_set(cert_reqs=ssl.CERT_NONE); client.tls_insecure_set(True)
-            pub_client.tls_set(cert_reqs=ssl.CERT_NONE); pub_client.tls_insecure_set(True)
+            client.tls_set(cert_reqs=ssl.CERT_NONE)
+            client.tls_insecure_set(True)
+            pub_client.tls_set(cert_reqs=ssl.CERT_NONE)
+            pub_client.tls_insecure_set(True)
             print("[TLS] 启用(insecure, 跳过 CA 校验；生产建议设 MQTT_CA_CERT)")
     client.on_connect = _on_connect
     client.on_message = _on_message
     client.on_subscribe = _on_subscribe
     client.connect_async(BROKER, PORT, keepalive=60)
     pub_client.connect_async(BROKER, PORT, keepalive=60)
-    client.loop_start(); pub_client.loop_start()
+    client.loop_start()
+    pub_client.loop_start()
     time.sleep(4)  # 等双连接 + SUBACK
 
     # 注册设备（后端创建 Device 并触发协商；上报版本=active 版本以免被自动推送干扰）
-    _publish("phonebox/ota/register", {
-        "device_id": DEVICE_ID, "device_type": "phonebox",
-        "fw_version": fver, "platform": "esp32",
-    })
+    _publish(
+        "phonebox/ota/register",
+        {
+            "device_id": DEVICE_ID,
+            "device_type": "phonebox",
+            "fw_version": fver,
+            "platform": "esp32",
+        },
+    )
     print(f"[SETUP] 已上报设备注册 {DEVICE_ID}（fw={fver}），等待后端创建设备…")
     time.sleep(3)
 
     # 触发 OTA 推送（force=True，绕过版本/auto_update 检查）
-    st, body = _http("POST", "/api/firmware/%s/ota-upgrade" % fid,
-                     token=token, data={"device_ids": [DEVICE_ID]})
+    st, body = _http(
+        "POST", "/api/firmware/%s/ota-upgrade" % fid, token=token, data={"device_ids": [DEVICE_ID]}
+    )
     if st != 200 or not (body.get("success") or body.get("data", {}).get("success")):
         print(f"[FAIL] 触发 OTA 推送失败 HTTP {st}: {body}")
         return 1
@@ -254,28 +267,44 @@ def main():
         time.sleep(0.3)
 
     if cmd is None:
-        results.append(("1.设备收到OTA指令", False, "30s 内未在 phonebox/ota/%s 收到指令" % DEVICE_ID))
+        results.append(
+            ("1.设备收到OTA指令", False, "30s 内未在 phonebox/ota/%s 收到指令" % DEVICE_ID)
+        )
     else:
         topic, pl = cmd
         ok_topic = topic in ("phonebox/ota/%s" % DEVICE_ID, "phonebox/ota")
         sig_ok, sig_msg = _verify_signature(pl)
         recv_ok = ok_topic and sig_ok and bool(pl.get("url")) and bool(pl.get("version"))
-        detail = (f"topic={topic} version={pl.get('version')} url={str(pl.get('url'))[:40]}… "
-                  f"md5={pl.get('md5')} sig={'有' if pl.get('signature') else '无'} -> {sig_msg}")
+        detail = (
+            f"topic={topic} version={pl.get('version')} url={str(pl.get('url'))[:40]}… "
+            f"md5={pl.get('md5')} sig={'有' if pl.get('signature') else '无'} -> {sig_msg}"
+        )
         results.append(("1.设备收到OTA指令+签名校验", recv_ok, detail))
         print(f"[DEVICE] 收到指令并验签: {'通过' if recv_ok else '拒绝'} ({sig_msg})")
 
         # ---- 设备回报状态：started -> success ----
         if recv_ok:
-            _publish("phonebox/ota/%s/status" % DEVICE_ID, {
-                "device_id": DEVICE_ID, "status": "started",
-                "from_version": pl.get("md5") and "0.0.0", "to_version": pl.get("version"), "progress": 0,
-            })
+            _publish(
+                "phonebox/ota/%s/status" % DEVICE_ID,
+                {
+                    "device_id": DEVICE_ID,
+                    "status": "started",
+                    "from_version": pl.get("md5") and "0.0.0",
+                    "to_version": pl.get("version"),
+                    "progress": 0,
+                },
+            )
             time.sleep(1)
-            _publish("phonebox/ota/%s/status" % DEVICE_ID, {
-                "device_id": DEVICE_ID, "status": "success",
-                "from_version": "0.0.0", "to_version": pl.get("version"), "progress": 100,
-            })
+            _publish(
+                "phonebox/ota/%s/status" % DEVICE_ID,
+                {
+                    "device_id": DEVICE_ID,
+                    "status": "success",
+                    "from_version": "0.0.0",
+                    "to_version": pl.get("version"),
+                    "progress": 100,
+                },
+            )
             print(f"[DEVICE] 已回报 started -> success 到 phonebox/ota/{DEVICE_ID}/status")
 
     # ---- 等待后端闭环：ota-status 出现 completed 记录 ----
@@ -284,7 +313,7 @@ def main():
     while time.time() < deadline:
         st, body = _http("GET", "/api/firmware/ota-status?device_id=%s" % DEVICE_ID, token=token)
         if st == 200:
-            recent = (body.get("recent") or [])
+            recent = body.get("recent") or []
             for r in recent:
                 if r.get("device_id") == DEVICE_ID and r.get("status") == "completed":
                     completed = True
@@ -292,8 +321,13 @@ def main():
             if completed:
                 break
         time.sleep(1.0)
-    results.append(("2.后端闭环(ota_status=completed)", completed,
-                    "后端已处理状态回报并落库 completed" if completed else "30s 内未见到 completed 记录"))
+    results.append(
+        (
+            "2.后端闭环(ota_status=completed)",
+            completed,
+            "后端已处理状态回报并落库 completed" if completed else "30s 内未见到 completed 记录",
+        )
+    )
 
     # ---- 汇总 ----
     print("\n==================== 无缝 OTA 本地 Broker e2e 结果 ====================")
@@ -310,7 +344,8 @@ def _shutdown():
     for c in (client, pub_client):
         if c is not None:
             try:
-                c.loop_stop(); c.disconnect()
+                c.loop_stop()
+                c.disconnect()
             except Exception:
                 pass
 

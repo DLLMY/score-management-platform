@@ -1,4 +1,5 @@
 """测试NotifyTemplate写入错误"""
+
 import sys
 import os
 import traceback
@@ -31,7 +32,7 @@ with app.app_context():
         db.session.commit()
         print(f"✓ 创建成功, ID: {template.id}")
         print(f"  tags: {template.tags}")
-        
+
         # 测试使用list直接赋值
         template2 = NotifyTemplate(
             name="测试模板2",
@@ -42,7 +43,7 @@ with app.app_context():
         db.session.add(template2)
         db.session.commit()
         print(f"✓ 创建成功2, ID: {template2.id}")
-        
+
     except Exception as e:
         print(f"✗ 创建失败: {e}")
         traceback.print_exc()

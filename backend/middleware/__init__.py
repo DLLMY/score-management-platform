@@ -41,14 +41,23 @@ def init_limiter(app, redis_url):
 
 def configure_rate_limits(app, limiter):
     # F7 修复: 补 /api/student/login（学生登录此前完全不在限流名单）
-    login_endpoints = ["/api/admins/login", "/api/auth/login", "/api/admins/refresh-token", "/api/student/login"]
+    login_endpoints = [
+        "/api/admins/login",
+        "/api/auth/login",
+        "/api/admins/refresh-token",
+        "/api/student/login",
+    ]
     for rule in app.url_map.iter_rules():
         if rule.rule in login_endpoints and "POST" in rule.methods:
             view_func = app.view_functions[rule.endpoint]
             limiter.limit(RateLimitStrategy.LOGIN)(view_func)
             print(f"已为 {rule.rule} 添加限流: {RateLimitStrategy.LOGIN}")
 
-    password_endpoints = ["/api/admins/change-password", "/api/admins/reset-password", "/api/admins/forgot-password"]
+    password_endpoints = [
+        "/api/admins/change-password",
+        "/api/admins/reset-password",
+        "/api/admins/forgot-password",
+    ]
     for rule in app.url_map.iter_rules():
         if rule.rule in password_endpoints and "POST" in rule.methods:
             view_func = app.view_functions[rule.endpoint]
@@ -67,7 +76,9 @@ def configure_rate_limits(app, limiter):
             view_func = app.view_functions[rule.endpoint]
             limiter.limit(RateLimitStrategy.CREATE)(view_func)
             print(f"已为 {rule.rule} 添加限流: {RateLimitStrategy.CREATE}")
-        elif rule.rule in device_write_endpoints and ("PUT" in rule.methods or "DELETE" in rule.methods):
+        elif rule.rule in device_write_endpoints and (
+            "PUT" in rule.methods or "DELETE" in rule.methods
+        ):
             view_func = app.view_functions[rule.endpoint]
             limiter.limit(RateLimitStrategy.UPDATE)(view_func)
             print(f"已为 {rule.rule} 添加限流: {RateLimitStrategy.UPDATE}")

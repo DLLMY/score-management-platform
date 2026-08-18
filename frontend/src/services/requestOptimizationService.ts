@@ -7,9 +7,9 @@
 // 请求优先级定义
 // ============================================
 export enum RequestPriority {
-  HIGH = 1,    // 高优先级：用户交互、关键数据
-  NORMAL = 2,  // 正常优先级：常规数据请求
-  LOW = 3,     // 低优先级：预加载、后台数据
+  HIGH = 1, // 高优先级：用户交互、关键数据
+  NORMAL = 2, // 正常优先级：常规数据请求
+  LOW = 3, // 低优先级：预加载、后台数据
   BACKGROUND = 4, // 后台优先级：统计分析、日志上报
 }
 
@@ -17,9 +17,9 @@ export enum RequestPriority {
 // 请求队列配置
 // ============================================
 interface RequestQueueConfig {
-  maxConcurrent: number;      // 最大并发数
-  highPrioritySlots: number;  // 高优先级预留槽位
-  queueTimeout: number;       // 队列等待超时时间(ms)
+  maxConcurrent: number; // 最大并发数
+  highPrioritySlots: number; // 高优先级预留槽位
+  queueTimeout: number; // 队列等待超时时间(ms)
 }
 
 const DEFAULT_QUEUE_CONFIG: RequestQueueConfig = {
@@ -32,14 +32,14 @@ const DEFAULT_QUEUE_CONFIG: RequestQueueConfig = {
 // 防抖/节流配置
 // ============================================
 interface DebounceConfig {
-  delay: number;        // 防抖延迟时间(ms)
-  maxWait?: number;     // 最大等待时间(ms)
+  delay: number; // 防抖延迟时间(ms)
+  maxWait?: number; // 最大等待时间(ms)
 }
 
 interface ThrottleConfig {
-  interval: number;     // 节流间隔时间(ms)
-  leading?: boolean;    // 是否在开始时立即执行
-  trailing?: boolean;   // 是否在结束时执行
+  interval: number; // 节流间隔时间(ms)
+  leading?: boolean; // 是否在开始时立即执行
+  trailing?: boolean; // 是否在结束时执行
 }
 
 // ============================================
@@ -62,9 +62,32 @@ class RequestOptimizationService {
   private queue: QueueItem[] = [];
   private activeCount = 0;
   private config: RequestQueueConfig;
-  private debounceMap = new Map<string, { timeoutId: number; resolve: (value: unknown) => void; reject: (error: Error) => void; request: () => Promise<unknown>; maxWaitTimeoutId?: number }>();
-  private throttleMap = new Map<string, { lastExecuteTime: number; timeoutId?: number; pendingRequest?: () => Promise<unknown> }>();
-  private batchMap = new Map<string, { requests: Array<{ data: unknown; resolve: (value: unknown) => void; reject: (error: Error) => void }>; timeoutId: number; batchHandler: (items: unknown[]) => Promise<unknown[]> }>();
+  private debounceMap = new Map<
+    string,
+    {
+      timeoutId: number;
+      resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
+      request: () => Promise<unknown>;
+      maxWaitTimeoutId?: number;
+    }
+  >();
+  private throttleMap = new Map<
+    string,
+    { lastExecuteTime: number; timeoutId?: number; pendingRequest?: () => Promise<unknown> }
+  >();
+  private batchMap = new Map<
+    string,
+    {
+      requests: Array<{
+        data: unknown;
+        resolve: (value: unknown) => void;
+        reject: (error: Error) => void;
+      }>;
+      timeoutId: number;
+      batchHandler: (items: unknown[]) => Promise<unknown[]>;
+    }
+  >();
 
   constructor(config: RequestQueueConfig = DEFAULT_QUEUE_CONFIG) {
     this.config = config;
@@ -102,7 +125,7 @@ class RequestOptimizationService {
 
       // 按优先级插入队列
       this.insertByPriority(item);
-      
+
       // 尝试执行队列中的请求
       this.processQueue();
     });
@@ -126,7 +149,7 @@ class RequestOptimizationService {
    * 从队列移除请求
    */
   private removeFromQueue(id: string): void {
-    const index = this.queue.findIndex(item => item.id === id);
+    const index = this.queue.findIndex((item) => item.id === id);
     if (index !== -1) {
       const item = this.queue[index];
       if (item.timeoutId) {
@@ -146,9 +169,9 @@ class RequestOptimizationService {
 
     // 优先处理高优先级请求
     const highPriorityItems = this.queue.filter(
-      item => item.priority === RequestPriority.HIGH || item.priority === RequestPriority.NORMAL
+      (item) => item.priority === RequestPriority.HIGH || item.priority === RequestPriority.NORMAL
     );
-    
+
     // 限制每次处理的数量
     const itemsToProcess = highPriorityItems.slice(0, availableSlots);
 
@@ -164,11 +187,12 @@ class RequestOptimizationService {
     this.removeFromQueue(item.id);
     this.activeCount++;
 
-    item.request()
-      .then(result => {
+    item
+      .request()
+      .then((result) => {
         item.resolve(result);
       })
-      .catch(error => {
+      .catch((error) => {
         item.reject(error);
       })
       .finally(() => {
@@ -189,8 +213,9 @@ class RequestOptimizationService {
     return {
       queueLength: this.queue.length,
       activeCount: this.activeCount,
-      highPriorityCount: this.queue.filter(item => item.priority <= RequestPriority.NORMAL).length,
-      lowPriorityCount: this.queue.filter(item => item.priority >= RequestPriority.LOW).length,
+      highPriorityCount: this.queue.filter((item) => item.priority <= RequestPriority.NORMAL)
+        .length,
+      lowPriorityCount: this.queue.filter((item) => item.priority >= RequestPriority.LOW).length,
     };
   }
 
@@ -232,9 +257,7 @@ class RequestOptimizationService {
     return new Promise((resolve, reject) => {
       const timeoutId = window.setTimeout(() => {
         this.debounceMap.delete(key);
-        request()
-          .then(resolve)
-          .catch(reject);
+        request().then(resolve).catch(reject);
       }, config.delay);
 
       // 最大等待时间配置
@@ -243,9 +266,7 @@ class RequestOptimizationService {
         maxWaitTimeoutId = window.setTimeout(() => {
           this.debounceMap.delete(key);
           clearTimeout(timeoutId);
-          request()
-            .then(resolve)
-            .catch(reject);
+          request().then(resolve).catch(reject);
         }, config.maxWait);
       }
 
@@ -270,9 +291,7 @@ class RequestOptimizationService {
         clearTimeout(existing.maxWaitTimeoutId);
       }
       this.debounceMap.delete(key);
-      existing.request()
-        .then(existing.resolve)
-        .catch(existing.reject);
+      existing.request().then(existing.resolve).catch(existing.reject);
     }
   }
 
@@ -312,17 +331,18 @@ class RequestOptimizationService {
       // trailing模式：保存待执行的请求
       if (config.trailing) {
         existing.pendingRequest = request as () => Promise<unknown>;
-        
+
         // 清除之前的trailing定时器
         if (existing.timeoutId) {
           clearTimeout(existing.timeoutId);
         }
-        
+
         // 设置trailing定时器
         existing.timeoutId = window.setTimeout(() => {
           if (existing.pendingRequest) {
             existing.lastExecuteTime = Date.now();
-            existing.pendingRequest()
+            existing
+              .pendingRequest()
               .then(() => {
                 existing.pendingRequest = undefined;
               })
@@ -332,12 +352,13 @@ class RequestOptimizationService {
           }
         }, config.interval - (now - existing.lastExecuteTime));
       }
-      
+
       // 返回一个等待的Promise（使用上次的结果或等待新结果）
       return new Promise<T>((resolve, reject) => {
         // 如果有pending请求，等待它完成
         if (config.trailing && existing.pendingRequest) {
-          existing.pendingRequest()
+          existing
+            .pendingRequest()
             .then((result: unknown) => resolve(result as T))
             .catch(reject);
         } else {
@@ -358,18 +379,15 @@ class RequestOptimizationService {
 
       // leading模式：立即执行
       if (config.leading) {
-        request()
-          .then(resolve)
-          .catch(reject);
+        request().then(resolve).catch(reject);
       } else {
         // 非leading模式：延迟执行
         const timeoutId = window.setTimeout(() => {
-          request()
-            .then(resolve)
-            .catch(reject);
-          this.throttleMap.get(key)?.timeoutId && clearTimeout(this.throttleMap.get(key)!.timeoutId!);
+          request().then(resolve).catch(reject);
+          this.throttleMap.get(key)?.timeoutId &&
+            clearTimeout(this.throttleMap.get(key)!.timeoutId!);
         }, config.interval);
-        
+
         this.throttleMap.set(key, {
           lastExecuteTime: now,
           timeoutId,
@@ -409,13 +427,13 @@ class RequestOptimizationService {
     return new Promise((resolve, reject) => {
       // 获取或创建批量队列
       let batch = this.batchMap.get(key);
-      
+
       if (!batch || batch.timeoutId === 0) {
         // 创建新的批量队列
         const timeoutId = window.setTimeout(() => {
           this.executeBatch(key);
         }, windowMs);
-        
+
         batch = {
           requests: [],
           timeoutId,
@@ -423,7 +441,7 @@ class RequestOptimizationService {
         };
         this.batchMap.set(key, batch);
       }
-      
+
       // 将请求加入批量队列
       batch.requests.push({
         data,
@@ -445,25 +463,25 @@ class RequestOptimizationService {
 
     // 清除定时器
     clearTimeout(batch.timeoutId);
-    
+
     // 提取所有数据
-    const items = batch.requests.map(r => r.data);
-    
+    const items = batch.requests.map((r) => r.data);
+
     try {
       // 执行批量请求
       const results = await batch.batchHandler(items);
-      
+
       // 分发结果
       batch.requests.forEach((request, index) => {
         request.resolve(results[index]);
       });
     } catch (error) {
       // 分发错误
-      batch.requests.forEach(request => {
+      batch.requests.forEach((request) => {
         request.reject(error as Error);
       });
     }
-    
+
     // 清除批量队列
     this.batchMap.delete(key);
   }
@@ -482,7 +500,7 @@ class RequestOptimizationService {
     const batch = this.batchMap.get(key);
     if (batch) {
       clearTimeout(batch.timeoutId);
-      batch.requests.forEach(request => {
+      batch.requests.forEach((request) => {
         request.reject(new Error('批量请求已取消'));
       });
       this.batchMap.delete(key);
@@ -498,17 +516,17 @@ class RequestOptimizationService {
    */
   cleanup(): void {
     this.clearQueue();
-    
+
     // 清理所有防抖请求
     this.debounceMap.forEach((_, key) => {
       this.cancelDebounce(key);
     });
-    
+
     // 清理所有节流请求
     this.throttleMap.forEach((_, key) => {
       this.cancelThrottle(key);
     });
-    
+
     // 清理所有批量请求
     this.batchMap.forEach((_, key) => {
       this.cancelBatch(key);
@@ -565,7 +583,11 @@ export const throttleRequest = <T>(
   request: () => Promise<T>,
   interval: number = 1000
 ): Promise<T> => {
-  return requestOptimizationService.throttle(key, request, { interval, leading: true, trailing: false });
+  return requestOptimizationService.throttle(key, request, {
+    interval,
+    leading: true,
+    trailing: false,
+  });
 };
 
 /**

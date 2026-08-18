@@ -6,6 +6,7 @@
 - 掩码值("***")不覆盖 DB 中已保存的真实密钥
 - 启动加载：DB 行能回灌 current_app.config（模拟重启后配置不丢）
 """
+
 from models.notification_config import NotificationConfig
 from services.notification_config_store import load_notification_config_to_app
 

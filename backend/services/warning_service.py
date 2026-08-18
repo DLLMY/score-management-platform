@@ -72,7 +72,9 @@ class WarningService:
             risk_level = "low"
             if user.current_score < int(config["score_threshold"]):
                 reasons.append(f"积分低于预警阈值({config['score_threshold']}分)")
-                risk_level = "high" if user.current_score < int(config["score_threshold"]) / 2 else "medium"
+                risk_level = (
+                    "high" if user.current_score < int(config["score_threshold"]) / 2 else "medium"
+                )
             no_positive_days = WarningService._get_no_positive_days(user.id)
             if no_positive_days >= int(config["no_positive_days"]):
                 reasons.append(f"连续{no_positive_days}天无正向积分")
@@ -128,8 +130,10 @@ class WarningService:
             records = ScoreRecord.query.filter(
                 ScoreRecord.student_id == user_id,
                 ScoreRecord.score_change > 0,
-                ScoreRecord.created_at >= datetime(check_date.year, check_date.month, check_date.day),
-                ScoreRecord.created_at <= datetime(check_date.year, check_date.month, check_date.day, 23, 59, 59),
+                ScoreRecord.created_at
+                >= datetime(check_date.year, check_date.month, check_date.day),
+                ScoreRecord.created_at
+                <= datetime(check_date.year, check_date.month, check_date.day, 23, 59, 59),
             ).first()
             if records:
                 break
@@ -149,7 +153,9 @@ class WarningService:
         # 注意：.count() 已返回整数，不能再套 len()（原实现如此，会抛
         # TypeError: object of type 'int' has no len()，导致 evaluate_risk 整体 500）
         unlock_count = (
-            ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.description.like("%开锁%"))
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id, ScoreRecord.description.like("%开锁%")
+            )
             .filter(ScoreRecord.created_at >= datetime(today.year, today.month, today.day))
             .count()
         )
@@ -268,8 +274,10 @@ class WarningService:
         # Alert.student_id 是普通整数列，模型上并没有 user 关系，
         # 因此不能写 warning.user.name（会抛 AttributeError）。
         # 这里把 User 一并 select 出来，配对取用。
-        query = db.session.query(Alert, User).join(User, Alert.student_id == User.id).filter(
-            Alert.source == "risk", ~Alert.is_resolved, User.is_active
+        query = (
+            db.session.query(Alert, User)
+            .join(User, Alert.student_id == User.id)
+            .filter(Alert.source == "risk", ~Alert.is_resolved, User.is_active)
         )
         if class_name:
             query = query.filter(User.class_name == class_name)
@@ -293,7 +301,9 @@ class WarningService:
                     "created_at": warning.created_at.isoformat() if warning.created_at else None,
                 }
             )
-            warning_reasons[warning.student_id] = warning.message.split("; ") if warning.message else []
+            warning_reasons[warning.student_id] = (
+                warning.message.split("; ") if warning.message else []
+            )
         return {
             "risk_threshold": int(WarningService._get_config()["score_threshold"]),
             "risk_students": result,

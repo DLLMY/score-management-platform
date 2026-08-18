@@ -27,6 +27,7 @@ P0-4 审批合并迁移脚本（幂等 / 单事务 / 可逆）
   python scripts/migrate_merge_leave_into_approval.py            # 执行
   python scripts/migrate_merge_leave_into_approval.py --check-only  # 仅报告状态不修改
 """
+
 import os
 import sqlite3
 import sys
@@ -38,9 +39,7 @@ CHECK_ONLY = "--check-only" in sys.argv
 
 
 def table_exists(conn, name):
-    cur = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
-    )
+    cur = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,))
     return cur.fetchone() is not None
 
 
@@ -98,8 +97,7 @@ def main():
 
         # 3) 仅当备份刚建立（即本次尚未拷贝）时拷贝数据，避免重复插入
         if not has_bak:
-            conn.execute(
-                """
+            conn.execute("""
                 INSERT INTO approval (
                     student_id, type, title, description, status,
                     approver_id, approve_time, created_at,
@@ -118,14 +116,11 @@ def main():
                     start_date,
                     end_date
                 FROM leave_application
-                """
-            )
+                """)
             copied = conn.execute("SELECT changes()").fetchone()[0]
             print(f"[ok] 已拷贝 {copied} 条请假记录到 approval(type='leave')")
         else:
-            already = conn.execute(
-                "SELECT COUNT(*) FROM approval WHERE type='leave'"
-            ).fetchone()[0]
+            already = conn.execute("SELECT COUNT(*) FROM approval WHERE type='leave'").fetchone()[0]
             print(f"[info] 疑似前次已拷贝，当前 approval.type='leave' 共 {already} 条，跳过拷贝")
 
         # 4) 删除旧表
@@ -133,9 +128,7 @@ def main():
         conn.commit()
         print("[ok] 已删除旧表 leave_application")
 
-        remain = conn.execute(
-            "SELECT COUNT(*) FROM approval WHERE type='leave'"
-        ).fetchone()[0]
+        remain = conn.execute("SELECT COUNT(*) FROM approval WHERE type='leave'").fetchone()[0]
         print(f"[done] 合并完成，approval 中 type='leave' 记录数 = {remain}")
     except Exception as e:
         conn.rollback()

@@ -89,7 +89,7 @@ deploy/service_manager.log
 
 # PM2 进程文件
 .pm2/
-pm2.config.json
+infra/pm2.config.json
 
 # 后端日志归档（仅忽略归档和临时文件，保留当前日志）
 backend/logs/*.log.*

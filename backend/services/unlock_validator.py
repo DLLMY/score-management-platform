@@ -14,7 +14,11 @@ class UnlockValidator:
         """根据用户分数获取对应的排名规则"""
         if not user.current_score:
             return None
-        rules = ScoreRankRule.query.filter_by(is_active=True).order_by(ScoreRankRule.min_score.desc()).all()
+        rules = (
+            ScoreRankRule.query.filter_by(is_active=True)
+            .order_by(ScoreRankRule.min_score.desc())
+            .all()
+        )
         for rule in rules:
             if user.current_score >= rule.min_score:
                 if rule.max_score is None or user.current_score <= rule.max_score:
@@ -22,7 +26,9 @@ class UnlockValidator:
         return None
 
     @staticmethod
-    def validate_unlock(card_id: str, skip_time_window: bool = False) -> Tuple[bool, str, Optional[Dict]]:
+    def validate_unlock(
+        card_id: str, skip_time_window: bool = False
+    ) -> Tuple[bool, str, Optional[Dict]]:
         """
         验证开锁资格
 
@@ -61,13 +67,23 @@ class UnlockValidator:
                 )
 
         rank = UnlockValidator.get_user_rank(user)
-        min_score = rank.unlock_min_score if rank and rank.unlock_min_score is not None else UnlockValidator.MIN_SCORE
+        min_score = (
+            rank.unlock_min_score
+            if rank and rank.unlock_min_score is not None
+            else UnlockValidator.MIN_SCORE
+        )
 
         if user.current_score < min_score:
-            return False, "score_low", {"current_score": user.current_score, "min_required": min_score}
+            return (
+                False,
+                "score_low",
+                {"current_score": user.current_score, "min_required": min_score},
+            )
 
         weekly_limit = (
-            rank.weekly_unlock_limit if rank and rank.weekly_unlock_limit is not None else UnlockValidator.WEEKLY_LIMIT
+            rank.weekly_unlock_limit
+            if rank and rank.weekly_unlock_limit is not None
+            else UnlockValidator.WEEKLY_LIMIT
         )  # noqa: E501
         if not UnlockValidator._check_weekly_limit(user, weekly_limit):
             return (
@@ -128,10 +144,14 @@ class UnlockValidator:
             user.week_start_date = None
 
         today_iso = date.today()
-        current_week_start = today_iso.isoformat()[:4] + "-W" + str(today_iso.isocalendar()[1]).zfill(2)
+        current_week_start = (
+            today_iso.isoformat()[:4] + "-W" + str(today_iso.isocalendar()[1]).zfill(2)
+        )
         if user.week_start_date:
             user_week_start = (
-                user.week_start_date.isoformat()[:4] + "-W" + str(user.week_start_date.isocalendar()[1]).zfill(2)
+                user.week_start_date.isoformat()[:4]
+                + "-W"
+                + str(user.week_start_date.isocalendar()[1]).zfill(2)
             )
         else:
             user_week_start = None
@@ -176,10 +196,14 @@ class UnlockValidator:
             user.last_unlock_date = today
 
         today_iso = date.today()
-        current_week_start = today_iso.isoformat()[:4] + "-W" + str(today_iso.isocalendar()[1]).zfill(2)
+        current_week_start = (
+            today_iso.isoformat()[:4] + "-W" + str(today_iso.isocalendar()[1]).zfill(2)
+        )
         if user.week_start_date:
             user_week_start = (
-                user.week_start_date.isoformat()[:4] + "-W" + str(user.week_start_date.isocalendar()[1]).zfill(2)
+                user.week_start_date.isoformat()[:4]
+                + "-W"
+                + str(user.week_start_date.isocalendar()[1]).zfill(2)
             )
         else:
             user_week_start = None
@@ -228,7 +252,6 @@ class UnlockValidator:
             "remaining": max(0, user.daily_unlock_limit - unlock_count),
             "is_active": user.is_active,
         }
-
 
     @staticmethod
     def get_min_score() -> int:

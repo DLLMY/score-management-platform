@@ -43,11 +43,11 @@ function NetworkStatus() {
   };
 
   const getIcon = () => {
-    if (!isOnline) return <WifiOff className="w-4 h-4" />;
+    if (!isOnline) return <WifiOff className='w-4 h-4' />;
     if (connectionType === 'slow-2g' || connectionType === '2g' || (downlink && downlink < 1)) {
-      return <AlertTriangle className="w-4 h-4" />;
+      return <AlertTriangle className='w-4 h-4' />;
     }
-    return <Wifi className="w-4 h-4" />;
+    return <Wifi className='w-4 h-4' />;
   };
 
   return (
@@ -56,11 +56,11 @@ function NetworkStatus() {
         showBanner ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+      <div className='max-w-7xl mx-auto flex items-center justify-center gap-2'>
         {getIcon()}
-        <span className="text-sm font-medium">{getConnectionLabel()}</span>
+        <span className='text-sm font-medium'>{getConnectionLabel()}</span>
         {isOnline && downlink && (
-          <span className="text-xs opacity-80">{downlink.toFixed(1)} Mbps</span>
+          <span className='text-xs opacity-80'>{downlink.toFixed(1)} Mbps</span>
         )}
       </div>
     </div>

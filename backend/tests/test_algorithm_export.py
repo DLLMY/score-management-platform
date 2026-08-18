@@ -6,6 +6,7 @@
 - 缺鉴权 → 401（student token 不能调）
 - 空 class_name（全部班级）不炸
 """
+
 import io
 import uuid
 from datetime import datetime, timedelta, date
@@ -13,7 +14,15 @@ from datetime import datetime, timedelta, date
 import pytest
 from openpyxl import load_workbook
 
-from models import db, ClassInfo, User, Attendance, HomeworkAssignment, HomeworkSubmission, ScoreRecord
+from models import (
+    db,
+    ClassInfo,
+    User,
+    Attendance,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    ScoreRecord,
+)
 from utils.security import generate_student_token
 
 
@@ -51,22 +60,38 @@ def _seed_engagement(app, sid, cid, base=None):
     base = base or date.today()
     with app.app_context():
         for k in range(8):
-            db.session.add(Attendance(
-                student_id=sid, class_id=cid, date=base - timedelta(days=k), status="present",
-            ))
+            db.session.add(
+                Attendance(
+                    student_id=sid,
+                    class_id=cid,
+                    date=base - timedelta(days=k),
+                    status="present",
+                )
+            )
         ha = HomeworkAssignment(
-            id=6000 + sid, class_id=cid, title="hw",
-            assigned_date=base - timedelta(days=4), due_date=base,
+            id=6000 + sid,
+            class_id=cid,
+            title="hw",
+            assigned_date=base - timedelta(days=4),
+            due_date=base,
         )
         db.session.add(ha)
-        db.session.add(HomeworkSubmission(
-            assignment_id=6000 + sid, student_id=sid, is_submitted=True, is_late=False,
-        ))
+        db.session.add(
+            HomeworkSubmission(
+                assignment_id=6000 + sid,
+                student_id=sid,
+                is_submitted=True,
+                is_late=False,
+            )
+        )
         for k in range(4):
-            db.session.add(ScoreRecord(
-                user_id=sid, score_change=2,
-                created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
-            ))
+            db.session.add(
+                ScoreRecord(
+                    user_id=sid,
+                    score_change=2,
+                    created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
+                )
+            )
         db.session.commit()
 
 
@@ -120,9 +145,7 @@ class TestAlgorithmExport:
         wb.close()
 
     def test_export_invalid_tab(self, client, auth_headers):
-        resp = client.get(
-            "/api/algorithm/export?tab=bogus", headers=auth_headers
-        )
+        resp = client.get("/api/algorithm/export?tab=bogus", headers=auth_headers)
         assert resp.status_code == 400
 
     def test_export_requires_admin(self, client, students):

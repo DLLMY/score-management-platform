@@ -93,9 +93,7 @@ def main():
 
             if decision == "defer":
                 try:
-                    in_session, info = ClassTimeChecker.check_class_in_session(
-                        p.class_info_id, now
-                    )
+                    in_session, info = ClassTimeChecker.check_class_in_session(p.class_info_id, now)
                     if in_session:
                         print(
                             f"  >> 回退判定    : 拒绝（正在第{info['period_number']}节"

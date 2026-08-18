@@ -4,6 +4,7 @@
 与 Admin 体系内的 /api/analysis/* 端点（权限 algorithm.view）区分：本命名空间专门服务于
 「积分排行榜」业务功能，避免为班主任开放算法分析权限。
 """
+
 from flask_restx import Namespace, Resource
 from flask import request
 from services.analysis_service import analysis_service

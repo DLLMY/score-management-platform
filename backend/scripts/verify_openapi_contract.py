@@ -13,6 +13,7 @@ OpenAPI 契约漂移校验脚本（P1 改进项：建立前后端 API 契约）�
     python scripts/verify_openapi_contract.py --live-url http://127.0.0.1:5000/api/swagger.json
     python scripts/verify_openapi_contract.py --strict        # 有漂移时 exit 1
 """
+
 import argparse
 import json
 import sys
@@ -48,7 +49,9 @@ def _norm(path):
 def _method_set(path_item):
     """提取路径下的 HTTP 方法集合（去 head/options）。"""
     return {
-        m.upper() for m in path_item.keys() if m.upper() in ("GET", "POST", "PUT", "DELETE", "PATCH")
+        m.upper()
+        for m in path_item.keys()
+        if m.upper() in ("GET", "POST", "PUT", "DELETE", "PATCH")
     }
 
 
@@ -57,14 +60,18 @@ def main():
     ap.add_argument("--snapshot", default=str(DEFAULT_SNAPSHOT), help="OpenAPI 快照文件路径")
     ap.add_argument("--live-url", default=DEFAULT_LIVE_URL, help="实时 swagger.json 地址")
     ap.add_argument("--strict", action="store_true", help="存在漂移时 exit 1（默认仅报告）")
-    ap.add_argument("--update", action="store_true", help="用实时 swagger 覆盖快照（先备份 .bak_<ts>）")
+    ap.add_argument(
+        "--update", action="store_true", help="用实时 swagger 覆盖快照（先备份 .bak_<ts>）"
+    )
     args = ap.parse_args()
 
     try:
         live = _load_live(args.live_url)
     except Exception as e:  # noqa: BLE001
-        print(f"[错误] 无法拉取实时 swagger.json（{args.live_url}）: {e}\n"
-              f"        请确认后端已启动（python run.py --env development --host 127.0.0.1 --port 5000）")
+        print(
+            f"[错误] 无法拉取实时 swagger.json（{args.live_url}）: {e}\n"
+            f"        请确认后端已启动（python run.py --env development --host 127.0.0.1 --port 5000）"
+        )
         sys.exit(2)
 
     snapshot_path = Path(args.snapshot)
@@ -84,7 +91,9 @@ def main():
 
         live_doc = (
             live["data"]
-            if live.get("paths") is None and isinstance(live.get("data"), dict) and "paths" in live.get("data")
+            if live.get("paths") is None
+            and isinstance(live.get("data"), dict)
+            and "paths" in live.get("data")
             else live
         )
         bak = snapshot_path.with_suffix(
@@ -99,10 +108,11 @@ def main():
             snapshot = json.load(f)
         snap_paths = {_norm(p): item for p, item in _extract_paths(snapshot).items()}
 
-    only_live = sorted(set(live_paths) - set(snap_paths))          # 新增端点，文档未同步
-    only_snap = sorted(set(snap_paths) - set(live_paths))          # 已删除/改名端点，文档残留
+    only_live = sorted(set(live_paths) - set(snap_paths))  # 新增端点，文档未同步
+    only_snap = sorted(set(snap_paths) - set(live_paths))  # 已删除/改名端点，文档残留
     method_diffs = sorted(
-        p for p in (set(live_paths) & set(snap_paths))
+        p
+        for p in (set(live_paths) & set(snap_paths))
         if _method_set(live_paths[p]) != _method_set(snap_paths[p])
     )
 
@@ -117,14 +127,18 @@ def main():
         print(f"  - {p}")
     print(f"方法不一致端点: {len(method_diffs)}")
     for p in method_diffs[:20]:
-        print(f"  ~ {p}: 快照{ sorted(_method_set(snap_paths[p])) } vs 实时{ sorted(_method_set(live_paths[p])) }")
+        print(
+            f"  ~ {p}: 快照{ sorted(_method_set(snap_paths[p])) } vs 实时{ sorted(_method_set(live_paths[p])) }"
+        )
 
     drift = only_live or only_snap or method_diffs
     if not drift:
         print("[结果] OpenAPI 契约一致，无漂移")
     else:
-        print(f"[结果] 发现 {len(only_live)} 新增 + {len(only_snap)} 消失 + {len(method_diffs)} 方法差异 处漂移"
-              f"（提示：更新 api-docs/openapi.json 快照）")
+        print(
+            f"[结果] 发现 {len(only_live)} 新增 + {len(only_snap)} 消失 + {len(method_diffs)} 方法差异 处漂移"
+            f"（提示：更新 api-docs/openapi.json 快照）"
+        )
     sys.exit(1 if (drift and args.strict) else 0)
 
 

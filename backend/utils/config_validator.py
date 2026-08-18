@@ -23,7 +23,9 @@ class ConfigValidator:
             return
 
         if len(jwt_secret) < 32:
-            self._add_warning("security", f"JWT_SECRET_KEY 长度不足32字节（当前{len(jwt_secret)}字节）")
+            self._add_warning(
+                "security", f"JWT_SECRET_KEY 长度不足32字节（当前{len(jwt_secret)}字节）"
+            )
 
         if jwt_secret == "CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p":
             self._add_error("security", "JWT_SECRET_KEY 使用默认值，生产环境必须修改")
@@ -35,7 +37,9 @@ class ConfigValidator:
             return
 
         if len(flask_secret) < 32:
-            self._add_warning("security", f"FLASK_SECRET_KEY 长度不足32字节（当前{len(flask_secret)}字节）")
+            self._add_warning(
+                "security", f"FLASK_SECRET_KEY 长度不足32字节（当前{len(flask_secret)}字节）"
+            )
 
         if flask_secret == "CHANGE_ME_IN_PRODUCTION_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p":
             self._add_error("security", "FLASK_SECRET_KEY 使用默认值，生产环境必须修改")
@@ -80,7 +84,10 @@ class ConfigValidator:
         if self.flask_env == "production" and debug_mode:
             self._add_error("security", "生产环境不应启用DEBUG模式")
 
-        if self.flask_env == "production" and os.getenv("BACKUP_ENABLED", "false").lower() != "true":
+        if (
+            self.flask_env == "production"
+            and os.getenv("BACKUP_ENABLED", "false").lower() != "true"
+        ):
             self._add_warning("backup", "生产环境建议启用自动备份")
 
     def validate_rate_limit_config(self) -> None:
@@ -89,7 +96,10 @@ class ConfigValidator:
             per_hour = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
 
             if per_minute * 60 < per_hour:
-                self._add_warning("rate_limit", f"每分钟限制({per_minute})*60 < 每小时限制({per_hour})，配置可能不一致")
+                self._add_warning(
+                    "rate_limit",
+                    f"每分钟限制({per_minute})*60 < 每小时限制({per_hour})，配置可能不一致",
+                )
 
             if per_minute < 0 or per_hour < 0:
                 self._add_error("rate_limit", "限流配置值不能为负数")

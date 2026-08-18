@@ -3,6 +3,7 @@
 不改动真实业务数据：临时建一个 __verify_tmp__ 管理员并赋予 timetable_manager 角色，
 调用 has_permission 后清理。
 """
+
 import os
 import sys
 

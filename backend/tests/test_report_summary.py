@@ -9,6 +9,7 @@
 
 注意：摘要的 batch 接口按 User.class_name 过滤，seed 必须同时设置 class_name。
 """
+
 import io
 import uuid
 from datetime import datetime, timedelta, date
@@ -17,7 +18,18 @@ from unittest import mock
 import pytest
 from openpyxl import load_workbook
 
-from models import db, ClassInfo, Exam, Score, Subject, User, Attendance, HomeworkAssignment, HomeworkSubmission, ScoreRecord
+from models import (
+    db,
+    ClassInfo,
+    Exam,
+    Score,
+    Subject,
+    User,
+    Attendance,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    ScoreRecord,
+)
 from services.report_summary_service import build_class_summary, summary_to_rows
 
 
@@ -56,22 +68,38 @@ def _seed_engagement(app, sid, cid, base=None):
     base = base or date.today()
     with app.app_context():
         for k in range(8):
-            db.session.add(Attendance(
-                student_id=sid, class_id=cid, date=base - timedelta(days=k), status="present",
-            ))
+            db.session.add(
+                Attendance(
+                    student_id=sid,
+                    class_id=cid,
+                    date=base - timedelta(days=k),
+                    status="present",
+                )
+            )
         ha = HomeworkAssignment(
-            id=5000 + sid, class_id=cid, title="hw",
-            assigned_date=base - timedelta(days=4), due_date=base,
+            id=5000 + sid,
+            class_id=cid,
+            title="hw",
+            assigned_date=base - timedelta(days=4),
+            due_date=base,
         )
         db.session.add(ha)
-        db.session.add(HomeworkSubmission(
-            assignment_id=5000 + sid, student_id=sid, is_submitted=True, is_late=False,
-        ))
+        db.session.add(
+            HomeworkSubmission(
+                assignment_id=5000 + sid,
+                student_id=sid,
+                is_submitted=True,
+                is_late=False,
+            )
+        )
         for k in range(4):
-            db.session.add(ScoreRecord(
-                user_id=sid, score_change=2,
-                created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
-            ))
+            db.session.add(
+                ScoreRecord(
+                    user_id=sid,
+                    score_change=2,
+                    created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
+                )
+            )
         db.session.commit()
 
 
@@ -140,7 +168,9 @@ class TestBuildClassSummary:
 
 
 class TestSemesterReportWithSummary:
-    def test_export_excel_contains_summary_sheet(self, client, auth_headers, klass, students, exam_factory):
+    def test_export_excel_contains_summary_sheet(
+        self, client, auth_headers, klass, students, exam_factory
+    ):
         exam_factory()
         resp = client.get(f"/api/reports/class-semester?class_id={klass.id}", headers=auth_headers)
         assert resp.status_code == 200
@@ -152,7 +182,9 @@ class TestSemesterReportWithSummary:
         assert rows and len(rows) >= 4
         wb.close()
 
-    def test_export_csv_contains_summary_lines(self, client, auth_headers, klass, students, exam_factory):
+    def test_export_csv_contains_summary_lines(
+        self, client, auth_headers, klass, students, exam_factory
+    ):
         exam_factory()
         resp = client.get(
             f"/api/reports/class-semester?class_id={klass.id}&format=csv", headers=auth_headers
@@ -175,7 +207,9 @@ def exam_factory(app_context, klass, students):
         db.session.add(math)
         db.session.commit()
         for i, s in enumerate(students):
-            db.session.add(Score(exam_id=e.id, student_id=s.id, subject_id=math.id, score=90 - i * 5))
+            db.session.add(
+                Score(exam_id=e.id, student_id=s.id, subject_id=math.id, score=90 - i * 5)
+            )
         db.session.commit()
         return e
 

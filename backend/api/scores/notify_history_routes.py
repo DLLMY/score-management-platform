@@ -139,6 +139,7 @@ class HistoryClean(Resource):
         days = int(request.args.get("days", 30))
         # 写入路径收口至 notify_history_service（F17 防腐层）：原路由内 delete + commit 已迁出
         from services.notify_history_service import clean_notify_history
+
         deleted_count = clean_notify_history(days)
         return {
             "success": True,

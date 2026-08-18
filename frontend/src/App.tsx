@@ -1,13 +1,20 @@
 import { lazy, Suspense, useEffect, ComponentType } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
-import { Sidebar, Header, ErrorBoundary, DevTools, GlobalLoading, GlobalErrorBoundary, NetworkStatusIndicator, PreloadProvider, PermissionGuard } from './components';
+import {
+  Sidebar,
+  Header,
+  ErrorBoundary,
+  DevTools,
+  GlobalLoading,
+  GlobalErrorBoundary,
+  NetworkStatusIndicator,
+  PreloadProvider,
+  PermissionGuard,
+} from './components';
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
 import { fetchCsrfToken } from './services/api';
 import { preloadService } from './services/preloadService';
-import {
-  useWebSocketStore,
-  initStores,
-} from './stores';
+import { useWebSocketStore, initStores } from './stores';
 import { ToastProvider } from './context/ToastContext';
 import { GlobalStateProvider } from './context/GlobalStateContext';
 
@@ -71,7 +78,8 @@ const createLazyComponent = (
   );
 
   WrappedComponent.displayName = `Lazy(${importFn.name || 'Component'})`;
-  (WrappedComponent as React.FC & LazyComponentProps).preload = importFn as unknown as () => Promise<ComponentType>;
+  (WrappedComponent as React.FC & LazyComponentProps).preload =
+    importFn as unknown as () => Promise<ComponentType>;
   return WrappedComponent as React.FC & LazyComponentProps;
 };
 
@@ -139,19 +147,58 @@ const StudentPortal = createLazyComponent(() => import('./pages/StudentPortal'))
 const NotFound = createLazyComponent(() => import('./pages/NotFound'));
 
 const preloadConfigs = [
-  { route: '/users', component: UserList, priority: 'high' as const, preloadOnHover: true, preloadOnVisit: true },
-  { route: '/devices', component: DeviceManagement, priority: 'high' as const, preloadOnHover: true, preloadOnVisit: true },
-  { route: '/rules', component: RuleList, priority: 'high' as const, preloadOnHover: true, preloadOnVisit: true },
+  {
+    route: '/users',
+    component: UserList,
+    priority: 'high' as const,
+    preloadOnHover: true,
+    preloadOnVisit: true,
+  },
+  {
+    route: '/devices',
+    component: DeviceManagement,
+    priority: 'high' as const,
+    preloadOnHover: true,
+    preloadOnVisit: true,
+  },
+  {
+    route: '/rules',
+    component: RuleList,
+    priority: 'high' as const,
+    preloadOnHover: true,
+    preloadOnVisit: true,
+  },
 
-  { route: '/users/:id', component: UserDetail, priority: 'medium' as const, preloadOnHover: true, dependencies: ['/users'] },
+  {
+    route: '/users/:id',
+    component: UserDetail,
+    priority: 'medium' as const,
+    preloadOnHover: true,
+    dependencies: ['/users'],
+  },
   { route: '/analysis', component: Analysis, priority: 'medium' as const, preloadOnHover: true },
-  { route: '/score-records', component: ScoreRecords, priority: 'medium' as const, preloadOnHover: true },
-  { route: '/operation-logs', component: OperationLogs, priority: 'medium' as const, preloadOnHover: true },
+  {
+    route: '/score-records',
+    component: ScoreRecords,
+    priority: 'medium' as const,
+    preloadOnHover: true,
+  },
+  {
+    route: '/operation-logs',
+    component: OperationLogs,
+    priority: 'medium' as const,
+    preloadOnHover: true,
+  },
 
   { route: '/settings', component: Settings, priority: 'low' as const, preloadOnVisit: true },
   { route: '/profile', component: Profile, priority: 'low' as const, preloadOnVisit: true },
   { route: '/help', component: HelpCenter, priority: 'low' as const, preloadOnVisit: true },
-  { route: '/firmware', component: FirmwareManagement, priority: 'low' as const, preloadOnHover: true },
+  {
+    route: '/firmware',
+    component: FirmwareManagement,
+    priority: 'low' as const,
+    preloadOnHover: true,
+  },
 ];
 
 let initializedOnce = false;
@@ -217,12 +264,21 @@ function AppLayout() {
       }
 
       if ('requestIdleCallback' in window) {
-        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback(() => {
-          if (!mounted) return;
-          import('./services/cacheWarmupService').then(({ cacheWarmupService }) => {
-            cacheWarmupService.warmup().catch(() => {});
-          }).catch(() => {});
-        }, { timeout: 5000 });
+        (
+          window as unknown as {
+            requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void;
+          }
+        ).requestIdleCallback(
+          () => {
+            if (!mounted) return;
+            import('./services/cacheWarmupService')
+              .then(({ cacheWarmupService }) => {
+                cacheWarmupService.warmup().catch(() => {});
+              })
+              .catch(() => {});
+          },
+          { timeout: 5000 }
+        );
       } else {
         setTimeout(async () => {
           if (!mounted) return;
@@ -272,7 +328,11 @@ function App() {
       };
 
       if ('requestIdleCallback' in window) {
-        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback(doPreload, { timeout: 8000 });
+        (
+          window as unknown as {
+            requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void;
+          }
+        ).requestIdleCallback(doPreload, { timeout: 8000 });
       } else {
         setTimeout(doPreload, 3000);
       }
@@ -301,74 +361,438 @@ function App() {
                   </StudentProtectedRoute>
                 }
               />
-              <Route path='/' element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                <Route index element={<PermissionGuard requiredPermission='score.view'><Dashboard /></PermissionGuard>} />
-                <Route path='dashboard' element={<PermissionGuard requiredPermission='score.view'><Dashboard /></PermissionGuard>} />
-                <Route path='users' element={<PermissionGuard requiredPermission='student.view'><UserList /></PermissionGuard>} />
-                <Route path='users/:id' element={<PermissionGuard requiredPermission='student.view'><UserDetail /></PermissionGuard>} />
-                <Route path='rules' element={<PermissionGuard requiredPermission='rule.view'><RuleList /></PermissionGuard>} />
-                <Route path='rank-rules' element={<PermissionGuard requiredPermission='rule.view'><RankRuleList /></PermissionGuard>} />
-                <Route path='categories' element={<PermissionGuard requiredPermission='rule.view'><CategoryList /></PermissionGuard>} />
-                <Route path='class-time-settings' element={<PermissionGuard requiredPermission='schedule.view'><TimeRuleList /></PermissionGuard>} />
-                <Route path='phonebox-policy' element={<PermissionGuard requiredPermission='phonebox.unlock.manage'><PhoneBoxPolicy /></PermissionGuard>} />
-                <Route path='class-period-settings' element={<PermissionGuard requiredPermission='period.view'><ClassPeriodSettings /></PermissionGuard>} />
-                <Route path='class-management' element={<PermissionGuard requiredPermission='class.view'><ClassManagement /></PermissionGuard>} />
-                <Route path='subject-management' element={<PermissionGuard requiredPermission='subject.view'><SubjectManagement /></PermissionGuard>} />
-                <Route path='course-schedule' element={<PermissionGuard requiredPermission='schedule.view'><CourseSchedule /></PermissionGuard>} />
-                <Route path='devices' element={<PermissionGuard requiredPermission='device.view'><DeviceManagement /></PermissionGuard>} />
-                <Route path='device-groups' element={<PermissionGuard requiredPermission='device.view'><DeviceGroup /></PermissionGuard>} />
+              <Route
+                path='/'
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <PermissionGuard requiredPermission='score.view'>
+                      <Dashboard />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='dashboard'
+                  element={
+                    <PermissionGuard requiredPermission='score.view'>
+                      <Dashboard />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='users'
+                  element={
+                    <PermissionGuard requiredPermission='student.view'>
+                      <UserList />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='users/:id'
+                  element={
+                    <PermissionGuard requiredPermission='student.view'>
+                      <UserDetail />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='rules'
+                  element={
+                    <PermissionGuard requiredPermission='rule.view'>
+                      <RuleList />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='rank-rules'
+                  element={
+                    <PermissionGuard requiredPermission='rule.view'>
+                      <RankRuleList />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='categories'
+                  element={
+                    <PermissionGuard requiredPermission='rule.view'>
+                      <CategoryList />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='class-time-settings'
+                  element={
+                    <PermissionGuard requiredPermission='schedule.view'>
+                      <TimeRuleList />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='phonebox-policy'
+                  element={
+                    <PermissionGuard requiredPermission='phonebox.unlock.manage'>
+                      <PhoneBoxPolicy />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='class-period-settings'
+                  element={
+                    <PermissionGuard requiredPermission='period.view'>
+                      <ClassPeriodSettings />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='class-management'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <ClassManagement />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='subject-management'
+                  element={
+                    <PermissionGuard requiredPermission='subject.view'>
+                      <SubjectManagement />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='course-schedule'
+                  element={
+                    <PermissionGuard requiredPermission='schedule.view'>
+                      <CourseSchedule />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='devices'
+                  element={
+                    <PermissionGuard requiredPermission='device.view'>
+                      <DeviceManagement />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='device-groups'
+                  element={
+                    <PermissionGuard requiredPermission='device.view'>
+                      <DeviceGroup />
+                    </PermissionGuard>
+                  }
+                />
                 <Route path='device-monitor' element={<Navigate to='/devices' replace />} />
-                <Route path='firmware' element={<PermissionGuard requiredPermission='firmware.manage'><FirmwareManagement /></PermissionGuard>} />
-                <Route path='analysis' element={<PermissionGuard requiredPermission='algorithm.view'><Analysis /></PermissionGuard>} />
+                <Route
+                  path='firmware'
+                  element={
+                    <PermissionGuard requiredPermission='firmware.manage'>
+                      <FirmwareManagement />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='analysis'
+                  element={
+                    <PermissionGuard requiredPermission='algorithm.view'>
+                      <Analysis />
+                    </PermissionGuard>
+                  }
+                />
 
-                <Route path='operation-logs' element={<PermissionGuard requiredPermission='system.logs'><OperationLogs /></PermissionGuard>} />
-                <Route path='notifications' element={<PermissionGuard requiredPermission='notification.view'><Notifications /></PermissionGuard>} />
-                <Route path='approvals' element={<PermissionGuard requiredPermission='score.approve'><Approvals /></PermissionGuard>} />
-                <Route path='settings' element={<PermissionGuard requiredPermission='system.settings'><Settings /></PermissionGuard>} />
+                <Route
+                  path='operation-logs'
+                  element={
+                    <PermissionGuard requiredPermission='system.logs'>
+                      <OperationLogs />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='notifications'
+                  element={
+                    <PermissionGuard requiredPermission='notification.view'>
+                      <Notifications />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='approvals'
+                  element={
+                    <PermissionGuard requiredPermission='score.approve'>
+                      <Approvals />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='settings'
+                  element={
+                    <PermissionGuard requiredPermission='system.settings'>
+                      <Settings />
+                    </PermissionGuard>
+                  }
+                />
                 <Route path='help' element={<HelpCenter />} />
                 <Route path='profile' element={<Profile />} />
-                <Route path='permission' element={<PermissionGuard requiredPermission='system.roles'><PermissionManagement /></PermissionGuard>} />
+                <Route
+                  path='permission'
+                  element={
+                    <PermissionGuard requiredPermission='system.roles'>
+                      <PermissionManagement />
+                    </PermissionGuard>
+                  }
+                />
 
-                <Route path='class-compare' element={<PermissionGuard requiredPermission='algorithm.view'><ClassCompare /></PermissionGuard>} />
-                <Route path='exams' element={<PermissionGuard requiredPermission='exam.view'><ExamManagement /></PermissionGuard>} />
-                <Route path='score-entry' element={<PermissionGuard requiredPermission='score.entry'><ScoreEntry /></PermissionGuard>} />
-                <Route path='semester-report' element={<PermissionGuard requiredPermission='score.view'><SemesterReport /></PermissionGuard>} />
-                <Route path='rank-board' element={<PermissionGuard requiredPermission='score.view'><RankBoard /></PermissionGuard>} />
-                <Route path='score-records' element={<PermissionGuard requiredPermission='score.view'><ScoreRecords /></PermissionGuard>} />
-                <Route path='score-analysis' element={<PermissionGuard requiredPermission='algorithm.view'><ScoreAnalysis /></PermissionGuard>} />
-                <Route path='algorithm-analysis' element={<PermissionGuard requiredPermission='algorithm.view'><AlgorithmAnalysis /></PermissionGuard>} />
-                <Route path='diagnostics' element={<PermissionGuard requiredPermission='device.view'><Diagnostics /></PermissionGuard>} />
+                <Route
+                  path='class-compare'
+                  element={
+                    <PermissionGuard requiredPermission='algorithm.view'>
+                      <ClassCompare />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='exams'
+                  element={
+                    <PermissionGuard requiredPermission='exam.view'>
+                      <ExamManagement />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='score-entry'
+                  element={
+                    <PermissionGuard requiredPermission='score.entry'>
+                      <ScoreEntry />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='semester-report'
+                  element={
+                    <PermissionGuard requiredPermission='score.view'>
+                      <SemesterReport />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='rank-board'
+                  element={
+                    <PermissionGuard requiredPermission='score.view'>
+                      <RankBoard />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='score-records'
+                  element={
+                    <PermissionGuard requiredPermission='score.view'>
+                      <ScoreRecords />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='score-analysis'
+                  element={
+                    <PermissionGuard requiredPermission='algorithm.view'>
+                      <ScoreAnalysis />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='algorithm-analysis'
+                  element={
+                    <PermissionGuard requiredPermission='algorithm.view'>
+                      <AlgorithmAnalysis />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='diagnostics'
+                  element={
+                    <PermissionGuard requiredPermission='device.view'>
+                      <Diagnostics />
+                    </PermissionGuard>
+                  }
+                />
 
-                <Route path='wake-on-lan' element={<PermissionGuard requiredPermission='device.edit'><WakeOnLan /></PermissionGuard>} />
-                <Route path='remote-notify' element={<PermissionGuard requiredPermission='notification.send'><RemoteNotify /></PermissionGuard>} />
-                <Route path='nlp-management' element={<PermissionGuard requiredPermission='algorithm.view'><NLPManagement /></PermissionGuard>} />
-                <Route path='data-sync' element={<PermissionGuard requiredPermission='system.settings'><DataSyncPage /></PermissionGuard>} />
-                <Route path='import-config' element={<PermissionGuard requiredPermission='system.settings'><ImportConfigManagement /></PermissionGuard>} />
+                <Route
+                  path='wake-on-lan'
+                  element={
+                    <PermissionGuard requiredPermission='device.edit'>
+                      <WakeOnLan />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='remote-notify'
+                  element={
+                    <PermissionGuard requiredPermission='notification.send'>
+                      <RemoteNotify />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='nlp-management'
+                  element={
+                    <PermissionGuard requiredPermission='algorithm.view'>
+                      <NLPManagement />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='data-sync'
+                  element={
+                    <PermissionGuard requiredPermission='system.settings'>
+                      <DataSyncPage />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='import-config'
+                  element={
+                    <PermissionGuard requiredPermission='system.settings'>
+                      <ImportConfigManagement />
+                    </PermissionGuard>
+                  }
+                />
 
                 {/* 班主任工作台 - 班级日常管理 */}
-                <Route path='seating-chart' element={<PermissionGuard requiredPermission='class.view'><SeatingChart /></PermissionGuard>} />
-                <Route path='duty-roster' element={<PermissionGuard requiredPermission='class.view'><DutyRoster /></PermissionGuard>} />
-                <Route path='committee' element={<PermissionGuard requiredPermission='class.view'><CommitteeList /></PermissionGuard>} />
-                <Route path='parent-contact' element={<PermissionGuard requiredPermission='class.view'><ParentContact /></PermissionGuard>} />
+                <Route
+                  path='seating-chart'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <SeatingChart />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='duty-roster'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <DutyRoster />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='committee'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <CommitteeList />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='parent-contact'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <ParentContact />
+                    </PermissionGuard>
+                  }
+                />
 
                 {/* 班主任工作台 - 教学与考勤管理 */}
-                <Route path='homework-check' element={<PermissionGuard requiredPermission='homework.view'><HomeworkCheck /></PermissionGuard>} />
-                <Route path='attendance' element={<PermissionGuard requiredPermission='attendance.view'><AttendanceManage /></PermissionGuard>} />
+                <Route
+                  path='homework-check'
+                  element={
+                    <PermissionGuard requiredPermission='homework.view'>
+                      <HomeworkCheck />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='attendance'
+                  element={
+                    <PermissionGuard requiredPermission='attendance.view'>
+                      <AttendanceManage />
+                    </PermissionGuard>
+                  }
+                />
 
                 {/* 班主任工作台 - 学习与心理管理 */}
-                <Route path='study-groups' element={<PermissionGuard requiredPermission='class.view'><StudyGroups /></PermissionGuard>} />
-                <Route path='mental-health' element={<PermissionGuard requiredPermission='class.view'><MentalHealth /></PermissionGuard>} />
+                <Route
+                  path='study-groups'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <StudyGroups />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='mental-health'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <MentalHealth />
+                    </PermissionGuard>
+                  }
+                />
 
                 {/* 班主任工作台 - 特色工作 */}
-                <Route path='activity' element={<PermissionGuard requiredPermission='class.view'><ActivityManage /></PermissionGuard>} />
-                <Route path='culture' element={<PermissionGuard requiredPermission='class.view'><CultureBoard /></PermissionGuard>} />
-                <Route path='study-guide' element={<PermissionGuard requiredPermission='class.view'><StudyGuide /></PermissionGuard>} />
+                <Route
+                  path='activity'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <ActivityManage />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='culture'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <CultureBoard />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='study-guide'
+                  element={
+                    <PermissionGuard requiredPermission='class.view'>
+                      <StudyGuide />
+                    </PermissionGuard>
+                  }
+                />
 
                 {/* 运维中心 - 系统运维聚合总览 */}
-                <Route path='ops-center' element={<PermissionGuard requiredPermission='ops_center.view'><OpsCenter /></PermissionGuard>} />
-                <Route path='ops-center/telemetry' element={<PermissionGuard requiredPermission='ops_center.view'><FrontendTelemetry /></PermissionGuard>} />
-                <Route path='ops-center/metrics' element={<PermissionGuard requiredPermission='ops_center.view'><SystemMetrics /></PermissionGuard>} />
-                <Route path='security-audit' element={<PermissionGuard requiredPermission='system.settings'><SecurityAudit /></PermissionGuard>} />
+                <Route
+                  path='ops-center'
+                  element={
+                    <PermissionGuard requiredPermission='ops_center.view'>
+                      <OpsCenter />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='ops-center/telemetry'
+                  element={
+                    <PermissionGuard requiredPermission='ops_center.view'>
+                      <FrontendTelemetry />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='ops-center/metrics'
+                  element={
+                    <PermissionGuard requiredPermission='ops_center.view'>
+                      <SystemMetrics />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path='security-audit'
+                  element={
+                    <PermissionGuard requiredPermission='system.settings'>
+                      <SecurityAudit />
+                    </PermissionGuard>
+                  }
+                />
               </Route>
               {/* S1: 404 兜底，任何未匹配路径展示 NotFound 而非白屏 */}
               <Route path='*' element={<NotFound />} />

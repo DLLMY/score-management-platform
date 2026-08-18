@@ -1,7 +1,16 @@
 import time
 from functools import wraps
 from flask import request, g
-from models import Admin, AdminClass, ClassInfo, Device, AdminRole, RolePermissionMapping, RoleHierarchy, User
+from models import (
+    Admin,
+    AdminClass,
+    ClassInfo,
+    Device,
+    AdminRole,
+    RolePermissionMapping,
+    RoleHierarchy,
+    User,
+)
 from utils.security import validate_token
 from utils.logger import log_access_denied
 
@@ -125,7 +134,10 @@ def requires_permission(permission):
                 token_admin_id = int(payload["sub"])
                 if admin_id_header and int(admin_id_header) != token_admin_id:
                     log_access_denied(request.path, reason="X-Admin-Id与令牌不匹配")
-                    return {"success": False, "message": "请求头中的X-Admin-Id与认证令牌不匹配"}, 401
+                    return {
+                        "success": False,
+                        "message": "请求头中的X-Admin-Id与认证令牌不匹配",
+                    }, 401
 
                 admin = Admin.query.filter_by(id=token_admin_id).first()
                 if not admin:
@@ -170,7 +182,10 @@ def requires_role(allowed_roles):
                 token_admin_id = int(payload["sub"])
                 if admin_id_header and int(admin_id_header) != token_admin_id:
                     log_access_denied(request.path, reason="X-Admin-Id与令牌不匹配")
-                    return {"success": False, "message": "请求头中的X-Admin-Id与认证令牌不匹配"}, 401
+                    return {
+                        "success": False,
+                        "message": "请求头中的X-Admin-Id与认证令牌不匹配",
+                    }, 401
 
                 admin = Admin.query.filter_by(id=token_admin_id).first()
                 if not admin:
@@ -322,7 +337,9 @@ def get_allowed_classes(admin_id):
 
     class_links = AdminClass.query.filter_by(admin_id=admin_id).all()
     class_ids = [link.class_info_id for link in class_links]
-    classes = ClassInfo.query.filter(ClassInfo.id.in_(class_ids), ClassInfo.is_active == True).all()  # noqa: E712
+    classes = ClassInfo.query.filter(
+        ClassInfo.id.in_(class_ids), ClassInfo.is_active == True
+    ).all()  # noqa: E712
 
     return [c.name for c in classes]
 

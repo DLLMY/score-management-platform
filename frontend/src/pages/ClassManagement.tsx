@@ -1,6 +1,26 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Building2, GraduationCap, Users, Search, ChevronLeft, ChevronRight, X, Check, UserCheck, BookOpen, Trash2 as RemoveIcon, UserPlus, AlertTriangle, Download, Upload, FileJson } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Building2,
+  GraduationCap,
+  Users,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Check,
+  UserCheck,
+  BookOpen,
+  Trash2 as RemoveIcon,
+  UserPlus,
+  AlertTriangle,
+  Download,
+  Upload,
+  FileJson,
+} from 'lucide-react';
 import api, { ClassInfo, ClassListResponse, getAuthHeaders } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, SearchFilter } from '../components';
@@ -43,34 +63,39 @@ function ClassManagementPage() {
 
   const [teacherPreview, setTeacherPreview] = useState<TeacherPreview | null>(null);
 
-  const {
-    formData,
-    errors,
-    handleChange,
-    handleChangeEvent,
-    setFormData,
-    resetForm,
-    validateAll,
-  } = useForm<FormData>(defaultForm, {
-    name: { required: true, minLength: 1, maxLength: 50 },
-    grade: { maxLength: 20 },
-    description: { maxLength: 200 },
-  });
+  const { formData, errors, handleChange, handleChangeEvent, setFormData, resetForm, validateAll } =
+    useForm<FormData>(defaultForm, {
+      name: { required: true, minLength: 1, maxLength: 50 },
+      grade: { maxLength: 20 },
+      description: { maxLength: 200 },
+    });
 
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<ClassInfo | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<ClassInfo | null>({
     onClose: () => {
       resetForm();
     },
   });
 
-  const { isOpen: showHeadTeacherModal, open: openHeadTeacherModalInternal, close: closeHeadTeacherModal } = useModal<ClassInfo | null>({
+  const {
+    isOpen: showHeadTeacherModal,
+    open: openHeadTeacherModalInternal,
+    close: closeHeadTeacherModal,
+  } = useModal<ClassInfo | null>({
     onClose: () => {
       setTeacherPreview(null);
       setSelectedClass(null);
     },
   });
 
-  const { isOpen: showTeacherPreview, open: openTeacherPreview, close: closeTeacherPreview } = useModal<TeacherPreview | null>({
+  const {
+    isOpen: showTeacherPreview,
+    open: openTeacherPreview,
+    close: closeTeacherPreview,
+  } = useModal<TeacherPreview | null>({
     onClose: () => {
       setTeacherPreview(null);
     },
@@ -93,39 +118,52 @@ function ClassManagementPage() {
     total: number;
     success_count: number;
     failed_count: number;
-    messages: Array<{ name: string; action: string; message: string; row_data?: Record<string, unknown>; error_fields?: string[] }>;
+    messages: Array<{
+      name: string;
+      action: string;
+      message: string;
+      row_data?: Record<string, unknown>;
+      error_fields?: string[];
+    }>;
   } | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
-  const [importConfigs, setImportConfigs] = useState<Array<{ id: number; config_name: string }>>([]);
+  const [importConfigs, setImportConfigs] = useState<Array<{ id: number; config_name: string }>>(
+    []
+  );
   const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const performRemoveHeadTeacherRef = useRef<(() => Promise<void>) | null>(null);
 
-  const fetchClasses = useCallback(async (page = 1, searchKeyword = searchInput, skipCache = false) => {
-    setIsLoading(true);
-    try {
-      const data: ClassListResponse = await api.classes.getAll({
-        page,
-        per_page: pagination.per_page,
-        keyword: searchKeyword || undefined,
-        skipCache
-      });
-      setClasses(data.classes || []);
-      setPagination(data.pagination || { page: 1, per_page: 10, total: 0, pages: 1 });
-    } catch (error) {
-      logger.error('获取班级列表失败:', error);
-      showToast('error', '获取班级列表失败');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchInput, pagination.per_page, showToast]);
+  const fetchClasses = useCallback(
+    async (page = 1, searchKeyword = searchInput, skipCache = false) => {
+      setIsLoading(true);
+      try {
+        const data: ClassListResponse = await api.classes.getAll({
+          page,
+          per_page: pagination.per_page,
+          keyword: searchKeyword || undefined,
+          skipCache,
+        });
+        setClasses(data.classes || []);
+        setPagination(data.pagination || { page: 1, per_page: 10, total: 0, pages: 1 });
+      } catch (error) {
+        logger.error('获取班级列表失败:', error);
+        showToast('error', '获取班级列表失败');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [searchInput, pagination.per_page, showToast]
+  );
 
   const fetchTeachers = useCallback(async () => {
     try {
       const adminsData = await api.admins.getAll();
       const teachersList = Array.isArray(adminsData)
         ? adminsData.filter((a: Admin) => a.role === 'teacher')
-        : ((adminsData as { admins?: Admin[] })?.admins || []).filter((a: Admin) => a.role === 'teacher');
+        : ((adminsData as { admins?: Admin[] })?.admins || []).filter(
+            (a: Admin) => a.role === 'teacher'
+          );
       setTeachers(teachersList);
     } catch (error: unknown) {
       showToast('error', '获取教师列表失败: ' + (error as Error).message);
@@ -142,65 +180,77 @@ function ClassManagementPage() {
     fetchClasses(1, searchInput);
   }, [searchInput, fetchClasses]);
 
-  const handlePageChange = useCallback((newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.pages) {
-      fetchClasses(newPage, searchInput);
-    }
-  }, [fetchClasses, searchInput, pagination.pages]);
-
-  const handleOpenModal = useCallback((isEdit = false, classData?: ClassInfo) => {
-    if (isEdit && classData) {
-      setFormData({
-        id: classData.id,
-        name: classData.name,
-        grade: classData.grade || '',
-        description: classData.description || '',
-        is_active: classData.is_active ?? true,
-      });
-    } else {
-      resetForm();
-    }
-    openModal(classData || null);
-  }, [setFormData, resetForm, openModal]);
-
-  const onSubmit = useCallback(async (data: FormData) => {
-    try {
-      if (data.id) {
-        await api.classes.update(data.id, {
-          name: data.name,
-          grade: data.grade,
-          description: data.description,
-          is_active: data.is_active,
-        });
-        showToast('success', '班级更新成功');
-      } else {
-        await api.classes.create({
-          name: data.name,
-          grade: data.grade,
-          description: data.description,
-          is_active: data.is_active,
-        });
-        showToast('success', '班级创建成功');
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      if (newPage >= 1 && newPage <= pagination.pages) {
+        fetchClasses(newPage, searchInput);
       }
-      closeModal();
-      fetchClasses(pagination.page, searchInput);
-    } catch (error) {
-      logger.error('操作失败:', error);
-      showToast('error', data.id ? '更新班级失败' : '创建班级失败');
-    }
-  }, [showToast, closeModal, fetchClasses, pagination.page, searchInput]);
+    },
+    [fetchClasses, searchInput, pagination.pages]
+  );
 
-  const handleDelete = useCallback(async (id: number) => {
-    if (!window.confirm('确定要删除这个班级吗？')) return;
-    try {
-      await api.classes.delete(id);
-      showToast('success', '班级删除成功');
-      fetchClasses(pagination.page, searchInput, true);
-    } catch (error) {
-      logger.error('删除失败:', error);
-      showToast('error', '删除班级失败');
-    }
-  }, [showToast, fetchClasses, pagination.page, searchInput]);
+  const handleOpenModal = useCallback(
+    (isEdit = false, classData?: ClassInfo) => {
+      if (isEdit && classData) {
+        setFormData({
+          id: classData.id,
+          name: classData.name,
+          grade: classData.grade || '',
+          description: classData.description || '',
+          is_active: classData.is_active ?? true,
+        });
+      } else {
+        resetForm();
+      }
+      openModal(classData || null);
+    },
+    [setFormData, resetForm, openModal]
+  );
+
+  const onSubmit = useCallback(
+    async (data: FormData) => {
+      try {
+        if (data.id) {
+          await api.classes.update(data.id, {
+            name: data.name,
+            grade: data.grade,
+            description: data.description,
+            is_active: data.is_active,
+          });
+          showToast('success', '班级更新成功');
+        } else {
+          await api.classes.create({
+            name: data.name,
+            grade: data.grade,
+            description: data.description,
+            is_active: data.is_active,
+          });
+          showToast('success', '班级创建成功');
+        }
+        closeModal();
+        fetchClasses(pagination.page, searchInput);
+      } catch (error) {
+        logger.error('操作失败:', error);
+        showToast('error', data.id ? '更新班级失败' : '创建班级失败');
+      }
+    },
+    [showToast, closeModal, fetchClasses, pagination.page, searchInput]
+  );
+
+  const handleDelete = useCallback(
+    async (id: number) => {
+      if (!window.confirm('确定要删除这个班级吗？')) return;
+      try {
+        await api.classes.delete(id);
+        showToast('success', '班级删除成功');
+        fetchClasses(pagination.page, searchInput, true);
+      } catch (error) {
+        logger.error('删除失败:', error);
+        showToast('error', '删除班级失败');
+      }
+    },
+    [showToast, fetchClasses, pagination.page, searchInput]
+  );
 
   const [exportFormat, setExportFormat] = useState<'json' | 'excel'>('excel');
   const [exporting, setExporting] = useState(false);
@@ -222,14 +272,17 @@ function ClassManagementPage() {
     setImportFile(null);
     setImportResult(null);
     setSelectedConfigId(null);
-    api.importConfig.list({ module_name: 'classes' }).then((res) => {
-      if (res) {
-        setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
-      }
-    }).catch((e) => {
-      logger.error(e); // 主功能不受影响，仅记录日志
-      showToast('error', '导入配置列表加载失败'); // M5: 加载失败提示
-    }); // 配置列表加载失败静默（主功能不受影响），仅记录日志
+    api.importConfig
+      .list({ module_name: 'classes' })
+      .then((res) => {
+        if (res) {
+          setImportConfigs(res.map((c) => ({ id: c.id, config_name: c.config_name })));
+        }
+      })
+      .catch((e) => {
+        logger.error(e); // 主功能不受影响，仅记录日志
+        showToast('error', '导入配置列表加载失败'); // M5: 加载失败提示
+      }); // 配置列表加载失败静默（主功能不受影响），仅记录日志
   }, [showToast]);
 
   const closeImportModal = useCallback(() => {
@@ -241,18 +294,25 @@ function ClassManagementPage() {
     }
   }, []);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const fileName = file.name.toLowerCase();
-      if (!fileName.endsWith('.json') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-        showToast('error', '请选择 JSON 或 Excel 格式的文件');
-        return;
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const fileName = file.name.toLowerCase();
+        if (
+          !fileName.endsWith('.json') &&
+          !fileName.endsWith('.xlsx') &&
+          !fileName.endsWith('.xls')
+        ) {
+          showToast('error', '请选择 JSON 或 Excel 格式的文件');
+          return;
+        }
+        setImportFile(file);
+        setImportResult(null);
       }
-      setImportFile(file);
-      setImportResult(null);
-    }
-  }, [showToast]);
+    },
+    [showToast]
+  );
 
   const handleImport = useCallback(async () => {
     if (!importFile) {
@@ -262,8 +322,10 @@ function ClassManagementPage() {
 
     setIsImporting(true);
     try {
-      const isExcel = importFile.name.toLowerCase().endsWith('.xlsx') || importFile.name.toLowerCase().endsWith('.xls');
-      
+      const isExcel =
+        importFile.name.toLowerCase().endsWith('.xlsx') ||
+        importFile.name.toLowerCase().endsWith('.xls');
+
       if (isExcel) {
         const formData = new FormData();
         formData.append('file', importFile);
@@ -275,7 +337,10 @@ function ClassManagementPage() {
         setImportResult(result);
 
         if (result.success) {
-          showToast('success', `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`);
+          showToast(
+            'success',
+            `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+          );
           fetchClasses(1, searchInput, true);
         } else {
           showToast('error', '导入失败');
@@ -290,13 +355,16 @@ function ClassManagementPage() {
         const result = await fetch(url, {
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(importData)
+          body: JSON.stringify(importData),
         });
         const resultData = await result.json();
         setImportResult(resultData);
 
         if (resultData.success) {
-          showToast('success', `导入完成：成功 ${resultData.success_count} 条，失败 ${resultData.failed_count} 条`);
+          showToast(
+            'success',
+            `导入完成：成功 ${resultData.success_count} 条，失败 ${resultData.failed_count} 条`
+          );
           fetchClasses(1, searchInput, true);
         } else {
           showToast('error', '导入失败');
@@ -313,8 +381,8 @@ function ClassManagementPage() {
   const handleExportErrors = useCallback((): void => {
     if (!importResult?.messages) return;
     const errors = importResult.messages
-      .filter(msg => msg.action === 'failed')
-      .map(msg => ({
+      .filter((msg) => msg.action === 'failed')
+      .map((msg) => ({
         ...msg,
         error_fields: msg.error_fields || [],
       }));
@@ -323,17 +391,23 @@ function ClassManagementPage() {
     }
   }, [importResult]);
 
-  const openHeadTeacherModal = useCallback((cls: ClassInfo) => {
-    setSelectedClass(cls);
-    openHeadTeacherModalInternal(cls);
-  }, [openHeadTeacherModalInternal]);
+  const openHeadTeacherModal = useCallback(
+    (cls: ClassInfo) => {
+      setSelectedClass(cls);
+      openHeadTeacherModalInternal(cls);
+    },
+    [openHeadTeacherModalInternal]
+  );
 
-  const showTeacherPreviewDialog = useCallback((teacher: Admin) => {
-    if (!selectedClass) return;
-    const previewData: TeacherPreview = { teacher, classInfo: selectedClass };
-    setTeacherPreview(previewData);
-    openTeacherPreview(previewData);
-  }, [selectedClass, openTeacherPreview]);
+  const showTeacherPreviewDialog = useCallback(
+    (teacher: Admin) => {
+      if (!selectedClass) return;
+      const previewData: TeacherPreview = { teacher, classInfo: selectedClass };
+      setTeacherPreview(previewData);
+      openTeacherPreview(previewData);
+    },
+    [selectedClass, openTeacherPreview]
+  );
 
   const confirmAssignHeadTeacher = useCallback(async () => {
     if (!teacherPreview) return;
@@ -358,7 +432,11 @@ function ClassManagementPage() {
         if (!lastOperation) return;
         try {
           if (lastOperation.previousTeacherId) {
-            await api.adminClasses.assign(lastOperation.previousTeacherId, lastOperation.classId, true);
+            await api.adminClasses.assign(
+              lastOperation.previousTeacherId,
+              lastOperation.classId,
+              true
+            );
           } else {
             await api.adminClasses.remove(lastOperation.teacherId, lastOperation.classId);
           }
@@ -370,7 +448,11 @@ function ClassManagementPage() {
         }
       };
 
-      showToast('success', `已将 ${teacher.real_name || teacher.username} 分配为 ${classInfo.name} 的班主任`, { undoAction, undoLabel: '撤销' });
+      showToast(
+        'success',
+        `已将 ${teacher.real_name || teacher.username} 分配为 ${classInfo.name} 的班主任`,
+        { undoAction, undoLabel: '撤销' }
+      );
 
       closeTeacherPreview();
       closeHeadTeacherModal();
@@ -382,12 +464,25 @@ function ClassManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [teacherPreview, showToast, fetchClasses, searchInput, lastOperation, closeTeacherPreview, closeHeadTeacherModal]);
+  }, [
+    teacherPreview,
+    showToast,
+    fetchClasses,
+    searchInput,
+    lastOperation,
+    closeTeacherPreview,
+    closeHeadTeacherModal,
+  ]);
 
   const showRemoveConfirmDialog = useCallback(async () => {
     if (!selectedClass || !selectedClass.head_teacher_id) return;
 
-    if (!window.confirm(`确定要从 ${selectedClass.name} 移除班主任 ${selectedClass.head_teacher_name} 吗？移除后该班级将暂时没有班主任。`)) return;
+    if (
+      !window.confirm(
+        `确定要从 ${selectedClass.name} 移除班主任 ${selectedClass.head_teacher_name} 吗？移除后该班级将暂时没有班主任。`
+      )
+    )
+      return;
 
     performRemoveHeadTeacherRef.current?.();
   }, [selectedClass]);
@@ -413,7 +508,11 @@ function ClassManagementPage() {
       const undoAction = async () => {
         if (!lastOperation) return;
         try {
-          await api.adminClasses.assign(lastOperation.previousTeacherId!, lastOperation.classId, true);
+          await api.adminClasses.assign(
+            lastOperation.previousTeacherId!,
+            lastOperation.classId,
+            true
+          );
           showToast('success', '已恢复班主任');
           fetchClasses(1, searchInput, true);
           setLastOperation(null);
@@ -422,7 +521,10 @@ function ClassManagementPage() {
         }
       };
 
-      showToast('success', `已从 ${selectedClass.name} 移除班主任 ${previousTeacherName}`, { undoAction, undoLabel: '恢复' });
+      showToast('success', `已从 ${selectedClass.name} 移除班主任 ${previousTeacherName}`, {
+        undoAction,
+        undoLabel: '恢复',
+      });
 
       cancel();
       closeHeadTeacherModal();
@@ -433,7 +535,15 @@ function ClassManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedClass, showToast, fetchClasses, searchInput, lastOperation, cancel, closeHeadTeacherModal]);
+  }, [
+    selectedClass,
+    showToast,
+    fetchClasses,
+    searchInput,
+    lastOperation,
+    cancel,
+    closeHeadTeacherModal,
+  ]);
 
   performRemoveHeadTeacherRef.current = performRemoveHeadTeacher;
 
@@ -450,7 +560,7 @@ function ClassManagementPage() {
   }, [classes]);
 
   const classesWithTeacher = useMemo(() => {
-    return classes.filter(cls => cls.head_teacher_id).length;
+    return classes.filter((cls) => cls.head_teacher_id).length;
   }, [classes]);
 
   return (
@@ -471,7 +581,9 @@ function ClassManagementPage() {
               <h1 className='text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text'>
                 班级管理
               </h1>
-              <p className='text-sm text-slate-500 dark:text-slate-400'>管理班级信息、班主任和学生</p>
+              <p className='text-sm text-slate-500 dark:text-slate-400'>
+                管理班级信息、班主任和学生
+              </p>
             </div>
           </div>
           <PermissionButton
@@ -496,7 +608,9 @@ function ClassManagementPage() {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>班级总数</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{pagination.total}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {pagination.total}
+                </p>
               </div>
             </div>
           </div>
@@ -509,7 +623,9 @@ function ClassManagementPage() {
               </div>
               <div>
                 <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>学生总数</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{totalStudents}</p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {totalStudents}
+                </p>
               </div>
             </div>
           </div>
@@ -521,8 +637,12 @@ function ClassManagementPage() {
                 <UserCheck className='w-7 h-7 text-white' />
               </div>
               <div>
-                <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>已分配班主任</p>
-                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>{classesWithTeacher}</p>
+                <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>
+                  已分配班主任
+                </p>
+                <p className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
+                  {classesWithTeacher}
+                </p>
               </div>
             </div>
           </div>
@@ -572,13 +692,27 @@ function ClassManagementPage() {
             <table className='w-full'>
               <thead>
                 <tr className='bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-700/30'>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>班级名称</th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>年级</th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>班主任</th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>关联状态</th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>学生数</th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>状态</th>
-                  <th className='px-5 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>操作</th>
+                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    班级名称
+                  </th>
+                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    年级
+                  </th>
+                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    班主任
+                  </th>
+                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    关联状态
+                  </th>
+                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    学生数
+                  </th>
+                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    状态
+                  </th>
+                  <th className='px-5 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className='divide-y divide-slate-100 dark:divide-slate-700/50'>
@@ -622,9 +756,13 @@ function ClassManagementPage() {
                             <GraduationCap className='w-5 h-5 text-blue-600 dark:text-blue-400' />
                           </div>
                           <div>
-                            <p className='font-medium text-slate-800 dark:text-slate-200'>{cls.name}</p>
+                            <p className='font-medium text-slate-800 dark:text-slate-200'>
+                              {cls.name}
+                            </p>
                             {cls.description && (
-                              <p className='text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs'>{cls.description}</p>
+                              <p className='text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs'>
+                                {cls.description}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -642,21 +780,27 @@ function ClassManagementPage() {
                                 {cls.head_teacher_name.charAt(0)}
                               </span>
                             </div>
-                            <span className='text-sm text-slate-700 dark:text-slate-300'>{cls.head_teacher_name}</span>
+                            <span className='text-sm text-slate-700 dark:text-slate-300'>
+                              {cls.head_teacher_name}
+                            </span>
                           </div>
                         ) : (
                           <span className='text-sm text-slate-400 dark:text-slate-500'>未分配</span>
                         )}
                       </td>
                       <td className='px-5 py-4 text-center'>
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          cls.head_teacher_id
-                            ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            cls.head_teacher_id ? 'bg-emerald-500' : 'bg-slate-400'
-                          }`} />
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            cls.head_teacher_id
+                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              cls.head_teacher_id ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                          />
                           {cls.head_teacher_id ? '已关联' : '未关联'}
                         </span>
                       </td>
@@ -666,14 +810,18 @@ function ClassManagementPage() {
                         </span>
                       </td>
                       <td className='px-5 py-4 text-center'>
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          cls.is_active
-                            ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            cls.is_active ? 'bg-emerald-500' : 'bg-slate-400'
-                          }`} />
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            cls.is_active
+                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              cls.is_active ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                          />
                           {cls.is_active ? '启用' : '禁用'}
                         </span>
                       </td>
@@ -715,7 +863,9 @@ function ClassManagementPage() {
             <div className='px-5 py-4 border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 to-white/50 dark:from-slate-800/50 dark:to-slate-800'>
               <div className='flex items-center justify-between'>
                 <p className='text-sm text-slate-500 dark:text-slate-400'>
-                  显示 {(pagination.page - 1) * pagination.per_page + 1} - {Math.min(pagination.page * pagination.per_page, pagination.total)} 条，共 {pagination.total} 条
+                  显示 {(pagination.page - 1) * pagination.per_page + 1} -{' '}
+                  {Math.min(pagination.page * pagination.per_page, pagination.total)} 条，共{' '}
+                  {pagination.total} 条
                 </p>
                 <div className='flex items-center gap-2'>
                   <button
@@ -764,13 +914,14 @@ function ClassManagementPage() {
             </div>
           )}
         </div>
-
-
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={closeModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={closeModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -807,12 +958,12 @@ function ClassManagementPage() {
                   onChange={handleChangeEvent('name')}
                   placeholder='输入班级名称'
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 ${
-                    errors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
+                    errors.name
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
                   }`}
                 />
-                {errors.name && (
-                  <p className='mt-1 text-xs text-red-500'>{errors.name}</p>
-                )}
+                {errors.name && <p className='mt-1 text-xs text-red-500'>{errors.name}</p>}
               </div>
 
               <div>
@@ -826,12 +977,12 @@ function ClassManagementPage() {
                   onChange={handleChangeEvent('grade')}
                   placeholder='输入年级（如：高一）'
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400 ${
-                    errors.grade ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
+                    errors.grade
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
                   }`}
                 />
-                {errors.grade && (
-                  <p className='mt-1 text-xs text-red-500'>{errors.grade}</p>
-                )}
+                {errors.grade && <p className='mt-1 text-xs text-red-500'>{errors.grade}</p>}
               </div>
 
               <div>
@@ -845,7 +996,9 @@ function ClassManagementPage() {
                   placeholder='输入班级描述'
                   rows={3}
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all resize-none text-slate-800 dark:text-slate-100 placeholder-slate-400 ${
-                    errors.description ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
+                    errors.description
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-blue-500'
                   }`}
                 />
                 {errors.description && (
@@ -890,7 +1043,10 @@ function ClassManagementPage() {
 
       {/* Head Teacher Assignment Modal */}
       {showHeadTeacherModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={closeHeadTeacherModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={closeHeadTeacherModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -1018,7 +1174,10 @@ function ClassManagementPage() {
 
       {/* Teacher Preview Dialog */}
       {showTeacherPreview && teacherPreview && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4' onClick={closeTeacherPreview}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4'
+          onClick={closeTeacherPreview}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -1123,24 +1282,35 @@ function ClassManagementPage() {
 
       {/* Confirm Dialog */}
       {confirmDialogOpen && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4' onClick={cancel}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4'
+          onClick={cancel}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
           >
             <div className='relative px-6 py-5 border-b border-slate-100 dark:border-slate-700'>
-              <div className={`absolute top-0 left-0 right-0 h-1 ${
-                options?.type === 'danger' ? 'bg-gradient-to-r from-red-500 via-rose-500 to-pink-500' :
-                options?.type === 'warning' ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500' :
-                'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'
-              }`} />
+              <div
+                className={`absolute top-0 left-0 right-0 h-1 ${
+                  options?.type === 'danger'
+                    ? 'bg-gradient-to-r from-red-500 via-rose-500 to-pink-500'
+                    : options?.type === 'warning'
+                    ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500'
+                    : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'
+                }`}
+              />
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-3'>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    options?.type === 'danger' ? 'bg-gradient-to-br from-red-500 to-rose-500' :
-                    options?.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
-                    'bg-gradient-to-br from-blue-500 to-indigo-500'
-                  }`}>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      options?.type === 'danger'
+                        ? 'bg-gradient-to-br from-red-500 to-rose-500'
+                        : options?.type === 'warning'
+                        ? 'bg-gradient-to-br from-amber-500 to-orange-500'
+                        : 'bg-gradient-to-br from-blue-500 to-indigo-500'
+                    }`}
+                  >
                     <AlertTriangle className='w-5 h-5 text-white' />
                   </div>
                   <h3 className='text-lg font-bold text-slate-800 dark:text-slate-100'>
@@ -1173,9 +1343,11 @@ function ClassManagementPage() {
                 onClick={confirm}
                 disabled={isLoading}
                 className={`flex items-center gap-2 px-6 py-2.5 text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium disabled:opacity-50 ${
-                  options?.type === 'danger' ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/25' :
-                  options?.type === 'warning' ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-amber-500/25' :
-                  'bg-gradient-to-r from-blue-500 to-indigo-500 hover:shadow-blue-500/25'
+                  options?.type === 'danger'
+                    ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/25'
+                    : options?.type === 'warning'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-amber-500/25'
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:shadow-blue-500/25'
                 }`}
               >
                 {isLoading ? (
@@ -1192,7 +1364,10 @@ function ClassManagementPage() {
 
       {/* Import Modal */}
       {showImportModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4' onClick={closeImportModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4'
+          onClick={closeImportModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -1254,25 +1429,37 @@ function ClassManagementPage() {
               <div className='p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800'>
                 <div className='flex items-center gap-2 mb-3'>
                   <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400' />
-                  <span className='text-sm font-medium text-amber-800 dark:text-amber-300'>必填字段说明</span>
+                  <span className='text-sm font-medium text-amber-800 dark:text-amber-300'>
+                    必填字段说明
+                  </span>
                 </div>
                 <ul className='space-y-1.5 text-sm text-amber-700 dark:text-amber-400'>
-                  <li><span className='font-medium'>班级名称</span>：唯一标识，不能为空</li>
+                  <li>
+                    <span className='font-medium'>班级名称</span>：唯一标识，不能为空
+                  </li>
                 </ul>
-                <p className='mt-2 text-xs text-amber-600 dark:text-amber-500'>提示：下载模板后，请参考"填写说明"工作表了解详细的字段填写规则</p>
+                <p className='mt-2 text-xs text-amber-600 dark:text-amber-500'>
+                  提示：下载模板后，请参考"填写说明"工作表了解详细的字段填写规则
+                </p>
               </div>
 
               {importConfigs.length > 0 && (
                 <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl'>
-                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>选择导入配置</label>
+                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'>
+                    选择导入配置
+                  </label>
                   <select
                     value={selectedConfigId || ''}
-                    onChange={(e) => setSelectedConfigId(e.target.value ? parseInt(e.target.value) : null)}
+                    onChange={(e) =>
+                      setSelectedConfigId(e.target.value ? parseInt(e.target.value) : null)
+                    }
                     className='w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500'
                   >
                     <option value=''>使用默认配置</option>
-                    {importConfigs.map(config => (
-                      <option key={config.id} value={config.id}>{config.config_name}</option>
+                    {importConfigs.map((config) => (
+                      <option key={config.id} value={config.id}>
+                        {config.config_name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1280,7 +1467,8 @@ function ClassManagementPage() {
 
               {!importResult ? (
                 <>
-                  <div className='border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-8 text-center hover:border-amber-400 dark:hover:border-amber-500 transition-colors cursor-pointer'
+                  <div
+                    className='border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-8 text-center hover:border-amber-400 dark:hover:border-amber-500 transition-colors cursor-pointer'
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input
@@ -1308,7 +1496,9 @@ function ClassManagementPage() {
                           <FileJson className='w-5 h-5 text-white' />
                         </div>
                         <div>
-                          <p className='font-medium text-slate-900 dark:text-slate-100'>{importFile.name}</p>
+                          <p className='font-medium text-slate-900 dark:text-slate-100'>
+                            {importFile.name}
+                          </p>
                           <p className='text-sm text-slate-500 dark:text-slate-400'>
                             {(importFile.size / 1024).toFixed(2)} KB
                           </p>
@@ -1328,11 +1518,19 @@ function ClassManagementPage() {
                 </>
               ) : (
                 <div className='space-y-4'>
-                  <div className='flex items-center justify-center gap-4 p-4 rounded-xl'
-                    style={{ backgroundColor: importResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      importResult.success ? 'bg-emerald-500' : 'bg-red-500'
-                    }`}>
+                  <div
+                    className='flex items-center justify-center gap-4 p-4 rounded-xl'
+                    style={{
+                      backgroundColor: importResult.success
+                        ? 'rgba(16, 185, 129, 0.1)'
+                        : 'rgba(239, 68, 68, 0.1)',
+                    }}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        importResult.success ? 'bg-emerald-500' : 'bg-red-500'
+                      }`}
+                    >
                       {importResult.success ? (
                         <Check className='w-6 h-6 text-white' />
                       ) : (
@@ -1344,7 +1542,8 @@ function ClassManagementPage() {
                         导入完成
                       </p>
                       <p className='text-sm text-slate-500 dark:text-slate-400'>
-                        总计 {importResult.total} 条 | 成功 {importResult.success_count} 条 | 失败 {importResult.failed_count} 条
+                        总计 {importResult.total} 条 | 成功 {importResult.success_count} 条 | 失败{' '}
+                        {importResult.failed_count} 条
                       </p>
                     </div>
                   </div>
@@ -1352,7 +1551,9 @@ function ClassManagementPage() {
                   {importResult.messages.length > 0 && (
                     <div className='max-h-[300px] overflow-y-auto space-y-2'>
                       <div className='flex items-center justify-between mb-2'>
-                        <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>导入详情：</p>
+                        <p className='text-sm font-medium text-slate-500 dark:text-slate-400'>
+                          导入详情：
+                        </p>
                         {importResult.failed_count > 0 && (
                           <button
                             onClick={handleExportErrors}
@@ -1364,13 +1565,16 @@ function ClassManagementPage() {
                         )}
                       </div>
                       {importResult.messages.map((msg, index) => (
-                        <div key={index} className={`p-3 rounded-lg text-sm ${
-                          msg.action === 'failed'
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                            : msg.action === 'created'
+                        <div
+                          key={index}
+                          className={`p-3 rounded-lg text-sm ${
+                            msg.action === 'failed'
+                              ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                              : msg.action === 'created'
                               ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
                               : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        }`}>
+                          }`}
+                        >
                           {msg.message}
                         </div>
                       ))}

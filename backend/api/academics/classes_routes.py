@@ -34,6 +34,7 @@ def _audit_class_op(op, name, result, payload, target_id=None):
     except Exception:  # noqa: BLE001 - 审计失败不影响业务
         pass
 
+
 class_model = ns_classes.model(
     "ClassInfo",
     {
@@ -198,7 +199,10 @@ class ClassExport(Resource):
             )
         else:
             return send_file(
-                result["data"], mimetype="application/json", as_attachment=True, download_name=result["filename"]
+                result["data"],
+                mimetype="application/json",
+                as_attachment=True,
+                download_name=result["filename"],
             )
 
 
@@ -218,7 +222,9 @@ class ClassImport(Resource):
             config = get_by_id(ImportConfig, config_id)
         else:
             config = ImportConfig.query.filter(
-                ImportConfig.module_name == "classes", ImportConfig.is_default, ImportConfig.is_active
+                ImportConfig.module_name == "classes",
+                ImportConfig.is_default,
+                ImportConfig.is_active,
             ).first()
 
         import_list = []
@@ -253,9 +259,18 @@ class ClassImport(Resource):
                         row_data[header] = ws.cell(row=row_idx, column=col_idx + 1).value
 
                     default_mappings = [
-                        {"source_field": "班级名称", "target_field": "name", "field_type": "string", "required": True},
+                        {
+                            "source_field": "班级名称",
+                            "target_field": "name",
+                            "field_type": "string",
+                            "required": True,
+                        },
                         {"source_field": "年级", "target_field": "grade", "field_type": "string"},
-                        {"source_field": "描述", "target_field": "description", "field_type": "string"},
+                        {
+                            "source_field": "描述",
+                            "target_field": "description",
+                            "field_type": "string",
+                        },
                         {
                             "source_field": "班主任ID",
                             "target_field": "head_teacher_id",
@@ -268,7 +283,11 @@ class ClassImport(Resource):
                             "field_type": "string",
                             "relation": "admin",
                         },
-                        {"source_field": "是否启用", "target_field": "is_active", "field_type": "boolean"},
+                        {
+                            "source_field": "是否启用",
+                            "target_field": "is_active",
+                            "field_type": "boolean",
+                        },
                     ]
                     field_mappings = config.field_mappings if config else default_mappings
                     default_values = config.default_values if config else {}
@@ -282,11 +301,18 @@ class ClassImport(Resource):
                         if source_val is None:
                             if mapping.get("required"):
                                 break
-                            source_val = mapping.get("default_value", default_values.get(target_field))
+                            source_val = mapping.get(
+                                "default_value", default_values.get(target_field)
+                            )
 
                         if field_type == "boolean":
                             if isinstance(source_val, str):
-                                mapped_item[target_field] = source_val in ["是", "true", "True", "1"]
+                                mapped_item[target_field] = source_val in [
+                                    "是",
+                                    "true",
+                                    "True",
+                                    "1",
+                                ]
                             else:
                                 mapped_item[target_field] = bool(source_val)
                         elif field_type == "integer":

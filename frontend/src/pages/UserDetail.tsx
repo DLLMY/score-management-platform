@@ -1,7 +1,23 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User as UserIcon, Phone, BookOpen, CreditCard, Award, History, TrendingUp, TrendingDown, AlertCircle, RefreshCw, X, Plus, Minus, AlertTriangle } from 'lucide-react';
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Phone,
+  BookOpen,
+  CreditCard,
+  Award,
+  History,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  RefreshCw,
+  X,
+  Plus,
+  Minus,
+  AlertTriangle,
+} from 'lucide-react';
 import api, { ScoreRecordItem } from '../services/api';
 import { User } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
@@ -71,7 +87,8 @@ function UserDetail() {
       await api.records.create({
         user_id: Number(id),
         score_change: scoreChange.score_change,
-        description: scoreChange.description || (scoreChange.score_change > 0 ? '手动加分' : '手动扣分'),
+        description:
+          scoreChange.description || (scoreChange.score_change > 0 ? '手动加分' : '手动扣分'),
         operator: '管理员',
       });
 
@@ -254,11 +271,17 @@ function UserDetail() {
                   <p className='text-xs text-gray-500'>账号状态</p>
                   <p className='font-semibold'>
                     {user.is_blacklisted ? (
-                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800'>黑名单</span>
+                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800'>
+                        黑名单
+                      </span>
                     ) : user.is_active ? (
-                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'>启用</span>
+                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'>
+                        启用
+                      </span>
                     ) : (
-                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600'>禁用</span>
+                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600'>
+                        禁用
+                      </span>
                     )}
                   </p>
                 </div>
@@ -329,7 +352,11 @@ function UserDetail() {
               </PermissionButton>
             </div>
             <div className='text-center py-6'>
-              <div className={`text-5xl font-bold ${user.current_score != null ? getScoreColor(user.current_score) : 'text-gray-400'} mb-2`}>
+              <div
+                className={`text-5xl font-bold ${
+                  user.current_score != null ? getScoreColor(user.current_score) : 'text-gray-400'
+                } mb-2`}
+              >
                 {user.current_score != null ? user.current_score : '--'}
               </div>
               <p className='text-gray-500'>分</p>
@@ -354,14 +381,18 @@ function UserDetail() {
               <div className='flex items-center gap-3'>
                 <History className='w-5 h-5 text-primary-600' />
                 <h3 className='font-semibold text-gray-800'>积分变动记录</h3>
-                <span className='text-sm text-gray-500'>({recordsError ? '--' : records.length} 条记录)</span>
+                <span className='text-sm text-gray-500'>
+                  ({recordsError ? '--' : records.length} 条记录)
+                </span>
               </div>
             </div>
             <div className='card-body'>
               {recordsError ? (
                 <div className='flex items-center gap-2 p-4 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
                   <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-                  <p className='text-sm text-amber-700 dark:text-amber-300'>积分记录加载失败，请返回重试</p>
+                  <p className='text-sm text-amber-700 dark:text-amber-300'>
+                    积分记录加载失败，请返回重试
+                  </p>
                 </div>
               ) : records.length === 0 ? (
                 <EmptyState
@@ -372,35 +403,33 @@ function UserDetail() {
               ) : (
                 <div className='space-y-3'>
                   {records.map((record) => {
-                      const change = record.score_change || 0;
-                      return (
+                    const change = record.score_change || 0;
+                    return (
+                      <div
+                        key={record.id}
+                        className='flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors'
+                      >
                         <div
-                          key={record.id}
-                          className='flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors'
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            change >= 0 ? 'bg-success-100' : 'bg-danger-100'
+                          }`}
                         >
-                          <div
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                              change >= 0 ? 'bg-success-100' : 'bg-danger-100'
-                            }`}
-                          >
-                            {getScoreChangeIcon(change)}
-                          </div>
-                          <div className='flex-1'>
-                            <p className='font-medium text-gray-800'>{record.description}</p>
-                            <p className='text-xs text-gray-500'>{formatDate(record.created_at)}</p>
-                          </div>
-                          <div className='text-right'>
-                            <p
-                              className={`text-lg font-bold ${getScoreChangeColor(change)}`}
-                            >
-                              {change >= 0 ? '+' : ''}
-                              {change}
-                            </p>
-                            <p className='text-xs text-gray-500'>分</p>
-                          </div>
+                          {getScoreChangeIcon(change)}
                         </div>
-                      );
-                    })}
+                        <div className='flex-1'>
+                          <p className='font-medium text-gray-800'>{record.description}</p>
+                          <p className='text-xs text-gray-500'>{formatDate(record.created_at)}</p>
+                        </div>
+                        <div className='text-right'>
+                          <p className={`text-lg font-bold ${getScoreChangeColor(change)}`}>
+                            {change >= 0 ? '+' : ''}
+                            {change}
+                          </p>
+                          <p className='text-xs text-gray-500'>分</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -436,7 +465,10 @@ function UserDetail() {
                     <button
                       type='button'
                       onClick={() =>
-                        setScoreChange({ ...scoreChange, score_change: -Math.abs(scoreChange.score_change) })
+                        setScoreChange({
+                          ...scoreChange,
+                          score_change: -Math.abs(scoreChange.score_change),
+                        })
                       }
                       className='btn btn-outline h-12 w-12 rounded-l-xl'
                     >
@@ -446,7 +478,10 @@ function UserDetail() {
                       type='number'
                       value={scoreChange.score_change}
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        setScoreChange({ ...scoreChange, score_change: parseInt(e.target.value) || 0 })
+                        setScoreChange({
+                          ...scoreChange,
+                          score_change: parseInt(e.target.value) || 0,
+                        })
                       }
                       className='form-input text-center w-32'
                       placeholder='0'
@@ -454,7 +489,10 @@ function UserDetail() {
                     <button
                       type='button'
                       onClick={() =>
-                        setScoreChange({ ...scoreChange, score_change: Math.abs(scoreChange.score_change) })
+                        setScoreChange({
+                          ...scoreChange,
+                          score_change: Math.abs(scoreChange.score_change),
+                        })
                       }
                       className='btn btn-outline h-12 w-12 rounded-r-xl'
                     >
@@ -484,8 +522,8 @@ function UserDetail() {
                   {scoreChange.score_change > 0
                     ? '确认加分'
                     : scoreChange.score_change < 0
-                      ? '确认扣分'
-                      : '确认'}
+                    ? '确认扣分'
+                    : '确认'}
                 </Button>
               </div>
             </form>

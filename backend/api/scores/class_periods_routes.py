@@ -64,11 +64,15 @@ class ClassPeriodList(Resource):
     @ns_class_periods.response(200, "成功", class_period_list_response)
     @requires_permission("timetable.rule.manage")
     def get(self):
-        periods = ClassPeriod.query.order_by(ClassPeriod.sort_order, ClassPeriod.period_number).all()
+        periods = ClassPeriod.query.order_by(
+            ClassPeriod.sort_order, ClassPeriod.period_number
+        ).all()
         result = []  # noqa: F841
         for p in periods:
             item = p.to_dict()  # noqa: F841
-            item["duration"] = (p.end_hour * 60 + p.end_minute) - (p.start_hour * 60 + p.start_minute)
+            item["duration"] = (p.end_hour * 60 + p.end_minute) - (
+                p.start_hour * 60 + p.start_minute
+            )
             result.append(item)
         return {"periods": result, "total": len(result)}
 
@@ -86,7 +90,9 @@ class ClassPeriodList(Resource):
         period = create_class_period(data)
 
         result = period.to_dict()  # noqa: F841
-        result["duration"] = (period.end_hour * 60 + period.end_minute) - (period.start_hour * 60 + period.start_minute)
+        result["duration"] = (period.end_hour * 60 + period.end_minute) - (
+            period.start_hour * 60 + period.start_minute
+        )
         return APIResponse.success(data=result, message="创建成功", status_code=201)
 
 
@@ -101,7 +107,9 @@ class ClassPeriodResource(Resource):
     def get(self, id):
         period = ClassPeriod.query.get_or_404(id)
         result = period.to_dict()  # noqa: F841
-        result["duration"] = (period.end_hour * 60 + period.end_minute) - (period.start_hour * 60 + period.start_minute)
+        result["duration"] = (period.end_hour * 60 + period.end_minute) - (
+            period.start_hour * 60 + period.start_minute
+        )
         return result
 
     @ns_class_periods.doc("update_class_period", description="更新课程节次", security="Bearer")
@@ -121,7 +129,9 @@ class ClassPeriodResource(Resource):
         update_class_period(period, data)
 
         result = period.to_dict()  # noqa: F841
-        result["duration"] = (period.end_hour * 60 + period.end_minute) - (period.start_hour * 60 + period.start_minute)
+        result["duration"] = (period.end_hour * 60 + period.end_minute) - (
+            period.start_hour * 60 + period.start_minute
+        )
         return APIResponse.success(data=result, message="更新成功")
 
     @ns_class_periods.doc("delete_class_period", description="删除课程节次", security="Bearer")
@@ -149,17 +159,22 @@ class ClassPeriodActiveList(Resource):
         result = []  # noqa: F841
         for p in periods:
             item = p.to_dict()  # noqa: F841
-            item["duration"] = (p.end_hour * 60 + p.end_minute) - (p.start_hour * 60 + p.start_minute)
+            item["duration"] = (p.end_hour * 60 + p.end_minute) - (
+                p.start_hour * 60 + p.start_minute
+            )
             result.append(item)
         return {"periods": result, "total": len(result)}
 
 
 @ns_class_periods.route("/batch")
 class ClassPeriodBatch(Resource):
-    @ns_class_periods.doc("batch_update_class_periods", description="批量更新课程节次", security="Bearer")
+    @ns_class_periods.doc(
+        "batch_update_class_periods", description="批量更新课程节次", security="Bearer"
+    )
     @ns_class_periods.expect(
         ns_class_periods.model(
-            "BatchUpdate", {"periods": fields.List(fields.Nested(class_period_model), required=True)}
+            "BatchUpdate",
+            {"periods": fields.List(fields.Nested(class_period_model), required=True)},
         )
     )
     @ns_class_periods.response(200, "批量更新成功")
@@ -174,7 +189,9 @@ class ClassPeriodBatch(Resource):
 @ns_class_periods.route("/reset")
 class ClassPeriodReset(Resource):
 
-    @ns_class_periods.doc("reset_class_periods", description="重置课程节次为默认值", security="Bearer")
+    @ns_class_periods.doc(
+        "reset_class_periods", description="重置课程节次为默认值", security="Bearer"
+    )
     @ns_class_periods.response(200, "重置成功")
     @requires_permission("timetable.rule.manage")
     def post(self):

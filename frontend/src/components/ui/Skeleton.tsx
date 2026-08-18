@@ -16,7 +16,7 @@ function Skeleton({
   animation = 'pulse',
 }: SkeletonProps) {
   const baseClasses = 'bg-gray-200';
-  
+
   const variantClasses = {
     text: 'rounded',
     rectangular: 'rounded-md',
@@ -87,14 +87,10 @@ function CardSkeleton({ count = 1, showAvatar = true, showSubtitle = true }: Car
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className='p-4 border border-gray-200 rounded-lg'>
           <div className='flex items-start gap-3'>
-            {showAvatar && (
-              <Skeleton variant='circular' width={40} height={40} />
-            )}
+            {showAvatar && <Skeleton variant='circular' width={40} height={40} />}
             <div className='flex-1 space-y-2'>
               <Skeleton variant='text' width='70%' height={20} />
-              {showSubtitle && (
-                <Skeleton variant='text' width='50%' height={16} />
-              )}
+              {showSubtitle && <Skeleton variant='text' width='50%' height={16} />}
               <Skeleton variant='text' width='90%' height={14} />
               <Skeleton variant='text' width='80%' height={14} />
             </div>
@@ -178,7 +174,7 @@ function DashboardSkeleton({ showCharts = true }: DashboardSkeletonProps) {
           </div>
         ))}
       </div>
-      
+
       {showCharts && (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
           <div className='card p-4'>
@@ -195,5 +191,12 @@ function DashboardSkeleton({ showCharts = true }: DashboardSkeletonProps) {
   );
 }
 
-export { Skeleton, TableSkeleton, CardSkeleton, FormSkeleton, CategoryCardSkeleton, DashboardSkeleton };
+export {
+  Skeleton,
+  TableSkeleton,
+  CardSkeleton,
+  FormSkeleton,
+  CategoryCardSkeleton,
+  DashboardSkeleton,
+};
 export default Skeleton;

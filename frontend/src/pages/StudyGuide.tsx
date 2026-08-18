@@ -199,7 +199,14 @@ function StudyGuidePage() {
       logger.error('保存指导文章失败:', error);
       showToast('error', guideForm.id ? '更新指导文章失败' : '创建指导文章失败');
     }
-  }, [guideForm, validateGuideForm, showToast, handleCloseGuideModal, fetchGuides, selectedClassId]);
+  }, [
+    guideForm,
+    validateGuideForm,
+    showToast,
+    handleCloseGuideModal,
+    fetchGuides,
+    selectedClassId,
+  ]);
 
   const handleOpenPlanCreate = useCallback(() => {
     setPlanForm(defaultPlanForm);
@@ -294,7 +301,10 @@ function StudyGuidePage() {
         showToast('success', '指导文章删除成功');
       } catch (error: any) {
         // 404 说明数据已不存在（过期缓存），刷新列表即可
-        const is404 = error?.status === 404 || error?.response?.status === 404 || String(error?.message || '').includes('不存在');
+        const is404 =
+          error?.status === 404 ||
+          error?.response?.status === 404 ||
+          String(error?.message || '').includes('不存在');
         if (is404) {
           showToast('info', '该文章已被删除');
         } else {
@@ -315,7 +325,10 @@ function StudyGuidePage() {
         await api.studyGuide.deletePlan(planId);
         showToast('success', '改进计划删除成功');
       } catch (error: any) {
-        const is404 = error?.status === 404 || error?.response?.status === 404 || String(error?.message || '').includes('不存在');
+        const is404 =
+          error?.status === 404 ||
+          error?.response?.status === 404 ||
+          String(error?.message || '').includes('不存在');
         if (is404) {
           showToast('info', '该计划已被删除');
         } else {
@@ -333,9 +346,12 @@ function StudyGuidePage() {
     setGuideForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handlePlanChange = useCallback((field: keyof PlanFormData, value: string | number | null) => {
-    setPlanForm((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  const handlePlanChange = useCallback(
+    (field: keyof PlanFormData, value: string | number | null) => {
+      setPlanForm((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const getProgressColor = (progress: number) => {
     if (progress >= 80) return 'from-emerald-500 to-teal-500';
@@ -345,9 +361,11 @@ function StudyGuidePage() {
   };
 
   const getProgressBg = (progress: number) => {
-    if (progress >= 80) return 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
+    if (progress >= 80)
+      return 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
     if (progress >= 50) return 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-    if (progress >= 20) return 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
+    if (progress >= 20)
+      return 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
     return 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400';
   };
 
@@ -470,11 +488,16 @@ function StudyGuidePage() {
                             <span className='text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'>
                               {guide.guide_type || '未分类'}
                             </span>
-                            <span className='text-xs text-slate-400'>{guide.target_audience || '全体'}</span>
+                            <span className='text-xs text-slate-400'>
+                              {guide.target_audience || '全体'}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      <div className='flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity' onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className='flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity'
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => handleOpenGuideEdit(guide)}
                           className='p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-all'
@@ -507,7 +530,9 @@ function StudyGuidePage() {
                     <div className='mt-3 flex items-center justify-between text-xs text-slate-400'>
                       <span>{guide.is_published ? '已发布' : '草稿'}</span>
                       <ChevronRight
-                        className={`w-4 h-4 transition-transform ${expandedGuide === guide.id ? 'rotate-90' : ''}`}
+                        className={`w-4 h-4 transition-transform ${
+                          expandedGuide === guide.id ? 'rotate-90' : ''
+                        }`}
                       />
                     </div>
                   </div>
@@ -536,7 +561,11 @@ function StudyGuidePage() {
               >
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex items-center gap-3'>
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getProgressColor(plan.progress)} flex items-center justify-center shadow-lg`}>
+                    <div
+                      className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getProgressColor(
+                        plan.progress
+                      )} flex items-center justify-center shadow-lg`}
+                    >
                       <TrendingUp className='w-5 h-5 text-white' />
                     </div>
                     <div>
@@ -544,7 +573,11 @@ function StudyGuidePage() {
                         <h3 className='font-semibold text-slate-800 dark:text-slate-100'>
                           {plan.student_name || `学生 #${plan.student_id}`}
                         </h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getProgressBg(plan.progress)}`}>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${getProgressBg(
+                            plan.progress
+                          )}`}
+                        >
                           {plan.plan_type || '未分类'}
                         </span>
                       </div>
@@ -582,7 +615,9 @@ function StudyGuidePage() {
                     </div>
                     <div className='h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden'>
                       <div
-                        className={`h-full bg-gradient-to-r ${getProgressColor(plan.progress)} rounded-full transition-all duration-500`}
+                        className={`h-full bg-gradient-to-r ${getProgressColor(
+                          plan.progress
+                        )} rounded-full transition-all duration-500`}
                         style={{ width: `${plan.progress}%` }}
                       />
                     </div>
@@ -590,12 +625,18 @@ function StudyGuidePage() {
                   <div className='flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400'>
                     {plan.current_score !== undefined && plan.current_score !== null && (
                       <span>
-                        当前: <span className='font-medium text-slate-700 dark:text-slate-200'>{plan.current_score}</span>
+                        当前:{' '}
+                        <span className='font-medium text-slate-700 dark:text-slate-200'>
+                          {plan.current_score}
+                        </span>
                       </span>
                     )}
                     {plan.target_score !== undefined && plan.target_score !== null && (
                       <span>
-                        目标: <span className='font-medium text-slate-700 dark:text-slate-200'>{plan.target_score}</span>
+                        目标:{' '}
+                        <span className='font-medium text-slate-700 dark:text-slate-200'>
+                          {plan.target_score}
+                        </span>
                       </span>
                     )}
                   </div>
@@ -630,7 +671,10 @@ function StudyGuidePage() {
       </div>
 
       {showGuideModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={handleCloseGuideModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={handleCloseGuideModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -666,9 +710,7 @@ function StudyGuidePage() {
                   disabled={!!guideForm.id}
                   emptyPlaceholder='暂无班级'
                 />
-                {guideForm.id && (
-                  <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>
-                )}
+                {guideForm.id && <p className='mt-1 text-xs text-slate-400'>编辑时班级不可更改</p>}
               </div>
 
               <div>
@@ -681,15 +723,21 @@ function StudyGuidePage() {
                   onChange={(e) => handleGuideChange('title', e.target.value)}
                   placeholder='输入文章标题'
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 dark:text-slate-100 ${
-                    guideErrors.title ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500'
+                    guideErrors.title
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500'
                   }`}
                 />
-                {guideErrors.title && <p className='mt-1 text-xs text-red-500'>{guideErrors.title}</p>}
+                {guideErrors.title && (
+                  <p className='mt-1 text-xs text-red-500'>{guideErrors.title}</p>
+                )}
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>文章类型</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    文章类型
+                  </label>
                   <select
                     value={guideForm.guide_type}
                     onChange={(e) => handleGuideChange('guide_type', e.target.value)}
@@ -703,7 +751,9 @@ function StudyGuidePage() {
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>适用对象</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    适用对象
+                  </label>
                   <select
                     value={guideForm.target_audience}
                     onChange={(e) => handleGuideChange('target_audience', e.target.value)}
@@ -719,7 +769,9 @@ function StudyGuidePage() {
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>文章内容</label>
+                <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                  文章内容
+                </label>
                 <textarea
                   value={guideForm.content}
                   onChange={(e) => handleGuideChange('content', e.target.value)}
@@ -730,7 +782,9 @@ function StudyGuidePage() {
               </div>
 
               <div className='flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl'>
-                <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>发布文章</label>
+                <label className='text-sm font-semibold text-slate-700 dark:text-slate-300'>
+                  发布文章
+                </label>
                 <ToggleSwitch
                   checked={guideForm.is_published}
                   onChange={(v) => handleGuideChange('is_published', v)}
@@ -759,7 +813,10 @@ function StudyGuidePage() {
       )}
 
       {showPlanModal && (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4' onClick={handleClosePlanModal}>
+        <div
+          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+          onClick={handleClosePlanModal}
+        >
           <div
             className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
@@ -797,16 +854,22 @@ function StudyGuidePage() {
                     allowEmpty
                     emptyLabel='请选择学生'
                     className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100 ${
-                      planErrors.student_id ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-cyan-500'
+                      planErrors.student_id
+                        ? 'border-red-500'
+                        : 'border-slate-200 dark:border-slate-600 focus:border-cyan-500'
                     }`}
                   />
                 </div>
-                {planErrors.student_id && <p className='mt-1 text-xs text-red-500'>{planErrors.student_id}</p>}
+                {planErrors.student_id && (
+                  <p className='mt-1 text-xs text-red-500'>{planErrors.student_id}</p>
+                )}
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>计划类型</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    计划类型
+                  </label>
                   <select
                     value={planForm.plan_type}
                     onChange={(e) => handlePlanChange('plan_type', e.target.value)}
@@ -820,7 +883,9 @@ function StudyGuidePage() {
                   </select>
                 </div>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>科目</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    科目
+                  </label>
                   <SubjectSelect
                     value={planForm.subject_id ?? null}
                     onChange={(id) => handlePlanChange('subject_id', id || null)}
@@ -832,21 +897,35 @@ function StudyGuidePage() {
 
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>当前分数</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    当前分数
+                  </label>
                   <input
                     type='number'
                     value={planForm.current_score ?? ''}
-                    onChange={(e) => handlePlanChange('current_score', e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      handlePlanChange(
+                        'current_score',
+                        e.target.value ? Number(e.target.value) : null
+                      )
+                    }
                     placeholder='当前分数'
                     className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100'
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>目标分数</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    目标分数
+                  </label>
                   <input
                     type='number'
                     value={planForm.target_score ?? ''}
-                    onChange={(e) => handlePlanChange('target_score', e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      handlePlanChange(
+                        'target_score',
+                        e.target.value ? Number(e.target.value) : null
+                      )
+                    }
                     placeholder='目标分数'
                     className='w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-slate-800 dark:text-slate-100'
                   />
@@ -863,15 +942,21 @@ function StudyGuidePage() {
                   placeholder='输入改进计划的详细内容'
                   rows={4}
                   className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none text-slate-800 dark:text-slate-100 ${
-                    planErrors.plan_content ? 'border-red-500' : 'border-slate-200 dark:border-slate-600 focus:border-cyan-500'
+                    planErrors.plan_content
+                      ? 'border-red-500'
+                      : 'border-slate-200 dark:border-slate-600 focus:border-cyan-500'
                   }`}
                 />
-                {planErrors.plan_content && <p className='mt-1 text-xs text-red-500'>{planErrors.plan_content}</p>}
+                {planErrors.plan_content && (
+                  <p className='mt-1 text-xs text-red-500'>{planErrors.plan_content}</p>
+                )}
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>开始日期</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    开始日期
+                  </label>
                   <input
                     type='date'
                     value={planForm.start_date}
@@ -880,7 +965,9 @@ function StudyGuidePage() {
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>结束日期</label>
+                  <label className='block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2'>
+                    结束日期
+                  </label>
                   <input
                     type='date'
                     value={planForm.end_date}

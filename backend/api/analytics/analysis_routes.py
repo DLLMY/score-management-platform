@@ -50,7 +50,9 @@ class UnlockStats(Resource):
         end_date = request.args.get("end_date")
         device_id = request.args.get("device_id")
         class_name = request.args.get("class_name")
-        return APIResponse.success(data=analysis_service.get_unlock_stats(start_date, end_date, device_id, class_name))
+        return APIResponse.success(
+            data=analysis_service.get_unlock_stats(start_date, end_date, device_id, class_name)
+        )
 
 
 @ns_analysis.route("/class-ranking")

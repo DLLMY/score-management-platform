@@ -1,7 +1,16 @@
 import { memo, useState, ReactNode, MouseEventHandler } from 'react';
 import { LucideIcon } from 'lucide-react';
 
-type CardVariant = 'default' | 'dark' | 'elevated' | 'glass' | 'primary' | 'success' | 'warning' | 'danger' | 'accent';
+type CardVariant =
+  | 'default'
+  | 'dark'
+  | 'elevated'
+  | 'glass'
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'accent';
 type IconVariant = 'circle' | 'square' | 'hexagon';
 
 interface CardProps {
@@ -109,7 +118,11 @@ function Card({
       className={`
       relative rounded-2xl overflow-hidden transition-all duration-400 border
       ${variants[variant]}
-      ${gradient && variant === 'dark' ? 'bg-gradient-to-br from-slate-800/90 via-blue-900/20 to-slate-900/90' : ''}
+      ${
+        gradient && variant === 'dark'
+          ? 'bg-gradient-to-br from-slate-800/90 via-blue-900/20 to-slate-900/90'
+          : ''
+      }
       ${hover ? 'hover:shadow-xl hover:-translate-y-1' : ''}
       ${float ? 'card-hover-float' : ''}
       ${glow ? 'card-glow' : ''}
@@ -125,17 +138,31 @@ function Card({
     >
       {title && (
         <div
-          className={`px-5 py-3 border-b ${variant === 'dark' ? 'border-slate-700/50 bg-slate-700/20' : 'border-gray-200/60 bg-gradient-to-r from-gray-50 via-white to-gray-50'} ${headerClass}`}
+          className={`px-5 py-3 border-b ${
+            variant === 'dark'
+              ? 'border-slate-700/50 bg-slate-700/20'
+              : 'border-gray-200/60 bg-gradient-to-r from-gray-50 via-white to-gray-50'
+          } ${headerClass}`}
         >
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-3'>
               {Icon && (
                 <div
-                  className={`relative w-10 h-10 ${iconVariants[iconVariant]} flex items-center justify-center transition-all duration-300 ${isHovered ? 'scale-110 rotate-3' : ''} ${iconBgColors[variant]}`}
+                  className={`relative w-10 h-10 ${
+                    iconVariants[iconVariant]
+                  } flex items-center justify-center transition-all duration-300 ${
+                    isHovered ? 'scale-110 rotate-3' : ''
+                  } ${iconBgColors[variant]}`}
                 >
-                  <Icon className={`w-5 h-5 ${iconColors[variant]} transition-transform duration-300 ${isHovered ? 'scale-110' : ''}`} />
+                  <Icon
+                    className={`w-5 h-5 ${iconColors[variant]} transition-transform duration-300 ${
+                      isHovered ? 'scale-110' : ''
+                    }`}
+                  />
                   {isHovered && (
-                    <div className={`absolute inset-0 ${iconVariants[iconVariant]} opacity-30 blur-md ${iconBgColors[variant]}`} />
+                    <div
+                      className={`absolute inset-0 ${iconVariants[iconVariant]} opacity-30 blur-md ${iconBgColors[variant]}`}
+                    />
                   )}
                 </div>
               )}
@@ -148,13 +175,21 @@ function Card({
           </div>
         </div>
       )}
-      <div className={`p-5 ${variant === 'dark' ? 'text-slate-300' : ''} ${animate ? 'card-content-hover' : ''}`}>
+      <div
+        className={`p-5 ${variant === 'dark' ? 'text-slate-300' : ''} ${
+          animate ? 'card-content-hover' : ''
+        }`}
+      >
         {children}
       </div>
 
       {glow && (
         <>
-          <div className={`absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
+          <div
+            className={`absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent transition-opacity duration-500 ${
+              isHovered ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
           <div className='absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent' />
           <div className='absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent-500/50 to-transparent' />
         </>

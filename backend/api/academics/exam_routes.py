@@ -186,7 +186,9 @@ class ScoreList(Resource):
         admin = get_current_admin()
         allowed = get_allowed_classes(admin.id) if admin else None
         if allowed is not None:
-            query = query.join(User, Score.student_id == User.id).filter(User.class_name.in_(allowed))
+            query = query.join(User, Score.student_id == User.id).filter(
+                User.class_name.in_(allowed)
+            )
         scores = query.order_by(Score.score.desc()).all()
         return APIResponse.success(data=[s.to_dict() for s in scores])
 
@@ -234,14 +236,18 @@ class ScoreList(Resource):
             )
         except IntegrityError:
             # R3 修复: DB 唯一约束兜底（并发窗口期重复提交）
-            return APIResponse.bad_request(message="该学生此科目成绩已存在（并发重复提交），请刷新后编辑原记录")
+            return APIResponse.bad_request(
+                message="该学生此科目成绩已存在（并发重复提交），请刷新后编辑原记录"
+            )
         score = get_by_id(Score, new_id)
         return APIResponse.success(data=score.to_dict(), message="创建成功")
 
 
 @ns_scores.route("/batch")
 class ScoreBatch(Resource):
-    @ns_scores.doc("batch_create_scores", description="批量录入成绩（支持 student_id 或 card_id 识别学生）")
+    @ns_scores.doc(
+        "batch_create_scores", description="批量录入成绩（支持 student_id 或 card_id 识别学生）"
+    )
     @requires_permission("score.entry")
     def post(self):
         data = request.get_json() or {}
@@ -257,7 +263,9 @@ class ScoreBatch(Resource):
         # R9 修复: 已关闭考试禁止录入成绩
         if exam.status == "closed":
             return APIResponse.bad_request(message="考试已关闭，禁止录入成绩")
-        operator_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        operator_id = (
+            getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
+        )
         created = 0
         errors = []
         valid = []
@@ -301,25 +309,35 @@ class ScoreBatch(Resource):
                 exam_id=exam_id, student_id=student.id, subject_id=subject_id
             ).first()
             if existing:
-                errors.append({"index": idx, "message": f"学生{student.name}该科目成绩已存在，跳过（可编辑原记录）"})
+                errors.append(
+                    {
+                        "index": idx,
+                        "message": f"学生{student.name}该科目成绩已存在，跳过（可编辑原记录）",
+                    }
+                )
                 continue
-            valid.append({
-                "exam_id": exam_id,
-                "student_id": student.id,
-                "subject_id": subject_id,
-                "score": score_val,
-                "full_score": item.get("full_score", 100),
-                "status": item.get("status", "pending"),
-                "remark": item.get("remark"),
-                "entered_by": operator_id,
-            })
+            valid.append(
+                {
+                    "exam_id": exam_id,
+                    "student_id": student.id,
+                    "subject_id": subject_id,
+                    "score": score_val,
+                    "full_score": item.get("full_score", 100),
+                    "status": item.get("status", "pending"),
+                    "remark": item.get("remark"),
+                    "entered_by": operator_id,
+                }
+            )
             created += 1
         if created:
             try:
                 academics_service.batch_create_scores(valid)
             except IntegrityError:
                 # R3 修复: 唯一约束兜底（并发窗口重复提交整批失败 → 回滚避免半提交）
-                return APIResponse.error(message="批量录入失败：存在重复成绩（同学生同科目），请刷新后重试", status_code=400)
+                return APIResponse.error(
+                    message="批量录入失败：存在重复成绩（同学生同科目），请刷新后重试",
+                    status_code=400,
+                )
         return APIResponse.success(
             data={"created": created, "errors": errors, "total": len(items)},
             message="成功录入 %s 条，%s 条失败" % (created, len(errors)),
@@ -355,7 +373,9 @@ class ScoreResource(Resource):
             # E13 修复: 更新后分数格式非法 / 越界（消息逐字节保留）
             return APIResponse.bad_request(message=str(e))
         except IntegrityError:
-            return APIResponse.error(message="更新失败：该学生此科目成绩已存在（唯一冲突）", status_code=400)
+            return APIResponse.error(
+                message="更新失败：该学生此科目成绩已存在（唯一冲突）", status_code=400
+            )
         score = get_by_id(Score, score_id)
         return APIResponse.success(data=score.to_dict(), message="更新成功")
 
@@ -465,19 +485,27 @@ class StudentScoreAnalysis(Resource):
         student = get_by_id(User, student_id)
         if not student:
             return APIResponse.not_found(message="学生不存在")
-        scores = Score.query.filter_by(student_id=student_id).order_by(Score.entered_at.desc()).all()
+        scores = (
+            Score.query.filter_by(student_id=student_id).order_by(Score.entered_at.desc()).all()
+        )
         score_list = [s.to_dict() for s in scores]
         if score_list:
             raw_scores = [s.score for s in scores if s.score is not None]
             avg = sum(raw_scores) / len(raw_scores) if raw_scores else 0
         else:
             avg = 0
-        return APIResponse.success(data={
-            "student": {"id": student.id, "name": student.name, "class_name": student.class_name},
-            "scores": score_list,
-            "total": len(score_list),
-            "avg_score": round(avg, 2),
-        })
+        return APIResponse.success(
+            data={
+                "student": {
+                    "id": student.id,
+                    "name": student.name,
+                    "class_name": student.class_name,
+                },
+                "scores": score_list,
+                "total": len(score_list),
+                "avg_score": round(avg, 2),
+            }
+        )
 
 
 @ns_score_analysis.route("/class/<string:class_name>")
@@ -490,21 +518,31 @@ class ClassScoreAnalysis(Resource):
         if not students:
             return APIResponse.not_found(message="班级不存在")
         student_ids = [s.id for s in students]
-        scores = Score.query.filter(Score.student_id.in_(student_ids)).order_by(Score.entered_at.desc()).all()
+        scores = (
+            Score.query.filter(Score.student_id.in_(student_ids))
+            .order_by(Score.entered_at.desc())
+            .all()
+        )
         score_list = [s.to_dict() for s in scores]
         exam_ids = set(s.exam_id for s in scores)
-        exams = {e.id: e.to_dict() for e in Exam.query.filter(Exam.id.in_(exam_ids)).all()} if exam_ids else {}
+        exams = (
+            {e.id: e.to_dict() for e in Exam.query.filter(Exam.id.in_(exam_ids)).all()}
+            if exam_ids
+            else {}
+        )
         subjects = {s.subject_rel.name for s in scores if s.subject_rel}
         raw_scores = [s.score for s in scores if s.score is not None]
-        return APIResponse.success(data={
-            "class_name": class_name,
-            "student_count": len(students),
-            "scores": score_list,
-            "total": len(score_list),
-            "subjects": list(subjects),
-            "exams": list(exams.values()),
-            "avg_score": round(sum(raw_scores) / len(raw_scores), 2) if raw_scores else 0,
-        })
+        return APIResponse.success(
+            data={
+                "class_name": class_name,
+                "student_count": len(students),
+                "scores": score_list,
+                "total": len(score_list),
+                "subjects": list(subjects),
+                "exams": list(exams.values()),
+                "avg_score": round(sum(raw_scores) / len(raw_scores), 2) if raw_scores else 0,
+            }
+        )
 
 
 @ns_scores.route("/export")
@@ -526,23 +564,38 @@ class ScoreExport(Resource):
             query = query.filter_by(subject_id=subject_id)
         scores = query.order_by(Score.subject_id, Score.score.desc()).all()
         exam = Exam.query.get(exam_id)
-        headers = ["学生姓名", "学号", "班级", "科目", "分数", "满分", "排名", "状态", "录入时间", "备注"]
+        headers = [
+            "学生姓名",
+            "学号",
+            "班级",
+            "科目",
+            "分数",
+            "满分",
+            "排名",
+            "状态",
+            "录入时间",
+            "备注",
+        ]
         rows = []
         # R7: 排名列动态计算（Score.rank 列已废弃恒 None；按当前排序 1..N）
         for _idx, s in enumerate(scores, 1):
             u = s.student
-            rows.append({
-                "学生姓名": u.name if u else "",
-                "学号": u.card_id if u else "",
-                "班级": (u.class_info.name if u and u.class_info else (u.class_name if u else "")),
-                "科目": s.subject_rel.name if s.subject_rel else "",
-                "分数": s.score,
-                "满分": s.full_score,
-                "排名": _idx,
-                "状态": s.status or "",
-                "录入时间": s.entered_at.strftime("%Y-%m-%d %H:%M") if s.entered_at else "",
-                "备注": s.remark or "",
-            })
+            rows.append(
+                {
+                    "学生姓名": u.name if u else "",
+                    "学号": u.card_id if u else "",
+                    "班级": (
+                        u.class_info.name if u and u.class_info else (u.class_name if u else "")
+                    ),
+                    "科目": s.subject_rel.name if s.subject_rel else "",
+                    "分数": s.score,
+                    "满分": s.full_score,
+                    "排名": _idx,
+                    "状态": s.status or "",
+                    "录入时间": s.entered_at.strftime("%Y-%m-%d %H:%M") if s.entered_at else "",
+                    "备注": s.remark or "",
+                }
+            )
         filename = "成绩导出_%s" % (exam.name if exam else exam_id)
         output = export_service.export_to_excel(rows, headers, filename)
         return send_file(
@@ -572,15 +625,17 @@ class ExamExport(Resource):
         rows = []
         for e in exams:
             subjects = ",".join(e.subjects) if isinstance(e.subjects, list) else (e.subjects or "")
-            rows.append({
-                "考试名称": e.name,
-                "类型": e.exam_type or "",
-                "科目": subjects,
-                "开始时间": e.start_time.strftime("%Y-%m-%d %H:%M") if e.start_time else "",
-                "结束时间": e.end_time.strftime("%Y-%m-%d %H:%M") if e.end_time else "",
-                "重要性": e.importance or "",
-                "状态": e.status or "",
-            })
+            rows.append(
+                {
+                    "考试名称": e.name,
+                    "类型": e.exam_type or "",
+                    "科目": subjects,
+                    "开始时间": e.start_time.strftime("%Y-%m-%d %H:%M") if e.start_time else "",
+                    "结束时间": e.end_time.strftime("%Y-%m-%d %H:%M") if e.end_time else "",
+                    "重要性": e.importance or "",
+                    "状态": e.status or "",
+                }
+            )
         output = export_service.export_to_excel(rows, headers, "考试列表导出")
         return send_file(
             output,

@@ -53,7 +53,12 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     if (!res.ok) return null;
     const env = await res.json();
     // M6: 检查业务信封，success===false 时不当作成功数据返回
-    if (env && typeof env === 'object' && 'success' in env && (env as { success?: boolean }).success === false) {
+    if (
+      env &&
+      typeof env === 'object' &&
+      'success' in env &&
+      (env as { success?: boolean }).success === false
+    ) {
       return null;
     }
     return ((env && 'data' in env ? env.data : env) ?? null) as T | null;
@@ -149,14 +154,47 @@ export const SystemMetrics: React.FC = () => {
   const pctSeries = useMemo(() => series, [series]);
 
   const latestCards = [
-    { key: 'cpu_percent', label: 'CPU', unit: '%', icon: <Cpu size={16} />, color: 'text-blue-500' },
-    { key: 'memory_percent', label: '内存', unit: '%', icon: <MemoryStick size={16} />, color: 'text-green-500' },
-    { key: 'disk_percent', label: '磁盘', unit: '%', icon: <HardDrive size={16} />, color: 'text-orange-500' },
-    { key: 'net_sent', label: '网络发送', unit: 'B', icon: <Network size={16} />, color: 'text-purple-500' },
-    { key: 'net_recv', label: '网络接收', unit: 'B', icon: <Network size={16} />, color: 'text-pink-500' },
+    {
+      key: 'cpu_percent',
+      label: 'CPU',
+      unit: '%',
+      icon: <Cpu size={16} />,
+      color: 'text-blue-500',
+    },
+    {
+      key: 'memory_percent',
+      label: '内存',
+      unit: '%',
+      icon: <MemoryStick size={16} />,
+      color: 'text-green-500',
+    },
+    {
+      key: 'disk_percent',
+      label: '磁盘',
+      unit: '%',
+      icon: <HardDrive size={16} />,
+      color: 'text-orange-500',
+    },
+    {
+      key: 'net_sent',
+      label: '网络发送',
+      unit: 'B',
+      icon: <Network size={16} />,
+      color: 'text-purple-500',
+    },
+    {
+      key: 'net_recv',
+      label: '网络接收',
+      unit: 'B',
+      icon: <Network size={16} />,
+      color: 'text-pink-500',
+    },
   ];
 
-  const fmtTime = (t?: string | null) => (t ? new Date(String(t)).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '');
+  const fmtTime = (t?: string | null) =>
+    t
+      ? new Date(String(t)).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      : '';
 
   return (
     <div className='space-y-6'>
@@ -164,7 +202,9 @@ export const SystemMetrics: React.FC = () => {
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-xl font-bold text-gray-800 dark:text-slate-100'>系统指标趋势</h1>
-          <p className='text-sm text-gray-500 dark:text-slate-400 mt-1'>后台每 60 秒采样的 CPU / 内存 / 磁盘 / 网络历史趋势</p>
+          <p className='text-sm text-gray-500 dark:text-slate-400 mt-1'>
+            后台每 60 秒采样的 CPU / 内存 / 磁盘 / 网络历史趋势
+          </p>
         </div>
         <div className='flex items-center gap-3'>
           <select
@@ -173,7 +213,9 @@ export const SystemMetrics: React.FC = () => {
             className='px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-100'
           >
             {HOUR_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
           <PermissionButton
@@ -189,7 +231,10 @@ export const SystemMetrics: React.FC = () => {
       </div>
 
       {loadError && (
-        <div role='alert' className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300'>
+        <div
+          role='alert'
+          className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300'
+        >
           <Activity size={16} className='flex-shrink-0' />
           系统指标加载失败，请稍后重试
         </div>
@@ -200,17 +245,24 @@ export const SystemMetrics: React.FC = () => {
         {latestCards.map((c) => {
           const v = latest[c.key];
           return (
-            <div key={c.key} className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'>
+            <div
+              key={c.key}
+              className='bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700'
+            >
               <div className='flex items-center gap-2 mb-1 text-gray-500 dark:text-slate-400'>
                 <span className={c.color}>{c.icon}</span>
                 <span className='text-sm'>{c.label}</span>
               </div>
               <div className='text-2xl font-bold text-gray-800 dark:text-slate-100'>
                 {v ? v.value : '—'}
-                {v?.unit && <span className='text-sm font-normal text-gray-400 ml-0.5'>{v.unit}</span>}
+                {v?.unit && (
+                  <span className='text-sm font-normal text-gray-400 ml-0.5'>{v.unit}</span>
+                )}
               </div>
               {v?.updated_at && (
-                <div className='text-xs text-gray-400 mt-1'>更新于 {new Date(v.updated_at).toLocaleTimeString('zh-CN')}</div>
+                <div className='text-xs text-gray-400 mt-1'>
+                  更新于 {new Date(v.updated_at).toLocaleTimeString('zh-CN')}
+                </div>
               )}
             </div>
           );
@@ -226,21 +278,50 @@ export const SystemMetrics: React.FC = () => {
         {loading ? (
           <div className='h-64 flex items-center justify-center text-gray-400'>加载中...</div>
         ) : pctSeries.length === 0 ? (
-          <EmptyState title='暂无采样数据' description='系统指标采样线程尚未产生数据，请稍候或检查后端采样服务' />
+          <EmptyState
+            title='暂无采样数据'
+            description='系统指标采样线程尚未产生数据，请稍候或检查后端采样服务'
+          />
         ) : (
           <ResponsiveContainer width='100%' height={280}>
             <LineChart data={pctSeries} margin={{ top: 8, right: 16, left: -8, bottom: 8 }}>
               <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-              <XAxis dataKey='t' tickFormatter={fmtTime} tick={{ fontSize: 11, fill: '#94a3b8' }} minTickGap={24} />
+              <XAxis
+                dataKey='t'
+                tickFormatter={fmtTime}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                minTickGap={24}
+              />
               <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#94a3b8' }} unit='%' />
               <Tooltip
                 labelFormatter={(l) => `时间 ${l}`}
                 formatter={(val: number, name: string) => [`${val}%`, name]}
               />
               <Legend />
-              <Line type='monotone' dataKey='cpu_percent' name='CPU' stroke={CHART_COLORS.cpu_percent} dot={false} strokeWidth={2} />
-              <Line type='monotone' dataKey='memory_percent' name='内存' stroke={CHART_COLORS.memory_percent} dot={false} strokeWidth={2} />
-              <Line type='monotone' dataKey='disk_percent' name='磁盘' stroke={CHART_COLORS.disk_percent} dot={false} strokeWidth={2} />
+              <Line
+                type='monotone'
+                dataKey='cpu_percent'
+                name='CPU'
+                stroke={CHART_COLORS.cpu_percent}
+                dot={false}
+                strokeWidth={2}
+              />
+              <Line
+                type='monotone'
+                dataKey='memory_percent'
+                name='内存'
+                stroke={CHART_COLORS.memory_percent}
+                dot={false}
+                strokeWidth={2}
+              />
+              <Line
+                type='monotone'
+                dataKey='disk_percent'
+                name='磁盘'
+                stroke={CHART_COLORS.disk_percent}
+                dot={false}
+                strokeWidth={2}
+              />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -260,19 +341,42 @@ export const SystemMetrics: React.FC = () => {
           <ResponsiveContainer width='100%' height={280}>
             <LineChart data={pctSeries} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
               <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-              <XAxis dataKey='t' tickFormatter={fmtTime} tick={{ fontSize: 11, fill: '#94a3b8' }} minTickGap={24} />
+              <XAxis
+                dataKey='t'
+                tickFormatter={fmtTime}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                minTickGap={24}
+              />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-              <Tooltip labelFormatter={(l) => `时间 ${l}`} formatter={(val: number, name: string) => [`${val} B`, name]} />
+              <Tooltip
+                labelFormatter={(l) => `时间 ${l}`}
+                formatter={(val: number, name: string) => [`${val} B`, name]}
+              />
               <Legend />
-              <Line type='monotone' dataKey='net_sent' name='发送' stroke={CHART_COLORS.net_sent} dot={false} strokeWidth={2} />
-              <Line type='monotone' dataKey='net_recv' name='接收' stroke={CHART_COLORS.net_recv} dot={false} strokeWidth={2} />
+              <Line
+                type='monotone'
+                dataKey='net_sent'
+                name='发送'
+                stroke={CHART_COLORS.net_sent}
+                dot={false}
+                strokeWidth={2}
+              />
+              <Line
+                type='monotone'
+                dataKey='net_recv'
+                name='接收'
+                stroke={CHART_COLORS.net_recv}
+                dot={false}
+                strokeWidth={2}
+              />
             </LineChart>
           </ResponsiveContainer>
         )}
       </section>
 
       <div className='text-xs text-gray-400'>
-        共 {total} 条采样记录（当前视图窗口 {HOUR_OPTIONS.find((o) => o.value === hours)?.label}）。保留期 30 天，过期数据自动清理。
+        共 {total} 条采样记录（当前视图窗口 {HOUR_OPTIONS.find((o) => o.value === hours)?.label}
+        ）。保留期 30 天，过期数据自动清理。
       </div>
     </div>
   );

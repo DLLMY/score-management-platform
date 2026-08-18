@@ -4,6 +4,7 @@
 `get_by_id(ClassInfo, ...)` + 统一错误返回，重复三份。本模块收敛，
 后续新增实体引用校验（学生/科目等）同样在此扩展。
 """
+
 from models import ClassInfo, User, get_by_id
 
 

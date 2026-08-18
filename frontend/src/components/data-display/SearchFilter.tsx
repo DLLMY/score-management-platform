@@ -1,4 +1,13 @@
-import { useState, useEffect, useRef, ChangeEventHandler, KeyboardEventHandler, MouseEventHandler, ReactNode, memo } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  ChangeEventHandler,
+  KeyboardEventHandler,
+  MouseEventHandler,
+  ReactNode,
+  memo,
+} from 'react';
 import { Search, X, RotateCcw } from 'lucide-react';
 
 export interface FilterOption {
@@ -27,7 +36,12 @@ export interface SearchFilterProps {
   autoSearch?: boolean;
   showReset?: boolean;
   onReset?: () => void;
-  selectFilters?: { label: string; options: SelectFilterOption[]; value: string; onChange: (value: string) => void }[];
+  selectFilters?: {
+    label: string;
+    options: SelectFilterOption[];
+    value: string;
+    onChange: (value: string) => void;
+  }[];
   children?: ReactNode;
   maxWidth?: string;
 }
@@ -135,11 +149,12 @@ function SearchFilter({
     if (onFilterChange && activeFilter !== undefined) {
       onFilterChange(activeFilter);
     }
-    selectFilters.forEach(sf => sf.onChange(sf.value));
+    selectFilters.forEach((sf) => sf.onChange(sf.value));
     onReset?.();
   };
 
-  const hasActiveFilters = localSearchTerm || selectFilters.some(sf => sf.value !== sf.options[0]?.value);
+  const hasActiveFilters =
+    localSearchTerm || selectFilters.some((sf) => sf.value !== sf.options[0]?.value);
 
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
@@ -195,7 +210,9 @@ function SearchFilter({
             className='px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all'
           >
             {sf.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>

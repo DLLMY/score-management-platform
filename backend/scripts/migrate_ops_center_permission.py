@@ -29,8 +29,18 @@ import sys
 
 # 待注册的权限目录：(code, name, category, description)
 PERMS_TO_REGISTER = [
-    ("ops_center.view", "运维中心查看", "系统管理", "查看系统运维中心聚合仪表盘（健康/性能/MQTT/日志/设备总览）"),
-    ("system.view", "系统查看", "系统管理", "查看系统健康/性能/统计等监控数据（/api/system/health|performance|stats）"),
+    (
+        "ops_center.view",
+        "运维中心查看",
+        "系统管理",
+        "查看系统运维中心聚合仪表盘（健康/性能/MQTT/日志/设备总览）",
+    ),
+    (
+        "system.view",
+        "系统查看",
+        "系统管理",
+        "查看系统健康/性能/统计等监控数据（/api/system/health|performance|stats）",
+    ),
 ]
 
 TARGET_ROLES = ["admin", "super_admin", "operator"]

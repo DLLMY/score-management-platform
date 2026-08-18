@@ -46,7 +46,10 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { usePermissionStore } from '../../stores';
-import { DEFAULT_PERMISSIONS_FOR_TEACHER, DEFAULT_PERMISSIONS_FOR_ADMIN } from '../../config/permissions';
+import {
+  DEFAULT_PERMISSIONS_FOR_TEACHER,
+  DEFAULT_PERMISSIONS_FOR_ADMIN,
+} from '../../config/permissions';
 
 // 类型定义
 interface MenuItemData {
@@ -105,7 +108,9 @@ const MenuItem = memo<MenuItemProps>(({ item, isActive, depth = 0, isCollapsed }
     <li key={item.path} className={`${isCollapsed ? 'ml-0' : `ml-${depth * 2}`}`}>
       <Link
         to={item.path}
-        className={`relative w-full flex items-center ${isCollapsed ? 'justify-center px-1 py-2' : 'gap-2.5 pl-6 pr-3 py-2'} rounded-xl transition-colors duration-150 ${
+        className={`relative w-full flex items-center ${
+          isCollapsed ? 'justify-center px-1 py-2' : 'gap-2.5 pl-6 pr-3 py-2'
+        } rounded-xl transition-colors duration-150 ${
           isActive
             ? isCollapsed
               ? 'bg-primary-500/15 dark:bg-primary-500/20'
@@ -128,8 +133,8 @@ const MenuItem = memo<MenuItemProps>(({ item, isActive, depth = 0, isCollapsed }
                 ? 'bg-gradient-to-br from-primary-500/80 to-accent-500/80 shadow-md shadow-primary-500/25'
                 : 'bg-primary-100/80 dark:bg-primary-500/20'
               : isCollapsed
-                ? 'bg-gray-100/60 dark:bg-slate-700/50'
-                : 'bg-gray-100/40 dark:bg-slate-700/40'
+              ? 'bg-gray-100/60 dark:bg-slate-700/50'
+              : 'bg-gray-100/40 dark:bg-slate-700/40'
           }`}
         >
           <Icon
@@ -139,7 +144,9 @@ const MenuItem = memo<MenuItemProps>(({ item, isActive, depth = 0, isCollapsed }
           />
         </div>
 
-        <span className={`relative font-medium flex-1 text-left text-sm ${isCollapsed ? 'hidden' : ''}`}>
+        <span
+          className={`relative font-medium flex-1 text-left text-sm ${isCollapsed ? 'hidden' : ''}`}
+        >
           {item.label}
         </span>
 
@@ -162,74 +169,88 @@ interface GroupHeaderProps {
   isCollapsed: boolean;
 }
 
-const GroupHeader = memo<GroupHeaderProps>(({ group, hasActive, isExpanded, onToggle, isCollapsed }) => {
-  const GroupIcon = group.icon;
+const GroupHeader = memo<GroupHeaderProps>(
+  ({ group, hasActive, isExpanded, onToggle, isCollapsed }) => {
+    const GroupIcon = group.icon;
 
-  return (
-    <button
-      onClick={onToggle}
-      className={`relative w-full flex items-center justify-center ${isCollapsed ? 'px-1 py-2.5' : 'gap-3 px-3 py-3'} rounded-2xl transition-colors duration-150 group overflow-hidden ${
-        hasActive || isExpanded
-          ? 'text-gray-800 dark:text-slate-200'
-          : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-      }`}
-    >
-      <div
-        className={`absolute inset-0 rounded-2xl ${
-          hasActive
-            ? isCollapsed
-              ? 'bg-gradient-to-br from-primary-500/20 to-accent-500/10'
-              : 'bg-gradient-to-r from-primary-500/10 via-blue-500/5 to-transparent'
-            : isExpanded
+    return (
+      <button
+        onClick={onToggle}
+        className={`relative w-full flex items-center justify-center ${
+          isCollapsed ? 'px-1 py-2.5' : 'gap-3 px-3 py-3'
+        } rounded-2xl transition-colors duration-150 group overflow-hidden ${
+          hasActive || isExpanded
+            ? 'text-gray-800 dark:text-slate-200'
+            : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+        }`}
+      >
+        <div
+          className={`absolute inset-0 rounded-2xl ${
+            hasActive
+              ? isCollapsed
+                ? 'bg-gradient-to-br from-primary-500/20 to-accent-500/10'
+                : 'bg-gradient-to-r from-primary-500/10 via-blue-500/5 to-transparent'
+              : isExpanded
               ? 'bg-gray-100/60 dark:bg-slate-700/50'
               : 'bg-gray-50/50 dark:bg-slate-800/50'
-        }`}
-      />
+          }`}
+        />
 
-      <div
-        className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full z-10 ${
-          hasActive && !isCollapsed ? 'bg-gradient-to-b from-primary-500 to-accent-500 opacity-100' : 'opacity-0'
-        }`}
-      />
+        <div
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full z-10 ${
+            hasActive && !isCollapsed
+              ? 'bg-gradient-to-b from-primary-500 to-accent-500 opacity-100'
+              : 'opacity-0'
+          }`}
+        />
 
-      <div
-        className={`relative flex items-center justify-center z-10 ${
-          isCollapsed ? 'w-10 h-10 rounded-xl' : 'w-9 h-9 rounded-xl'
-        } ${
-          hasActive
-            ? isCollapsed
-              ? 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/35 scale-110'
-              : 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/30 scale-110'
-            : isCollapsed
+        <div
+          className={`relative flex items-center justify-center z-10 ${
+            isCollapsed ? 'w-10 h-10 rounded-xl' : 'w-9 h-9 rounded-xl'
+          } ${
+            hasActive
+              ? isCollapsed
+                ? 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/35 scale-110'
+                : 'bg-gradient-to-br from-primary-500 to-accent-500 shadow-lg shadow-primary-500/30 scale-110'
+              : isCollapsed
               ? 'bg-gray-100/80 dark:bg-slate-700/60'
               : 'bg-gray-100/70 dark:bg-slate-700/50'
-        }`}
-      >
-        <GroupIcon
-          className={`${isCollapsed ? 'w-5 h-5' : 'w-5 h-5'} ${hasActive ? 'text-white' : 'text-gray-600 dark:text-slate-300'}`}
-        />
-      </div>
+          }`}
+        >
+          <GroupIcon
+            className={`${isCollapsed ? 'w-5 h-5' : 'w-5 h-5'} ${
+              hasActive ? 'text-white' : 'text-gray-600 dark:text-slate-300'
+            }`}
+          />
+        </div>
 
-      <span className={`relative font-semibold flex-1 text-left text-sm z-10 tracking-wide ${isCollapsed ? 'hidden' : ''}`}>
-        {group.label}
-      </span>
+        <span
+          className={`relative font-semibold flex-1 text-left text-sm z-10 tracking-wide ${
+            isCollapsed ? 'hidden' : ''
+          }`}
+        >
+          {group.label}
+        </span>
 
-      <div
-        className={`relative w-7 h-7 flex items-center justify-center rounded-xl z-10 ${isCollapsed ? 'hidden' : ''} ${
-          hasActive
-            ? 'bg-primary-100/80 dark:bg-primary-500/20 text-primary-600'
-            : 'bg-gray-100/50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-400'
-        }`}
-      >
-        {isExpanded ? (
-          <ChevronDown className='w-4.5 h-4.5' />
-        ) : (
-          <ChevronRight className='w-4.5 h-4.5' />
-        )}
-      </div>
-    </button>
-  );
-});
+        <div
+          className={`relative w-7 h-7 flex items-center justify-center rounded-xl z-10 ${
+            isCollapsed ? 'hidden' : ''
+          } ${
+            hasActive
+              ? 'bg-primary-100/80 dark:bg-primary-500/20 text-primary-600'
+              : 'bg-gray-100/50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-400'
+          }`}
+        >
+          {isExpanded ? (
+            <ChevronDown className='w-4.5 h-4.5' />
+          ) : (
+            <ChevronRight className='w-4.5 h-4.5' />
+          )}
+        </div>
+      </button>
+    );
+  }
+);
 
 interface SidebarProps {
   isMobileMenuOpen?: boolean;
@@ -240,10 +261,16 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
   const location = useLocation();
   const navigate = useNavigate();
   const role = useMemo<string | null>(() => getCurrentRole(), []);
-  const { hasPermission, hasAnyPermission, isAdmin: isSuperAdmin, permissions, isLoading } = usePermissionStore();
-  
+  const {
+    hasPermission,
+    hasAnyPermission,
+    isAdmin: isSuperAdmin,
+    permissions,
+    isLoading,
+  } = usePermissionStore();
+
   const isAdmin = useMemo<boolean>(() => role === 'admin' || isSuperAdmin, [role, isSuperAdmin]);
-  
+
   useEffect(() => {
     const adminStr = localStorage.getItem('admin');
     if (adminStr && isLoading) {
@@ -269,7 +296,7 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [internalMobileMenuOpen, setInternalMobileMenuOpen] = useState<boolean>(false);
-  
+
   const isMobileMenuOpen = externalMobileMenuOpen ?? internalMobileMenuOpen;
 
   const closeMobileMenu = useCallback(() => {
@@ -354,125 +381,229 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
     [isItemActive]
   );
 
-  const menuGroups = useMemo<MenuGroup[]>(() => [
-    {
-      id: 'main',
-      label: '首页',
-      icon: Home,
-      items: [
-        { path: '/dashboard', label: '数据概览', icon: Activity, permission: 'score.view' },
-        { path: '/users', label: '学生管理', icon: Users, permission: 'student.view' },
-        { path: '/analysis', label: '数据分析', icon: BarChart3, permission: 'algorithm.view' },
-        { path: '/class-compare', label: '班级对比', icon: BarChart3, permission: 'algorithm.view' },
-      ],
-    },
-    {
-      id: 'scoreManagement',
-      label: '积分管理',
-      icon: Trophy,
-      items: [
-        { path: '/rules', label: '积分规则', icon: FileKey, permission: 'rule.view' },
-        { path: '/rank-rules', label: '排名规则', icon: Trophy, permission: 'rule.view' },
-        { path: '/categories', label: '分类管理', icon: Tags, permission: 'rule.view' },
-        { path: '/nlp-management', label: '智能评分', icon: Sparkles, permission: 'algorithm.view' },
-      ],
-    },
-    {
-      id: 'academicManagement',
-      label: '教务管理',
-      icon: GraduationCap,
-      items: [
-        { path: '/class-management', label: '班级管理', icon: Building2, permission: 'class.view' },
-        { path: '/subject-management', label: '科目管理', icon: BookOpen, permission: 'subject.view' },
-        { path: '/course-schedule', label: '课程表管理', icon: Calendar, permission: 'schedule.view' },
-        { path: '/class-time-settings', label: '时间规则设置', icon: Clock, permission: 'schedule.view' },
-        { path: '/class-period-settings', label: '课程节次管理', icon: Clock, permission: 'period.view' },
-      ],
-    },
-    {
-      id: 'teacherWorkbench',
-      label: '班主任工作台',
-      icon: Users,
-      items: [
-        { path: '/seating-chart', label: '座次表', icon: Grid3x3, permission: 'class.view' },
-        { path: '/duty-roster', label: '值日生表', icon: ClipboardList, permission: 'class.view' },
-        { path: '/committee', label: '班委名单', icon: Users, permission: 'class.view' },
-        { path: '/parent-contact', label: '家长联系', icon: Phone, permission: 'class.view' },
-        { path: '/homework-check', label: '作业检查', icon: BookCheck, permission: 'homework.view' },
-        { path: '/attendance', label: '考勤管理', icon: CalendarCheck, permission: 'attendance.view' },
-        { path: '/study-groups', label: '学习小组', icon: Users, permission: 'class.view' },
-        { path: '/mental-health', label: '心理健康', icon: Heart, permission: 'class.view' },
-        { path: '/activity', label: '文体活动', icon: PartyPopper, permission: 'class.view' },
-        { path: '/culture', label: '班级文化', icon: Palette, permission: 'class.view' },
-        { path: '/study-guide', label: '学法指导', icon: GraduationCap, permission: 'class.view' },
-        { path: '/phonebox-policy', label: '手机箱开箱策略', icon: Smartphone, permission: 'phonebox.unlock.manage' },
-      ],
-    },
-    {
-      id: 'examManagement',
-      label: '成绩管理',
-      icon: ClipboardCheck,
-      items: [
-        { path: '/exams', label: '考试管理', icon: ClipboardCheck, permission: 'exam.view' },
-        { path: '/score-entry', label: '成绩录入', icon: FileKey, permission: 'score.entry' },
-        { path: '/score-records', label: '成绩档案', icon: BookOpen, permission: 'score.view' },
-        { path: '/score-analysis', label: '成绩分析', icon: BarChart3, permission: 'algorithm.view' },
-        { path: '/algorithm-analysis', label: '算法分析', icon: Sparkles, permission: 'algorithm.view' },
-      ],
-    },
-    {
-      id: 'deviceManagement',
-      label: '设备管理',
-      icon: Box,
-      items: [
-        { path: '/devices', label: '设备管理', icon: Box, permission: 'device.view' },
-        { path: '/device-groups', label: '设备分组', icon: Server, permission: 'device.view' },
-        { path: '/firmware', label: '固件管理', icon: Upload, permission: 'firmware.manage' },
-      ],
-    },
-    {
-      id: 'notificationCenter',
-      label: '通知中心',
-      icon: Bell,
-      items: [
-        { path: '/notifications', label: '通知管理', icon: Bell, permission: 'notification.view' },
-        { path: '/approvals', label: '审批管理', icon: ClipboardCheck, permission: 'score.approve' },
-        { path: '/remote-notify', label: '远程通知', icon: Bell, permission: 'notification.send' },
-        { path: '/wake-on-lan', label: '远程开机', icon: Power, permission: 'device.edit' },
-      ],
-    },
-    {
-      id: 'systemAdmin',
-      label: '系统管理',
-      icon: Settings,
-      permission: 'system.settings',
-      items: [
-        { path: '/settings', label: '系统设置', icon: Sliders, permission: 'system.settings' },
-        { path: '/permission', label: '权限管理', icon: Shield, permission: 'system.roles' },
-        
-        { path: '/data-sync', label: '数据同步', icon: RefreshCw, permission: 'system.settings' },
-      ],
-    },
-    {
-      id: 'opsCenter',
-      label: '运维中心',
-      icon: Server,
-      permission: 'ops_center.view',
-      items: [
-        { path: '/ops-center', label: '运维总览', icon: Activity, permission: 'ops_center.view' },
-        { path: '/ops-center/telemetry', label: '前端遥测', icon: Gauge, permission: 'ops_center.view' },
-        { path: '/ops-center/metrics', label: '系统指标趋势', icon: LineChart, permission: 'ops_center.view' },
-        { path: '/diagnostics', label: '系统诊断', icon: Server, permission: 'device.view' },
-        { path: '/security-audit', label: '安全审计', icon: Shield, permission: 'system.settings' },
-        { path: '/operation-logs', label: '操作日志', icon: History, permission: 'system.logs' },
-      ],
-    },
-  ], []);
+  const menuGroups = useMemo<MenuGroup[]>(
+    () => [
+      {
+        id: 'main',
+        label: '首页',
+        icon: Home,
+        items: [
+          { path: '/dashboard', label: '数据概览', icon: Activity, permission: 'score.view' },
+          { path: '/users', label: '学生管理', icon: Users, permission: 'student.view' },
+          { path: '/analysis', label: '数据分析', icon: BarChart3, permission: 'algorithm.view' },
+          {
+            path: '/class-compare',
+            label: '班级对比',
+            icon: BarChart3,
+            permission: 'algorithm.view',
+          },
+        ],
+      },
+      {
+        id: 'scoreManagement',
+        label: '积分管理',
+        icon: Trophy,
+        items: [
+          { path: '/rules', label: '积分规则', icon: FileKey, permission: 'rule.view' },
+          { path: '/rank-rules', label: '排名规则', icon: Trophy, permission: 'rule.view' },
+          { path: '/categories', label: '分类管理', icon: Tags, permission: 'rule.view' },
+          {
+            path: '/nlp-management',
+            label: '智能评分',
+            icon: Sparkles,
+            permission: 'algorithm.view',
+          },
+        ],
+      },
+      {
+        id: 'academicManagement',
+        label: '教务管理',
+        icon: GraduationCap,
+        items: [
+          {
+            path: '/class-management',
+            label: '班级管理',
+            icon: Building2,
+            permission: 'class.view',
+          },
+          {
+            path: '/subject-management',
+            label: '科目管理',
+            icon: BookOpen,
+            permission: 'subject.view',
+          },
+          {
+            path: '/course-schedule',
+            label: '课程表管理',
+            icon: Calendar,
+            permission: 'schedule.view',
+          },
+          {
+            path: '/class-time-settings',
+            label: '时间规则设置',
+            icon: Clock,
+            permission: 'schedule.view',
+          },
+          {
+            path: '/class-period-settings',
+            label: '课程节次管理',
+            icon: Clock,
+            permission: 'period.view',
+          },
+        ],
+      },
+      {
+        id: 'teacherWorkbench',
+        label: '班主任工作台',
+        icon: Users,
+        items: [
+          { path: '/seating-chart', label: '座次表', icon: Grid3x3, permission: 'class.view' },
+          {
+            path: '/duty-roster',
+            label: '值日生表',
+            icon: ClipboardList,
+            permission: 'class.view',
+          },
+          { path: '/committee', label: '班委名单', icon: Users, permission: 'class.view' },
+          { path: '/parent-contact', label: '家长联系', icon: Phone, permission: 'class.view' },
+          {
+            path: '/homework-check',
+            label: '作业检查',
+            icon: BookCheck,
+            permission: 'homework.view',
+          },
+          {
+            path: '/attendance',
+            label: '考勤管理',
+            icon: CalendarCheck,
+            permission: 'attendance.view',
+          },
+          { path: '/study-groups', label: '学习小组', icon: Users, permission: 'class.view' },
+          { path: '/mental-health', label: '心理健康', icon: Heart, permission: 'class.view' },
+          { path: '/activity', label: '文体活动', icon: PartyPopper, permission: 'class.view' },
+          { path: '/culture', label: '班级文化', icon: Palette, permission: 'class.view' },
+          {
+            path: '/study-guide',
+            label: '学法指导',
+            icon: GraduationCap,
+            permission: 'class.view',
+          },
+          {
+            path: '/phonebox-policy',
+            label: '手机箱开箱策略',
+            icon: Smartphone,
+            permission: 'phonebox.unlock.manage',
+          },
+        ],
+      },
+      {
+        id: 'examManagement',
+        label: '成绩管理',
+        icon: ClipboardCheck,
+        items: [
+          { path: '/exams', label: '考试管理', icon: ClipboardCheck, permission: 'exam.view' },
+          { path: '/score-entry', label: '成绩录入', icon: FileKey, permission: 'score.entry' },
+          { path: '/score-records', label: '成绩档案', icon: BookOpen, permission: 'score.view' },
+          {
+            path: '/score-analysis',
+            label: '成绩分析',
+            icon: BarChart3,
+            permission: 'algorithm.view',
+          },
+          {
+            path: '/algorithm-analysis',
+            label: '算法分析',
+            icon: Sparkles,
+            permission: 'algorithm.view',
+          },
+        ],
+      },
+      {
+        id: 'deviceManagement',
+        label: '设备管理',
+        icon: Box,
+        items: [
+          { path: '/devices', label: '设备管理', icon: Box, permission: 'device.view' },
+          { path: '/device-groups', label: '设备分组', icon: Server, permission: 'device.view' },
+          { path: '/firmware', label: '固件管理', icon: Upload, permission: 'firmware.manage' },
+        ],
+      },
+      {
+        id: 'notificationCenter',
+        label: '通知中心',
+        icon: Bell,
+        items: [
+          {
+            path: '/notifications',
+            label: '通知管理',
+            icon: Bell,
+            permission: 'notification.view',
+          },
+          {
+            path: '/approvals',
+            label: '审批管理',
+            icon: ClipboardCheck,
+            permission: 'score.approve',
+          },
+          {
+            path: '/remote-notify',
+            label: '远程通知',
+            icon: Bell,
+            permission: 'notification.send',
+          },
+          { path: '/wake-on-lan', label: '远程开机', icon: Power, permission: 'device.edit' },
+        ],
+      },
+      {
+        id: 'systemAdmin',
+        label: '系统管理',
+        icon: Settings,
+        permission: 'system.settings',
+        items: [
+          { path: '/settings', label: '系统设置', icon: Sliders, permission: 'system.settings' },
+          { path: '/permission', label: '权限管理', icon: Shield, permission: 'system.roles' },
+
+          { path: '/data-sync', label: '数据同步', icon: RefreshCw, permission: 'system.settings' },
+        ],
+      },
+      {
+        id: 'opsCenter',
+        label: '运维中心',
+        icon: Server,
+        permission: 'ops_center.view',
+        items: [
+          { path: '/ops-center', label: '运维总览', icon: Activity, permission: 'ops_center.view' },
+          {
+            path: '/ops-center/telemetry',
+            label: '前端遥测',
+            icon: Gauge,
+            permission: 'ops_center.view',
+          },
+          {
+            path: '/ops-center/metrics',
+            label: '系统指标趋势',
+            icon: LineChart,
+            permission: 'ops_center.view',
+          },
+          { path: '/diagnostics', label: '系统诊断', icon: Server, permission: 'device.view' },
+          {
+            path: '/security-audit',
+            label: '安全审计',
+            icon: Shield,
+            permission: 'system.settings',
+          },
+          { path: '/operation-logs', label: '操作日志', icon: History, permission: 'system.logs' },
+        ],
+      },
+    ],
+    []
+  );
 
   const filteredMenuGroups = useMemo<MenuGroup[]>(() => {
     const shouldUseFallback = isLoading || permissions.length === 0;
-    const fallbackPermissions = role === 'admin' ? DEFAULT_PERMISSIONS_FOR_ADMIN : DEFAULT_PERMISSIONS_FOR_TEACHER;
-    
+    const fallbackPermissions =
+      role === 'admin' ? DEFAULT_PERMISSIONS_FOR_ADMIN : DEFAULT_PERMISSIONS_FOR_TEACHER;
+
     const checkPermission = (permissionCode?: string): boolean => {
       if (!permissionCode) return true;
       if (shouldUseFallback) {
@@ -480,25 +611,28 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
       }
       return hasPermission(permissionCode);
     };
-    
+
     const checkAnyPermission = (permissionCodes?: string[]): boolean => {
       if (!permissionCodes || permissionCodes.length === 0) return true;
       if (shouldUseFallback) {
-        return permissionCodes.some((code) => fallbackPermissions.includes(code)) || fallbackPermissions.includes('all');
+        return (
+          permissionCodes.some((code) => fallbackPermissions.includes(code)) ||
+          fallbackPermissions.includes('all')
+        );
       }
       return hasAnyPermission(permissionCodes);
     };
-    
+
     return menuGroups.filter((group) => {
       if (group.requiresAdmin && !isAdmin) return false;
       if (group.permission && !checkPermission(group.permission)) return false;
-      
+
       const filteredItems = group.items.filter((item) => {
         if (item.permission && !checkPermission(item.permission)) return false;
         if (item.permissions && !checkAnyPermission(item.permissions)) return false;
         return true;
       });
-      
+
       return filteredItems.length > 0;
     });
   }, [menuGroups, isAdmin, hasPermission, hasAnyPermission, permissions, isLoading, role]);
@@ -518,7 +652,12 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         aria-label='打开菜单'
       >
         <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 6h16M4 12h16M4 18h16' />
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            strokeWidth={2}
+            d='M4 6h16M4 12h16M4 18h16'
+          />
         </svg>
       </button>
 
@@ -531,9 +670,19 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         `}
       >
         <div
-          className={`p-3 border-b border-gray-200/50 dark:border-slate-700/50 relative z-10 ${isCollapsed ? 'bg-gradient-to-b from-primary-50/50 to-white dark:from-primary-500/10 dark:to-slate-800' : 'bg-gray-50/50 dark:bg-slate-700/30'} ${isCollapsed ? 'flex flex-col items-center gap-3' : 'flex items-center justify-between'}`}
+          className={`p-3 border-b border-gray-200/50 dark:border-slate-700/50 relative z-10 ${
+            isCollapsed
+              ? 'bg-gradient-to-b from-primary-50/50 to-white dark:from-primary-500/10 dark:to-slate-800'
+              : 'bg-gray-50/50 dark:bg-slate-700/30'
+          } ${
+            isCollapsed ? 'flex flex-col items-center gap-3' : 'flex items-center justify-between'
+          }`}
         >
-          <div className={`flex items-center gap-3 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+          <div
+            className={`flex items-center gap-3 ${
+              isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+            }`}
+          >
             <div className='relative w-10 h-10 rounded-xl overflow-hidden'>
               <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-500' />
               <div className='relative w-full h-full flex items-center justify-center'>
@@ -552,7 +701,11 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
           </div>
 
           <div
-            className={`relative w-12 h-12 rounded-2xl overflow-hidden ${!isCollapsed ? 'hidden' : 'flex items-center justify-center shadow-lg shadow-primary-500/20'}`}
+            className={`relative w-12 h-12 rounded-2xl overflow-hidden ${
+              !isCollapsed
+                ? 'hidden'
+                : 'flex items-center justify-center shadow-lg shadow-primary-500/20'
+            }`}
           >
             <div className='absolute inset-0 bg-gradient-to-br from-primary-500 via-blue-500 to-accent-500' />
             <GraduationCap className='relative w-6 h-6 text-white' />
@@ -560,7 +713,11 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-150 hover:scale-110 active:scale-95 ${isCollapsed ? 'bg-white/80 dark:bg-slate-700/80 shadow-md shadow-black/5 text-gray-600 dark:text-slate-300 hover:shadow-lg' : 'bg-gray-200/50 dark:bg-slate-700/50 hover:bg-gray-300/50 dark:hover:bg-slate-600/50 text-gray-600 dark:text-slate-300'}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-150 hover:scale-110 active:scale-95 ${
+              isCollapsed
+                ? 'bg-white/80 dark:bg-slate-700/80 shadow-md shadow-black/5 text-gray-600 dark:text-slate-300 hover:shadow-lg'
+                : 'bg-gray-200/50 dark:bg-slate-700/50 hover:bg-gray-300/50 dark:hover:bg-slate-600/50 text-gray-600 dark:text-slate-300'
+            }`}
             title={`${isCollapsed ? '展开侧边栏' : '收起侧边栏'} (Ctrl+B)`}
           >
             {isCollapsed ? (
@@ -618,7 +775,9 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         <div className='px-3 py-3 border-t border-gray-200/50 dark:border-slate-700/50 space-y-1 relative z-10 bg-gray-50/30 dark:bg-slate-700/30'>
           <Link
             to='/help'
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/60 hover:text-gray-800 dark:hover:text-slate-200 transition-colors duration-150 ${isCollapsed ? 'justify-center' : ''}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/60 hover:text-gray-800 dark:hover:text-slate-200 transition-colors duration-150 ${
+              isCollapsed ? 'justify-center' : ''
+            }`}
             onMouseEnter={() => setHoveredItem('/help')}
             onMouseLeave={() => setHoveredItem(null)}
             onClick={closeMobileMenu}
@@ -630,7 +789,9 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
           </Link>
 
           <button
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 transition-colors duration-150 ${isCollapsed ? 'justify-center' : ''}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 transition-colors duration-150 ${
+              isCollapsed ? 'justify-center' : ''
+            }`}
             onMouseEnter={() => setHoveredItem('logout')}
             onMouseLeave={() => setHoveredItem(null)}
             onClick={handleLogout}
@@ -651,8 +812,8 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
                 hoveredItem === '/help'
                   ? '帮助中心'
                   : hoveredItem === 'logout'
-                    ? '退出登录'
-                    : ''}
+                  ? '退出登录'
+                  : ''}
               </span>
             </div>
           </div>
@@ -665,9 +826,7 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
             className='fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden'
             onClick={closeMobileMenu}
           />
-          <aside
-            className='fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 flex flex-col shadow-2xl z-50 md:hidden transform transition-transform duration-300 ease-out animate-slide-in-left safe-area-top'
-          >
+          <aside className='fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 flex flex-col shadow-2xl z-50 md:hidden transform transition-transform duration-300 ease-out animate-slide-in-left safe-area-top'>
             <div className='p-4 border-b border-gray-200/50 dark:border-slate-700/50 flex items-center justify-between bg-gradient-to-r from-primary-50/50 to-white dark:from-primary-500/10 dark:to-slate-800'>
               <div className='flex items-center gap-3'>
                 <div className='relative w-10 h-10 rounded-xl overflow-hidden'>
@@ -710,16 +869,11 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
 
                       <ul
                         className={`overflow-hidden transition-max-height duration-200 ease-in-out ${
-                          isExpanded
-                            ? 'max-h-[500px] opacity-100 mt-1'
-                            : 'max-h-0 opacity-0 mt-0'
+                          isExpanded ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0 mt-0'
                         }`}
                       >
                         {group.items.map((item) => (
-                          <div
-                            key={item.path}
-                            onClick={closeMobileMenu}
-                          >
+                          <div key={item.path} onClick={closeMobileMenu}>
                             <MenuItem
                               item={item}
                               isActive={isItemActive(item.path)}

@@ -10,6 +10,7 @@ F5: device_id 全项目统一 String(100)（语义迁移）。
 - SQLite FK 开启，故全程 PRAGMA foreign_keys=OFF，结束恢复。
 幂等：表已为新结构时跳过重建；wol_devices 不存在则跳过。
 """
+
 import os
 import sys
 import json
@@ -25,7 +26,11 @@ MAP_PATH = os.path.join(BACKEND_DIR, "migration_backups", "migration_wol_id_map.
 
 
 def _table_exists(name):
-    return bool(db.session.execute(text("SELECT name FROM sqlite_master WHERE name=:n"), {"n": name}).fetchone())
+    return bool(
+        db.session.execute(
+            text("SELECT name FROM sqlite_master WHERE name=:n"), {"n": name}
+        ).fetchone()
+    )
 
 
 def upgrade():
@@ -39,9 +44,26 @@ def upgrade():
 
             # ---- device_group_mappings ----
             if _table_exists("device_group_mappings"):
-                cols = [r[1] for r in db.session.execute(text("PRAGMA table_info(device_group_mappings)")).fetchall()]
-                if cols and cols[2] != "device_id" or (cols and cols[2] == "device_id" and
-                        db.session.execute(text("SELECT sql FROM sqlite_master WHERE name='device_group_mappings'")).fetchone()[0].find("VARCHAR(100)") == -1):
+                cols = [
+                    r[1]
+                    for r in db.session.execute(
+                        text("PRAGMA table_info(device_group_mappings)")
+                    ).fetchall()
+                ]
+                if (
+                    cols
+                    and cols[2] != "device_id"
+                    or (
+                        cols
+                        and cols[2] == "device_id"
+                        and db.session.execute(
+                            text("SELECT sql FROM sqlite_master WHERE name='device_group_mappings'")
+                        )
+                        .fetchone()[0]
+                        .find("VARCHAR(100)")
+                        == -1
+                    )
+                ):
                     db.session.execute(text("""
                         CREATE TABLE device_group_mappings_new (
                             id INTEGER NOT NULL,
@@ -63,8 +85,14 @@ def upgrade():
                         FROM device_group_mappings dgm
                     """))
                     db.session.execute(text("DROP TABLE device_group_mappings"))
-                    db.session.execute(text("ALTER TABLE device_group_mappings_new RENAME TO device_group_mappings"))
-                    print("OK: device_group_mappings 重建为 device_id VARCHAR(100) FK->device.device_id")
+                    db.session.execute(
+                        text(
+                            "ALTER TABLE device_group_mappings_new RENAME TO device_group_mappings"
+                        )
+                    )
+                    print(
+                        "OK: device_group_mappings 重建为 device_id VARCHAR(100) FK->device.device_id"
+                    )
                 else:
                     print("SKIP: device_group_mappings 已是 VARCHAR(100)")
             else:
@@ -72,7 +100,9 @@ def upgrade():
 
             # ---- notify_histories ----
             if _table_exists("notify_histories"):
-                sql = db.session.execute(text("SELECT sql FROM sqlite_master WHERE name='notify_histories'")).fetchone()[0]
+                sql = db.session.execute(
+                    text("SELECT sql FROM sqlite_master WHERE name='notify_histories'")
+                ).fetchone()[0]
                 if sql.find("device_id VARCHAR(100)") == -1:
                     db.session.execute(text("""
                         CREATE TABLE notify_histories_new (
@@ -106,7 +136,9 @@ def upgrade():
                         FROM notify_histories nh
                     """))
                     db.session.execute(text("DROP TABLE notify_histories"))
-                    db.session.execute(text("ALTER TABLE notify_histories_new RENAME TO notify_histories"))
+                    db.session.execute(
+                        text("ALTER TABLE notify_histories_new RENAME TO notify_histories")
+                    )
                     print("OK: notify_histories 重建为 device_id VARCHAR(100) FK->device.device_id")
                 else:
                     print("SKIP: notify_histories 已是 VARCHAR(100)")

@@ -51,13 +51,16 @@ class HomeworkService:
             return {"success": False, "message": "作业不存在"}, 404
         submissions = HomeworkSubmission.query.filter_by(assignment_id=assignment_id).all()
         submitted = [s for s in submissions if s.is_submitted]
-        return {"success": True, "data": {
-            **self._build_assignment_response(assignment),
-            "total_students": self._get_class_student_count(assignment.class_id),
-            "submitted_count": len(submitted),
-            "unsubmitted_count": len(submissions) - len(submitted),
-            "submissions": [self._build_submission_response(s) for s in submissions],
-        }}
+        return {
+            "success": True,
+            "data": {
+                **self._build_assignment_response(assignment),
+                "total_students": self._get_class_student_count(assignment.class_id),
+                "submitted_count": len(submitted),
+                "unsubmitted_count": len(submissions) - len(submitted),
+                "submissions": [self._build_submission_response(s) for s in submissions],
+            },
+        }
 
     def update_assignment(self, assignment_id, data):
         assignment = HomeworkAssignment.query.get(assignment_id)
@@ -78,9 +81,7 @@ class HomeworkService:
             assignment_id=assignment_id, student_id=student_id
         ).first()
         if not submission:
-            submission = HomeworkSubmission(
-                assignment_id=assignment_id, student_id=student_id
-            )
+            submission = HomeworkSubmission(assignment_id=assignment_id, student_id=student_id)
             db.session.add(submission)
         submission.is_submitted = True
         submission.submitted_at = datetime.now()
@@ -113,6 +114,7 @@ class HomeworkService:
 
     def _get_class_student_count(self, class_id):
         from models import User
+
         return User.query.filter_by(class_info_id=class_id, is_active=True).count()
 
     def _build_assignment_response(self, a):

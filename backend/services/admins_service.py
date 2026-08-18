@@ -7,9 +7,16 @@ class_id 必填）/ 登录令牌 / CSRF / 响应构造。sync_admin_rbac_role(s)
 
 from datetime import datetime
 
-from models import db, Admin, AdminClass, PermissionLog, AdminRole, RolePermission, cascade_delete_related_records
+from models import (
+    db,
+    Admin,
+    AdminClass,
+    PermissionLog,
+    AdminRole,
+    RolePermission,
+    cascade_delete_related_records,
+)
 from utils.security import hash_password
-
 
 ROLE_MAPPING = {
     "admin": "admin",
@@ -137,7 +144,10 @@ def assign_class_link(admin_id, class_id, is_primary):
         existing_link.is_primary = is_primary
     else:
         link = AdminClass(
-            admin_id=admin_id, class_info_id=class_id, is_primary=is_primary, assigned_at=datetime.now()
+            admin_id=admin_id,
+            class_info_id=class_id,
+            is_primary=is_primary,
+            assigned_at=datetime.now(),
         )
         db.session.add(link)
     db.session.commit()

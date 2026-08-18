@@ -1,6 +1,7 @@
 """Tests for NLP Enhanced Service"""
 
 from unittest.mock import patch, MagicMock
+
 try:
     from services.nlp_enhanced_service import MLIntentClassifier
 except ImportError:
@@ -231,7 +232,7 @@ class TestEnhancedNLPParserServiceBatch:
 
             engine = EnhancedNLPParserService()
 
-            with patch.object(engine, 'parse', return_value={"success": True, "intent": "unknown"}):
+            with patch.object(engine, "parse", return_value={"success": True, "intent": "unknown"}):
                 results = engine.batch_parse(["文本1", "文本2", "文本3"], parallel=False)
 
                 assert isinstance(results, list)

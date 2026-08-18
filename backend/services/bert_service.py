@@ -20,7 +20,9 @@ except ImportError:
 
 class BertNLPService:
     def __init__(self, model_path: str = None, use_quantization: bool = True):
-        self.model_path = model_path or os.path.join(os.path.dirname(__file__), "..", "models", "bert")
+        self.model_path = model_path or os.path.join(
+            os.path.dirname(__file__), "..", "models", "bert"
+        )
         self.use_quantization = use_quantization
         self.tokenizer = None
         self.model = None
@@ -94,12 +96,12 @@ class BertNLPService:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path, revision="main"  # nosec
             )
-            self.model = AutoModel.from_pretrained(
-                self.model_path, revision="main"  # nosec
-            )
+            self.model = AutoModel.from_pretrained(self.model_path, revision="main")  # nosec
             if self.use_quantization:
                 try:
-                    self.model = torch.quantization.quantize_dynamic(self.model, {torch.nn.Linear}, dtype=torch.qint8)
+                    self.model = torch.quantization.quantize_dynamic(
+                        self.model, {torch.nn.Linear}, dtype=torch.qint8
+                    )
                     print("PyTorch动态量化成功")
                 except Exception as e:
                     print(f"动态量化失败: {e}")

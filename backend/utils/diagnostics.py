@@ -71,7 +71,10 @@ class HealthChecker:
                 free_bytes = ctypes.c_ulonglong(0)
                 total_bytes = ctypes.c_ulonglong(0)
                 ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-                    ctypes.c_wchar_p("C:\\"), None, ctypes.pointer(total_bytes), ctypes.pointer(free_bytes)
+                    ctypes.c_wchar_p("C:\\"),
+                    None,
+                    ctypes.pointer(total_bytes),
+                    ctypes.pointer(free_bytes),
                 )
                 free_space = free_bytes.value
                 total_space = total_bytes.value
@@ -136,7 +139,10 @@ class HealthChecker:
                 result = check["check"]()  # noqa: F841
                 results["checks"][check["name"]] = result
             except Exception as e:
-                results["checks"][check["name"]] = {"status": "error", "message": f"检查执行失败: {str(e)}"}
+                results["checks"][check["name"]] = {
+                    "status": "error",
+                    "message": f"检查执行失败: {str(e)}",
+                }
         # 确定整体状态
         for check_name, check_result in results["checks"].items():
             status = check_result.get("status", "unknown")
@@ -188,7 +194,10 @@ class PerformanceDiagnostic:
 
     def start_timer(self, name):
         """开始计时"""
-        self.timings[name] = {"start": time.time(), "count": self.timings.get(name, {}).get("count", 0)}
+        self.timings[name] = {
+            "start": time.time(),
+            "count": self.timings.get(name, {}).get("count", 0),
+        }
 
     def end_timer(self, name):
         """结束计时并返回耗时"""
@@ -377,8 +386,12 @@ def get_system_info():
             "cpu_count": psutil.cpu_count(),
             "memory_total": round(psutil.virtual_memory().total / (1024**3), 2),
             "memory_available": round(psutil.virtual_memory().available / (1024**3), 2),
-            "disk_total": round(psutil.disk_usage("/").total / (1024**3), 2) if os.name != "nt" else "N/A",
-            "disk_available": round(psutil.disk_usage("/").free / (1024**3), 2) if os.name != "nt" else "N/A",
+            "disk_total": (
+                round(psutil.disk_usage("/").total / (1024**3), 2) if os.name != "nt" else "N/A"
+            ),
+            "disk_available": (
+                round(psutil.disk_usage("/").free / (1024**3), 2) if os.name != "nt" else "N/A"
+            ),
             "boot_time": datetime.fromtimestamp(psutil.boot_time()).isoformat(),
         }
     except Exception as e:

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # NLP规则服务测试模块
 """
 """
 
 import pytest
 from unittest.mock import MagicMock
+
 try:
     from services.nlp_rule_service import NLPRuleManagementService
 except ImportError:
@@ -94,12 +95,14 @@ class TestNLPRuleManagementService:
 
         with app.app_context():
             service = NLPRuleManagementService()
-            result = service.create_rule({
-                "behavior_keyword": "测试关键词",
-                "behavior_description": "测试描述",
-                "score_value": 10,
-                "score_type": "add"
-            })
+            result = service.create_rule(
+                {
+                    "behavior_keyword": "测试关键词",
+                    "behavior_description": "测试描述",
+                    "score_value": 10,
+                    "score_type": "add",
+                }
+            )
 
             assert isinstance(result, dict)
             assert result["success"] is True
@@ -110,19 +113,23 @@ class TestNLPRuleManagementService:
 
         with app.app_context():
             service = NLPRuleManagementService()
-            service.create_rule({
-                "behavior_keyword": "重复关键词",
-                "behavior_description": "测试描述",
-                "score_value": 10,
-                "score_type": "add"
-            })
+            service.create_rule(
+                {
+                    "behavior_keyword": "重复关键词",
+                    "behavior_description": "测试描述",
+                    "score_value": 10,
+                    "score_type": "add",
+                }
+            )
 
-            result = service.create_rule({
-                "behavior_keyword": "重复关键词",
-                "behavior_description": "测试描述",
-                "score_value": 10,
-                "score_type": "add"
-            })
+            result = service.create_rule(
+                {
+                    "behavior_keyword": "重复关键词",
+                    "behavior_description": "测试描述",
+                    "score_value": 10,
+                    "score_type": "add",
+                }
+            )
 
             assert isinstance(result, dict)
             assert result["success"] is False
@@ -137,16 +144,15 @@ class TestNLPRuleManagementService:
                 behavior_description="原始描述",
                 score_value=5,
                 score_type="add",
-                is_active=True
+                is_active=True,
             )
             db.session.add(rule)
             db.session.commit()
 
             service = NLPRuleManagementService()
-            result = service.update_rule(rule.id, {
-                "behavior_description": "更新描述",
-                "score_value": 15
-            })
+            result = service.update_rule(
+                rule.id, {"behavior_description": "更新描述", "score_value": 15}
+            )
 
             assert isinstance(result, dict)
             assert result["success"] is True
@@ -157,9 +163,7 @@ class TestNLPRuleManagementService:
 
         with app.app_context():
             service = NLPRuleManagementService()
-            result = service.update_rule(99999, {
-                "behavior_description": "更新描述"
-            })
+            result = service.update_rule(99999, {"behavior_description": "更新描述"})
 
             assert isinstance(result, dict)
             assert result["success"] is False
@@ -174,7 +178,7 @@ class TestNLPRuleManagementService:
                 behavior_description="测试描述",
                 score_value=5,
                 score_type="add",
-                is_active=True
+                is_active=True,
             )
             db.session.add(rule)
             db.session.commit()
@@ -253,7 +257,7 @@ class TestNLPRuleManagementService:
                 behavior_description="测试描述",
                 score_value=5,
                 score_type="add",
-                is_active=True
+                is_active=True,
             )
             db.session.add(rule)
             db.session.commit()
@@ -262,7 +266,7 @@ class TestNLPRuleManagementService:
                 input_text="测试输入",
                 matched_rule_id=rule.id,
                 intent="add",
-                is_manual_correction=False
+                is_manual_correction=False,
             )
             db.session.add(match_result)
             db.session.commit()
@@ -308,14 +312,14 @@ class TestNLPRuleManagementService:
                     "behavior_keyword": "导入关键词1",
                     "behavior_description": "描述1",
                     "score_value": 5,
-                    "score_type": "add"
+                    "score_type": "add",
                 },
                 {
                     "behavior_keyword": "导入关键词2",
                     "behavior_description": "描述2",
                     "score_value": -5,
-                    "score_type": "deduct"
-                }
+                    "score_type": "deduct",
+                },
             ]
             result = service.batch_import_rules(rules_data)
 
@@ -332,7 +336,7 @@ class TestNLPRuleManagementService:
                 behavior_description="原始描述",
                 score_value=5,
                 score_type="add",
-                is_active=True
+                is_active=True,
             )
             db.session.add(rule)
             db.session.commit()
@@ -343,14 +347,14 @@ class TestNLPRuleManagementService:
                     "behavior_keyword": "重复关键词",
                     "behavior_description": "重复描述",
                     "score_value": 10,
-                    "score_type": "add"
+                    "score_type": "add",
                 },
                 {
                     "behavior_keyword": "新关键词",
                     "behavior_description": "新描述",
                     "score_value": 5,
-                    "score_type": "add"
-                }
+                    "score_type": "add",
+                },
             ]
             result = service.batch_import_rules(rules_data)
 

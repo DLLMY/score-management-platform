@@ -5,38 +5,50 @@ from utils.permission import requires_permission
 
 ns_attendance = Namespace("attendance", description="考勤管理")
 
-attendance_model = ns_attendance.model("AttendanceInput", {
-    "class_id": fields.Integer(required=True),
-    "student_id": fields.Integer(required=True),
-    "date": fields.String(),
-    "period": fields.String(default="morning"),
-    "status": fields.String(default="present"),
-    "arrive_time": fields.String(),
-    "leave_time": fields.String(),
-    "notes": fields.String(),
-})
+attendance_model = ns_attendance.model(
+    "AttendanceInput",
+    {
+        "class_id": fields.Integer(required=True),
+        "student_id": fields.Integer(required=True),
+        "date": fields.String(),
+        "period": fields.String(default="morning"),
+        "status": fields.String(default="present"),
+        "arrive_time": fields.String(),
+        "leave_time": fields.String(),
+        "notes": fields.String(),
+    },
+)
 
-batch_model = ns_attendance.model("BatchAttendanceInput", {
-    "records": fields.List(fields.Nested(attendance_model)),
-})
+batch_model = ns_attendance.model(
+    "BatchAttendanceInput",
+    {
+        "records": fields.List(fields.Nested(attendance_model)),
+    },
+)
 
-leave_model = ns_attendance.model("LeaveInput", {
-    "student_id": fields.Integer(required=True),
-    "leave_type": fields.String(default="personal"),
-    "start_date": fields.String(required=True),
-    "end_date": fields.String(required=True),
-    "reason": fields.String(),
-})
+leave_model = ns_attendance.model(
+    "LeaveInput",
+    {
+        "student_id": fields.Integer(required=True),
+        "leave_type": fields.String(default="personal"),
+        "start_date": fields.String(required=True),
+        "end_date": fields.String(required=True),
+        "reason": fields.String(),
+    },
+)
 
 
 @ns_attendance.route("/records")
 class AttendanceList(Resource):
-    @ns_attendance.doc("list_attendance", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "student_id": {"description": "学生ID", "type": int},
-        "date": {"description": "日期"},
-        "status": {"description": "状态"},
-    })
+    @ns_attendance.doc(
+        "list_attendance",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "student_id": {"description": "学生ID", "type": int},
+            "date": {"description": "日期"},
+            "status": {"description": "状态"},
+        },
+    )
     @requires_permission("attendance.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)
@@ -68,10 +80,13 @@ class BatchAttendance(Resource):
 
 @ns_attendance.route("/leaves")
 class LeaveList(Resource):
-    @ns_attendance.doc("list_leaves", params={
-        "student_id": {"description": "学生ID", "type": int},
-        "status": {"description": "状态"},
-    })
+    @ns_attendance.doc(
+        "list_leaves",
+        params={
+            "student_id": {"description": "学生ID", "type": int},
+            "status": {"description": "状态"},
+        },
+    )
     @requires_permission("attendance.view")
     def get(self):
         student_id = request.args.get("student_id", type=int)
@@ -99,11 +114,14 @@ class LeaveApprove(Resource):
 
 @ns_attendance.route("/stats")
 class AttendanceStats(Resource):
-    @ns_attendance.doc("attendance_stats", params={
-        "class_id": {"description": "班级ID", "type": int},
-        "start_date": {"description": "开始日期"},
-        "end_date": {"description": "结束日期"},
-    })
+    @ns_attendance.doc(
+        "attendance_stats",
+        params={
+            "class_id": {"description": "班级ID", "type": int},
+            "start_date": {"description": "开始日期"},
+            "end_date": {"description": "结束日期"},
+        },
+    )
     @requires_permission("attendance.view")
     def get(self):
         class_id = request.args.get("class_id", type=int)

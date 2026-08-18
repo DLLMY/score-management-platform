@@ -28,7 +28,8 @@ notify_model = ns_remote_notify.model(
         "urgent": fields.Boolean(default=False, description="是否紧急通知"),
         "topic": fields.String(default="phonebox/remote/notify", description="MQTT主题"),
         "force_send": fields.Boolean(
-            default=False, description="是否强制发送（需 notification.force_send 权限，跳过上课时间检查）"
+            default=False,
+            description="是否强制发送（需 notification.force_send 权限，跳过上课时间检查）",
         ),
     },
 )
@@ -53,7 +54,8 @@ score_change_model = ns_remote_notify.model(
         "course": fields.String(description="课程名称（可选）"),
         "device_id": fields.String(description="指定设备ID（可选，不指定则广播）"),
         "force_send": fields.Boolean(
-            default=False, description="是否强制发送（需 notification.force_send 权限，跳过上课时间检查）"
+            default=False,
+            description="是否强制发送（需 notification.force_send 权限，跳过上课时间检查）",
         ),
     },
 )
@@ -73,8 +75,13 @@ def _resolve_class_from_device(device_id):
     return None
 
 
-def _block_if_not_allowed(force_send, target_class_info_id=None, broadcast=False,
-                          audit_type="remote_notify", audit_payload=None):
+def _block_if_not_allowed(
+    force_send,
+    target_class_info_id=None,
+    broadcast=False,
+    audit_type="remote_notify",
+    audit_payload=None,
+):
     """
     统一上课时间拦截校验。
     返回 None 表示允许发送；返回 dict 表示应直接作为响应返回的拦截结果（topic 由调用方补全）。
@@ -136,8 +143,9 @@ class RemoteNotifySend(Resource):
         args = ns_remote_notify.payload
         force_send = args.get("force_send", False)
 
-        blocked = _block_if_not_allowed(force_send, audit_type="remote_notify",
-                                        audit_payload={"text": args.get("text")})
+        blocked = _block_if_not_allowed(
+            force_send, audit_type="remote_notify", audit_payload={"text": args.get("text")}
+        )
         if blocked is not None:
             blocked["topic"] = args.get("topic", "phonebox/remote/notify")
             return blocked
@@ -196,10 +204,16 @@ class RemoteNotifyBroadcast(Resource):
         args = ns_remote_notify.payload
         force_send = args.get("force_send", False)
 
-        blocked = _block_if_not_allowed(force_send, broadcast=True, audit_type="remote_notify",
-                                        audit_payload={"text": args.get("text")})
+        blocked = _block_if_not_allowed(
+            force_send,
+            broadcast=True,
+            audit_type="remote_notify",
+            audit_payload={"text": args.get("text")},
+        )
         if blocked is not None:
-            blocked["topic"] = ",".join(["phonebox/remote/notify", "phonebox/remote/notify/all", "remote/notify"])
+            blocked["topic"] = ",".join(
+                ["phonebox/remote/notify", "phonebox/remote/notify/all", "remote/notify"]
+            )
             return blocked
 
         message = {
@@ -262,8 +276,12 @@ class RemoteNotifySendToDevice(Resource):
         force_send = args.get("force_send", False)
         cls_id = _resolve_class_from_device(device_id)
 
-        blocked = _block_if_not_allowed(force_send, target_class_info_id=cls_id, audit_type="remote_notify",
-                                        audit_payload={"device_id": device_id, "text": args.get("text")})
+        blocked = _block_if_not_allowed(
+            force_send,
+            target_class_info_id=cls_id,
+            audit_type="remote_notify",
+            audit_payload={"device_id": device_id, "text": args.get("text")},
+        )
         if blocked is not None:
             blocked["topic"] = f"phonebox/remote/notify/{device_id}"
             return blocked
@@ -292,7 +310,12 @@ class RemoteNotifySendToDevice(Resource):
                     "timestamp": datetime.now().isoformat(),
                 }
             if force_send:
-                _log_force("remote_notify", cls_id, {"device_id": device_id}, f"强制发送（设备 {device_id}）")
+                _log_force(
+                    "remote_notify",
+                    cls_id,
+                    {"device_id": device_id},
+                    f"强制发送（设备 {device_id}）",
+                )
             return {
                 "success": True,
                 "message": f"通知已发送到设备 {device_id}",
@@ -324,9 +347,12 @@ class ScoreChangeNotify(Resource):
         device_id = args.get("device_id")
         cls_id = _resolve_class_from_device(device_id)
 
-        blocked = _block_if_not_allowed(force_send, target_class_info_id=cls_id, audit_type="score_change",
-                                        audit_payload={"student_name": args.get("student_name"),
-                                                       "device_id": device_id})
+        blocked = _block_if_not_allowed(
+            force_send,
+            target_class_info_id=cls_id,
+            audit_type="score_change",
+            audit_payload={"student_name": args.get("student_name"), "device_id": device_id},
+        )
         if blocked is not None:
             topic = f"phonebox/remote/notify/{device_id}" if device_id else "phonebox/remote/notify"
             blocked["topic"] = topic
@@ -360,8 +386,12 @@ class ScoreChangeNotify(Resource):
                     "timestamp": datetime.now().isoformat(),
                 }
             if force_send:
-                _log_force("score_change", cls_id, {"student_name": args.get("student_name")},
-                           "强制发送积分变化通知")
+                _log_force(
+                    "score_change",
+                    cls_id,
+                    {"student_name": args.get("student_name")},
+                    "强制发送积分变化通知",
+                )
             return {
                 "success": True,
                 "message": f"积分变化通知已发送: {args.get('student_name')} {args.get('score_change', 0):+g}分",
@@ -392,8 +422,11 @@ class RemoteNotifyTest(Resource):
         args = ns_remote_notify.payload or {}
         force_send = args.get("force_send", False)
 
-        blocked = _block_if_not_allowed(force_send, audit_type="remote_notify",
-                                        audit_payload={"text": args.get("text", "测试通知")})
+        blocked = _block_if_not_allowed(
+            force_send,
+            audit_type="remote_notify",
+            audit_payload={"text": args.get("text", "测试通知")},
+        )
         if blocked is not None:
             blocked["topic"] = "phonebox/remote/notify"
             return blocked

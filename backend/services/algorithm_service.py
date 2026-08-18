@@ -281,13 +281,17 @@ class AlgorithmService:
             "student_count": len(df),
         }
         # 相关性分析
-        corr, _ = AlgorithmService.calculate_correlation(df["behavior_score"].tolist(), df["academic_score"].tolist())
+        corr, _ = AlgorithmService.calculate_correlation(
+            df["behavior_score"].tolist(), df["academic_score"].tolist()
+        )
         stats["correlation"] = round(corr, 2)
         # 及格率（假设60分为及格线）
         pass_count = len(df[df["academic_score"] >= 60])
         stats["pass_rate"] = round(pass_count / len(df), 2)
         # 分组对比
-        df["behavior_group"] = pd.qcut(df["behavior_score"], 3, labels=["低分组", "中分组", "高分组"])
+        df["behavior_group"] = pd.qcut(
+            df["behavior_score"], 3, labels=["低分组", "中分组", "高分组"]
+        )
         group_stats = (
             df.groupby("behavior_group")
             .agg(

@@ -32,7 +32,9 @@ try:
     import pkgutil as _pkgutil
     import api as _api_pkg_disc
 
-    for _finder, _modname, _ispkg in _pkgutil.walk_packages(_api_pkg_disc.__path__, _api_pkg_disc.__name__ + "."):
+    for _finder, _modname, _ispkg in _pkgutil.walk_packages(
+        _api_pkg_disc.__path__, _api_pkg_disc.__name__ + "."
+    ):
         _API_MODULE_NAMES.append(_modname)
 except Exception:  # noqa: BLE001
     _API_MODULE_NAMES = []
@@ -110,6 +112,7 @@ def app():
     # 否则依赖独立 Blueprint 的路由（/api/scores/template/download 等）在测试中会 404。
     try:
         from api.data.download_routes import download_bp
+
         app.register_blueprint(download_bp)
     except Exception:  # noqa: BLE001
         pass
@@ -139,7 +142,9 @@ def app():
 
             if not AdminRole.query.filter_by(admin_id=1, role_code="admin").first():
                 db.session.add(AdminRole(admin_id=1, role_code="admin"))
-            if not RolePermissionMapping.query.filter_by(role_code="admin", permission_code="all").first():
+            if not RolePermissionMapping.query.filter_by(
+                role_code="admin", permission_code="all"
+            ).first():
                 db.session.add(RolePermissionMapping(role_code="admin", permission_code="all"))
             db.session.commit()
 
@@ -222,7 +227,11 @@ def sample_category(db_session):
         return existing
 
     category = ScoreCategory(
-        name="测试分类", description="测试用分类", color="#FF0000", is_active=True, created_at=datetime.now()
+        name="测试分类",
+        description="测试用分类",
+        color="#FF0000",
+        is_active=True,
+        created_at=datetime.now(),
     )
     db_session.add(category)
     db_session.commit()
@@ -236,7 +245,11 @@ def sample_rule(db_session, sample_category):
     from models import ScoreRule
 
     rule = ScoreRule(
-        name="测试规则", description="测试用规则", category_id=sample_category.id, score=10.0, is_active=True
+        name="测试规则",
+        description="测试用规则",
+        category_id=sample_category.id,
+        score=10.0,
+        is_active=True,
     )
     db_session.add(rule)
     db_session.commit()
@@ -287,7 +300,9 @@ def clean_db(app):
 
         if not AdminRole.query.filter_by(admin_id=1, role_code="admin").first():
             db.session.add(AdminRole(admin_id=1, role_code="admin"))
-        if not RolePermissionMapping.query.filter_by(role_code="admin", permission_code="all").first():
+        if not RolePermissionMapping.query.filter_by(
+            role_code="admin", permission_code="all"
+        ).first():
             db.session.add(RolePermissionMapping(role_code="admin", permission_code="all"))
         db.session.commit()
         yield

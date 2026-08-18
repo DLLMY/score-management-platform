@@ -1,10 +1,12 @@
 """
 API Integration Tests
 """
+
 # 测试核心服务流程的端到端集成
 """
 """
 from unittest.mock import patch, MagicMock
+
 try:
     from services.redis_cache_service import RedisCache
 except ImportError:
@@ -53,7 +55,7 @@ class TestServiceIntegration:
         """Test Redis cache basic operation flow"""
         from services.redis_cache_service import RedisCache
 
-        with patch('redis.Redis') as mock_redis:
+        with patch("redis.Redis") as mock_redis:
             mock_instance = MagicMock()
             mock_instance.ping.return_value = True
             mock_instance.setex.return_value = True
@@ -63,12 +65,12 @@ class TestServiceIntegration:
             service = RedisCache()
             service.client = mock_instance
 
-            set_result = service.set('test_key', {'key': 'value'}, expire=3600)
+            set_result = service.set("test_key", {"key": "value"}, expire=3600)
             assert set_result is True
 
-            get_result = service.get('test_key')
+            get_result = service.get("test_key")
             assert get_result is not None
-            assert get_result['key'] == 'value'
+            assert get_result["key"] == "value"
 
     def test_mqtt_message_service_initialization(self):
         """Test MQTT message service can be initialized"""
@@ -90,11 +92,11 @@ class TestServiceIntegration:
 
         container = DIContainer()
 
-        assert hasattr(container, 'notification_service')
-        assert hasattr(container, 'redis_cache_service')
-        assert hasattr(container, 'alert_service')
-        assert hasattr(container, 'mqtt_manager')
-        assert hasattr(container, 'mqtt_message_service')
+        assert hasattr(container, "notification_service")
+        assert hasattr(container, "redis_cache_service")
+        assert hasattr(container, "alert_service")
+        assert hasattr(container, "mqtt_manager")
+        assert hasattr(container, "mqtt_message_service")
 
     def test_config_loader_has_watcher(self):
         """Test config loader has watcher method"""
@@ -102,48 +104,48 @@ class TestServiceIntegration:
 
         loader = ConfigLoader()
 
-        assert hasattr(loader, 'start_config_watcher')
+        assert hasattr(loader, "start_config_watcher")
 
     def test_api_response_success_format(self):
         """Test API response success format"""
         from utils.response import APIResponse
 
-        success_response = APIResponse.success(data={'key': 'value'}, message='Success')
+        success_response = APIResponse.success(data={"key": "value"}, message="Success")
 
         assert isinstance(success_response, tuple)
         assert len(success_response) == 2
         data, status_code = success_response
-        assert 'success' in data
-        assert data['success'] is True
-        assert data['message'] == 'Success'
-        assert data['data'] == {'key': 'value'}
+        assert "success" in data
+        assert data["success"] is True
+        assert data["message"] == "Success"
+        assert data["data"] == {"key": "value"}
 
     def test_api_response_error_format(self):
         """Test API response error format"""
 
-        error_response = APIResponse.error(message='Error', code=500)
+        error_response = APIResponse.error(message="Error", code=500)
 
         assert isinstance(error_response, tuple)
         assert len(error_response) == 2
         data, status_code = error_response
-        assert 'success' in data
-        assert data['success'] is False
-        assert data['message'] == 'Error'
+        assert "success" in data
+        assert data["success"] is False
+        assert data["message"] == "Error"
 
     def test_service_init_import(self):
         """Test service_init module can be imported successfully"""
         from app import service_init
 
-        assert hasattr(service_init, 'init_services')
-        assert hasattr(service_init, 'init_di_container')
-        assert hasattr(service_init, 'init_config_watcher')
-        assert hasattr(service_init, 'init_mqtt')
-        assert hasattr(service_init, 'init_cache_warmup')
+        assert hasattr(service_init, "init_services")
+        assert hasattr(service_init, "init_di_container")
+        assert hasattr(service_init, "init_config_watcher")
+        assert hasattr(service_init, "init_mqtt")
+        assert hasattr(service_init, "init_cache_warmup")
 
     def test_redis_cache_service_import(self):
         """Test redis_cache_service module can be imported successfully"""
         from services import redis_cache_service
 
-        assert hasattr(redis_cache_service, 'RedisCache')
-        assert hasattr(redis_cache_service, 'RedisCacheService')
-        assert hasattr(redis_cache_service, 'warmup_cache')
+        assert hasattr(redis_cache_service, "RedisCache")
+        assert hasattr(redis_cache_service, "RedisCacheService")
+        assert hasattr(redis_cache_service, "warmup_cache")

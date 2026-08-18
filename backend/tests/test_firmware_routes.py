@@ -39,7 +39,11 @@ class TestFirmwareRoutes:
 
     def test_create_firmware_version_success(self, client, app, auth_headers, db_session):
         with app.app_context():
-            payload = {"version": _unique_version(), "description": "初始版本", "is_mandatory": True}
+            payload = {
+                "version": _unique_version(),
+                "description": "初始版本",
+                "is_mandatory": True,
+            }
             response = client.post("/api/firmware/versions", json=payload, headers=auth_headers)
             assert response.status_code == 201
             data = response.get_json()
@@ -52,7 +56,9 @@ class TestFirmwareRoutes:
 
     def test_create_firmware_version_missing_version(self, client, app, auth_headers):
         with app.app_context():
-            response = client.post("/api/firmware/versions", json={"description": "x"}, headers=auth_headers)
+            response = client.post(
+                "/api/firmware/versions", json={"description": "x"}, headers=auth_headers
+            )
             assert response.status_code == 400
 
     def test_create_firmware_version_duplicate(self, client, app, auth_headers, db_session):
@@ -60,7 +66,9 @@ class TestFirmwareRoutes:
             ver = _unique_version()
             db_session.add(FirmwareVersion(version=ver, is_active=True))
             db_session.commit()
-            response = client.post("/api/firmware/versions", json={"version": ver}, headers=auth_headers)
+            response = client.post(
+                "/api/firmware/versions", json={"version": ver}, headers=auth_headers
+            )
             assert response.status_code == 400
 
     # ---------- GET /firmware/versions ----------
@@ -113,7 +121,9 @@ class TestFirmwareRoutes:
 
     def test_update_firmware_version_not_found(self, client, app, auth_headers):
         with app.app_context():
-            response = client.put("/api/firmware/versions/99999", json={"description": "x"}, headers=auth_headers)
+            response = client.put(
+                "/api/firmware/versions/99999", json={"description": "x"}, headers=auth_headers
+            )
             assert response.status_code == 404
 
     # ---------- DELETE /firmware/versions/<id> ----------
@@ -147,9 +157,13 @@ class TestFirmwareRoutes:
 
     def test_ota_report_missing_params(self, client, app, auth_headers):
         with app.app_context():
-            response = client.post("/api/firmware/ota/report", json={"device_id": "D1"}, headers=auth_headers)
+            response = client.post(
+                "/api/firmware/ota/report", json={"device_id": "D1"}, headers=auth_headers
+            )
             assert response.status_code == 400
-            response2 = client.post("/api/firmware/ota/report", json={"status": "started"}, headers=auth_headers)
+            response2 = client.post(
+                "/api/firmware/ota/report", json={"status": "started"}, headers=auth_headers
+            )
             assert response2.status_code == 400
 
     def test_ota_report_started_then_completed(self, client, app, auth_headers, db_session):
@@ -158,13 +172,23 @@ class TestFirmwareRoutes:
             ver = _unique_version()
             r1 = client.post(
                 "/api/firmware/ota/report",
-                json={"device_id": did, "from_version": "1.0", "to_version": ver, "status": "started"},
+                json={
+                    "device_id": did,
+                    "from_version": "1.0",
+                    "to_version": ver,
+                    "status": "started",
+                },
                 headers=auth_headers,
             )
             assert r1.status_code == 200
             r2 = client.post(
                 "/api/firmware/ota/report",
-                json={"device_id": did, "from_version": "1.0", "to_version": ver, "status": "completed"},
+                json={
+                    "device_id": did,
+                    "from_version": "1.0",
+                    "to_version": ver,
+                    "status": "completed",
+                },
                 headers=auth_headers,
             )
             assert r2.status_code == 200
@@ -183,14 +207,22 @@ class TestFirmwareRoutes:
             ver = _unique_version()
             client.post(
                 "/api/firmware/ota/report",
-                json={"device_id": did, "from_version": "1.0", "to_version": ver, "status": "started"},
+                json={
+                    "device_id": did,
+                    "from_version": "1.0",
+                    "to_version": ver,
+                    "status": "started",
+                },
                 headers=auth_headers,
             )
             r = client.post(
                 "/api/firmware/ota/report",
                 json={
-                    "device_id": did, "from_version": "1.0", "to_version": ver,
-                    "status": "failed", "error_message": "checksum mismatch",
+                    "device_id": did,
+                    "from_version": "1.0",
+                    "to_version": ver,
+                    "status": "failed",
+                    "error_message": "checksum mismatch",
                 },
                 headers=auth_headers,
             )
@@ -247,8 +279,10 @@ class TestFirmwareRoutes:
     def test_upload_no_file(self, client, app, auth_headers):
         with app.app_context():
             response = client.post(
-                "/api/firmware/upload", data={"version": "1.0"},
-                content_type="multipart/form-data", headers=auth_headers,
+                "/api/firmware/upload",
+                data={"version": "1.0"},
+                content_type="multipart/form-data",
+                headers=auth_headers,
             )
             assert response.status_code == 400
 
@@ -258,7 +292,7 @@ class TestFirmwareRoutes:
         fw_mod.FIRMWARE_UPLOAD_FOLDER = str(tmp_path)
         with app.app_context():
             ver = _unique_version()
-            content = b"\x00\x01\x02FAKE-FIRMWARE-BINARY\xFF"
+            content = b"\x00\x01\x02FAKE-FIRMWARE-BINARY\xff"
             expected_md5 = __import__("hashlib").md5(content).hexdigest()
             response = client.post(
                 "/api/firmware/upload",
@@ -329,7 +363,9 @@ class TestFirmwareRoutes:
             db_session.commit()
             fw_id = fw.id
             response = client.post(
-                f"/api/firmware/{fw_id}/ota-upgrade", json={"device_ids": ["D1"]}, headers=auth_headers
+                f"/api/firmware/{fw_id}/ota-upgrade",
+                json={"device_ids": ["D1"]},
+                headers=auth_headers,
             )
             assert response.status_code == 400
 
@@ -338,7 +374,9 @@ class TestFirmwareRoutes:
     def test_upgrade_records(self, client, app, auth_headers, db_session):
         with app.app_context():
             db_session.add(
-                DeviceFirmwareUpdate(device_id="D1", from_version="1.0", to_version="2.0", status="completed")
+                DeviceFirmwareUpdate(
+                    device_id="D1", from_version="1.0", to_version="2.0", status="completed"
+                )
             )
             db_session.commit()
             response = client.get("/api/firmware/upgrade-records", headers=auth_headers)
@@ -352,7 +390,9 @@ class TestFirmwareRoutes:
     def test_ota_status_summary(self, client, app, auth_headers, db_session):
         with app.app_context():
             db_session.add(
-                DeviceFirmwareUpdate(device_id="D1", from_version="1.0", to_version="2.0", status="in_progress")
+                DeviceFirmwareUpdate(
+                    device_id="D1", from_version="1.0", to_version="2.0", status="in_progress"
+                )
             )
             db_session.commit()
             response = client.get("/api/firmware/ota-status", headers=auth_headers)

@@ -10,7 +10,15 @@ from datetime import datetime, timedelta, date
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
-from models import NLPScoringRule, NLPBehaviorKeyword, NLPMatchResult, NLPRuleUsage, User, get_by_id, db
+from models import (
+    NLPScoringRule,
+    NLPBehaviorKeyword,
+    NLPMatchResult,
+    NLPRuleUsage,
+    User,
+    get_by_id,
+    db,
+)
 from services.nlp_ml_service import NLPMLTrainingService
 from config.config_loader import config_loader
 from utils.db_session import db_session_scope
@@ -1006,18 +1014,38 @@ class EnhancedNLPParserService:
                 re.compile(r"^([\u4e00-\u9fa5]{3})(?:同学)?(?:加|扣)分"),
                 re.compile(r"^([\u4e00-\u9fa5]{2})(?:加|扣)\d+分"),
                 re.compile(r"^([\u4e00-\u9fa5]{2})(?:同学)?(?:加|扣)分"),
-                re.compile(r"[\u4e00-\u9fa5]{1,2}老师(?:表扬了|批评了|奖励了|处罚了)" r"([\u4e00-\u9fa5]{3})(?:同学)?"),
-                re.compile(r"[\u4e00-\u9fa5]{1,2}老师(?:表扬了|批评了|奖励了|处罚了)" r"([\u4e00-\u9fa5]{2})(?:同学)?"),
-                re.compile(r"[\u4e00-\u9fa5]{1,2}老师(?:表扬|批评|奖励|处罚)" r"([\u4e00-\u9fa5]{3})(?:同学)?"),
-                re.compile(r"[\u4e00-\u9fa5]{1,2}老师(?:表扬|批评|奖励|处罚)" r"([\u4e00-\u9fa5]{2})(?:同学)?"),
+                re.compile(
+                    r"[\u4e00-\u9fa5]{1,2}老师(?:表扬了|批评了|奖励了|处罚了)"
+                    r"([\u4e00-\u9fa5]{3})(?:同学)?"
+                ),
+                re.compile(
+                    r"[\u4e00-\u9fa5]{1,2}老师(?:表扬了|批评了|奖励了|处罚了)"
+                    r"([\u4e00-\u9fa5]{2})(?:同学)?"
+                ),
+                re.compile(
+                    r"[\u4e00-\u9fa5]{1,2}老师(?:表扬|批评|奖励|处罚)"
+                    r"([\u4e00-\u9fa5]{3})(?:同学)?"
+                ),
+                re.compile(
+                    r"[\u4e00-\u9fa5]{1,2}老师(?:表扬|批评|奖励|处罚)"
+                    r"([\u4e00-\u9fa5]{2})(?:同学)?"
+                ),
                 re.compile(r"(?:表扬|批评|奖励|惩罚)([\u4e00-\u9fa5]{2})(?:加|扣)\d+分"),
                 re.compile(r"(?:表扬|批评|奖励|惩罚)([\u4e00-\u9fa5]{3})(?:加|扣)\d+分"),
-                re.compile(r"(?:奖励|惩罚|表扬|批评|处罚)了([\u4e00-\u9fa5]{2})(?:同学)?(?:\d+分)?$"),
-                re.compile(r"(?:奖励|惩罚|表扬|批评|处罚)了([\u4e00-\u9fa5]{3})(?:同学)?(?:\d+分)?$"),
+                re.compile(
+                    r"(?:奖励|惩罚|表扬|批评|处罚)了([\u4e00-\u9fa5]{2})(?:同学)?(?:\d+分)?$"
+                ),
+                re.compile(
+                    r"(?:奖励|惩罚|表扬|批评|处罚)了([\u4e00-\u9fa5]{3})(?:同学)?(?:\d+分)?$"
+                ),
                 re.compile(r"(?:奖励|惩罚|表扬|批评|处罚)([\u4e00-\u9fa5]{2})(?:同学)?(?:\d+分)?$"),
                 re.compile(r"(?:奖励|惩罚|表扬|批评|处罚)([\u4e00-\u9fa5]{3})(?:同学)?(?:\d+分)?$"),
-                re.compile(r"(?:查询|查看|显示|看看|展示)([\u4e00-\u9fa5]{2})的(?:分数|积分|得分|成绩)"),
-                re.compile(r"(?:查询|查看|显示|看看|展示)([\u4e00-\u9fa5]{3})的(?:分数|积分|得分|成绩)"),
+                re.compile(
+                    r"(?:查询|查看|显示|看看|展示)([\u4e00-\u9fa5]{2})的(?:分数|积分|得分|成绩)"
+                ),
+                re.compile(
+                    r"(?:查询|查看|显示|看看|展示)([\u4e00-\u9fa5]{3})的(?:分数|积分|得分|成绩)"
+                ),
                 re.compile(
                     r"因为(?:迟到|早退|旷课|违纪|违规|睡觉|说话|玩手机)"
                     r"([\u4e00-\u9fa5]{2})(?:同学)?被(?:扣分|加分|扣\d+分|加\d+分)"
@@ -1036,7 +1064,10 @@ class EnhancedNLPParserService:
                 re.compile(r"([\u4e00-\u9fa5]{2})的(?:行为|表现|作业|课堂|情况|事情)"),
                 re.compile(r"(?:学生|同学)([\u4e00-\u9fa5]{2})"),
                 re.compile(r"^([\u4e00-\u9fa5]{3})(?:同学)?"),
-                re.compile(r"([\u4e00-\u9fa5]{3})(?:同学|的|在|上课|今天|昨天|" r"刚才|表现|作业|发言|迟到|早退|旷课)"),
+                re.compile(
+                    r"([\u4e00-\u9fa5]{3})(?:同学|的|在|上课|今天|昨天|"
+                    r"刚才|表现|作业|发言|迟到|早退|旷课)"
+                ),
             ]
 
         self.name_prefix_words = config_loader.get_name_prefix_words() or {
@@ -1330,7 +1361,9 @@ class EnhancedNLPParserService:
 
                 priority_score = rule.priority * 10 if rule.priority else 0
 
-                dynamic_score = accuracy_rate * 50 + usage_count * 0.1 + recency_score * 20 + priority_score
+                dynamic_score = (
+                    accuracy_rate * 50 + usage_count * 0.1 + recency_score * 20 + priority_score
+                )
 
                 stats[rule.id] = {
                     "rule": rule,
@@ -1459,7 +1492,9 @@ class EnhancedNLPParserService:
 
             idf = bm25_index["idf"][term]
             numerator = tf * (k1 + 1)
-            denominator = tf + k1 * (1 - b + b * doc_len / avg_doc_len) if avg_doc_len > 0 else tf + k1
+            denominator = (
+                tf + k1 * (1 - b + b * doc_len / avg_doc_len) if avg_doc_len > 0 else tf + k1
+            )
 
             score += idf * numerator / denominator
 
@@ -1518,19 +1553,25 @@ class EnhancedNLPParserService:
 
     def _update_context_memory(self, user_name=None, rule_id=None, intent=None):
         if user_name:
-            self.context_memory["recent_users"] = [u for u in self.context_memory["recent_users"] if u != user_name]
+            self.context_memory["recent_users"] = [
+                u for u in self.context_memory["recent_users"] if u != user_name
+            ]
             self.context_memory["recent_users"].append(user_name)
             if len(self.context_memory["recent_users"]) > self.context_memory["max_memory_size"]:
                 self.context_memory["recent_users"].pop(0)
 
         if rule_id:
-            self.context_memory["recent_rules"] = [r for r in self.context_memory["recent_rules"] if r != rule_id]
+            self.context_memory["recent_rules"] = [
+                r for r in self.context_memory["recent_rules"] if r != rule_id
+            ]
             self.context_memory["recent_rules"].append(rule_id)
             if len(self.context_memory["recent_rules"]) > self.context_memory["max_memory_size"]:
                 self.context_memory["recent_rules"].pop(0)
 
         if intent:
-            self.context_memory["recent_intents"] = [i for i in self.context_memory["recent_intents"] if i != intent]
+            self.context_memory["recent_intents"] = [
+                i for i in self.context_memory["recent_intents"] if i != intent
+            ]
             self.context_memory["recent_intents"].append(intent)
             if len(self.context_memory["recent_intents"]) > self.context_memory["max_memory_size"]:
                 self.context_memory["recent_intents"].pop(0)
@@ -1606,7 +1647,9 @@ class EnhancedNLPParserService:
                         "学生积极主动认真努力优秀良好出色进步按时准时及时提前"
                         "把因为奖励惩罚批评表扬处罚"
                     )
-                    if name not in self.invalid_names and not any(char in invalid_chars for char in name):
+                    if name not in self.invalid_names and not any(
+                        char in invalid_chars for char in name
+                    ):
                         if name in name_to_id:
                             return name, name_to_id[name]
                         return name, None
@@ -1619,7 +1662,9 @@ class EnhancedNLPParserService:
                 remaining = text[i:]
                 # 获取行为关键词列表（字符串）
                 keyword_objs = self._get_behavior_keywords()
-                behavior_kw_list = [kw.keyword if hasattr(kw, "keyword") else str(kw) for kw in keyword_objs]
+                behavior_kw_list = [
+                    kw.keyword if hasattr(kw, "keyword") else str(kw) for kw in keyword_objs
+                ]
                 for kw in behavior_kw_list:
                     if remaining.startswith(kw):
                         if candidate in name_to_id:
@@ -1820,7 +1865,9 @@ class EnhancedNLPParserService:
                             )
                         )
                     for synonym in kw.synonyms:
-                        if synonym in expanded_text and synonym not in [k[0] for k in matched_keywords]:
+                        if synonym in expanded_text and synonym not in [
+                            k[0] for k in matched_keywords
+                        ]:
                             matched_keywords.append(
                                 (
                                     synonym,
@@ -1919,7 +1966,7 @@ class EnhancedNLPParserService:
                 kw_pos = text_lower.find(kw)
                 if kw_pos == -1:
                     continue
-                prefix_ctx = text_lower[max(0, kw_pos - 2):kw_pos]
+                prefix_ctx = text_lower[max(0, kw_pos - 2) : kw_pos]
                 if any(prefix_ctx.endswith(neg) for neg in _NEG_PREFIXES):
                     continue  # 否定前缀 → 不命中该意图
                 rule_based_intent = intent
@@ -1958,7 +2005,9 @@ class EnhancedNLPParserService:
         if self.vectorizer is None:
             return []
 
-        rules = NLPScoringRule.query.filter(NLPScoringRule.score_type == intent, NLPScoringRule.is_active).all()
+        rules = NLPScoringRule.query.filter(
+            NLPScoringRule.score_type == intent, NLPScoringRule.is_active
+        ).all()
 
         if not rules:
             return []
@@ -2080,7 +2129,10 @@ class EnhancedNLPParserService:
         combined_scores = []
         for i in range(len(rules)):
             combined = (
-                0.2 * tfidf_final[i] + 0.2 * bm25_normalized[i] + 0.3 * bert_similarities[i] + 0.3 * keyword_matches[i]
+                0.2 * tfidf_final[i]
+                + 0.2 * bm25_normalized[i]
+                + 0.3 * bert_similarities[i]
+                + 0.3 * keyword_matches[i]
             )
             combined_scores.append(combined)
 
@@ -2482,7 +2534,9 @@ class EnhancedNLPParserService:
             "behavior": behavior_result["text"],
             "intent": primary_intent,
             "all_intents": all_intents,
-            "confidence": self._calculate_confidence(behavior_result, primary_intent, matched_rules),
+            "confidence": self._calculate_confidence(
+                behavior_result, primary_intent, matched_rules
+            ),
             "matched_rules": [],
             "suggestions": [],
             "matched_patterns": behavior_result["patterns"],
@@ -2495,7 +2549,9 @@ class EnhancedNLPParserService:
 
         extracted_scores = entities.get("scores", [])
         if extracted_scores:
-            add_scores = [s["value"] for s in extracted_scores if s["type"] in ("add_value", "deduct_value")]
+            add_scores = [
+                s["value"] for s in extracted_scores if s["type"] in ("add_value", "deduct_value")
+            ]
             if add_scores:
                 result["score"] = add_scores[0] if primary_intent == "add" else -add_scores[0]
             else:
@@ -2519,7 +2575,9 @@ class EnhancedNLPParserService:
                     "match_pattern": rule.match_pattern,
                     "priority": rule.priority,
                     "usage_count": (rule.usage_count if hasattr(rule, "usage_count") else 0),
-                    "accuracy_rate": (rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0),
+                    "accuracy_rate": (
+                        rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0
+                    ),
                     "match_confidence": round(confidence, 2),
                     "match_method": method,
                 }
@@ -2715,14 +2773,17 @@ class EnhancedNLPParserService:
             "behavior": behavior_result["text"],
             "intent": primary_intent,
             "all_intents": all_intents,
-            "confidence": self._calculate_confidence(behavior_result, primary_intent, matched_rules),
+            "confidence": self._calculate_confidence(
+                behavior_result, primary_intent, matched_rules
+            ),
             "matched_rules": [],
             "suggestions": [],
             "matched_patterns": behavior_result["patterns"],
             "positive_count": behavior_result["positive_count"],
             "negative_count": behavior_result["negative_count"],
             "expanded_texts_count": len(behavior_result.get("expanded_texts", [])),
-            "context_used": context_history is not None and len(context_history.get("recent_users", [])) > 0,
+            "context_used": context_history is not None
+            and len(context_history.get("recent_users", [])) > 0,
             "entities": entities,
         }
 
@@ -2730,7 +2791,9 @@ class EnhancedNLPParserService:
         extracted_scores = entities.get("scores", [])
         if extracted_scores:
             # 优先使用add_value或deduct_value类型（明确的加/扣分数）
-            add_scores = [s["value"] for s in extracted_scores if s["type"] in ("add_value", "deduct_value")]
+            add_scores = [
+                s["value"] for s in extracted_scores if s["type"] in ("add_value", "deduct_value")
+            ]
             if add_scores:
                 result["score"] = add_scores[0] if primary_intent == "add" else -add_scores[0]
             else:
@@ -2756,7 +2819,9 @@ class EnhancedNLPParserService:
                     "match_pattern": rule.match_pattern,
                     "priority": rule.priority,
                     "usage_count": (rule.usage_count if hasattr(rule, "usage_count") else 0),
-                    "accuracy_rate": (rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0),
+                    "accuracy_rate": (
+                        rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0
+                    ),
                     "match_confidence": round(confidence, 2),
                     "match_method": method,
                 }
@@ -2792,7 +2857,9 @@ class EnhancedNLPParserService:
             score += min(0.1, expanded_count * 0.02)
 
         if matched_rules:
-            avg_confidence = sum(confidence for _, _, confidence in matched_rules) / len(matched_rules)
+            avg_confidence = sum(confidence for _, _, confidence in matched_rules) / len(
+                matched_rules
+            )
             score += min(0.4, avg_confidence * 0.4)
 
         return round(min(1.0, score), 2)
@@ -2858,7 +2925,8 @@ class EnhancedNLPParserService:
         # S6-B-P0-2 修复: 复合句（"张三加分，李四扣分"）原静默只执行第一人/第一条规则 → 漏记。
         # 不支持多目标执行，改为明确提示逐条确认（诚实拒绝而非静默丢）。
         valid_intents = [
-            i for i in parse_result.get("all_intents", [])
+            i
+            for i in parse_result.get("all_intents", [])
             if isinstance(i, dict) and i.get("intent") not in ("unknown", "query")
         ]
         if len(valid_intents) > 1:
@@ -2893,7 +2961,9 @@ class EnhancedNLPParserService:
             elif intent == "add" and score_value is not None and score_value < 0:
                 score_value = -score_value
             behavior_tags = manual_correction.get("behavior_tags", [])
-            behavior_description = manual_correction.get("behavior_description", parse_result["behavior"])
+            behavior_description = manual_correction.get(
+                "behavior_description", parse_result["behavior"]
+            )
 
             rule = NLPScoringRule.query.filter(
                 NLPScoringRule.behavior_keyword == behavior_description[:100],

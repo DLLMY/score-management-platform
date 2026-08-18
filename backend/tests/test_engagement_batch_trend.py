@@ -2,8 +2,21 @@ import json
 from datetime import datetime, timedelta, date
 from unittest import mock
 
-from models import db, User, ClassInfo, Attendance, HomeworkAssignment, HomeworkSubmission, ScoreRecord
-from services.engagement_service import EngagementService, calculate_engagement, weekly_trend, batch_rank
+from models import (
+    db,
+    User,
+    ClassInfo,
+    Attendance,
+    HomeworkAssignment,
+    HomeworkSubmission,
+    ScoreRecord,
+)
+from services.engagement_service import (
+    EngagementService,
+    calculate_engagement,
+    weekly_trend,
+    batch_rank,
+)
 import services.engagement_service as engagement_service
 
 
@@ -15,10 +28,15 @@ class TestEngagementBatchTrend:
         with app.app_context():
             db.session.add(ClassInfo(id=cid, name="测试班%d" % cid))
             for sid, name in students:
-                db.session.add(User(
-                    id=sid, name=name, card_id="CARD_%d" % sid,
-                    class_info_id=cid, class_name="测试班%d" % cid,
-                ))
+                db.session.add(
+                    User(
+                        id=sid,
+                        name=name,
+                        card_id="CARD_%d" % sid,
+                        class_info_id=cid,
+                        class_name="测试班%d" % cid,
+                    )
+                )
             db.session.commit()
 
     @staticmethod
@@ -26,23 +44,38 @@ class TestEngagementBatchTrend:
         base = base or date.today()
         with app.app_context():
             for k in range(10):
-                db.session.add(Attendance(
-                    student_id=sid, class_id=cid,
-                    date=base - timedelta(days=k), status="present",
-                ))
+                db.session.add(
+                    Attendance(
+                        student_id=sid,
+                        class_id=cid,
+                        date=base - timedelta(days=k),
+                        status="present",
+                    )
+                )
             ha = HomeworkAssignment(
-                id=1000 + sid, class_id=cid, title="hw",
-                assigned_date=base - timedelta(days=5), due_date=base,
+                id=1000 + sid,
+                class_id=cid,
+                title="hw",
+                assigned_date=base - timedelta(days=5),
+                due_date=base,
             )
             db.session.add(ha)
-            db.session.add(HomeworkSubmission(
-                assignment_id=1000 + sid, student_id=sid, is_submitted=True, is_late=False,
-            ))
+            db.session.add(
+                HomeworkSubmission(
+                    assignment_id=1000 + sid,
+                    student_id=sid,
+                    is_submitted=True,
+                    is_late=False,
+                )
+            )
             for k in range(5):
-                db.session.add(ScoreRecord(
-                    user_id=sid, score_change=2,
-                    created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
-                ))
+                db.session.add(
+                    ScoreRecord(
+                        user_id=sid,
+                        score_change=2,
+                        created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
+                    )
+                )
             db.session.commit()
 
     def test_batch_rank_structure_and_serializable(self, app):

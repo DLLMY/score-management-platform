@@ -20,6 +20,7 @@ sys.path.insert(0, basedir)
 from flask import Flask
 from flask_restx import Api
 from models import db
+
 try:
     from api.class_management.seating_routes import ns_seating
 except ImportError:
@@ -126,10 +127,13 @@ def register_test_routes(app):
 
 def mock_permission_decorator():
     """Mock requires_permission 装饰器，跳过权限检查"""
+
     def mock_decorator(permission):
         def wrapper(f):
             return f
+
         return wrapper
+
     return mock_decorator
 
 
@@ -181,8 +185,8 @@ def run_tests():
 
                 registered_routes = []
                 for rule in app.url_map.iter_rules():
-                    if '/api/' in rule.rule and rule.methods:
-                        methods = ','.join(sorted(rule.methods - {'HEAD', 'OPTIONS'}))
+                    if "/api/" in rule.rule and rule.methods:
+                        methods = ",".join(sorted(rule.methods - {"HEAD", "OPTIONS"}))
                         registered_routes.append(f"    {methods:8s} {rule.rule}")
                 print(f"  已注册 {len(registered_routes)} 个 API 路由")
             except Exception as e:
@@ -329,18 +333,22 @@ def run_tests():
                             test_result["response_format_valid"] = False
                             test_result["warnings"].extend(format_errors)
                             results["warnings"] += 1
-                            print(f"  ⚠ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有警告")
+                            print(
+                                f"  ⚠ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有警告"
+                            )
                             for err in format_errors:
                                 print(f"    警告: {err}")
                         else:
                             test_result["response_format_valid"] = True
-                            print(f"  ✓ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有效")
+                            print(
+                                f"  ✓ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有效"
+                            )
 
                         if "success" in data:
                             data_info = f"success={data['success']}"
-                            if isinstance(data.get('data'), list):
+                            if isinstance(data.get("data"), list):
                                 data_info += f", 记录数={len(data['data'])}"
-                            elif isinstance(data.get('data'), dict):
+                            elif isinstance(data.get("data"), dict):
                                 data_info += f", 字段={list(data['data'].keys())}"
                             print(f"    响应: {data_info}")
                         else:
@@ -354,9 +362,13 @@ def run_tests():
                         results["failed"] += 1
                         print(f"  ✗ JSON解析失败: {e}")
                 else:
-                    test_result["error"] = f"期望状态码 {case['expected_status']}, 实际 {response.status_code}"
+                    test_result["error"] = (
+                        f"期望状态码 {case['expected_status']}, 实际 {response.status_code}"
+                    )
                     results["failed"] += 1
-                    print(f"  ✗ 状态码不匹配: 期望 {case['expected_status']}, 实际 {response.status_code}")
+                    print(
+                        f"  ✗ 状态码不匹配: 期望 {case['expected_status']}, 实际 {response.status_code}"
+                    )
 
                     if case.get("alt_url"):
                         print(f"  尝试用户指定路径: {case['alt_url']}")
@@ -378,12 +390,14 @@ def run_tests():
             except Exception as e:
                 test_result["error"] = str(e)
                 results["failed"] += 1
-                results["errors"].append({
-                    "module": case["module"],
-                    "endpoint": case["url"],
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                })
+                results["errors"].append(
+                    {
+                        "module": case["module"],
+                        "endpoint": case["url"],
+                        "error": str(e),
+                        "traceback": traceback.format_exc(),
+                    }
+                )
                 print(f"  ✗ 异常: {e}")
                 traceback.print_exc()
 
@@ -396,7 +410,7 @@ def run_tests():
         print(f"通过: {results['passed']}")
         print(f"失败: {results['failed']}")
         print(f"警告: {results['warnings']}")
-        pass_rate = results['passed']/results['total']*100 if results['total'] > 0 else 0
+        pass_rate = results["passed"] / results["total"] * 100 if results["total"] > 0 else 0
         print(f"通过率: {pass_rate:.1f}%")
 
         if results["warnings"] > 0:
@@ -448,12 +462,14 @@ def run_tests():
     except Exception as e:
         print(f"\n严重错误: {e}")
         traceback.print_exc()
-        results["errors"].append({
-            "module": "全局",
-            "endpoint": "N/A",
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-        })
+        results["errors"].append(
+            {
+                "module": "全局",
+                "endpoint": "N/A",
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+            }
+        )
         return results
 
 

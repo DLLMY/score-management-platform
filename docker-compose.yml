@@ -23,7 +23,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: infra/Dockerfile
     container_name: score-management-backend
     ports:
       - "5000:5000"
@@ -51,7 +51,7 @@ services:
   celery-worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: infra/Dockerfile
     container_name: score-management-celery-worker
     command: celery -A celery_app worker -Q default,notification,mqtt,export -c 4 --loglevel=info
     volumes:
@@ -74,7 +74,7 @@ services:
   celery-beat:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: infra/Dockerfile
     container_name: score-management-celery-beat
     command: celery -A celery_app beat --loglevel=info
     volumes:

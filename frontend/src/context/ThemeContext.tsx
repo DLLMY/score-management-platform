@@ -20,7 +20,8 @@ export function ThemeProvider({ children }: ThemeProviderProps): ReactNode {
     if (saved === 'light' || saved === 'dark') return saved;
     // 环境 guard: 旧浏览器/测试环境无 matchMedia → 默认浅色（原直接调用 → ReferenceError/TypeError）
     try {
-      return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches
+      return typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
         : 'light';
     } catch {

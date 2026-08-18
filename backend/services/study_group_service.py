@@ -53,7 +53,9 @@ class StudyGroupService:
         group = StudyGroup.query.get(group_id)
         if not group:
             return {"success": False, "message": "学习小组不存在"}, 404
-        existing = StudyGroupMember.query.filter_by(group_id=group_id, student_id=student_id).first()
+        existing = StudyGroupMember.query.filter_by(
+            group_id=group_id, student_id=student_id
+        ).first()
         if existing:
             return {"success": False, "message": "学生已在组内"}, 400
         member = StudyGroupMember(group_id=group_id, student_id=student_id)

@@ -125,7 +125,9 @@ class ExportUsers(Resource):
 @ns_import_export.route("/export/records")
 class ExportRecords(Resource):
 
-    @ns_import_export.doc("export_records", params={"format": "导出格式", "user_id": "按用户ID筛选"})
+    @ns_import_export.doc(
+        "export_records", params={"format": "导出格式", "user_id": "按用户ID筛选"}
+    )
     @requires_permission("report.export")
     def get(self):
         """导出积分记录"""
@@ -143,12 +145,24 @@ class ExportRecords(Resource):
         if admin and admin.role not in ("admin", "super_admin"):
             allowed = get_allowed_classes(admin.id)
             if allowed:
-                query = query.join(_U, ScoreRecord.student_id == _U.id).filter(_U.class_name.in_(allowed))
+                query = query.join(_U, ScoreRecord.student_id == _U.id).filter(
+                    _U.class_name.in_(allowed)
+                )
             else:
                 query = query.filter(False)
 
         records = query.all()
-        headers = ["ID", "学生ID", "学生姓名", "规则ID", "规则名称", "积分变化", "描述", "操作人", "创建时间"]
+        headers = [
+            "ID",
+            "学生ID",
+            "学生姓名",
+            "规则ID",
+            "规则名称",
+            "积分变化",
+            "描述",
+            "操作人",
+            "创建时间",
+        ]
 
         data = []
         for record in records:
@@ -268,7 +282,11 @@ class ExportCategories(Resource):
                     category.name,
                     category.description,
                     category.color,
-                    category.created_at.strftime("%Y-%m-%d %H:%M:%S") if category.created_at else "",
+                    (
+                        category.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                        if category.created_at
+                        else ""
+                    ),
                 ]
             )
 
@@ -360,7 +378,11 @@ class ImportUsers(Resource):
         if not acquired:
             return APIResponse.error(
                 message="系统繁忙，请稍后重试",
-                data={"imported_count": 0, "failed_count": 0, "errors": ["当前导入请求过多，请稍后再试"]},
+                data={
+                    "imported_count": 0,
+                    "failed_count": 0,
+                    "errors": ["当前导入请求过多，请稍后再试"],
+                },
                 status_code=429,
             )
 
@@ -372,13 +394,15 @@ class ImportUsers(Resource):
     def _do_import_users(self):
         if "file" not in request.files:
             return APIResponse.bad_request(
-                message="请选择要导入的文件", data={"imported_count": 0, "failed_count": 0, "errors": ["未上传文件"]}
+                message="请选择要导入的文件",
+                data={"imported_count": 0, "failed_count": 0, "errors": ["未上传文件"]},
             )
 
         file = request.files["file"]
         if file.filename == "":
             return APIResponse.bad_request(
-                message="请选择要导入的文件", data={"imported_count": 0, "failed_count": 0, "errors": ["文件名为空"]}
+                message="请选择要导入的文件",
+                data={"imported_count": 0, "failed_count": 0, "errors": ["文件名为空"]},
             )
 
         try:
@@ -392,11 +416,17 @@ class ImportUsers(Resource):
             else:
                 return APIResponse.bad_request(
                     message="不支持的文件格式",
-                    data={"imported_count": 0, "failed_count": 0, "errors": ["仅支持.xlsx、.xls和.csv格式"]},
+                    data={
+                        "imported_count": 0,
+                        "failed_count": 0,
+                        "errors": ["仅支持.xlsx、.xls和.csv格式"],
+                    },
                 )
 
             # 验证数据
-            validation = ExcelTemplateGenerator.validate_import_data("user", result["headers"], result["data"])
+            validation = ExcelTemplateGenerator.validate_import_data(
+                "user", result["headers"], result["data"]
+            )
             if not validation["valid"]:
                 return APIResponse.bad_request(
                     message="数据格式验证失败",
@@ -437,13 +467,20 @@ class ImportUsers(Resource):
                     if class_name:
                         class_info = ClassInfo.query.filter_by(name=class_name).first()
                         if not class_info:
-                            row_errors.append({"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'})
+                            row_errors.append(
+                                {
+                                    "field": "class_name",
+                                    "message": f'班级 "{class_name}" 在系统中不存在',
+                                }
+                            )
 
                     # 验证手机号
                     if phone:
 
                         if not re.match(r"^1[3-9]\d{9}$", phone):
-                            row_errors.append({"field": "phone", "message": "手机号格式无效，应为11位数字"})
+                            row_errors.append(
+                                {"field": "phone", "message": "手机号格式无效，应为11位数字"}
+                            )
 
                     # 验证学号/饭卡号
                     if not card_id:
@@ -453,11 +490,15 @@ class ImportUsers(Resource):
                         if not is_valid:
                             row_errors.append({"field": "card_id", "message": msg})
                         elif User.query.filter_by(card_id=card_id).first():
-                            row_errors.append({"field": "card_id", "message": f"学号 {card_id} 已存在"})
+                            row_errors.append(
+                                {"field": "card_id", "message": f"学号 {card_id} 已存在"}
+                            )
 
                     if row_errors:
                         failed_count += 1
-                        error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
+                        error_msg = "; ".join(
+                            [f'{err["field"]}: {err["message"]}' for err in row_errors]
+                        )
                         errors.append(
                             {
                                 "row": row_idx,
@@ -479,12 +520,21 @@ class ImportUsers(Resource):
 
                     new_user = create_user_row(name, gender, class_name, phone, card_id)
                     imported_count += 1
-                    messages.append({"name": name, "action": "created", "message": f"学生 {name} 导入成功"})
+                    messages.append(
+                        {"name": name, "action": "created", "message": f"学生 {name} 导入成功"}
+                    )
 
                 except Exception as e:
                     failed_count += 1
                     error_msg = str(e)
-                    errors.append({"row": row_idx, "message": error_msg, "row_data": {}, "error_fields": ["system"]})
+                    errors.append(
+                        {
+                            "row": row_idx,
+                            "message": error_msg,
+                            "row_data": {},
+                            "error_fields": ["system"],
+                        }
+                    )
                     messages.append(
                         {
                             "name": name if name else "未知",
@@ -504,7 +554,11 @@ class ImportUsers(Resource):
                     logger.error(f"数据提交失败（已重试{retry.retry_count}次）: {str(e)}")
                     return APIResponse.server_error(
                         message="导入失败: 数据提交失败，请重试",
-                        data={"imported_count": 0, "failed_count": imported_count + failed_count, "errors": [str(e)]},
+                        data={
+                            "imported_count": 0,
+                            "failed_count": imported_count + failed_count,
+                            "errors": [str(e)],
+                        },
                     )
 
             message = f"导入完成！成功导入 {imported_count} 条记录，失败 {failed_count} 条"
@@ -521,7 +575,8 @@ class ImportUsers(Resource):
         except Exception as e:
             db.session.rollback()
             return APIResponse.server_error(
-                message=f"导入失败: {str(e)}", data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]}
+                message=f"导入失败: {str(e)}",
+                data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
             )
 
 
@@ -534,13 +589,15 @@ class ImportRules(Resource):
         """导入规则数据"""
         if "file" not in request.files:
             return APIResponse.bad_request(
-                message="请选择要导入的文件", data={"imported_count": 0, "failed_count": 0, "errors": ["未上传文件"]}
+                message="请选择要导入的文件",
+                data={"imported_count": 0, "failed_count": 0, "errors": ["未上传文件"]},
             )
 
         file = request.files["file"]
         if file.filename == "":
             return APIResponse.bad_request(
-                message="请选择要导入的文件", data={"imported_count": 0, "failed_count": 0, "errors": ["文件名为空"]}
+                message="请选择要导入的文件",
+                data={"imported_count": 0, "failed_count": 0, "errors": ["文件名为空"]},
             )
 
         try:
@@ -554,11 +611,17 @@ class ImportRules(Resource):
             else:
                 return APIResponse.bad_request(
                     message="不支持的文件格式",
-                    data={"imported_count": 0, "failed_count": 0, "errors": ["仅支持.xlsx、.xls和.csv格式"]},
+                    data={
+                        "imported_count": 0,
+                        "failed_count": 0,
+                        "errors": ["仅支持.xlsx、.xls和.csv格式"],
+                    },
                 )
 
             # 验证数据
-            validation = ExcelTemplateGenerator.validate_import_data("rule", result["headers"], result["data"])
+            validation = ExcelTemplateGenerator.validate_import_data(
+                "rule", result["headers"], result["data"]
+            )
             if not validation["valid"]:
                 return APIResponse.bad_request(
                     message="数据格式验证失败",
@@ -611,13 +674,19 @@ class ImportRules(Resource):
 
             message = f"导入完成！成功导入 {imported_count} 条记录，失败 {failed_count} 条"
             return APIResponse.success(
-                message=message, data={"imported_count": imported_count, "failed_count": failed_count, "errors": errors}
+                message=message,
+                data={
+                    "imported_count": imported_count,
+                    "failed_count": failed_count,
+                    "errors": errors,
+                },
             )
 
         except Exception as e:
             db.session.rollback()
             return APIResponse.server_error(
-                message=f"导入失败: {str(e)}", data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]}
+                message=f"导入失败: {str(e)}",
+                data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
             )
 
 
@@ -630,13 +699,15 @@ class ImportCategories(Resource):
         """导入分类数据"""
         if "file" not in request.files:
             return APIResponse.bad_request(
-                message="请选择要导入的文件", data={"imported_count": 0, "failed_count": 0, "errors": ["未上传文件"]}
+                message="请选择要导入的文件",
+                data={"imported_count": 0, "failed_count": 0, "errors": ["未上传文件"]},
             )
 
         file = request.files["file"]
         if file.filename == "":
             return APIResponse.bad_request(
-                message="请选择要导入的文件", data={"imported_count": 0, "failed_count": 0, "errors": ["文件名为空"]}
+                message="请选择要导入的文件",
+                data={"imported_count": 0, "failed_count": 0, "errors": ["文件名为空"]},
             )
 
         try:
@@ -650,11 +721,17 @@ class ImportCategories(Resource):
             else:
                 return APIResponse.bad_request(
                     message="不支持的文件格式",
-                    data={"imported_count": 0, "failed_count": 0, "errors": ["仅支持.xlsx、.xls和.csv格式"]},
+                    data={
+                        "imported_count": 0,
+                        "failed_count": 0,
+                        "errors": ["仅支持.xlsx、.xls和.csv格式"],
+                    },
                 )
 
             # 验证数据
-            validation = ExcelTemplateGenerator.validate_import_data("category", result["headers"], result["data"])
+            validation = ExcelTemplateGenerator.validate_import_data(
+                "category", result["headers"], result["data"]
+            )
             if not validation["valid"]:
                 return APIResponse.bad_request(
                     message="数据格式验证失败",
@@ -694,13 +771,19 @@ class ImportCategories(Resource):
 
             message = f"导入完成！成功导入 {imported_count} 条记录，失败 {failed_count} 条"
             return APIResponse.success(
-                message=message, data={"imported_count": imported_count, "failed_count": failed_count, "errors": errors}
+                message=message,
+                data={
+                    "imported_count": imported_count,
+                    "failed_count": failed_count,
+                    "errors": errors,
+                },
             )
 
         except Exception as e:
             db.session.rollback()
             return APIResponse.server_error(
-                message=f"导入失败: {str(e)}", data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]}
+                message=f"导入失败: {str(e)}",
+                data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
             )
 
 
@@ -710,7 +793,9 @@ class ImportCategories(Resource):
 @ns_import_export.route("/backup/create")
 class CreateBackup(Resource):
 
-    @ns_import_export.doc("create_backup", params={"type": "备份类型: full, incremental, data_only"})
+    @ns_import_export.doc(
+        "create_backup", params={"type": "备份类型: full, incremental, data_only"}
+    )
     @requires_permission("system.settings")
     def post(self):
         """创建手动备份"""
@@ -810,7 +895,11 @@ class GetBackupScheduleStatus(Resource):
             "success": True,
             "enabled": backup_scheduler.enabled,
             "schedule_time": backup_scheduler.schedule_time,
-            "last_run_time": backup_scheduler.last_run_time.isoformat() if backup_scheduler.last_run_time else None,
+            "last_run_time": (
+                backup_scheduler.last_run_time.isoformat()
+                if backup_scheduler.last_run_time
+                else None
+            ),
         }
 
 

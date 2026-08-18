@@ -10,6 +10,7 @@ execute_scoring 必须返回失败并明确提示"未找到学生"，且不得�
 测试构造用 __new__ 跳过重型 __init__（torch/sklearn/jieba），
 仅 patch parse 方法，隔离出 execute_scoring 自身的判定逻辑。
 """
+
 import pytest
 from models import User, NLPScoringRule, NLPMatchResult, NLPRuleUsage, db
 from services.nlp_enhanced_service import EnhancedNLPParserService

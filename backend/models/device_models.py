@@ -8,6 +8,8 @@ class MQTTLog(db.Model):
     message = db.Column(db.Text)
     direction = db.Column(db.String(10))
     timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
 class MQTTConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     broker = db.Column(db.String(200), default="nc5233fc.ala.cn-hangzhou.emqxsl.cn")
@@ -19,6 +21,8 @@ class MQTTConfig(db.Model):
     timeout = db.Column(db.Integer, default=10)
     keepalive = db.Column(db.Integer, default=60)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class ProcessedMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     message_id = db.Column(db.String(100), unique=True, nullable=False)
@@ -26,6 +30,8 @@ class ProcessedMessage(db.Model):
     new_score = db.Column(db.Integer)
     client_id = db.Column(db.String(100))
     processed_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class PhoneBoxPolicy(db.Model):
     """班主任自助开箱策略：按班级（class_info_id 唯一）配置手机箱自助开箱。
 
@@ -54,6 +60,8 @@ class PhoneBoxPolicy(db.Model):
     class_info = db.relationship(
         "ClassInfo", backref=db.backref("phone_box_policy", uselist=False, lazy=True)
     )
+
+
 class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
@@ -75,7 +83,9 @@ class Device(db.Model):
     ota_status = db.Column(db.String(20), default="idle")  # idle/pending/upgrading/failed
     last_ota_push_at = db.Column(db.DateTime)  # 最近一次自动推送指令下发时间
     free_heap = db.Column(db.Integer)
-    battery_level = db.Column(db.Float)  # R7/F8: 心跳上报电量（此前模型缺列 → 设备上报即 AttributeError）
+    battery_level = db.Column(
+        db.Float
+    )  # R7/F8: 心跳上报电量（此前模型缺列 → 设备上报即 AttributeError）
     temperature = db.Column(db.Float)  # R7/F8: 心跳上报温度
     last_error = db.Column(db.String(500))
     error_count = db.Column(db.Integer, default=0)
@@ -105,7 +115,10 @@ class Device(db.Model):
         等价于 services.heartbeat_service.is_device_online(self)。
         """
         from services.heartbeat_service import is_device_online
+
         return is_device_online(self)
+
+
 class DeviceHeartbeat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(100), nullable=False)
@@ -117,6 +130,8 @@ class DeviceHeartbeat(db.Model):
     box_b_status = db.Column(db.String(20))
     system_state = db.Column(db.Integer)
     received_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class FirmwareVersion(db.Model):
     __tablename__ = "firmware_versions"
 
@@ -131,6 +146,8 @@ class FirmwareVersion(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer)
+
+
 class DeviceFirmwareUpdate(db.Model):
     __tablename__ = "device_firmware_updates"
 
@@ -144,6 +161,8 @@ class DeviceFirmwareUpdate(db.Model):
     completed_at = db.Column(db.DateTime)
     error_message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
 class DeviceGroup(db.Model):
     """设备分组表"""
 
@@ -175,12 +194,16 @@ class DeviceGroup(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
 class DeviceGroupMapping(db.Model):
     """设备-分组映射表"""
 
     __tablename__ = "device_group_mappings"
 
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(100), db.ForeignKey("device.device_id"), nullable=False, index=True)
+    device_id = db.Column(
+        db.String(100), db.ForeignKey("device.device_id"), nullable=False, index=True
+    )
     group_id = db.Column(db.Integer, db.ForeignKey("device_groups.id"), nullable=False, index=True)
     added_at = db.Column(db.DateTime, default=datetime.now)

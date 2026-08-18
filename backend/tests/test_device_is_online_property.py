@@ -3,6 +3,7 @@
 确保设备在线判定走 last_heartbeat TTL（修复「无心跳却显示在线」），
 并防止 DeviceExport 直接读 device.is_online 时的 AttributeError 复发。
 """
+
 from datetime import datetime, timedelta
 
 from models import Device

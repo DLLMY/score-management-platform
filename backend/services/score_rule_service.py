@@ -72,9 +72,13 @@ def import_rules(rules_data):
             if not name:
                 row_errors.append({"field": "name", "message": "规则名称不能为空"})
             elif not isinstance(name, str) or len(str(name).strip()) == 0:
-                row_errors.append({"field": "name", "message": "规则名称格式无效，必须为非空字符串"})
+                row_errors.append(
+                    {"field": "name", "message": "规则名称格式无效，必须为非空字符串"}
+                )
             elif len(str(name).strip()) > 100:
-                row_errors.append({"field": "name", "message": "规则名称长度超过限制（最大100字符）"})
+                row_errors.append(
+                    {"field": "name", "message": "规则名称长度超过限制（最大100字符）"}
+                )
             if name:
                 name_str = str(name).strip()
                 if name_str in existing_names:
@@ -95,24 +99,33 @@ def import_rules(rules_data):
                         category = get_by_id(ScoreCategory, category_id_int)
                         if not category:
                             row_errors.append(
-                                {"field": "category_id", "message": f'分类ID"{category_id_int}"不存在'}
+                                {
+                                    "field": "category_id",
+                                    "message": f'分类ID"{category_id_int}"不存在',
+                                }
                             )
                 except (ValueError, TypeError):
-                    row_errors.append({"field": "category_id", "message": f'分类ID"{category_id}"不是有效的整数'})
+                    row_errors.append(
+                        {"field": "category_id", "message": f'分类ID"{category_id}"不是有效的整数'}
+                    )
             daily_limit = rule_data.get("daily_limit", 0)
             try:
                 daily_limit_int = int(daily_limit)
                 if daily_limit_int < 0:
                     row_errors.append({"field": "daily_limit", "message": "每日上限不能为负数"})
             except (ValueError, TypeError):
-                row_errors.append({"field": "daily_limit", "message": f'每日上限"{daily_limit}"不是有效的整数'})
+                row_errors.append(
+                    {"field": "daily_limit", "message": f'每日上限"{daily_limit}"不是有效的整数'}
+                )
             min_interval = rule_data.get("min_interval", 0)
             try:
                 min_interval_int = int(min_interval)
                 if min_interval_int < 0:
                     row_errors.append({"field": "min_interval", "message": "最小间隔不能为负数"})
             except (ValueError, TypeError):
-                row_errors.append({"field": "min_interval", "message": f'最小间隔"{min_interval}"不是有效的整数'})
+                row_errors.append(
+                    {"field": "min_interval", "message": f'最小间隔"{min_interval}"不是有效的整数'}
+                )
             if row_errors:
                 error_count += 1
                 error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
@@ -151,11 +164,20 @@ def import_rules(rules_data):
             db.session.add(rule)
             imported_count += 1
             existing_names.add(name_str)
-            messages.append({"name": name_str, "action": "created", "message": f'规则"{name_str}"导入成功'})
+            messages.append(
+                {"name": name_str, "action": "created", "message": f'规则"{name_str}"导入成功'}
+            )
         except Exception as e:
             error_count += 1
             error_msg = str(e)
-            errors.append({"row": idx + 1, "message": error_msg, "row_data": rule_data, "error_fields": ["system"]})
+            errors.append(
+                {
+                    "row": idx + 1,
+                    "message": error_msg,
+                    "row_data": rule_data,
+                    "error_fields": ["system"],
+                }
+            )
             messages.append(
                 {
                     "name": rule_data.get("name", "未知"),
@@ -198,7 +220,9 @@ def apply_rule_template(template, category_id):
     created_rules = []
     for rule_data in template["rules"]:
         # 检查规则是否已存在（同名同分类）
-        existing = ScoreRule.query.filter_by(name=rule_data["name"], category_id=category_id).first()
+        existing = ScoreRule.query.filter_by(
+            name=rule_data["name"], category_id=category_id
+        ).first()
         if not existing:
             rule = ScoreRule(
                 name=rule_data["name"],

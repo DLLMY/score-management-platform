@@ -25,7 +25,9 @@ class PredictionService:
         """
         start_date = datetime.now() - timedelta(days=days)
         records = (
-            ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date)
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date
+            )
             .order_by(ScoreRecord.created_at.asc())
             .all()
         )
@@ -185,7 +187,12 @@ class PredictionService:
                 )
                 continue
             results["predictions"].append(
-                {"user_id": user.id, "name": user.name, "class_name": user.class_name, "prediction": prediction}
+                {
+                    "user_id": user.id,
+                    "name": user.name,
+                    "class_name": user.class_name,
+                    "prediction": prediction,
+                }
             )
             if prediction["trend"] == "rising":
                 results["summary"]["rising_count"] += 1
@@ -211,7 +218,9 @@ class PredictionService:
             prediction = item["prediction"]
             if prediction["trend"] == "falling" and prediction["slope"] < threshold:
                 if prediction["predicted_scores"]:
-                    predicted_change = prediction["predicted_scores"][-1] - prediction["current_score"]
+                    predicted_change = (
+                        prediction["predicted_scores"][-1] - prediction["current_score"]
+                    )
 
                     # 以调用方给定的 threshold 作为风险基准线衡量严重度：
                     # severity = |slope| / |threshold|，因过滤条件所限必然 >= 1。
@@ -236,7 +245,9 @@ class PredictionService:
                             "risk_level": risk_level,
                             # 未来预测窗口内低于当前积分的天数
                             "warning_count": sum(
-                                1 for s in prediction["predicted_scores"] if s < prediction["current_score"]
+                                1
+                                for s in prediction["predicted_scores"]
+                                if s < prediction["current_score"]
                             ),
                             "confidence": prediction.get("confidence", 0.0),
                         }

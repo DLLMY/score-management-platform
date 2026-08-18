@@ -107,7 +107,9 @@ class StructuredLogFormatter(logging.Formatter):
             log_data["exception"] = {
                 "type": exc_type.__name__ if exc_type else None,
                 "message": str(exc_value) if exc_value else None,
-                "traceback": traceback.format_exception(exc_type, exc_value, exc_tb) if exc_tb else None,
+                "traceback": (
+                    traceback.format_exception(exc_type, exc_value, exc_tb) if exc_tb else None
+                ),
             }
         return json.dumps(log_data, ensure_ascii=False, default=str)
 
@@ -142,7 +144,9 @@ class StructuredLogger:
         json_formatter = StructuredLogFormatter()
         # 控制台处理器（开发环境）
         if sys.platform == "win32":
-            utf8_stream = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+            utf8_stream = io.TextIOWrapper(
+                sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+            )
             console_handler = logging.StreamHandler(utf8_stream)
         else:
             console_handler = logging.StreamHandler(sys.stdout)
@@ -151,14 +155,20 @@ class StructuredLogger:
         self.logger.addHandler(console_handler)
         # 主日志文件处理器（按大小轮转，使用ConcurrentRotatingFileHandler解决Windows文件锁问题）
         main_file_handler = ConcurrentRotatingFileHandler(
-            os.path.join(log_dir, "app.json.log"), maxBytes=50 * 1024 * 1024, backupCount=10, encoding="utf-8"  # 50MB
+            os.path.join(log_dir, "app.json.log"),
+            maxBytes=50 * 1024 * 1024,
+            backupCount=10,
+            encoding="utf-8",  # 50MB
         )
         main_file_handler.setLevel(logging.DEBUG)
         main_file_handler.setFormatter(json_formatter)
         self.logger.addHandler(main_file_handler)
         # 错误日志文件处理器（使用ConcurrentRotatingFileHandler）
         error_file_handler = ConcurrentRotatingFileHandler(
-            os.path.join(log_dir, "error.json.log"), maxBytes=20 * 1024 * 1024, backupCount=5, encoding="utf-8"  # 20MB
+            os.path.join(log_dir, "error.json.log"),
+            maxBytes=20 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",  # 20MB
         )
         error_file_handler.setLevel(logging.ERROR)
         error_file_handler.setFormatter(json_formatter)
@@ -323,7 +333,13 @@ class StructuredLogger:
     # 特殊日志方法
     # ============================================
     def log_api_request(
-        self, method: str, path: str, status_code: int, duration_ms: int, ip: str = None, user_id: str = None
+        self,
+        method: str,
+        path: str,
+        status_code: int,
+        duration_ms: int,
+        ip: str = None,
+        user_id: str = None,
     ):
         """记录API请求"""
         self.api(
@@ -348,14 +364,27 @@ class StructuredLogger:
             device_id=device_id,
         )
 
-    def log_device_event(self, device_id: str, event: str, status: str, details: Dict[str, Any] = None):
+    def log_device_event(
+        self, device_id: str, event: str, status: str, details: Dict[str, Any] = None
+    ):
         """记录设备事件"""
         self.device(
-            LogLevel.INFO, f"设备事件: {event}", device_id=device_id, event=event, status=status, details=details or {}
+            LogLevel.INFO,
+            f"设备事件: {event}",
+            device_id=device_id,
+            event=event,
+            status=status,
+            details=details or {},
         )
 
     def log_score_change(
-        self, user_id: str, user_name: str, score_change: int, new_score: int, reason: str = None, operator: str = None
+        self,
+        user_id: str,
+        user_name: str,
+        score_change: int,
+        new_score: int,
+        reason: str = None,
+        operator: str = None,
     ):
         """记录积分变更"""
         self.score(
@@ -384,10 +413,17 @@ class StructuredLogger:
         )
 
     def log_security_event(
-        self, event_type: str, description: str, ip: str = None, user_id: str = None, details: Dict = None
+        self,
+        event_type: str,
+        description: str,
+        ip: str = None,
+        user_id: str = None,
+        details: Dict = None,
     ):
         """记录安全事件"""
-        level = LogLevel.WARNING if "failed" in event_type or "denied" in event_type else LogLevel.INFO
+        level = (
+            LogLevel.WARNING if "failed" in event_type or "denied" in event_type else LogLevel.INFO
+        )
         self.security(
             level,
             f"安全事件: {event_type}",
@@ -400,7 +436,14 @@ class StructuredLogger:
 
     def log_exception(self, category: LogCategory, message: str, exception: Exception, **kwargs):
         """记录异常"""
-        self._log(LogLevel.ERROR, category, message, kwargs, exc_info=True, error_type=type(exception).__name__)
+        self._log(
+            LogLevel.ERROR,
+            category,
+            message,
+            kwargs,
+            exc_info=True,
+            error_type=type(exception).__name__,
+        )
 
 
 structured_logger = StructuredLogger()
@@ -457,10 +500,14 @@ def log_function_call(category: LogCategory = LogCategory.SYSTEM):
             )
             try:
                 result = func(*args, **kwargs)  # noqa: F841
-                structured_logger.debug(category, f"函数返回: {func_name}", function=func_name, success=True)
+                structured_logger.debug(
+                    category, f"函数返回: {func_name}", function=func_name, success=True
+                )
                 return result
             except Exception as e:
-                structured_logger.log_exception(category, f"函数异常: {func_name}", e, function=func_name)
+                structured_logger.log_exception(
+                    category, f"函数异常: {func_name}", e, function=func_name
+                )
                 raise
 
         return wrapper
@@ -478,7 +525,9 @@ def log_api_endpoint(category: LogCategory = LogCategory.API):
             func_name = func.__name__
             try:
                 result = func(*args, **kwargs)  # noqa: F841
-                duration = (datetime.now(timezone.utc).replace(tzinfo=None) - start_time).total_seconds() * 1000
+                duration = (
+                    datetime.now(timezone.utc).replace(tzinfo=None) - start_time
+                ).total_seconds() * 1000
                 # 获取响应状态码
                 status_code = getattr(result, "status_code", 200) if result else 200
                 structured_logger.log_api_request(
@@ -489,8 +538,12 @@ def log_api_endpoint(category: LogCategory = LogCategory.API):
                 )
                 return result
             except Exception as e:
-                duration = (datetime.now(timezone.utc).replace(tzinfo=None) - start_time).total_seconds() * 1000
-                structured_logger.log_exception(category, f"API异常: {func_name}", e, duration_ms=int(duration))
+                duration = (
+                    datetime.now(timezone.utc).replace(tzinfo=None) - start_time
+                ).total_seconds() * 1000
+                structured_logger.log_exception(
+                    category, f"API异常: {func_name}", e, duration_ms=int(duration)
+                )
                 raise
 
         return wrapper
@@ -518,7 +571,9 @@ def setup_request_logging(app):
     @app.after_request
     def after_request(response):
         if has_request_context() and hasattr(request, "start_time"):
-            duration = (datetime.now(timezone.utc).replace(tzinfo=None) - request.start_time).total_seconds() * 1000
+            duration = (
+                datetime.now(timezone.utc).replace(tzinfo=None) - request.start_time
+            ).total_seconds() * 1000
             structured_logger.log_api_request(
                 method=request.method,
                 path=request.path,

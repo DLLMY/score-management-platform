@@ -4,6 +4,7 @@ import time
 import io
 import json
 from datetime import datetime
+
 try:
     from models import Subject
 except ImportError:
@@ -28,7 +29,7 @@ class TestLargeDatasetPerformance:
 
         # 预先清理，防止前序用例失败遗留的 PERF_ 数据累积（共享 :memory: 会话不重置）
         db_session.rollback()
-        Subject.query.filter(Subject.code.like('PERF_%')).delete()
+        Subject.query.filter(Subject.code.like("PERF_%")).delete()
         db_session.commit()
 
         # 创建10000条测试数据
@@ -42,12 +43,14 @@ class TestLargeDatasetPerformance:
             batch_end = min(batch_start + batch_size, total_records)
             subjects = []
             for i in range(batch_start, batch_end):
-                subjects.append(Subject(
-                    name=f'性能测试科目_{i:05d}',
-                    code=f'PERF_{i:05d}',
-                    grade=f'Grade_{(i % 3) + 1}',
-                    is_active=True
-                ))
+                subjects.append(
+                    Subject(
+                        name=f"性能测试科目_{i:05d}",
+                        code=f"PERF_{i:05d}",
+                        grade=f"Grade_{(i % 3) + 1}",
+                        is_active=True,
+                    )
+                )
             db_session.add_all(subjects)
             db_session.commit()
 
@@ -58,27 +61,24 @@ class TestLargeDatasetPerformance:
         total_elapsed = time.time() - start_time
         print(f"[SETUP] 完成创建 {total_records} 条数据，总耗时 {total_elapsed:.2f}秒")
 
-        yield {
-            'total_records': total_records,
-            'setup_time': total_elapsed
-        }
+        yield {"total_records": total_records, "setup_time": total_elapsed}
 
         # 清理测试数据
         print("[CLEANUP] 清理测试数据...")
-        Subject.query.filter(Subject.code.like('PERF_%')).delete()
+        Subject.query.filter(Subject.code.like("PERF_%")).delete()
         db_session.commit()
 
-    def test_export_10000_excel_performance(self, client, auth_headers, db_session, large_dataset_setup):
+    def test_export_10000_excel_performance(
+        self, client, auth_headers, db_session, large_dataset_setup
+    ):
         """测试10000条数据Excel导出性能"""
-        total_records = large_dataset_setup['total_records']
+        total_records = large_dataset_setup["total_records"]
 
         print(f"\n[TEST] 测试 {total_records} 条数据 Excel 导出...")
 
         start_time = time.time()
         response = client.get(
-            '/api/subjects/export',
-            headers=auth_headers,
-            query_string={'format': 'excel'}
+            "/api/subjects/export", headers=auth_headers, query_string={"format": "excel"}
         )
         elapsed_time = time.time() - start_time
 
@@ -98,17 +98,17 @@ class TestLargeDatasetPerformance:
 
         assert elapsed_time <= 30, f"导出耗时 {elapsed_time:.2f}秒 超过30秒基线"
 
-    def test_export_10000_csv_performance(self, client, auth_headers, db_session, large_dataset_setup):
+    def test_export_10000_csv_performance(
+        self, client, auth_headers, db_session, large_dataset_setup
+    ):
         """测试10000条数据CSV导出性能"""
-        total_records = large_dataset_setup['total_records']
+        total_records = large_dataset_setup["total_records"]
 
         print(f"\n[TEST] 测试 {total_records} 条数据 CSV 导出...")
 
         start_time = time.time()
         response = client.get(
-            '/api/subjects/export',
-            headers=auth_headers,
-            query_string={'format': 'csv'}
+            "/api/subjects/export", headers=auth_headers, query_string={"format": "csv"}
         )
         elapsed_time = time.time() - start_time
 
@@ -130,16 +130,14 @@ class TestLargeDatasetPerformance:
 
     def test_filter_10000_performance(self, client, auth_headers, db_session, large_dataset_setup):
         """测试10000条数据筛选响应性能"""
-        total_records = large_dataset_setup['total_records']
+        total_records = large_dataset_setup["total_records"]
 
         print(f"\n[TEST] 测试 {total_records} 条数据筛选响应...")
 
         # 精确匹配筛选
         start_time = time.time()
         response = client.get(
-            '/api/subjects/',
-            headers=auth_headers,
-            query_string={'search': '性能测试科目_00001'}
+            "/api/subjects/", headers=auth_headers, query_string={"search": "性能测试科目_00001"}
         )
         elapsed_time = time.time() - start_time
 
@@ -158,15 +156,13 @@ class TestLargeDatasetPerformance:
         # 模糊匹配筛选
         start_time = time.time()
         response = client.get(
-            '/api/subjects/',
-            headers=auth_headers,
-            query_string={'search': '性能测试'}
+            "/api/subjects/", headers=auth_headers, query_string={"search": "性能测试"}
         )
         elapsed_time = time.time() - start_time
 
         assert response.status_code == 200
         data = response.get_json()
-        returned_count = len(data['data'])
+        returned_count = len(data["data"])
 
         print("\n[RESULT] 模糊筛选性能:")
         print(f"  - 匹配数量: {returned_count} 条")
@@ -188,10 +184,10 @@ class TestLargeDatasetPerformance:
         total_import = 10000
         import_data = [
             {
-                'name': f'导入性能测试_{i:05d}',
-                'code': f'IMP_PERF_{i:05d}',
-                'grade': f'Grade_{(i % 3) + 1}',
-                'is_active': True
+                "name": f"导入性能测试_{i:05d}",
+                "code": f"IMP_PERF_{i:05d}",
+                "grade": f"Grade_{(i % 3) + 1}",
+                "is_active": True,
             }
             for i in range(total_import)
         ]
@@ -204,22 +200,20 @@ class TestLargeDatasetPerformance:
         total_failed = 0
 
         for batch_start in range(0, total_import, batch_size):
-            batch_data = import_data[batch_start:batch_start + batch_size]
+            batch_data = import_data[batch_start : batch_start + batch_size]
 
-            data = {
-                'file': (io.BytesIO(json.dumps(batch_data).encode()), 'batch_import.json')
-            }
+            data = {"file": (io.BytesIO(json.dumps(batch_data).encode()), "batch_import.json")}
             response = client.post(
-                '/api/subjects/import',
+                "/api/subjects/import",
                 headers=auth_headers,
                 data=data,
-                content_type='multipart/form-data'
+                content_type="multipart/form-data",
             )
 
             if response.status_code == 200:
                 result = response.get_json()
-                total_success += result.get('success_count', 0)
-                total_failed += result.get('failed_count', 0)
+                total_success += result.get("success_count", 0)
+                total_failed += result.get("failed_count", 0)
 
         elapsed_time = time.time() - start_time
 
@@ -231,7 +225,7 @@ class TestLargeDatasetPerformance:
         print(f"  - 平均每条: {elapsed_time / total_import * 1000:.2f} ms")
 
         # 清理测试数据
-        Subject.query.filter(Subject.code.like('IMP_PERF_%')).delete()
+        Subject.query.filter(Subject.code.like("IMP_PERF_%")).delete()
         db_session.commit()
 
         # 性能基线: 10000条 ≤ 60秒
@@ -259,10 +253,7 @@ class TestPerformanceBaseline:
             # 创建指定数量的数据
             subjects = [
                 Subject(
-                    name=f'趋势测试_{i:05d}',
-                    code=f'TREND_{i:05d}',
-                    grade='Grade_1',
-                    is_active=True
+                    name=f"趋势测试_{i:05d}", code=f"TREND_{i:05d}", grade="Grade_1", is_active=True
                 )
                 for i in range(size)
             ]
@@ -272,22 +263,18 @@ class TestPerformanceBaseline:
             # 测量导出时间
             start_time = time.time()
             client.get(
-                '/api/subjects/export',
-                headers=auth_headers,
-                query_string={'format': 'excel'}
+                "/api/subjects/export", headers=auth_headers, query_string={"format": "excel"}
             )
             elapsed = time.time() - start_time
 
-            results.append({
-                'size': size,
-                'time': elapsed,
-                'avg_time': elapsed / size * 1000  # ms per record
-            })
+            results.append(
+                {"size": size, "time": elapsed, "avg_time": elapsed / size * 1000}  # ms per record
+            )
 
             print(f"  {size:5d} 条数据: {elapsed:8.3f} 秒 (平均 {elapsed / size * 1000:.4f} ms/条)")
 
             # 清理
-            Subject.query.filter(Subject.code.like('TREND_%')).delete()
+            Subject.query.filter(Subject.code.like("TREND_%")).delete()
             db_session.commit()
 
         print("=" * 60)
@@ -295,8 +282,8 @@ class TestPerformanceBaseline:
         # 分析性能增长趋势
         if len(results) >= 2:
             # 检查是否为近似线性增长
-            ratio = results[-1]['time'] / results[0]['time']
-            expected_ratio = results[-1]['size'] / results[0]['size']
+            ratio = results[-1]["time"] / results[0]["time"]
+            expected_ratio = results[-1]["size"] / results[0]["size"]
             efficiency = expected_ratio / ratio
 
             print(f"  性能效率指数: {efficiency:.2f} (理想值接近1.0)")
@@ -307,10 +294,7 @@ class TestPerformanceBaseline:
                 print("  状态: ⚠️ 性能需要优化 (非线性增长)")
 
         # 保存基线数据
-        {
-            'test_date': datetime.now().isoformat(),
-            'results': results
-        }
+        {"test_date": datetime.now().isoformat(), "results": results}
 
         print("\n[BASELINE] 性能基线已建立:")
         for r in results:
@@ -343,6 +327,7 @@ class TestPerformanceReport:
         print("\n运行命令: pytest tests/test_large_dataset_performance.py -v")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
-    sys.exit(pytest.main([__file__, '-v', '--tb=short', '-x']))
+
+    sys.exit(pytest.main([__file__, "-v", "--tb=short", "-x"]))

@@ -94,7 +94,9 @@ def rate_limit(key: str):
             if entry["count"] >= config["limit"]:
                 wait_time = int(config["window"] - (now - entry["start_time"]))
                 return APIResponse.error(
-                    message="请求过于频繁，请稍后再试", status_code=429, headers={"Retry-After": str(wait_time)}
+                    message="请求过于频繁，请稍后再试",
+                    status_code=429,
+                    headers={"Retry-After": str(wait_time)},
                 )
 
             entry["count"] += 1
@@ -275,7 +277,9 @@ class SystemBackup(Resource):
             if os.path.exists(source_path):
                 shutil.copy2(source_path, backup_path)
 
-                backups = sorted([f for f in os.listdir(backup_dir) if f.startswith("score_management_")])
+                backups = sorted(
+                    [f for f in os.listdir(backup_dir) if f.startswith("score_management_")]
+                )
                 if len(backups) > 10:
                     oldest = backups[0]
                     os.remove(os.path.join(backup_dir, oldest))
@@ -321,7 +325,9 @@ class SystemBackupsList(Resource):
                         }
                     )
 
-            return APIResponse.success(data=sorted(backups, key=lambda x: x["created_at"], reverse=True))
+            return APIResponse.success(
+                data=sorted(backups, key=lambda x: x["created_at"], reverse=True)
+            )
         except Exception as e:
             return APIResponse.error(message=f"获取备份列表失败: {str(e)}", status_code=500)
 
@@ -371,7 +377,9 @@ class SystemRestore(Resource):
             except OSError as _e:
                 return APIResponse.error(message=f"备份文件不可读: {_e}", status_code=500)
             if not magic.startswith(b"SQLite format 3"):
-                return APIResponse.error(message="备份文件不是有效的 SQLite 数据库", status_code=400)
+                return APIResponse.error(
+                    message="备份文件不是有效的 SQLite 数据库", status_code=400
+                )
 
             # F14 修复: 恢复前自动备份当前库（磁盘空间不足时仅告警不阻断恢复）
             try:
@@ -478,7 +486,11 @@ class SystemHealth(Resource):
 
         返回系统各组件的健康状态，包括数据库、Redis、MQTT等。
         """
-        health_status = {"timestamp": datetime.now().isoformat(), "status": "healthy", "components": {}}
+        health_status = {
+            "timestamp": datetime.now().isoformat(),
+            "status": "healthy",
+            "components": {},
+        }
 
         # 批量获取系统资源信息，减少系统调用次数
         try:
@@ -495,10 +507,16 @@ class SystemHealth(Resource):
         try:
             with db.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            health_status["components"]["database"] = {"status": "healthy", "message": "数据库连接正常"}
+            health_status["components"]["database"] = {
+                "status": "healthy",
+                "message": "数据库连接正常",
+            }
         except Exception as e:
             health_status["status"] = "unhealthy"
-            health_status["components"]["database"] = {"status": "unhealthy", "message": f"数据库连接失败: {str(e)}"}
+            health_status["components"]["database"] = {
+                "status": "unhealthy",
+                "message": f"数据库连接失败: {str(e)}",
+            }
 
         # 检查Redis缓存
         try:
@@ -511,7 +529,10 @@ class SystemHealth(Resource):
             }
         except Exception as e:
             health_status["status"] = "unhealthy"
-            health_status["components"]["redis"] = {"status": "unhealthy", "message": f"Redis连接失败: {str(e)}"}
+            health_status["components"]["redis"] = {
+                "status": "unhealthy",
+                "message": f"Redis连接失败: {str(e)}",
+            }
 
         # 检查MQTT连接
         try:
@@ -526,7 +547,10 @@ class SystemHealth(Resource):
                 "message": mqtt_message,
             }
         except Exception as e:
-            health_status["components"]["mqtt"] = {"status": "unknown", "message": f"MQTT状态检查失败: {str(e)}"}
+            health_status["components"]["mqtt"] = {
+                "status": "unknown",
+                "message": f"MQTT状态检查失败: {str(e)}",
+            }
 
         # 检查CPU状态
         if cpu_percent is not None:
@@ -643,7 +667,12 @@ class SystemPerformance(Resource):
                         "used": memory.used,
                         "percent": memory.percent,
                     },
-                    "disk": {"total": disk.total, "used": disk.used, "free": disk.free, "percent": disk.percent},
+                    "disk": {
+                        "total": disk.total,
+                        "used": disk.used,
+                        "free": disk.free,
+                        "percent": disk.percent,
+                    },
                     "network": {
                         "bytes_sent": net_io.bytes_sent,
                         "bytes_recv": net_io.bytes_recv,
@@ -693,7 +722,11 @@ frontend_performance_model = ns_system.model(
 
 frontend_performance_batch_model = ns_system.model(
     "FrontendPerformanceBatch",
-    {"metrics": fields.List(fields.Nested(frontend_performance_model), required=True, description="性能指标列表")},
+    {
+        "metrics": fields.List(
+            fields.Nested(frontend_performance_model), required=True, description="性能指标列表"
+        )
+    },
 )
 
 frontend_error_model = ns_system.model(
@@ -719,7 +752,9 @@ frontend_error_model = ns_system.model(
 @ns_system.route("/frontend-performance")
 class FrontendPerformance(Resource):
 
-    @ns_system.doc("submit_frontend_performance", description="上报前端性能指标（匿名允许，限频保护）")
+    @ns_system.doc(
+        "submit_frontend_performance", description="上报前端性能指标（匿名允许，限频保护）"
+    )
     @ns_system.expect(frontend_performance_model)
     @ns_system.response(200, "成功")
     @ns_system.response(400, "参数错误")
@@ -739,7 +774,9 @@ class FrontendPerformance(Resource):
                 return APIResponse.error(message=msg, status_code=400)
 
             persist_perf_metric(data)
-            logger.info(f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}')
+            logger.info(
+                f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}'
+            )
             return APIResponse.success(message="性能指标接收成功")
         except Exception as e:
             logger.error(f"接收前端性能指标失败: {str(e)}")
@@ -749,7 +786,10 @@ class FrontendPerformance(Resource):
 @ns_system.route("/frontend-performance/batch")
 class FrontendPerformanceBatch(Resource):
 
-    @ns_system.doc("submit_frontend_performance_batch", description="批量上报前端性能指标（匿名允许，限频保护）")
+    @ns_system.doc(
+        "submit_frontend_performance_batch",
+        description="批量上报前端性能指标（匿名允许，限频保护）",
+    )
     @ns_system.expect(frontend_performance_batch_model)
     @ns_system.response(200, "成功")
     @ns_system.response(400, "参数错误")
@@ -885,19 +925,24 @@ class SystemStats(Resource):
                                     continue
                                 counts[table] = (
                                     conn.execute(
-                                        text("SELECT COUNT(*) FROM " + table)  # nosec B608 - table is whitelisted
+                                        text(
+                                            "SELECT COUNT(*) FROM " + table
+                                        )  # nosec B608 - table is whitelisted
                                     ).scalar()
                                     or 0
                                 )
                             except Exception as e2:
                                 logger.error(f"系统统计单表 {table} 计数查询失败: {e2}")
                                 return APIResponse.error(
-                                    message=f"系统统计查询失败（{table}），数据不完整", status_code=500
+                                    message=f"系统统计查询失败（{table}），数据不完整",
+                                    status_code=500,
                                 )
                 except Exception as e2:
                     logger.error(f"系统统计单表降级查询整体失败: {e2}")
                     # DB 不可用：返回失败而非伪造全 0（防止前端误信"0 用户 0 记录"为真实值）
-                    return APIResponse.error(message="数据库不可用，无法获取系统统计", status_code=500)
+                    return APIResponse.error(
+                        message="数据库不可用，无法获取系统统计", status_code=500
+                    )
 
                 # counts 字典 key 与表名一致（单数）——此前用复数 key 取值致降级分支必全 0
                 user_count = counts.get("user", 0)
@@ -965,7 +1010,13 @@ class FrontendMetricsList(Resource):
                 for m in pagination.items
             ]
             return APIResponse.success(
-                data={"items": items, "total": pagination.total, "page": page, "per_page": per_page, "pages": pagination.pages}
+                data={
+                    "items": items,
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                }
             )
         except Exception as e:
             return APIResponse.error(message=f"获取前端指标失败: {str(e)}", status_code=500)
@@ -1009,7 +1060,13 @@ class FrontendErrorList(Resource):
                 for e in pagination.items
             ]
             return APIResponse.success(
-                data={"items": items, "total": pagination.total, "page": page, "per_page": per_page, "pages": pagination.pages}
+                data={
+                    "items": items,
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                }
             )
         except Exception as e:
             return APIResponse.error(message=f"获取前端错误失败: {str(e)}", status_code=500)
@@ -1041,7 +1098,11 @@ class SystemMetricsList(Resource):
 
             # 各指标最新值（用于趋势卡片）
             latest = {}
-            names = [metric_name] if metric_name else ["cpu_percent", "memory_percent", "disk_percent", "net_sent", "net_recv"]
+            names = (
+                [metric_name]
+                if metric_name
+                else ["cpu_percent", "memory_percent", "disk_percent", "net_sent", "net_recv"]
+            )
             for nm in names:
                 row = (
                     SystemMetric.query.filter(SystemMetric.metric_name == nm)

@@ -16,6 +16,7 @@
 
 publish_mqtt 被 monkeypatch 为 no-op，使测试不依赖本地 MQTT broker。
 """
+
 import pytest
 from datetime import datetime
 
@@ -54,7 +55,9 @@ def _audit_count(app, reason_code):
         return NotifyAudit.query.filter_by(reason_code=reason_code).count()
 
 
-def test_real_global_block_and_force_send(app, client, auth_headers, blocking_time_rule, monkeypatch):
+def test_real_global_block_and_force_send(
+    app, client, auth_headers, blocking_time_rule, monkeypatch
+):
     """真实 TimeRule 触发全局拦截；force_send 逃生舱绕过并写 FORCE 审计。"""
     monkeypatch.setattr("api.scores.remote_notify_routes.publish_mqtt", lambda *a, **k: True)
 
@@ -97,6 +100,7 @@ def test_no_block_when_no_rule(app, client, auth_headers, monkeypatch):
     # 确认当前确实没有覆盖 now 的活跃 TimeRule（隔离环境保证）
     with app.app_context():
         from services.class_time_checker import ClassTimeChecker
+
         is_ct, _ = ClassTimeChecker.is_during_class_time()
         assert is_ct is False
 

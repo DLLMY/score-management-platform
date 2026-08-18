@@ -4,6 +4,7 @@
 confidence_interval 计算：正常结构、边界（历史不足 / 零方差收敛）与路由返回。
 后端区间计算逻辑已在 service 内联实现且天然健壮，这里做回归保护。
 """
+
 import pytest
 from datetime import datetime, timedelta
 

@@ -1,5 +1,7 @@
 import urllib.request, json
+
 BASE = "http://127.0.0.1:5000"
+
 
 def req(method, path, token=None, body=None):
     url = BASE + path
@@ -13,6 +15,7 @@ def req(method, path, token=None, body=None):
         return resp.status, resp.read().decode()
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode()
+
 
 for uname in ["admin", "teacher", "paikao"]:
     st, raw = req("POST", "/api/auth/login", body={"username": uname, "password": "123456"})
@@ -35,10 +38,18 @@ for uname in ["admin", "teacher", "paikao"]:
     print(f"  id={aid} real_name={admin.get('real_name')} roles={roles}")
     print(f"  permissions({len(perms)}): {perms}")
     paths = [
-        "/api/seating/charts", "/api/duty/groups", "/api/committee/members",
-        "/api/parent/contacts", "/api/homework/assignments", "/api/attendance/records",
-        "/api/study-group/groups", "/api/mental-health/records", "/api/activity",
-        "/api/culture/records", "/api/study-guide/guides", "/api/phonebox-policy",
+        "/api/seating/charts",
+        "/api/duty/groups",
+        "/api/committee/members",
+        "/api/parent/contacts",
+        "/api/homework/assignments",
+        "/api/attendance/records",
+        "/api/study-group/groups",
+        "/api/mental-health/records",
+        "/api/activity",
+        "/api/culture/records",
+        "/api/study-guide/guides",
+        "/api/phonebox-policy",
     ]
     codes = []
     for p in paths:

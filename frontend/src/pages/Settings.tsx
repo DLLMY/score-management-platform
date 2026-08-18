@@ -1,6 +1,22 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import { Settings as SettingsIcon, Bell, Shield, Palette, Database, Save, RefreshCw, Check, AlertCircle, Download, Upload, Trash2, FileText, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  Settings as SettingsIcon,
+  Bell,
+  Shield,
+  Palette,
+  Database,
+  Save,
+  RefreshCw,
+  Check,
+  AlertCircle,
+  Download,
+  Upload,
+  Trash2,
+  FileText,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import api, { SystemConfig, BackupInfo } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, FormSkeleton, Skeleton } from '../components';
@@ -57,9 +73,12 @@ function Settings() {
   });
 
   // 记忆化配置更新函数
-  const updateSettingsField = useCallback((field: keyof SystemSettings, value: string | number | boolean): void => {
-    setSettings((prev: SystemSettings) => ({ ...prev, [field]: value }));
-  }, []);
+  const updateSettingsField = useCallback(
+    (field: keyof SystemSettings, value: string | number | boolean): void => {
+      setSettings((prev: SystemSettings) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   // 加载系统配置
   const loadConfig = useCallback(async (): Promise<void> => {
@@ -234,14 +253,18 @@ function Settings() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }, []);
 
-  const handleInputChange = (field: keyof SystemSettings) => (e: ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.type === 'number' ? parseInt(e.target.value) || 0 : e.target.value;
-    updateSettingsField(field, value);
-  };
+  const handleInputChange =
+    (field: keyof SystemSettings) =>
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      const value = e.target.type === 'number' ? parseInt(e.target.value) || 0 : e.target.value;
+      updateSettingsField(field, value);
+    };
 
-  const handleSelectChange = (field: keyof SystemSettings) => (e: ChangeEvent<HTMLSelectElement>): void => {
-    updateSettingsField(field, e.target.value);
-  };
+  const handleSelectChange =
+    (field: keyof SystemSettings) =>
+    (e: ChangeEvent<HTMLSelectElement>): void => {
+      updateSettingsField(field, e.target.value);
+    };
 
   const themeOptions: ThemeOption[] = [
     { id: 'light', label: '浅色', description: '明亮清爽的界面' },
@@ -254,7 +277,9 @@ function Settings() {
       {loadError && (
         <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>系统配置加载失败，当前展示可能不完整，请刷新重试</p>
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            系统配置加载失败，当前展示可能不完整，请刷新重试
+          </p>
         </div>
       )}
       <div className='max-w-4xl mx-auto px-4 py-6'>
@@ -524,7 +549,9 @@ function Settings() {
                             <div className='font-medium text-gray-800'>{backup.filename}</div>
                             <div className='text-xs text-gray-500'>
                               {formatFileSize(backup.size)} -{' '}
-                              {(backup.modified || backup.created_at) ? new Date(backup.modified || backup.created_at).toLocaleString() : '--'}
+                              {backup.modified || backup.created_at
+                                ? new Date(backup.modified || backup.created_at).toLocaleString()
+                                : '--'}
                             </div>
                           </div>
                           <PermissionButton

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""
-"""
+""" """
+
 # 数据一致性检查服务测试模块
 """
 """
 
 import uuid
+
 try:
     from services.data_consistency_checker import DataConsistencyChecker
 except ImportError:
@@ -140,10 +141,7 @@ class TestDataConsistencyChecker:
 
         with app.app_context():
             user = User(
-                name="测试用户",
-                card_id="TEST001",
-                class_name="测试班级",
-                class_info_id=None
+                name="测试用户", card_id="TEST001", class_name="测试班级", class_info_id=None
             )
             db.session.add(user)
             db.session.commit()
@@ -168,7 +166,7 @@ class TestDataConsistencyChecker:
                 name="测试用户",
                 card_id="TEST002",
                 class_name="测试班级",
-                class_info_id=class_info.id
+                class_info_id=class_info.id,
             )
             db.session.add(user)
             db.session.commit()
@@ -185,10 +183,7 @@ class TestDataConsistencyChecker:
 
         with app.app_context():
             user = User(
-                name="测试用户",
-                card_id="TEST003",
-                class_name="测试班级",
-                class_info_id=99999
+                name="测试用户", card_id="TEST003", class_name="测试班级", class_info_id=99999
             )
             db.session.add(user)
             db.session.commit()
@@ -210,7 +205,7 @@ class TestDataConsistencyChecker:
                 password=hash_password("password"),
                 real_name="测试管理员",
                 class_name="测试班级",
-                primary_class_id=None
+                primary_class_id=None,
             )
             db.session.add(admin)
             db.session.commit()
@@ -226,11 +221,7 @@ class TestDataConsistencyChecker:
         """测试无效管理员的AdminClass关联检查"""
 
         with app.app_context():
-            admin_class = AdminClass(
-                admin_id=99999,
-                class_info_id=1,
-                is_primary=True
-            )
+            admin_class = AdminClass(admin_id=99999, class_info_id=1, is_primary=True)
             db.session.add(admin_class)
             db.session.commit()
 
@@ -246,18 +237,12 @@ class TestDataConsistencyChecker:
 
         with app.app_context():
             admin = Admin(
-                username="test_admin2",
-                password=hash_password("password"),
-                real_name="测试管理员2"
+                username="test_admin2", password=hash_password("password"), real_name="测试管理员2"
             )
             db.session.add(admin)
             db.session.commit()
 
-            admin_class = AdminClass(
-                admin_id=admin.id,
-                class_info_id=99999,
-                is_primary=True
-            )
+            admin_class = AdminClass(admin_id=admin.id, class_info_id=99999, is_primary=True)
             db.session.add(admin_class)
             db.session.commit()
 
@@ -273,9 +258,7 @@ class TestDataConsistencyChecker:
 
         with app.app_context():
             admin = Admin(
-                username="test_admin3",
-                password=hash_password("password"),
-                real_name="测试管理员3"
+                username="test_admin3", password=hash_password("password"), real_name="测试管理员3"
             )
             class1 = ClassInfo(name="班级1", is_active=True)
             class2 = ClassInfo(name="班级2", is_active=True)
@@ -283,16 +266,8 @@ class TestDataConsistencyChecker:
             db.session.add_all([admin, class1, class2])
             db.session.commit()
 
-            admin_class1 = AdminClass(
-                admin_id=admin.id,
-                class_info_id=class1.id,
-                is_primary=True
-            )
-            admin_class2 = AdminClass(
-                admin_id=admin.id,
-                class_info_id=class2.id,
-                is_primary=True
-            )
+            admin_class1 = AdminClass(admin_id=admin.id, class_info_id=class1.id, is_primary=True)
+            admin_class2 = AdminClass(admin_id=admin.id, class_info_id=class2.id, is_primary=True)
 
             db.session.add_all([admin_class1, admin_class2])
             db.session.commit()
@@ -309,10 +284,7 @@ class TestDataConsistencyChecker:
 
         with app.app_context():
             schedule = CourseSchedule(
-                class_info_id=99999,
-                subject_id=1,
-                day_of_week=1,
-                period_number=1
+                class_info_id=99999, subject_id=1, day_of_week=1, period_number=1
             )
             db.session.add(schedule)
             db.session.commit()
@@ -333,10 +305,7 @@ class TestDataConsistencyChecker:
             db.session.commit()
 
             schedule = CourseSchedule(
-                class_info_id=class_info.id,
-                subject_id=99999,
-                day_of_week=1,
-                period_number=1
+                class_info_id=class_info.id, subject_id=99999, day_of_week=1, period_number=1
             )
             db.session.add(schedule)
             db.session.commit()
@@ -379,7 +348,7 @@ class TestDataConsistencyChecker:
                 name="测试用户",
                 card_id=f"TEST004_{uuid.uuid4()}",
                 class_name="测试班级",
-                class_info_id=None
+                class_info_id=None,
             )
             db.session.add(user)
             db.session.commit()
@@ -398,10 +367,7 @@ class TestDataConsistencyChecker:
 
         with app.app_context():
             user = User(
-                name="测试用户",
-                card_id="TEST005",
-                class_name="测试班级",
-                class_info_id=99999
+                name="测试用户", card_id="TEST005", class_name="测试班级", class_info_id=99999
             )
             db.session.add(user)
             db.session.commit()

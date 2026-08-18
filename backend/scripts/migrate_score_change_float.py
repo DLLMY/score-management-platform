@@ -13,6 +13,7 @@ SQLite 不支持 ALTER COLUMN 改类型，采用「建新表 -> 拷数据 -> 删
 运行：系统 Python 3.11
   python scripts/migrate_score_change_float.py
 """
+
 import os
 import re
 import sys
@@ -30,7 +31,7 @@ DB_URI = app.config.get("SQLALCHEMY_DATABASE_URI", "")
 if not DB_URI.startswith("sqlite:///"):
     raise SystemExit(f"非预期数据库类型: {DB_URI}")
 
-DB_PATH = os.path.abspath(DB_URI[len("sqlite:///"):])
+DB_PATH = os.path.abspath(DB_URI[len("sqlite:///") :])
 if not os.path.exists(DB_PATH):
     raise SystemExit(f"数据库文件不存在: {DB_PATH}")
 

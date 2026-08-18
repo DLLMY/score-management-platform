@@ -11,6 +11,7 @@
 注意：路由鉴权依赖 @requires_permission("phonebox.unlock.manage")，本测试为班主任补
 RolePermissionMapping（与 init_default_roles 一致），并验证静态回退 PERMISSIONS['teacher']。
 """
+
 import pytest
 from datetime import datetime, timedelta
 
@@ -50,7 +51,9 @@ def _make_teacher(db_session, class_info_id, username="teacher1"):
     if not AdminRole.query.filter_by(admin_id=admin.id, role_code="teacher").first():
         db_session.add(AdminRole(admin_id=admin.id, role_code="teacher"))
     for code in ("phonebox.unlock.manage",):
-        if not RolePermissionMapping.query.filter_by(role_code="teacher", permission_code=code).first():
+        if not RolePermissionMapping.query.filter_by(
+            role_code="teacher", permission_code=code
+        ).first():
             db_session.add(RolePermissionMapping(role_code="teacher", permission_code=code))
     db_session.commit()
     return admin
@@ -161,7 +164,9 @@ class TestPhoneBoxPolicyRoutes:
 
     def test_teacher_put_windows(self, client, db_session):
         cls, teacher = self._setup_teacher(db_session)
-        windows = [{"day": -1, "start_hour": 12, "start_minute": 0, "end_hour": 12, "end_minute": 20}]
+        windows = [
+            {"day": -1, "start_hour": 12, "start_minute": 0, "end_hour": 12, "end_minute": 20}
+        ]
         resp = client.put(
             f"/api/phonebox-policy?class_info_id={cls.id}",
             headers=_teacher_headers(teacher),

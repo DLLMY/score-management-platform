@@ -11,11 +11,11 @@ export const usePerformance = (componentName: string) => {
 
   useEffect(() => {
     startTime.current = performance.now();
-    
+
     return () => {
       const endTime = performance.now();
       const duration = endTime - startTime.current;
-      
+
       // 记录性能数据
       logger.log(`[Performance] ${componentName} unmounted after ${duration.toFixed(2)}ms`);
     };
@@ -24,8 +24,12 @@ export const usePerformance = (componentName: string) => {
   useEffect(() => {
     renderCount.current++;
     const renderTime = performance.now();
-    
-    logger.log(`[Performance] ${componentName} rendered (count: ${renderCount.current}) at ${renderTime.toFixed(2)}ms`);
+
+    logger.log(
+      `[Performance] ${componentName} rendered (count: ${
+        renderCount.current
+      }) at ${renderTime.toFixed(2)}ms`
+    );
   });
 
   return {
@@ -48,9 +52,9 @@ export const monitorPerformance = <T extends (...args: Parameters<T>) => ReturnT
     const start = performance.now();
     const result = fn(...args);
     const end = performance.now();
-    
+
     logger.log(`[Performance] ${label} executed in ${(end - start).toFixed(2)}ms`);
-    
+
     return result;
   }) as T;
 };
@@ -61,7 +65,9 @@ export const monitorPerformance = <T extends (...args: Parameters<T>) => ReturnT
  * @param label 标签
  * @returns 包装后的函数
  */
-export const monitorAsyncPerformance = <T extends (...args: Parameters<T>) => Promise<ReturnType<T>>>(
+export const monitorAsyncPerformance = <
+  T extends (...args: Parameters<T>) => Promise<ReturnType<T>>
+>(
   fn: T,
   label: string
 ): T => {
@@ -69,9 +75,9 @@ export const monitorAsyncPerformance = <T extends (...args: Parameters<T>) => Pr
     const start = performance.now();
     const result = await fn(...args);
     const end = performance.now();
-    
+
     logger.log(`[Performance] ${label} executed in ${(end - start).toFixed(2)}ms`);
-    
+
     return result;
   }) as T;
 };
@@ -93,7 +99,7 @@ export const useDebounce = <T extends (...args: Parameters<T>) => ReturnType<T>>
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         callback(...args);
       }, delay);
@@ -129,7 +135,7 @@ export const useThrottle = <T extends (...args: Parameters<T>) => ReturnType<T>>
       if (!inThrottle.current) {
         callback(...args);
         inThrottle.current = true;
-        
+
         setTimeout(() => {
           inThrottle.current = false;
         }, limit);
@@ -189,10 +195,10 @@ export const useCache = <T>(
 
   useEffect(() => {
     const cached = cacheRef.current.get(key);
-    
+
     if (cached) {
       const now = Date.now();
-      
+
       if (now - cached.timestamp < ttl) {
         // 缓存有效
         setData(cached.data);

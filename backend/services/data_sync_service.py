@@ -47,14 +47,20 @@ class DataSyncService:
         """
         stats = {"users_linked": 0, "admins_linked": 0, "admin_classes_created": 0}
         try:
-            users = User.query.filter(User.class_name == class_info.name, User.class_info_id.is_(None)).all()
+            users = User.query.filter(
+                User.class_name == class_info.name, User.class_info_id.is_(None)
+            ).all()
             for user in users:
                 user.class_info_id = class_info.id
                 stats["users_linked"] += 1
-            admins = Admin.query.filter(Admin.class_name == class_info.name, Admin.primary_class_id.is_(None)).all()
+            admins = Admin.query.filter(
+                Admin.class_name == class_info.name, Admin.primary_class_id.is_(None)
+            ).all()
             for admin in admins:
                 admin.primary_class_id = class_info.id
-                admin_class = AdminClass(admin_id=admin.id, class_info_id=class_info.id, is_primary=True)
+                admin_class = AdminClass(
+                    admin_id=admin.id, class_info_id=class_info.id, is_primary=True
+                )
                 db.session.add(admin_class)
                 stats["admins_linked"] += 1
                 stats["admin_classes_created"] += 1
@@ -75,7 +81,12 @@ class DataSyncService:
         同步班级删除
         处理班级删除时的关联数据
         """
-        stats = {"users_unlinked": 0, "admins_unlinked": 0, "admin_classes_deleted": 0, "course_schedules_deleted": 0}
+        stats = {
+            "users_unlinked": 0,
+            "admins_unlinked": 0,
+            "admin_classes_deleted": 0,
+            "course_schedules_deleted": 0,
+        }
         try:
             users = User.query.filter_by(class_info_id=class_info.id).all()
             for user in users:
@@ -95,7 +106,9 @@ class DataSyncService:
             for schedule in schedules:
                 db.session.delete(schedule)
                 stats["course_schedules_deleted"] += 1
-            logger.info(f"Class delete sync: {class_info.name}, unlinked {stats['users_unlinked']} users")
+            logger.info(
+                f"Class delete sync: {class_info.name}, unlinked {stats['users_unlinked']} users"
+            )
         except Exception as e:
             logger.error(f"Class delete sync failed: {e}")
             try:
@@ -105,7 +118,9 @@ class DataSyncService:
         return stats
 
     @staticmethod
-    def sync_user_class_change(user: User, old_class_name: Optional[str], new_class_name: Optional[str]) -> Dict:
+    def sync_user_class_change(
+        user: User, old_class_name: Optional[str], new_class_name: Optional[str]
+    ) -> Dict:
         """
         同步用户班级变更
         当用户班级变更时，自动建立或解除关联
@@ -119,7 +134,9 @@ class DataSyncService:
             from services.class_migration_service import ClassMigrationService
 
             grade = ClassMigrationService._infer_grade(new_class_name)
-            class_info = ClassInfo(name=new_class_name, grade=grade, description="Auto created", is_active=True)
+            class_info = ClassInfo(
+                name=new_class_name, grade=grade, description="Auto created", is_active=True
+            )
             db.session.add(class_info)
             db.session.flush()
             stats["class_created"] = True
@@ -129,7 +146,9 @@ class DataSyncService:
         return stats
 
     @staticmethod
-    def sync_admin_class_change(admin: Admin, old_class_name: Optional[str], new_class_name: Optional[str]) -> Dict:
+    def sync_admin_class_change(
+        admin: Admin, old_class_name: Optional[str], new_class_name: Optional[str]
+    ) -> Dict:
         """
         同步管理员班级变更
         当管理员班级变更时，自动建立或解除关联
@@ -141,14 +160,20 @@ class DataSyncService:
         class_info = ClassInfo.query.filter_by(name=new_class_name).first()
         if not class_info:
             grade = ClassMigrationService._infer_grade(new_class_name)
-            class_info = ClassInfo(name=new_class_name, grade=grade, description="Auto created", is_active=True)
+            class_info = ClassInfo(
+                name=new_class_name, grade=grade, description="Auto created", is_active=True
+            )
             db.session.add(class_info)
             db.session.flush()
             stats["class_created"] = True
         admin.primary_class_id = class_info.id
-        admin_class = AdminClass.query.filter_by(admin_id=admin.id, class_info_id=class_info.id).first()
+        admin_class = AdminClass.query.filter_by(
+            admin_id=admin.id, class_info_id=class_info.id
+        ).first()
         if not admin_class:
-            admin_class = AdminClass(admin_id=admin.id, class_info_id=class_info.id, is_primary=True)
+            admin_class = AdminClass(
+                admin_id=admin.id, class_info_id=class_info.id, is_primary=True
+            )
             db.session.add(admin_class)
             stats["admin_class_created"] = True
         stats["linked"] = True

@@ -6,6 +6,7 @@
 - 考试未发布 400 / 考试不存在 404
 - 分数越界（validate_score=true → failed_count）
 """
+
 import io
 
 import pytest
@@ -134,4 +135,3 @@ class TestExamImportRoutes:
             resp = self._post_execute(client, auth_headers, exam_id, buf, validate_score="true")
             d = resp.get_json()["data"]
             assert d["failed_count"] == 1
-

@@ -76,7 +76,9 @@ class ConsistencyFix(Resource):
         try:
             service = ClassMigrationService()
             result = service.run_full_migration()  # noqa: F841
-            return APIResponse.success(data={"stats": result["stats"]}, message="Data fix completed")
+            return APIResponse.success(
+                data={"stats": result["stats"]}, message="Data fix completed"
+            )
         except Exception as e:
             logger.error(f"Data fix failed: {e}")
             return APIResponse.error(message=str(e), status_code=500)

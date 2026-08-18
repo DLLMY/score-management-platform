@@ -17,6 +17,7 @@
 用法：
     python scripts/verify_class_time_lock.py [--class-info-id 23] [--live]
 """
+
 import os
 import sys
 import argparse
@@ -32,6 +33,7 @@ def _boot_app():
     """加载 .env 并导入 app，返回 (app, env)。失败则抛错。"""
     try:
         from dotenv import load_dotenv
+
         env_file = os.path.join(BASEDIR, ".env")
         if os.path.exists(env_file):
             load_dotenv(env_file)
@@ -39,6 +41,7 @@ def _boot_app():
         pass
     os.environ.setdefault("FLASK_ENV", "development")
     from app import app  # noqa: E402
+
     return app
 
 
@@ -49,8 +52,10 @@ def verify(app, class_info_id=None):
     print("  上课时间拦截 - 决策验证")
     print("=" * 64)
     now = datetime.now()
-    print(f"  服务器时间 : {now.strftime('%Y-%m-%d %H:%M:%S')} "
-          f"(周{['一','二','三','四','五','六','日'][now.weekday()]})")
+    print(
+        f"  服务器时间 : {now.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"(周{['一','二','三','四','五','六','日'][now.weekday()]})"
+    )
 
     # 1) 全局 TimeRule 时段
     is_class_time, rule_info = ClassTimeChecker.is_during_class_time()
@@ -61,8 +66,10 @@ def verify(app, class_info_id=None):
     if is_class_time and rule_info:
         print(f"  状态       : 命中全局时段")
         print(f"  规则名称   : {rule_info.get('name')}")
-        print(f"  时段       : {rule_info.get('start_hour'):02d}:{rule_info.get('start_minute'):02d}"
-              f" - {rule_info.get('end_hour'):02d}:{rule_info.get('end_minute'):02d}")
+        print(
+            f"  时段       : {rule_info.get('start_hour'):02d}:{rule_info.get('start_minute'):02d}"
+            f" - {rule_info.get('end_hour'):02d}:{rule_info.get('end_minute'):02d}"
+        )
     else:
         print("  状态       : 未命中全局时段（无匹配的 TimeRule）")
 
@@ -74,8 +81,10 @@ def verify(app, class_info_id=None):
     print("-" * 64)
     if period:
         print(f"  节次       : 第{period.period_number}节《{period.name}》")
-        print(f"  时间窗     : {period.start_hour:02d}:{period.start_minute:02d}"
-              f" - {period.end_hour:02d}:{period.end_minute:02d}")
+        print(
+            f"  时间窗     : {period.start_hour:02d}:{period.start_minute:02d}"
+            f" - {period.end_hour:02d}:{period.end_minute:02d}"
+        )
     else:
         print("  节次       : 课间 / 放学后（不在任何节次时间窗内）")
 
@@ -100,8 +109,10 @@ def verify(app, class_info_id=None):
         in_session, info = ClassTimeChecker.check_class_in_session(class_info_id, now)
         if in_session and info:
             print(f"  班级 {class_info_id} ({info.get('class_name')}) : 上课中")
-            print(f"    第{info.get('period_number')}节《{info.get('subject_name')}》"
-                  f" {info.get('start_time')}-{info.get('end_time')}")
+            print(
+                f"    第{info.get('period_number')}节《{info.get('subject_name')}》"
+                f" {info.get('start_time')}-{info.get('end_time')}"
+            )
         else:
             print(f"  班级 {class_info_id} : 未处于上课状态（课间/放学/无课）")
 

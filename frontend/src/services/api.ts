@@ -5,7 +5,69 @@ import { coalesceRequest, invalidateRequestCache } from '../utils/requestCoalesc
 import { performanceMonitor } from '../utils/performanceMonitor';
 import { errorMonitor } from '../utils/errorMonitor';
 import { performanceReportingService } from '../services/performanceReportingService';
-import { Admin, Device, DevicePaginatedResponse, User, UserCreateInput, UserUpdateInput, UserPaginatedResponse, Notification, AlgorithmStatistics, ClusterData, WarningData, AlgorithmData, BatchPredictionData, BatchAnomalyData, RuleRecommendData, BatchScorePredictData, BatchRiskPredictData, ModelTrainingResult, ModelEvaluationResult, RiskStudent, PredictionResult, AnomalyResult, ScorePredictResult, RiskPredictResult, RiskSubRisk, ScoreAttributionResult, EngagementResult, BatchAttributionResult, ExamAnalysis, ClassAnalysis, StudentScoreAnalysis, SeatingChart, SeatingChartCreateInput, DutyGroup, DutyGroupCreateInput, DutyAssignment, CommitteeCreateInput, ClassCommittee, ParentContact, ParentContactCreateInput, ContactLog, HomeworkAssignment, HomeworkCreateInput, Attendance, AttendanceRecordInput, AttendanceStats, LeaveApplyInput, LeaveApplication, StudyGroup, StudyGroupCreateInput, MentalHealthRecord, MentalHealthRecordCreateInput, MentalHealthAlert, Activity, ActivityCreateInput, CultureRecord, CultureCreateInput, StudyGuide, StudyGuideCreateInput, ImprovementPlan, ImprovementPlanCreateInput } from '../types';
+import {
+  Admin,
+  Device,
+  DevicePaginatedResponse,
+  User,
+  UserCreateInput,
+  UserUpdateInput,
+  UserPaginatedResponse,
+  Notification,
+  AlgorithmStatistics,
+  ClusterData,
+  WarningData,
+  AlgorithmData,
+  BatchPredictionData,
+  BatchAnomalyData,
+  RuleRecommendData,
+  BatchScorePredictData,
+  BatchRiskPredictData,
+  ModelTrainingResult,
+  ModelEvaluationResult,
+  RiskStudent,
+  PredictionResult,
+  AnomalyResult,
+  ScorePredictResult,
+  RiskPredictResult,
+  RiskSubRisk,
+  ScoreAttributionResult,
+  EngagementResult,
+  BatchAttributionResult,
+  ExamAnalysis,
+  ClassAnalysis,
+  StudentScoreAnalysis,
+  SeatingChart,
+  SeatingChartCreateInput,
+  DutyGroup,
+  DutyGroupCreateInput,
+  DutyAssignment,
+  CommitteeCreateInput,
+  ClassCommittee,
+  ParentContact,
+  ParentContactCreateInput,
+  ContactLog,
+  HomeworkAssignment,
+  HomeworkCreateInput,
+  Attendance,
+  AttendanceRecordInput,
+  AttendanceStats,
+  LeaveApplyInput,
+  LeaveApplication,
+  StudyGroup,
+  StudyGroupCreateInput,
+  MentalHealthRecord,
+  MentalHealthRecordCreateInput,
+  MentalHealthAlert,
+  Activity,
+  ActivityCreateInput,
+  CultureRecord,
+  CultureCreateInput,
+  StudyGuide,
+  StudyGuideCreateInput,
+  ImprovementPlan,
+  ImprovementPlanCreateInput,
+} from '../types';
 import { config, getApiUrl, getCacheTtlByUrl } from '../config';
 
 // 从统一配置模块读取API基础路径
@@ -69,7 +131,7 @@ export const abortAllRequests = (): void => {
  * 获取当前是否已取消请求
  */
 export const isRequestAborted = (): boolean => {
-  return Array.from(abortControllers.values()).some(c => c.signal.aborted);
+  return Array.from(abortControllers.values()).some((c) => c.signal.aborted);
 };
 
 interface CachedData {
@@ -232,9 +294,11 @@ const fetchCsrfToken = async (): Promise<string | null> => {
   if (token) {
     return token;
   }
-  
+
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admins/csrf-token`, { credentials: 'include' });
+    const response = await fetch(`${API_BASE_URL}/api/admins/csrf-token`, {
+      credentials: 'include',
+    });
     if (response.ok) {
       const data = await response.json();
       if (data.csrf_token) {
@@ -271,10 +335,17 @@ let refreshPromise: Promise<string> | null = null;
 let lastRefreshFailTime = 0;
 const REFRESH_FAIL_COOLDOWN = 5000;
 
-const AUTH_ENDPOINTS = ['/login', '/refresh-token', '/logout', '/csrf-token', '/register', '/reset-password'];
+const AUTH_ENDPOINTS = [
+  '/login',
+  '/refresh-token',
+  '/logout',
+  '/csrf-token',
+  '/register',
+  '/reset-password',
+];
 
 const isAuthEndpoint = (url: string): boolean => {
-  return AUTH_ENDPOINTS.some(ep => url.includes(ep));
+  return AUTH_ENDPOINTS.some((ep) => url.includes(ep));
 };
 
 const getCacheKey = (url: string, method: string): string => {
@@ -327,17 +398,17 @@ const cacheDependencyMap: Record<string, string[]> = {
 
 const clearRelatedCache = async (url: string): Promise<void> => {
   const baseUrl = url.split('?')[0];
-  
+
   const relatedPatterns = new Set<string>([baseUrl]);
-  
+
   for (const [pattern, dependencies] of Object.entries(cacheDependencyMap)) {
     if (baseUrl.includes(pattern)) {
       dependencies.forEach((dep) => relatedPatterns.add(dep));
     }
   }
-  
+
   const patternsArray = Array.from(relatedPatterns);
-  
+
   // 清除内存缓存
   const keysToDelete: string[] = [];
   for (const key of cache.keys()) {
@@ -346,10 +417,10 @@ const clearRelatedCache = async (url: string): Promise<void> => {
     }
   }
   keysToDelete.forEach((key) => cache.delete(key));
-  
+
   // 清除ETag缓存
   clearEtagCache(baseUrl);
-  
+
   // 清除持久化缓存
   for (const pattern of patternsArray) {
     await deleteCacheByPattern(pattern);
@@ -419,7 +490,7 @@ const refreshToken = async (): Promise<void> => {
   }
 
   isRefreshing = true;
-  
+
   refreshPromise = new Promise(async (resolve, reject) => {
     try {
       const csrfToken = getCsrfToken();
@@ -440,7 +511,7 @@ const refreshToken = async (): Promise<void> => {
 
       if (hasLocalToken) {
         fetchOptions.body = JSON.stringify({
-          refresh_token: storedRefreshToken!
+          refresh_token: storedRefreshToken!,
         });
       }
 
@@ -497,7 +568,7 @@ const fetchWithTimeout = async (
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    
+
     // 检查是否是主动取消的请求（路由切换等原因）
     if ((error as Error).name === 'AbortError') {
       // 如果是超时导致的取消，抛出超时错误
@@ -542,7 +613,13 @@ const unwrapEnvelope = (rawData: any, skipDataExtract?: boolean): any => {
   return rawData;
 };
 
-const executeRequest = async (url: string, options: RequestOptions, retryCount: number, cacheKey: string, abortController: AbortController): Promise<unknown> => {
+const executeRequest = async (
+  url: string,
+  options: RequestOptions,
+  retryCount: number,
+  cacheKey: string,
+  abortController: AbortController
+): Promise<unknown> => {
   const startTime = performance.now();
   const method = options.method || 'GET';
   const perfId = performanceMonitor.start(`${method} ${url}`, 'api');
@@ -668,32 +745,34 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
           }
 
           return data;
-      } catch (refreshError) {
-        const studentStr = localStorage.getItem('student');
-        if (studentStr) {
-          clearStudentAuth();
-          setTimeout(() => {
-            // S2: HashRouter 下必须带 #，否则整页加载服务器路径且 hash 丢失 → 卡空白页
-            window.location.hash = '#/student/login';
-          }, 100);
-        } else {
-          clearAuthData();
-          setTimeout(() => {
-            window.location.hash = '#/login';
-          }, 100);
+        } catch (refreshError) {
+          const studentStr = localStorage.getItem('student');
+          if (studentStr) {
+            clearStudentAuth();
+            setTimeout(() => {
+              // S2: HashRouter 下必须带 #，否则整页加载服务器路径且 hash 丢失 → 卡空白页
+              window.location.hash = '#/student/login';
+            }, 100);
+          } else {
+            clearAuthData();
+            setTimeout(() => {
+              window.location.hash = '#/login';
+            }, 100);
+          }
+          const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
+          apiError.status = 401;
+          throw apiError;
         }
-        const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
-        apiError.status = 401;
-        throw apiError;
-      }
       }
 
       const error = await response.json().catch(() => ({}));
 
-      if ((response.status === 400 || response.status === 419) &&
-          ((error as { message?: string }).message?.includes('CSRF') ||
-           (error as { message?: string }).message?.includes('csrf') ||
-           (error as { message?: string }).message?.includes('token'))) {
+      if (
+        (response.status === 400 || response.status === 419) &&
+        ((error as { message?: string }).message?.includes('CSRF') ||
+          (error as { message?: string }).message?.includes('csrf') ||
+          (error as { message?: string }).message?.includes('token'))
+      ) {
         if (retryCount < 1 && !isAuthEndpoint(url)) {
           await fetchCsrfToken();
           const newCsrfToken = getCsrfToken();
@@ -743,7 +822,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
     responseStatus = response.status;
     const responseTime = performance.now() - startTime;
     performanceReportingService.reportApiRequest(url, method, responseTime, responseStatus);
-    
+
     if (isDev) {
       logger.log(`[API] ${method} ${url} - ${responseTime.toFixed(2)}ms`);
     }
@@ -754,7 +833,7 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
 
     if (method === 'GET') {
       extractAndCacheEtag(cacheKey, response);
-      
+
       cache.set(cacheKey, { data, timestamp: Date.now() });
       setCache(cacheKey, data, getCacheTTL(url));
     } else {
@@ -775,13 +854,16 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
       }
       return null;
     }
-    
+
     if ((error as Error).name === 'TypeError' && (error as Error).message === 'Failed to fetch') {
       const networkError = new Error('网络连接失败，请检查网络或服务器是否可用') as ApiError;
       networkError.type = 'network';
       throw networkError;
     }
-    if ((error as Error).message.includes('NetworkError') || (error as Error).message.includes('net::ERR')) {
+    if (
+      (error as Error).message.includes('NetworkError') ||
+      (error as Error).message.includes('net::ERR')
+    ) {
       const networkError = new Error('网络错误，请检查服务器连接') as ApiError;
       networkError.type = 'network';
       throw networkError;
@@ -789,12 +871,12 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
 
     handleApiError(error as Error, url, method);
     performanceMonitor.recordError(`${method} ${url}`);
-    
+
     const errorToReport = error as ApiError;
     if (errorToReport.type !== 'cancelled') {
       errorMonitor.reportApiError(url, method, errorToReport.status || 0, errorToReport.message);
     }
-    
+
     throw error;
   } finally {
     performanceMonitor.end(perfId);
@@ -802,7 +884,11 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
   }
 };
 
-const request = async (url: string, options: RequestOptions = {}, retryCount = 0): Promise<unknown> => {
+const request = async (
+  url: string,
+  options: RequestOptions = {},
+  retryCount = 0
+): Promise<unknown> => {
   const method = options.method || 'GET';
   const cacheKey = getCacheKey(url, method);
 
@@ -816,7 +902,7 @@ const request = async (url: string, options: RequestOptions = {}, retryCount = 0
     if (persistentCache) {
       return persistentCache.data;
     }
-    
+
     if (cache.has(cacheKey)) {
       const cached = cache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < getCacheTTL(url)) {
@@ -937,7 +1023,13 @@ export interface ClassNowStatus {
   /** 是否处于全局 TimeRule 限制时段（全校级） */
   is_during_class_time: boolean;
   /** 命中的全局时间规则（未命中为 null） */
-  global_rule: { id?: number; name?: string; start?: string; end?: string; allow_unlock?: boolean } | null;
+  global_rule: {
+    id?: number;
+    name?: string;
+    start?: string;
+    end?: string;
+    allow_unlock?: boolean;
+  } | null;
   /** 当前所处节次（不在任何节次时间窗内为 null） */
   period: { period_number: number; name: string; start: string; end: string } | null;
   /** 指定班级此刻是否在上课（含自习） */
@@ -1589,7 +1681,9 @@ export interface Api {
     delete: (id: number) => Promise<void>;
   };
   rules: {
-    getAll: (params?: RulesParams) => Promise<{ rules: Rule[]; total: number; pages: number } | Rule[]>;
+    getAll: (
+      params?: RulesParams
+    ) => Promise<{ rules: Rule[]; total: number; pages: number } | Rule[]>;
     create: (data: Partial<Rule>) => Promise<Rule>;
     update: (id: number, data: Partial<Rule>) => Promise<Rule>;
     delete: (id: number) => Promise<void>;
@@ -1611,18 +1705,27 @@ export interface Api {
     getStatistics: (params?: ScoreRecordParams) => Promise<unknown>;
   };
   auth: {
-    login: (data: { username: string; password: string }) => Promise<{ access_token: string; refresh_token: string; user: Admin }>;
+    login: (data: {
+      username: string;
+      password: string;
+    }) => Promise<{ access_token: string; refresh_token: string; user: Admin }>;
     getCsrfToken: () => Promise<{ csrf_token: string }>;
   };
   admins: {
-    login: (data: { username: string; password: string }) => Promise<{ access_token: string; refresh_token: string; admin: Admin }>;
+    login: (data: {
+      username: string;
+      password: string;
+    }) => Promise<{ access_token: string; refresh_token: string; admin: Admin }>;
     getCsrfToken: () => Promise<{ csrf_token: string }>;
     getAll: () => Promise<Admin[]>;
     getById: (id: number) => Promise<Admin>;
     create: (data: Partial<Admin>) => Promise<Admin>;
     update: (id: number, data: Partial<Admin>) => Promise<Admin>;
     delete: (id: number) => Promise<void>;
-    changePassword: (id: number, data: { old_password: string; new_password: string }) => Promise<void>;
+    changePassword: (
+      id: number,
+      data: { old_password: string; new_password: string }
+    ) => Promise<void>;
   };
   roles: {
     getAll: () => Promise<Role[]>;
@@ -1636,7 +1739,15 @@ export interface Api {
     rules: (format?: 'excel' | 'pdf') => string;
     devices: (format?: 'excel' | 'pdf') => string;
     summary: () => string;
-    errors: (errors: Array<{ row?: number; error_fields: string[]; message: string; row_data?: Record<string, unknown> }>, module: string) => void;
+    errors: (
+      errors: Array<{
+        row?: number;
+        error_fields: string[];
+        message: string;
+        row_data?: Record<string, unknown>;
+      }>,
+      module: string
+    ) => void;
   };
   analysis: {
     getUserAnalysis: (userId: number) => Promise<unknown>;
@@ -1649,25 +1760,73 @@ export interface Api {
     create: (data: TimeRuleData) => Promise<TimeRule>;
     update: (id: number, data: Partial<TimeRuleData>) => Promise<TimeRule>;
     delete: (id: number) => Promise<void>;
-    check: (data: { card_id: string; device_id: string }) => Promise<{ allowed: boolean; rule?: TimeRule }>;
+    check: (data: {
+      card_id: string;
+      device_id: string;
+    }) => Promise<{ allowed: boolean; rule?: TimeRule }>;
   };
   classPeriods: {
     getAll: () => Promise<{ periods: ClassPeriod[]; total: number }>;
     getActive: () => Promise<{ periods: ClassPeriod[]; total: number }>;
     getById: (id: number) => Promise<ClassPeriod>;
-    create: (data: Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>) => Promise<ClassPeriod>;
-    update: (id: number, data: Partial<Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>>) => Promise<ClassPeriod>;
+    create: (
+      data: Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>
+    ) => Promise<ClassPeriod>;
+    update: (
+      id: number,
+      data: Partial<Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>>
+    ) => Promise<ClassPeriod>;
     delete: (id: number) => Promise<void>;
     batchUpdate: (periods: Partial<ClassPeriod>[]) => Promise<void>;
     reset: () => Promise<void>;
   };
   courseSchedules: {
-    getAll: (params?: { class_info_id?: number; day_of_week?: number; period_number?: number; is_active?: boolean; teacher_name?: string; classroom?: string; skipCache?: boolean }) => Promise<CourseSchedule[]>;
+    getAll: (params?: {
+      class_info_id?: number;
+      day_of_week?: number;
+      period_number?: number;
+      is_active?: boolean;
+      teacher_name?: string;
+      classroom?: string;
+      skipCache?: boolean;
+    }) => Promise<CourseSchedule[]>;
     getById: (id: number) => Promise<CourseSchedule>;
-    create: (data: { class_info_id: number; subject_id: number; day_of_week: number; period_number: number; teacher_id?: number; teacher_name?: string; classroom?: string; description?: string; color?: string; is_active?: boolean }) => Promise<CourseSchedule>;
-    update: (id: number, data: Partial<{ class_info_id: number; subject_id: number; day_of_week: number; period_number: number; teacher_id?: number; teacher_name?: string; classroom?: string; description?: string; color?: string; is_active?: boolean }>) => Promise<CourseSchedule>;
+    create: (data: {
+      class_info_id: number;
+      subject_id: number;
+      day_of_week: number;
+      period_number: number;
+      teacher_id?: number;
+      teacher_name?: string;
+      classroom?: string;
+      description?: string;
+      color?: string;
+      is_active?: boolean;
+    }) => Promise<CourseSchedule>;
+    update: (
+      id: number,
+      data: Partial<{
+        class_info_id: number;
+        subject_id: number;
+        day_of_week: number;
+        period_number: number;
+        teacher_id?: number;
+        teacher_name?: string;
+        classroom?: string;
+        description?: string;
+        color?: string;
+        is_active?: boolean;
+      }>
+    ) => Promise<CourseSchedule>;
     delete: (id: number) => Promise<void>;
-    checkConflict: (params: { class_info_id?: number; teacher_name?: string; classroom?: string; day_of_week?: number; period_number?: number; exclude_id?: number }) => Promise<{
+    checkConflict: (params: {
+      class_info_id?: number;
+      teacher_name?: string;
+      classroom?: string;
+      day_of_week?: number;
+      period_number?: number;
+      exclude_id?: number;
+    }) => Promise<{
       has_conflict: boolean;
       conflicts: Array<{
         type: string;
@@ -1680,7 +1839,21 @@ export interface Api {
       }>;
     }>;
     export: (classInfoId?: number, format?: 'json' | 'excel') => Promise<void>;
-    import: (data: FormData, customUrl?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ class_name: string; subject_name: string; action: string; message: string }> }>;
+    import: (
+      data: FormData,
+      customUrl?: string
+    ) => Promise<{
+      success: boolean;
+      total: number;
+      success_count: number;
+      failed_count: number;
+      messages: Array<{
+        class_name: string;
+        subject_name: string;
+        action: string;
+        message: string;
+      }>;
+    }>;
     /** 查询当前时刻的上课状态（用于下发页「班级实时状态」徽章，恒不走缓存）。deviceId 会按设备反查班级 */
     getNow: (classInfoId?: number, deviceId?: string) => Promise<ClassNowStatus>;
   };
@@ -1700,7 +1873,10 @@ export interface Api {
     /** 获取本班（班主任）或指定班级（admin）的手机箱开箱策略 */
     get: (classInfoId?: number) => Promise<PhoneBoxPolicy>;
     /** 更新总开关 / 预设时段（班主任仅本班，admin 可指定班级） */
-    update: (data: { allow_self_unlock?: boolean; unlock_windows?: UnlockWindow[] }, classInfoId?: number) => Promise<PhoneBoxPolicy>;
+    update: (
+      data: { allow_self_unlock?: boolean; unlock_windows?: UnlockWindow[] },
+      classInfoId?: number
+    ) => Promise<PhoneBoxPolicy>;
     /** 一键临时放行本班开箱 minutes 分钟（含上课期间） */
     override: (minutes: number, classInfoId?: number) => Promise<PhoneBoxPolicy>;
     /** 取消一键临时放行 */
@@ -1712,11 +1888,20 @@ export interface Api {
     getStatus: () => Promise<MQTTStatus>;
     connect: () => Promise<void>;
     disconnect: () => Promise<void>;
-    publish: (data: { topic: string; message?: string; payload?: string; qos?: number }) => Promise<void>;
+    publish: (data: {
+      topic: string;
+      message?: string;
+      payload?: string;
+      qos?: number;
+    }) => Promise<void>;
     subscribe: (data: { topic: string; qos?: number }) => Promise<void>;
     unsubscribe: (data: { topic: string }) => Promise<void>;
     getLogs: (limit?: number) => Promise<MQTTLog[]>;
-    unlock: (data: { device_id: string; box_id?: string; response?: Record<string, unknown> }) => Promise<void>;
+    unlock: (data: {
+      device_id: string;
+      box_id?: string;
+      response?: Record<string, unknown>;
+    }) => Promise<void>;
   };
   system: {
     backup: () => Promise<{ filename: string }>;
@@ -1738,16 +1923,37 @@ export interface Api {
     markAllAsRead: () => Promise<void>;
     create: (data: Partial<Notification>) => Promise<Notification>;
     delete: (id: number) => Promise<void>;
-    batchSend: (data: { user_ids?: number[]; class_id?: number; title: string; content: string; type?: string; force_send?: boolean }) => Promise<BatchNotifyResult>;
+    batchSend: (data: {
+      user_ids?: number[];
+      class_id?: number;
+      title: string;
+      content: string;
+      type?: string;
+      force_send?: boolean;
+    }) => Promise<BatchNotifyResult>;
   };
   classes: {
-    getAll: (params?: { page?: number; per_page?: number; keyword?: string; skipCache?: boolean }) => Promise<ClassListResponse>;
+    getAll: (params?: {
+      page?: number;
+      per_page?: number;
+      keyword?: string;
+      skipCache?: boolean;
+    }) => Promise<ClassListResponse>;
     getStudents: (className: string) => Promise<User[]>;
     create: (data: ClassCreateData) => Promise<ClassInfo>;
     update: (id: number, data: ClassCreateData) => Promise<ClassInfo>;
     delete: (id: number) => Promise<void>;
     export: (keyword?: string, format?: 'json' | 'excel') => Promise<void>;
-    import: (data: FormData, customUrl?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ name: string; action: string; message: string }> }>;
+    import: (
+      data: FormData,
+      customUrl?: string
+    ) => Promise<{
+      success: boolean;
+      total: number;
+      success_count: number;
+      failed_count: number;
+      messages: Array<{ name: string; action: string; message: string }>;
+    }>;
   };
   adminClasses: {
     getByAdmin: (adminId: number) => Promise<unknown>;
@@ -1764,7 +1970,13 @@ export interface Api {
   };
   scores: {
     getAll: (params?: { exam_id?: string; class_name?: string }) => Promise<unknown>;
-    create: (data: { exam_id: number; student_id: number; subject: string; subject_id?: number; score: number }) => Promise<unknown>;
+    create: (data: {
+      exam_id: number;
+      student_id: number;
+      subject: string;
+      subject_id?: number;
+      score: number;
+    }) => Promise<unknown>;
     update: (id: number, data: { score: number }) => Promise<unknown>;
     delete: (id: number) => Promise<void>;
     importScores: (formData: FormData) => Promise<unknown>;
@@ -1775,11 +1987,45 @@ export interface Api {
     exportClassSemester: (classId: number, format?: 'excel' | 'csv') => Promise<void>;
   };
   remoteNotify: {
-    send: (data: { text: string; volume?: number; speak?: boolean; popup?: boolean; timeout_sec?: number; urgent?: boolean; force_send?: boolean }) => Promise<unknown>;
-    broadcast: (data: { text: string; volume?: number; speak?: boolean; popup?: boolean; timeout_sec?: number; urgent?: boolean; force_send?: boolean }) => Promise<unknown>;
-    sendToDevice: (deviceId: string, data: { text: string; volume?: number; speak?: boolean; popup?: boolean; timeout_sec?: number; urgent?: boolean; force_send?: boolean }) => Promise<unknown>;
+    send: (data: {
+      text: string;
+      volume?: number;
+      speak?: boolean;
+      popup?: boolean;
+      timeout_sec?: number;
+      urgent?: boolean;
+      force_send?: boolean;
+    }) => Promise<unknown>;
+    broadcast: (data: {
+      text: string;
+      volume?: number;
+      speak?: boolean;
+      popup?: boolean;
+      timeout_sec?: number;
+      urgent?: boolean;
+      force_send?: boolean;
+    }) => Promise<unknown>;
+    sendToDevice: (
+      deviceId: string,
+      data: {
+        text: string;
+        volume?: number;
+        speak?: boolean;
+        popup?: boolean;
+        timeout_sec?: number;
+        urgent?: boolean;
+        force_send?: boolean;
+      }
+    ) => Promise<unknown>;
     test: (data?: { force_send?: boolean }) => Promise<unknown>;
-    scoreChange: (data: { student_name: string; score_change: number; reason: string; course?: string; device_id?: string; force_send?: boolean }) => Promise<unknown>;
+    scoreChange: (data: {
+      student_name: string;
+      score_change: number;
+      reason: string;
+      course?: string;
+      device_id?: string;
+      force_send?: boolean;
+    }) => Promise<unknown>;
   };
   notifyTemplates: {
     getAll: () => Promise<NotifyTemplate[]>;
@@ -1787,39 +2033,112 @@ export interface Api {
     create: (data: Partial<NotifyTemplate>) => Promise<NotifyTemplate>;
     update: (id: number, data: Partial<NotifyTemplate>) => Promise<NotifyTemplate>;
     delete: (id: number) => Promise<{ success: boolean; message: string }>;
-    use: (id: number, data?: { send_mode?: string; device_id?: string; force_send?: boolean }) => Promise<{ success: boolean; message: string; template_id: number; topics: string[] }>;
+    use: (
+      id: number,
+      data?: { send_mode?: string; device_id?: string; force_send?: boolean }
+    ) => Promise<{ success: boolean; message: string; template_id: number; topics: string[] }>;
     getCategories: () => Promise<string[]>;
   };
   scheduledNotify: {
     getAll: () => Promise<ScheduledNotify[]>;
     getById: (id: number) => Promise<ScheduledNotify>;
-    create: (data: Partial<ScheduledNotify>) => Promise<{ success: boolean; message: string; id: number }>;
-    update: (id: number, data: Partial<ScheduledNotify>) => Promise<{ success: boolean; message: string }>;
+    create: (
+      data: Partial<ScheduledNotify>
+    ) => Promise<{ success: boolean; message: string; id: number }>;
+    update: (
+      id: number,
+      data: Partial<ScheduledNotify>
+    ) => Promise<{ success: boolean; message: string }>;
     delete: (id: number) => Promise<{ success: boolean; message: string }>;
     cancel: (id: number) => Promise<{ success: boolean; message: string }>;
-    trigger: (id: number, data?: { force_send?: boolean }) => Promise<{ success: boolean; message: string }>;
+    trigger: (
+      id: number,
+      data?: { force_send?: boolean }
+    ) => Promise<{ success: boolean; message: string }>;
   };
   notifyHistory: {
-    getAll: (params?: { page?: number; per_page?: number; status?: string; days?: number }) => Promise<{ data: NotifyHistory[]; total: number; page: number; per_page: number; pages: number }>;
+    getAll: (params?: {
+      page?: number;
+      per_page?: number;
+      status?: string;
+      days?: number;
+    }) => Promise<{
+      data: NotifyHistory[];
+      total: number;
+      page: number;
+      per_page: number;
+      pages: number;
+    }>;
     getById: (id: number) => Promise<NotifyHistory>;
-    getStats: () => Promise<{ total_count: number; today_count: number; week_count: number; month_count: number; success_count: number; fail_count: number; success_rate: number }>;
+    getStats: () => Promise<{
+      total_count: number;
+      today_count: number;
+      week_count: number;
+      month_count: number;
+      success_count: number;
+      fail_count: number;
+      success_rate: number;
+    }>;
     clean: (days?: number) => Promise<{ success: boolean; message: string; deleted_count: number }>;
   };
   adminNotifications: {
-    getAll: (params?: { admin_id?: number; page?: number; per_page?: number; is_read?: string; type?: string; priority?: string }) => Promise<{ notifications: AdminNotification[]; total: number; page: number; per_page: number; pages: number }>;
+    getAll: (params?: {
+      admin_id?: number;
+      page?: number;
+      per_page?: number;
+      is_read?: string;
+      type?: string;
+      priority?: string;
+    }) => Promise<{
+      notifications: AdminNotification[];
+      total: number;
+      page: number;
+      per_page: number;
+      pages: number;
+    }>;
     getRecent: (params?: { admin_id?: number; limit?: number }) => Promise<AdminNotification[]>;
     getCount: (admin_id?: number) => Promise<{ unread_count: number; total_count: number }>;
     markRead: (id: number) => Promise<{ success: boolean; message: string }>;
-    markAllRead: (admin_id?: number) => Promise<{ success: boolean; message: string; count: number }>;
-    create: (data: { admin_id?: number; title: string; message: string; type?: string; priority?: string; extra_data?: Record<string, unknown> }) => Promise<{ success: boolean; message: string; notification: AdminNotification }>;
+    markAllRead: (
+      admin_id?: number
+    ) => Promise<{ success: boolean; message: string; count: number }>;
+    create: (data: {
+      admin_id?: number;
+      title: string;
+      message: string;
+      type?: string;
+      priority?: string;
+      extra_data?: Record<string, unknown>;
+    }) => Promise<{ success: boolean; message: string; notification: AdminNotification }>;
     delete: (id: number) => Promise<{ success: boolean; message: string }>;
   };
   wakeOnLan: {
-    wake: (data: { mac_address: string; broadcast_ip?: string; port?: number }) => Promise<{ success: boolean; message: string; mac_address: string }>;
-    wakeBatch: (data: { mac_addresses: string[]; broadcast_ip?: string; port?: number }) => Promise<{ success: boolean; total: number; success_count: number; results: Record<string, { success: boolean; message: string }> }>;
-    validateMac: (mac: string) => Promise<{ mac_address: string; valid: boolean; normalized: string | null }>;
+    wake: (data: {
+      mac_address: string;
+      broadcast_ip?: string;
+      port?: number;
+    }) => Promise<{ success: boolean; message: string; mac_address: string }>;
+    wakeBatch: (data: {
+      mac_addresses: string[];
+      broadcast_ip?: string;
+      port?: number;
+    }) => Promise<{
+      success: boolean;
+      total: number;
+      success_count: number;
+      results: Record<string, { success: boolean; message: string }>;
+    }>;
+    validateMac: (
+      mac: string
+    ) => Promise<{ mac_address: string; valid: boolean; normalized: string | null }>;
     getDevices: () => Promise<WOLDevice[]>;
-    addDevice: (data: { name: string; mac_address: string; broadcast_ip?: string; port?: number; description?: string }) => Promise<WOLDevice>;
+    addDevice: (data: {
+      name: string;
+      mac_address: string;
+      broadcast_ip?: string;
+      port?: number;
+      description?: string;
+    }) => Promise<WOLDevice>;
     updateDevice: (id: number, data: Partial<WOLDevice>) => Promise<WOLDevice>;
     deleteDevice: (id: number) => Promise<{ success: boolean; message: string }>;
   };
@@ -1834,13 +2153,46 @@ export interface Api {
     bindClass: (deviceId: string | number, data: { class_id: string | null }) => Promise<void>;
     bindAdmin: (deviceId: string | number, data: { admin_id: string | null }) => Promise<void>;
     remoteControl: (deviceId: string | number, action: string) => Promise<void>;
-    otaUpgrade: (deviceId: string | number, data: { firmware_url: string; version: string; force?: boolean }) => Promise<void>;
-    bulkOTAUpgrade: (data: { firmware_url: string; version: string; force?: boolean }) => Promise<void>;
+    otaUpgrade: (
+      deviceId: string | number,
+      data: { firmware_url: string; version: string; force?: boolean }
+    ) => Promise<void>;
+    bulkOTAUpgrade: (data: {
+      firmware_url: string;
+      version: string;
+      force?: boolean;
+    }) => Promise<void>;
     resolveAlert: (deviceId: string, alertId: number) => Promise<void>;
     updateSettings: (deviceId: string | number, settings: Record<string, unknown>) => Promise<void>;
-    getStats: () => Promise<{ total_devices: number; online_devices: number; offline_devices: number; error_devices?: number; today_heartbeats?: number; recent_activity?: unknown[] }>;
-    getAdvancedStats: () => Promise<{ total_devices: number; online_devices: number; offline_devices: number; error_devices?: number; online_rate?: number; avg_signal_strength?: number; signal_distribution?: Record<string, number>; today_heartbeats?: number; unresolved_alerts?: number; critical_alerts?: number }>;
-    import: (formData: FormData) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>;
+    getStats: () => Promise<{
+      total_devices: number;
+      online_devices: number;
+      offline_devices: number;
+      error_devices?: number;
+      today_heartbeats?: number;
+      recent_activity?: unknown[];
+    }>;
+    getAdvancedStats: () => Promise<{
+      total_devices: number;
+      online_devices: number;
+      offline_devices: number;
+      error_devices?: number;
+      online_rate?: number;
+      avg_signal_strength?: number;
+      signal_distribution?: Record<string, number>;
+      today_heartbeats?: number;
+      unresolved_alerts?: number;
+      critical_alerts?: number;
+    }>;
+    import: (
+      formData: FormData
+    ) => Promise<{
+      success: boolean;
+      total: number;
+      success_count: number;
+      failed_count: number;
+      messages: Array<{ action: string; message: string }>;
+    }>;
   };
   firmware: {
     getAll: () => Promise<Firmware[]>;
@@ -1861,25 +2213,71 @@ export interface Api {
     create: (data: Partial<Exam>) => Promise<Exam>;
     update: (id: number, data: Partial<Exam>) => Promise<Exam>;
     delete: (id: number) => Promise<void>;
-    import: (data: FormData, url?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>;
+    import: (
+      data: FormData,
+      url?: string
+    ) => Promise<{
+      success: boolean;
+      total: number;
+      success_count: number;
+      failed_count: number;
+      messages: Array<{ action: string; message: string }>;
+    }>;
     publish: (id: number) => Promise<Exam>;
     close: (id: number) => Promise<Exam>;
   };
   subjects: {
     getAll: (params?: { include_inactive?: boolean; skipCache?: boolean }) => Promise<Subject[]>;
-    create: (data: { name: string; code?: string; grade?: string; description?: string; color?: string }) => Promise<Subject>;
-    update: (id: number, data: { name: string; code?: string; grade?: string; description?: string; color?: string; is_active?: boolean }) => Promise<Subject>;
+    create: (data: {
+      name: string;
+      code?: string;
+      grade?: string;
+      description?: string;
+      color?: string;
+    }) => Promise<Subject>;
+    update: (
+      id: number,
+      data: {
+        name: string;
+        code?: string;
+        grade?: string;
+        description?: string;
+        color?: string;
+        is_active?: boolean;
+      }
+    ) => Promise<Subject>;
     delete: (id: number) => Promise<void>;
     toggle: (id: number) => Promise<Subject>;
     getClasses: (id: number) => Promise<{ classes: SubjectClassLink[] }>;
-    assignClass: (id: number, data: { class_info_id: number; teacher_id?: number }) => Promise<SubjectClassLink>;
-    updateClassTeacher: (subjectId: number, classId: number, data: { teacher_id?: number }) => Promise<SubjectClassLink>;
+    assignClass: (
+      id: number,
+      data: { class_info_id: number; teacher_id?: number }
+    ) => Promise<SubjectClassLink>;
+    updateClassTeacher: (
+      subjectId: number,
+      classId: number,
+      data: { teacher_id?: number }
+    ) => Promise<SubjectClassLink>;
     removeClass: (subjectId: number, classId: number) => Promise<void>;
-    import: (data: FormData, customUrl?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ name: string; action: string; message: string }> }>;
+    import: (
+      data: FormData,
+      customUrl?: string
+    ) => Promise<{
+      success: boolean;
+      total: number;
+      success_count: number;
+      failed_count: number;
+      messages: Array<{ name: string; action: string; message: string }>;
+    }>;
     updateOrder: (data: Array<{ id: number; order: number }>) => Promise<void>;
   };
   approvals: {
-    getAll: (params?: ScoreRecordParams) => Promise<{ approvals: Approval[]; pagination: { page: number; per_page: number; total: number; pages: number } }>;
+    getAll: (
+      params?: ScoreRecordParams
+    ) => Promise<{
+      approvals: Approval[];
+      pagination: { page: number; per_page: number; total: number; pages: number };
+    }>;
     getById: (id: number) => Promise<Approval>;
     create: (data: Partial<Approval>) => Promise<Approval>;
     approve: (id: number, data: { comment?: string }) => Promise<Approval>;
@@ -1922,17 +2320,25 @@ export interface Api {
     getEngagement: (userId: number, days?: number) => Promise<EngagementResult>;
     getBatchAttribution: (className?: string, days?: number) => Promise<BatchAttributionResult>;
     getEngagementRank: (className?: string, days?: number) => Promise<EngagementRankResult>;
-    exportExcel: (tab: 'engagement' | 'attribution' | 'risk', className?: string, days?: number) => Promise<void>;
+    exportExcel: (
+      tab: 'engagement' | 'attribution' | 'risk',
+      className?: string,
+      days?: number
+    ) => Promise<void>;
     getEngagementTrend: (userId: number, weeks?: number) => Promise<EngagementTrendResult>;
     getBatchRiskPredict: (className?: string, days?: number) => Promise<BatchRiskPredictData>;
     getHighRiskStudents: (days?: number) => Promise<RiskStudent[]>;
     trainRiskPredictModel: (days?: number) => Promise<ModelTrainingResult>;
     evaluateRiskPredictModel: (days?: number) => Promise<ModelEvaluationResult>;
-    
+
     // 智能规则自动应用
     executeRuleEngine: (modelOutput: unknown, userContext: unknown) => Promise<unknown>;
-    applyRuleByBehavior: (userId: number, behaviorType: string, context?: unknown) => Promise<unknown>;
-    
+    applyRuleByBehavior: (
+      userId: number,
+      behaviorType: string,
+      context?: unknown
+    ) => Promise<unknown>;
+
     // 评分分布控制
     // 注意：后端返回 success(data={...})，request 剥信封后直接返回内层对象（含 success 字段）
     getScoreDistributionStats: (className?: string) => Promise<unknown>;
@@ -1940,21 +2346,21 @@ export interface Api {
     validateScoreDistribution: (scores: number[]) => Promise<{ data: unknown }>;
     detectOutliers: (scores: number[]) => Promise<{ data: unknown }>;
     validateAndCorrectScores: (scores: number[]) => Promise<{ data: unknown }>;
-    
+
     // 积分生态系统
     earnScore: (userId: number, behaviorType: string, context?: unknown) => Promise<unknown>;
     spendScore: (userId: number, spendingType: string, amount?: number) => Promise<unknown>;
     getEarningRules: () => Promise<{ data: unknown }>;
     getSpendingRules: () => Promise<{ data: unknown }>;
     getUserBalance: (userId: number) => Promise<{ data: unknown }>;
-    
+
     // 奖励体系
     handlePhoneAccess: (userId: number, accessCount?: number) => Promise<unknown>;
     getRewardTypes: () => Promise<{ data: unknown }>;
     getEligibleRewards: (userId: number) => Promise<{ data: unknown }>;
     redeemReward: (userId: number, rewardType: string) => Promise<unknown>;
     getDailyRewardUsage: (userId: number) => Promise<{ data: unknown }>;
-    
+
     // 统计分析
     getStatistics: (params?: { class_name?: string }) => Promise<AlgorithmStatistics>;
     // 分群分析
@@ -1970,7 +2376,10 @@ export interface Api {
     recalculateCompositeScores: () => Promise<{ data: unknown }>;
     runWarningEvaluation: () => Promise<{ data: unknown }>;
     resolveWarning: (warningId: number) => Promise<{ data: unknown }>;
-    updateWarningConfig: (data: { config_key: string; config_value: string }) => Promise<{ data: unknown }>;
+    updateWarningConfig: (data: {
+      config_key: string;
+      config_value: string;
+    }) => Promise<{ data: unknown }>;
     getCompositeScoreProgress: () => Promise<{
       status: string;
       progress: number;
@@ -1988,7 +2397,10 @@ export interface Api {
     update: (id: number, data: Partial<DeviceGroup>) => Promise<DeviceGroup>;
     delete: (id: number) => Promise<void>;
     getDevices: (groupId: number) => Promise<DeviceInGroup[]>;
-    addDevices: (groupId: number, deviceIds: string[]) => Promise<{ added_count: number; skipped: { device_id: string; reason: string }[] }>;
+    addDevices: (
+      groupId: number,
+      deviceIds: string[]
+    ) => Promise<{ added_count: number; skipped: { device_id: string; reason: string }[] }>;
     removeDevices: (groupId: number, deviceIds: string[]) => Promise<{ removed_count: number }>;
     getByDevice: (deviceId: string) => Promise<DeviceGroup[]>;
     getStats: () => Promise<DeviceGroupStats[]>;
@@ -2026,7 +2438,10 @@ export interface Api {
     update: (id: number, data: Partial<ParentContactCreateInput>) => Promise<ParentContact>;
     delete: (id: number) => Promise<void>;
     getContactLogs: (parentId: number) => Promise<ContactLog[]>;
-    addContactLog: (parentId: number, data: { contact_type: string; content?: string }) => Promise<ContactLog>;
+    addContactLog: (
+      parentId: number,
+      data: { contact_type: string; content?: string }
+    ) => Promise<ContactLog>;
     resolveLog: (logId: number) => Promise<void>;
   };
   // 作业检查
@@ -2097,7 +2512,10 @@ export interface Api {
     updatePlanProgress: (planId: number, progress: number) => Promise<void>;
   };
   student: {
-    login: (data: { card_id: string; name: string }) => Promise<{ access_token: string; expires_in: number; student: StudentInfo }>;
+    login: (data: {
+      card_id: string;
+      name: string;
+    }) => Promise<{ access_token: string; expires_in: number; student: StudentInfo }>;
     getMe: () => Promise<StudentInfo>;
     getScore: () => Promise<{ current_score: number; name: string; card_id: string }>;
     getRecords: (params?: { page?: number; per_page?: number }) => Promise<{
@@ -2109,13 +2527,23 @@ export interface Api {
       pagination: { page: number; per_page: number; total: number; pages: number };
     }>;
     getLeaves: () => Promise<LeaveItem[]>;
-    applyLeave: (data: { leave_type?: string; start_date: string; end_date: string; reason?: string }) => Promise<LeaveItem>;
+    applyLeave: (data: {
+      leave_type?: string;
+      start_date: string;
+      end_date: string;
+      reason?: string;
+    }) => Promise<LeaveItem>;
     requestPhoneboxUnlock: () => Promise<PhoneboxUnlockResult>;
     getMyRank: () => Promise<MyRankResult>;
     getInsights: (days?: number, weeks?: number) => Promise<StudentInsight>;
   };
   rank: {
-    getStudentRanking: (params?: { class_name?: string; sort_by?: string; order?: string; limit?: number }) => Promise<{
+    getStudentRanking: (params?: {
+      class_name?: string;
+      sort_by?: string;
+      order?: string;
+      limit?: number;
+    }) => Promise<{
       ranking: StudentRankItem[];
       total_students: number;
       class_name: string;
@@ -2325,7 +2753,10 @@ export interface NLPCorrection {
 
 interface NLP {
   parse: (text: string) => Promise<NLPBackendResponse<NLPParsedResult>>;
-  execute: (data: { text: string; manual_correction?: unknown }) => Promise<NLPBackendResponse<unknown>>;
+  execute: (data: {
+    text: string;
+    manual_correction?: unknown;
+  }) => Promise<NLPBackendResponse<unknown>>;
   batchParse: (texts: string[]) => Promise<NLPBackendResponse<unknown>>;
   sentiment: (text: string) => Promise<NLPBackendResponse<unknown>>;
   getRules: (params?: {
@@ -2337,18 +2768,42 @@ interface NLP {
     sort_order?: string;
   }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPScoringRule>>>;
   createRule: (data: NLPScoringRuleInput) => Promise<NLPBackendResponse<NLPScoringRule>>;
-  updateRule: (id: number, data: Partial<NLPScoringRuleInput>) => Promise<NLPBackendResponse<NLPScoringRule>>;
+  updateRule: (
+    id: number,
+    data: Partial<NLPScoringRuleInput>
+  ) => Promise<NLPBackendResponse<NLPScoringRule>>;
   deleteRule: (id: number) => Promise<NLPBackendResponse<unknown>>;
   suggestRules: (keyword: string) => Promise<NLPBackendResponse<NLPScoringRule[]>>;
   getRuleStatistics: () => Promise<NLPBackendResponse<NLPStatistics>>;
   getRuleUsage: (ruleId: number) => Promise<NLPBackendResponse<unknown>>;
-  batchImportRules: (rules: unknown[]) => Promise<NLPBackendResponse<{ success: boolean; imported_count: number; skipped_count: number; message: string }>>;
-  trainModel: (data: { trained_by?: number; algorithm?: string; use_cross_validation?: boolean }) => Promise<NLPBackendResponse<NLPMLTrainingResult>>;
-  trainAllModels: (data: { trained_by?: number }) => Promise<NLPBackendResponse<NLPMLTrainAllResult>>;
+  batchImportRules: (
+    rules: unknown[]
+  ) => Promise<
+    NLPBackendResponse<{
+      success: boolean;
+      imported_count: number;
+      skipped_count: number;
+      message: string;
+    }>
+  >;
+  trainModel: (data: {
+    trained_by?: number;
+    algorithm?: string;
+    use_cross_validation?: boolean;
+  }) => Promise<NLPBackendResponse<NLPMLTrainingResult>>;
+  trainAllModels: (data: {
+    trained_by?: number;
+  }) => Promise<NLPBackendResponse<NLPMLTrainAllResult>>;
   getAlgorithms: () => Promise<NLPBackendResponse<NLPAlgorithm[]>>;
   evaluateAllModels: () => Promise<NLPBackendResponse<NLPMLEvaluationAllResult>>;
-  predictRule: (data: { text: string; algorithm?: string }) => Promise<NLPBackendResponse<NLPPredictResult>>;
-  getTrainingHistory: (params?: { page?: number; per_page?: number }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPTrainingRecord>>>;
+  predictRule: (data: {
+    text: string;
+    algorithm?: string;
+  }) => Promise<NLPBackendResponse<NLPPredictResult>>;
+  getTrainingHistory: (params?: {
+    page?: number;
+    per_page?: number;
+  }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPTrainingRecord>>>;
   evaluateModel: () => Promise<NLPBackendResponse<NLPEvaluationResult>>;
   // 自学习反馈相关
   recordFeedback: (data: {
@@ -2364,7 +2819,11 @@ interface NLP {
     original_score?: number;
     cache_hit?: boolean;
   }) => Promise<NLPBackendResponse<{ message: string; corrections_saved?: number }>>;
-  getCorrections: (params?: { page?: number; per_page?: number; status?: string }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPCorrection>>>;
+  getCorrections: (params?: {
+    page?: number;
+    per_page?: number;
+    status?: string;
+  }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPCorrection>>>;
   updateCorrection: (id: number, data: { status: string }) => Promise<NLPBackendResponse<unknown>>;
   deleteCorrection: (id: number) => Promise<NLPBackendResponse<unknown>>;
   // 算法分析相关
@@ -2373,7 +2832,9 @@ interface NLP {
   getAnalysisPerformance: () => Promise<NLPBackendResponse<unknown>>;
   getAnalysisSuggestions: () => Promise<NLPBackendResponse<unknown>>;
   resetAnalysis: () => Promise<NLPBackendResponse<unknown>>;
-  benchmarkIntentClassifier: (params?: { iterations?: number }) => Promise<NLPBackendResponse<unknown>>;
+  benchmarkIntentClassifier: (params?: {
+    iterations?: number;
+  }) => Promise<NLPBackendResponse<unknown>>;
   getOptimizationConfig: () => Promise<NLPBackendResponse<unknown>>;
   setOptimizationConfig: (data: { strategy?: string }) => Promise<NLPBackendResponse<unknown>>;
   autoTuneOptimization: (data?: { target_metric?: string }) => Promise<NLPBackendResponse<unknown>>;
@@ -2439,9 +2900,14 @@ const normalizeUserPrediction = (raw?: any): PredictionResult => {
   const trendKey = typeof raw?.trend === 'string' ? raw.trend : 'stable';
   const ci = raw?.confidence_interval;
   const confidence_interval: [number, number] | undefined =
-    Array.isArray(ci) && ci.length === 2 ? ([toNumSafe(ci[0]), toNumSafe(ci[1])] as [number, number]) : undefined;
+    Array.isArray(ci) && ci.length === 2
+      ? ([toNumSafe(ci[0]), toNumSafe(ci[1])] as [number, number])
+      : undefined;
   return {
-    name: typeof raw?.user_id === 'number' || typeof raw?.user_id === 'string' ? String(raw.user_id) : '未知学生',
+    name:
+      typeof raw?.user_id === 'number' || typeof raw?.user_id === 'string'
+        ? String(raw.user_id)
+        : '未知学生',
     current_score: toNumSafe(raw?.current_score),
     predicted_score,
     trend: TREND_MAP[trendKey] ?? 'stable',
@@ -2454,7 +2920,9 @@ const normalizeUserScorePredict = (raw?: any): ScorePredictResult => {
   const features = raw?.features ?? {};
   const ci = raw?.confidence_interval;
   const confidence_interval: [number, number] | undefined =
-    Array.isArray(ci) && ci.length === 2 ? ([toNumSafe(ci[0]), toNumSafe(ci[1])] as [number, number]) : undefined;
+    Array.isArray(ci) && ci.length === 2
+      ? ([toNumSafe(ci[0]), toNumSafe(ci[1])] as [number, number])
+      : undefined;
   return {
     name: raw?.name ?? '未知学生',
     subject: raw?.class_name ?? '',
@@ -2480,7 +2948,8 @@ const normalizeScoreAttribution = (raw?: any): ScoreAttributionResult => ({
         key: f?.key ?? '',
         name: f?.name ?? '',
         contribution: toNumSafe(f?.contribution),
-        direction: f?.direction === 'positive' || f?.direction === 'negative' ? f.direction : 'neutral',
+        direction:
+          f?.direction === 'positive' || f?.direction === 'negative' ? f.direction : 'neutral',
         delta: toNumSafe(f?.delta),
         detail: f?.detail ?? '',
       }))
@@ -2511,7 +2980,9 @@ const normalizeBatchAttribution = (raw?: any): BatchAttributionResult => ({
               name: f?.name ?? '',
               contribution: toNumSafe(f?.contribution),
               direction:
-                f?.direction === 'positive' || f?.direction === 'negative' ? f.direction : 'neutral',
+                f?.direction === 'positive' || f?.direction === 'negative'
+                  ? f.direction
+                  : 'neutral',
               delta: toNumSafe(f?.delta),
               detail: f?.detail ?? '',
             }))
@@ -2609,7 +3080,8 @@ const normalizeUserRiskPredict = (raw?: any): RiskPredictResult => {
     'behavior',
     'attendance',
   ];
-  const details = raw && raw.risk_details && typeof raw.risk_details === 'object' ? raw.risk_details : null;
+  const details =
+    raw && raw.risk_details && typeof raw.risk_details === 'object' ? raw.risk_details : null;
   const sub_risks: RiskSubRisk[] = details
     ? SUB_RISK_ORDER.filter((k) => details[k] && typeof details[k] === 'object').map((k) => {
         const d = details[k];
@@ -2657,8 +3129,14 @@ const normalizeUserEngagement = (raw?: any): EngagementResult => {
     level,
     factors,
     components: {
-      attendance_rate: comp.attendance_rate === undefined || comp.attendance_rate === null ? null : toNumSafe(comp.attendance_rate),
-      homework_rate: comp.homework_rate === undefined || comp.homework_rate === null ? null : toNumSafe(comp.homework_rate),
+      attendance_rate:
+        comp.attendance_rate === undefined || comp.attendance_rate === null
+          ? null
+          : toNumSafe(comp.attendance_rate),
+      homework_rate:
+        comp.homework_rate === undefined || comp.homework_rate === null
+          ? null
+          : toNumSafe(comp.homework_rate),
       activity_rate: toNumSafe(comp.activity_rate),
       leave_days: toNumSafe(comp.leave_days),
     },
@@ -2722,13 +3200,16 @@ const normalizeGroupAnomaly = (raw?: any): AnomalyResult => {
 
 const normalizeBatchPrediction = (raw?: RawBatchPrediction | null): BatchPredictionData => {
   const list = Array.isArray(raw?.predictions) ? raw!.predictions! : [];
-  const toNum = (v: unknown, fallback = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+  const toNum = (v: unknown, fallback = 0): number =>
+    typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 
   const predictions: PredictionResult[] = list.map((p) => {
     const inner = (p && p.prediction) || {};
     const predictedRaw = Array.isArray(inner.predicted_scores) ? inner.predicted_scores : [];
     const predicted_score =
-      predictedRaw.length > 0 ? toNum(predictedRaw[predictedRaw.length - 1]) : toNum(inner.current_score);
+      predictedRaw.length > 0
+        ? toNum(predictedRaw[predictedRaw.length - 1])
+        : toNum(inner.current_score);
     const trendKey = typeof inner.trend === 'string' ? inner.trend : 'stable';
     return {
       name: (p && p.name) || '未知学生',
@@ -2742,8 +3223,14 @@ const normalizeBatchPrediction = (raw?: RawBatchPrediction | null): BatchPredict
   // 后端不再直接给 avg_*_score，统一基于归一化后的 predictions 重新计算，
   // 避免前端读取到 undefined 导致 NaN.toFixed 这类崩溃。
   const total = predictions.length;
-  const sumCurrent = predictions.reduce((s, x) => s + (Number.isFinite(x.current_score) ? x.current_score : 0), 0);
-  const sumPredicted = predictions.reduce((s, x) => s + (Number.isFinite(x.predicted_score) ? x.predicted_score : 0), 0);
+  const sumCurrent = predictions.reduce(
+    (s, x) => s + (Number.isFinite(x.current_score) ? x.current_score : 0),
+    0
+  );
+  const sumPredicted = predictions.reduce(
+    (s, x) => s + (Number.isFinite(x.predicted_score) ? x.predicted_score : 0),
+    0
+  );
 
   return {
     summary: {
@@ -2821,8 +3308,8 @@ const normalizeBatchRiskPredict = (raw?: RawBatchRiskPredict): BatchRiskPredictD
       recommended_actions: Array.isArray(r?.recommended_actions)
         ? r.recommended_actions
         : Array.isArray(r?.intervention_suggestions)
-          ? r.intervention_suggestions
-          : [],
+        ? r.intervention_suggestions
+        : [],
     })),
   };
 };
@@ -2866,7 +3353,7 @@ interface RawBatchScorePredict {
 }
 
 const normalizeBatchScorePrediction = (
-  raw?: RawBatchScorePredict | null,
+  raw?: RawBatchScorePredict | null
 ): BatchScorePredictData => {
   const list = Array.isArray(raw?.predictions) ? raw!.predictions! : [];
   const toNum = (v: unknown, fallback = 0): number =>
@@ -2899,20 +3386,18 @@ const normalizeBatchScorePrediction = (
   const total = predictions.length;
   const sumCurrent = predictions.reduce(
     (s, x) => s + (Number.isFinite(x.current_score) ? x.current_score : 0),
-    0,
+    0
   );
   const sumPredicted = predictions.reduce(
     (s, x) => s + (Number.isFinite(x.predicted_score) ? x.predicted_score : 0),
-    0,
+    0
   );
 
   return {
     summary: {
       avg_current_score: total > 0 ? round2(sumCurrent / total) : 0,
       avg_predicted_score:
-        total > 0
-          ? round2(sumPredicted / total)
-          : round2(toNum(raw?.summary?.avg_predicted_score)),
+        total > 0 ? round2(sumPredicted / total) : round2(toNum(raw?.summary?.avg_predicted_score)),
       subjects: [],
     },
     predictions,
@@ -2966,14 +3451,16 @@ const normalizeBatchAnomaly = (raw?: RawBatchAnomaly | null): BatchAnomalyData =
     summary: {
       total_anomalies: typeof s.total_anomalies === 'number' ? s.total_anomalies : 0,
       high_severity_count: typeof s.high_severity_count === 'number' ? s.high_severity_count : 0,
-      medium_severity_count: typeof s.medium_severity_count === 'number' ? s.medium_severity_count : 0,
+      medium_severity_count:
+        typeof s.medium_severity_count === 'number' ? s.medium_severity_count : 0,
       low_severity_count: typeof s.low_severity_count === 'number' ? s.low_severity_count : 0,
     },
     anomalies: list.map((a) => {
       const sevRaw = (a?.severity ?? 'low') as string;
       const sev: 'high' | 'medium' | 'low' =
         sevRaw === 'high' || sevRaw === 'medium' || sevRaw === 'low' ? sevRaw : 'low';
-      const scoreNum = typeof a?.score_change === 'number' && Number.isFinite(a.score_change) ? a.score_change : 0;
+      const scoreNum =
+        typeof a?.score_change === 'number' && Number.isFinite(a.score_change) ? a.score_change : 0;
       return {
         name: a?.name ?? '未知学生',
         anomaly_type: a?.anomaly_type_label || a?.anomaly_type || '异常',
@@ -3050,13 +3537,17 @@ const normalizeBatchRuleRecommend = (raw?: RawBatchRuleRecommend | null): RuleRe
   // 若后端未提供，则从前端组合构造（兜底）。
   let unified: RuleRecommendData['recommendations'];
   if (Array.isArray(raw?.recommendations) && raw!.recommendations!.length > 0) {
-    unified = (raw!.recommendations!).map((r) => ({
+    unified = raw!.recommendations!.map((r) => ({
       rule_id: r?.rule_id ?? null,
       rule_name: r?.rule_name ?? '未命名规则',
       category: r?.category ?? '未分类',
       description: r?.description ?? '',
-      confidence: typeof r?.confidence === 'number' && Number.isFinite(r.confidence) ? r.confidence : 0,
-      estimated_impact: typeof r?.estimated_impact === 'number' && Number.isFinite(r.estimated_impact) ? r.estimated_impact : 0,
+      confidence:
+        typeof r?.confidence === 'number' && Number.isFinite(r.confidence) ? r.confidence : 0,
+      estimated_impact:
+        typeof r?.estimated_impact === 'number' && Number.isFinite(r.estimated_impact)
+          ? r.estimated_impact
+          : 0,
     }));
   } else {
     unified = [];
@@ -3111,8 +3602,8 @@ const normalizeBatchRuleRecommend = (raw?: RawBatchRuleRecommend | null): RuleRe
     typeof summary.avg_confidence === 'number'
       ? summary.avg_confidence
       : total > 0
-        ? round2(unified.reduce((a, b) => a + b.confidence, 0) / total)
-        : 0;
+      ? round2(unified.reduce((a, b) => a + b.confidence, 0) / total)
+      : 0;
   const estimatedImpact =
     typeof summary.estimated_total_impact === 'number'
       ? summary.estimated_total_impact
@@ -3143,38 +3634,48 @@ const api: Api = {
       if (params.skipCache) queryParams.append('skip_cache', 'true');
       // 高级筛选参数
       if (params.keyword) queryParams.append('keyword', params.keyword);
-      if (params.min_score !== undefined && params.min_score !== null) queryParams.append('min_score', params.min_score.toString());
-      if (params.max_score !== undefined && params.max_score !== null) queryParams.append('max_score', params.max_score.toString());
+      if (params.min_score !== undefined && params.min_score !== null)
+        queryParams.append('min_score', params.min_score.toString());
+      if (params.max_score !== undefined && params.max_score !== null)
+        queryParams.append('max_score', params.max_score.toString());
       if (params.sort_by) queryParams.append('sort_by', params.sort_by);
       if (params.sort_order) queryParams.append('sort_order', params.sort_order);
       const query = queryParams.toString();
       const options: RequestOptions = {};
       if (params.skipCache) options.skipCache = true;
-      return request(`/api/users${query ? '?' + query : ''}`, options) as Promise<UserPaginatedResponse>;
+      return request(
+        `/api/users${query ? '?' + query : ''}`,
+        options
+      ) as Promise<UserPaginatedResponse>;
     },
     getById: (id) => request(`/api/users/${id}`) as Promise<User>,
-    create: (data) => request('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<User>,
-    update: (id, data) => request(`/api/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<User>,
+    create: (data) =>
+      request('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<User>,
+    update: (id, data) =>
+      request(`/api/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<User>,
     delete: (id) => request(`/api/users/${id}`, { method: 'DELETE' }) as Promise<void>,
     getByCard: (cardId) => request(`/api/users/by-card/${cardId}`) as Promise<User>,
-    import: (data) => request('/api/users/import', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ imported: number }>,
-    batchDelete: (ids) => request('/api/users/batch-delete', {
-      method: 'POST',
-      body: JSON.stringify({ ids }),
-    }) as Promise<void>,
-    batchUpdateScore: (ids, scoreChange, description) => request('/api/users/batch-score', {
-      method: 'POST',
-      body: JSON.stringify({ ids, score_change: scoreChange, description }),
-    }) as Promise<void>,
+    import: (data) =>
+      request('/api/users/import', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ imported: number }>,
+    batchDelete: (ids) =>
+      request('/api/users/batch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      }) as Promise<void>,
+    batchUpdateScore: (ids, scoreChange, description) =>
+      request('/api/users/batch-score', {
+        method: 'POST',
+        body: JSON.stringify({ ids, score_change: scoreChange, description }),
+      }) as Promise<void>,
     downloadTemplate: () => '/api/users/template/download',
   },
   scoreCategories: {
@@ -3182,14 +3683,16 @@ const api: Api = {
       const response = await request('/api/score-categories');
       return (response as { categories: Category[] }).categories || [];
     },
-    create: (data) => request('/api/score-categories', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Category>,
-    update: (id, data) => request(`/api/score-categories/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Category>,
+    create: (data) =>
+      request('/api/score-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Category>,
+    update: (id, data) =>
+      request(`/api/score-categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Category>,
     delete: (id) => request(`/api/score-categories/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   rules: {
@@ -3201,8 +3704,10 @@ const api: Api = {
       if (params.is_active !== undefined && params.is_active !== null)
         queryParams.append('is_active', String(params.is_active));
       const query = queryParams.toString();
-      const result = await request(`/api/rules${query ? '?' + query : ''}`) as { rules: Array<Record<string, unknown>>; total: number; pages: number } | Array<Record<string, unknown>>;
-      const rawRules = Array.isArray(result) ? result : (result.rules || []);
+      const result = (await request(`/api/rules${query ? '?' + query : ''}`)) as
+        | { rules: Array<Record<string, unknown>>; total: number; pages: number }
+        | Array<Record<string, unknown>>;
+      const rawRules = Array.isArray(result) ? result : result.rules || [];
       const mappedRules = rawRules.map((r: Record<string, unknown>) => ({
         ...r,
         max_per_day: r.max_per_day ?? r.daily_limit ?? 0,
@@ -3212,20 +3717,23 @@ const api: Api = {
       if (Array.isArray(result)) return mappedRules;
       return { rules: mappedRules, total: result.total, pages: result.pages };
     },
-    create: (data) => request('/api/rules', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Rule>,
-    update: (id, data) => request(`/api/rules/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Rule>,
+    create: (data) =>
+      request('/api/rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Rule>,
+    update: (id, data) =>
+      request(`/api/rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Rule>,
     delete: (id) => request(`/api/rules/${id}`, { method: 'DELETE' }) as Promise<void>,
     export: () => request('/api/rules/export') as Promise<string>,
-    import: (data) => request('/api/rules/import', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ imported: number }>,
+    import: (data) =>
+      request('/api/rules/import', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ imported: number }>,
     downloadTemplate: () => '/api/rules/template/download',
   },
   rankRules: {
@@ -3233,28 +3741,33 @@ const api: Api = {
       const response = await request('/api/rank-rules');
       return (response as { rules: RankRule[] }).rules || [];
     },
-    create: (data) => request('/api/rank-rules', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<RankRule>,
-    update: (id, data) => request(`/api/rank-rules/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<RankRule>,
+    create: (data) =>
+      request('/api/rank-rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<RankRule>,
+    update: (id, data) =>
+      request(`/api/rank-rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<RankRule>,
     delete: (id) => request(`/api/rank-rules/${id}`, { method: 'DELETE' }) as Promise<void>,
     getByScore: (score) => request(`/api/rank-rules/get-rank/${score}`) as Promise<RankRule>,
   },
   records: {
-    create: (data) => request('/api/records', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ScoreRecordItem>,
+    create: (data) =>
+      request('/api/records', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ScoreRecordItem>,
     getByUser: (userId, params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
-      return request(`/api/records/user/${userId}${query ? '?' + query : ''}`) as Promise<ScoreRecordItem[]>;
+      return request(`/api/records/user/${userId}${query ? '?' + query : ''}`) as Promise<
+        ScoreRecordItem[]
+      >;
     },
     getAll: (params = {}) => {
       const queryParams = new URLSearchParams();
@@ -3273,12 +3786,17 @@ const api: Api = {
   },
   auth: {
     login: async (data) => {
-      const result = await request('/api/auth/login', {
+      const result = (await request('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify(data),
         skipAuth: true,
         skipDataExtract: true,
-      }) as { access_token: string; refresh_token: string; user: Admin; data?: { admin?: Admin; user?: Admin } };
+      })) as {
+        access_token: string;
+        refresh_token: string;
+        user: Admin;
+        data?: { admin?: Admin; user?: Admin };
+      };
       const user = result.user || result.data?.admin || result.data?.user;
       if (result.access_token) {
         localStorage.setItem('access_token', result.access_token);
@@ -3306,19 +3824,26 @@ const api: Api = {
   },
   admins: {
     login: async (data) => {
-      const result = await request('/api/admins/login', {
+      const result = (await request('/api/admins/login', {
         method: 'POST',
         body: JSON.stringify(data),
         skipAuth: true,
         skipDataExtract: true,
-      }) as { access_token: string; refresh_token: string; admin: Admin; data?: { admin?: Admin } };
+      })) as {
+        access_token: string;
+        refresh_token: string;
+        admin: Admin;
+        data?: { admin?: Admin };
+      };
       setCurrentAdmin(result.admin || result.data?.admin);
       return { ...result, admin: result.admin || result.data?.admin };
     },
     getCsrfToken: () => request('/api/admins/csrf-token') as Promise<{ csrf_token: string }>,
     getAll: async () => {
-      const result = await request('/api/admins') as { admins: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
-      const rawList = Array.isArray(result) ? result : (result.admins || []);
+      const result = (await request('/api/admins')) as
+        | { admins: Array<Record<string, unknown>> }
+        | Array<Record<string, unknown>>;
+      const rawList = Array.isArray(result) ? result : result.admins || [];
       return rawList.map((a: Record<string, unknown>) => ({
         ...a,
         name: a.name || a.real_name || a.username || '',
@@ -3326,36 +3851,42 @@ const api: Api = {
       })) as Admin[];
     },
     getById: (id) => request(`/api/admins/${id}`) as Promise<Admin>,
-    create: (data) => request('/api/admins', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Admin>,
-    update: (id, data) => request(`/api/admins/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Admin>,
+    create: (data) =>
+      request('/api/admins', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Admin>,
+    update: (id, data) =>
+      request(`/api/admins/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Admin>,
     delete: (id) => request(`/api/admins/${id}`, { method: 'DELETE' }) as Promise<void>,
-    changePassword: (id, data) => request(`/api/admins/${id}/change-password`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
+    changePassword: (id, data) =>
+      request(`/api/admins/${id}/change-password`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
   },
   roles: {
     getAll: async () => {
-      const result = await request('/api/roles') as { roles: Role[] } | Role[];
-      return Array.isArray(result) ? result : (result.roles || []);
+      const result = (await request('/api/roles')) as { roles: Role[] } | Role[];
+      return Array.isArray(result) ? result : result.roles || [];
     },
-    create: (data) => request('/api/roles', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Role>,
-    update: (id, data) => request(`/api/roles/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Role>,
-    delete: (id) => request(`/api/roles/${id}`, {
-      method: 'DELETE',
-    }) as Promise<void>,
+    create: (data) =>
+      request('/api/roles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Role>,
+    update: (id, data) =>
+      request(`/api/roles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Role>,
+    delete: (id) =>
+      request(`/api/roles/${id}`, {
+        method: 'DELETE',
+      }) as Promise<void>,
   },
   export: {
     users: (format: 'excel' | 'pdf' = 'excel') => `/api/export/users?format=${format}`,
@@ -3366,35 +3897,49 @@ const api: Api = {
     rules: (format: 'excel' | 'pdf' = 'excel') => `/api/export/rules?format=${format}`,
     devices: (format: 'excel' | 'pdf' = 'excel') => `/api/export/devices?format=${format}`,
     summary: () => '/api/export/summary',
-    errors: (errors: Array<{ row?: number; error_fields: string[]; message: string; row_data?: Record<string, unknown> }>, module: string) => {
+    errors: (
+      errors: Array<{
+        row?: number;
+        error_fields: string[];
+        message: string;
+        row_data?: Record<string, unknown>;
+      }>,
+      module: string
+    ) => {
       fetch('/api/export/errors', {
         method: 'POST',
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
-        body: JSON.stringify({ errors, module })
-      }).then(response => {
-        if (!response.ok) throw new Error(`导出错误明细失败(${response.status})`);
-        return response.blob();
-      }).then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `import_errors_${module}_${Date.now()}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }).catch(err => {
-        // 避免 unhandled rejection；调用方为"导出错误数据"按钮，失败时给出可观测日志
-        logger.error('导出错误明细失败:', err);
-      });
+        body: JSON.stringify({ errors, module }),
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`导出错误明细失败(${response.status})`);
+          return response.blob();
+        })
+        .then((blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `import_errors_${module}_${Date.now()}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        })
+        .catch((err) => {
+          // 避免 unhandled rejection；调用方为"导出错误数据"按钮，失败时给出可观测日志
+          logger.error('导出错误明细失败:', err);
+        });
     },
   },
   analysis: {
     getUserAnalysis: (userId) => request(`/api/analysis/user/${userId}`) as Promise<unknown>,
-    getClassAnalysis: (className) => request(`/api/analysis/class/${className}`) as Promise<unknown>,
+    getClassAnalysis: (className) =>
+      request(`/api/analysis/class/${className}`) as Promise<unknown>,
     getClassCompare: (classNames: string[], period: '7d' | '30d' | '90d') => {
-      const url = `/api/analysis/class-compare?class_names=${classNames.join(',')}&period=${period}`;
+      const url = `/api/analysis/class-compare?class_names=${classNames.join(
+        ','
+      )}&period=${period}`;
       // 后端返回 APIResponse.success(data=[...])，request 默认剥信封 → 直接返回数组
       return request(url) as Promise<unknown[]>;
     },
@@ -3405,19 +3950,22 @@ const api: Api = {
       return (response as { rules: TimeRule[] }).rules || [];
     },
     getById: (id) => request(`/api/time-rules/${id}`) as Promise<TimeRule>,
-    create: (data) => request('/api/time-rules', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<TimeRule>,
-    update: (id, data) => request(`/api/time-rules/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<TimeRule>,
+    create: (data) =>
+      request('/api/time-rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<TimeRule>,
+    update: (id, data) =>
+      request(`/api/time-rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<TimeRule>,
     delete: (id) => request(`/api/time-rules/${id}`, { method: 'DELETE' }) as Promise<void>,
-    check: (data) => request('/api/time-rules/check', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ allowed: boolean; rule?: TimeRule }>,
+    check: (data) =>
+      request('/api/time-rules/check', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ allowed: boolean; rule?: TimeRule }>,
   },
   classPeriods: {
     getAll: async () => {
@@ -3429,88 +3977,118 @@ const api: Api = {
       return (response as { periods: ClassPeriod[]; total: number }) || { periods: [], total: 0 };
     },
     getById: (id: number) => request(`/api/class-periods/${id}`) as Promise<ClassPeriod>,
-    create: (data: Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>) => request('/api/class-periods', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ClassPeriod>,
-    update: (id: number, data: Partial<Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>>) => request(`/api/class-periods/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<ClassPeriod>,
-    delete: (id: number) => request(`/api/class-periods/${id}`, { method: 'DELETE' }) as Promise<void>,
-    batchUpdate: (periods: Partial<ClassPeriod>[]) => request('/api/class-periods/batch', {
-      method: 'PUT',
-      body: JSON.stringify({ periods }),
-    }) as Promise<void>,
-    reset: () => request('/api/class-periods/reset', {
-      method: 'POST',
-    }) as Promise<void>,
+    create: (data: Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>) =>
+      request('/api/class-periods', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ClassPeriod>,
+    update: (
+      id: number,
+      data: Partial<Omit<ClassPeriod, 'id' | 'created_at' | 'updated_at' | 'duration'>>
+    ) =>
+      request(`/api/class-periods/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<ClassPeriod>,
+    delete: (id: number) =>
+      request(`/api/class-periods/${id}`, { method: 'DELETE' }) as Promise<void>,
+    batchUpdate: (periods: Partial<ClassPeriod>[]) =>
+      request('/api/class-periods/batch', {
+        method: 'PUT',
+        body: JSON.stringify({ periods }),
+      }) as Promise<void>,
+    reset: () =>
+      request('/api/class-periods/reset', {
+        method: 'POST',
+      }) as Promise<void>,
   },
   box: {
-    verify: (data) => request('/api/box/verify', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ verified: boolean; user?: User }>,
+    verify: (data) =>
+      request('/api/box/verify', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ verified: boolean; user?: User }>,
   },
   phoneBoxPolicy: {
     get: (classInfoId?: number) =>
-      request(classInfoId ? `/api/phonebox-policy?class_info_id=${classInfoId}` : '/api/phonebox-policy') as Promise<PhoneBoxPolicy>,
-    update: (data: { allow_self_unlock?: boolean; unlock_windows?: UnlockWindow[] }, classInfoId?: number) =>
+      request(
+        classInfoId ? `/api/phonebox-policy?class_info_id=${classInfoId}` : '/api/phonebox-policy'
+      ) as Promise<PhoneBoxPolicy>,
+    update: (
+      data: { allow_self_unlock?: boolean; unlock_windows?: UnlockWindow[] },
+      classInfoId?: number
+    ) =>
       request(
         classInfoId ? `/api/phonebox-policy?class_info_id=${classInfoId}` : '/api/phonebox-policy',
-        { method: 'PUT', body: JSON.stringify(data) },
+        { method: 'PUT', body: JSON.stringify(data) }
       ) as Promise<PhoneBoxPolicy>,
     override: (minutes: number, classInfoId?: number) =>
       request(
-        classInfoId ? `/api/phonebox-policy/override?class_info_id=${classInfoId}` : '/api/phonebox-policy/override',
-        { method: 'POST', body: JSON.stringify({ minutes }) },
+        classInfoId
+          ? `/api/phonebox-policy/override?class_info_id=${classInfoId}`
+          : '/api/phonebox-policy/override',
+        { method: 'POST', body: JSON.stringify({ minutes }) }
       ) as Promise<PhoneBoxPolicy>,
     cancelOverride: (classInfoId?: number) =>
       request(
-        classInfoId ? `/api/phonebox-policy/cancel-override?class_info_id=${classInfoId}` : '/api/phonebox-policy/cancel-override',
-        { method: 'POST' },
+        classInfoId
+          ? `/api/phonebox-policy/cancel-override?class_info_id=${classInfoId}`
+          : '/api/phonebox-policy/cancel-override',
+        { method: 'POST' }
       ) as Promise<PhoneBoxPolicy>,
   },
   mqtt: {
     getConfig: () => request('/api/mqtt/config') as Promise<MQTTConfig>,
-    updateConfig: (data) => request('/api/mqtt/config', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<MQTTConfig>,
-    getStatus: () => request(`/api/mqtt/status?_=${Date.now()}`, { skipCache: true }) as Promise<MQTTStatus>,
-    connect: () => request('/api/mqtt/connect', {
-      method: 'POST',
-    }) as Promise<void>,
-    disconnect: () => request('/api/mqtt/disconnect', {
-      method: 'POST',
-    }) as Promise<void>,
-    publish: (data) => request('/api/mqtt/publish', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
-    subscribe: (data) => request('/api/mqtt/subscribe', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
-    unsubscribe: (data) => request('/api/mqtt/unsubscribe', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
+    updateConfig: (data) =>
+      request('/api/mqtt/config', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<MQTTConfig>,
+    getStatus: () =>
+      request(`/api/mqtt/status?_=${Date.now()}`, { skipCache: true }) as Promise<MQTTStatus>,
+    connect: () =>
+      request('/api/mqtt/connect', {
+        method: 'POST',
+      }) as Promise<void>,
+    disconnect: () =>
+      request('/api/mqtt/disconnect', {
+        method: 'POST',
+      }) as Promise<void>,
+    publish: (data) =>
+      request('/api/mqtt/publish', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
+    subscribe: (data) =>
+      request('/api/mqtt/subscribe', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
+    unsubscribe: (data) =>
+      request('/api/mqtt/unsubscribe', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
     getLogs: (limit = 100) =>
-      request(`/api/mqtt/logs?limit=${limit}&_=${Date.now()}`, { skipCache: true }) as Promise<MQTTLog[]>,
-    unlock: (data) => request('/api/mqtt/unlock', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
+      request(`/api/mqtt/logs?limit=${limit}&_=${Date.now()}`, { skipCache: true }) as Promise<
+        MQTTLog[]
+      >,
+    unlock: (data) =>
+      request('/api/mqtt/unlock', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
   },
   system: {
-    backup: () => request('/api/system/backup', {
-      method: 'POST',
-    }) as Promise<{ filename: string }>,
-    restore: (filename) => request('/api/system/restore', {
-      method: 'POST',
-      body: JSON.stringify({ filename }),
-    }) as Promise<void>,
+    backup: () =>
+      request('/api/system/backup', {
+        method: 'POST',
+      }) as Promise<{ filename: string }>,
+    restore: (filename) =>
+      request('/api/system/restore', {
+        method: 'POST',
+        body: JSON.stringify({ filename }),
+      }) as Promise<void>,
     listBackups: () => request('/api/system/backups') as Promise<BackupInfo[]>,
     clearCache: () => {
       cache.clear();
@@ -3519,10 +4097,11 @@ const api: Api = {
       }) as Promise<void>;
     },
     getConfig: () => request('/api/system/config') as Promise<SystemConfig>,
-    updateConfig: (data) => request('/api/system/config', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<SystemConfig>,
+    updateConfig: (data) =>
+      request('/api/system/config', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<SystemConfig>,
   },
   algorithm: {
     getPrediction: async (userId: number, days = 7) => {
@@ -3533,7 +4112,9 @@ const api: Api = {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
       params.append('days', String(days));
-      const raw = (await request(`/api/algorithm/prediction/batch?${params.toString()}`)) as RawBatchPrediction | null;
+      const raw = (await request(
+        `/api/algorithm/prediction/batch?${params.toString()}`
+      )) as RawBatchPrediction | null;
       // 后端字段在 prediction 子对象里，且 summary 命名也不同；统一归一化避免页面读到 undefined 崩溃。
       return normalizeBatchPrediction(raw);
     },
@@ -3550,7 +4131,9 @@ const api: Api = {
       params.append('days', String(days));
       // 后端返回顶层字段名/嵌套结构与前端 BatchAnomalyData 不一致，
       // 必须经 normalizeBatchAnomaly 归一化，否则 renderAnomaly 读 summary.total_anomalies 会崩。
-      const raw = (await request(`/api/algorithm/anomaly/batch?${params.toString()}`)) as RawBatchAnomaly;
+      const raw = (await request(
+        `/api/algorithm/anomaly/batch?${params.toString()}`
+      )) as RawBatchAnomaly;
       return normalizeBatchAnomaly(raw);
     },
     getSuddenChange: async (userId: number, days = 30) => {
@@ -3570,34 +4153,48 @@ const api: Api = {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
       params.append('days', String(days));
-      const raw = (await request(`/api/algorithm/rule-recommend?${params.toString()}`)) as RawBatchRuleRecommend | null;
+      const raw = (await request(
+        `/api/algorithm/rule-recommend?${params.toString()}`
+      )) as RawBatchRuleRecommend | null;
       return normalizeBatchRuleRecommend(raw);
     },
     getNewRuleRecommend: (className?: string, days = 30) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
       params.append('days', String(days));
-      return request(`/api/algorithm/rule-recommend/new?${params.toString()}`) as Promise<RuleRecommendData>;
+      return request(
+        `/api/algorithm/rule-recommend/new?${params.toString()}`
+      ) as Promise<RuleRecommendData>;
     },
     getRuleOptimization: (className?: string, days = 30) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
       params.append('days', String(days));
-      return request(`/api/algorithm/rule-recommend/optimization?${params.toString()}`) as Promise<RuleRecommendData>;
+      return request(
+        `/api/algorithm/rule-recommend/optimization?${params.toString()}`
+      ) as Promise<RuleRecommendData>;
     },
     getRuleCombination: (className?: string, days = 30) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
       params.append('days', String(days));
-      return request(`/api/algorithm/rule-recommend/combination?${params.toString()}`) as Promise<RuleRecommendData>;
+      return request(
+        `/api/algorithm/rule-recommend/combination?${params.toString()}`
+      ) as Promise<RuleRecommendData>;
     },
     getRuleStatistics: (days = 30) =>
-      request(`/api/algorithm/rule-recommend/statistics?days=${days}`) as Promise<RuleRecommendData>,
+      request(
+        `/api/algorithm/rule-recommend/statistics?days=${days}`
+      ) as Promise<RuleRecommendData>,
     trainRuleRecommendModel: (days = 90) =>
-      request(`/api/algorithm/rule-recommend/train?days=${days}`, { method: 'POST' }) as Promise<ModelTrainingResult>,
+      request(`/api/algorithm/rule-recommend/train?days=${days}`, {
+        method: 'POST',
+      }) as Promise<ModelTrainingResult>,
     evaluateRuleRecommendModel: (days = 30) =>
-      request(`/api/algorithm/rule-recommend/evaluate?days=${days}`) as Promise<ModelEvaluationResult>,
-    
+      request(
+        `/api/algorithm/rule-recommend/evaluate?days=${days}`
+      ) as Promise<ModelEvaluationResult>,
+
     getScorePredict: async (userId: number, days = 30) => {
       const raw = (await request(`/api/algorithm/score-predict/${userId}?days=${days}`)) as any;
       return normalizeUserScorePredict(raw);
@@ -3607,7 +4204,7 @@ const api: Api = {
       if (className) params.append('class_name', className);
       params.append('days', String(days));
       const raw = (await request(
-        `/api/algorithm/score-predict/batch?${params.toString()}`,
+        `/api/algorithm/score-predict/batch?${params.toString()}`
       )) as RawBatchScorePredict | null;
       // 后端 current_score 嵌在 features 里，且 subject/trend 缺字段；统一归一化避免页面读到 undefined 崩溃。
       return normalizeBatchScorePrediction(raw);
@@ -3615,12 +4212,20 @@ const api: Api = {
     getScoreDistribution: (className?: string) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
-      return request(`/api/algorithm/score-predict/distribution${params.toString() ? '?' + params.toString() : ''}`) as Promise<unknown>;
+      return request(
+        `/api/algorithm/score-predict/distribution${
+          params.toString() ? '?' + params.toString() : ''
+        }`
+      ) as Promise<unknown>;
     },
     trainScorePredictModel: (days = 90) =>
-      request(`/api/algorithm/score-predict/train?days=${days}`, { method: 'POST' }) as Promise<ModelTrainingResult>,
+      request(`/api/algorithm/score-predict/train?days=${days}`, {
+        method: 'POST',
+      }) as Promise<ModelTrainingResult>,
     evaluateScorePredictModel: (days = 30) =>
-      request(`/api/algorithm/score-predict/evaluate?days=${days}`) as Promise<ModelEvaluationResult>,
+      request(
+        `/api/algorithm/score-predict/evaluate?days=${days}`
+      ) as Promise<ModelEvaluationResult>,
 
     getRiskPredict: async (userId: number, days = 30) => {
       const raw = (await request(`/api/algorithm/risk-predict/${userId}?days=${days}`)) as any;
@@ -3645,7 +4250,9 @@ const api: Api = {
       return normalizeEngagementRank(raw);
     },
     getEngagementTrend: async (userId: number, weeks = 8) => {
-      const raw = (await request(`/api/algorithm/engagement/${userId}/weekly-trend?weeks=${weeks}`)) as any;
+      const raw = (await request(
+        `/api/algorithm/engagement/${userId}/weekly-trend?weeks=${weeks}`
+      )) as any;
       return normalizeEngagementTrend(raw);
     },
     getEngagement: async (userId: number, days = 30) => {
@@ -3692,76 +4299,119 @@ const api: Api = {
     getHighRiskStudents: (days = 30) =>
       request(`/api/algorithm/risk-predict/high-risk?days=${days}`) as Promise<RiskStudent[]>,
     trainRiskPredictModel: (days = 90) =>
-      request(`/api/algorithm/risk-predict/train?days=${days}`, { method: 'POST' }) as Promise<ModelTrainingResult>,
+      request(`/api/algorithm/risk-predict/train?days=${days}`, {
+        method: 'POST',
+      }) as Promise<ModelTrainingResult>,
     evaluateRiskPredictModel: (days = 30) =>
-      request(`/api/algorithm/risk-predict/evaluate?days=${days}`) as Promise<ModelEvaluationResult>,
-    
+      request(
+        `/api/algorithm/risk-predict/evaluate?days=${days}`
+      ) as Promise<ModelEvaluationResult>,
+
     // 智能规则自动应用
     executeRuleEngine: (modelOutput: unknown, userContext: unknown) =>
-      request('/api/algorithm/rule-engine/execute', { method: 'POST', body: JSON.stringify({ model_output: modelOutput, user_context: userContext }) }) as Promise<unknown>,
+      request('/api/algorithm/rule-engine/execute', {
+        method: 'POST',
+        body: JSON.stringify({ model_output: modelOutput, user_context: userContext }),
+      }) as Promise<unknown>,
     applyRuleByBehavior: (userId: number, behaviorType: string, context?: unknown) =>
-      request('/api/algorithm/rule-engine/apply-by-behavior', { method: 'POST', body: JSON.stringify({ user_id: userId, behavior_type: behaviorType, context }) }) as Promise<unknown>,
-    
+      request('/api/algorithm/rule-engine/apply-by-behavior', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, behavior_type: behaviorType, context }),
+      }) as Promise<unknown>,
+
     getScoreDistributionStats: (className?: string) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
-      return request(`/api/algorithm/score-distribution/statistics${params.toString() ? '?' + params.toString() : ''}`) as Promise<unknown>;
+      return request(
+        `/api/algorithm/score-distribution/statistics${
+          params.toString() ? '?' + params.toString() : ''
+        }`
+      ) as Promise<unknown>;
     },
     adjustScoreDistribution: (className?: string) => {
       const params = new URLSearchParams();
       if (className) params.append('class_name', className);
-      return request(`/api/algorithm/score-distribution/adjust${params.toString() ? '?' + params.toString() : ''}`, { method: 'POST' }) as Promise<{ data: unknown }>;
+      return request(
+        `/api/algorithm/score-distribution/adjust${
+          params.toString() ? '?' + params.toString() : ''
+        }`,
+        { method: 'POST' }
+      ) as Promise<{ data: unknown }>;
     },
     validateScoreDistribution: (scores: number[]) =>
-      request('/api/algorithm/score-distribution/validate', { method: 'POST', body: JSON.stringify({ scores }) }) as Promise<{ data: unknown }>,
+      request('/api/algorithm/score-distribution/validate', {
+        method: 'POST',
+        body: JSON.stringify({ scores }),
+      }) as Promise<{ data: unknown }>,
     detectOutliers: (scores: number[]) =>
-      request('/api/algorithm/score-validator/detect-outliers', { method: 'POST', body: JSON.stringify({ scores }) }) as Promise<{ data: unknown }>,
+      request('/api/algorithm/score-validator/detect-outliers', {
+        method: 'POST',
+        body: JSON.stringify({ scores }),
+      }) as Promise<{ data: unknown }>,
     validateAndCorrectScores: (scores: number[]) =>
-      request('/api/algorithm/score-validator/validate-and-correct', { method: 'POST', body: JSON.stringify({ scores }) }) as Promise<{ data: unknown }>,
-    
+      request('/api/algorithm/score-validator/validate-and-correct', {
+        method: 'POST',
+        body: JSON.stringify({ scores }),
+      }) as Promise<{ data: unknown }>,
+
     earnScore: (userId: number, behaviorType: string, context?: unknown) =>
-      request('/api/algorithm/score-ecosystem/earn', { method: 'POST', body: JSON.stringify({ user_id: userId, behavior_type: behaviorType, context }) }) as Promise<unknown>,
+      request('/api/algorithm/score-ecosystem/earn', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, behavior_type: behaviorType, context }),
+      }) as Promise<unknown>,
     spendScore: (userId: number, spendingType: string, amount = 1) =>
-      request('/api/algorithm/score-ecosystem/spend', { method: 'POST', body: JSON.stringify({ user_id: userId, spending_type: spendingType, amount }) }) as Promise<unknown>,
+      request('/api/algorithm/score-ecosystem/spend', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, spending_type: spendingType, amount }),
+      }) as Promise<unknown>,
     getEarningRules: () =>
       request('/api/algorithm/score-ecosystem/earning-rules') as Promise<{ data: unknown }>,
     getSpendingRules: () =>
       request('/api/algorithm/score-ecosystem/spending-rules') as Promise<{ data: unknown }>,
     getUserBalance: (userId: number) =>
       request(`/api/algorithm/score-ecosystem/balance/${userId}`) as Promise<{ data: unknown }>,
-    
+
     handlePhoneAccess: (userId: number, accessCount = 1) =>
-      request('/api/algorithm/reward/phone-access', { method: 'POST', body: JSON.stringify({ user_id: userId, access_count: accessCount }) }) as Promise<unknown>,
-    getRewardTypes: () =>
-      request('/api/algorithm/reward/types') as Promise<{ data: unknown }>,
+      request('/api/algorithm/reward/phone-access', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, access_count: accessCount }),
+      }) as Promise<unknown>,
+    getRewardTypes: () => request('/api/algorithm/reward/types') as Promise<{ data: unknown }>,
     getEligibleRewards: (userId: number) =>
       request(`/api/algorithm/reward/eligible/${userId}`) as Promise<{ data: unknown }>,
     redeemReward: (userId: number, rewardType: string) =>
-      request('/api/algorithm/reward/redeem', { method: 'POST', body: JSON.stringify({ user_id: userId, reward_type: rewardType }) }) as Promise<unknown>,
+      request('/api/algorithm/reward/redeem', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, reward_type: rewardType }),
+      }) as Promise<unknown>,
     getDailyRewardUsage: (userId: number) =>
       request(`/api/algorithm/reward/daily-usage/${userId}`) as Promise<{ data: unknown }>,
-    
+
     getStatistics: (params?: { class_name?: string }) => {
       const queryParams = new URLSearchParams();
       if (params?.class_name) queryParams.append('class_name', params.class_name);
       const query = queryParams.toString();
-      return request(`/api/algorithm/statistics${query ? '?' + query : ''}`) as Promise<AlgorithmStatistics>;
+      return request(
+        `/api/algorithm/statistics${query ? '?' + query : ''}`
+      ) as Promise<AlgorithmStatistics>;
     },
-    
+
     getClusters: (params?: { class_name?: string }) => {
       const queryParams = new URLSearchParams();
       if (params?.class_name) queryParams.append('class_name', params.class_name);
       const query = queryParams.toString();
       return request(`/api/algorithm/cluster${query ? '?' + query : ''}`) as Promise<ClusterData>;
     },
-    
+
     getCompositeScores: (params?: { class_name?: string }) => {
       const queryParams = new URLSearchParams();
       if (params?.class_name) queryParams.append('class_name', params.class_name);
       const query = queryParams.toString();
-      return request(`/api/algorithm/composite-score${query ? '?' + query : ''}`) as Promise<{ data: unknown }>;
+      return request(`/api/algorithm/composite-score${query ? '?' + query : ''}`) as Promise<{
+        data: unknown;
+      }>;
     },
-    
+
     getWarnings: (params?: { class_name?: string }) => {
       const queryParams = new URLSearchParams();
       if (params?.class_name) queryParams.append('class_name', params.class_name);
@@ -3771,23 +4421,35 @@ const api: Api = {
     getAll: () => request('/api/algorithm/all') as Promise<AlgorithmData>,
     runAnalysis: () => request('/api/algorithm/run', { method: 'POST' }) as Promise<AlgorithmData>,
     getWarningConfig: () => request('/api/algorithm/warning/config') as Promise<{ data: unknown }>,
-    recalculateClusters: () => request('/api/algorithm/cluster/recalculate', { method: 'POST' }) as Promise<{ data: unknown }>,
-    recalculateCompositeScores: () => request('/api/algorithm/composite-score/recalculate', { method: 'POST' }) as Promise<{ data: unknown }>,
-    runWarningEvaluation: () => request('/api/algorithm/warning/evaluate', { method: 'POST' }) as Promise<{ data: unknown }>,
-    resolveWarning: (warningId: number) => request(`/api/algorithm/warning/${warningId}/resolve`, { method: 'POST' }) as Promise<{ data: unknown }>,
-    updateWarningConfig: (data: { config_key: string; config_value: string }) => request('/api/algorithm/warning/config', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<{ data: unknown }>,
-    getCompositeScoreProgress: () => request('/api/algorithm/composite-score/progress') as Promise<{
-      status: string;
-      progress: number;
-      message: string;
-      total_students: number;
-      completed_students: number;
-      start_time: string | null;
-      end_time: string | null;
-    }>,
+    recalculateClusters: () =>
+      request('/api/algorithm/cluster/recalculate', { method: 'POST' }) as Promise<{
+        data: unknown;
+      }>,
+    recalculateCompositeScores: () =>
+      request('/api/algorithm/composite-score/recalculate', { method: 'POST' }) as Promise<{
+        data: unknown;
+      }>,
+    runWarningEvaluation: () =>
+      request('/api/algorithm/warning/evaluate', { method: 'POST' }) as Promise<{ data: unknown }>,
+    resolveWarning: (warningId: number) =>
+      request(`/api/algorithm/warning/${warningId}/resolve`, { method: 'POST' }) as Promise<{
+        data: unknown;
+      }>,
+    updateWarningConfig: (data: { config_key: string; config_value: string }) =>
+      request('/api/algorithm/warning/config', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<{ data: unknown }>,
+    getCompositeScoreProgress: () =>
+      request('/api/algorithm/composite-score/progress') as Promise<{
+        status: string;
+        progress: number;
+        message: string;
+        total_students: number;
+        completed_students: number;
+        start_time: string | null;
+        end_time: string | null;
+      }>,
   },
   operationLogs: {
     getAll: (params = {}) => {
@@ -3795,7 +4457,9 @@ const api: Api = {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) queryParams.append(key, String(value));
       });
-      return request(`/api/operation-logs?${queryParams.toString()}`) as Promise<OperationLogListResponse>;
+      return request(
+        `/api/operation-logs?${queryParams.toString()}`
+      ) as Promise<OperationLogListResponse>;
     },
     getStats: (params = {}) => {
       const queryParams = new URLSearchParams();
@@ -3815,41 +4479,55 @@ const api: Api = {
       return request(`/api/notifications?${queryParams.toString()}`) as Promise<Notification[]>;
     },
     getUnread: async () => {
-      const result = await request('/api/notifications?status=unread') as { notifications: Notification[] } | Notification[];
-      return Array.isArray(result) ? result : (result.notifications || []);
+      const result = (await request('/api/notifications?status=unread')) as
+        | { notifications: Notification[] }
+        | Notification[];
+      return Array.isArray(result) ? result : result.notifications || [];
     },
-    markAsRead: (id) => request(`/api/notifications/${id}/read`, { method: 'POST' }) as Promise<void>,
-    markAllAsRead: () => request('/api/notifications/read-all', { method: 'POST' }) as Promise<void>,
-    create: (data) => request('/api/notifications', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Notification>,
+    markAsRead: (id) =>
+      request(`/api/notifications/${id}/read`, { method: 'POST' }) as Promise<void>,
+    markAllAsRead: () =>
+      request('/api/notifications/read-all', { method: 'POST' }) as Promise<void>,
+    create: (data) =>
+      request('/api/notifications', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Notification>,
     delete: (id) => request(`/api/notifications/${id}`, { method: 'DELETE' }) as Promise<void>,
-    batchSend: (data) => request('/api/notifications/batch', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<BatchNotifyResult>,
+    batchSend: (data) =>
+      request('/api/notifications/batch', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<BatchNotifyResult>,
   },
   classes: {
-    getAll: async (params?: { page?: number; per_page?: number; keyword?: string; skipCache?: boolean }) => {
+    getAll: async (params?: {
+      page?: number;
+      per_page?: number;
+      keyword?: string;
+      skipCache?: boolean;
+    }) => {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
       if (params?.keyword) queryParams.append('keyword', params.keyword);
       const query = queryParams.toString();
       const url = query ? `/api/classes/?${query}` : '/api/classes/';
-      const result = await request(url, { skipCache: params?.skipCache }) as ClassListResponse;
+      const result = (await request(url, { skipCache: params?.skipCache })) as ClassListResponse;
       return result;
     },
-    getStudents: (className) => request(`/api/classes/${encodeURIComponent(className)}/students`) as Promise<User[]>,
-    create: (data) => request('/api/classes', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ClassInfo>,
-    update: (id, data) => request(`/api/classes/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<ClassInfo>,
+    getStudents: (className) =>
+      request(`/api/classes/${encodeURIComponent(className)}/students`) as Promise<User[]>,
+    create: (data) =>
+      request('/api/classes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ClassInfo>,
+    update: (id, data) =>
+      request(`/api/classes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<ClassInfo>,
     delete: (id) => request(`/api/classes/${id}`, { method: 'DELETE' }) as Promise<void>,
     export: (keyword?: string, format?: 'json' | 'excel') => {
       const queryParams = new URLSearchParams();
@@ -3877,29 +4555,43 @@ const api: Api = {
           window.URL.revokeObjectURL(dlUrl);
         });
     },
-    import: (data: FormData, customUrl?: string) => request(customUrl || '/api/classes/import', {
-      method: 'POST',
-      body: data,
-    }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ name: string; action: string; message: string }> }>,
+    import: (data: FormData, customUrl?: string) =>
+      request(customUrl || '/api/classes/import', {
+        method: 'POST',
+        body: data,
+      }) as Promise<{
+        success: boolean;
+        total: number;
+        success_count: number;
+        failed_count: number;
+        messages: Array<{ name: string; action: string; message: string }>;
+      }>,
   },
   adminClasses: {
     getByAdmin: (adminId: number) => request(`/api/admin-classes/${adminId}`) as Promise<unknown>,
-    assign: (adminId: number, classId: number, isPrimary?: boolean) => request(`/api/admin-classes/${adminId}/assign-class`, {
-      method: 'POST',
-      body: JSON.stringify({ class_id: classId, is_primary: isPrimary || false }),
-    }) as Promise<unknown>,
-    remove: (adminId: number, classId: number) => request(`/api/admin-classes/${adminId}/remove-class/${classId}`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    }) as Promise<unknown>,
+    assign: (adminId: number, classId: number, isPrimary?: boolean) =>
+      request(`/api/admin-classes/${adminId}/assign-class`, {
+        method: 'POST',
+        body: JSON.stringify({ class_id: classId, is_primary: isPrimary || false }),
+      }) as Promise<unknown>,
+    remove: (adminId: number, classId: number) =>
+      request(`/api/admin-classes/${adminId}/remove-class/${classId}`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }) as Promise<unknown>,
   },
   permissionLogs: {
     getAll: () => request('/api/permission-logs') as Promise<PermissionLog[]>,
   },
   scoreAnalysis: {
-    getExamAnalysis: (examId) => request(`/api/score-analysis/exam/${examId}`) as Promise<ExamAnalysis>,
-    getClassAnalysis: (className) => request(`/api/score-analysis/class/${encodeURIComponent(className)}`) as Promise<ClassAnalysis>,
-    getStudentAnalysis: (studentId) => request(`/api/score-analysis/student/${studentId}`) as Promise<StudentScoreAnalysis>,
+    getExamAnalysis: (examId) =>
+      request(`/api/score-analysis/exam/${examId}`) as Promise<ExamAnalysis>,
+    getClassAnalysis: (className) =>
+      request(
+        `/api/score-analysis/class/${encodeURIComponent(className)}`
+      ) as Promise<ClassAnalysis>,
+    getStudentAnalysis: (studentId) =>
+      request(`/api/score-analysis/student/${studentId}`) as Promise<StudentScoreAnalysis>,
   },
   scores: {
     getAll: (params = {}) => {
@@ -3909,29 +4601,34 @@ const api: Api = {
       const query = queryParams.toString();
       return request(`/api/scores${query ? '?' + query : ''}`) as Promise<unknown>;
     },
-    create: (data) => request('/api/scores', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<unknown>,
-    update: (id, data) => request(`/api/scores/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<unknown>,
+    create: (data) =>
+      request('/api/scores', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<unknown>,
+    update: (id, data) =>
+      request(`/api/scores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<unknown>,
     delete: (id) => request(`/api/scores/${id}`, { method: 'DELETE' }) as Promise<void>,
     // P0-3 修复：后端无 /api/scores/import；成绩导入实际在 /api/exam-import/execute（FormData: file+exam_id，返回 success_count/errors 与前端期望一致）
-    importScores: (formData) => request('/api/exam-import/execute', {
-      method: 'POST',
-      body: formData,
-      // 注意：勿手动设 Content-Type——FormData 需浏览器自动附带 boundary，手动指定会丢 boundary 致 Flask 解析失败
-    }) as Promise<unknown>,
-    confirmAll: (examId) => request(`/api/scores/confirm-all`, {
-      method: 'POST',
-      body: JSON.stringify({ exam_id: examId }),
-    }) as Promise<void>,
-    batchCreate: (data) => request('/api/scores/batch', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<BatchScoreResult>,
+    importScores: (formData) =>
+      request('/api/exam-import/execute', {
+        method: 'POST',
+        body: formData,
+        // 注意：勿手动设 Content-Type——FormData 需浏览器自动附带 boundary，手动指定会丢 boundary 致 Flask 解析失败
+      }) as Promise<unknown>,
+    confirmAll: (examId) =>
+      request(`/api/scores/confirm-all`, {
+        method: 'POST',
+        body: JSON.stringify({ exam_id: examId }),
+      }) as Promise<void>,
+    batchCreate: (data) =>
+      request('/api/scores/batch', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<BatchScoreResult>,
   },
   reports: {
     exportClassSemester: (classId: number, format: 'excel' | 'csv' = 'excel') => {
@@ -3959,62 +4656,89 @@ const api: Api = {
     },
   },
   remoteNotify: {
-    send: (data) => request('/api/remote_notify/send', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<unknown>,
-    broadcast: (data) => request('/api/remote_notify/broadcast', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<unknown>,
-    sendToDevice: (deviceId, data) => request(`/api/remote_notify/send_to_device/${deviceId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<unknown>,
-    test: (data) => request('/api/remote_notify/test', {
-      method: 'POST',
-      body: JSON.stringify(data || {}),
-    }) as Promise<unknown>,
-    scoreChange: (data) => request('/api/remote_notify/score_change', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<unknown>,
+    send: (data) =>
+      request('/api/remote_notify/send', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<unknown>,
+    broadcast: (data) =>
+      request('/api/remote_notify/broadcast', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<unknown>,
+    sendToDevice: (deviceId, data) =>
+      request(`/api/remote_notify/send_to_device/${deviceId}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<unknown>,
+    test: (data) =>
+      request('/api/remote_notify/test', {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }) as Promise<unknown>,
+    scoreChange: (data) =>
+      request('/api/remote_notify/score_change', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<unknown>,
   },
   notifyTemplates: {
     getAll: () => request('/api/notify_templates/', { method: 'GET' }) as Promise<NotifyTemplate[]>,
-    getById: (id) => request(`/api/notify_templates/${id}`, { method: 'GET' }) as Promise<NotifyTemplate>,
-    create: (data) => request('/api/notify_templates/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NotifyTemplate>,
-    update: (id, data) => request(`/api/notify_templates/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<NotifyTemplate>,
-    delete: (id) => request(`/api/notify_templates/${id}`, { method: 'DELETE' }) as Promise<{ success: boolean; message: string }>,
-    use: (id, data) => request(`/api/notify_templates/${id}/use`, {
-      method: 'POST',
-      body: JSON.stringify(data || {}),
-    }) as Promise<{ success: boolean; message: string; template_id: number; topics: string[] }>,
-    getCategories: () => request('/api/notify_templates/categories', { method: 'GET' }) as Promise<string[]>,
+    getById: (id) =>
+      request(`/api/notify_templates/${id}`, { method: 'GET' }) as Promise<NotifyTemplate>,
+    create: (data) =>
+      request('/api/notify_templates/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NotifyTemplate>,
+    update: (id, data) =>
+      request(`/api/notify_templates/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<NotifyTemplate>,
+    delete: (id) =>
+      request(`/api/notify_templates/${id}`, { method: 'DELETE' }) as Promise<{
+        success: boolean;
+        message: string;
+      }>,
+    use: (id, data) =>
+      request(`/api/notify_templates/${id}/use`, {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }) as Promise<{ success: boolean; message: string; template_id: number; topics: string[] }>,
+    getCategories: () =>
+      request('/api/notify_templates/categories', { method: 'GET' }) as Promise<string[]>,
   },
   scheduledNotify: {
-    getAll: () => request('/api/scheduled_notify/', { method: 'GET' }) as Promise<ScheduledNotify[]>,
-    getById: (id) => request(`/api/scheduled_notify/${id}`, { method: 'GET' }) as Promise<ScheduledNotify>,
-    create: (data) => request('/api/scheduled_notify/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ success: boolean; message: string; id: number }>,
-    update: (id, data) => request(`/api/scheduled_notify/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<{ success: boolean; message: string }>,
-    delete: (id) => request(`/api/scheduled_notify/${id}`, { method: 'DELETE' }) as Promise<{ success: boolean; message: string }>,
-    cancel: (id) => request(`/api/scheduled_notify/${id}/cancel`, { method: 'POST' }) as Promise<{ success: boolean; message: string }>,
-    trigger: (id, data) => request(`/api/scheduled_notify/${id}/trigger`, {
-      method: 'POST',
-      body: JSON.stringify(data || {}),
-    }) as Promise<{ success: boolean; message: string }>,
+    getAll: () =>
+      request('/api/scheduled_notify/', { method: 'GET' }) as Promise<ScheduledNotify[]>,
+    getById: (id) =>
+      request(`/api/scheduled_notify/${id}`, { method: 'GET' }) as Promise<ScheduledNotify>,
+    create: (data) =>
+      request('/api/scheduled_notify/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ success: boolean; message: string; id: number }>,
+    update: (id, data) =>
+      request(`/api/scheduled_notify/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<{ success: boolean; message: string }>,
+    delete: (id) =>
+      request(`/api/scheduled_notify/${id}`, { method: 'DELETE' }) as Promise<{
+        success: boolean;
+        message: string;
+      }>,
+    cancel: (id) =>
+      request(`/api/scheduled_notify/${id}/cancel`, { method: 'POST' }) as Promise<{
+        success: boolean;
+        message: string;
+      }>,
+    trigger: (id, data) =>
+      request(`/api/scheduled_notify/${id}/trigger`, {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }) as Promise<{ success: boolean; message: string }>,
   },
   notifyHistory: {
     getAll: (params) => {
@@ -4023,13 +4747,33 @@ const api: Api = {
       if (params?.per_page) query.set('per_page', params.per_page.toString());
       if (params?.status) query.set('status', params.status);
       if (params?.days) query.set('days', params.days.toString());
-      return request(`/api/notify_history/?${query.toString()}`, { method: 'GET' }) as Promise<{ data: NotifyHistory[]; total: number; page: number; per_page: number; pages: number }>;
+      return request(`/api/notify_history/?${query.toString()}`, { method: 'GET' }) as Promise<{
+        data: NotifyHistory[];
+        total: number;
+        page: number;
+        per_page: number;
+        pages: number;
+      }>;
     },
-    getById: (id) => request(`/api/notify_history/${id}`, { method: 'GET' }) as Promise<NotifyHistory>,
-    getStats: () => request('/api/notify_history/stats', { method: 'GET' }) as Promise<{ total_count: number; today_count: number; week_count: number; month_count: number; success_count: number; fail_count: number; success_rate: number }>,
+    getById: (id) =>
+      request(`/api/notify_history/${id}`, { method: 'GET' }) as Promise<NotifyHistory>,
+    getStats: () =>
+      request('/api/notify_history/stats', { method: 'GET' }) as Promise<{
+        total_count: number;
+        today_count: number;
+        week_count: number;
+        month_count: number;
+        success_count: number;
+        fail_count: number;
+        success_rate: number;
+      }>,
     clean: (days) => {
       const query = days ? `?days=${days}` : '';
-      return request(`/api/notify_history/clean${query}`, { method: 'DELETE' }) as Promise<{ success: boolean; message: string; deleted_count: number }>;
+      return request(`/api/notify_history/clean${query}`, { method: 'DELETE' }) as Promise<{
+        success: boolean;
+        message: string;
+        deleted_count: number;
+      }>;
     },
   },
   adminNotifications: {
@@ -4041,128 +4785,233 @@ const api: Api = {
       if (params?.is_read !== undefined) query.set('is_read', params.is_read);
       if (params?.type) query.set('type', params.type);
       if (params?.priority) query.set('priority', params.priority);
-      return request(`/api/admin_notifications/?${query.toString()}`, { method: 'GET' }) as Promise<{ notifications: AdminNotification[]; total: number; page: number; per_page: number; pages: number }>;
+      return request(`/api/admin_notifications/?${query.toString()}`, {
+        method: 'GET',
+      }) as Promise<{
+        notifications: AdminNotification[];
+        total: number;
+        page: number;
+        per_page: number;
+        pages: number;
+      }>;
     },
     getRecent: (params) => {
       const query = new URLSearchParams();
       if (params?.admin_id) query.set('admin_id', params.admin_id.toString());
       if (params?.limit) query.set('limit', params.limit.toString());
-      return request(`/api/admin_notifications/recent?${query.toString()}`, { method: 'GET' }) as Promise<AdminNotification[]>;
+      return request(`/api/admin_notifications/recent?${query.toString()}`, {
+        method: 'GET',
+      }) as Promise<AdminNotification[]>;
     },
     getCount: (admin_id) => {
       const query = admin_id ? `?admin_id=${admin_id}` : '';
-      return request(`/api/admin_notifications/count${query}`, { method: 'GET' }) as Promise<{ unread_count: number; total_count: number }>;
+      return request(`/api/admin_notifications/count${query}`, { method: 'GET' }) as Promise<{
+        unread_count: number;
+        total_count: number;
+      }>;
     },
-    markRead: (id) => request(`/api/admin_notifications/${id}/read`, { method: 'POST' }) as Promise<{ success: boolean; message: string }>,
+    markRead: (id) =>
+      request(`/api/admin_notifications/${id}/read`, { method: 'POST' }) as Promise<{
+        success: boolean;
+        message: string;
+      }>,
     markAllRead: (admin_id) => {
       const query = admin_id ? `?admin_id=${admin_id}` : '';
-      return request(`/api/admin_notifications/read_all${query}`, { method: 'POST' }) as Promise<{ success: boolean; message: string; count: number }>;
+      return request(`/api/admin_notifications/read_all${query}`, { method: 'POST' }) as Promise<{
+        success: boolean;
+        message: string;
+        count: number;
+      }>;
     },
-    create: (data) => request('/api/admin_notifications/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ success: boolean; message: string; notification: AdminNotification }>,
-    delete: (id) => request(`/api/admin_notifications/${id}`, { method: 'DELETE' }) as Promise<{ success: boolean; message: string }>,
+    create: (data) =>
+      request('/api/admin_notifications/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ success: boolean; message: string; notification: AdminNotification }>,
+    delete: (id) =>
+      request(`/api/admin_notifications/${id}`, { method: 'DELETE' }) as Promise<{
+        success: boolean;
+        message: string;
+      }>,
   },
   wakeOnLan: {
-    wake: (data: { mac_address: string; broadcast_ip?: string; port?: number; force_send?: boolean }) => request('/api/wol/wake', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ success: boolean; message: string; mac_address: string }>,
-    wakeBatch: (data: { mac_addresses: string[]; broadcast_ip?: string; port?: number; force_send?: boolean }) => request('/api/wol/wake/batch', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<{ success: boolean; total: number; success_count: number; results: Record<string, { success: boolean; message: string }> }>,
-    validateMac: (mac: string) => request(`/api/wol/validate?mac=${encodeURIComponent(mac)}`) as Promise<{ mac_address: string; valid: boolean; normalized: string | null }>,
+    wake: (data: {
+      mac_address: string;
+      broadcast_ip?: string;
+      port?: number;
+      force_send?: boolean;
+    }) =>
+      request('/api/wol/wake', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{ success: boolean; message: string; mac_address: string }>,
+    wakeBatch: (data: {
+      mac_addresses: string[];
+      broadcast_ip?: string;
+      port?: number;
+      force_send?: boolean;
+    }) =>
+      request('/api/wol/wake/batch', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<{
+        success: boolean;
+        total: number;
+        success_count: number;
+        results: Record<string, { success: boolean; message: string }>;
+      }>,
+    validateMac: (mac: string) =>
+      request(`/api/wol/validate?mac=${encodeURIComponent(mac)}`) as Promise<{
+        mac_address: string;
+        valid: boolean;
+        normalized: string | null;
+      }>,
     getDevices: () => request('/api/wol/devices') as Promise<WOLDevice[]>,
-    addDevice: (data: { name: string; mac_address: string; broadcast_ip?: string; port?: number; description?: string }) => request('/api/wol/devices', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<WOLDevice>,
-    updateDevice: (id: number, data: Partial<WOLDevice>) => request(`/api/wol/devices/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<WOLDevice>,
-    deleteDevice: (id: number) => request(`/api/wol/devices/${id}`, { method: 'DELETE' }) as Promise<{ success: boolean; message: string }>,
+    addDevice: (data: {
+      name: string;
+      mac_address: string;
+      broadcast_ip?: string;
+      port?: number;
+      description?: string;
+    }) =>
+      request('/api/wol/devices', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<WOLDevice>,
+    updateDevice: (id: number, data: Partial<WOLDevice>) =>
+      request(`/api/wol/devices/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<WOLDevice>,
+    deleteDevice: (id: number) =>
+      request(`/api/wol/devices/${id}`, { method: 'DELETE' }) as Promise<{
+        success: boolean;
+        message: string;
+      }>,
   },
   devices: {
     getAll: () => request('/api/devices') as Promise<DevicePaginatedResponse>,
     getById: (id) => request(`/api/devices/${id}`) as Promise<Device>,
-    create: (data) => request('/api/devices', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Device>,
-    update: (id, data) => request(`/api/devices/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Device>,
+    create: (data) =>
+      request('/api/devices', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Device>,
+    update: (id, data) =>
+      request(`/api/devices/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Device>,
     delete: (id) => request(`/api/devices/${id}`, { method: 'DELETE' }) as Promise<void>,
     getAlerts: (resolved) => {
       const query = resolved ? `?resolved=${resolved}` : '';
       return request(`/api/devices/alerts${query}`) as Promise<{ alerts: Alert[] }>;
     },
-    getHeartbeats: (deviceId) => request(`/api/devices/${deviceId}/heartbeats`) as Promise<{ heartbeats: Heartbeat[] }>,
-    bindClass: (deviceId, data) => request(`/api/devices/${deviceId}/bind-class`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
-    bindAdmin: (deviceId, data) => request(`/api/devices/${deviceId}/bind-admin`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
-    remoteControl: (deviceId, action) => request(`/api/devices/${deviceId}/remote-control`, {
-      method: 'POST',
-      body: JSON.stringify({ action }),
-    }) as Promise<void>,
-    otaUpgrade: (deviceId, data) => request(`/api/devices/${deviceId}/ota-upgrade`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
-    bulkOTAUpgrade: (data) => request('/api/devices/bulk-ota-upgrade', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
-    resolveAlert: (deviceId, alertId) => request(`/api/devices/${deviceId}/alerts/${alertId}/resolve`, {
-      method: 'POST',
-    }) as Promise<void>,
-    updateSettings: (deviceId, settings) => request(`/api/devices/${deviceId}/settings`, {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    }) as Promise<void>,
-    getStats: () => request('/api/devices/stats') as Promise<{ total_devices: number; online_devices: number; offline_devices: number; error_devices?: number; today_heartbeats?: number; recent_activity?: unknown[] }>,
-    getAdvancedStats: () => request('/api/devices/advanced-stats') as Promise<{ total_devices: number; online_devices: number; offline_devices: number; error_devices?: number; online_rate?: number; avg_signal_strength?: number; signal_distribution?: Record<string, number>; today_heartbeats?: number; unresolved_alerts?: number; critical_alerts?: number }>,
-    import: (formData: FormData) => request('/api/devices/import', {
-      method: 'POST',
-      body: formData,
-    }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>,
+    getHeartbeats: (deviceId) =>
+      request(`/api/devices/${deviceId}/heartbeats`) as Promise<{ heartbeats: Heartbeat[] }>,
+    bindClass: (deviceId, data) =>
+      request(`/api/devices/${deviceId}/bind-class`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
+    bindAdmin: (deviceId, data) =>
+      request(`/api/devices/${deviceId}/bind-admin`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
+    remoteControl: (deviceId, action) =>
+      request(`/api/devices/${deviceId}/remote-control`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      }) as Promise<void>,
+    otaUpgrade: (deviceId, data) =>
+      request(`/api/devices/${deviceId}/ota-upgrade`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
+    bulkOTAUpgrade: (data) =>
+      request('/api/devices/bulk-ota-upgrade', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
+    resolveAlert: (deviceId, alertId) =>
+      request(`/api/devices/${deviceId}/alerts/${alertId}/resolve`, {
+        method: 'POST',
+      }) as Promise<void>,
+    updateSettings: (deviceId, settings) =>
+      request(`/api/devices/${deviceId}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      }) as Promise<void>,
+    getStats: () =>
+      request('/api/devices/stats') as Promise<{
+        total_devices: number;
+        online_devices: number;
+        offline_devices: number;
+        error_devices?: number;
+        today_heartbeats?: number;
+        recent_activity?: unknown[];
+      }>,
+    getAdvancedStats: () =>
+      request('/api/devices/advanced-stats') as Promise<{
+        total_devices: number;
+        online_devices: number;
+        offline_devices: number;
+        error_devices?: number;
+        online_rate?: number;
+        avg_signal_strength?: number;
+        signal_distribution?: Record<string, number>;
+        today_heartbeats?: number;
+        unresolved_alerts?: number;
+        critical_alerts?: number;
+      }>,
+    import: (formData: FormData) =>
+      request('/api/devices/import', {
+        method: 'POST',
+        body: formData,
+      }) as Promise<{
+        success: boolean;
+        total: number;
+        success_count: number;
+        failed_count: number;
+        messages: Array<{ action: string; message: string }>;
+      }>,
   },
   firmware: {
     getAll: async () => {
-      const result = await request('/api/firmware/versions') as { versions: Firmware[] } | Firmware[];
-      return Array.isArray(result) ? result : (result.versions || []);
+      const result = (await request('/api/firmware/versions')) as
+        | { versions: Firmware[] }
+        | Firmware[];
+      return Array.isArray(result) ? result : result.versions || [];
     },
     getVersions: () => request('/api/firmware/versions') as Promise<{ versions: Firmware[] }>,
-    getUpgradeRecords: () => request('/api/firmware/upgrade-records') as Promise<{ records: FirmwareRecord[] }>,
-    upload: (data) => request('/api/firmware/upload', {
-      method: 'POST',
-      body: data,
-    }) as Promise<Firmware>,
-    update: (id, data) => request(`/api/firmware/versions/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Firmware>,
-    updateVersion: (id: number, data: { is_active: boolean }) => request(`/api/firmware/versions/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Firmware>,
-    deleteVersion: (id: number) => request(`/api/firmware/versions/${id}`, { method: 'DELETE' }) as Promise<void>,
+    getUpgradeRecords: () =>
+      request('/api/firmware/upgrade-records') as Promise<{ records: FirmwareRecord[] }>,
+    upload: (data) =>
+      request('/api/firmware/upload', {
+        method: 'POST',
+        body: data,
+      }) as Promise<Firmware>,
+    update: (id, data) =>
+      request(`/api/firmware/versions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Firmware>,
+    updateVersion: (id: number, data: { is_active: boolean }) =>
+      request(`/api/firmware/versions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Firmware>,
+    deleteVersion: (id: number) =>
+      request(`/api/firmware/versions/${id}`, { method: 'DELETE' }) as Promise<void>,
     delete: (id) => request(`/api/firmware/versions/${id}`, { method: 'DELETE' }) as Promise<void>,
     download: (id) => `/api/firmware/download/${id}`,
     getOTAStatus: () => request('/api/firmware/ota-status') as Promise<OTAStatus>,
-    otaUpgrade: (firmwareId, deviceIds) => request(`/api/firmware/${firmwareId}/ota-upgrade`, {
-      method: 'POST',
-      body: JSON.stringify({ device_ids: deviceIds }),
-    }) as Promise<void>,
+    otaUpgrade: (firmwareId, deviceIds) =>
+      request(`/api/firmware/${firmwareId}/ota-upgrade`, {
+        method: 'POST',
+        body: JSON.stringify({ device_ids: deviceIds }),
+      }) as Promise<void>,
   },
   exams: {
     getAll: (params: ScoreRecordParams & { skipCache?: boolean } = {}) => {
@@ -4176,63 +5025,92 @@ const api: Api = {
       return request(url, skipCache ? { skipCache: true } : undefined) as Promise<Exam[]>;
     },
     getById: (id) => request(`/api/exams/${id}`) as Promise<Exam>,
-    create: (data) => request('/api/exams', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Exam>,
-    update: (id, data) => request(`/api/exams/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Exam>,
+    create: (data) =>
+      request('/api/exams', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Exam>,
+    update: (id, data) =>
+      request(`/api/exams/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Exam>,
     delete: (id) => request(`/api/exams/${id}`, { method: 'DELETE' }) as Promise<void>,
-    import: (data: FormData, url?: string) => request(url || '/api/exams/import', {
-      method: 'POST',
-      body: data,
-    }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>,
+    import: (data: FormData, url?: string) =>
+      request(url || '/api/exams/import', {
+        method: 'POST',
+        body: data,
+      }) as Promise<{
+        success: boolean;
+        total: number;
+        success_count: number;
+        failed_count: number;
+        messages: Array<{ action: string; message: string }>;
+      }>,
     // P3-2: 删除 uploadScores（后端无 /api/exams/{id}/scores 路由，且零调用；成绩导入走 importScores → /api/exam-import/execute）
-    publish: (id) => request(`/api/exams/${id}/publish`, {
-      method: 'POST',
-    }) as Promise<Exam>,
-    close: (id) => request(`/api/exams/${id}/close`, {
-      method: 'POST',
-    }) as Promise<Exam>,
+    publish: (id) =>
+      request(`/api/exams/${id}/publish`, {
+        method: 'POST',
+      }) as Promise<Exam>,
+    close: (id) =>
+      request(`/api/exams/${id}/close`, {
+        method: 'POST',
+      }) as Promise<Exam>,
   },
   subjects: {
     getAll: async (params: { include_inactive?: boolean; skipCache?: boolean } = {}) => {
       const queryParams = new URLSearchParams();
       if (params.include_inactive) queryParams.append('include_inactive', 'true');
       const query = queryParams.toString();
-      const result = await request(`/api/subjects${query ? '?' + query : ''}`, { skipCache: params.skipCache });
+      const result = await request(`/api/subjects${query ? '?' + query : ''}`, {
+        skipCache: params.skipCache,
+      });
       return Array.isArray(result) ? result : [];
     },
-    create: (data) => request('/api/subjects', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Subject>,
-    update: (id, data) => request(`/api/subjects/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Subject>,
+    create: (data) =>
+      request('/api/subjects', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Subject>,
+    update: (id, data) =>
+      request(`/api/subjects/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Subject>,
     delete: (id) => request(`/api/subjects/${id}`, { method: 'DELETE' }) as Promise<void>,
     toggle: (id) => request(`/api/subjects/${id}/toggle`) as Promise<Subject>,
-    getClasses: (id) => request(`/api/subjects/${id}/classes`) as Promise<{ classes: SubjectClassLink[] }>,
-    assignClass: (id, data) => request(`/api/subjects/${id}/classes`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<SubjectClassLink>,
-    updateClassTeacher: (subjectId, classId, data) => request(`/api/subjects/${subjectId}/classes/${classId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<SubjectClassLink>,
-    removeClass: (subjectId, classId) => request(`/api/subjects/${subjectId}/classes/${classId}`, { method: 'DELETE' }) as Promise<void>,
-    import: (data: FormData, customUrl?: string) => request(customUrl || '/api/subjects/import', {
-      method: 'POST',
-      body: data,
-    }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ name: string; action: string; message: string }> }>,
-    updateOrder: (data: Array<{ id: number; order: number }>) => request('/api/subjects/order', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<void>,
+    getClasses: (id) =>
+      request(`/api/subjects/${id}/classes`) as Promise<{ classes: SubjectClassLink[] }>,
+    assignClass: (id, data) =>
+      request(`/api/subjects/${id}/classes`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<SubjectClassLink>,
+    updateClassTeacher: (subjectId, classId, data) =>
+      request(`/api/subjects/${subjectId}/classes/${classId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<SubjectClassLink>,
+    removeClass: (subjectId, classId) =>
+      request(`/api/subjects/${subjectId}/classes/${classId}`, {
+        method: 'DELETE',
+      }) as Promise<void>,
+    import: (data: FormData, customUrl?: string) =>
+      request(customUrl || '/api/subjects/import', {
+        method: 'POST',
+        body: data,
+      }) as Promise<{
+        success: boolean;
+        total: number;
+        success_count: number;
+        failed_count: number;
+        messages: Array<{ name: string; action: string; message: string }>;
+      }>,
+    updateOrder: (data: Array<{ id: number; order: number }>) =>
+      request('/api/subjects/order', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<void>,
   },
   approvals: {
     getAll: (params = {}) => {
@@ -4240,60 +5118,77 @@ const api: Api = {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) queryParams.append(key, String(value));
       });
-      return request(`/api/approvals?${queryParams.toString()}`) as Promise<{ approvals: Approval[]; pagination: { page: number; per_page: number; total: number; pages: number } }>;
+      return request(`/api/approvals?${queryParams.toString()}`) as Promise<{
+        approvals: Approval[];
+        pagination: { page: number; per_page: number; total: number; pages: number };
+      }>;
     },
     getById: (id) => request(`/api/approvals/${id}`) as Promise<Approval>,
-    create: (data) => request('/api/approvals', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Approval>,
-    approve: (id, data) => request(`/api/approvals/${id}/approve`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Approval>,
-    reject: (id, data) => request(`/api/approvals/${id}/reject`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Approval>,
+    create: (data) =>
+      request('/api/approvals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Approval>,
+    approve: (id, data) =>
+      request(`/api/approvals/${id}/approve`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Approval>,
+    reject: (id, data) =>
+      request(`/api/approvals/${id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Approval>,
     delete: (id) => request(`/api/approvals/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   deviceGroup: {
     getAll: (params?: { is_active?: boolean }) => {
       const queryParams = new URLSearchParams();
-      if (params?.is_active !== undefined) queryParams.append('is_active', String(params.is_active));
+      if (params?.is_active !== undefined)
+        queryParams.append('is_active', String(params.is_active));
       const query = queryParams.toString();
       return request(`/api/device-group/${query ? '?' + query : ''}`) as Promise<DeviceGroup[]>;
     },
     getById: (id: number) => request(`/api/device-group/${id}`) as Promise<DeviceGroupDetail>,
-    create: (data: Partial<DeviceGroup>) => request('/api/device-group/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<DeviceGroup>,
-    update: (id: number, data: Partial<DeviceGroup>) => request(`/api/device-group/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<DeviceGroup>,
-    delete: (id: number) => request(`/api/device-group/${id}`, { method: 'DELETE' }) as Promise<void>,
-    getDevices: (groupId: number) => request(`/api/device-group/${groupId}/devices`) as Promise<DeviceInGroup[]>,
-    addDevices: (groupId: number, deviceIds: number[]) => request(`/api/device-group/${groupId}/devices`, {
-      method: 'POST',
-      body: JSON.stringify({ device_ids: deviceIds }),
-    }) as Promise<{ added_count: number; skipped: { device_id: number; reason: string }[] }>,
-    removeDevices: (groupId: number, deviceIds: number[]) => request(`/api/device-group/${groupId}/devices`, {
-      method: 'DELETE',
-      body: JSON.stringify({ device_ids: deviceIds }),
-    }) as Promise<{ removed_count: number }>,
+    create: (data: Partial<DeviceGroup>) =>
+      request('/api/device-group/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<DeviceGroup>,
+    update: (id: number, data: Partial<DeviceGroup>) =>
+      request(`/api/device-group/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<DeviceGroup>,
+    delete: (id: number) =>
+      request(`/api/device-group/${id}`, { method: 'DELETE' }) as Promise<void>,
+    getDevices: (groupId: number) =>
+      request(`/api/device-group/${groupId}/devices`) as Promise<DeviceInGroup[]>,
+    addDevices: (groupId: number, deviceIds: number[]) =>
+      request(`/api/device-group/${groupId}/devices`, {
+        method: 'POST',
+        body: JSON.stringify({ device_ids: deviceIds }),
+      }) as Promise<{ added_count: number; skipped: { device_id: number; reason: string }[] }>,
+    removeDevices: (groupId: number, deviceIds: number[]) =>
+      request(`/api/device-group/${groupId}/devices`, {
+        method: 'DELETE',
+        body: JSON.stringify({ device_ids: deviceIds }),
+      }) as Promise<{ removed_count: number }>,
     // P3-2: 删除 getUngroupedDevices（后端无此路由且零调用）；修正 getByDevice 路径为后端真实 /device/<id>/groups
-    getByDevice: (deviceId: number) => request(`/api/device-group/device/${deviceId}/groups`) as Promise<DeviceGroup[]>,
+    getByDevice: (deviceId: number) =>
+      request(`/api/device-group/device/${deviceId}/groups`) as Promise<DeviceGroup[]>,
     getStats: async () => {
       const raw = (await request('/api/device-group/stats')) as unknown;
       // 后端实际返回 {total_groups, active_groups, total_mappings, groups: [...]}
       // 前端需要扁平 DeviceGroupStats[] 列表。兼容裸数组、裸对象两种 shape。
       const list: any[] = Array.isArray(raw)
         ? (raw as any[])
-        : (raw && Array.isArray((raw as any).groups) ? (raw as any).groups : []);
+        : raw && Array.isArray((raw as any).groups)
+        ? (raw as any).groups
+        : [];
       return list.map((g) => {
-        const id = typeof g?.id === 'number' ? g.id : (typeof g?.group_id === 'number' ? g.group_id : 0);
+        const id =
+          typeof g?.id === 'number' ? g.id : typeof g?.group_id === 'number' ? g.group_id : 0;
         return {
           group_id: id,
           group_name: g?.name ?? g?.group_name ?? '未命名',
@@ -4302,8 +5197,8 @@ const api: Api = {
             typeof g?.total_devices === 'number'
               ? g.total_devices
               : typeof g?.actual_device_count === 'number'
-                ? g.actual_device_count
-                : 0,
+              ? g.actual_device_count
+              : 0,
           online_devices: typeof g?.online_devices === 'number' ? g.online_devices : 0,
           offline_devices: typeof g?.offline_devices === 'number' ? g.offline_devices : 0,
         } as DeviceGroupStats;
@@ -4311,30 +5206,46 @@ const api: Api = {
     },
   },
   courseSchedules: {
-    getAll: async (params: { class_info_id?: number; day_of_week?: number; period_number?: number; is_active?: boolean; teacher_name?: string; classroom?: string; skipCache?: boolean } = {}) => {
+    getAll: async (
+      params: {
+        class_info_id?: number;
+        day_of_week?: number;
+        period_number?: number;
+        is_active?: boolean;
+        teacher_name?: string;
+        classroom?: string;
+        skipCache?: boolean;
+      } = {}
+    ) => {
       const queryParams = new URLSearchParams();
-      if (params.class_info_id) queryParams.append('class_info_id', params.class_info_id.toString());
-      if (params.day_of_week !== undefined) queryParams.append('day_of_week', params.day_of_week.toString());
-      if (params.period_number !== undefined) queryParams.append('period_number', params.period_number.toString());
+      if (params.class_info_id)
+        queryParams.append('class_info_id', params.class_info_id.toString());
+      if (params.day_of_week !== undefined)
+        queryParams.append('day_of_week', params.day_of_week.toString());
+      if (params.period_number !== undefined)
+        queryParams.append('period_number', params.period_number.toString());
       if (params.is_active !== undefined) queryParams.append('is_active', String(params.is_active));
       if (params.teacher_name) queryParams.append('teacher_name', params.teacher_name);
       if (params.classroom) queryParams.append('classroom', params.classroom);
       const query = queryParams.toString();
-      const result = await request(`/api/course-schedules${query ? '?' + query : ''}`, { skipCache: params.skipCache }) as { schedules: CourseSchedule[] };
+      const result = (await request(`/api/course-schedules${query ? '?' + query : ''}`, {
+        skipCache: params.skipCache,
+      })) as { schedules: CourseSchedule[] };
       return result.schedules || [];
     },
     getById: (id) => request(`/api/course-schedules/${id}`) as Promise<CourseSchedule>,
-    create: (data) => request('/api/course-schedules', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<CourseSchedule>,
+    create: (data) =>
+      request('/api/course-schedules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<CourseSchedule>,
     update: async (id, data) => {
-      const result = await request(`/api/course-schedules/${id}`, {
+      const result = (await request(`/api/course-schedules/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
-      }) as { success: boolean; message: string };
+      })) as { success: boolean; message: string };
       if (!result.success) throw new Error(result.message);
-      return await request(`/api/course-schedules/${id}`) as CourseSchedule;
+      return (await request(`/api/course-schedules/${id}`)) as CourseSchedule;
     },
     delete: (id) => request(`/api/course-schedules/${id}`, { method: 'DELETE' }) as Promise<void>,
     checkConflict: async (params: {
@@ -4346,11 +5257,14 @@ const api: Api = {
       exclude_id?: number;
     }) => {
       const queryParams = new URLSearchParams();
-      if (params.class_info_id) queryParams.append('class_info_id', params.class_info_id.toString());
+      if (params.class_info_id)
+        queryParams.append('class_info_id', params.class_info_id.toString());
       if (params.teacher_name) queryParams.append('teacher_name', params.teacher_name);
       if (params.classroom) queryParams.append('classroom', params.classroom);
-      if (params.day_of_week !== undefined) queryParams.append('day_of_week', params.day_of_week.toString());
-      if (params.period_number !== undefined) queryParams.append('period_number', params.period_number.toString());
+      if (params.day_of_week !== undefined)
+        queryParams.append('day_of_week', params.day_of_week.toString());
+      if (params.period_number !== undefined)
+        queryParams.append('period_number', params.period_number.toString());
       if (params.exclude_id) queryParams.append('exclude_id', params.exclude_id.toString());
       const query = queryParams.toString();
       return request(`/api/course-schedules/check-conflict${query ? '?' + query : ''}`) as Promise<{
@@ -4392,61 +5306,81 @@ const api: Api = {
           window.URL.revokeObjectURL(dlUrl);
         });
     },
-    import: (data: FormData, customUrl?: string) => request(customUrl || '/api/course-schedules/import', {
-      method: 'POST',
-      body: data,
-    }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ class_name: string; subject_name: string; action: string; message: string }> }>,
+    import: (data: FormData, customUrl?: string) =>
+      request(customUrl || '/api/course-schedules/import', {
+        method: 'POST',
+        body: data,
+      }) as Promise<{
+        success: boolean;
+        total: number;
+        success_count: number;
+        failed_count: number;
+        messages: Array<{
+          class_name: string;
+          subject_name: string;
+          action: string;
+          message: string;
+        }>;
+      }>,
     // 实时状态必须反映"改课表立即生效"，因此强制 skipCache
     getNow: (classInfoId?: number, deviceId?: string) => {
       const qs = new URLSearchParams();
       if (classInfoId) qs.append('class_info_id', String(classInfoId));
       else if (deviceId) qs.append('device_id', deviceId);
       const query = qs.toString();
-      return request(
-        `/api/course-schedules/now${query ? `?${query}` : ''}`,
-        { skipCache: true },
-      ) as Promise<ClassNowStatus>;
+      return request(`/api/course-schedules/now${query ? `?${query}` : ''}`, {
+        skipCache: true,
+      }) as Promise<ClassNowStatus>;
     },
   },
   importConfig: {
     list: (params?: { module_name?: string; is_active?: boolean }) => {
       const queryParams = new URLSearchParams();
       if (params?.module_name) queryParams.append('module_name', params.module_name);
-      if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
+      if (params?.is_active !== undefined)
+        queryParams.append('is_active', params.is_active.toString());
       const query = queryParams.toString();
       return request(`/api/import/configs${query ? '?' + query : ''}`) as Promise<ImportConfig[]>;
     },
     get: (id: number) => request(`/api/import/configs/${id}`) as Promise<ImportConfig>,
-    create: (data: ImportConfigInput) => request('/api/import/configs', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ImportConfig>,
-    update: (id: number, data: ImportConfigInput) => request(`/api/import/configs/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<ImportConfig>,
-    delete: (id: number) => request(`/api/import/configs/${id}`, {
-      method: 'DELETE',
-    }) as Promise<unknown>,
+    create: (data: ImportConfigInput) =>
+      request('/api/import/configs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ImportConfig>,
+    update: (id: number, data: ImportConfigInput) =>
+      request(`/api/import/configs/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<ImportConfig>,
+    delete: (id: number) =>
+      request(`/api/import/configs/${id}`, {
+        method: 'DELETE',
+      }) as Promise<unknown>,
     // P1-2 修复：后端路径为 /configs/set-default/<id>（原 ${id}/set-default 顺序反 → 404）
-    setDefault: (id: number) => request(`/api/import/configs/set-default/${id}`, {
-      method: 'POST',
-    }) as Promise<unknown>,
-    downloadTemplate: (templateType: string) => `${API_BASE_URL}/api/import/template/${templateType}`,
+    setDefault: (id: number) =>
+      request(`/api/import/configs/set-default/${id}`, {
+        method: 'POST',
+      }) as Promise<unknown>,
+    downloadTemplate: (templateType: string) =>
+      `${API_BASE_URL}/api/import/template/${templateType}`,
   },
   nlp: {
-    parse: (text) => request('/api/nlp/parse', {
-      method: 'POST',
-      body: JSON.stringify({ text }),
-    }) as Promise<NLPBackendResponse<NLPParsedResult>>,
-    execute: (data) => request('/api/nlp/execute', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<unknown>>,
-    batchParse: (texts) => request('/api/nlp/batch-parse', {
-      method: 'POST',
-      body: JSON.stringify({ texts }),
-    }) as Promise<NLPBackendResponse<unknown>>,
+    parse: (text) =>
+      request('/api/nlp/parse', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      }) as Promise<NLPBackendResponse<NLPParsedResult>>,
+    execute: (data) =>
+      request('/api/nlp/execute', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<unknown>>,
+    batchParse: (texts) =>
+      request('/api/nlp/batch-parse', {
+        method: 'POST',
+        body: JSON.stringify({ texts }),
+      }) as Promise<NLPBackendResponse<unknown>>,
     getRules: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
@@ -4456,91 +5390,136 @@ const api: Api = {
       if (params.sort_by) queryParams.append('sort_by', params.sort_by);
       if (params.sort_order) queryParams.append('sort_order', params.sort_order);
       const query = queryParams.toString();
-      return request(`/api/nlp/rules${query ? '?' + query : ''}`) as Promise<NLPBackendResponse<BackendPaginatedResult<NLPScoringRule>>>;
+      return request(`/api/nlp/rules${query ? '?' + query : ''}`) as Promise<
+        NLPBackendResponse<BackendPaginatedResult<NLPScoringRule>>
+      >;
     },
-    createRule: (data) => request('/api/nlp/rules', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<NLPScoringRule>>,
-    updateRule: (id, data) => request(`/api/nlp/rules/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<NLPScoringRule>>,
-    deleteRule: (id) => request(`/api/nlp/rules/${id}`, {
-      method: 'DELETE',
-    }) as Promise<NLPBackendResponse<unknown>>,
-    suggestRules: (keyword) => request(`/api/nlp/rules/suggest?keyword=${encodeURIComponent(keyword)}`) as Promise<NLPBackendResponse<NLPScoringRule[]>>,
-    getRuleStatistics: () => request('/api/nlp/rules/statistics') as Promise<NLPBackendResponse<NLPStatistics>>,
-    getRuleUsage: (ruleId) => request(`/api/nlp/rules/${ruleId}/usage`) as Promise<NLPBackendResponse<unknown>>,
-    batchImportRules: (rules) => request('/api/nlp/rules/batch-import', {
-      method: 'POST',
-      body: JSON.stringify({ rules }),
-    }) as Promise<NLPBackendResponse<{ success: boolean; imported_count: number; skipped_count: number; message: string }>>,
-    trainModel: (data) => request('/api/nlp/model/train', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<NLPMLTrainingResult>>,
-    trainAllModels: (data) => request('/api/nlp/model/train-all', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<NLPMLTrainAllResult>>,
-    getAlgorithms: () => request('/api/nlp/model/algorithms') as Promise<NLPBackendResponse<NLPAlgorithm[]>>,
-    evaluateAllModels: () => request('/api/nlp/model/evaluate-all') as Promise<NLPBackendResponse<NLPMLEvaluationAllResult>>,
-    predictRule: (data) => request('/api/nlp/model/predict', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<NLPPredictResult>>,
+    createRule: (data) =>
+      request('/api/nlp/rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<NLPScoringRule>>,
+    updateRule: (id, data) =>
+      request(`/api/nlp/rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<NLPScoringRule>>,
+    deleteRule: (id) =>
+      request(`/api/nlp/rules/${id}`, {
+        method: 'DELETE',
+      }) as Promise<NLPBackendResponse<unknown>>,
+    suggestRules: (keyword) =>
+      request(`/api/nlp/rules/suggest?keyword=${encodeURIComponent(keyword)}`) as Promise<
+        NLPBackendResponse<NLPScoringRule[]>
+      >,
+    getRuleStatistics: () =>
+      request('/api/nlp/rules/statistics') as Promise<NLPBackendResponse<NLPStatistics>>,
+    getRuleUsage: (ruleId) =>
+      request(`/api/nlp/rules/${ruleId}/usage`) as Promise<NLPBackendResponse<unknown>>,
+    batchImportRules: (rules) =>
+      request('/api/nlp/rules/batch-import', {
+        method: 'POST',
+        body: JSON.stringify({ rules }),
+      }) as Promise<
+        NLPBackendResponse<{
+          success: boolean;
+          imported_count: number;
+          skipped_count: number;
+          message: string;
+        }>
+      >,
+    trainModel: (data) =>
+      request('/api/nlp/model/train', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<NLPMLTrainingResult>>,
+    trainAllModels: (data) =>
+      request('/api/nlp/model/train-all', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<NLPMLTrainAllResult>>,
+    getAlgorithms: () =>
+      request('/api/nlp/model/algorithms') as Promise<NLPBackendResponse<NLPAlgorithm[]>>,
+    evaluateAllModels: () =>
+      request('/api/nlp/model/evaluate-all') as Promise<
+        NLPBackendResponse<NLPMLEvaluationAllResult>
+      >,
+    predictRule: (data) =>
+      request('/api/nlp/model/predict', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<NLPPredictResult>>,
     getTrainingHistory: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
-      return request(`/api/nlp/model/training-history${query ? '?' + query : ''}`) as Promise<NLPBackendResponse<BackendPaginatedResult<NLPTrainingRecord>>>;
+      return request(`/api/nlp/model/training-history${query ? '?' + query : ''}`) as Promise<
+        NLPBackendResponse<BackendPaginatedResult<NLPTrainingRecord>>
+      >;
     },
-    evaluateModel: () => request('/api/nlp/model/evaluate') as Promise<NLPBackendResponse<NLPEvaluationResult>>,
+    evaluateModel: () =>
+      request('/api/nlp/model/evaluate') as Promise<NLPBackendResponse<NLPEvaluationResult>>,
     // 算法分析相关
-    getAnalysisComprehensive: () => request('/api/nlp/analysis/comprehensive') as Promise<NLPBackendResponse<unknown>>,
-    getAnalysisIntent: () => request('/api/nlp/analysis/intent') as Promise<NLPBackendResponse<unknown>>,
-    getAnalysisPerformance: () => request('/api/nlp/analysis/performance') as Promise<NLPBackendResponse<unknown>>,
-    getAnalysisSuggestions: () => request('/api/nlp/analysis/suggestions') as Promise<NLPBackendResponse<unknown>>,
-    resetAnalysis: () => request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<NLPBackendResponse<unknown>>,
-    benchmarkIntentClassifier: (params) => request('/api/nlp/benchmark/intent-classifier', {
-      method: 'POST',
-      body: JSON.stringify(params || {}),
-    }) as Promise<NLPBackendResponse<unknown>>,
-    getOptimizationConfig: () => request('/api/nlp/optimization/config') as Promise<NLPBackendResponse<unknown>>,
-    setOptimizationConfig: (data) => request('/api/nlp/optimization/config', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<unknown>>,
-    autoTuneOptimization: (data) => request('/api/nlp/optimization/auto-tune', {
-      method: 'POST',
-      body: JSON.stringify(data || {}),
-    }) as Promise<NLPBackendResponse<unknown>>,
+    getAnalysisComprehensive: () =>
+      request('/api/nlp/analysis/comprehensive') as Promise<NLPBackendResponse<unknown>>,
+    getAnalysisIntent: () =>
+      request('/api/nlp/analysis/intent') as Promise<NLPBackendResponse<unknown>>,
+    getAnalysisPerformance: () =>
+      request('/api/nlp/analysis/performance') as Promise<NLPBackendResponse<unknown>>,
+    getAnalysisSuggestions: () =>
+      request('/api/nlp/analysis/suggestions') as Promise<NLPBackendResponse<unknown>>,
+    resetAnalysis: () =>
+      request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<
+        NLPBackendResponse<unknown>
+      >,
+    benchmarkIntentClassifier: (params) =>
+      request('/api/nlp/benchmark/intent-classifier', {
+        method: 'POST',
+        body: JSON.stringify(params || {}),
+      }) as Promise<NLPBackendResponse<unknown>>,
+    getOptimizationConfig: () =>
+      request('/api/nlp/optimization/config') as Promise<NLPBackendResponse<unknown>>,
+    setOptimizationConfig: (data) =>
+      request('/api/nlp/optimization/config', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<unknown>>,
+    autoTuneOptimization: (data) =>
+      request('/api/nlp/optimization/auto-tune', {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }) as Promise<NLPBackendResponse<unknown>>,
     // 自学习反馈相关
-    sentiment: (text) => request('/api/nlp/sentiment', {
-      method: 'POST',
-      body: JSON.stringify({ text }),
-    }) as Promise<NLPBackendResponse<unknown>>,
-    recordFeedback: (data) => request('/api/nlp/feedback/record', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<{ message: string; corrections_saved?: number }>>,
+    sentiment: (text) =>
+      request('/api/nlp/sentiment', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      }) as Promise<NLPBackendResponse<unknown>>,
+    recordFeedback: (data) =>
+      request('/api/nlp/feedback/record', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<{ message: string; corrections_saved?: number }>>,
     getCorrections: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       if (params.status) queryParams.append('status', params.status);
       const query = queryParams.toString();
-      return request(`/api/nlp/corrections${query ? '?' + query : ''}`) as Promise<NLPBackendResponse<BackendPaginatedResult<NLPCorrection>>>;
+      return request(`/api/nlp/corrections${query ? '?' + query : ''}`) as Promise<
+        NLPBackendResponse<BackendPaginatedResult<NLPCorrection>>
+      >;
     },
-    updateCorrection: (id, data) => request(`/api/nlp/corrections/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<NLPBackendResponse<unknown>>,
-    deleteCorrection: (id) => request(`/api/nlp/corrections/${id}`, {
-      method: 'DELETE',
-    }) as Promise<NLPBackendResponse<unknown>>,
+    updateCorrection: (id, data) =>
+      request(`/api/nlp/corrections/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<NLPBackendResponse<unknown>>,
+    deleteCorrection: (id) =>
+      request(`/api/nlp/corrections/${id}`, {
+        method: 'DELETE',
+      }) as Promise<NLPBackendResponse<unknown>>,
   },
   seating: {
     getAll: (classId?: number) => {
@@ -4549,23 +5528,27 @@ const api: Api = {
       return request(`/api/seating/charts?${params.toString()}`) as Promise<SeatingChart[]>;
     },
     getById: (id) => request(`/api/seating/charts/${id}`) as Promise<SeatingChart>,
-    create: (data) => request('/api/seating/charts', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<SeatingChart>,
-    update: (id, data) => request(`/api/seating/charts/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<SeatingChart>,
+    create: (data) =>
+      request('/api/seating/charts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<SeatingChart>,
+    update: (id, data) =>
+      request(`/api/seating/charts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<SeatingChart>,
     delete: (id) => request(`/api/seating/charts/${id}`, { method: 'DELETE' }) as Promise<void>,
-    autoArrange: (chartId, strategy, classId) => request(`/api/seating/charts/${chartId}/auto-arrange`, {
-      method: 'POST',
-      body: JSON.stringify({ strategy, class_id: classId }),
-    }) as Promise<SeatingChart>,
-    updateSeat: (chartId, row, col, studentId) => request(`/api/seating/charts/${chartId}/seats`, {
-      method: 'PUT',
-      body: JSON.stringify({ row, col, student_id: studentId }),
-    }) as Promise<void>,
+    autoArrange: (chartId, strategy, classId) =>
+      request(`/api/seating/charts/${chartId}/auto-arrange`, {
+        method: 'POST',
+        body: JSON.stringify({ strategy, class_id: classId }),
+      }) as Promise<SeatingChart>,
+    updateSeat: (chartId, row, col, studentId) =>
+      request(`/api/seating/charts/${chartId}/seats`, {
+        method: 'PUT',
+        body: JSON.stringify({ row, col, student_id: studentId }),
+      }) as Promise<void>,
   },
   duty: {
     getAll: (classId?: number) => {
@@ -4573,10 +5556,11 @@ const api: Api = {
       if (classId) params.append('class_id', String(classId));
       return request(`/api/duty/groups?${params.toString()}`) as Promise<DutyGroup[]>;
     },
-    createGroup: (data) => request('/api/duty/groups', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<DutyGroup>,
+    createGroup: (data) =>
+      request('/api/duty/groups', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<DutyGroup>,
     deleteGroup: (id) => request(`/api/duty/groups/${id}`, { method: 'DELETE' }) as Promise<void>,
     // S3: 拉取值日任务（支持按组过滤），DutyRoster 首屏数据源
     getAssignments: (group_id?: number) => {
@@ -4584,13 +5568,15 @@ const api: Api = {
       if (group_id) params.append('group_id', String(group_id));
       return request(`/api/duty/assignments?${params.toString()}`) as Promise<DutyAssignment[]>;
     },
-    assignDuty: (data) => request('/api/duty/assignments', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<DutyAssignment>,
-    markComplete: (assignmentId) => request(`/api/duty/assignments/${assignmentId}/complete`, {
-      method: 'POST',
-    }) as Promise<void>,
+    assignDuty: (data) =>
+      request('/api/duty/assignments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<DutyAssignment>,
+    markComplete: (assignmentId) =>
+      request(`/api/duty/assignments/${assignmentId}/complete`, {
+        method: 'POST',
+      }) as Promise<void>,
   },
   committee: {
     getAll: (classId?: number) => {
@@ -4598,14 +5584,16 @@ const api: Api = {
       if (classId) params.append('class_id', String(classId));
       return request(`/api/committee/members?${params.toString()}`) as Promise<ClassCommittee[]>;
     },
-    create: (data) => request('/api/committee/members', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ClassCommittee>,
-    update: (id, data) => request(`/api/committee/members/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<ClassCommittee>,
+    create: (data) =>
+      request('/api/committee/members', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ClassCommittee>,
+    update: (id, data) =>
+      request(`/api/committee/members/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<ClassCommittee>,
     delete: (id) => request(`/api/committee/members/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   parent: {
@@ -4614,49 +5602,61 @@ const api: Api = {
       if (studentId) params.append('student_id', String(studentId));
       return request(`/api/parent/contacts?${params.toString()}`) as Promise<ParentContact[]>;
     },
-    create: (data) => request('/api/parent/contacts', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ParentContact>,
-    update: (id, data) => request(`/api/parent/contacts/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<ParentContact>,
+    create: (data) =>
+      request('/api/parent/contacts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ParentContact>,
+    update: (id, data) =>
+      request(`/api/parent/contacts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<ParentContact>,
     delete: (id) => request(`/api/parent/contacts/${id}`, { method: 'DELETE' }) as Promise<void>,
-    getContactLogs: (parentId) => request(`/api/parent/logs?parent_id=${parentId}`) as Promise<ContactLog[]>,
-    addContactLog: (parentId, data) => request('/api/parent/logs', {
-      method: 'POST',
-      body: JSON.stringify({ parent_id: parentId, ...data }),
-    }) as Promise<ContactLog>,
-    resolveLog: (logId) => request(`/api/parent/logs/${logId}/resolve`, {
-      method: 'POST',
-    }) as Promise<void>,
+    getContactLogs: (parentId) =>
+      request(`/api/parent/logs?parent_id=${parentId}`) as Promise<ContactLog[]>,
+    addContactLog: (parentId, data) =>
+      request('/api/parent/logs', {
+        method: 'POST',
+        body: JSON.stringify({ parent_id: parentId, ...data }),
+      }) as Promise<ContactLog>,
+    resolveLog: (logId) =>
+      request(`/api/parent/logs/${logId}/resolve`, {
+        method: 'POST',
+      }) as Promise<void>,
   },
   homework: {
     getAll: (classId?: number, subjectId?: number) => {
       const params = new URLSearchParams();
       if (classId) params.append('class_id', String(classId));
       if (subjectId) params.append('subject_id', String(subjectId));
-      return request(`/api/homework/assignments?${params.toString()}`) as Promise<HomeworkAssignment[]>;
+      return request(`/api/homework/assignments?${params.toString()}`) as Promise<
+        HomeworkAssignment[]
+      >;
     },
     getById: (id) => request(`/api/homework/assignments/${id}`) as Promise<HomeworkAssignment>,
-    create: (data) => request('/api/homework/assignments', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<HomeworkAssignment>,
-    update: (id, data) => request(`/api/homework/assignments/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<HomeworkAssignment>,
-    delete: (id) => request(`/api/homework/assignments/${id}`, { method: 'DELETE' }) as Promise<void>,
-    markSubmitted: (assignmentId, studentId) => request(`/api/homework/assignments/${assignmentId}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ student_id: studentId }),
-    }) as Promise<void>,
-    markChecked: (assignmentId, studentId, notes) => request(`/api/homework/assignments/${assignmentId}/check`, {
-      method: 'POST',
-      body: JSON.stringify({ student_id: studentId, notes: notes || '' }),
-    }) as Promise<void>,
+    create: (data) =>
+      request('/api/homework/assignments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<HomeworkAssignment>,
+    update: (id, data) =>
+      request(`/api/homework/assignments/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<HomeworkAssignment>,
+    delete: (id) =>
+      request(`/api/homework/assignments/${id}`, { method: 'DELETE' }) as Promise<void>,
+    markSubmitted: (assignmentId, studentId) =>
+      request(`/api/homework/assignments/${assignmentId}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ student_id: studentId }),
+      }) as Promise<void>,
+    markChecked: (assignmentId, studentId, notes) =>
+      request(`/api/homework/assignments/${assignmentId}/check`, {
+        method: 'POST',
+        body: JSON.stringify({ student_id: studentId, notes: notes || '' }),
+      }) as Promise<void>,
   },
   attendance: {
     getAll: (classId?, studentId?, date?) => {
@@ -4666,14 +5666,16 @@ const api: Api = {
       if (date) params.append('date', date);
       return request(`/api/attendance/records?${params.toString()}`) as Promise<Attendance[]>;
     },
-    record: (data) => request('/api/attendance/records', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Attendance>,
-    batchRecord: (records) => request('/api/attendance/batch', {
-      method: 'POST',
-      body: JSON.stringify({ records }),
-    }) as Promise<{ count: number }>,
+    record: (data) =>
+      request('/api/attendance/records', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Attendance>,
+    batchRecord: (records) =>
+      request('/api/attendance/batch', {
+        method: 'POST',
+        body: JSON.stringify({ records }),
+      }) as Promise<{ count: number }>,
     getStats: (classId, startDate?, endDate?) => {
       const params = new URLSearchParams();
       params.append('class_id', String(classId));
@@ -4687,14 +5689,16 @@ const api: Api = {
       if (status) params.append('status', status);
       return request(`/api/attendance/leaves?${params.toString()}`) as Promise<LeaveApplication[]>;
     },
-    applyLeave: (data) => request('/api/attendance/leaves', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<LeaveApplication>,
-    approveLeave: (leaveId, approve = true) => request(`/api/attendance/leaves/${leaveId}/approve`, {
-      method: 'POST',
-      body: JSON.stringify({ approve }),
-    }) as Promise<void>,
+    applyLeave: (data) =>
+      request('/api/attendance/leaves', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<LeaveApplication>,
+    approveLeave: (leaveId, approve = true) =>
+      request(`/api/attendance/leaves/${leaveId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ approve }),
+      }) as Promise<void>,
   },
   studyGroup: {
     getAll: (classId?) => {
@@ -4703,47 +5707,58 @@ const api: Api = {
       return request(`/api/study-group/groups?${params.toString()}`) as Promise<StudyGroup[]>;
     },
     getById: (id) => request(`/api/study-group/groups/${id}`) as Promise<StudyGroup>,
-    create: (data) => request('/api/study-group/groups', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<StudyGroup>,
-    update: (id, data) => request(`/api/study-group/groups/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<StudyGroup>,
+    create: (data) =>
+      request('/api/study-group/groups', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<StudyGroup>,
+    update: (id, data) =>
+      request(`/api/study-group/groups/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<StudyGroup>,
     delete: (id) => request(`/api/study-group/groups/${id}`, { method: 'DELETE' }) as Promise<void>,
-    addMember: (groupId, studentId) => request(`/api/study-group/groups/${groupId}/members`, {
-      method: 'POST',
-      body: JSON.stringify({ student_id: studentId }),
-    }) as Promise<void>,
-    removeMember: (groupId, studentId) => request(`/api/study-group/groups/${groupId}/members`, {
-      method: 'DELETE',
-      body: JSON.stringify({ student_id: studentId }),
-    }) as Promise<void>,
-    addScore: (groupId, scoreChange, reason?) => request(`/api/study-group/groups/${groupId}/score`, {
-      method: 'POST',
-      body: JSON.stringify({ score_change: scoreChange, reason: reason || '' }),
-    }) as Promise<void>,
+    addMember: (groupId, studentId) =>
+      request(`/api/study-group/groups/${groupId}/members`, {
+        method: 'POST',
+        body: JSON.stringify({ student_id: studentId }),
+      }) as Promise<void>,
+    removeMember: (groupId, studentId) =>
+      request(`/api/study-group/groups/${groupId}/members`, {
+        method: 'DELETE',
+        body: JSON.stringify({ student_id: studentId }),
+      }) as Promise<void>,
+    addScore: (groupId, scoreChange, reason?) =>
+      request(`/api/study-group/groups/${groupId}/score`, {
+        method: 'POST',
+        body: JSON.stringify({ score_change: scoreChange, reason: reason || '' }),
+      }) as Promise<void>,
   },
   mentalHealth: {
     getRecords: (studentId?) => {
       const params = new URLSearchParams();
       if (studentId) params.append('student_id', String(studentId));
-      return request(`/api/mental-health/records?${params.toString()}`) as Promise<MentalHealthRecord[]>;
+      return request(`/api/mental-health/records?${params.toString()}`) as Promise<
+        MentalHealthRecord[]
+      >;
     },
-    createRecord: (data) => request('/api/mental-health/records', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<MentalHealthRecord>,
+    createRecord: (data) =>
+      request('/api/mental-health/records', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<MentalHealthRecord>,
     getAlerts: (studentId?, isResolved?) => {
       const params = new URLSearchParams();
       if (studentId) params.append('student_id', String(studentId));
       if (isResolved !== undefined) params.append('is_resolved', String(isResolved));
-      return request(`/api/mental-health/alerts?${params.toString()}`) as Promise<MentalHealthAlert[]>;
+      return request(`/api/mental-health/alerts?${params.toString()}`) as Promise<
+        MentalHealthAlert[]
+      >;
     },
-    resolveAlert: (alertId) => request(`/api/mental-health/alerts/${alertId}/resolve`, {
-      method: 'POST',
-    }) as Promise<void>,
+    resolveAlert: (alertId) =>
+      request(`/api/mental-health/alerts/${alertId}/resolve`, {
+        method: 'POST',
+      }) as Promise<void>,
   },
   activity: {
     getAll: (classId?, isPublished?) => {
@@ -4753,23 +5768,27 @@ const api: Api = {
       return request(`/api/activity?${params.toString()}`) as Promise<Activity[]>;
     },
     getById: (id) => request(`/api/activity/${id}`) as Promise<Activity>,
-    create: (data) => request('/api/activity', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<Activity>,
-    update: (id, data) => request(`/api/activity/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<Activity>,
+    create: (data) =>
+      request('/api/activity', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<Activity>,
+    update: (id, data) =>
+      request(`/api/activity/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<Activity>,
     delete: (id) => request(`/api/activity/${id}`, { method: 'DELETE' }) as Promise<void>,
-    registerStudent: (activityId, studentId) => request(`/api/activity/${activityId}/register`, {
-      method: 'POST',
-      body: JSON.stringify({ student_id: studentId }),
-    }) as Promise<void>,
-    cancelRegistration: (activityId, studentId) => request(`/api/activity/${activityId}/register`, {
-      method: 'DELETE',
-      body: JSON.stringify({ student_id: studentId }),
-    }) as Promise<void>,
+    registerStudent: (activityId, studentId) =>
+      request(`/api/activity/${activityId}/register`, {
+        method: 'POST',
+        body: JSON.stringify({ student_id: studentId }),
+      }) as Promise<void>,
+    cancelRegistration: (activityId, studentId) =>
+      request(`/api/activity/${activityId}/register`, {
+        method: 'DELETE',
+        body: JSON.stringify({ student_id: studentId }),
+      }) as Promise<void>,
   },
   culture: {
     getAll: (classId?, category?) => {
@@ -4778,14 +5797,16 @@ const api: Api = {
       if (category) params.append('category', category);
       return request(`/api/culture/records?${params.toString()}`) as Promise<CultureRecord[]>;
     },
-    create: (data) => request('/api/culture/records', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<CultureRecord>,
-    update: (id, data) => request(`/api/culture/records/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<CultureRecord>,
+    create: (data) =>
+      request('/api/culture/records', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<CultureRecord>,
+    update: (id, data) =>
+      request(`/api/culture/records/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<CultureRecord>,
     delete: (id) => request(`/api/culture/records/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   studyGuide: {
@@ -4795,33 +5816,40 @@ const api: Api = {
       if (guideType) params.append('guide_type', guideType);
       return request(`/api/study-guide/guides?${params.toString()}`) as Promise<StudyGuide[]>;
     },
-    createGuide: (data) => request('/api/study-guide/guides', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<StudyGuide>,
-    updateGuide: (id, data) => request(`/api/study-guide/guides/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<StudyGuide>,
-    deleteGuide: (id) => request(`/api/study-guide/guides/${id}`, { method: 'DELETE' }) as Promise<void>,
+    createGuide: (data) =>
+      request('/api/study-guide/guides', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<StudyGuide>,
+    updateGuide: (id, data) =>
+      request(`/api/study-guide/guides/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<StudyGuide>,
+    deleteGuide: (id) =>
+      request(`/api/study-guide/guides/${id}`, { method: 'DELETE' }) as Promise<void>,
     getPlans: (studentId?) => {
       const params = new URLSearchParams();
       if (studentId) params.append('student_id', String(studentId));
       return request(`/api/study-guide/plans?${params.toString()}`) as Promise<ImprovementPlan[]>;
     },
-    createPlan: (data) => request('/api/study-guide/plans', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }) as Promise<ImprovementPlan>,
-    updatePlan: (id, data) => request(`/api/study-guide/plans/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }) as Promise<ImprovementPlan>,
-    deletePlan: (id) => request(`/api/study-guide/plans/${id}`, { method: 'DELETE' }) as Promise<void>,
-    updatePlanProgress: (planId, progress) => request(`/api/study-guide/plans/${planId}/progress`, {
-      method: 'PUT',
-      body: JSON.stringify({ progress }),
-    }) as Promise<void>,
+    createPlan: (data) =>
+      request('/api/study-guide/plans', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }) as Promise<ImprovementPlan>,
+    updatePlan: (id, data) =>
+      request(`/api/study-guide/plans/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }) as Promise<ImprovementPlan>,
+    deletePlan: (id) =>
+      request(`/api/study-guide/plans/${id}`, { method: 'DELETE' }) as Promise<void>,
+    updatePlanProgress: (planId, progress) =>
+      request(`/api/study-guide/plans/${planId}/progress`, {
+        method: 'PUT',
+        body: JSON.stringify({ progress }),
+      }) as Promise<void>,
   },
   student: {
     login: (data: { card_id: string; name: string }) =>
@@ -4831,7 +5859,12 @@ const api: Api = {
         skipAuth: true,
       }) as Promise<{ access_token: string; expires_in: number; student: StudentInfo }>,
     getMe: () => request('/api/student/me') as Promise<StudentInfo>,
-    getScore: () => request('/api/student/score') as Promise<{ current_score: number; name: string; card_id: string }>,
+    getScore: () =>
+      request('/api/student/score') as Promise<{
+        current_score: number;
+        name: string;
+        card_id: string;
+      }>,
     getRecords: (params: { page?: number; per_page?: number } = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
@@ -4853,7 +5886,12 @@ const api: Api = {
       }>;
     },
     getLeaves: () => request('/api/student/leaves') as Promise<LeaveItem[]>,
-    applyLeave: (data: { leave_type?: string; start_date: string; end_date: string; reason?: string }) =>
+    applyLeave: (data: {
+      leave_type?: string;
+      start_date: string;
+      end_date: string;
+      reason?: string;
+    }) =>
       request('/api/student/leaves', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -4869,7 +5907,9 @@ const api: Api = {
     },
   },
   rank: {
-    getStudentRanking: (params: { class_name?: string; sort_by?: string; order?: string; limit?: number } = {}) => {
+    getStudentRanking: (
+      params: { class_name?: string; sort_by?: string; order?: string; limit?: number } = {}
+    ) => {
       const queryParams = new URLSearchParams();
       if (params.class_name) queryParams.append('class_name', params.class_name);
       if (params.sort_by) queryParams.append('sort_by', params.sort_by);

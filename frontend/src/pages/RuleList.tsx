@@ -3,7 +3,24 @@ import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useForm, useModal, useConfirmDialog } from '../hooks';
-import { Plus, Edit2, Trash2, Download, Upload, AlertCircle, X, RefreshCw, FileJson, FileSpreadsheet, Sliders, Info, Filter, LayoutTemplate, Check, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Download,
+  Upload,
+  AlertCircle,
+  X,
+  RefreshCw,
+  FileJson,
+  FileSpreadsheet,
+  Sliders,
+  Info,
+  Filter,
+  LayoutTemplate,
+  Check,
+  AlertTriangle,
+} from 'lucide-react';
 import api, { request } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { validateForm } from '../utils/validation';
@@ -101,31 +118,46 @@ function RuleList() {
     resetForm,
     errors: formErrors,
     setErrors: setFormErrors,
-  } = useForm<FormData>({
-    name: '',
-    description: '',
-    category_id: '',
-    score: 0,
-    is_active: true,
-    daily_limit: 0,
-    min_interval: 0,
-  }, {
-    name: { required: true, maxLength: 100 },
-    score: { required: true, min: -1000, max: 1000 },
-    description: { maxLength: 500 },
-    daily_limit: { min: 0, max: 100 },
-    min_interval: { min: 0, max: 1440 },
-  });
+  } = useForm<FormData>(
+    {
+      name: '',
+      description: '',
+      category_id: '',
+      score: 0,
+      is_active: true,
+      daily_limit: 0,
+      min_interval: 0,
+    },
+    {
+      name: { required: true, maxLength: 100 },
+      score: { required: true, min: -1000, max: 1000 },
+      description: { maxLength: 500 },
+      daily_limit: { min: 0, max: 100 },
+      min_interval: { min: 0, max: 1440 },
+    }
+  );
 
-  const { isOpen: showModal, open: openModal, close: closeModal } = useModal<Rule | null>({
+  const {
+    isOpen: showModal,
+    open: openModal,
+    close: closeModal,
+  } = useModal<Rule | null>({
     onClose: () => {
       resetForm();
       setEditingRule(null);
     },
   });
 
-  const { isOpen: showImportModal, open: openImportModal, close: closeImportModal } = useModal<null>({});
-  const { isOpen: showTemplateModal, open: openTemplateModal, close: closeTemplateModal } = useModal<null>({});
+  const {
+    isOpen: showImportModal,
+    open: openImportModal,
+    close: closeImportModal,
+  } = useModal<null>({});
+  const {
+    isOpen: showTemplateModal,
+    open: openTemplateModal,
+    close: closeTemplateModal,
+  } = useModal<null>({});
 
   const validationRules = useMemo(
     () => ({
@@ -159,7 +191,8 @@ function RuleList() {
         category_id: selectedCategory ? Number(selectedCategory) : undefined,
         is_active: null,
       });
-      if (Array.isArray(data)) { // 防御分支：后端异常时兜底，非真实总数
+      if (Array.isArray(data)) {
+        // 防御分支：后端异常时兜底，非真实总数
         setRules(data as Rule[]);
         setPagination((prev) => ({
           ...prev,
@@ -183,9 +216,9 @@ function RuleList() {
 
   const fetchTemplates = useCallback(async () => {
     try {
-      const data = await request('/api/rules/templates', {
+      const data = (await request('/api/rules/templates', {
         skipDataExtract: true,
-      }) as { success?: boolean; templates?: unknown[] };
+      })) as { success?: boolean; templates?: unknown[] };
       if (data.success) {
         setTemplates(data.templates || []);
         setLoadError(false);
@@ -230,7 +263,7 @@ function RuleList() {
           const newRule = await api.rules.create(submitData);
           showToast('success', '规则添加成功');
 
-          setRules((prevRules) => [(newRule as Rule), ...prevRules]);
+          setRules((prevRules) => [newRule as Rule, ...prevRules]);
         }
         closeModal();
       } catch (err) {
@@ -260,7 +293,7 @@ function RuleList() {
   const handleExport = useCallback(async () => {
     try {
       const data = await api.rules.export();
-      const list = Array.isArray(data) ? data : ((data as { rules?: unknown[] })?.rules || []);
+      const list = Array.isArray(data) ? data : (data as { rules?: unknown[] })?.rules || [];
       if (list.length === 0) {
         showToast('warning', '暂无规则数据可导出');
         return;
@@ -280,67 +313,74 @@ function RuleList() {
     }
   }, [showToast]);
 
-  const handleExportFile = useCallback(async (format: 'excel' | 'pdf') => {
-    try {
-      const apiUrl = format === 'pdf'
-        ? '/api/export/rules?format=pdf'
-        : '/api/import_export/export/rules?format=excel';
+  const handleExportFile = useCallback(
+    async (format: 'excel' | 'pdf') => {
+      try {
+        const apiUrl =
+          format === 'pdf'
+            ? '/api/export/rules?format=pdf'
+            : '/api/import_export/export/rules?format=excel';
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        credentials: 'include',
-      });
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-      if (!response.ok) {
-        throw new Error('导出失败');
-      }
-
-      const blob = await response.blob();
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `rules.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match) {
-          filename = match[1];
+        if (!response.ok) {
+          throw new Error('导出失败');
         }
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `rules.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (match) {
+            filename = match[1];
+          }
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        showToast('success', '导出成功');
+      } catch (err) {
+        showToast('error', '导出失败: ' + (err as Error).message);
       }
+    },
+    [showToast]
+  );
 
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      showToast('success', '导出成功');
-    } catch (err) {
-      showToast('error', '导出失败: ' + (err as Error).message);
-    }
-  }, [showToast]);
-
-  const handleApplyTemplate = useCallback(async (templateId: string) => {
-    setApplyingTemplate(true);
-    try {
-      const data = await request('/api/rules/templates/apply', {
-        method: 'POST',
-        skipDataExtract: true,
-        body: JSON.stringify({ template_id: templateId }),
-      }) as { success?: boolean; message?: string };
-      if (data.success) {
-        showToast('success', data.message);
-        closeTemplateModal();
-        fetchRules();
-      } else {
-        showToast('error', data.message || '应用模板失败');
+  const handleApplyTemplate = useCallback(
+    async (templateId: string) => {
+      setApplyingTemplate(true);
+      try {
+        const data = (await request('/api/rules/templates/apply', {
+          method: 'POST',
+          skipDataExtract: true,
+          body: JSON.stringify({ template_id: templateId }),
+        })) as { success?: boolean; message?: string };
+        if (data.success) {
+          showToast('success', data.message);
+          closeTemplateModal();
+          fetchRules();
+        } else {
+          showToast('error', data.message || '应用模板失败');
+        }
+      } catch (err) {
+        showToast('error', '应用模板失败: ' + (err as Error).message);
+      } finally {
+        setApplyingTemplate(false);
       }
-    } catch (err) {
-      showToast('error', '应用模板失败: ' + (err as Error).message);
-    } finally {
-      setApplyingTemplate(false);
-    }
-  }, [showToast, fetchRules]);
+    },
+    [showToast, fetchRules]
+  );
 
   const handleDownloadTemplate = useCallback(async () => {
     try {
@@ -378,14 +418,22 @@ function RuleList() {
         const formData = new FormData();
         formData.append('file', file);
 
-        const result = await request('/api/import_export/import/rules', {
+        const result = (await request('/api/import_export/import/rules', {
           method: 'POST',
           skipDataExtract: true,
           body: formData,
-        }) as { success?: boolean; success_count?: number; failed_count?: number; message?: string };
+        })) as {
+          success?: boolean;
+          success_count?: number;
+          failed_count?: number;
+          message?: string;
+        };
 
         if (result.success) {
-          showToast('success', `导入完成：成功 ${result.success_count || 0} 条，失败 ${result.failed_count || 0} 条`);
+          showToast(
+            'success',
+            `导入完成：成功 ${result.success_count || 0} 条，失败 ${result.failed_count || 0} 条`
+          );
           closeImportModal();
           fetchRules();
         } else {
@@ -405,7 +453,8 @@ function RuleList() {
       if (!rule) return false;
       const matchesSearch =
         (rule.name && rule.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
-        (rule.description && rule.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+        (rule.description &&
+          rule.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
       const categoryId = selectedCategory ? parseInt(selectedCategory) : null;
       const matchesCategory = !selectedCategory || rule.category_id === categoryId;
       return matchesSearch && matchesCategory;
@@ -431,7 +480,9 @@ function RuleList() {
       {loadError && !error && (
         <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>分类/模板数据加载失败，部分功能可能不可用，请刷新重试</p>
+          <p className='text-sm text-amber-700 dark:text-amber-300'>
+            分类/模板数据加载失败，部分功能可能不可用，请刷新重试
+          </p>
         </div>
       )}
       <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-7'>
@@ -453,11 +504,19 @@ function RuleList() {
             <Download className='w-4 h-4' />
             下载模板
           </Button>
-          <PermissionButton permission='rule.manage' variant='outline' onClick={() => openImportModal()}>
+          <PermissionButton
+            permission='rule.manage'
+            variant='outline'
+            onClick={() => openImportModal()}
+          >
             <Upload className='w-4 h-4' />
             导入规则
           </PermissionButton>
-          <PermissionButton permission='rule.manage' variant='outline' onClick={() => openTemplateModal()}>
+          <PermissionButton
+            permission='rule.manage'
+            variant='outline'
+            onClick={() => openTemplateModal()}
+          >
             <LayoutTemplate className='w-4 h-4' />
             使用模板
           </PermissionButton>
@@ -469,10 +528,13 @@ function RuleList() {
             <FileSpreadsheet className='w-4 h-4' />
             导出Excel
           </Button>
-          <PermissionButton permission='rule.manage' onClick={() => {
+          <PermissionButton
+            permission='rule.manage'
+            onClick={() => {
               setEditingRule(null);
               openModal();
-            }}>
+            }}
+          >
             <Plus className='w-5 h-5 mr-2' />
             添加规则
           </PermissionButton>
@@ -483,7 +545,13 @@ function RuleList() {
         <div className='mb-6 p-4 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 flex items-center gap-3'>
           <AlertCircle className='w-5 h-5' />
           <span>{error}</span>
-          <button onClick={() => { setError(null); fetchRules(); }} className='ml-auto text-danger-600 hover:text-danger-800'>
+          <button
+            onClick={() => {
+              setError(null);
+              fetchRules();
+            }}
+            className='ml-auto text-danger-600 hover:text-danger-800'
+          >
             <RefreshCw className='w-4 h-4' />
           </button>
         </div>
@@ -492,7 +560,11 @@ function RuleList() {
       <div className='card'>
         <div className='card-header flex flex-col md:flex-row md:items-center justify-between gap-4'>
           <div className='flex items-center gap-4'>
-            <SearchFilter searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder='搜索规则名称或描述...' />
+            <SearchFilter
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              placeholder='搜索规则名称或描述...'
+            />
             <div className='flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2.5'>
               <Filter className='w-5 h-5 text-gray-500' />
               <select
@@ -512,7 +584,9 @@ function RuleList() {
           <div className='flex items-center gap-3'>
             <div className='flex items-center gap-2 px-4 py-2 bg-primary-50 rounded-xl'>
               <Sliders className='w-4 h-4 text-primary-600' />
-              <span className='text-sm font-semibold text-primary-700'>{filteredRules.length} 条规则</span>
+              <span className='text-sm font-semibold text-primary-700'>
+                {filteredRules.length} 条规则
+              </span>
             </div>
           </div>
         </div>
@@ -521,7 +595,10 @@ function RuleList() {
           {isLoading ? (
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className='bg-white rounded-2xl border border-gray-100 p-5 animate-pulse'>
+                <div
+                  key={i}
+                  className='bg-white rounded-2xl border border-gray-100 p-5 animate-pulse'
+                >
                   <div className='flex items-start gap-3 mb-4'>
                     <Skeleton variant='rectangular' className='w-10 h-10 rounded-xl' />
                     <div className='flex-1 space-y-2'>
@@ -545,12 +622,21 @@ function RuleList() {
                   key={rule.id}
                   className='group relative bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden'
                 >
-                  <div className='absolute left-0 top-0 bottom-0 w-1.5' style={{ backgroundColor: getCategoryColor(rule.category_id) }} />
+                  <div
+                    className='absolute left-0 top-0 bottom-0 w-1.5'
+                    style={{ backgroundColor: getCategoryColor(rule.category_id) }}
+                  />
                   <div className='p-5 pl-6'>
                     <div className='flex items-start justify-between mb-3'>
                       <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-xl flex items-center justify-center' style={{ backgroundColor: `${getCategoryColor(rule.category_id)}20` }}>
-                          <span className='text-lg' style={{ color: getCategoryColor(rule.category_id) }}>
+                        <div
+                          className='w-10 h-10 rounded-xl flex items-center justify-center'
+                          style={{ backgroundColor: `${getCategoryColor(rule.category_id)}20` }}
+                        >
+                          <span
+                            className='text-lg'
+                            style={{ color: getCategoryColor(rule.category_id) }}
+                          >
                             {rule.score >= 0 ? '+' : ''}
                             {rule.score}
                           </span>
@@ -558,10 +644,22 @@ function RuleList() {
                         <div>
                           <h3 className='font-semibold text-gray-800 text-lg'>{rule.name}</h3>
                           <div className='flex items-center gap-2 mt-1'>
-                            <span className='text-xs font-medium px-2 py-0.5 rounded-full' style={{ backgroundColor: `${getCategoryColor(rule.category_id)}20`, color: getCategoryColor(rule.category_id) }}>
+                            <span
+                              className='text-xs font-medium px-2 py-0.5 rounded-full'
+                              style={{
+                                backgroundColor: `${getCategoryColor(rule.category_id)}20`,
+                                color: getCategoryColor(rule.category_id),
+                              }}
+                            >
                               {getCategoryName(rule.category_id)}
                             </span>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${rule.is_active ? 'bg-success-100 text-success-700' : 'bg-gray-100 text-gray-600'}`}>
+                            <span
+                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                rule.is_active
+                                  ? 'bg-success-100 text-success-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
                               {rule.is_active ? '启用' : '禁用'}
                             </span>
                           </div>
@@ -569,7 +667,9 @@ function RuleList() {
                       </div>
                     </div>
 
-                    {rule.description && <p className='text-sm text-gray-500 mb-4 line-clamp-2'>{rule.description}</p>}
+                    {rule.description && (
+                      <p className='text-sm text-gray-500 mb-4 line-clamp-2'>{rule.description}</p>
+                    )}
 
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center gap-2'>
@@ -596,7 +696,9 @@ function RuleList() {
                       </div>
 
                       <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-                        <PermissionButton permission='rule.manage' onClick={() => {
+                        <PermissionButton
+                          permission='rule.manage'
+                          onClick={() => {
                             setEditingRule(rule);
                             setFormData({
                               name: rule.name,
@@ -615,7 +717,9 @@ function RuleList() {
                           <Edit2 className='w-4 h-4' />
                         </PermissionButton>
                         {/* S1: rule.delete 后端无此码，统一 rule.manage */}
-                        <PermissionButton permission='rule.manage' onClick={() => handleDelete(rule.id)}
+                        <PermissionButton
+                          permission='rule.manage'
+                          onClick={() => handleDelete(rule.id)}
                           className='p-2 hover:bg-danger-50 rounded-lg text-gray-400 hover:text-danger-500 transition-all'
                           title='删除'
                         >
@@ -628,7 +732,13 @@ function RuleList() {
               ))}
 
               {filteredRules.length === 0 && !isLoading && (
-                <EmptyState icon='file' title='暂无规则数据' description='添加规则开始配置积分系统' actionLabel='添加规则' onAction={() => openModal()} />
+                <EmptyState
+                  icon='file'
+                  title='暂无规则数据'
+                  description='添加规则开始配置积分系统'
+                  actionLabel='添加规则'
+                  onAction={() => openModal()}
+                />
               )}
             </div>
           )}
@@ -641,20 +751,33 @@ function RuleList() {
             <div className='modal-header'>
               <div className='flex items-center gap-3'>
                 <div className='w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center'>
-                  {editingRule ? <Edit2 className='w-5 h-5 text-white' /> : <Plus className='w-5 h-5 text-white' />}
+                  {editingRule ? (
+                    <Edit2 className='w-5 h-5 text-white' />
+                  ) : (
+                    <Plus className='w-5 h-5 text-white' />
+                  )}
                 </div>
                 <div>
-                  <h3 className='text-lg font-semibold text-gray-800'>{editingRule ? '编辑规则' : '添加新规则'}</h3>
-                  <p className='text-xs text-gray-500'>{editingRule ? '修改规则的详细信息' : '创建新的积分规则'}</p>
+                  <h3 className='text-lg font-semibold text-gray-800'>
+                    {editingRule ? '编辑规则' : '添加新规则'}
+                  </h3>
+                  <p className='text-xs text-gray-500'>
+                    {editingRule ? '修改规则的详细信息' : '创建新的积分规则'}
+                  </p>
                 </div>
               </div>
-              <button onClick={closeModal} className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'>
+              <button
+                onClick={closeModal}
+                className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'
+              >
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
             <form onSubmit={handleSubmit} className='modal-body'>
               <div className='form-group'>
-                <label className='form-label'>规则名称 <span className='text-danger-500'>*</span></label>
+                <label className='form-label'>
+                  规则名称 <span className='text-danger-500'>*</span>
+                </label>
                 <input
                   type='text'
                   value={formData.name}
@@ -664,7 +787,9 @@ function RuleList() {
                       setFormErrors({ ...formErrors, name: undefined });
                     }
                   }}
-                  className={`form-input ${formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-input ${
+                    formErrors.name ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   placeholder='请输入规则名称'
                 />
                 {formErrors.name && (
@@ -679,7 +804,9 @@ function RuleList() {
                 <label className='form-label'>分类</label>
                 <select
                   value={formData.category_id}
-                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, category_id: e.target.value })}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                    setFormData({ ...formData, category_id: e.target.value })
+                  }
                   className='form-select'
                 >
                   <option value=''>请选择分类</option>
@@ -692,11 +819,13 @@ function RuleList() {
               </div>
 
               <div className='form-group'>
-                <label className='form-label'>积分值 <span className='text-danger-500'>*</span></label>
+                <label className='form-label'>
+                  积分值 <span className='text-danger-500'>*</span>
+                </label>
                 <input
                   type='number'
-                  min="-1000"
-                  max="1000"
+                  min='-1000'
+                  max='1000'
                   value={formData.score}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     const value = parseInt(e.target.value);
@@ -705,7 +834,9 @@ function RuleList() {
                       setFormErrors({ ...formErrors, score: undefined });
                     }
                   }}
-                  className={`form-input ${formErrors.score ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-input ${
+                    formErrors.score ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   placeholder='正数为加分，负数为扣分'
                 />
                 {formErrors.score && (
@@ -726,7 +857,9 @@ function RuleList() {
                       setFormErrors({ ...formErrors, description: undefined });
                     }
                   }}
-                  className={`form-input resize-none ${formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                  className={`form-input resize-none ${
+                    formErrors.description ? 'border-danger-300 focus:ring-danger-500' : ''
+                  }`}
                   rows={3}
                   placeholder='请输入规则描述'
                 />
@@ -751,7 +884,9 @@ function RuleList() {
                         setFormErrors({ ...formErrors, daily_limit: undefined });
                       }
                     }}
-                    className={`form-input ${formErrors.daily_limit ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                    className={`form-input ${
+                      formErrors.daily_limit ? 'border-danger-300 focus:ring-danger-500' : ''
+                    }`}
                     placeholder='0表示无限制'
                   />
                   {formErrors.daily_limit && (
@@ -773,7 +908,9 @@ function RuleList() {
                         setFormErrors({ ...formErrors, min_interval: undefined });
                       }
                     }}
-                    className={`form-input ${formErrors.min_interval ? 'border-danger-300 focus:ring-danger-500' : ''}`}
+                    className={`form-input ${
+                      formErrors.min_interval ? 'border-danger-300 focus:ring-danger-500' : ''
+                    }`}
                     placeholder='0表示无限制'
                   />
                   {formErrors.min_interval && (
@@ -790,7 +927,9 @@ function RuleList() {
                   <input
                     type='checkbox'
                     checked={formData.is_active}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, is_active: e.target.checked })}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setFormData({ ...formData, is_active: e.target.checked })
+                    }
                     className='w-5 h-5 text-primary-600 rounded focus:ring-primary-500'
                   />
                   <span className='text-sm font-medium text-gray-700'>启用规则</span>
@@ -801,9 +940,7 @@ function RuleList() {
                 <Button variant='outline' onClick={closeModal}>
                   取消
                 </Button>
-                <Button type='submit'>
-                  {editingRule ? '保存修改' : '添加规则'}
-                </Button>
+                <Button type='submit'>{editingRule ? '保存修改' : '添加规则'}</Button>
               </div>
             </form>
           </div>
@@ -823,7 +960,10 @@ function RuleList() {
                   <p className='text-xs text-gray-500'>从Excel文件导入积分规则</p>
                 </div>
               </div>
-              <button onClick={closeImportModal} className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'>
+              <button
+                onClick={closeImportModal}
+                className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'
+              >
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
@@ -835,7 +975,10 @@ function RuleList() {
                     <h4 className='font-medium text-blue-800'>导入说明</h4>
                     <ul className='text-sm text-blue-700 mt-2 space-y-1'>
                       <li>• 支持 Excel 格式文件（.xlsx, .xls）</li>
-                      <li>• 第一行必须为表头（规则名称、描述、分类名称、分数、是否启用、每日上限、最小间隔(秒)）</li>
+                      <li>
+                        •
+                        第一行必须为表头（规则名称、描述、分类名称、分数、是否启用、每日上限、最小间隔(秒)）
+                      </li>
                       <li>• 如果分类名称不存在，将自动创建</li>
                       <li>• 如果规则名称已存在，将更新该规则</li>
                     </ul>
@@ -856,7 +999,9 @@ function RuleList() {
                   />
                   <label htmlFor='ruleImportFile' className='cursor-pointer'>
                     <Upload className='w-12 h-12 text-gray-400 mx-auto mb-3' />
-                    <p className='text-gray-600 font-medium'>{importing ? '正在导入...' : '点击选择文件或拖拽到此处'}</p>
+                    <p className='text-gray-600 font-medium'>
+                      {importing ? '正在导入...' : '点击选择文件或拖拽到此处'}
+                    </p>
                     <p className='text-sm text-gray-500 mt-1'>支持 .xlsx, .xls 格式</p>
                   </label>
                 </div>
@@ -889,7 +1034,10 @@ function RuleList() {
                   <p className='text-xs text-gray-500'>应用预设的积分规则模板，快速创建常用规则</p>
                 </div>
               </div>
-              <button onClick={closeTemplateModal} className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'>
+              <button
+                onClick={closeTemplateModal}
+                className='p-2.5 hover:bg-gray-100 rounded-xl transition-all'
+              >
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
@@ -918,7 +1066,10 @@ function RuleList() {
                               }`}
                             >
                               {rule.name}
-                              <span className='ml-1'>{rule.score >= 0 ? '+' : ''}{rule.score}</span>
+                              <span className='ml-1'>
+                                {rule.score >= 0 ? '+' : ''}
+                                {rule.score}
+                              </span>
                             </span>
                           ))}
                           {template.rules.length > 4 && (

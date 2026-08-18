@@ -46,7 +46,8 @@ vi.mock('../../services/api', () => ({
           ],
           pagination: { page: 1, per_page: 20, total: 1, pages: 1 },
         }),
-      getNotifications: () => Promise.resolve({ data: [], pagination: { page: 1, per_page: 20, total: 0, pages: 0 } }),
+      getNotifications: () =>
+        Promise.resolve({ data: [], pagination: { page: 1, per_page: 20, total: 0, pages: 0 } }),
       getLeaves: () => Promise.resolve([]),
       applyLeave: () => Promise.resolve({}),
       requestPhoneboxUnlock: () => Promise.resolve({ allowed: true, reason: 'ok' }),
@@ -57,7 +58,12 @@ vi.mock('../../services/api', () => ({
             has_data: true,
             engagement_score: 62.5,
             level: 'medium',
-            components: { attendance_rate: 0.9, homework_rate: 0.8, activity_rate: 0.6, leave_days: 0 },
+            components: {
+              attendance_rate: 0.9,
+              homework_rate: 0.8,
+              activity_rate: 0.6,
+              leave_days: 0,
+            },
             description: '参与度指数 62.5（中），综合评估。',
           },
           risk: {

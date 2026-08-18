@@ -23,9 +23,11 @@ policy_model = ns_phonebox_policy.model(
     "PhoneBoxPolicy",
     {
         "allow_self_unlock": fields.Boolean(description="是否允许本班自助开箱（总开关）"),
-        "unlock_windows": fields.Raw(description="预设允许时段列表，形如 "
-                                                 "[{'day':-1,'start_hour':10,'start_minute':0,"
-                                                 "'end_hour':10,'end_minute':20}]"),
+        "unlock_windows": fields.Raw(
+            description="预设允许时段列表，形如 "
+            "[{'day':-1,'start_hour':10,'start_minute':0,"
+            "'end_hour':10,'end_minute':20}]"
+        ),
     },
 )
 
@@ -33,7 +35,9 @@ override_model = ns_phonebox_policy.model(
     "PhoneBoxOverride",
     {
         "minutes": fields.Integer(required=True, description="一键放行持续时间（分钟）"),
-        "class_info_id": fields.Integer(required=False, description="目标班级ID（admin 用，班主任留空）"),
+        "class_info_id": fields.Integer(
+            required=False, description="目标班级ID（admin 用，班主任留空）"
+        ),
     },
 )
 
@@ -138,7 +142,9 @@ def _serialize(policy, class_info_id):
 
 @ns_phonebox_policy.route("")
 class PhoneBoxPolicyResource(Resource):
-    @ns_phonebox_policy.doc("get_phonebox_policy", description="获取手机箱开箱策略（班主任取本班，admin 可指定班级）")
+    @ns_phonebox_policy.doc(
+        "get_phonebox_policy", description="获取手机箱开箱策略（班主任取本班，admin 可指定班级）"
+    )
     @ns_phonebox_policy.response(200, "成功", policy_response)
     @requires_permission("phonebox.unlock.manage")
     def get(self):
@@ -149,7 +155,11 @@ class PhoneBoxPolicyResource(Resource):
         policy = policy_service.get_policy(cid)
         return APIResponse.success(data=_serialize(policy, cid))
 
-    @ns_phonebox_policy.doc("update_phonebox_policy", description="更新手机箱开箱策略（总开关/预设时段）", security="Bearer")
+    @ns_phonebox_policy.doc(
+        "update_phonebox_policy",
+        description="更新手机箱开箱策略（总开关/预设时段）",
+        security="Bearer",
+    )
     @ns_phonebox_policy.expect(policy_model)
     @ns_phonebox_policy.response(200, "更新成功", policy_response)
     @requires_permission("phonebox.unlock.manage")
@@ -179,7 +189,11 @@ class PhoneBoxPolicyResource(Resource):
 
 @ns_phonebox_policy.route("/override")
 class PhoneBoxOverrideResource(Resource):
-    @ns_phonebox_policy.doc("one_click_allow", description="一键临时放行本班开箱 N 分钟（含上课期间）", security="Bearer")
+    @ns_phonebox_policy.doc(
+        "one_click_allow",
+        description="一键临时放行本班开箱 N 分钟（含上课期间）",
+        security="Bearer",
+    )
     @ns_phonebox_policy.expect(override_model)
     @ns_phonebox_policy.response(200, "成功", policy_response)
     @requires_permission("phonebox.unlock.manage")
