@@ -2184,9 +2184,7 @@ export interface Api {
       unresolved_alerts?: number;
       critical_alerts?: number;
     }>;
-    import: (
-      formData: FormData
-    ) => Promise<{
+    import: (formData: FormData) => Promise<{
       success: boolean;
       total: number;
       success_count: number;
@@ -2272,9 +2270,7 @@ export interface Api {
     updateOrder: (data: Array<{ id: number; order: number }>) => Promise<void>;
   };
   approvals: {
-    getAll: (
-      params?: ScoreRecordParams
-    ) => Promise<{
+    getAll: (params?: ScoreRecordParams) => Promise<{
       approvals: Approval[];
       pagination: { page: number; per_page: number; total: number; pages: number };
     }>;
@@ -2776,9 +2772,7 @@ interface NLP {
   suggestRules: (keyword: string) => Promise<NLPBackendResponse<NLPScoringRule[]>>;
   getRuleStatistics: () => Promise<NLPBackendResponse<NLPStatistics>>;
   getRuleUsage: (ruleId: number) => Promise<NLPBackendResponse<unknown>>;
-  batchImportRules: (
-    rules: unknown[]
-  ) => Promise<
+  batchImportRules: (rules: unknown[]) => Promise<
     NLPBackendResponse<{
       success: boolean;
       imported_count: number;

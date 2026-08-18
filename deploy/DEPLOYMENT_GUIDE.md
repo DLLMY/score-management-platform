@@ -81,7 +81,7 @@ install_dependencies.bat
 ```cmd
 # 新开一个命令行窗口
 cd 管理平台设计\backend
-python app.py
+python run.py
 ```
 
 ### 步骤3：启动前端服务
@@ -107,7 +107,7 @@ ngrok.exe http 3000
 ### 启动顺序
 
 1. **后端服务** (端口 5000)
-   - 启动命令：`cd backend && python app.py`
+   - 启动命令：`cd backend && python run.py`
    - 状态检查：http://localhost:5000/api/docs/
 
 2. **前端服务** (端口 3000)
@@ -244,7 +244,7 @@ python backup_db.py
 ```cmd
 # 查看后端日志
 cd backend
-python app.py  # 查看控制台输出
+python run.py  # 查看控制台输出
 
 # 查看操作日志
 # 在系统后台的"操作日志"页面查看
@@ -268,7 +268,7 @@ python app.py  # 查看控制台输出
 │       └── start.bat
 │
 ├── backend/                  # 后端服务
-│   ├── app.py               # Flask应用
+│   ├── run.py               # Flask应用入口
 │   ├── mqtt_client.py       # MQTT客户端
 │   ├── instance/            # 数据库
 │   └── backups/             # 备份目录
