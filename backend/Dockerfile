@@ -10,7 +10,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLASK_ENV=production \
-    FLASK_APP=app.py
+    FLASK_APP=app
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \

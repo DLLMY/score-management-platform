@@ -3,6 +3,11 @@
 班主任/老师视角（权限 score.view，teacher 已持有），复用 analysis_service 的排名方法。
 与 Admin 体系内的 /api/analysis/* 端点（权限 algorithm.view）区分：本命名空间专门服务于
 「积分排行榜」业务功能，避免为班主任开放算法分析权限。
+
+⚠️ 与 `api/scores/rank_routes.py`（"排名规则" CRUD）**不是同一模块**，仅文件名同名：
+  - 本文件  = 排行榜展示（学生/班级排名，权限 score.view，analysis_service 计算）
+  - 那个文件 = 排名规则管理（段位阈值/颜色/图标 CRUD，权限 rule.view / undefined）
+两者 Namespace 不同（`rank` vs `rank-rules`）、URL 前缀不同（`/api/rank/*` vs `/api/rank-rules/*`），不合并。
 """
 
 from flask_restx import Namespace, Resource

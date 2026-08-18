@@ -33,7 +33,7 @@ limit_request_line = 4094
 limit_request_fields = 100
 limit_request_field_size = 8190
 raw_env = [
-    "FLASK_APP=app.py",
+    "FLASK_APP=app",
     "FLASK_ENV=production",
 ]
 preload_app = True

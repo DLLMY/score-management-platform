@@ -250,7 +250,7 @@ def main():
     env_content = f"""\
 # 后端环境变量配置
 # Flask 配置
-FLASK_APP=app.py
+FLASK_APP=app
 FLASK_ENV=development
 FLASK_DEBUG=true
 FLASK_SECRET_KEY=dev_secret_key_for_student_score_management_platform_2024

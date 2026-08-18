@@ -5,6 +5,11 @@ from utils.response import APIResponse
 from services.redis_cache_service import get_cache_service
 from services.score_rank_service import create_rank_rule, update_rank_rule, delete_rank_rule
 
+# ⚠️ 与 `api/rank/rank_routes.py`（"积分排行榜"展示）**不是同一模块**，仅文件名同名：
+#   - 本文件  = 排名规则管理（段位阈值/颜色/图标 CRUD，权限 rule.view / undefined，操作 ScoreRankRule 模型）
+#   - 那个文件 = 排行榜展示（学生/班级排名，权限 score.view，调用 analysis_service 计算）
+# 两者 Namespace 不同（`rank-rules` vs `rank`）、URL 前缀不同（`/api/rank-rules/*` vs `/api/rank/*`），不合并。
+
 ns_rank = Namespace("rank-rules", description="排名规则相关操作")
 
 rank_rule_model = ns_rank.model(
