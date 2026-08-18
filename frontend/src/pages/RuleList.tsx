@@ -220,7 +220,7 @@ function RuleList() {
         skipDataExtract: true,
       })) as { success?: boolean; templates?: unknown[] };
       if (data.success) {
-        setTemplates(data.templates || []);
+        setTemplates((data.templates as RuleTemplate[]) || []);
         setLoadError(false);
       }
     } catch (err) {

@@ -1149,7 +1149,7 @@ function DeviceManagement() {
                                 permission='device.edit'
                                 variant='danger'
                                 size='sm'
-                                onClick={() => handleDeleteDevice(device.id)}
+                                onClick={() => handleDeleteDevice(Number(device.id))}
                               >
                                 <Trash2 className='w-4 h-4' />
                               </PermissionButton>

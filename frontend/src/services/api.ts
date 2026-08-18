@@ -33,6 +33,9 @@ import {
   RiskSubRisk,
   ScoreAttributionResult,
   EngagementResult,
+  EngagementRankResult,
+  EngagementTrendResult,
+  EngagementFactor,
   BatchAttributionResult,
   ExamAnalysis,
   ClassAnalysis,
@@ -926,6 +929,7 @@ interface UserParams {
   per_page?: number;
   search?: string;
   class_name?: string;
+  class_id?: number;
   skipCache?: boolean;
   keyword?: string;
   min_score?: number;
@@ -1103,6 +1107,7 @@ export interface SubjectClassLink {
   class_info_id: number;
   class_name: string;
   class_grade: string;
+  grade?: string;
   teacher_id: number | null;
   teacher_name: string | null;
   created_at: string;
@@ -1243,6 +1248,7 @@ export interface StudentEngagementInsight {
   has_data: boolean;
   engagement_score: number;
   level: 'low' | 'medium' | 'high';
+  error?: string;
   factors?: Array<{ name: string; value: number; weight: number; contribution: number }>;
   components?: {
     attendance_rate?: number | null;
@@ -1256,6 +1262,7 @@ export interface StudentRiskInsight {
   overall_risk_level?: 'low' | 'medium' | 'high';
   overall_risk_score?: number;
   overall_risk_name?: string;
+  error?: string;
   risk_factors?: Array<{ factor: string; description: string }>;
   intervention_suggestions?: string[];
   recommended_actions?: string[];
@@ -1276,6 +1283,7 @@ export interface StudentParticipationTrend {
   user_id: number;
   weeks: number;
   trend: 'up' | 'down' | 'stable';
+  error?: string;
   series: StudentParticipationTrendPoint[];
 }
 export interface StudentInsight {
@@ -1586,6 +1594,7 @@ export interface DeviceInGroup {
     device_id: string;
     name: string;
     status: string;
+    is_online?: boolean;
   } | null;
   added_at: string;
 }
@@ -2117,11 +2126,13 @@ export interface Api {
       mac_address: string;
       broadcast_ip?: string;
       port?: number;
+      force_send?: boolean;
     }) => Promise<{ success: boolean; message: string; mac_address: string }>;
     wakeBatch: (data: {
       mac_addresses: string[];
       broadcast_ip?: string;
       port?: number;
+      force_send?: boolean;
     }) => Promise<{
       success: boolean;
       total: number;
@@ -2417,6 +2428,7 @@ export interface Api {
     getAll: (classId?: number) => Promise<DutyGroup[]>;
     createGroup: (data: DutyGroupCreateInput) => Promise<DutyGroup>;
     deleteGroup: (id: number) => Promise<void>;
+    getAssignments: (group_id?: number) => Promise<DutyAssignment[]>;
     assignDuty: (data: DutyAssignment) => Promise<DutyAssignment>;
     markComplete: (assignmentId: number) => Promise<void>;
   };
@@ -2549,6 +2561,9 @@ export interface Api {
       total_classes: number;
     }>;
   };
+  cache: {
+    clearByUrl: (url: string) => void;
+  };
 }
 
 export interface NLPScoringRuleInput {
@@ -2608,9 +2623,6 @@ export interface NLPParsedResult {
     /** 与相似规则的相似度（0-1） */
     similarity?: number;
   }[];
-  cache: {
-    clearByUrl: (url: string) => void;
-  };
 }
 
 export interface NLPStatistics {
@@ -2748,13 +2760,13 @@ export interface NLPCorrection {
 }
 
 interface NLP {
-  parse: (text: string) => Promise<NLPBackendResponse<NLPParsedResult>>;
+  parse: (text: string) => Promise<NLPParsedResult>;
   execute: (data: {
     text: string;
     manual_correction?: unknown;
-  }) => Promise<NLPBackendResponse<unknown>>;
-  batchParse: (texts: string[]) => Promise<NLPBackendResponse<unknown>>;
-  sentiment: (text: string) => Promise<NLPBackendResponse<unknown>>;
+  }) => Promise<unknown>;
+  batchParse: (texts: string[]) => Promise<unknown>;
+  sentiment: (text: string) => Promise<unknown>;
   getRules: (params?: {
     page?: number;
     per_page?: number;
@@ -2762,43 +2774,41 @@ interface NLP {
     score_type?: string;
     sort_by?: string;
     sort_order?: string;
-  }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPScoringRule>>>;
-  createRule: (data: NLPScoringRuleInput) => Promise<NLPBackendResponse<NLPScoringRule>>;
+  }) => Promise<BackendPaginatedResult<NLPScoringRule>>;
+  createRule: (data: NLPScoringRuleInput) => Promise<NLPScoringRule>;
   updateRule: (
     id: number,
     data: Partial<NLPScoringRuleInput>
-  ) => Promise<NLPBackendResponse<NLPScoringRule>>;
-  deleteRule: (id: number) => Promise<NLPBackendResponse<unknown>>;
-  suggestRules: (keyword: string) => Promise<NLPBackendResponse<NLPScoringRule[]>>;
-  getRuleStatistics: () => Promise<NLPBackendResponse<NLPStatistics>>;
-  getRuleUsage: (ruleId: number) => Promise<NLPBackendResponse<unknown>>;
-  batchImportRules: (rules: unknown[]) => Promise<
-    NLPBackendResponse<{
-      success: boolean;
-      imported_count: number;
-      skipped_count: number;
-      message: string;
-    }>
-  >;
+  ) => Promise<NLPScoringRule>;
+  deleteRule: (id: number) => Promise<unknown>;
+  suggestRules: (keyword: string) => Promise<NLPScoringRule[]>;
+  getRuleStatistics: () => Promise<NLPStatistics>;
+  getRuleUsage: (ruleId: number) => Promise<unknown>;
+  batchImportRules: (rules: unknown[]) => Promise<{
+    success: boolean;
+    imported_count: number;
+    skipped_count: number;
+    message: string;
+  }>;
   trainModel: (data: {
     trained_by?: number;
     algorithm?: string;
     use_cross_validation?: boolean;
-  }) => Promise<NLPBackendResponse<NLPMLTrainingResult>>;
+  }) => Promise<NLPMLTrainingResult>;
   trainAllModels: (data: {
     trained_by?: number;
-  }) => Promise<NLPBackendResponse<NLPMLTrainAllResult>>;
-  getAlgorithms: () => Promise<NLPBackendResponse<NLPAlgorithm[]>>;
-  evaluateAllModels: () => Promise<NLPBackendResponse<NLPMLEvaluationAllResult>>;
+  }) => Promise<NLPMLTrainAllResult>;
+  getAlgorithms: () => Promise<NLPAlgorithm[]>;
+  evaluateAllModels: () => Promise<NLPMLEvaluationAllResult>;
   predictRule: (data: {
     text: string;
     algorithm?: string;
-  }) => Promise<NLPBackendResponse<NLPPredictResult>>;
+  }) => Promise<NLPPredictResult>;
   getTrainingHistory: (params?: {
     page?: number;
     per_page?: number;
-  }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPTrainingRecord>>>;
-  evaluateModel: () => Promise<NLPBackendResponse<NLPEvaluationResult>>;
+  }) => Promise<BackendPaginatedResult<NLPTrainingRecord>>;
+  evaluateModel: () => Promise<NLPEvaluationResult>;
   // 自学习反馈相关
   recordFeedback: (data: {
     text: string;
@@ -2812,26 +2822,26 @@ interface NLP {
     original_name?: string;
     original_score?: number;
     cache_hit?: boolean;
-  }) => Promise<NLPBackendResponse<{ message: string; corrections_saved?: number }>>;
+  }) => Promise<{ message: string; corrections_saved?: number }>;
   getCorrections: (params?: {
     page?: number;
     per_page?: number;
     status?: string;
-  }) => Promise<NLPBackendResponse<BackendPaginatedResult<NLPCorrection>>>;
-  updateCorrection: (id: number, data: { status: string }) => Promise<NLPBackendResponse<unknown>>;
-  deleteCorrection: (id: number) => Promise<NLPBackendResponse<unknown>>;
+  }) => Promise<BackendPaginatedResult<NLPCorrection>>;
+  updateCorrection: (id: number, data: { status: string }) => Promise<unknown>;
+  deleteCorrection: (id: number) => Promise<unknown>;
   // 算法分析相关
-  getAnalysisComprehensive: () => Promise<NLPBackendResponse<unknown>>;
-  getAnalysisIntent: () => Promise<NLPBackendResponse<unknown>>;
-  getAnalysisPerformance: () => Promise<NLPBackendResponse<unknown>>;
-  getAnalysisSuggestions: () => Promise<NLPBackendResponse<unknown>>;
-  resetAnalysis: () => Promise<NLPBackendResponse<unknown>>;
+  getAnalysisComprehensive: () => Promise<unknown>;
+  getAnalysisIntent: () => Promise<unknown>;
+  getAnalysisPerformance: () => Promise<unknown>;
+  getAnalysisSuggestions: () => Promise<unknown>;
+  resetAnalysis: () => Promise<unknown>;
   benchmarkIntentClassifier: (params?: {
     iterations?: number;
-  }) => Promise<NLPBackendResponse<unknown>>;
-  getOptimizationConfig: () => Promise<NLPBackendResponse<unknown>>;
-  setOptimizationConfig: (data: { strategy?: string }) => Promise<NLPBackendResponse<unknown>>;
-  autoTuneOptimization: (data?: { target_metric?: string }) => Promise<NLPBackendResponse<unknown>>;
+  }) => Promise<unknown>;
+  getOptimizationConfig: () => Promise<unknown>;
+  setOptimizationConfig: (data: { strategy?: string }) => Promise<unknown>;
+  autoTuneOptimization: (data?: { target_metric?: string }) => Promise<unknown>;
 }
 
 /**
@@ -5158,18 +5168,18 @@ const api: Api = {
       request(`/api/device-group/${id}`, { method: 'DELETE' }) as Promise<void>,
     getDevices: (groupId: number) =>
       request(`/api/device-group/${groupId}/devices`) as Promise<DeviceInGroup[]>,
-    addDevices: (groupId: number, deviceIds: number[]) =>
+    addDevices: (groupId: number, deviceIds: string[]) =>
       request(`/api/device-group/${groupId}/devices`, {
         method: 'POST',
         body: JSON.stringify({ device_ids: deviceIds }),
-      }) as Promise<{ added_count: number; skipped: { device_id: number; reason: string }[] }>,
-    removeDevices: (groupId: number, deviceIds: number[]) =>
+      }) as Promise<{ added_count: number; skipped: { device_id: string; reason: string }[] }>,
+    removeDevices: (groupId: number, deviceIds: string[]) =>
       request(`/api/device-group/${groupId}/devices`, {
         method: 'DELETE',
         body: JSON.stringify({ device_ids: deviceIds }),
       }) as Promise<{ removed_count: number }>,
     // P3-2: 删除 getUngroupedDevices（后端无此路由且零调用）；修正 getByDevice 路径为后端真实 /device/<id>/groups
-    getByDevice: (deviceId: number) =>
+    getByDevice: (deviceId: string) =>
       request(`/api/device-group/device/${deviceId}/groups`) as Promise<DeviceGroup[]>,
     getStats: async () => {
       const raw = (await request('/api/device-group/stats')) as unknown;
@@ -5364,17 +5374,17 @@ const api: Api = {
       request('/api/nlp/parse', {
         method: 'POST',
         body: JSON.stringify({ text }),
-      }) as Promise<NLPBackendResponse<NLPParsedResult>>,
+      }) as Promise<NLPParsedResult>,
     execute: (data) =>
       request('/api/nlp/execute', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     batchParse: (texts) =>
       request('/api/nlp/batch-parse', {
         method: 'POST',
         body: JSON.stringify({ texts }),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     getRules: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
@@ -5385,116 +5395,112 @@ const api: Api = {
       if (params.sort_order) queryParams.append('sort_order', params.sort_order);
       const query = queryParams.toString();
       return request(`/api/nlp/rules${query ? '?' + query : ''}`) as Promise<
-        NLPBackendResponse<BackendPaginatedResult<NLPScoringRule>>
+        BackendPaginatedResult<NLPScoringRule>
       >;
     },
     createRule: (data) =>
       request('/api/nlp/rules', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<NLPScoringRule>>,
+      }) as Promise<NLPScoringRule>,
     updateRule: (id, data) =>
       request(`/api/nlp/rules/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<NLPScoringRule>>,
+      }) as Promise<NLPScoringRule>,
     deleteRule: (id) =>
       request(`/api/nlp/rules/${id}`, {
         method: 'DELETE',
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     suggestRules: (keyword) =>
       request(`/api/nlp/rules/suggest?keyword=${encodeURIComponent(keyword)}`) as Promise<
-        NLPBackendResponse<NLPScoringRule[]>
-      >,
+        NLPScoringRule[]>,
     getRuleStatistics: () =>
-      request('/api/nlp/rules/statistics') as Promise<NLPBackendResponse<NLPStatistics>>,
+      request('/api/nlp/rules/statistics') as Promise<NLPStatistics>,
     getRuleUsage: (ruleId) =>
-      request(`/api/nlp/rules/${ruleId}/usage`) as Promise<NLPBackendResponse<unknown>>,
+      request(`/api/nlp/rules/${ruleId}/usage`) as Promise<unknown>,
     batchImportRules: (rules) =>
       request('/api/nlp/rules/batch-import', {
         method: 'POST',
         body: JSON.stringify({ rules }),
       }) as Promise<
-        NLPBackendResponse<{
+        {
           success: boolean;
           imported_count: number;
           skipped_count: number;
           message: string;
-        }>
-      >,
+        }>,
     trainModel: (data) =>
       request('/api/nlp/model/train', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<NLPMLTrainingResult>>,
+      }) as Promise<NLPMLTrainingResult>,
     trainAllModels: (data) =>
       request('/api/nlp/model/train-all', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<NLPMLTrainAllResult>>,
+      }) as Promise<NLPMLTrainAllResult>,
     getAlgorithms: () =>
-      request('/api/nlp/model/algorithms') as Promise<NLPBackendResponse<NLPAlgorithm[]>>,
+      request('/api/nlp/model/algorithms') as Promise<NLPAlgorithm[]>,
     evaluateAllModels: () =>
       request('/api/nlp/model/evaluate-all') as Promise<
-        NLPBackendResponse<NLPMLEvaluationAllResult>
-      >,
+        NLPMLEvaluationAllResult>,
     predictRule: (data) =>
       request('/api/nlp/model/predict', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<NLPPredictResult>>,
+      }) as Promise<NLPPredictResult>,
     getTrainingHistory: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
       return request(`/api/nlp/model/training-history${query ? '?' + query : ''}`) as Promise<
-        NLPBackendResponse<BackendPaginatedResult<NLPTrainingRecord>>
+        BackendPaginatedResult<NLPTrainingRecord>
       >;
     },
     evaluateModel: () =>
-      request('/api/nlp/model/evaluate') as Promise<NLPBackendResponse<NLPEvaluationResult>>,
+      request('/api/nlp/model/evaluate') as Promise<NLPEvaluationResult>,
     // 算法分析相关
     getAnalysisComprehensive: () =>
-      request('/api/nlp/analysis/comprehensive') as Promise<NLPBackendResponse<unknown>>,
+      request('/api/nlp/analysis/comprehensive') as Promise<unknown>,
     getAnalysisIntent: () =>
-      request('/api/nlp/analysis/intent') as Promise<NLPBackendResponse<unknown>>,
+      request('/api/nlp/analysis/intent') as Promise<unknown>,
     getAnalysisPerformance: () =>
-      request('/api/nlp/analysis/performance') as Promise<NLPBackendResponse<unknown>>,
+      request('/api/nlp/analysis/performance') as Promise<unknown>,
     getAnalysisSuggestions: () =>
-      request('/api/nlp/analysis/suggestions') as Promise<NLPBackendResponse<unknown>>,
+      request('/api/nlp/analysis/suggestions') as Promise<unknown>,
     resetAnalysis: () =>
       request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<
-        NLPBackendResponse<unknown>
-      >,
+        unknown>,
     benchmarkIntentClassifier: (params) =>
       request('/api/nlp/benchmark/intent-classifier', {
         method: 'POST',
         body: JSON.stringify(params || {}),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     getOptimizationConfig: () =>
-      request('/api/nlp/optimization/config') as Promise<NLPBackendResponse<unknown>>,
+      request('/api/nlp/optimization/config') as Promise<unknown>,
     setOptimizationConfig: (data) =>
       request('/api/nlp/optimization/config', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     autoTuneOptimization: (data) =>
       request('/api/nlp/optimization/auto-tune', {
         method: 'POST',
         body: JSON.stringify(data || {}),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     // 自学习反馈相关
     sentiment: (text) =>
       request('/api/nlp/sentiment', {
         method: 'POST',
         body: JSON.stringify({ text }),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     recordFeedback: (data) =>
       request('/api/nlp/feedback/record', {
         method: 'POST',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<{ message: string; corrections_saved?: number }>>,
+      }) as Promise<{ message: string; corrections_saved?: number }>,
     getCorrections: (params = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
@@ -5502,18 +5508,18 @@ const api: Api = {
       if (params.status) queryParams.append('status', params.status);
       const query = queryParams.toString();
       return request(`/api/nlp/corrections${query ? '?' + query : ''}`) as Promise<
-        NLPBackendResponse<BackendPaginatedResult<NLPCorrection>>
+        BackendPaginatedResult<NLPCorrection>
       >;
     },
     updateCorrection: (id, data) =>
       request(`/api/nlp/corrections/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
     deleteCorrection: (id) =>
       request(`/api/nlp/corrections/${id}`, {
         method: 'DELETE',
-      }) as Promise<NLPBackendResponse<unknown>>,
+      }) as Promise<unknown>,
   },
   seating: {
     getAll: (classId?: number) => {

@@ -346,7 +346,7 @@ function ExamManagement(): React.ReactElement {
       file: File
     ): Promise<{
       success: boolean;
-      message?: string;
+      message: string;
       success_count?: number;
       failed_count?: number;
     }> => {
@@ -363,8 +363,8 @@ function ExamManagement(): React.ReactElement {
         body: formData,
       });
       const result = (await response.json()) as {
-        success?: boolean;
-        message?: string;
+        success: boolean;
+        message: string;
         success_count?: number;
         failed_count?: number;
       };

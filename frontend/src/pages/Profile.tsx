@@ -61,6 +61,7 @@ interface AdminData {
   real_name?: string;
   username: string;
   phone?: string;
+  email?: string;
   class_name?: string;
   role?: string;
   created_at?: string | Date;

@@ -52,6 +52,11 @@ import {
   RiskPredictResult,
   AnomalyResult,
   ScoreAttributionResult,
+  EngagementResult,
+  EngagementRankResult,
+  EngagementTrendResult,
+  BatchAttributionResult,
+  BatchAttributionStudent,
 } from '../types';
 
 const TABS = [
@@ -1057,7 +1062,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                   const aName = anomaly?.name ?? '未知学生';
                   const aType = anomaly?.anomaly_type ?? '异常';
                   const aSev = (anomaly?.severity ?? 'low') as 'high' | 'medium' | 'low';
-                  const aColor = SEVERITY_COLORS[aSev] || {};
+                  const aColor = SEVERITY_COLORS[aSev] || { bg: '', text: '', light: '' };
                   const aDesc = anomaly?.description ?? '';
                   const aScoreNum =
                     typeof anomaly?.score_change === 'number' &&
@@ -2100,12 +2105,10 @@ export default function AlgorithmAnalysis(): React.ReactElement {
   const renderRuleApplication = () => {
     const stats = ruleApplicationData.scoreDistributionStats as {
       success?: boolean;
-      data?: {
-        total_students?: number;
-        distribution?: { excellent: number; good: number; medium: number; low: number };
-        counts?: { excellent: number; good: number; medium: number; low: number };
-        statistics?: { avg: number; std: number; min: number; max: number };
-      };
+      total_students?: number;
+      distribution?: { excellent: number; good: number; medium: number; low: number };
+      counts?: { excellent: number; good: number; medium: number; low: number };
+      statistics?: { avg: number; std: number; min: number; max: number };
     };
 
     const earningRules = Array.isArray(ruleApplicationData.earningRules)

@@ -28,6 +28,7 @@ import {
   Users,
   FileText,
   Layers,
+  LucideIcon,
 } from 'lucide-react';
 import { PermissionButton } from '../components';
 import { getAuthHeaders } from '../services/api';
@@ -148,8 +149,7 @@ const HealthStatusBadge: React.FC<{ status?: string; message?: string }> = ({
   status,
   message,
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const map: Record<string, { color: string; icon: any; label: string }> = {
+    const map: Record<string, { color: string; icon: LucideIcon; label: string }> = {
     healthy: { color: 'bg-green-100 text-green-600', icon: CheckCircle, label: '正常' },
     degraded: { color: 'bg-yellow-100 text-yellow-600', icon: AlertTriangle, label: '降级' },
     unhealthy: { color: 'bg-red-100 text-red-600', icon: XCircle, label: '异常' },

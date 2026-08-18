@@ -22,6 +22,7 @@ import {
   TrendingUp,
   XCircle,
   Zap,
+  LucideIcon,
 } from 'lucide-react';
 import { PermissionButton } from '../components';
 import { getAuthHeaders } from '../services/api';
@@ -108,8 +109,7 @@ interface MetricCardProps {
   value: string | number;
   unit?: string;
   trend?: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
+    icon: LucideIcon;
   color?: 'blue' | 'green' | 'orange' | 'purple';
 }
 
@@ -118,8 +118,7 @@ const HealthStatus: React.FC<{
   status: string;
   message?: string;
 }> = ({ status, message }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
+    const statusConfig: Record<string, { color: string; icon: LucideIcon; label: string }> = {
     healthy: { color: 'bg-green-100 text-green-600', icon: CheckCircle, label: '健康' },
     degraded: { color: 'bg-yellow-100 text-yellow-600', icon: AlertTriangle, label: '降级' },
     unhealthy: { color: 'bg-red-100 text-red-600', icon: XCircle, label: '异常' },
@@ -145,8 +144,7 @@ const HealthStatus: React.FC<{
 // 健康检查卡片组件
 const HealthCard: React.FC<{
   title: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
+    icon: LucideIcon;
   checks: HealthCheck[];
 }> = ({ title, icon: Icon, checks }) => {
   const hasIssues = checks.some((c) => c.status !== 'healthy');
@@ -681,8 +679,8 @@ export const DiagnosticsPage: React.FC = () => {
       {/* 系统信息 */}
       {systemData && (
         <SystemInfoComponent
-          system={systemData.system || {}}
-          processInfo={systemData.process || {}}
+          system={(systemData.system || {}) as SystemInfo}
+          processInfo={(systemData.process || {}) as ProcessInfo}
         />
       )}
 

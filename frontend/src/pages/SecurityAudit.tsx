@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  LucideIcon,
 } from 'lucide-react';
 import { PermissionButton, EmptyState } from '../components';
 import { getAuthHeaders } from '../services/api';
@@ -65,8 +66,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 }
 
 const SeverityBadge: React.FC<{ severity?: string }> = ({ severity }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const map: Record<string, { color: string; icon: any; label: string }> = {
+    const map: Record<string, { color: string; icon: LucideIcon; label: string }> = {
     info: { color: 'bg-blue-100 text-blue-600', icon: Info, label: '信息' },
     debug: { color: 'bg-gray-100 text-gray-600', icon: Info, label: '调试' },
     warning: { color: 'bg-orange-100 text-orange-600', icon: AlertTriangle, label: '警告' },

@@ -51,12 +51,13 @@ interface DeviceGroup {
 
 interface DeviceInGroup {
   id: number;
-  device_id: number;
+  device_id: string;
   device: {
     id: number;
     device_id: string;
     name: string;
     status: string;
+    is_online?: boolean;
   } | null;
   added_at: string;
 }

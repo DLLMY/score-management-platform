@@ -725,6 +725,7 @@ export interface AlgorithmData {
 }
 
 export interface PredictionResult {
+  user_id?: number;
   name: string;
   current_score: number;
   predicted_score: number;
@@ -905,6 +906,7 @@ export interface EngagementStudentRank {
   engagement_score: number;
   level: 'high' | 'medium' | 'low';
   has_data: boolean;
+  error?: string;
   components?: {
     attendance_rate: number | null;
     homework_rate: number | null;
@@ -1269,6 +1271,7 @@ export interface HomeworkCreateInput {
 export interface Attendance {
   id: number;
   class_id: number;
+  class_name?: string;
   student_id: number;
   student_name?: string;
   date: string;
@@ -1325,6 +1328,7 @@ export interface LeaveApplyInput {
 export interface StudyGroup {
   id: number;
   class_id: number;
+  class_name?: string;
   name: string;
   leader_id?: number;
   leader_name?: string;

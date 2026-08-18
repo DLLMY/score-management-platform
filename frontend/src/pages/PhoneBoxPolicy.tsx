@@ -224,9 +224,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
               <div>
                 <label className='block text-xs text-gray-500 mb-1'>放行时长（分钟）</label>
                 <Input
-                  type='number'
-                  min={1}
-                  value={minutes}
+                  value={String(minutes)}
                   onChange={(v) => setMinutes(parseInt(v, 10) || 0)}
                   className='w-32'
                 />

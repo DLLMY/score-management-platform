@@ -56,6 +56,8 @@ interface Suggestion {
   intent: string;
   score_value: number;
   description: string;
+  rule_id?: number;
+  similarity?: number;
 }
 
 interface Rule {
@@ -98,8 +100,10 @@ interface TrainingRecord {
   id: number;
   training_version: string;
   training_data_count: number;
+  training_data_size?: number;
   accuracy_before: number;
   accuracy_after: number;
+  accuracy?: number;
   precision: number;
   recall: number;
   f1_score: number;
@@ -1171,7 +1175,7 @@ const NLPScoringManagement = () => {
                               </div>
                               <PermissionButton
                                 permission='score.entry'
-                                size='small'
+                                size='sm'
                                 type='primary'
                                 onClick={() => applySuggestionAsRule(suggestion)}
                                 className='!px-3 !py-1 shrink-0'
