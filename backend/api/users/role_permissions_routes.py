@@ -11,7 +11,6 @@ role_permission_model = ns_role_permissions.model(
         "role_code": fields.String(required=True, description="角色代码"),
         "role_name": fields.String(required=True, description="角色名称"),
         "description": fields.String(description="角色描述"),
-        "permissions": fields.String(description="权限列表（逗号分隔）"),
         "is_active": fields.Boolean(description="是否启用"),
         "created_at": fields.String(description="创建时间"),
         "updated_at": fields.String(description="更新时间"),
@@ -42,7 +41,6 @@ class RolePermissionList(Resource):
                 "role_code": p.role_code,
                 "role_name": p.role_name,
                 "description": p.description,
-                "permissions": p.permissions,
                 "is_active": p.is_active,
                 "created_at": p.created_at.isoformat() if p.created_at else None,
             }
@@ -71,9 +69,8 @@ class RolePermissionResource(Resource):
             "id": permission.id,
             "role_code": permission.role_code,
             "role_name": permission.role_name,
-            "description": permission.description,
-            "permissions": permission.permissions,
-            "is_active": permission.is_active,
+        "description": permission.description,
+        "is_active": permission.is_active,
             "created_at": permission.created_at.isoformat() if permission.created_at else None,
             "updated_at": permission.updated_at.isoformat() if permission.updated_at else None,
         }

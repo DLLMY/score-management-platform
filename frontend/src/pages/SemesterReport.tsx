@@ -21,7 +21,7 @@ const SemesterReport: React.FC = () => {
   useEffect(() => {
     setLoadingClasses(true);
     api.classes
-      .getAll({ page: 1, page_size: 200 })
+      .getAll({ page: 1, per_page: 200 })
       .then((res) => {
         const list = (res?.classes || []) as ClassOption[];
         setClasses(list);

@@ -2,7 +2,7 @@ from flask import request, send_file
 from utils.response import APIResponse
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from models import db, User, ClassInfo, get_by_id, cascade_delete_user_related_records
+from models import User, ClassInfo, get_by_id
 from utils.permission import requires_permission, get_current_admin, get_admin_class_ids, get_allowed_classes
 from utils.logger import log_operation
 from utils.validation import (
@@ -16,9 +16,11 @@ from utils.validation import (
 )
 from services.redis_cache_service import get_cache_service
 from services.class_time_checker import ClassTimeChecker
+from services.user_service import user_service
 from datetime import datetime
 import io
 import csv
+import re
 import logging
 from pypinyin import lazy_pinyin
 import io
@@ -52,6 +54,8 @@ user_model = ns_users.model(
         "guardian_relation": fields.String(description="监护关系"),
         "card_id": fields.String(description="卡片ID"),
         "current_score": fields.Float(description="当前积分"),
+        "is_active": fields.Boolean(description="账号是否启用"),
+        "is_blacklisted": fields.Boolean(description="是否黑名单"),
     },
 )
 user_list_response = ns_users.model(
@@ -68,7 +72,7 @@ batch_score_model = ns_users.model(
     "BatchScoreRequest",
     {
         "ids": fields.List(fields.Integer, required=True, description="用户ID列表"),
-        "score_change": fields.Integer(required=True, description="积分变化量"),
+        "score_change": fields.Float(required=True, description="积分变化量"),
         "description": fields.String(description="操作描述"),
     },
 )
@@ -224,8 +228,8 @@ class UserList(Resource):
                             "guardian_phone": u.guardian_phone,
                             "guardian_relation": u.guardian_relation,
                             "card_id": u.card_id,
-                            "current_score": u.current_score,
-                            "score": u.current_score,
+                            "current_score": u.current_score,                            "is_active": u.is_active,
+                            "is_blacklisted": u.is_blacklisted,
                             "role": "student",
                             "created_at": u.created_at.isoformat() if u.created_at else None,
                         }
@@ -288,9 +292,7 @@ class UserList(Resource):
                     "guardian_phone": u.guardian_phone,
                     "guardian_relation": u.guardian_relation,
                     "card_id": u.card_id,
-                    "current_score": u.current_score,
-                    "score": u.current_score,
-                    "role": "student",
+                    "current_score": u.current_score,                    "role": "student",
                     "created_at": u.created_at.isoformat() if u.created_at else None,
                 }
                 for u in pagination.items
@@ -383,23 +385,8 @@ class UserList(Resource):
                 errors.append(f"卡号 {card_id} 已被用户 {existing_user.name} 使用")
         if errors:
             return validation_error_response(errors)
-        user = User(
-            name=data.get("name").strip(),
-            gender=data.get("gender"),
-            class_name=data.get("class_name"),
-            phone=data.get("phone"),
-            father_name=data.get("father_name"),
-            father_phone=data.get("father_phone"),
-            mother_name=data.get("mother_name"),
-            mother_phone=data.get("mother_phone"),
-            guardian_name=data.get("guardian_name"),
-            guardian_phone=data.get("guardian_phone"),
-            guardian_relation=data.get("guardian_relation"),
-            card_id=data.get("card_id"),
-            current_score=int(data.get("current_score", 0)),
-        )
-        db.session.add(user)
-        db.session.commit()
+        user_id = user_service.create_user(data)
+        user = get_by_id(User, user_id)
         # 更新FTS搜索索引
         try:
             from utils.fulltext_search import get_search_engine
@@ -476,6 +463,8 @@ class UserResource(Resource):
                 "card_id": user.card_id,
                 "current_score": user.current_score,
                 "score": user.current_score,
+                "is_active": user.is_active,
+                "is_blacklisted": user.is_blacklisted,
                 "role": "student",
                 "created_at": user.created_at.isoformat() if user.created_at else None,
                 "updated_at": user.updated_at.isoformat() if user.updated_at else None,
@@ -519,8 +508,8 @@ class UserResource(Resource):
         user.guardian_relation = data.get("guardian_relation", user.guardian_relation)
         user.card_id = data.get("card_id", user.card_id)
         user.current_score = data.get("current_score", user.current_score)
-        user.updated_at = datetime.now()
-        db.session.commit()
+        user_id = user_service.update_user(id, data)
+        user = get_by_id(User, user_id)
         # 更新FTS搜索索引
         try:
             from utils.fulltext_search import get_search_engine  # 函数内 import（与 create 分支一致，缺失会 NameError）
@@ -583,10 +572,9 @@ class UserResource(Resource):
             "current_score": user.current_score,
         }
         # 先清理所有关联子表，避免 SQLite 外键 NOT NULL 约束导致删除失败
-        cascade_delete_user_related_records(id)
+        # （级联清理 + 用户删除同处一个事务，收口至 service）
+        user_service.delete_user(id)
 
-        db.session.delete(user)
-        db.session.commit()
         # 从FTS搜索索引移除
         try:
             from utils.fulltext_search import get_search_engine  # 函数内 import（缺失会 NameError）
@@ -666,6 +654,9 @@ class UserImport(Resource):
         imported_count = 0
         error_count = 0
         errors = []
+        pending_users = []
+        # R8 修复: 批内 card_id 去重（原只查 DB，同批重复卡号通过预检 → commit IntegrityError 无回滚脏 session）
+        seen_card_ids = set()
         for idx, user_data in enumerate(users_data):
             try:
                 row_errors = []
@@ -715,9 +706,12 @@ class UserImport(Resource):
                         if not re.match(r"^1[3-9]\d{9}$", str(phone).strip()):
                             row_errors.append({"field": "phone", "message": "联系电话格式无效，请输入11位手机号"})
                 if card_id:
-                    existing = User.query.filter_by(card_id=str(card_id)).first()
+                    card_id_norm = str(card_id).strip()
+                    existing = User.query.filter_by(card_id=card_id_norm).first()
                     if existing:
-                        row_errors.append({"field": "card_id", "message": f'学号 "{str(card_id)}" 已存在'})
+                        row_errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 已存在'})
+                    elif card_id_norm in seen_card_ids:
+                        row_errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 在本批中重复'})
                 if row_errors:
                     error_count += 1
                     errors.append(
@@ -744,12 +738,21 @@ class UserImport(Resource):
                     card_id=str(card_id),
                     current_score=user_data.get("current_score", 0),
                 )
-                db.session.add(user)
+                pending_users.append(user)
+                seen_card_ids.add(str(card_id).strip())
                 imported_count += 1
             except Exception as e:
                 error_count += 1
                 errors.append({"row": idx + 1, "message": str(e), "row_data": user_data, "error_fields": ["system"]})
-        db.session.commit()
+        try:
+            user_service.bulk_create_users(pending_users)
+        except Exception as e:
+            # R8 修复: 唯一约束/数据异常 → 回滚避免脏 session（service 内 db_session_scope 已回滚）
+            return APIResponse.error(
+                message=f"导入失败：数据库写入冲突（{str(e)[:120]}），已回滚",
+                data={"imported": 0, "errors": errors},
+                status_code=400,
+            )
         return APIResponse.success(
             data={"imported": imported_count, "errors": errors},
             message=f"导入完成: 成功{imported_count}条, 失败{error_count}条",
@@ -780,15 +783,14 @@ class UserBatchDelete(Resource):
         ids = data.get("ids", [])
         if not ids:
             return APIResponse.error(message="没有提供删除ID", status_code=400)
-        deleted_count = 0
+        target_ids = []
         for user_id in ids:
             if not _can_access_user(user_id):
                 continue
             user = get_by_id(User, user_id)
             if user:
-                db.session.delete(user)
-                deleted_count += 1
-        db.session.commit()
+                target_ids.append(user_id)
+        deleted_count = user_service.bulk_delete_users(target_ids)
         return APIResponse.success(message=f"批量删除完成: 成功{deleted_count}条")
 
 
@@ -810,9 +812,6 @@ class UserBatchScore(Resource):
         - description: 操作描述（可选）
         返回调整结果。
         """
-        from sqlalchemy import update
-        from models import ScoreRecord
-
         data = request.get_json()
         ids = data.get("ids", [])
         score_change = data.get("score_change", 0)
@@ -823,22 +822,8 @@ class UserBatchScore(Resource):
         allowed_ids = [uid for uid in ids if _can_access_user(uid)]
         if not allowed_ids:
             return APIResponse.error(message="无权为这些学生调整积分", status_code=403)
-        # 性能优化：使用批量更新
-        update_stmt = (
-            update(User)
-            .where(User.id.in_(allowed_ids))
-            .values(current_score=User.current_score + score_change, updated_at=datetime.now())
-        )
-        result = db.session.execute(update_stmt)  # noqa: F841
-        updated_count = result.rowcount
-        # 批量插入积分记录
-        records = [
-            ScoreRecord(user_id=user_id, score_change=score_change, description=description, operator="batch_operation")
-            for user_id in allowed_ids
-        ]
-        if records:
-            db.session.add_all(records)
-        db.session.commit()
+        # 性能优化：使用批量更新（写入路径收口至 service）
+        updated_count = user_service.bulk_score_update(allowed_ids, score_change, description)
         # 发送积分变动通知到远程客户端（积分窗口显示）
         try:
             from api.monitoring.mqtt_routes import publish_mqtt
@@ -846,7 +831,7 @@ class UserBatchScore(Resource):
             blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=False)
             if not blocked:
                 users = User.query.filter(User.id.in_(ids)).all()
-                score_change_str = f"{score_change:+d}" if score_change > 0 else str(score_change)
+                score_change_str = f"{score_change:+g}" if score_change > 0 else str(score_change)
                 for user in users:
                     score_change_text = f"学生:{user.name}, {score_change_str}分, 原因:{description}"
                     score_notification = {
@@ -965,6 +950,8 @@ class UserImportFile(Resource):
         updated = 0
         errors = []
         messages = []
+        pending_users = []
+        pending_updates = []
         try:
             content_bytes = file.read()
             content, encoding = detect_encoding(content_bytes)
@@ -1087,46 +1074,33 @@ class UserImportFile(Resource):
                     current_score_int = int(current_score) if current_score else 0
                     existing = User.query.filter_by(card_id=card_id).first()
                     if existing:
-                        existing.name = name if name else existing.name
-                        existing.gender = gender if gender else existing.gender
-                        existing.class_name = class_name if class_name else existing.class_name
-                        existing.phone = phone if phone else existing.phone
-                        existing.parent_info = (
-                            row_dict.get("parent_info", "") if row_dict.get("parent_info", "") else existing.parent_info
-                        )
-                        existing.father_name = (
-                            row_dict.get("father_name", "") if row_dict.get("father_name", "") else existing.father_name
-                        )
-                        existing.father_phone = (
-                            row_dict.get("father_phone", "")
-                            if row_dict.get("father_phone", "")
-                            else existing.father_phone
-                        )
-                        existing.mother_name = (
-                            row_dict.get("mother_name", "") if row_dict.get("mother_name", "") else existing.mother_name
-                        )
-                        existing.mother_phone = (
-                            row_dict.get("mother_phone", "")
-                            if row_dict.get("mother_phone", "")
-                            else existing.mother_phone
-                        )
-                        existing.guardian_name = (
-                            row_dict.get("guardian_name", "")
-                            if row_dict.get("guardian_name", "")
-                            else existing.guardian_name
-                        )
-                        existing.guardian_phone = (
-                            row_dict.get("guardian_phone", "")
-                            if row_dict.get("guardian_phone", "")
-                            else existing.guardian_phone
-                        )
-                        existing.guardian_relation = (
-                            row_dict.get("guardian_relation", "")
-                            if row_dict.get("guardian_relation", "")
-                            else existing.guardian_relation
-                        )
-                        existing.current_score = current_score_int
-                        existing.updated_at = datetime.now()
+                        updates = {}
+                        if name:
+                            updates["name"] = name
+                        if gender:
+                            updates["gender"] = gender
+                        if class_name:
+                            updates["class_name"] = class_name
+                        if phone:
+                            updates["phone"] = phone
+                        if row_dict.get("parent_info", ""):
+                            updates["parent_info"] = row_dict["parent_info"]
+                        if row_dict.get("father_name", ""):
+                            updates["father_name"] = row_dict["father_name"]
+                        if row_dict.get("father_phone", ""):
+                            updates["father_phone"] = row_dict["father_phone"]
+                        if row_dict.get("mother_name", ""):
+                            updates["mother_name"] = row_dict["mother_name"]
+                        if row_dict.get("mother_phone", ""):
+                            updates["mother_phone"] = row_dict["mother_phone"]
+                        if row_dict.get("guardian_name", ""):
+                            updates["guardian_name"] = row_dict["guardian_name"]
+                        if row_dict.get("guardian_phone", ""):
+                            updates["guardian_phone"] = row_dict["guardian_phone"]
+                        if row_dict.get("guardian_relation", ""):
+                            updates["guardian_relation"] = row_dict["guardian_relation"]
+                        updates["current_score"] = current_score_int
+                        pending_updates.append((existing.id, updates))
                         updated += 1
                         messages.append({"name": name, "action": "updated", "message": f'学生"{name}"信息更新成功'})
                     else:
@@ -1146,7 +1120,7 @@ class UserImportFile(Resource):
                             card_id=card_id,
                             current_score=current_score_int,
                         )
-                        db.session.add(user)
+                        pending_users.append(user)
                         imported += 1
                         messages.append({"name": name, "action": "created", "message": f'学生"{name}"导入成功'})
                 except Exception as e:
@@ -1175,7 +1149,7 @@ class UserImportFile(Resource):
                     )
         except Exception as e:
             return APIResponse.error(message=f"导入失败: {str(e)}", status_code=500)
-        db.session.commit()
+        user_service.apply_csv_import(pending_users, pending_updates)
         failed_count = len(errors)
         return APIResponse.success(
             data={

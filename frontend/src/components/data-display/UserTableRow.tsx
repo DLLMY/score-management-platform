@@ -51,6 +51,21 @@ const UserTableRow = memo<UserTableRowProps>(
           </span>
         </td>
         <td className="px-4 py-3">
+          {user.is_blacklisted ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              黑名单
+            </span>
+          ) : user.is_active ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              启用
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              禁用
+            </span>
+          )}
+        </td>
+        <td className="px-4 py-3">
           <AnimatedScore value={user.current_score != null ? user.current_score : undefined} />
         </td>
         <td className="px-4 py-3">
@@ -65,7 +80,7 @@ const UserTableRow = memo<UserTableRowProps>(
               评分
             </PermissionButton>
             <PermissionButton
-              permission="student.manage"
+              permission="student.edit"
               size="sm"
               variant="secondary"
               onClick={() => onOpenEdit(user)}
@@ -90,7 +105,9 @@ const UserTableRow = memo<UserTableRowProps>(
   (prevProps, nextProps) => {
     return (
       prevProps.user.id === nextProps.user.id &&
-      prevProps.user.score === nextProps.user.score &&
+      prevProps.user.current_score === nextProps.user.current_score &&
+      prevProps.user.is_active === nextProps.user.is_active &&
+      prevProps.user.is_blacklisted === nextProps.user.is_blacklisted &&
       prevProps.isSelected === nextProps.isSelected
     );
   }

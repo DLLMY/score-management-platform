@@ -33,7 +33,6 @@ export interface User {
   phone?: string;
   card_id: string;
   current_score: number;
-  score?: number;
   is_blacklisted: boolean;
   blacklist_reason?: string;
   blacklist_until?: Date | string;
@@ -150,7 +149,6 @@ export interface Device {
   wifi_signal: number | null;
   uptime: number | null;
   last_heartbeat: string | null;
-  last_seen: string;
   box_a_status: 'opened' | 'closed' | null;
   box_b_status: 'opened' | 'closed' | null;
   system_state: number;
@@ -230,8 +228,7 @@ export interface Notification {
   title: string;
   message: string;
   content?: string;
-  read: boolean;
-  is_read?: boolean;
+  is_read: boolean;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   data?: Record<string, unknown>;
   created_at: Date | string;
@@ -1187,6 +1184,7 @@ export interface ParentContact {
   mother_phone?: string;
   address?: string;
   email?: string;
+  created_at?: string;
 }
 
 export interface ContactLog {
@@ -1390,6 +1388,7 @@ export interface MentalHealthRecordCreateInput {
 export interface Activity {
   id: number;
   class_id: number;
+  class_name?: string;
   title: string;
   description?: string;
   activity_type?: string;
@@ -1426,6 +1425,7 @@ export interface ActivityCreateInput {
 export interface CultureRecord {
   id: number;
   class_id: number;
+  class_name?: string;
   category?: string;
   title?: string;
   content?: string;

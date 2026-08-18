@@ -52,8 +52,10 @@ class APIResponse:
         return APIResponse.error(message, code=-1, status_code=403, error_code=error_code)
 
     @staticmethod
-    def bad_request(message="请求参数错误", errors=None, error_code="BAD_REQUEST"):
-        return APIResponse.error(message, code=-1, status_code=400, error_code=error_code, errors=errors)
+    def bad_request(message="请求参数错误", errors=None, error_code="BAD_REQUEST", data=None, **kwargs):
+        return APIResponse.error(
+            message, code=-1, status_code=400, error_code=error_code, errors=errors, data=data, **kwargs
+        )
 
     @staticmethod
     def server_error(message="服务器内部错误", error_code="INTERNAL_ERROR"):
@@ -70,7 +72,7 @@ class APIResponse:
     def pagination(data, page, page_size, total):
         pagination = {
             "page": page,
-            "page_size": page_size,
+            "per_page": page_size,
             "total": total,
             "pages": (total + page_size - 1) // page_size if page_size > 0 else 0,
         }
@@ -82,7 +84,7 @@ class APIResponse:
             "items": items,
             "pagination": {
                 "page": page,
-                "page_size": page_size,
+                "per_page": page_size,
                 "total": total,
                 "pages": (total + page_size - 1) // page_size if page_size > 0 else 0,
             },

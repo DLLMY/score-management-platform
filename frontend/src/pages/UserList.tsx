@@ -235,12 +235,23 @@ function reducer(state: State, action: Action): State {
             : user
         ),
       };
-    case 'DELETE_USER':
+    case 'DELETE_USER': {
+      // M7: 总数同步减一 + 末页分页回退（防删除后页码越界导致空列表）
+      const total = Math.max(0, (state.pagination.total || 0) - 1);
+      const perPage = state.pagination.per_page || 20;
+      const pages = Math.max(1, Math.ceil(total / perPage));
       return {
         ...state,
         users: state.users.filter((user) => user.id !== action.payload),
         selectedUsers: new Set([...state.selectedUsers].filter((id) => id !== action.payload)),
+        pagination: {
+          ...state.pagination,
+          total,
+          pages,
+          page: (state.pagination.page || 1) > pages ? pages : (state.pagination.page || 1),
+        },
       };
+    }
     case 'ADD_USER':
       return { ...state, users: [action.payload, ...state.users] };
     case 'UPDATE_USER':
@@ -578,6 +589,7 @@ function UserList() {
 
   const handleDelete = useCallback(
     async (userId: number) => {
+      if (!window.confirm('确定要删除该学生吗？此操作不可恢复。')) return; // 删除确认（单条，批量删除已有确认）
       const deletedUser = state.users.find(u => u.id === userId);
       
       await wrapAsync(
@@ -908,15 +920,15 @@ function UserList() {
             <p className="text-gray-500 mt-1">管理学生信息和积分</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <PermissionButton permission='student.manage' variant='secondary' onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}>
+            <PermissionButton permission='student.edit' variant='secondary' onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}>
               <Upload className="w-4 h-4 mr-2" />
               导入学生
             </PermissionButton>
-            <PermissionButton permission='student.manage' variant='secondary' onClick={handleExport}>
+            <PermissionButton permission='student.edit' variant='secondary' onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               导出学生
             </PermissionButton>
-            <PermissionButton permission='student.manage' onClick={() => handleOpenModal()}>
+            <PermissionButton permission='student.edit' onClick={() => handleOpenModal()}>
               <Plus className="w-4 h-4 mr-2" />
               添加学生
             </PermissionButton>
@@ -956,15 +968,15 @@ function UserList() {
           <p className="text-gray-500 mt-1">管理学生信息和积分</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <PermissionButton permission='student.manage' variant='secondary' onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}>
+          <PermissionButton permission='student.edit' variant='secondary' onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}>
             <Upload className="w-4 h-4 mr-2" />
             导入学生
           </PermissionButton>
-          <PermissionButton permission='student.manage' variant='secondary' onClick={handleExport}>
+          <PermissionButton permission='student.edit' variant='secondary' onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             导出学生
           </PermissionButton>
-          <PermissionButton permission='student.manage' onClick={() => handleOpenModal()}>
+          <PermissionButton permission='student.edit' onClick={() => handleOpenModal()}>
             <Plus className="w-4 h-4 mr-2" />
             添加学生
           </PermissionButton>
@@ -1064,6 +1076,7 @@ function UserList() {
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">学生信息</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">班级</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">当前积分</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
               </tr>

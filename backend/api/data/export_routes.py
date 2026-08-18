@@ -23,6 +23,16 @@ export_format_model = ns_export.model(
 )
 
 
+def _admin_scope():
+    """S3 修复: 导出班级隔离。返回 (allowed_class_names, allowed_class_ids)；超管/admin 为 (None, None) 表示全量。"""
+    from utils.permission import get_current_admin, get_allowed_classes, get_admin_class_ids
+
+    admin = get_current_admin()
+    if not admin or admin.role in ("admin", "super_admin"):
+        return None, None
+    return get_allowed_classes(admin.id), get_admin_class_ids(admin.id)
+
+
 @ns_export.route("/")
 class ExportData(Resource):
     @ns_export.doc("export_data", description="导出数据", security="Bearer")
@@ -49,7 +59,12 @@ class ExportData(Resource):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:
             if export_type == "users":
-                users = User.query.all()
+                # S3 修复: 班主任仅可导出自己班级（原全校含电话/卡号 → 越权）
+                _cn, _ci = _admin_scope()
+                users_q = User.query
+                if _cn is not None:
+                    users_q = users_q.filter(User.class_name.in_(_cn))
+                users = users_q.all()
                 user_data = [
                     {
                         "id": u.id,
@@ -97,7 +112,12 @@ class ExportData(Resource):
                     filename = f"rules_{timestamp}.pdf"
                     mimetype = "application/pdf"
             elif export_type == "devices":
-                devices = Device.query.all()
+                # S3 修复: 班主任仅可导出本班设备
+                _cn, _ci = _admin_scope()
+                devices_q = Device.query
+                if _ci is not None:
+                    devices_q = devices_q.filter(Device.class_info_id.in_(_ci))
+                devices = devices_q.all()
                 device_data = [
                     {
                         "id": d.id,
@@ -122,19 +142,23 @@ class ExportData(Resource):
                     mimetype = "application/pdf"
             elif export_type == "records":
                 # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
-                records = (
-                    ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
-                    .order_by(ScoreRecord.created_at.desc())
-                    .all()
-                )
+                # S3 修复: 班主任仅可导出自己班级的积分记录
+                _cn, _ci = _admin_scope()
+                records_q = ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
+                if _cn is not None:
+                    records_q = records_q.join(User, ScoreRecord.student_id == User.id).filter(
+                        User.class_name.in_(_cn)
+                    )
+                records = records_q.order_by(ScoreRecord.created_at.desc()).all()
                 record_data = [
                     {
                         "id": r.id,
-                        "user_id": r.user_id,
+                        "user_id": r.student_id,
+                "student_id": r.student_id,
+                        "student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "card_id": r.user.card_id if r.user else None,
                         "score_change": r.score_change,
-                        "new_score": r.new_score,
                         "rule_id": r.rule_id,
                         "rule_name": r.rule.name if r.rule else None,
                         "category_name": r.rule.category.name if r.rule and r.rule.category else None,
@@ -165,7 +189,9 @@ class ExportData(Resource):
                 mimetype = "application/pdf"
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            # S8 修复: 不直返异常细节（泄露路径/实现）
+            print(f"[Export] 导出失败: {e}")
+            return APIResponse.server_error(message="导出失败，请稍后重试或联系管理员")
 
 
 @ns_export.route("/users")
@@ -188,7 +214,12 @@ class ExportUsers(Resource):
         export_format = request.args.get("format", "excel").lower()
         if export_format not in ["excel", "pdf"]:
             return APIResponse.bad_request(message="不支持的导出格式")
-        users = User.query.all()
+        # S3 修复: GET 导出同样按班级隔离
+        _cn, _ci = _admin_scope()
+        users_q = User.query
+        if _cn is not None:
+            users_q = users_q.filter(User.class_name.in_(_cn))
+        users = users_q.all()
         user_data = [
             {
                 "id": u.id,
@@ -344,11 +375,11 @@ class ExportRecords(Resource):
         record_data = [
             {
                 "id": r.id,
-                "user_id": r.user_id,
+                "user_id": r.student_id,
+                "student_id": r.student_id,
                 "user_name": r.user.name if r.user else None,
                 "card_id": r.user.card_id if r.user else None,
                 "score_change": r.score_change,
-                "new_score": r.new_score,
                 "rule_id": r.rule_id,
                 "rule_name": r.rule.name if r.rule else None,
                 "category_name": r.rule.category.name if r.rule and r.rule.category else None,

@@ -410,7 +410,7 @@ class NLPParserService:
 
             usage_record = NLPRuleUsage(
                 rule_id=rule.id,
-                user_id=user.id,
+                student_id=user.id,
                 input_text=text,
                 matched_keyword=rule.behavior_keyword,
                 score_change=score_value,
@@ -423,7 +423,7 @@ class NLPParserService:
                 matched_keyword=rule.behavior_keyword if rule else parse_result["behavior"],
                 intent=parse_result["intent"],
                 confidence=parse_result["confidence"],
-                user_id=parse_result["user_id"],
+                student_id=parse_result["user_id"],
                 behavior_description=parse_result["behavior"],
                 score_change=score_value,
                 is_manual_correction=manual_correction is not None,
@@ -441,7 +441,7 @@ class NLPParserService:
                 matched_keyword=rule.behavior_keyword if rule else parse_result["behavior"],
                 intent=parse_result["intent"],
                 confidence=parse_result["confidence"],
-                user_id=parse_result["user_id"],
+                student_id=parse_result["user_id"],
                 behavior_description=parse_result["behavior"],
                 score_change=score_value,
                 is_manual_correction=manual_correction is not None,

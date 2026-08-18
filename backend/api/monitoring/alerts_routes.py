@@ -1,7 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from utils.permission import requires_permission
 from services.alert_service import alert_service
-from datetime import datetime
 
 from utils.response import APIResponse
 
@@ -119,11 +118,10 @@ class AlertResource(Resource):
         if not alert:
             return APIResponse.error(message="告警不存在", status_code=404)
         if "is_read" in data:
-            alert.is_read = data["is_read"]
-            alert.read_at = datetime.now() if data["is_read"] else None
-        from models import db
-
-        db.session.commit()
+            # 写入路径收口至 alert_service（F17 防腐层）：原路由内 is_read/read_at 赋值 + commit 已迁出
+            ok = alert_service.update_alert_status(alert_id, bool(data["is_read"]))
+            if not ok:
+                return APIResponse.error(message="告警不存在", status_code=404)
         return APIResponse.success(message="告警状态更新成功")
 
     @ns_alerts.doc("delete_alert", description="删除告警", security="Bearer")

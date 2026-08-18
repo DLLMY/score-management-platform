@@ -68,7 +68,7 @@ class TestModels:
             assert retrieved.current_score == 100
             assert retrieved.is_active is True
 
-            StudentCluster.query.filter_by(user_id=retrieved.id).delete()
+            StudentCluster.query.filter_by(student_id=retrieved.id).delete()
             db.session.delete(retrieved)
             db.session.commit()
 
@@ -116,8 +116,7 @@ class TestModels:
             db.session.add(rule)
             db.session.commit()
 
-            record = ScoreRecord(
-                user_id=user.id,
+            record = ScoreRecord(student_id=user.id,
                 rule_id=rule.id,
                 score_change=5,
                 description='Test record',
@@ -126,13 +125,13 @@ class TestModels:
             db.session.add(record)
             db.session.commit()
 
-            retrieved = ScoreRecord.query.filter_by(user_id=user.id).first()
+            retrieved = ScoreRecord.query.filter_by(student_id=user.id).first()
             assert retrieved is not None
             assert retrieved.score_change == 5
 
             db.session.delete(retrieved)
             db.session.delete(rule)
-            StudentCluster.query.filter_by(user_id=user.id).delete()
+            StudentCluster.query.filter_by(student_id=user.id).delete()
             db.session.delete(user)
             db.session.commit()
 

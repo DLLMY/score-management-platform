@@ -1,12 +1,17 @@
 from flask_restx import Namespace, Resource, fields
 from flask import g
-from models import db, NotifyTemplate, NotifyHistory, Device
+from models import db, NotifyTemplate, Device
 from services.class_time_checker import ClassTimeChecker
 from utils.permission import requires_permission, has_permission
-from utils.logger import log_operation
 from datetime import datetime
 from services.mqtt_service import publish_mqtt
 from utils.response import APIResponse
+from services.notify_template_service import (
+    create_template,
+    update_template,
+    delete_template,
+    record_template_usage,
+)
 import json
 
 def _resolve_class_from_device(device_id):
@@ -113,37 +118,9 @@ class TemplateList(Resource):
     def post(self):
         """创建新模板"""
         data = ns_notify_template.payload
-        # tags 字段需要转换为 JSON 字符串存储
-        tags_val = data.get("tags", [])
-        if isinstance(tags_val, list):
-            tags_val = json.dumps(tags_val, ensure_ascii=False)
         # 从 token 获取当前管理员，避免审计链丢失真实责任人；无 token 时兜底种子管理员
         _admin_id = getattr(g.current_user, "id", None) if getattr(g, "current_user", None) else None
-        template = NotifyTemplate(
-            name=data.get("name"),
-            text=data.get("text"),
-            volume=data.get("volume", 0.7),
-            speak=data.get("speak", True),
-            popup=data.get("popup", True),
-            timeout_sec=data.get("timeout_sec", 8),
-            urgent=data.get("urgent", False),
-            bg_color=data.get("bg_color", "#000000"),
-            text_color=data.get("text_color", "#FF0000"),
-            font_size=data.get("font_size", 48),
-            language=data.get("language", "zh"),
-            category=data.get("category"),
-            tags=tags_val,
-            created_by=_admin_id or 1,
-        )
-        db.session.add(template)
-        db.session.commit()
-        log_operation(
-            "notify_template.create",
-            "notify_template",
-            template.id,
-            f"创建通知模板: {template.name}",
-            after_data=data,
-        )
+        template = create_template(data, _admin_id)
         return serialize_template(template)
 
 
@@ -165,35 +142,14 @@ class TemplateDetail(Resource):
         """更新模板"""
         template = NotifyTemplate.query.get_or_404(id)
         data = ns_notify_template.payload
-        template.name = data.get("name", template.name)
-        template.text = data.get("text", template.text)
-        template.volume = data.get("volume", template.volume)
-        template.speak = data.get("speak", template.speak)
-        template.popup = data.get("popup", template.popup)
-        template.timeout_sec = data.get("timeout_sec", template.timeout_sec)
-        template.urgent = data.get("urgent", template.urgent)
-        template.bg_color = data.get("bg_color", template.bg_color)
-        template.text_color = data.get("text_color", template.text_color)
-        template.font_size = data.get("font_size", template.font_size)
-        template.language = data.get("language", template.language)
-        template.category = data.get("category", template.category)
-        # tags 字段需要转换为 JSON 字符串存储
-        if "tags" in data:
-            tags_val = data.get("tags")
-            if isinstance(tags_val, list):
-                tags_val = json.dumps(tags_val, ensure_ascii=False)
-            template.tags = tags_val
-        template.updated_at = datetime.now()
-        db.session.commit()
+        template = update_template(template, data)
         return serialize_template(template)
 
     @requires_permission("notification.send")
     def delete(self, id):
         """删除模板（软删除）"""
         template = NotifyTemplate.query.get_or_404(id)
-        template.is_active = False
-        template.updated_at = datetime.now()
-        db.session.commit()
+        delete_template(template)
         return APIResponse.success(message="模板已删除")
 
 
@@ -257,26 +213,8 @@ class TemplateUse(Resource):
         try:
             for topic in topics:
                 publish_mqtt(topic, json.dumps(message))
-            # 更新使用次数
-            template.usage_count += 1
-            template.updated_at = datetime.now()
-            # 记录历史
-            history = NotifyHistory(
-                text=template.text,
-                volume=template.volume,
-                speak=template.speak,
-                popup=template.popup,
-                timeout_sec=template.timeout_sec,
-                urgent=template.urgent,
-                send_mode=send_mode,
-                device_id=device_id,
-                topic=",".join(topics),
-                template_id=template.id,
-                status="sent",
-                sent_by=1,
-            )
-            db.session.add(history)
-            db.session.commit()
+            # 落库：递增使用次数 + 写入历史记录（防腐层 service 承载 db.session 写入）
+            record_template_usage(template, send_mode, device_id, topics)
             return {
                 "success": True,
                 "message": "通知已发送",

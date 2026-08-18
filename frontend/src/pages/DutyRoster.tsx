@@ -86,9 +86,21 @@ function DutyRosterPage() {
     }
   }, [showToast]);
 
+  // S3: 值日任务数据源——首屏拉取，否则历史任务不可见、统计恒 0
+  const fetchAssignments = useCallback(async () => {
+    try {
+      const data = await api.duty.getAssignments();
+      setAssignments(Array.isArray(data) ? data : []);
+    } catch (error) {
+      logger.error('获取值日任务失败:', error);
+      showToast('error', '获取值日任务失败');
+    }
+  }, [showToast]);
+
   useEffect(() => {
     fetchGroups();
-  }, [fetchGroups]);
+    fetchAssignments();
+  }, [fetchGroups, fetchAssignments]);
 
   const handleCreateGroup = useCallback(async () => {
     if (!dutyForm.name.trim()) {
@@ -123,13 +135,14 @@ function DutyRosterPage() {
       await api.duty.deleteGroup(id);
       showToast('success', '值日组删除成功');
       fetchGroups();
+      fetchAssignments(); // S3: 删组后同步清理该组任务与统计
     } catch (error) {
       logger.error('删除值日组失败:', error);
       showToast('error', '删除值日组失败');
     } finally {
       setIsLoading(false);
     }
-  }, [showToast, fetchGroups]);
+  }, [showToast, fetchGroups, fetchAssignments]);
 
   const handleAssignDuty = useCallback(async () => {
     if (!assignmentForm.group_id || !assignmentForm.student_id) {
@@ -146,9 +159,9 @@ function DutyRosterPage() {
         task: assignmentForm.task,
         is_completed: false,
       };
-      const result = await api.duty.assignDuty(data);
+      await api.duty.assignDuty(data);
       showToast('success', '值日任务分配成功');
-      setAssignments(prev => [...prev, result]);
+      fetchAssignments(); // S3: 以服务端为准刷新任务列表
       setShowAssignModal(false);
       setAssignmentForm(defaultAssignmentForm);
     } catch (error) {
@@ -157,20 +170,18 @@ function DutyRosterPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [assignmentForm, showToast]);
+  }, [assignmentForm, showToast, fetchAssignments]);
 
   const handleMarkComplete = useCallback(async (assignmentId: number) => {
     try {
       await api.duty.markComplete(assignmentId);
       showToast('success', '任务已标记完成');
-      setAssignments(prev =>
-        prev.map(a => a.id === assignmentId ? { ...a, is_completed: true, completed_at: new Date().toISOString() } : a) // 乐观更新占位，服务端完成时间为准
-      );
+      fetchAssignments(); // S3: 以服务端完成时间为准刷新
     } catch (error) {
       logger.error('标记完成失败:', error);
       showToast('error', '标记完成失败');
     }
-  }, [showToast]);
+  }, [showToast, fetchAssignments]);
 
   const completedCount = assignments.filter(a => a.is_completed).length;
   const pendingCount = assignments.length - completedCount;

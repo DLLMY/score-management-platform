@@ -262,8 +262,9 @@ class NLPRuleManagementService:
             accuracy = round(accuracy_after, 4)
             f1 = round(f1_score, 4)
         else:
+            # P2-2 修复: 无训练数据不再伪造 accuracy=0.85，指标归零并标记 untrained
             training_data_size = 0
-            accuracy = 0.85
+            accuracy = 0.0
             f1 = 0.0
 
         # 此前直接改 training_record 字段（对象已 detached）→ DB 永远停留 running。
@@ -274,7 +275,7 @@ class NLPRuleManagementService:
                 rec.training_data_size = training_data_size
                 rec.accuracy = accuracy
                 rec.f1_score = f1
-                rec.status = "completed"
+                rec.status = "completed" if training_data_size > 0 else "untrained"
                 rec.trained_at = datetime.now()
             else:
                 # 记录异常消失（不应发生）：仅返回内存数据，不静默
@@ -409,7 +410,7 @@ class NLPRuleManagementService:
         return {
             "id": usage.id,
             "rule_id": usage.rule_id,
-            "user_id": usage.user_id,
+            "user_id": usage.student_id,
             "input_text": usage.input_text,
             "matched_keyword": usage.matched_keyword,
             "score_change": usage.score_change,

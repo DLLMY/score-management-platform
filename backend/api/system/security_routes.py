@@ -1,6 +1,15 @@
 from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
 from models import db, SecurityAudit, RateLimitRecord, LoginAttempt
+from services.security_service import (
+    check_login_rate_limit as _service_check_login_rate_limit,
+    record_failed_login as _service_record_failed_login,
+    clear_login_attempts as _service_clear_login_attempts,
+    increment_rate_limit_request,
+    create_rate_limit_record,
+    log_security_event as _service_log_security_event,
+    clear_rate_limit_records,
+)
 from datetime import datetime, timedelta
 from utils.permission import requires_permission
 from utils.response import APIResponse
@@ -17,50 +26,25 @@ def check_login_rate_limit(username, ip_address, max_attempts=5, lockout_minutes
     """
     检查登录频率限制
     返回: (is_allowed, message, retry_after_seconds)
+    （F17：落库委托 services.security_service，本函数保留以维持 auth/student/admins/sub_accounts 导入契约）
     """
-    now = datetime.now()
-    record = LoginAttempt.query.filter_by(username=username).first()
-
-    if record and record.locked_until and record.locked_until > now:
-        retry_after = int((record.locked_until - now).total_seconds())
-        return False, "登录失败次数过多，账户已被锁定", retry_after
-
-    if record and record.last_attempt_at:
-        window_start = now - timedelta(minutes=lockout_minutes)
-        if record.last_attempt_at < window_start:
-            record.attempt_count = 1
-            record.locked_until = None
-            db.session.commit()
-
-    return True, None, 0
+    return _service_check_login_rate_limit(username, ip_address, max_attempts, lockout_minutes)
 
 
 def record_failed_login(username, ip_address, max_attempts=5, lockout_minutes=15):
     """
     记录失败的登录尝试
+    （F17：落库委托 services.security_service）
     """
-    now = datetime.now()
-    record = LoginAttempt.query.filter_by(username=username).first()
-
-    if not record:
-        record = LoginAttempt(username=username, ip_address=ip_address, attempt_count=1, last_attempt_at=now)
-        db.session.add(record)
-    else:
-        record.attempt_count += 1
-        record.last_attempt_at = now
-        record.ip_address = ip_address
-        if record.attempt_count >= max_attempts:
-            record.locked_until = now + timedelta(minutes=lockout_minutes)
-
-    db.session.commit()
+    _service_record_failed_login(username, ip_address, max_attempts, lockout_minutes)
 
 
 def clear_login_attempts(username):
     """
     清除登录尝试记录（登录成功后调用）
+    （F17：落库委托 services.security_service）
     """
-    LoginAttempt.query.filter_by(username=username).delete()
-    db.session.commit()
+    _service_clear_login_attempts(username)
 
 
 def verify_request_signature():
@@ -124,12 +108,9 @@ def rate_limit(max_requests=100, window_minutes=1):
                     log_security_event("rate_limit_exceeded", "warning", details=f"{endpoint}")
                     return APIResponse.error(message="请求过于频繁，请稍后再试", status_code=429)
 
-                record.request_count += 1
-                db.session.commit()
+                increment_rate_limit_request(record)
             else:
-                new_record = RateLimitRecord(ip_address=ip, endpoint=endpoint, request_count=1, window_start=now)
-                db.session.add(new_record)
-                db.session.commit()
+                create_rate_limit_record(ip, endpoint, now)
 
             return f(*args, **kwargs)
 
@@ -141,25 +122,9 @@ def rate_limit(max_requests=100, window_minutes=1):
 def log_security_event(event_type, severity="info", user_id=None, user_type="unknown", details=None):
     """
     记录安全审计日志
+    （F17：落库委托 services.security_service，本函数保留供本模块装饰器调用）
     """
-    try:
-        audit = SecurityAudit(
-            event_type=event_type,
-            severity=severity,
-            user_id=user_id,
-            user_type=user_type,
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get("User-Agent", "")[:500],
-            request_path=request.path,
-            request_method=request.method,
-            response_status=None,
-            event_details=details,
-        )
-        db.session.add(audit)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
-        pass
+    _service_log_security_event(event_type, severity, user_id, user_type, details)
 
 
 def verify_token_expiry(token):
@@ -421,8 +386,7 @@ class ClearRateLimit(Resource):
         if not ip:
             return APIResponse.error(message="请提供IP地址", status_code=400)
 
-        deleted = RateLimitRecord.query.filter_by(ip_address=ip).delete()
-        db.session.commit()
+        deleted = clear_rate_limit_records(ip)
 
         return APIResponse.success(data={"deleted": deleted}, message=f"已清除 {deleted} 条记录")
 

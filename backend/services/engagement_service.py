@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from models import (
     Attendance,
-    LeaveApplication,
+    Approval,
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
@@ -47,10 +47,11 @@ def _to_date(value):
 
 def _count_leave_days(user_id, cutoff, now):
     """统计窗口内已批准请假的天数（按与窗口重叠的实际天数计）。"""
-    leaves = LeaveApplication.query.filter(
-        LeaveApplication.student_id == user_id,
-        LeaveApplication.status == "approved",
-        LeaveApplication.end_date >= cutoff,
+    leaves = Approval.query.filter(
+        Approval.student_id == user_id,
+        Approval.type == "leave",
+        Approval.status == "approved",
+        Approval.end_date >= cutoff,
     ).all()
     total = 0
     for lv in leaves:
@@ -135,7 +136,7 @@ def calculate_engagement(user_id, days=30, end_date=None):
 
     # ---- 积分活跃度（无积分行为记录时记为缺失，参与权重重归一化）----
     records = ScoreRecord.query.filter(
-        ScoreRecord.user_id == user_id,
+        ScoreRecord.student_id == user_id,
         ScoreRecord.created_at >= cutoff_dt,
     ).all()
     event_count = len(records)

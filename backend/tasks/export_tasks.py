@@ -63,12 +63,12 @@ def export_score_records(self, user_id=None, start_date=None, end_date=None):
         from sqlalchemy import and_
 
         with app.app_context():
-            query = ScoreRecord.query.join(User, ScoreRecord.user_id == User.id).outerjoin(
+            query = ScoreRecord.query.join(User, ScoreRecord.student_id == User.id).outerjoin(
                 ScoreRule, ScoreRecord.rule_id == ScoreRule.id
             )
             conditions = []
             if user_id:
-                conditions.append(ScoreRecord.user_id == user_id)
+                conditions.append(ScoreRecord.student_id == user_id)
             if start_date:
                 conditions.append(ScoreRecord.created_at >= start_date)
             if end_date:
@@ -81,7 +81,7 @@ def export_score_records(self, user_id=None, start_date=None, end_date=None):
                 records_data.append(
                     {
                         "id": record.id,
-                        "user_id": record.user_id,
+                        "user_id": record.student_id,
                         "user_name": record.user.name if record.user else "",
                         "rule_id": record.rule_id or "",
                         "rule_name": record.rule.name if record.rule else "",
@@ -131,7 +131,7 @@ def export_exam_scores(self, exam_id=None, class_id=None):
                         "student_name": score.user.name if score.user else "",
                         "exam_id": score.exam_id or "",
                         "exam_name": score.exam.name if score.exam else "",
-                        "subject": score.subject or "",
+                        "subject": score.subject_rel.name if score.subject_rel else "",
                         "score": score.score or 0,
                         "created_at": score.created_at.isoformat() if score.created_at else "",
                     }

@@ -88,7 +88,7 @@ class AnomalyService:
         """
         start_date = datetime.now() - timedelta(days=days)
         records = (
-            ScoreRecord.query.filter(ScoreRecord.user_id == user_id, ScoreRecord.created_at >= start_date)
+            ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date)
             .order_by(ScoreRecord.created_at.asc())
             .all()
         )
@@ -236,7 +236,7 @@ class AnomalyService:
             dict: 频率异常信息
         """
         start_date = datetime.now() - timedelta(days=days)
-        count = ScoreRecord.query.filter(ScoreRecord.user_id == user_id, ScoreRecord.created_at >= start_date).count()
+        count = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date).count()
         threshold = ANOMALY_TYPES["frequency_anomaly"]["threshold"]
         is_anomaly = count > threshold
         return {

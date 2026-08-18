@@ -252,7 +252,6 @@ function Dashboard(): React.ReactElement {
   const [classList, setClassList] = useState<{ id: number; name: string }[]>([]);
   const [dashboardError, setDashboardError] = useState(false);
   const stateRef = useRef(state);
-  const currentTimeRef = useRef(new Date());
 
   const { initSocket, isConnected, deviceStatuses, scoreUpdates, subscribe } = useWebSocketStore();
 
@@ -267,9 +266,10 @@ function Dashboard(): React.ReactElement {
 
   useEffect(() => {
     if (Object.keys(deviceStatuses).length > 0) {
+      // M2: 读 stateRef 最新 state，避免闭包过期（依赖仅 deviceStatuses）
       dispatch({
         type: 'SET_DEVICES',
-        payload: state.devices.map((device) => {
+        payload: stateRef.current.devices.map((device) => {
           const updatedStatus = deviceStatuses[device.device_id];
           if (updatedStatus) {
             return { ...device, is_online: updatedStatus === 'online' };
@@ -285,11 +285,11 @@ function Dashboard(): React.ReactElement {
       const latestUpdate = scoreUpdates[0];
       dispatch({
         type: 'SET_USERS',
-        payload: state.users.map((user) => {
+        payload: stateRef.current.users.map((user) => {
           if (Number(user.id) === latestUpdate.user_id) {
             return {
               ...user,
-              score: (user.score || 0) + latestUpdate.score_change,
+              current_score: (user.current_score || 0) + latestUpdate.score_change,
             };
           }
           return user;
@@ -298,19 +298,13 @@ function Dashboard(): React.ReactElement {
       dispatch({
         type: 'SET_STATISTICS',
         payload: {
-          totalScore: state.statistics.totalScore + latestUpdate.score_change,
+          totalScore: stateRef.current.statistics.totalScore + latestUpdate.score_change,
         },
       });
     }
   }, [scoreUpdates]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      currentTimeRef.current = new Date();
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
+  // M1: 时钟改为独立 LiveClock 组件（memo + 每秒只重渲染自身），避免整页每秒 setState
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -329,9 +323,9 @@ function Dashboard(): React.ReactElement {
     if (selectedClass) {
       return state.users
         .filter((u) => u.class_name === selectedClass)
-        .sort((a, b) => (b.score || 0) - (a.score || 0));
+        .sort((a, b) => (b.current_score || 0) - (a.current_score || 0));
     }
-    return [...state.users].sort((a, b) => (b.score || 0) - (a.score || 0));
+    return [...state.users].sort((a, b) => (b.current_score || 0) - (a.current_score || 0));
   }, [state.users, selectedClass]);
 
   const classes = useMemo(() => {
@@ -452,7 +446,7 @@ function Dashboard(): React.ReactElement {
           fetchDevices(),
         ]);
 
-        const sortedUsers = usersList !== null ? [...usersList].sort((a, b) => (b.score || 0) - (a.score || 0)) : null;
+        const sortedUsers = usersList !== null ? [...usersList].sort((a, b) => (b.current_score || 0) - (a.current_score || 0)) : null;
         if (sortedUsers !== null) {
           dispatch({ type: 'SET_USERS', payload: sortedUsers });
         }
@@ -479,7 +473,7 @@ function Dashboard(): React.ReactElement {
             payload: {
               totalUsers: (usersList ?? []).length,
               totalRecords: 0,
-              totalScore: (usersList ?? []).reduce((sum, u) => sum + (u.score || 0), 0),
+              totalScore: (usersList ?? []).reduce((sum, u) => sum + (u.current_score || 0), 0),
               onlineDevices: deviceList !== null ? getOnlineCount(deviceList) : 0,
             },
           });
@@ -613,14 +607,6 @@ function Dashboard(): React.ReactElement {
     return `${hours}小时前`;
   };
 
-  const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
-
   const formatDateFull = (date: Date): string => {
     return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -735,9 +721,9 @@ function Dashboard(): React.ReactElement {
   };
 
   const UserCard = memo(({ user, globalIndex }: { user: User; globalIndex: number }) => {
-    const level = getLevel(user.score || 0);
+    const level = getLevel(user.current_score || 0);
     const isTopThree = globalIndex < 3;
-    const score = user.score || 0;
+    const score = user.current_score || 0;
     const [isHovered, setIsHovered] = useState(false);
     const cluster = getUserCluster(user.id);
     const clusterColors = cluster ? CLUSTER_COLORS[cluster.cluster_name] : null;
@@ -873,7 +859,8 @@ function Dashboard(): React.ReactElement {
           <div className='flex items-center gap-2 text-sm text-gray-500'>
             <Clock className='w-4 h-4' />
             <span>{state.lastUpdateTime ? formatDateFull(state.lastUpdateTime) : '—'}</span>
-            <span className='font-mono font-semibold text-gray-700'>{formatTime(currentTimeRef.current)}</span>
+            {/* M1: 实时时钟（独立组件，不拖垮整页重渲染） */}
+            <LiveClock />
           </div>
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
@@ -1105,5 +1092,25 @@ function Dashboard(): React.ReactElement {
     </div>
   );
 }
+
+/**
+ * M1: 实时时钟组件（memo 隔离，每秒仅重渲染自身，不拖垮仪表盘整页）
+ */
+const LiveClock = memo(function LiveClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <span className='font-mono font-semibold text-gray-700'>
+      {now.toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })}
+    </span>
+  );
+});
 
 export default Dashboard;

@@ -7,7 +7,8 @@ import { config } from '../../config';
 const DevTools = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [vitals, setVitals] = useState(getVitals());
-  const memory = useMemoryUsage();
+  // 门控前调用（hooks 规则）：把 enabled 传入，禁用时（生产/关闭）定时器不注册，消除每秒空转
+  const memory = useMemoryUsage(config.devTools.enabled);
 
   useEffect(() => {
     const cleanup = observeVitals(setVitals);

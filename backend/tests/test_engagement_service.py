@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, date
 
-from models import db, User, ClassInfo, Attendance, LeaveApplication, HomeworkAssignment, HomeworkSubmission, ScoreRecord
+from models import db, User, ClassInfo, Attendance, Approval, HomeworkAssignment, HomeworkSubmission, ScoreRecord
 from services.engagement_service import calculate_engagement
 
 
@@ -45,7 +45,7 @@ class TestEngagementService:
             ))
             for k in range(5):
                 db.session.add(ScoreRecord(
-                    user_id=sid, score_change=2,
+                    student_id=sid, score_change=2,
                     created_at=datetime.now() - timedelta(days=k),
                 ))
             db.session.commit()
@@ -113,10 +113,10 @@ class TestEngagementService:
                     student_id=sid, class_id=cid,
                     date=today - timedelta(days=k), status="absent",
                 ))
-            db.session.add(LeaveApplication(
-                student_id=sid, leave_type="病假",
+            db.session.add(Approval(
+                student_id=sid, type="leave", leave_type="病假",
                 start_date=today - timedelta(days=9), end_date=today,
-                status="approved",
+                description="", status="approved",
             ))
             db.session.commit()
 

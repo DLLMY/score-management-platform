@@ -171,6 +171,7 @@ const ImportConfigManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm('确定要删除该导入配置吗？')) return; // 删除确认
     try {
       await api.importConfig.delete(id);
       showToast('success', '删除成功');

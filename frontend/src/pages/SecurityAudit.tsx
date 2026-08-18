@@ -49,6 +49,10 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     const res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
     if (!res.ok) return null;
     const env = await res.json();
+    // M6: 检查业务信封，success===false 时不当作成功数据返回
+    if (env && typeof env === 'object' && 'success' in env && (env as { success?: boolean }).success === false) {
+      return null;
+    }
     return ((env && 'data' in env ? env.data : env) ?? null) as T | null;
   } catch {
     return null;

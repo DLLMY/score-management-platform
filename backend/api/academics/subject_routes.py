@@ -1,14 +1,13 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
-from models import db, Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id, cascade_delete_related_records
+from models import db, Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from datetime import datetime
 from services.excel_service import excel_export_service, excel_import_service
+from services.academics_service import academics_service
 import json
 import io
-
-import re
 
 ns_subjects = Namespace("subjects", description="科目管理")
 
@@ -114,16 +113,8 @@ class SubjectList(Resource):
         if data.get("code") and Subject.query.filter_by(code=data["code"]).first():
             return APIResponse.error(message="科目代码已存在", status_code=400)
 
-        subject = Subject(  # noqa: F841
-            name=data["name"],
-            code=data.get("code"),
-            grade=data.get("grade"),
-            description=data.get("description"),
-            color=data.get("color", "#10B981"),
-            is_active=data.get("is_active", True),
-        )
-        db.session.add(subject)
-        db.session.commit()
+        new_id = academics_service.create_subject(data)
+        subject = Subject.query.get(new_id)
 
         return {
             "id": subject.id,
@@ -150,10 +141,9 @@ class SubjectToggle(Resource):
     @requires_permission("score.entry")
     def get(self, id):
         """切换科目启用/禁用状态"""
-        subject = Subject.query.get_or_404(id)  # noqa: F841
-        subject.is_active = not subject.is_active
-        subject.updated_at = datetime.now()
-        db.session.commit()
+        subject = Subject.query.get_or_404(id)
+        academics_service.toggle_subject(subject)
+        subject = Subject.query.get(id)
 
         class_count = SubjectClass.query.filter_by(subject_id=id).count()
 
@@ -201,7 +191,7 @@ class SubjectResource(Resource):
     @requires_permission("score.entry")
     def put(self, id):
         """更新科目信息"""
-        subject = Subject.query.get_or_404(id)  # noqa: F841
+        subject = Subject.query.get_or_404(id)
         data = request.json
 
         # 检查名称是否重复
@@ -214,15 +204,8 @@ class SubjectResource(Resource):
             if Subject.query.filter_by(code=data["code"]).first():
                 return APIResponse.error(message="科目代码已存在", status_code=400)
 
-        subject.name = data.get("name", subject.name)
-        subject.code = data.get("code", subject.code)
-        subject.grade = data.get("grade", subject.grade)
-        subject.description = data.get("description", subject.description)
-        subject.color = data.get("color", subject.color)
-        subject.is_active = data.get("is_active", subject.is_active)
-        subject.updated_at = datetime.now()
-
-        db.session.commit()
+        academics_service.update_subject(subject, data)
+        subject = Subject.query.get(id)
 
         class_count = SubjectClass.query.filter_by(subject_id=id).count()
 
@@ -247,11 +230,7 @@ class SubjectResource(Resource):
     def delete(self, id):
         """删除科目（先级联清理关联数据，再删除科目本身）"""
         subject = Subject.query.get_or_404(id)
-        # 先清理子表关联（SubjectClass / CourseSchedule 等，NOT NULL 外键递归删除，
-        # 可空外键如 study_guide/homework 仅置空），避免直接删父记录触发外键约束。
-        cascade_delete_related_records(Subject, id)
-        db.session.delete(subject)
-        db.session.commit()
+        academics_service.delete_subject(id)
         return APIResponse.success(message="科目已删除")
 
 
@@ -293,7 +272,7 @@ class SubjectClasses(Resource):
     @requires_permission("score.entry")
     def post(self, id):
         """添加科目与班级的关联"""
-        subject = Subject.query.get_or_404(id)  # noqa: F841
+        Subject.query.get_or_404(id)
         data = request.json
 
         existing = SubjectClass.query.filter(
@@ -307,11 +286,10 @@ class SubjectClasses(Resource):
         if not class_info:
             return APIResponse.error(message="班级不存在", status_code=404)
 
-        link = SubjectClass(subject_id=id, class_info_id=data["class_info_id"], teacher_id=data.get("teacher_id"))
+        link_id = academics_service.create_subject_class(id, data["class_info_id"], data.get("teacher_id"))
 
-        db.session.add(link)
-        db.session.commit()
-
+        link = get_by_id(SubjectClass, link_id)
+        subject = Subject.query.get(id)
         teacher = get_by_id(Admin, link.teacher_id) if link.teacher_id else None
 
         return {
@@ -345,13 +323,12 @@ class SubjectClassResource(Resource):
         data = request.json
 
         if "teacher_id" in data:
-            link.teacher_id = data["teacher_id"]
+            academics_service.update_subject_class(link, data["teacher_id"])
 
-        db.session.commit()
-
+        link = get_by_id(SubjectClass, link.id)
         teacher = get_by_id(Admin, link.teacher_id) if link.teacher_id else None
         class_info = get_by_id(ClassInfo, link.class_info_id)
-        subject = get_by_id(Subject, subject_id)  # noqa: F841
+        subject = get_by_id(Subject, subject_id)
 
         return {
             "id": link.id,
@@ -374,8 +351,7 @@ class SubjectClassResource(Resource):
             SubjectClass.subject_id == subject_id, SubjectClass.class_info_id == class_id
         ).first_or_404()
 
-        db.session.delete(link)
-        db.session.commit()
+        academics_service.delete_subject_class(link)
 
         return APIResponse.success(message="科目与班级关联已删除")
 
@@ -696,255 +672,12 @@ class SubjectImport(Resource):
         else:
             return APIResponse.error(message="不支持的文件格式", status_code=400)
 
-        success_count = 0
-        failed_count = 0
-        messages = []
-
-        def validate_item(item):
-            errors = []
-            for rule in validation_rules:
-                field = rule["field"]
-                rule_type = rule["rule_type"]
-                params = rule.get("params", {})
-                message = rule.get("message", f"{field}验证失败")
-                value = item.get(field)
-
-                if rule_type == "required" and value is None:
-                    errors.append(message)
-                elif rule_type == "max_length" and value and len(str(value)) > params.get("max", 100):
-                    errors.append(message)
-                elif rule_type == "min_length" and value and len(str(value)) < params.get("min", 1):
-                    errors.append(message)
-                elif rule_type == "regex" and value and not re.match(params.get("pattern", ""), str(value)):
-                    errors.append(message)
-            return errors
-
-        def resolve_relations(item):
-            resolved = item.copy()
-            validation_errors = []
-
-            class_name = item.get("class_name")
-            class_id = item.get("class_id")
-            resolved_class_id = None
-
-            if class_id and class_name:
-                validation_errors.append("不能同时提供班级ID和班级名称")
-            elif class_name:
-                if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                    validation_errors.append("班级名称格式无效，必须为非空字符串")
-                elif len(class_name.strip()) > 100:
-                    validation_errors.append("班级名称长度超过限制（最大100字符）")
-                else:
-                    class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                    if not class_info:
-                        validation_errors.append(f'班级 "{class_name}" 在系统中不存在')
-                    else:
-                        resolved_class_id = class_info.id
-            elif class_id:
-                if not isinstance(class_id, (int, str)):
-                    validation_errors.append("班级ID格式无效")
-                else:
-                    try:
-                        cid = int(class_id)
-                        class_info = get_by_id(ClassInfo, cid)
-                        if not class_info:
-                            validation_errors.append(f'班级ID "{class_id}" 在系统中不存在')
-                        else:
-                            resolved_class_id = cid
-                    except ValueError:
-                        validation_errors.append("班级ID必须为有效数字")
-
-            teacher_name = item.get("teacher_name")
-            teacher_id = item.get("teacher_id")
-            resolved_teacher_id = None
-
-            if teacher_id and teacher_name:
-                validation_errors.append("不能同时提供教师ID和教师姓名")
-            elif teacher_name:
-                if not isinstance(teacher_name, str) or len(teacher_name.strip()) == 0:
-                    validation_errors.append("教师姓名格式无效，必须为非空字符串")
-                elif len(teacher_name.strip()) > 50:
-                    validation_errors.append("教师姓名长度超过限制（最大50字符）")
-                else:
-                    admin = Admin.query.filter(Admin.real_name == teacher_name.strip()).first()
-                    if not admin:
-                        admin = Admin.query.filter(Admin.username == teacher_name.strip()).first()
-                    if not admin:
-                        validation_errors.append(f'教师 "{teacher_name}" 在系统中不存在')
-                    else:
-                        if admin.role not in ["admin", "teacher"]:
-                            validation_errors.append(f'用户 "{teacher_name}" 的角色不是管理员或教师，无法担任授课教师')
-                        resolved_teacher_id = admin.id
-            elif teacher_id:
-                if not isinstance(teacher_id, (int, str)):
-                    validation_errors.append("教师ID格式无效")
-                else:
-                    try:
-                        tid = int(teacher_id)
-                        admin = get_by_id(Admin, tid)
-                        if not admin:
-                            validation_errors.append(f'教师ID "{teacher_id}" 在系统中不存在')
-                        else:
-                            if admin.role not in ["admin", "teacher"]:
-                                validation_errors.append(
-                                    f'用户ID "{teacher_id}" 的角色不是管理员或教师，无法担任授课教师'
-                                )
-                            resolved_teacher_id = tid
-                    except ValueError:
-                        validation_errors.append("教师ID必须为有效数字")
-
-            resolved["_validation_errors"] = validation_errors
-            resolved["_class_id"] = resolved_class_id
-            resolved["_teacher_id"] = resolved_teacher_id
-            return resolved
-
-        for item in import_list:
-            try:
-                if item.get("__error__"):
-                    failed_count += 1
-                    messages.append(
-                        {
-                            "name": "未知",
-                            "action": "failed",
-                            "message": item.get("__message__", "数据格式错误"),
-                            "row_data": item,
-                        }
-                    )
-                    continue
-
-                errors = validate_item(item)
-                if errors:
-                    failed_count += 1
-                    messages.append(
-                        {
-                            "name": item.get("name", "未知"),
-                            "action": "failed",
-                            "message": f'验证失败: {", ".join(errors)}',
-                            "row_data": item,
-                            "error_fields": list(
-                                set([rule["field"] for rule in validation_rules if item.get(rule["field"]) is None])
-                            ),
-                        }
-                    )
-                    continue
-
-                resolved_item = resolve_relations(item)
-
-                relation_errors = resolved_item.get("_validation_errors", [])
-                if relation_errors:
-                    failed_count += 1
-                    messages.append(
-                        {
-                            "name": item.get("name", "未知"),
-                            "action": "failed",
-                            "message": f'关联验证失败: {", ".join(relation_errors)}',
-                            "row_data": item,
-                            "error_fields": ["class_name", "class_id", "teacher_name", "teacher_id"],
-                        }
-                    )
-                    continue
-
-                existing = Subject.query.filter_by(name=resolved_item["name"]).first()
-                subject_id = None
-
-                if existing:
-                    if conflict_strategy == "skip":
-                        messages.append(
-                            {
-                                "name": resolved_item["name"],
-                                "action": "skipped",
-                                "message": f'科目 "{resolved_item["name"]}" 已存在，已跳过',
-                            }
-                        )
-                        continue
-                    elif conflict_strategy == "update":
-                        existing.code = resolved_item.get("code", existing.code)
-                        existing.grade = resolved_item.get("grade", existing.grade)
-                        existing.description = resolved_item.get("description", existing.description)
-                        existing.color = resolved_item.get("color", existing.color)
-                        existing.is_active = resolved_item.get("is_active", existing.is_active)
-                        existing.updated_at = datetime.now()
-                        subject_id = existing.id
-
-                        messages.append(
-                            {
-                                "name": resolved_item["name"],
-                                "action": "updated",
-                                "message": f'科目 "{resolved_item["name"]}" 已更新',
-                            }
-                        )
-                else:
-                    new_subject = Subject(
-                        name=resolved_item["name"],
-                        code=resolved_item.get("code"),
-                        grade=resolved_item.get("grade"),
-                        description=resolved_item.get("description"),
-                        color=resolved_item.get("color", "#10B981"),
-                        is_active=resolved_item.get("is_active", True),
-                    )
-                    db.session.add(new_subject)
-                    db.session.flush()
-                    subject_id = new_subject.id
-
-                    messages.append(
-                        {
-                            "name": resolved_item["name"],
-                            "action": "created",
-                            "message": f'科目 "{resolved_item["name"]}" 已创建',
-                        }
-                    )
-
-                if subject_id and resolved_item.get("_class_id"):
-                    existing_link = SubjectClass.query.filter(
-                        SubjectClass.subject_id == subject_id, SubjectClass.class_info_id == resolved_item["_class_id"]
-                    ).first()
-                    if existing_link:
-                        if resolved_item.get("_teacher_id"):
-                            existing_link.teacher_id = resolved_item["_teacher_id"]
-                            messages.append(
-                                {
-                                    "name": resolved_item["name"],
-                                    "action": "updated",
-                                    "message": f'科目 "{resolved_item["name"]}" 与班级关联已更新',
-                                }
-                            )
-                    else:
-                        new_link = SubjectClass(
-                            subject_id=subject_id,
-                            class_info_id=resolved_item["_class_id"],
-                            teacher_id=resolved_item.get("_teacher_id"),
-                        )
-                        db.session.add(new_link)
-                        messages.append(
-                            {
-                                "name": resolved_item["name"],
-                                "action": "created",
-                                "message": f'科目 "{resolved_item["name"]}" 与班级关联已创建',
-                            }
-                        )
-
-                success_count += 1
-            except Exception as e:
-                failed_count += 1
-                messages.append(
-                    {
-                        "name": item.get("name", "未知"),
-                        "action": "failed",
-                        "message": f"导入失败: {str(e)}",
-                        "row_data": item,
-                        "error_fields": ["system"],
-                    }
-                )
-
-        db.session.commit()
-
-        return {
-            "success": True,
-            "total": len(import_list),
-            "success_count": success_count,
-            "failed_count": failed_count,
-            "messages": messages,
-        }
+        result = academics_service.execute_subject_import(
+            import_list=import_list,
+            validation_rules=validation_rules,
+            conflict_strategy=conflict_strategy,
+        )
+        return result
 
 
 @ns_subjects.route("/order")
@@ -957,12 +690,7 @@ class SubjectOrder(Resource):
         if not data or not isinstance(data, list):
             return APIResponse.error(message="无效数据: 应为 [{id, order}] 列表", status_code=400)
         try:
-            for item in data:
-                subject = Subject.query.get(item.get("id"))
-                if subject:
-                    subject.sort_order = item.get("order", 0)
-            db.session.commit()
+            academics_service.update_subject_order(data)
             return APIResponse.success(message="排序更新成功")
         except Exception as e:
-            db.session.rollback()
             return APIResponse.error(message=str(e))

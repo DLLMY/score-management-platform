@@ -37,7 +37,7 @@ class TestScorePredictService:
         with app.app_context():
             for i in range(10):
                 record = ScoreRecord(
-                    user_id=sample_user.id,
+                    student_id=sample_user.id,
                     rule_id=1,
                     score_change=5 if i % 2 == 0 else -3,
                     description="测试记录"
@@ -99,7 +99,7 @@ class TestScorePredictService:
         with app.app_context():
             for i in range(10):
                 record = ScoreRecord(
-                    user_id=sample_user.id,
+                    student_id=sample_user.id,
                     rule_id=1,
                     score_change=5,
                     description="测试记录"

@@ -24,6 +24,25 @@ _auto_start_lock = threading.Lock()
 _auto_start_attempted = False
 
 
+def _safe(default):
+    """R8 修复: Redis 方法统一降级——连接断开/MISCONF 时返回默认值而非裸抛 ConnectionError。
+
+    模块级函数（类体内引用类名不可用，会 NameError）。
+    """
+
+    def deco(fn):
+        def wrapper(self, *args, **kwargs):
+            try:
+                return fn(self, *args, **kwargs)
+            except Exception as e:
+                print(f"Redis {fn.__name__} error (degraded): {e}")
+                return default() if callable(default) else default
+
+        return wrapper
+
+    return deco
+
+
 class RedisCache:
     def __init__(self, app=None):
         self.client = None
@@ -317,6 +336,7 @@ class RedisCache:
             self.client = None
             return None
 
+    @_safe(None)
     def hget(self, name: str, key: str) -> Optional[str]:
         if not self.client:
             return None
@@ -332,61 +352,73 @@ class RedisCache:
             print(f"Redis hset error: {e}")
             return False
 
+    @_safe({})
     def hgetall(self, name: str) -> dict:
         if not self.client:
             return {}
         return self.client.hgetall(self._key(name)) or {}
 
+    @_safe(0)
     def hdel(self, name: str, *keys) -> int:
         if not self.client:
             return 0
         return self.client.hdel(self._key(name), *keys)
 
+    @_safe(0)
     def lpush(self, key: str, *values) -> int:
         if not self.client:
             return 0
         return self.client.lpush(self._key(key), *values)
 
+    @_safe(None)
     def rpop(self, key: str) -> Optional[str]:
         if not self.client:
             return None
         return self.client.rpop(self._key(key))
 
+    @_safe(0)
     def llen(self, key: str) -> int:
         if not self.client:
             return 0
         return self.client.llen(self._key(key))
 
+    @_safe(set)
     def smembers(self, key: str) -> set:
         if not self.client:
             return set()
         return self.client.smembers(self._key(key)) or set()
 
+    @_safe(0)
     def sadd(self, key: str, *values) -> int:
         if not self.client:
             return 0
         return self.client.sadd(self._key(key), *values)
 
+    @_safe(0)
     def srem(self, key: str, *values) -> int:
         if not self.client:
             return 0
         return self.client.srem(self._key(key), *values)
 
+    @_safe(0)
     def zadd(self, key: str, mapping: dict) -> int:
         if not self.client:
             return 0
         return self.client.zadd(self._key(key), mapping)
 
+    @_safe([])
     def zrange(self, key: str, start: int, end: int, desc: bool = False) -> list:
         if not self.client:
             return []
         return self.client.zrange(self._key(key), start, end, desc=desc)
 
+    @_safe(None)
     def zrevrank(self, key: str, member: str) -> Optional[int]:
         if not self.client:
             return None
         return self.client.zrevrank(self._key(key), member)
 
+    @_safe(None)
     def zscore(self, key: str, member: str) -> Optional[float]:
         if not self.client:
             return None

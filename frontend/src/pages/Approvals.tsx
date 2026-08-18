@@ -196,7 +196,7 @@ function Approvals() {
         case 'other':
           return '其他';
         default:
-          return type;
+          return '未知类型';
       }
     };
   }, []);

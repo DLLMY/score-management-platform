@@ -94,13 +94,16 @@ function SeatingChartPage() {
       showToast('warning', '请输入座次表名称');
       return;
     }
+    // 边界：行列数钳制在合理范围（1-50），防止 -5/9999 等非法值
+    const rows = Math.min(50, Math.max(1, Math.round(formData.rows || 6)));
+    const columns = Math.min(50, Math.max(1, Math.round(formData.columns || 7)));
     setIsLoading(true);
     try {
       const data: SeatingChartCreateInput = {
         name: formData.name,
         class_id: formData.class_id,
-        rows: formData.rows,
-        columns: formData.columns,
+        rows,
+        columns,
         strategy: formData.strategy,
       };
       const newChart = await api.seating.create(data);
@@ -137,6 +140,8 @@ function SeatingChartPage() {
 
   const handleAutoArrange = useCallback(async () => {
     if (!selectedChart) return;
+    // M1: 自动排列会覆盖当前整张座次表，先确认
+    if (!window.confirm('自动排列将覆盖当前座次表的全部座位，确定继续吗？')) return;
     setIsArranging(true);
     try {
       const result = await api.seating.autoArrange(

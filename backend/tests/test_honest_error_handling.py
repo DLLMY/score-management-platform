@@ -33,7 +33,7 @@ class TestHonestErrorHandling:
 
     def test_dashboard_exception_returns_error_not_fake_zeros(self, client, session):
         """dashboard /stats 数据服务抛异常 → success:false，不再返回全 0 假统计。"""
-        from api.dashboard_routes import dashboard_service
+        from api.analytics.dashboard_routes import dashboard_service
 
         token = client.post('/api/auth/login', json={
             'username': 'test_admin', 'password': 'test_password'

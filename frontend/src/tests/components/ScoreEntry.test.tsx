@@ -3,9 +3,17 @@
  */
 /// <reference types="jest" />
 import { screen, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import ScoreEntry from '../../pages/ScoreEntry';
 import { mockLocalStorage, renderWithProviders } from '../utils/test-utils';
 import { usePermissionStore } from '../../stores';
+
+// 通用 api mock：任何嵌套方法返回空数组（渲染组件不再真实 fetch → 消除 fetch failed 噪音）
+vi.mock('../../services/api', () => {
+  const empty = () => Promise.resolve([]);
+  const proxify = () => new Proxy({}, { get: () => empty });
+  return { __esModule: true, default: new Proxy({}, { get: () => proxify() }) };
+});
 
 describe('ScoreEntry Component', () => {
   beforeEach(() => {

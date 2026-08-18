@@ -1,4 +1,4 @@
-from models import db, User, TimeRule, ScoreRankRule
+from models import db, User, TimeRule, ScoreRankRule, ScoreRecord
 from datetime import datetime, date, time
 from typing import Dict, Tuple, Optional
 
@@ -22,9 +22,14 @@ class UnlockValidator:
         return None
 
     @staticmethod
-    def validate_unlock(card_id: str) -> Tuple[bool, str, Optional[Dict]]:
+    def validate_unlock(card_id: str, skip_time_window: bool = False) -> Tuple[bool, str, Optional[Dict]]:
         """
         验证开锁资格
+
+        Args:
+            card_id: 学生卡号
+            skip_time_window: 跳过时段检查（班主任放行/已有全局时段校验的路径传 True，
+                              避免双重时段拦截违背"一键放行"语义；默认 False 保持全量校验）
 
         Returns:
             Tuple[是否允许, 原因, 用户信息]
@@ -86,7 +91,7 @@ class UnlockValidator:
                 },
             )
 
-        if not UnlockValidator._check_time_window():
+        if not UnlockValidator._check_time_window() and not skip_time_window:
             return False, "not_in_time_window", {"current_score": user.current_score}
 
         return (
@@ -109,11 +114,14 @@ class UnlockValidator:
             user.today_unlock_count = 0
             user.last_unlock_date = today
 
-        return user.today_unlock_count < user.daily_unlock_limit
+        # R2 复核修复: daily_unlock_limit/today_unlock_count 历史数据可能为 NULL → None 比较 TypeError
+        limit = user.daily_unlock_limit if user.daily_unlock_limit is not None else 5
+        used = user.today_unlock_count or 0
+        return used < limit
 
     @staticmethod
     def _check_weekly_limit(user: User, weekly_limit: int) -> bool:
-        """检查每周开门次数限制"""
+        """检查每周开门次数限制（weekly_unlock_count/week_start_date 已落库，R2）"""
         if not hasattr(user, "weekly_unlock_count"):
             user.weekly_unlock_count = 0
         if not hasattr(user, "week_start_date"):
@@ -132,7 +140,7 @@ class UnlockValidator:
             user.weekly_unlock_count = 0
             user.week_start_date = date.today()
 
-        return user.weekly_unlock_count < weekly_limit
+        return (user.weekly_unlock_count or 0) < weekly_limit
 
     @staticmethod
     def _check_time_window() -> bool:
@@ -155,10 +163,12 @@ class UnlockValidator:
             if start <= current_time <= end:
                 return True
 
-        return True
+        # R2 修复: 配置了时段规则但当前时刻不匹配任何规则 → 拒绝（原兜底 return True 恒放行，规则形同虚设）
+        return False
 
     @staticmethod
     def record_unlock(user: User) -> None:
+        """开锁记账：扣分 + 日/周计数 + 写积分流水（统一写端，描述词与统计 like('%开锁%') 一致，R2）"""
         today = date.today()
 
         if user.last_unlock_date != today:
@@ -178,10 +188,19 @@ class UnlockValidator:
             user.weekly_unlock_count = 0
             user.week_start_date = today
 
-        user.today_unlock_count += 1
-        user.weekly_unlock_count = getattr(user, "weekly_unlock_count", 0) + 1
-        user.current_score = max(0, user.current_score - UnlockValidator.UNLOCK_COST)
+        user.today_unlock_count = (user.today_unlock_count or 0) + 1
+        user.weekly_unlock_count = (user.weekly_unlock_count or 0) + 1
+        user.current_score = max(0, (user.current_score or 0) - UnlockValidator.UNLOCK_COST)
         user.updated_at = datetime.now()
+
+        # 积分流水：描述词统一"开锁扣分"（analysis/composite 统计均按 like('%开锁%') 匹配）
+        record = ScoreRecord(
+            student_id=user.id,
+            score_change=-UnlockValidator.UNLOCK_COST,
+            description="开锁扣分",
+            operator="MQTT System",
+        )
+        db.session.add(record)
 
         db.session.commit()
 

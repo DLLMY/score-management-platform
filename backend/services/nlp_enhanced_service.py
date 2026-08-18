@@ -1290,7 +1290,15 @@ class EnhancedNLPParserService:
         if now - self._cache["cache_time"] > self._cache["cache_ttl"]:
             self._cache["users"] = User.query.filter(User.is_active).all()
             self._cache["user_names"] = {u.name for u in self._cache["users"]}
-            self._cache["name_to_id"] = {u.name: u.id for u in self._cache["users"]}
+            # S6-B-P0-5 修复: 重名学生 last-wins 会记错人——重名时 id 置 None（歧义），
+            # execute_scoring 对 user_id=None 返回"存在重名学生请指定班级"
+            _nti = {}
+            for _u in self._cache["users"]:
+                if _u.name in _nti:
+                    _nti[_u.name] = None
+                else:
+                    _nti[_u.name] = _u.id
+            self._cache["name_to_id"] = _nti
             self._cache["behavior_keywords"] = NLPBehaviorKeyword.query.all()
             self._cache["rules_by_intent"] = {}
             for intent in ["add", "deduct", "query", "reset"]:
@@ -1747,7 +1755,8 @@ class EnhancedNLPParserService:
                     }
                 )
 
-        behavior_keywords = NLPBehaviorKeyword.query.all()
+        # S10 修复: 每请求全表查行为词库 → 走 _refresh_cache 300s TTL 缓存
+        behavior_keywords = self._get_behavior_keywords()
         for kw in behavior_keywords:
             if kw.keyword in text_no_name:
                 entities["behaviors"].append(
@@ -1900,14 +1909,21 @@ class EnhancedNLPParserService:
 
     def determine_intent(self, text, behavior_result):
         text_lower = text.lower()
+        # S6 修复: 否定词前缀（"不要扣分/别加分/禁止减分"含意图词子串 → 原误判意图）
+        _NEG_PREFIXES = ("不要", "别", "请勿", "禁止", "不想", "别给", "别扣", "别加")
 
         # 快速规则匹配（优先级最高）
         rule_based_intent = None
         for intent, keywords in self.intent_keywords.items():
             for kw in keywords:
-                if kw in text_lower:
-                    rule_based_intent = intent
-                    break
+                kw_pos = text_lower.find(kw)
+                if kw_pos == -1:
+                    continue
+                prefix_ctx = text_lower[max(0, kw_pos - 2):kw_pos]
+                if any(prefix_ctx.endswith(neg) for neg in _NEG_PREFIXES):
+                    continue  # 否定前缀 → 不命中该意图
+                rule_based_intent = intent
+                break
             if rule_based_intent:
                 break
         if rule_based_intent and rule_based_intent != "unknown":
@@ -2839,16 +2855,43 @@ class EnhancedNLPParserService:
     def execute_scoring(self, text, manual_correction=None, context_history=None):
         parse_result = self.parse(text, context_history=context_history)
 
-        if not parse_result["success"] and not manual_correction:
+        # S6-B-P0-2 修复: 复合句（"张三加分，李四扣分"）原静默只执行第一人/第一条规则 → 漏记。
+        # 不支持多目标执行，改为明确提示逐条确认（诚实拒绝而非静默丢）。
+        valid_intents = [
+            i for i in parse_result.get("all_intents", [])
+            if isinstance(i, dict) and i.get("intent") not in ("unknown", "query")
+        ]
+        if len(valid_intents) > 1:
             return {
                 "success": False,
-                "message": "无法识别意图，请手动确认",
+                "message": "检测到多条评分指令，请逐条确认执行（当前仅支持单条指令）",
+                "parse_result": parse_result,
+            }
+
+        if not parse_result["success"] and not manual_correction:
+            # S6-B-P0-6 修复: 空行为词库/无匹配规则时如实说明（原统一"无法识别意图"误导）
+            intent_hint = parse_result.get("intent")
+            if intent_hint in ("add", "deduct"):
+                message = (
+                    "已识别为%s指令但无匹配的行为规则（行为词库可能为空或未配置），请手动确认"
+                    % ("加分" if intent_hint == "add" else "扣分")
+                )
+            else:
+                message = "无法识别意图，请手动确认"
+            return {
+                "success": False,
+                "message": message,
                 "parse_result": parse_result,
             }
 
         if manual_correction:
             intent = manual_correction.get("intent", parse_result["intent"])
             score_value = manual_correction.get("score_value", 0)
+            # S6-B-P0-3 修复: 分数符号按意图归一化（deduct 误存正数 → 扣分变加分）
+            if intent == "deduct" and score_value is not None and score_value > 0:
+                score_value = -score_value
+            elif intent == "add" and score_value is not None and score_value < 0:
+                score_value = -score_value
             behavior_tags = manual_correction.get("behavior_tags", [])
             behavior_description = manual_correction.get("behavior_description", parse_result["behavior"])
 
@@ -2896,6 +2939,11 @@ class EnhancedNLPParserService:
                 rule.usage_count = (rule.usage_count or 0) + 1
                 rule.last_used_at = datetime.now()
                 score_value = rule.score_value
+                # S6-B-P0-3 修复: 分数符号按规则 score_type 归一化（deduct 规则误存正数 → 扣分变加分）
+                if rule.score_type == "deduct" and score_value is not None and score_value > 0:
+                    score_value = -score_value
+                elif rule.score_type == "add" and score_value is not None and score_value < 0:
+                    score_value = -score_value
             else:
                 score_value = parse_result["matched_rules"][0]["score_value"]
                 behavior_desc = parse_result["matched_rules"][0]["behavior_description"]
@@ -2926,15 +2974,29 @@ class EnhancedNLPParserService:
             }
 
         if user:
-            old_score = user.current_score
-            user.current_score = max(0, min(100, user.current_score + score_value))
+            old_score = user.current_score or 0
+            # S2 修复: 走标准积分链路——原直接 max(0,min(100,current+delta))：
+            # 不写流水/不原子（并发丢更新）/限额写死 0-100（非 SystemConfig）/不触发综合分重算。
+            from models import ScoreRecord, SystemConfig as _SysCfg
+            from utils.score_utils import atomic_score_update
+
+            _cfg = _SysCfg.query.first()
+            _min_s = _cfg.min_score if _cfg else 0
+            _max_s = _cfg.max_score if _cfg else 100
+            _ok, final_score = atomic_score_update(
+                user.id, score_value, min_score=_min_s, max_score=_max_s
+            )
+            if not _ok:
+                final_score = max(_min_s, min(_max_s, old_score + score_value))
+            user.current_score = final_score
             user.updated_at = datetime.now()
 
             from utils.logger import log_operation
 
-            action = "加分" if score_value > 0 else "减分"
+            action = "加分" if final_score - old_score >= 0 else "减分"
             description = (
-                f"智能评分{action}: {user.name} {action}{abs(score_value)}分，" f"原因: {rule.behavior_description}"
+                f"智能评分{action}: {user.name} {action}{abs(final_score - old_score)}分，"
+                f"原因: {getattr(rule, 'behavior_description', '') or ''}"
             )
 
             log_operation(
@@ -2943,15 +3005,35 @@ class EnhancedNLPParserService:
                 target_id=user.id,
                 description=description,
                 before_data={"score": old_score},
-                after_data={"score": user.current_score},
+                after_data={"score": final_score},
             )
+
+            # S2 修复: 补积分流水（与手动录入一致），规则为 NLP 规则（非 ScoreRule）→ rule_id 置空，
+            # 规则信息进描述，避免外键语义错位。
+            db.session.add(
+                ScoreRecord(
+                    student_id=user.id,
+                    rule_id=None,
+                    score_change=final_score - old_score,
+                    description=description,
+                    operator="NLP System",
+                )
+            )
+
+            # S2 修复: 触发综合评分重算（与手动/批量/审批/MQTT 路径一致）
+            try:
+                from services.composite_score_service import CompositeScoreService
+
+                CompositeScoreService.recalculate_user_score(user.id)
+            except Exception:
+                pass
 
             usage_record = NLPRuleUsage(
                 rule_id=rule.id,
-                user_id=user.id,
+                student_id=user.id,
                 input_text=text,
                 matched_keyword=rule.behavior_keyword,
-                score_change=score_value,
+                score_change=final_score - old_score,
                 is_manual_correction=manual_correction is not None,
             )
 
@@ -2961,7 +3043,7 @@ class EnhancedNLPParserService:
                 matched_keyword=rule.behavior_keyword if rule else parse_result["behavior"],
                 intent=parse_result["intent"],
                 confidence=parse_result["confidence"],
-                user_id=parse_result["user_id"],
+                student_id=parse_result["user_id"],
                 behavior_description=parse_result["behavior"],
                 score_change=score_value,
                 is_manual_correction=manual_correction is not None,

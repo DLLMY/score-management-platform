@@ -81,6 +81,8 @@ function ClassCompare() {
       setCompareData(list);
       if (list.length === 0) {
         showToast('info', '所选班级暂无对比数据');
+      } else {
+        showToast('success', '对比数据已生成'); // L9: 成功反馈
       }
     } catch (err: unknown) {
       showToast('error', '获取对比数据失败: ' + (err as Error).message);

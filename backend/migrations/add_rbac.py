@@ -49,18 +49,16 @@ def run_migration():
         from models import RolePermission
 
         default_roles = [
-            {"role_code": "admin", "role_name": "超级管理员", "description": "拥有系统所有权限", "permissions": "all"},
+            {"role_code": "admin", "role_name": "超级管理员", "description": "拥有系统所有权限"},
             {
                 "role_code": "operator",
                 "role_name": "运维人员",
                 "description": "负责设备运维管理",
-                "permissions": "device.view,device.edit,device.groups",
             },
             {
                 "role_code": "viewer",
                 "role_name": "查看者",
                 "description": "仅可查看数据",
-                "permissions": "device.view,data.view",
             },
         ]
 

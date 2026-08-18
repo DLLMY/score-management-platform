@@ -48,6 +48,7 @@ function ActivityManage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -119,6 +120,8 @@ function ActivityManage() {
       showToast('error', '请先选择班级');
       return;
     }
+    if (submitting) return; // M2: 防重复提交
+    setSubmitting(true);
 
     try {
       const payload: ActivityCreateInput = {
@@ -144,8 +147,10 @@ function ActivityManage() {
     } catch (error) {
       logger.error('保存活动失败:', error);
       showToast('error', formData.id ? '更新活动失败' : '创建活动失败');
+    } finally {
+      setSubmitting(false);
     }
-  }, [formData, validateForm, showToast, handleCloseModal, fetchActivities, selectedClassId]);
+  }, [formData, validateForm, showToast, handleCloseModal, fetchActivities, selectedClassId, submitting]);
 
   const handleDelete = useCallback(
     async (id: number) => {
@@ -530,10 +535,11 @@ function ActivityManage() {
               </button>
               <button
                 onClick={handleSubmit}
-                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-200 font-medium'
+                disabled={submitting}
+                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <Check className='w-5 h-5' />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </button>
             </div>
           </div>

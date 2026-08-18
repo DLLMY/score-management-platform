@@ -1,9 +1,10 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, User, get_by_id
+from models import User, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from datetime import datetime
+from services.user_service import user_service
 from services.unlock_validator import (
     add_to_blacklist,
     remove_from_blacklist,
@@ -255,16 +256,11 @@ class ToggleUserActive(Resource):
 
         将用户标记为启用或禁用。禁用的用户无法使用开锁功能。
         """
-        user = get_by_id(User, user_id)
+        is_active = user_service.toggle_active(user_id)
 
-        if not user:
+        if is_active is None:
             return APIResponse.error(message="用户不存在", status_code=404)
 
-        user.is_active = not user.is_active
-        user.updated_at = datetime.now()
-
-        db.session.commit()
-
         return APIResponse.success(
-            data={"is_active": user.is_active}, message=f'用户已{"启用" if user.is_active else "禁用"}'
+            data={"is_active": is_active}, message=f'用户已{"启用" if is_active else "禁用"}'
         )

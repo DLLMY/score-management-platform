@@ -6,7 +6,7 @@ Heartbeat Service Test Cases
 """
 import uuid
 from datetime import datetime, timedelta
-from models import Device, DeviceAlert
+from models import Device, Alert
 try:
     from services.heartbeat_service import update_device_heartbeat
 except ImportError:
@@ -119,12 +119,13 @@ class TestHeartbeatService:
             )
             session.add(device)
 
-            alert = DeviceAlert(
+            alert = Alert(
                 device_id=device.device_id,
                 alert_type='heartbeat_timeout',
                 severity='warning',
                 message='心跳超时告警',
-                is_resolved=False
+                is_resolved=False,
+                source='device'
             )
             session.add(alert)
             session.commit()

@@ -49,13 +49,11 @@ export { Header, Sidebar, PageTransition } from './layout';
 
 // 特殊组件
 export { default as ImportExportPanel } from './special/ImportExportPanel';
-export { default as PWAUpdateToast } from './special/PWAUpdateToast';
 export { default as ErrorBoundary, ErrorBoundaryFallback, ErrorBoundaryWrapper } from './special/ErrorBoundary';
 export { default as DevTools } from './special/DevTools';
 export { default as ClassStatusBadge } from './special/ClassStatusBadge';
 export type { ClassStatusBadgeProps } from './special/ClassStatusBadge';
 export { GlobalLoading, GlobalErrorBoundary, NetworkStatusIndicator } from './special/GlobalStateComponents';
-export { default as withToast } from './special/withToast';
 
 // 图片优化组件
 export { OptimizedImage, LazyImage } from './image';

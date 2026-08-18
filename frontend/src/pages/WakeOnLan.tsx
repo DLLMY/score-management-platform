@@ -83,6 +83,9 @@ export default function WakeOnLan() {
       return;
     }
 
+    // M1: 批量唤醒为群发操作，先确认
+    if (!window.confirm(`确定要向 ${validMacs.length} 台设备发送唤醒指令吗？`)) return;
+
     setIsLoading(true);
     setWakeResult(null);
 
@@ -154,6 +157,8 @@ export default function WakeOnLan() {
 
   // Delete device
   const handleDeleteDevice = async (id: number) => {
+    // M1: 删除设备不可恢复，先确认
+    if (!window.confirm('确定要删除该设备吗？此操作不可恢复。')) return;
     setIsLoading(true);
     try {
       await api.wakeOnLan.deleteDevice(id);
@@ -190,7 +195,7 @@ export default function WakeOnLan() {
         </div>
         <div className="flex gap-2">
           <PermissionButton
-            permission='device.manage'
+            permission='device.edit'
             onClick={handleWakeAll}
             disabled={isLoading}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
@@ -199,7 +204,7 @@ export default function WakeOnLan() {
             Wake All
           </PermissionButton>
           <PermissionButton
-            permission='device.manage'
+            permission='device.create'
             onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -262,7 +267,7 @@ export default function WakeOnLan() {
             </div>
             <div className="flex items-end gap-2">
               <PermissionButton
-                permission='device.manage'
+                permission='device.create'
                 onClick={handleAddDevice}
                 disabled={isLoading}
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
@@ -320,7 +325,7 @@ export default function WakeOnLan() {
                 </div>
               </div>
               <PermissionButton
-                permission='device.manage'
+                permission='device.delete'
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteDevice(device.id);
@@ -337,7 +342,7 @@ export default function WakeOnLan() {
                 ID: {device.id}
               </span>
               <PermissionButton
-                permission='device.manage'
+                permission='device.edit'
                 onClick={(e) => {
                   e.stopPropagation();
                   if (device.mac_address) {

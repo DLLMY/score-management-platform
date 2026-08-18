@@ -1,4 +1,5 @@
 import os
+import sys
 from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -13,20 +14,20 @@ _swagger_initialized = False
 
 
 def validate_secret_keys(app):
-    """验证密钥安全性"""
+    """验证密钥安全性；生产环境下无效密钥将拒绝启动（S1 硬失败）。"""
     secret_key = app.config.get("SECRET_KEY", "")
     jwt_secret = os.getenv("JWT_SECRET_KEY", "")
+    flask_env = os.getenv("FLASK_ENV", app.config.get("ENV", "development")).lower()
+    is_production = flask_env == "production"
 
     validation_errors = []
+    DEFAULT_SECRET = "your_secret_key_here_change_in_production"
+    DEFAULT_JWT = "CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p"
 
-    if secret_key == "your_secret_key_here_change_in_production":
-        validation_errors.append("SECRET_KEY 使用了默认值")
-
-    if len(secret_key) < 32:
-        validation_errors.append(f"SECRET_KEY 长度不足32位（当前{len(secret_key)}位）")
-
-    if not jwt_secret or len(jwt_secret) < 32:
-        validation_errors.append("JWT_SECRET_KEY 未设置或长度不足")
+    if not secret_key or secret_key == DEFAULT_SECRET or len(secret_key) < 32:
+        validation_errors.append("FLASK_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
+    if not jwt_secret or jwt_secret == DEFAULT_JWT or len(jwt_secret) < 32:
+        validation_errors.append("JWT_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
 
     if validation_errors:
         print("\n" + "=" * 60)
@@ -34,11 +35,80 @@ def validate_secret_keys(app):
         print("=" * 60)
         for error in validation_errors:
             print(f"  ❌ {error}")
-        if app.config.get("ENV") == "production":
-            print("  ⚠️  生产环境下请确保所有密钥都已正确设置")
+        if is_production:
+            print("  🚨 生产环境下密钥校验失败，拒绝启动！")
+            print("     请设置 FLASK_SECRET_KEY 与 JWT_SECRET_KEY（均 >=32 位）后再部署。")
+            print("=" * 60 + "\n")
+            sys.exit(1)
+        else:
+            print("  ⚠️  非生产环境仅警告（开发 / 测试可继续使用当前密钥）")
         print("=" * 60 + "\n")
 
     return len(validation_errors) == 0
+
+
+def _current_flask_env(app):
+    return os.getenv("FLASK_ENV", app.config.get("ENV", "development")).lower()
+
+
+def _check_rbac_consistency(app):
+    """M3: 非致命 RBAC 一致性启动检查。
+
+    通过 importlib 加载 scripts/verify_rbac_consistency.py 的 run_check()，
+    在应用启动时快速校验 RBAC 权限目录 / 角色 / 映射是否一致。
+    生产环境发现问题仅告警（不阻断启动）；其余情况静默跳过。
+    """
+    try:
+        import importlib.util
+
+        basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        script_path = os.path.join(basedir, "scripts", "verify_rbac_consistency.py")
+        if not os.path.exists(script_path):
+            return
+        spec = importlib.util.spec_from_file_location("verify_rbac_consistency", script_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        if not hasattr(mod, "run_check"):
+            return
+        _issues, _infos, code = mod.run_check(check_only=True, apply=False)
+        if code == 0:
+            print("[启动检查] RBAC 一致性 OK")
+            return
+        print("⚠️  [启动检查] RBAC 一致性存在问题（非致命，服务继续启动）：")
+        for i in _issues:
+            print(f"   - {i}")
+        if _current_flask_env(app) == "production":
+            print("   🚨 生产环境建议先修复 RBAC 不一致再上线")
+    except Exception as e:  # 启动检查本身失败绝不应阻断服务启动
+        print(f"[启动检查] RBAC 检查跳过（异常：{e}）")
+
+
+def _check_redis_connectivity(app):
+    """R1: 非致命 Redis 启动连通性检查。
+
+    探测 Redis 是否可达；redis 客户端库未安装或实例不可达时仅告警并降级为内存缓存，
+    绝不阻断启动。生产环境下 Redis 不可达会显著告警以引起重视。
+    """
+    try:
+        import redis  # noqa: F401
+    except ImportError:
+        print("[R1] ⚠️  redis 客户端库未安装，缓存降级为内存（非致命）")
+        return
+    try:
+        host = os.getenv("REDIS_HOST", "localhost")
+        port = int(os.getenv("REDIS_PORT", "6379"))
+        db = int(os.getenv("REDIS_DB", "0"))
+        pwd = os.getenv("REDIS_PASSWORD", "")
+        url = f"redis://:{pwd}@{host}:{port}/{db}" if pwd else f"redis://{host}:{port}/{db}"
+        r = redis.Redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
+        r.ping()
+        print(f"[R1] Redis 连通性 OK ({url})")
+    except Exception as e:
+        msg = f"Redis 不可达（{e}），缓存降级为内存（非致命）"
+        if _current_flask_env(app) == "production":
+            print(f"[R1] 🚨 生产环境 {msg}")
+        else:
+            print(f"[R1] ⚠️  {msg}")
 
 
 def init_config(app, lightweight=False):
@@ -154,6 +224,22 @@ def init_config(app, lightweight=False):
 
     validate_secret_keys(app)
 
+    from utils.config_validator import validate_config
+
+    config_ok = validate_config()
+    if not config_ok and _current_flask_env(app) == "production":
+        # M1: 生产环境下配置校验失败（error 级）拒绝启动
+        print("🚨 生产环境配置校验失败，拒绝启动！详见上方配置验证报告。")
+        sys.exit(1)
+    elif not config_ok:
+        print("⚠️  配置校验存在错误（非生产环境仅警告，服务继续启动）")
+
+    # M3: 非致命 RBAC 一致性启动检查
+    _check_rbac_consistency(app)
+
+    # R1: 非致命 Redis 连通性检查
+    _check_redis_connectivity(app)
+
     from utils.performance_monitor import PerformanceMiddleware, start_performance_logger
 
     PerformanceMiddleware(app)
@@ -169,9 +255,5 @@ def init_config(app, lightweight=False):
 
     setup_cache_middleware(app)
     print("API缓存中间件已启用")
-
-    from utils.config_validator import validate_config
-
-    validate_config()
 
     return app

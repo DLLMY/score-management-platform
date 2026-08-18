@@ -51,7 +51,7 @@ class MQTTMessageService:
 
         today = datetime.now().date()
         records = ScoreRecord.query.filter(
-            ScoreRecord.user_id == user_id,
+            ScoreRecord.student_id == user_id,
             ScoreRecord.rule_id == rule_id,
             ScoreRecord.created_at >= datetime.combine(today, datetime.min.time()),
         ).all()
@@ -66,19 +66,21 @@ class MQTTMessageService:
         if rule.min_interval > 0:
             last_record = (
                 ScoreRecord.query.filter(
-                    ScoreRecord.user_id == user_id,
+                    ScoreRecord.student_id == user_id,
                     ScoreRecord.rule_id == rule_id,
                 )
                 .order_by(ScoreRecord.created_at.desc())
                 .first()
             )
 
-            time_diff = (datetime.now() - last_record.created_at).total_seconds()
-            if last_record and time_diff < rule.min_interval:
-                return {
-                    "allow": False,
-                    "message": (f"Too frequent, wait {rule.min_interval}s"),
-                }
+            # R8 修复: 判空顺序（原先算 time_diff 再判 last_record → 首笔使用 AttributeError 且无回包）
+            if last_record:
+                time_diff = (datetime.now() - last_record.created_at).total_seconds()
+                if time_diff < rule.min_interval:
+                    return {
+                        "allow": False,
+                        "message": (f"Too frequent, wait {rule.min_interval}s"),
+                    }
 
         return {"allow": True, "message": "Allowed"}
 
@@ -237,26 +239,19 @@ class MQTTMessageService:
         self._deduct_and_unlock(box_id, user, card_id)
 
     def _deduct_and_unlock(self, box_id, user, card_id):
-        """学生自助开箱扣 10 分并下发开箱成功结果（统一出口）。
+        """学生自助开箱统一出口：限额/黑名单/分数门槛校验（R2 统一 UnlockValidator）→ 扣分记账 → 下发开箱成功结果。
 
         供原路径（全局门禁/课表通过）与班主任策略放行路径共用。
+        skip_time_window=True：时段已由调用方校验（全局 TimeRule / 班主任策略），避免双重时段拦截。
         """
-        if user.current_score < 60:
-            self.publish_unlock_result(box_id, False, "score_low", user.current_score)
+        from services.unlock_validator import UnlockValidator
+
+        allowed, reason, info = UnlockValidator.validate_unlock(card_id, skip_time_window=True)
+        if not allowed:
+            self.publish_unlock_result(box_id, False, reason, user.current_score)
             return
-        with db_session_scope():
-            user.current_score -= 10
-            user.current_score = max(0, user.current_score)
-
-            record = ScoreRecord(
-                user_id=user.id,
-                score_change=-10,
-                description="Points deducted for unlock",
-                operator="MQTT System",
-            )
-            from models import db
-
-            db.session.add(record)
+        # R2: 统一记账（扣 10 分 + 日/周计数 + 流水"开锁扣分"），内部 commit
+        UnlockValidator.record_unlock(user)
 
         mqtt_manager.set_cached_user(card_id, user)
         self.publish_unlock_result(box_id, True, "score_ok", user.current_score)
@@ -401,8 +396,7 @@ class MQTTMessageService:
             with db_session_scope():
                 from models import Approval
 
-                approval = Approval(
-                    user_id=user.id,
+                approval = Approval(student_id=user.id,
                     type="score_add",
                     title="Device score add request",
                     description=(f"Device {device_id} requests to add +{amount} " f"points for {user.name}"),
@@ -458,8 +452,7 @@ class MQTTMessageService:
         else:
             with db_session_scope():
 
-                approval = Approval(
-                    user_id=user.id,
+                approval = Approval(student_id=user.id,
                     type="score_sub",
                     title="Device score subtract request",
                     description=(f"Device {device_id} requests to subtract -{amount} " f"points from {user.name}"),
@@ -539,12 +532,21 @@ class MQTTMessageService:
                     publish_mqtt(response_topic, json.dumps(response))
                 else:
                     with db_session_scope():
-                        actual_change = rule.score
-                        new_score = self.apply_score_limit(user.current_score + actual_change)
-                        actual_change = new_score - user.current_score
+                        # R5: SQL 原子累加 + 钳制（原 Python 读改写有并发竞态；钳制语义与 apply_score_limit 一致）
+                        from models import SystemConfig as _SysConfig
+                        from utils.score_utils import atomic_score_update
 
-                        record = ScoreRecord(
-                            user_id=user_id,
+                        _cfg = _SysConfig.query.first()
+                        _min_s = _cfg.min_score if _cfg else 0
+                        _max_s = _cfg.max_score if _cfg else 100
+                        _ok, new_score = atomic_score_update(
+                            user_id, rule.score, min_score=_min_s, max_score=_max_s
+                        )
+                        if not _ok:
+                            new_score = user.current_score or 0
+                        actual_change = new_score - (user.current_score or 0)
+
+                        record = ScoreRecord(student_id=user_id,
                             rule_id=rule_id,
                             score_change=actual_change,
                             description=description or rule.name,
@@ -562,6 +564,13 @@ class MQTTMessageService:
                                 client_id=client_id,
                             )
                             db.session.add(processed)
+
+                    # R4: MQTT 加分后触发综合评分重算（低频卡片操作，单学生聚合查询，失败不影响主流程）
+                    try:
+                        from services.composite_score_service import CompositeScoreService
+                        CompositeScoreService.recalculate_user_score(user_id)
+                    except Exception:
+                        pass
 
                     response = {
                         "success": True,
@@ -602,11 +611,21 @@ class MQTTMessageService:
                 else:
                     with db_session_scope():
                         actual_change = rule.score
-                        new_score = self.apply_score_limit(user.current_score + actual_change)
-                        actual_change = new_score - user.current_score
+                        # R5 补漏: SQL 原子累加 + 钳制（与 rule_id 路径一致）
+                        from models import SystemConfig as _SysCfg2
+                        from utils.score_utils import atomic_score_update
 
-                        record = ScoreRecord(
-                            user_id=user_id,
+                        _cfg2 = _SysCfg2.query.first()
+                        _min2 = _cfg2.min_score if _cfg2 else 0
+                        _max2 = _cfg2.max_score if _cfg2 else 100
+                        _ok2, new_score = atomic_score_update(
+                            user_id, actual_change, min_score=_min2, max_score=_max2
+                        )
+                        if not _ok2:
+                            new_score = user.current_score or 0
+                        actual_change = new_score - (user.current_score or 0)
+
+                        record = ScoreRecord(student_id=user_id,
                             rule_id=rule.id,
                             score_change=actual_change,
                             description=description or rule.name,
@@ -637,12 +656,25 @@ class MQTTMessageService:
                     publish_mqtt(response_topic, json.dumps(response))
         elif score_change is not None:
             with db_session_scope():
-                actual_change = int(score_change)
-                new_score = self.apply_score_limit(user.current_score + actual_change)
-                actual_change = new_score - user.current_score
+                try:
+                    actual_change = float(score_change)
+                except (TypeError, ValueError):
+                    actual_change = 0
+                # R5 补漏: SQL 原子累加 + 钳制
+                from models import SystemConfig as _SysCfg3
+                from utils.score_utils import atomic_score_update
 
-                record = ScoreRecord(
-                    user_id=user_id,
+                _cfg3 = _SysCfg3.query.first()
+                _min3 = _cfg3.min_score if _cfg3 else 0
+                _max3 = _cfg3.max_score if _cfg3 else 100
+                _ok3, new_score = atomic_score_update(
+                    user_id, actual_change, min_score=_min3, max_score=_max3
+                )
+                if not _ok3:
+                    new_score = user.current_score or 0
+                actual_change = new_score - (user.current_score or 0)
+
+                record = ScoreRecord(student_id=user_id,
                     score_change=actual_change,
                     description=description or "MQTT score adjustment",
                     operator=operator,
@@ -703,7 +735,7 @@ class MQTTMessageService:
             }
         else:
             with db_session_scope():
-                user = get_by_id(User, record.user_id)
+                user = get_by_id(User, record.student_id)
                 if user:
                     user.current_score -= record.score_change
                     user.current_score = max(0, user.current_score)

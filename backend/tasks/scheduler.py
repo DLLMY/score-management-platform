@@ -38,7 +38,7 @@ def scheduled_approval_timeout_check(app):
                     notification = {
                         "type": "approval_timeout",
                         "approval_id": approval.id,
-                        "user_id": approval.user_id,
+                        "user_id": approval.student_id,
                         "user_name": approval.user.name if approval.user else None,
                         "title": approval.title,
                         "description": approval.description,

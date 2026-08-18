@@ -50,6 +50,7 @@ function MentalHealth() {
   const [formData, setFormData] = useState<RecordFormData>(defaultRecordForm);
   const [errors, setErrors] = useState<Partial<Record<keyof RecordFormData, string>>>({});
   const [activeTab, setActiveTab] = useState<'records' | 'alerts'>('records');
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const fetchRecords = useCallback(async () => {
     setIsLoading(true);
@@ -113,7 +114,8 @@ function MentalHealth() {
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
-
+    if (submitting) return; // M2: 防重复提交
+    setSubmitting(true);
     try {
       const data: MentalHealthRecordCreateInput = {
         student_id: formData.student_id,
@@ -130,8 +132,10 @@ function MentalHealth() {
     } catch (error) {
       logger.error('创建记录失败:', error);
       showToast('error', '创建记录失败');
+    } finally {
+      setSubmitting(false);
     }
-  }, [formData, showToast, handleCloseForm, fetchRecords, fetchAlerts, validateForm]);
+  }, [formData, showToast, handleCloseForm, fetchRecords, fetchAlerts, validateForm, submitting]);
 
   const handleResolveAlert = useCallback(
     async (alertId: number) => {
@@ -614,21 +618,29 @@ function MentalHealth() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubmit();
+              }}
+              className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3"
+            >
               <button
+                type="button"
                 onClick={handleCloseForm}
                 className="px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors font-medium"
               >
                 取消
               </button>
               <button
-                onClick={handleSubmit}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-200 font-medium"
+                type="submit"
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-5 h-5" />
-                保存记录
+                {submitting ? '保存中...' : '保存记录'}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       )}

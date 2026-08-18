@@ -6,6 +6,12 @@ from utils.permission import requires_permission, get_current_admin, get_allowed
 from utils.logger import log_operation
 from services.redis_cache_service import get_cache_service
 from services.class_time_checker import ClassTimeChecker
+from services.score_record_service import (
+    create_record,
+    create_score_entry,
+    delete_record,
+    commit_batch_score_entry,
+)
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 
@@ -47,15 +53,16 @@ def check_rule_limits(user_id, rule_id):
 
     if rule.daily_limit > 0:
         today_count = ScoreRecord.query.filter(
-            ScoreRecord.user_id == user_id, ScoreRecord.rule_id == rule_id, ScoreRecord.created_at >= today_start
+            ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id, ScoreRecord.created_at >= today_start
         ).count()
         if today_count >= rule.daily_limit:
             return False, f"该规则今日已使用{today_count}次，达到上限{rule.daily_limit}次"
 
     if rule.min_interval > 0:
-        last_record = ScoreRecord.query.filter(ScoreRecord.user_id == user_id, ScoreRecord.rule_id == rule_id).order_by(
+        # F1 修复: Query 对象恒真，须 .first() 取记录，否则 last_record.created_at 抛 AttributeError → 500
+        last_record = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id).order_by(
             ScoreRecord.created_at.desc()
-        )
+        ).first()
         if last_record:
             time_diff = (now - last_record.created_at).total_seconds()
             if time_diff < rule.min_interval:
@@ -77,7 +84,7 @@ def _apply_score_data_isolation(query):
         return query
     if not allowed_classes:
         return query.filter(False)
-    return query.filter(exists().where((User.id == ScoreRecord.user_id) & (User.class_name.in_(allowed_classes))))
+    return query.filter(exists().where((User.id == ScoreRecord.student_id) & (User.class_name.in_(allowed_classes))))
 
 
 def _can_access_student(user_id):
@@ -159,6 +166,12 @@ class RecordList(Resource):
         """
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 50, type=int)
+        # F10 修复: 分页钳制（page>=1、per_page 1-200），防 page=0/负/超大
+        if page is None or page < 1:
+            page = 1
+        if per_page is None or per_page < 1:
+            per_page = 50
+        per_page = min(per_page, 200)
         user_id = request.args.get("user_id", type=int)
         rule_id = request.args.get("rule_id", type=int)
         start_date = request.args.get("start_date")
@@ -167,13 +180,21 @@ class RecordList(Resource):
         # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
         query = ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
         if user_id:
-            query = query.filter(ScoreRecord.user_id == user_id)
+            query = query.filter(ScoreRecord.student_id == user_id)
         if rule_id:
             query = query.filter(ScoreRecord.rule_id == rule_id)
         if start_date:
-            query = query.filter(ScoreRecord.created_at >= datetime.fromisoformat(start_date))
+            try:
+                start_dt = datetime.fromisoformat(start_date)
+            except ValueError:
+                return APIResponse.bad_request(message="start_date 格式非法（应为 ISO 日期）")
+            query = query.filter(ScoreRecord.created_at >= start_dt)
         if end_date:
-            query = query.filter(ScoreRecord.created_at <= datetime.fromisoformat(end_date))
+            try:
+                end_dt = datetime.fromisoformat(end_date)
+            except ValueError:
+                return APIResponse.bad_request(message="end_date 格式非法（应为 ISO 日期）")
+            query = query.filter(ScoreRecord.created_at <= end_dt)
 
         # 数据隔离：非管理员只能查看关联班级的数据
         query = _apply_score_data_isolation(query)
@@ -187,7 +208,8 @@ class RecordList(Resource):
                 "records": [
                     {
                         "id": r.id,
-                        "user_id": r.user_id,
+                        "user_id": r.student_id,
+"student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "rule_id": r.rule_id,
                         "rule_name": r.rule.name if r.rule else None,
@@ -247,26 +269,25 @@ class RecordList(Resource):
             return APIResponse.error(message="无权为该学生创建记录", status_code=403)
 
         try:
-            record = ScoreRecord(
-                user_id=user_id,
-                rule_id=data.get("rule_id"),
-                score_change=score_change,
-                description=data.get("description"),
-                operator=data.get("operator", "system"),
+            record, user_name = create_record(
+                {
+                    "user_id": user_id,
+                    "rule_id": data.get("rule_id"),
+                    "score_change": score_change,
+                    "description": data.get("description"),
+                    "operator": data.get("operator", "system"),
+                }
             )
-
-            user = get_by_id(User, user_id)
-            if user:
-                user.current_score = (user.current_score or 0) + score_change
-                user_name = user.name
-            else:
-                user_name = "未知用户"
-
-            db.session.add(record)
-            db.session.commit()
         except Exception as e:
             db.session.rollback()
             return APIResponse.error(message=f"创建积分记录失败: {str(e)}", status_code=500)
+
+        # R4: 手动创建积分记录同样触发综合评分重算（原仅 score-entry 路径触发 → 两套行为）
+        try:
+            from services.composite_score_service import CompositeScoreService
+            CompositeScoreService.recalculate_user_score(user_id)
+        except Exception:
+            pass
 
         # 记录操作日志（失败不影响主流程）
         try:
@@ -314,7 +335,7 @@ class RecordByUser(Resource):
         # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
         pagination = (
             ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
-            .filter_by(user_id=user_id)
+            .filter_by(student_id=user_id)
             .paginate(page=page, per_page=per_page, error_out=False)
         )
 
@@ -323,7 +344,8 @@ class RecordByUser(Resource):
                 "records": [
                     {
                         "id": r.id,
-                        "user_id": r.user_id,
+                        "user_id": r.student_id,
+"student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "rule_id": r.rule_id,
                         "rule_name": r.rule.name if r.rule else None,
@@ -385,13 +407,21 @@ class RecordStatistics(Resource):
 
         query = ScoreRecord.query
         if user_id:
-            query = query.filter(ScoreRecord.user_id == user_id)
+            query = query.filter(ScoreRecord.student_id == user_id)
         elif class_name:
             query = query.join(User).filter(User.class_name == class_name)
         if start_date:
-            query = query.filter(ScoreRecord.created_at >= datetime.fromisoformat(start_date))
+            try:
+                start_dt = datetime.fromisoformat(start_date)
+            except ValueError:
+                return APIResponse.bad_request(message="start_date 格式非法（应为 ISO 日期）")
+            query = query.filter(ScoreRecord.created_at >= start_dt)
         if end_date:
-            query = query.filter(ScoreRecord.created_at <= datetime.fromisoformat(end_date))
+            try:
+                end_dt = datetime.fromisoformat(end_date)
+            except ValueError:
+                return APIResponse.bad_request(message="end_date 格式非法（应为 ISO 日期）")
+            query = query.filter(ScoreRecord.created_at <= end_dt)
 
         # 数据隔离
         query = _apply_score_data_isolation(query)
@@ -420,7 +450,7 @@ class RecordStatistics(Resource):
         today = datetime.now().date()
         today_records = ScoreRecord.query.filter(ScoreRecord.created_at >= datetime.combine(today, datetime.min.time()))
         if user_id:
-            today_records = today_records.filter(ScoreRecord.user_id == user_id)
+            today_records = today_records.filter(ScoreRecord.student_id == user_id)
         today_count = today_records.count()
 
         result = {  # noqa: F841
@@ -540,53 +570,38 @@ class ScoreEntryResource(Resource):
         elif score_change is None:
             return APIResponse.error(message="必须提供规则ID或积分变化", status_code=400)
 
-        # 创建积分记录
-        record = ScoreRecord(
-            user_id=user_id, rule_id=rule_id, score_change=score_change, description=description, operator=operator
-        )
-
-        # 更新学生积分
+        # 学生存在性校验 + 排名对比用的 before/after 计算（只读；积分原子累加收口到 service，避免路由侧重复累加）
         user = get_by_id(User, user_id)
-        if user:
-            before_score = user.current_score or 0
-
-            # 使用缓存获取排名规则
-            from api.scores.rank_routes import _find_rank_by_score_binary_search, _get_active_rank_rules_cached
-
-            before_rules = _get_active_rank_rules_cached()
-            before_rank = _find_rank_by_score_binary_search(before_rules, before_score)
-            before_rank_name = before_rank.get("name") if before_rank else "无等级"
-
-            user.current_score = before_score + score_change
-            user_name = user.name
-
-            # 获取变动后的排名
-            after_rank = _find_rank_by_score_binary_search(before_rules, user.current_score)
-            after_rank_name = after_rank.get("name") if after_rank else "无等级"
-        else:
+        if not user:
             return APIResponse.error(message="学生不存在", status_code=400)
 
-        db.session.add(record)
+        before_score = user.current_score or 0
+        user_name = user.name
 
-        # 记录操作日志并关联到积分记录
-        log_entry = log_operation(
-            operation_type="score_entry",
-            target_type="record",
-            target_id=record.id,
-            description=f'积分录入: {user_name} {"+" if score_change > 0 else ""}{score_change}分',
-            after_data={
-                **data,
-                "before_score": before_score,
-                "after_score": user.current_score,
-                "before_rank": before_rank_name,
-                "after_rank": after_rank_name,
-            },
+        # 使用缓存获取排名规则（仅用于排名变动通知的 before/after 对比，不改写积分）
+        from api.scores.rank_routes import _find_rank_by_score_binary_search, _get_active_rank_rules_cached
+
+        before_rules = _get_active_rank_rules_cached()
+        before_rank = _find_rank_by_score_binary_search(before_rules, before_score)
+        before_rank_name = before_rank.get("name") if before_rank else "无等级"
+
+        # 仅预测变动后排名（基于 before_score + score_change，不改积分）；积分原子累加由 service 完成
+        after_rank = _find_rank_by_score_binary_search(before_rules, before_score + score_change)
+        after_rank_name = after_rank.get("name") if after_rank else "无等级"
+
+        # 事务收口到 service：排名计算 + 设置积分 + log_operation（commit 前设 operation_log_id）+ add + commit
+        result, err = create_score_entry(
+            {
+                "user_id": user_id,
+                "rule_id": rule_id,
+                "score_change": score_change,
+                "description": description,
+                "operator": operator,
+            }
         )
-
-        if log_entry:
-            record.operation_log_id = log_entry.id
-
-        db.session.commit()
+        if err:
+            return APIResponse.error(message=err, status_code=400)
+        record = result["record"]
 
         # 检查排名是否发生变化，如果变化则发送通知
         if before_rank_name != after_rank_name:
@@ -624,7 +639,7 @@ class ScoreEntryResource(Resource):
         try:
 
             # 构建积分变化消息文本
-            score_change_str = f"{score_change:+d}" if score_change > 0 else str(score_change)
+            score_change_str = f"{score_change:+g}" if score_change > 0 else str(score_change)
             text_parts = [f"学生:{user_name}", f"{score_change_str}分", f"原因:{description or '积分变动'}"]
             # 如果有规则名称，添加到原因中
             if rule_id:
@@ -743,6 +758,14 @@ class BatchScoreEntryResource(Resource):
         errors = []
         created_records = []
 
+        # F3 修复: 先做纯校验收集（只读，不修改任何对象/session），失败行零副作用；
+        # 全部校验通过后再统一修改 current_score + add + 单次 commit。
+        # 原实现行内 add/改分，行内异常仅 except 不 rollback → 失败行的积分变更残留 session，
+        # 后续行基于污染值累加，末次 commit 全部落库 → 积分被改但无记录的数据错乱。
+        # F12 修复: 权限隔离集合一次性计算（原每条 _can_access_student ≈ 3 次查询 → N 条 3N 次）
+        _perm_admin = get_current_admin()
+        _allowed_classes = get_allowed_classes(_perm_admin.id) if _perm_admin else None
+
         for i, entry in enumerate(entries):
             try:
                 user_id = entry.get("user_id")
@@ -756,11 +779,6 @@ class BatchScoreEntryResource(Resource):
 
                 if score_change is None:
                     errors.append({"index": i, "error": "score_change不能为空"})
-                    continue
-
-                # 数据隔离检查
-                if not _can_access_student(user_id):
-                    errors.append({"index": i, "error": "无权为该学生创建记录"})
                     continue
 
                 # 处理规则
@@ -780,6 +798,11 @@ class BatchScoreEntryResource(Resource):
                     errors.append({"index": i, "error": f"学生{user_id}不存在"})
                     continue
 
+                # 数据隔离检查（F12: 用预计算的 allowed_classes 集合，合并进学生查询避免重复查库）
+                if _allowed_classes is not None and user.class_name not in _allowed_classes:
+                    errors.append({"index": i, "error": "无权为该学生创建记录"})
+                    continue
+
                 # 验证规则限制
                 if rule:
                     is_allowed, limit_message = check_rule_limits(user_id, rule.id)
@@ -787,57 +810,46 @@ class BatchScoreEntryResource(Resource):
                         errors.append({"index": i, "error": limit_message})
                         continue
 
-                # 创建记录
+                # 仅构造记录与目标分值，暂不写 session
                 record = ScoreRecord(
-                    user_id=user_id,
+                    student_id=user_id,
                     rule_id=rule_id,
                     score_change=score_change,
                     description=description,
                     operator=operator,
                 )
-
-                # 更新积分
                 before_score = user.current_score or 0
-                user.current_score = before_score + score_change
-
-                db.session.add(record)
                 created_records.append(
                     {
                         "index": i,
                         "record": record,
                         "user": user,
                         "score_change": score_change,
-                        "new_score": user.current_score,
+                        "new_score": before_score + score_change,
                     }
                 )
 
             except Exception as e:
                 errors.append({"index": i, "error": str(e)})
 
-        # 批量提交
-        if created_records:
-            try:
-                db.session.commit()
-                for item in created_records:
-                    results.append(
-                        {
-                            "index": item["index"],
-                            "success": True,
-                            "record_id": item["record"].id,
-                            "user_name": item["user"].name,
-                            "score_change": item["score_change"],
-                            "new_score": item["new_score"],
-                        }
-                    )
-            except Exception:
-                db.session.rollback()
-                errors.extend([{"index": item["index"], "error": "数据库提交失败"} for item in created_records])
+        # 批量提交（仅成功行）：事务收口到 service（add + 原子累加 + 单次 commit）
+        results, commit_errors = commit_batch_score_entry(created_records)
+        errors.extend(commit_errors)
 
         # 清除统计缓存
         try:
             get_cache_service().invalidate_by_tag("statistics")
         except Exception:
             pass
+
+        # R4: 批量录入后对涉及学生触发综合评分重算
+        if results:
+            try:
+                from services.composite_score_service import CompositeScoreService
+                for uid in {item["user"].id for item in created_records}:
+                    CompositeScoreService.recalculate_user_score(uid)
+            except Exception:
+                pass
 
         status_code = 200 if results else 400
         if not results:
@@ -872,12 +884,12 @@ class RecordResource(Resource):
         非管理员用户只能查看关联班级的学生记录。
         """
         record = ScoreRecord.query.get_or_404(id)
-        if not _can_access_student(record.user_id):
+        if not _can_access_student(record.student_id):
             return APIResponse.error(message="无权查看该记录", status_code=403)
         return APIResponse.success(
             data={
                 "id": record.id,
-                "user_id": record.user_id,
+                "user_id": record.student_id,
                 "user_name": record.user.name if record.user else None,
                 "rule_id": record.rule_id,
                 "rule_name": record.rule.name if record.rule else None,
@@ -905,7 +917,7 @@ class RecordResource(Resource):
         record = ScoreRecord.query.get_or_404(id)
 
         # 数据隔离检查
-        if not _can_access_student(record.user_id):
+        if not _can_access_student(record.student_id):
             return APIResponse.error(message="无权删除该记录", status_code=403)
 
         data = request.get_json() or {}
@@ -917,7 +929,7 @@ class RecordResource(Resource):
                 data={
                     "record_info": {
                         "id": record.id,
-                        "user_id": record.user_id,
+                        "user_id": record.student_id,
                         "user_name": user_name,
                         "score_change": record.score_change,
                         "description": record.description,
@@ -929,7 +941,7 @@ class RecordResource(Resource):
 
         before_data = {
             "id": record.id,
-            "user_id": record.user_id,
+            "user_id": record.student_id,
             "user_name": record.user.name if record.user else None,
             "score_change": record.score_change,
             "description": record.description,
@@ -937,25 +949,20 @@ class RecordResource(Resource):
             "created_at": record.created_at.isoformat() if record.created_at else None,
         }
 
-        user = get_by_id(User, record.user_id)
-        if user:
-            before_score = user.current_score or 0
-            user.current_score = before_score - record.score_change
-            user_name = user.name
+        # 事务收口到 service：R5 原子回滚积分 + delete + commit
+        before_score, after_score, user_name = delete_record(record)
 
-            after_data = {
-                "user_id": user.id,
+        after_data = (
+            {
+                "user_id": record.student_id,
                 "user_name": user_name,
                 "before_score": before_score,
-                "after_score": user.current_score,
+                "after_score": after_score,
                 "score_change": -record.score_change,
             }
-        else:
-            user_name = "未知用户"
-            after_data = None
-
-        db.session.delete(record)
-        db.session.commit()
+            if user_name != "未知用户"
+            else None
+        )
 
         log_operation(
             operation_type="delete",
@@ -972,6 +979,13 @@ class RecordResource(Resource):
             print(f"[Cache] 删除记录后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
             print(f"[Cache] 清除缓存失败: {e}")
+
+        # R4: 删除回滚后触发综合评分重算
+        try:
+            from services.composite_score_service import CompositeScoreService
+            CompositeScoreService.recalculate_user_score(record.student_id)
+        except Exception:
+            pass
 
         print(f"[Record] 删除记录: id={id}, user={user_name}, score_change={record.score_change}")
 

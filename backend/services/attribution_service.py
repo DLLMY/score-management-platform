@@ -297,7 +297,7 @@ class AttributionService:
         """返回窗口内行为积分日均分值；无记录返回 None。"""
         rows = (
             ScoreRecord.query.filter(
-                ScoreRecord.user_id == user_id,
+                ScoreRecord.student_id == user_id,
                 ScoreRecord.created_at >= start,
                 ScoreRecord.created_at < end,
             )

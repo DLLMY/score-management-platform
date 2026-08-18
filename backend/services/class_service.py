@@ -48,7 +48,7 @@ class ClassService:
             "updated_at": (class_info.updated_at.isoformat() if class_info.updated_at else None),
         }
 
-    def get_class_list(self, page=1, page_size=10, keyword=None, admin=None):
+    def get_class_list(self, page=1, per_page=10, keyword=None, admin=None):
         try:
             allowed_classes = get_allowed_classes(admin.id) if admin else None
 
@@ -67,15 +67,15 @@ class ClassService:
 
             total = query.count()
 
-            classes = query.order_by(ClassInfo.name).paginate(page=page, per_page=page_size, error_out=False)
+            classes = query.order_by(ClassInfo.name).paginate(page=page, per_page=per_page, error_out=False)
 
             return {
                 "classes": [self._build_class_response(c) for c in classes.items],
                 "pagination": {
                     "page": page,
-                    "page_size": page_size,
+                    "per_page": per_page,
                     "total": total,
-                    "pages": (total + page_size - 1) // page_size,
+                    "pages": (total + per_page - 1) // per_page,
                 },
             }
         except Exception:

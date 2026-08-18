@@ -477,6 +477,20 @@ const NLPScoringManagement = () => {
   }, [showToast]);
 
   const handleCreateRule = useCallback(async () => {
+    // M3: 规则必填与数值边界校验
+    if (!newRule.behavior_keyword.trim()) {
+      showToast('warning', '行为关键词不能为空');
+      return;
+    }
+    if (!newRule.behavior_description.trim()) {
+      showToast('warning', '行为描述不能为空');
+      return;
+    }
+    const sv = Number(newRule.score_value);
+    if (!sv || isNaN(sv) || Math.abs(sv) > 100) {
+      showToast('warning', '分值需为 1-100 之间的数值（扣分为负）');
+      return;
+    }
     try {
       const response = await api.nlp.createRule({
         ...newRule,

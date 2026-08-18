@@ -44,6 +44,18 @@ def sample_once(app):
             # 清理过期（保留最近 RETENTION_DAYS 天）
             cutoff = datetime.now() - timedelta(days=RETENTION_DAYS)
             deleted = db.session.query(SystemMetric).filter(SystemMetric.created_at < cutoff).delete()
+            # S7 修复: 前端性能/错误上报表一并清理（原只清 system_metrics → 两表无限膨胀）
+            try:
+                from models import FrontendPerfMetric, FrontendErrorLog
+
+                deleted += (
+                    db.session.query(FrontendPerfMetric).filter(FrontendPerfMetric.created_at < cutoff).delete()
+                )
+                deleted += (
+                    db.session.query(FrontendErrorLog).filter(FrontendErrorLog.created_at < cutoff).delete()
+                )
+            except Exception:
+                pass
             db.session.commit()
             logger.debug(f"系统指标采样完成（写入 {len(rows)} 条，清理过期 {deleted} 条）")
     except Exception as e:

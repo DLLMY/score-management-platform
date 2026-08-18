@@ -66,7 +66,7 @@ ex("DELETE FROM class_committee WHERE student_id IN (" + ph + ")", *test_ids)
 ex("DELETE FROM attendance WHERE student_id IN (" + ph + ")", *test_ids)
 # 安全扫：任何含 student_id 的表，凡引用测试学生一律清
 sweep_tables = ["seating_seat","duty_assignment","homework_submission","study_group_member",
-                "activity_registration","mental_health_record","mental_health_alert","parent_contact"]
+                "activity_registration","mental_health_record","parent_contact"]
 for t in sweep_tables:
     try:
         cols=[r["name"] for r in q("PRAGMA table_info(" + t + ")") if r["name"] in ("student_id","leader_id")]
@@ -74,6 +74,12 @@ for t in sweep_tables:
             ex("DELETE FROM " + t + " WHERE " + c + " IN (" + ph + ")", *test_ids)
     except Exception as e:
         print("  sweep " + t + " 跳过: " + str(e))
+# P0-6: 心理/风险预警已并入 alert(source IN ('mental','risk'))，按 student_id 清理测试学生残留
+try:
+    ex("DELETE FROM alert WHERE student_id IN (" + ph + ") AND source IN ('mental','risk')", *test_ids)
+    print("  已删测试学生的 alert(source IN ('mental','risk')) 行")
+except Exception as e:
+    print("  sweep alert(mental/risk) 跳过: " + str(e))
 print("  已删关联测试学生的行 + 安全扫")
 
 # 6) 删测试学生

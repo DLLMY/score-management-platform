@@ -40,6 +40,11 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   useEffect(() => {
     if (!lazy || !imgRef.current) return;
 
+    // 环境 guard: 无 IntersectionObserver → 直接加载
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsInView(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

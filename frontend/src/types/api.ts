@@ -177,7 +177,7 @@ export interface DeviceUpdateRequest {
 export interface DeviceStatusResponse {
   device_id: string;
   status: string;
-  last_seen: string;
+  last_heartbeat: string | null;
   firmware_version?: string;
 }
 

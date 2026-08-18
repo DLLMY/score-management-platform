@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
 import { Bell, Filter, Check, Trash2, RefreshCw, Sparkles, X, Info } from 'lucide-react';
 import { Card, Button, Modal, PermissionButton } from '../components';
 import api, { AdminNotification } from '../services/api';
@@ -28,6 +28,7 @@ function Notifications() {
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [showSendModal, setShowSendModal] = useState<boolean>(false);
   const [sendForm, setSendForm] = useState<SendForm>({ title: '', message: '', type: 'info', priority: 'medium' });
+  const [sending, setSending] = useState<boolean>(false);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, per_page: 20, total: 0, pages: 0 });
 
   // 使用 useMemo 缓存 adminId，避免重复读取 localStorage
@@ -40,7 +41,10 @@ function Notifications() {
     return undefined;
   }, []);
 
+  // M8: 竞态防护——请求序号，快速切换筛选时仅最新请求生效
+  const loadSeqRef = useRef(0);
   const loadNotifications = useCallback(async (): Promise<void> => {
+    const seq = ++loadSeqRef.current;
     try {
       setLoading(true);
       const params: { admin_id?: number; page: number; per_page: number; is_read?: string; type?: string; priority?: string } = {
@@ -52,6 +56,7 @@ function Notifications() {
       if (filterType) params.type = filterType;
       if (filterPriority) params.priority = filterPriority;
       const data = await api.adminNotifications.getAll(params);
+      if (seq !== loadSeqRef.current) return; // 旧响应丢弃
       setNotifications(data.notifications || []);
       setPagination((prev: Pagination) => ({
         ...prev,
@@ -59,10 +64,11 @@ function Notifications() {
         pages: data.pages || 0,
       }));
     } catch (error) {
+      if (seq !== loadSeqRef.current) return;
       logger.error('加载通知失败:', error);
       showToast('error', '加载通知失败');
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
   }, [pagination.page, pagination.per_page, filterStatus, filterType, filterPriority, adminId, showToast]);
 
@@ -101,6 +107,12 @@ function Notifications() {
       try {
         await api.adminNotifications.delete(id);
         setNotifications((prev: AdminNotification[]) => prev.filter((n: AdminNotification) => n.id !== id));
+        // M4: 总数同步减一 + 末页分页回退（防删除后页码越界）
+        setPagination((prev: Pagination) => {
+          const total = Math.max(0, prev.total - 1);
+          const pages = Math.max(1, Math.ceil(total / prev.per_page));
+          return { ...prev, total, pages, page: prev.page > pages ? pages : prev.page };
+        });
         showToast('success', '删除成功');
       } catch (error) {
         logger.error('删除通知失败:', error);
@@ -113,21 +125,28 @@ function Notifications() {
   const handleSendNotification = useCallback(
     async (e: FormEvent<HTMLFormElement>): Promise<void> => {
       e.preventDefault();
+      if (sending) return; // M2: 防重复提交
+      setSending(true);
       try {
         const result = await api.adminNotifications.create({ ...sendForm, admin_id: adminId });
         setShowSendModal(false);
         setSendForm({ title: '', message: '', type: 'info', priority: 'medium' });
-        // 后端返回 data: {notification}; 防御性校验，缺失时不插入假条目
+        // M4: 后端返回 data: {notification} 则前置插入；否则重新拉取保证列表与总数一致
         if (result && result.notification) {
           setNotifications((prev: AdminNotification[]) => [result.notification, ...prev]);
+          setPagination((prev: Pagination) => ({ ...prev, total: prev.total + 1, pages: Math.max(1, Math.ceil((prev.total + 1) / prev.per_page)) }));
+        } else {
+          loadNotifications();
         }
         showToast('success', '通知发送成功');
       } catch (error) {
         logger.error('发送通知失败:', error);
         showToast('error', '发送失败: ' + ((error as Error).message || ''));
+      } finally {
+        setSending(false);
       }
     },
-    [sendForm, adminId, showToast]
+    [sendForm, adminId, showToast, sending, loadNotifications]
   );
 
   const getTypeColor = useMemo(() => {
@@ -319,6 +338,7 @@ function Notifications() {
           <div className='flex flex-col items-center justify-center py-12'>
             <Bell className='w-12 h-12 text-gray-300 mb-4' />
             <p className='text-gray-500'>暂无通知</p>
+            <p className='text-gray-400 text-sm mt-1'>点击右上角「发送通知」给师生下发消息</p> {/* L3: 空态引导 */}
           </div>
         ) : (
           <div className='space-y-3'>
@@ -422,7 +442,7 @@ function Notifications() {
         )}
       </Card>
 
-      <Modal isOpen={showSendModal} onClose={() => setShowSendModal(false)} title='发送通知'>
+      <Modal isOpen={showSendModal} onClose={() => { setShowSendModal(false); setSendForm({ title: '', message: '', type: 'info', priority: 'medium' }); }} title='发送通知'>
         <form onSubmit={handleSendNotification} className='space-y-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>通知标题</label>
@@ -471,12 +491,12 @@ function Notifications() {
             />
           </div>
           <div className='flex gap-3 pt-4 border-t border-gray-100'>
-            <Button variant='outline' onClick={() => setShowSendModal(false)}>
+            <Button variant='outline' onClick={() => { setShowSendModal(false); setSendForm({ title: '', message: '', type: 'info', priority: 'medium' }); }} disabled={sending}>
               取消
             </Button>
-            <Button type='submit'>
+            <Button type='submit' disabled={sending}>
               <Bell className='w-4 h-4' />
-              发送通知
+              {sending ? '发送中...' : '发送通知'}
             </Button>
           </div>
         </form>

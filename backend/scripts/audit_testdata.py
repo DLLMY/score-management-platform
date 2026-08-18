@@ -47,7 +47,7 @@ tables={
  "seating_chart":["name"],"duty_group":["name"],"class_committee":[],
  "committee_term":[],"parent_contact":[],"homework_assignment":["title"],
  "attendance":["notes"],"study_group":["name"],"mental_health_record":["notes"],
- "mental_health_alert":[],"activity":["title"],"culture_record":["title","content"],
+ "alert":[],"activity":["title"],"culture_record":["title","content"],
  "study_guide":["title","content"],"seating_seat":[],"duty_assignment":[],
  "homework_submission":["notes"],"study_group_member":[],"activity_registration":[],
  "culture_item":["content"],"phone_box_policy":[],

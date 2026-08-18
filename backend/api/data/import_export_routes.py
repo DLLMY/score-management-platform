@@ -7,6 +7,11 @@ from utils.excel_utils import ExcelUtils, ExcelTemplateGenerator
 from utils.backup_utils import BackupManager, BackupScheduler
 from utils.validation import validate_name, validate_student_id
 from utils.transaction_retry import TransactionRetry, get_import_guard
+from services.import_export_service import (
+    create_user_row,
+    create_score_rule_row,
+    create_score_category_row,
+)
 from datetime import datetime
 import logging
 import io
@@ -129,7 +134,18 @@ class ExportRecords(Resource):
 
         query = ScoreRecord.query
         if user_id:
-            query = query.filter_by(user_id=int(user_id))
+            query = query.filter_by(student_id=int(user_id))
+        # S3 修复: 班主任仅可导出本班记录（原全校 → 越权）
+        from utils.permission import get_current_admin, get_allowed_classes
+        from models import User as _U
+
+        admin = get_current_admin()
+        if admin and admin.role not in ("admin", "super_admin"):
+            allowed = get_allowed_classes(admin.id)
+            if allowed:
+                query = query.join(_U, ScoreRecord.student_id == _U.id).filter(_U.class_name.in_(allowed))
+            else:
+                query = query.filter(False)
 
         records = query.all()
         headers = ["ID", "学生ID", "学生姓名", "规则ID", "规则名称", "积分变化", "描述", "操作人", "创建时间"]
@@ -139,7 +155,7 @@ class ExportRecords(Resource):
             data.append(
                 [
                     record.id,
-                    record.user_id,
+                    record.student_id,
                     record.user.name if record.user else "",
                     record.rule_id,
                     record.rule.name if record.rule else "",
@@ -461,10 +477,7 @@ class ImportUsers(Resource):
                         )
                         continue
 
-                    new_user = User(
-                        name=name, gender=gender, class_name=class_name, phone=phone, card_id=card_id, current_score=0
-                    )
-                    db.session.add(new_user)
+                    new_user = create_user_row(name, gender, class_name, phone, card_id)
                     imported_count += 1
                     messages.append({"name": name, "action": "created", "message": f"学生 {name} 导入成功"})
 
@@ -585,16 +598,9 @@ class ImportRules(Resource):
                         failed_count += 1
                         continue
 
-                    new_rule = ScoreRule(
-                        name=name,
-                        description=description,
-                        category_id=category.id,
-                        score=score,
-                        is_active=is_active,
-                        daily_limit=daily_limit,
-                        min_interval=min_interval,
+                    new_rule = create_score_rule_row(
+                        name, description, category.id, score, is_active, daily_limit, min_interval
                     )
-                    db.session.add(new_rule)
                     imported_count += 1
 
                 except Exception as e:
@@ -677,8 +683,7 @@ class ImportCategories(Resource):
                         failed_count += 1
                         continue
 
-                    new_category = ScoreCategory(name=name, description=description, color=color)
-                    db.session.add(new_category)
+                    new_category = create_score_category_row(name, description, color)
                     imported_count += 1
 
                 except Exception as e:
@@ -747,8 +752,11 @@ class DeleteBackup(Resource):
     @requires_permission("system.settings")
     def delete(self, filename):
         """删除备份文件"""
+        # S8 修复: 路径穿越防护——只允许备份目录内文件名（原 filename="../.." 可越权删除任意文件）
+        if filename != os.path.basename(filename) or not filename:
+            return APIResponse.error(message="备份文件名非法", status_code=400)
         try:
-            backup_path = backup_manager.backup_dir / filename
+            backup_path = backup_manager.backup_dir / os.path.basename(filename)
             if backup_path.exists():
                 backup_path.unlink()
                 return APIResponse.success(message="备份文件已删除")

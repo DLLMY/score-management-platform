@@ -44,6 +44,7 @@ function StudyGroups() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [formData, setFormData] = useState<GroupFormData>(defaultGroupForm);
   const [errors, setErrors] = useState<Partial<Record<keyof GroupFormData, string>>>({});
   const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
@@ -112,6 +113,8 @@ function StudyGroups() {
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
+    if (submitting) return; // M2: 防重复提交
+    setSubmitting(true);
 
     try {
       if (formData.id) {
@@ -137,8 +140,10 @@ function StudyGroups() {
     } catch (error) {
       logger.error('操作失败:', error);
       showToast('error', formData.id ? '更新小组失败' : '创建小组失败');
+    } finally {
+      setSubmitting(false);
     }
-  }, [formData, showToast, handleCloseModal, fetchGroups, validateForm]);
+  }, [formData, showToast, handleCloseModal, fetchGroups, validateForm, submitting]);
 
   const handleDelete = useCallback(
     async (id: number) => {
@@ -200,6 +205,11 @@ function StudyGroups() {
       const change = Number(scoreAdjustValue);
       if (!change || isNaN(change)) {
         showToast('warning', '请输入有效的积分数值');
+        return;
+      }
+      // M3: 分值边界校验，防止异常大额调整
+      if (Math.abs(change) > 1000) {
+        showToast('warning', '单次积分调整不能超过 ±1000');
         return;
       }
       try {
@@ -607,10 +617,11 @@ function StudyGroups() {
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-200 font-medium"
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-5 h-5" />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </button>
             </div>
           </div>

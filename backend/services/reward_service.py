@@ -37,8 +37,7 @@ class PhoneAccessHandler:
         original_score = user.current_score or 0
         user.current_score = max(0, original_score - deduction)
 
-        score_record = ScoreRecord(
-            user_id=user_id,
+        score_record = ScoreRecord(student_id=user_id,
             rule_id="PHONE_ACCESS",
             score_change=-deduction,
             description=f"手机拿取奖励扣除 x{access_count}",
@@ -147,7 +146,7 @@ class RewardSystem:
 
         today = date.today()
         usage_count = ScoreRecord.query.filter(
-            ScoreRecord.user_id == user_id,
+            ScoreRecord.student_id == user_id,
             ScoreRecord.rule_id == reward_type,
             func.date(ScoreRecord.created_at) == today,
         ).count()
@@ -161,8 +160,7 @@ class RewardSystem:
 
         user.current_score = (user.current_score or 0) - reward["cost"]
 
-        score_record = ScoreRecord(
-            user_id=user_id,
+        score_record = ScoreRecord(student_id=user_id,
             rule_id=reward_type,
             score_change=-reward["cost"],
             description=f'兑换奖励：{reward["name"]}',
@@ -210,7 +208,7 @@ class RewardInteractionController:
 
         today = date.today()
         today_changes = ScoreRecord.query.filter(
-            ScoreRecord.user_id == user_id,
+            ScoreRecord.student_id == user_id,
             func.date(ScoreRecord.created_at) == today,
         ).all()
 
@@ -256,7 +254,7 @@ class RewardInteractionController:
         """获取用户今日奖励使用情况"""
         today = date.today()
         records = ScoreRecord.query.filter(
-            ScoreRecord.user_id == user_id,
+            ScoreRecord.student_id == user_id,
             ScoreRecord.description.like("%兑换奖励%"),
             func.date(ScoreRecord.created_at) == today,
         ).all()

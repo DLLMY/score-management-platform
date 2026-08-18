@@ -56,7 +56,7 @@ class TestDashboardRoutes:
                         last_heartbeat=datetime.now())
         session.add(device)
 
-        session.add(ScoreRecord(user_id=1, score_change=5, description='测试记录'))
+        session.add(ScoreRecord(student_id=1, score_change=5, description='测试记录'))
 
         session.commit()
 
@@ -220,9 +220,9 @@ class TestDashboardRoutes:
         session.add(user)
         session.commit()
 
-        session.add(ScoreRecord(user_id=user.id, rule_id=rule1.id, score_change=5, description='规则1记录'))
-        session.add(ScoreRecord(user_id=user.id, rule_id=rule1.id, score_change=5, description='规则1记录'))
-        session.add(ScoreRecord(user_id=user.id, rule_id=rule2.id, score_change=10, description='规则2记录'))
+        session.add(ScoreRecord(student_id=user.id, rule_id=rule1.id, score_change=5, description='规则1记录'))
+        session.add(ScoreRecord(student_id=user.id, rule_id=rule1.id, score_change=5, description='规则1记录'))
+        session.add(ScoreRecord(student_id=user.id, rule_id=rule2.id, score_change=10, description='规则2记录'))
         session.commit()
 
         response = client.get('/api/dashboard/data', headers={'Authorization': f'Bearer {token}'})

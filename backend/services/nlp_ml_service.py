@@ -1379,13 +1379,14 @@ class NLPMLTrainingService:
         }
 
     def _train_without_data(self, algorithm, trained_by):
+        # P2-2 修复: 无训练数据不再伪造 accuracy=0.85/completed，标记 untrained 且指标归零
         training_record = NLPModelTraining(
             model_name=f'{algorithm}_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
             algorithm_type=algorithm,
             training_data_size=0,
-            accuracy=0.85,
-            f1_score=0.85,
-            status="completed",
+            accuracy=0.0,
+            f1_score=0.0,
+            status="untrained",
             trained_at=datetime.now(),
         )
         db.session.add(training_record)
@@ -1396,12 +1397,12 @@ class NLPMLTrainingService:
             "algorithm_name": MLAlgorithmType.get_name(algorithm),
             "training_data_count": 0,
             "evaluation": {
-                "accuracy": 0.85,
-                "precision": 0.85,
-                "recall": 0.85,
-                "f1_score": 0.85,
+                "accuracy": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": 0.0,
             },
-            "message": "使用默认参数初始化模型（无训练数据）",
+            "message": "无训练数据，模型未训练（标记 untrained）",
         }
 
     def predict(self, text, algorithm=None):

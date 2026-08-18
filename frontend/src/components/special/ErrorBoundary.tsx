@@ -122,7 +122,7 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
                 刷新页面
               </button>
               <button
-                onClick={() => (window.location.href = '/')}
+                onClick={() => (window.location.hash = '#/')}
                 className='flex items-center justify-center gap-2 px-8 py-3 bg-slate-700 text-white rounded-xl font-semibold hover:bg-slate-600 transition-all duration-300 hover:-translate-y-0.5'
               >
                 <Home className='w-4 h-4' />

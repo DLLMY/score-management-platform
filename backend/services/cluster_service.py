@@ -127,13 +127,12 @@ class ClusterService:
         """
         # 清除旧的分群结果
         for _, row in df.iterrows():
-            StudentCluster.query.filter_by(user_id=row["user_id"]).delete()
+            StudentCluster.query.filter_by(student_id=row["user_id"]).delete()
         # 保存新结果
         with db_session_scope():
             for i, (_, row) in enumerate(df.iterrows()):
                 label = labels[i]
-                cluster = StudentCluster(
-                    user_id=row["user_id"],
+                cluster = StudentCluster(student_id=row["user_id"],
                     cluster_label=cluster_names[label],
                     cluster_score=float(row.get("academic_score", 0)),
                     features={
@@ -161,7 +160,7 @@ class ClusterService:
         if cached_result is not None:
             return cached_result
         query = StudentCluster.query.join(
-            User, StudentCluster.user_id == User.id
+            User, StudentCluster.student_id == User.id
         ).filter(User.is_active)
         if class_name:
             query = query.filter(User.class_name == class_name)
@@ -185,13 +184,13 @@ class ClusterService:
             )
             students_result.append(
                 {
-                    "user_id": cluster.user_id,
+                    "user_id": cluster.student_id,
                     "name": cluster.user.name,
                     "class_name": cluster.user.class_name,
                     "cluster": cluster.cluster_label,
                     "cluster_name": cluster_name,
                     "behavior_score": cluster.user.current_score,
-                    "academic_score": ClusterService._get_student_avg_score(cluster.user_id),
+                    "academic_score": ClusterService._get_student_avg_score(cluster.student_id),
                 }
             )
             if cluster_name not in cluster_summary:
@@ -203,7 +202,7 @@ class ClusterService:
                 }
             cluster_summary[cluster_name]["count"] += 1
             cluster_summary[cluster_name]["avg_behavior"] += cluster.user.current_score
-            avg_score = ClusterService._get_student_avg_score(cluster.user_id)
+            avg_score = ClusterService._get_student_avg_score(cluster.student_id)
             cluster_summary[cluster_name]["avg_score"] += avg_score if avg_score else 0
         # 计算平均值
         for name, stats in cluster_summary.items():
@@ -245,7 +244,7 @@ class ClusterService:
         Returns:
             dict or None: 分群信息
         """
-        cluster = StudentCluster.query.filter_by(user_id=user_id).first()
+        cluster = StudentCluster.query.filter_by(student_id=user_id).first()
         if not cluster:
             return None
         cluster_name = (
@@ -253,7 +252,7 @@ class ClusterService:
         )
         features = cluster.features or {}
         return {
-            "user_id": cluster.user_id,
+            "user_id": cluster.student_id,
             "cluster": cluster.cluster_label,
             "cluster_name": cluster_name,
             "behavior_score": features.get("behavior_score", 0),

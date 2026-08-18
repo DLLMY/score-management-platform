@@ -54,7 +54,7 @@ class RuleRecommendationService:
             }
 
         score_changes = [r.score_change for r in records]
-        unique_users = len(set(r.user_id for r in records))
+        unique_users = len(set(r.student_id for r in records))
 
         avg_change = np.mean(score_changes)
         total_change = sum(score_changes)
@@ -131,7 +131,7 @@ class RuleRecommendationService:
                 category_name = record.description or "未分类"
             category_stats[category_name]["count"] += 1
             category_stats[category_name]["total_score"] += record.score_change
-            category_stats[category_name]["users"].add(record.user_id)
+            category_stats[category_name]["users"].add(record.student_id)
 
         # 转换为列表并排序
         patterns = []
@@ -337,7 +337,7 @@ class RuleRecommendationService:
 
         for record in records:
             if record.rule_id:
-                user_rule_combinations[record.user_id][record.rule_id] += 1
+                user_rule_combinations[record.student_id][record.rule_id] += 1
 
         # 找出频繁组合
         combinations = defaultdict(int)
@@ -585,9 +585,9 @@ class RuleRecommendationService:
         for record in records:
             category = getattr(record, "category", None) or record.description or "未分类" or "未分类"
             category_usage[category]["count"] += 1
-            category_usage[category]["users"].add(record.user_id)
+            category_usage[category]["users"].add(record.student_id)
             category_usage[category]["score_sum"] += record.score_change
-            user_category_usage[record.user_id].add(category)
+            user_category_usage[record.student_id].add(category)
 
         # 计算支持度和置信度（简化版Apriori）
         total_users = len(user_category_usage)

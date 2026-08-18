@@ -145,7 +145,7 @@ def validate_query(schema: Dict[str, Dict]):
     使用示例:
         @validate_query({
             'page': {'type': 'int', 'min': 1},
-            'page_size': {'type': 'int', 'min': 1, 'max': 100}
+            'per_page': {'type': 'int', 'min': 1, 'max': 100}
         })
     """
 
@@ -184,3 +184,22 @@ SCORE_RULE_SCHEMA = {
     "category_id": {"required": True, "type": "int", "min": 1},
     "score": {"required": True, "type": "float", "min": 0, "max": 100},
 }  # noqa: E501
+
+# 中国大陆手机号正则（与前端 frontend/src/constants/enums.ts.PHONE_PATTERN 对齐）
+PHONE_PATTERN = r"^1[3-9]\d{9}$"
+
+
+def validate_chinese_phone(value: str, field_name: str = "手机号") -> None:
+    """验证中国大陆手机号；空值视为合法（由 required 控制必填）。
+
+    统一全项目手机号格式校验（User.phone / ParentContact.father_phone / mother_phone / Admin.phone），
+    消除此前无校验导致的前后不一致。端点接线见 Phase 2。
+    """
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return
+    Validator.pattern(value, PHONE_PATTERN, field_name, message=f"{field_name}格式不正确（应为 11 位手机号）")
+
+
+PHONE_SCHEMA = {
+    "phone": {"required": False, "pattern": PHONE_PATTERN, "pattern_message": "手机号格式不正确（应为 11 位手机号）"},
+}

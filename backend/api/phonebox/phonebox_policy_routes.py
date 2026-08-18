@@ -111,10 +111,12 @@ def _resolve_target_class(class_info_id):
 
 def _serialize(policy, class_info_id):
     if policy is None:
+        # R1-R9 复核补漏（原 P2-7）: 无策略时 evaluate 实际返回 DEFER（不开放自助开锁），
+        # 原 allow_self_unlock=True → 前端显示"已开启"与实际行为矛盾（界面误导）
         return {
             "class_info_id": class_info_id,
             "exists": False,
-            "allow_self_unlock": True,
+            "allow_self_unlock": False,
             "unlock_windows": [],
             "override_until": None,
             "override_active": False,

@@ -224,14 +224,15 @@ class MQTTConnect(Resource):
                 pass
 
             if data:
+                # P2-7 修复: username/password 不再回退硬编码 "phoneboxtest"/"123456"，缺省置空
                 config_dict = {
                     "broker": data.get(
                         "broker", config_dict["broker"] if config_dict else "nc5233fc.ala.cn-hangzhou.emqxsl.cn"
                     ),
                     "port": data.get("port", config_dict["port"] if config_dict else 8883),
                     "client_id": data.get("client_id", config_dict["client_id"] if config_dict else "score_backend"),
-                    "username": data.get("username", config_dict["username"] if config_dict else "phoneboxtest"),
-                    "password": data.get("password", config_dict["password"] if config_dict else "123456"),
+                    "username": data.get("username", config_dict["username"] if config_dict else ""),
+                    "password": data.get("password", config_dict["password"] if config_dict else ""),
                     "ssl": data.get("ssl", config_dict["ssl"] if config_dict else True),
                     "timeout": data.get("timeout", config_dict["timeout"] if config_dict else 10),
                     "keepalive": data.get("keepalive", config_dict["keepalive"] if config_dict else 60),
@@ -240,18 +241,11 @@ class MQTTConnect(Resource):
                 }
             else:
                 if not config_dict:
-                    config_dict = {
-                        "broker": "nc5233fc.ala.cn-hangzhou.emqxsl.cn",
-                        "port": 8883,
-                        "client_id": "score_backend",
-                        "username": "phoneboxtest",
-                        "password": "123456",
-                        "ssl": True,
-                        "timeout": 10,
-                        "keepalive": 60,
-                        "transport": "tcp",
-                        "ws_path": "/mqtt",
-                    }
+                    # P2-7 修复: 无 DB 配置且无请求参数时明确报错，不再用硬编码弱口令连接生产 Broker
+                    return APIResponse.error(
+                        message="MQTT 未配置：请先在系统 MQTT 配置中填写 Broker 地址与凭据，再发起连接",
+                        status_code=400,
+                    )
                 else:
                     config_dict["transport"] = "tcp"
                     config_dict["ws_path"] = "/mqtt"

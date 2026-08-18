@@ -891,21 +891,29 @@ function StudyGuidePage() {
               </div>
             </div>
 
-            <div className='px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3'>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePlanSubmit();
+              }} /* L8: 支持回车提交 */
+              className='px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3'
+            >
               <button
+                type='button'
                 onClick={handleClosePlanModal}
                 className='px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors font-medium'
               >
                 取消
               </button>
               <button
+                type='submit'
                 onClick={handlePlanSubmit}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-200 font-medium'
               >
                 <Check className='w-5 h-5' />
                 保存
               </button>
-            </div>
+            </form>
           </div>
         </div>
       )}

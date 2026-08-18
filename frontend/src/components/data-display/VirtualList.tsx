@@ -81,6 +81,10 @@ function VirtualList<T>({
         container.style.height = `${calculatedHeight}px`;
       };
 
+      // 环境 guard: 无 ResizeObserver → 跳过自动高度同步（仍可滚动）
+      if (typeof ResizeObserver === 'undefined') {
+        return undefined;
+      }
       const resizeObserver = new ResizeObserver(handleResize);
       resizeObserver.observe(container);
 

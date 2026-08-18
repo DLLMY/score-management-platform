@@ -32,14 +32,14 @@ class AnalysisService:
                     0,
                 ).label("total_subtract"),
             )
-            .filter(ScoreRecord.user_id == user_id)
+            .filter(ScoreRecord.student_id == user_id)
             .first()
         )
 
         last_30_days = datetime.now() - timedelta(days=30)
         recent_records = (
             ScoreRecord.query.filter(
-                ScoreRecord.user_id == user_id,
+                ScoreRecord.student_id == user_id,
                 ScoreRecord.created_at >= last_30_days,
             )
             .order_by(ScoreRecord.created_at.desc())
@@ -220,14 +220,14 @@ class AnalysisService:
 
         unlock_subquery = (
             db.session.query(
-                ScoreRecord.user_id,
+                ScoreRecord.student_id,
                 func.count(ScoreRecord.id).label("unlock_count"),
             )
             .filter(
                 ScoreRecord.description.like("%开锁%"),
                 ScoreRecord.created_at >= last_30_days,
             )
-            .group_by(ScoreRecord.user_id)
+            .group_by(ScoreRecord.student_id)
             .subquery()
         )
 
@@ -237,7 +237,7 @@ class AnalysisService:
             query = query.filter(User.class_name == class_name)
 
         users = (
-            query.outerjoin(unlock_subquery, User.id == unlock_subquery.c.user_id)
+            query.outerjoin(unlock_subquery, User.id == unlock_subquery.c.student_id)
             .add_columns(func.coalesce(unlock_subquery.c.unlock_count, 0).label("unlock_count_30d"))
             .all()
         )
@@ -318,7 +318,7 @@ class AnalysisService:
                         ),
                         0,
                     ).label("total_subtract"),
-                    func.count(distinct(ScoreRecord.user_id)).label("active_students"),
+                    func.count(distinct(ScoreRecord.student_id)).label("active_students"),
                 )
                 .join(User)
                 .filter(
@@ -428,7 +428,7 @@ class AnalysisService:
         today_stats = (
             db.session.query(
                 func.count(ScoreRecord.id).label("total_records"),
-                func.count(distinct(ScoreRecord.user_id)).label("active_users"),
+                func.count(distinct(ScoreRecord.student_id)).label("active_users"),
                 func.sum(
                     case(
                         (ScoreRecord.description.contains("开锁"), 1),

@@ -40,6 +40,17 @@ class ClassSemesterReport(Resource):
         if not class_info:
             return APIResponse.not_found(message="班级不存在")
 
+        # S3 修复: 非超管仅可导出自己关联班级的报表（原任意 class_id → 越权）
+        from utils.permission import get_current_admin, get_admin_class_ids
+
+        _admin = get_current_admin()
+        if _admin and _admin.role not in ("admin", "super_admin"):
+            _allowed_ids = get_admin_class_ids(_admin.id)
+            if _allowed_ids and class_id not in _allowed_ids:
+                return APIResponse.error(message="无权导出该班级报表", status_code=403)
+            if not _allowed_ids:
+                return APIResponse.error(message="未关联任何班级，无权导出报表", status_code=403)
+
         try:
             students = (
                 User.query.filter_by(class_info_id=class_id, is_active=True)

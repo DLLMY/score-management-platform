@@ -293,7 +293,7 @@ function CategoryList() {
                         <Edit2 className='w-5 h-5' />
                       </button>
                       <PermissionButton
-                        permission='category.manage'
+                        permission='rule.manage'
                         onClick={() => handleDelete(cat.id)}
                         className='btn-icon text-danger-500 hover:bg-danger-50 hover:text-danger-600'
                       >

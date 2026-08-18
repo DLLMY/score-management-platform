@@ -52,6 +52,10 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     const res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
     if (!res.ok) return null;
     const env = await res.json();
+    // M6: 检查业务信封，success===false 时不当作成功数据返回
+    if (env && typeof env === 'object' && 'success' in env && (env as { success?: boolean }).success === false) {
+      return null;
+    }
     return ((env && 'data' in env ? env.data : env) ?? null) as T | null;
   } catch {
     return null;
@@ -103,14 +107,34 @@ export const SystemMetrics: React.FC = () => {
     const params = new URLSearchParams();
     params.set('hours', String(hours));
     params.set('per_page', '500');
-    const data = await fetchJson<MetricsResult>(`/api/system/metrics?${params.toString()}`);
-    if (data) {
-      setRows(data.items || []);
-      setLatest(data.latest || {});
-      setTotal(data.total || 0);
-      setLoadError(false);
-    } else {
+    // S7-C-P0-3 修复: 原固定拉 500 条（约 100 分钟），时间范围越大截断越严重（近7天只剩 500/8400）
+    // → 循环拉取所有分页聚合，上限 60 页（3 万条）兜底防极端数据量
+    let page = 1;
+    let all: MetricRow[] = [];
+    let latest: MetricsResult['latest'] = {};
+    let total = 0;
+    let pages = 1;
+    let failed = false;
+    do {
+      params.set('page', String(page));
+      const data = await fetchJson<MetricsResult>(`/api/system/metrics?${params.toString()}`);
+      if (!data) {
+        failed = true;
+        break;
+      }
+      all = page === 1 ? data.items || [] : all.concat(data.items || []);
+      latest = data.latest || latest;
+      total = data.total || 0;
+      pages = data.pages || 1;
+      page += 1;
+    } while (page <= pages && page <= 60);
+    if (failed) {
       setLoadError(true);
+    } else {
+      setRows(all);
+      setLatest(latest);
+      setTotal(total);
+      setLoadError(false);
     }
     setLoading(false);
   }, [hours]);

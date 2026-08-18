@@ -61,16 +61,14 @@ def _load_literals(path, var_names):
     return found
 
 
-def main():
-    ap = argparse.ArgumentParser(description="RBAC 一致性校验与幂等补齐")
-    ap.add_argument("--apply", action="store_true", help="幂等补齐缺失项（INSERT OR IGNORE，绝不删除）")
-    ap.add_argument(
-        "--check-only",
-        action="store_true",
-        help="仅检查不补齐（默认行为，CI 中使用以显式声明）",
-    )
-    args = ap.parse_args()
+def run_check(check_only=True, apply=False):
+    """执行 RBAC 一致性校验（可选幂等补齐），返回 (issues, infos, exit_code)。
 
+    设计：可被 config_init 在启动时以 importlib 调用，因此 **绝不** 调用 sys.exit，
+    而是通过返回值传递退出码，避免杀死宿主进程。CLI 的 main() 才负责 sys.exit。
+    - check_only / apply：apply=True 时在校验后执行幂等补齐（INSERT OR IGNORE）。
+    - 返回 exit_code：有 issue 且未 apply 时为 1（供 CI 判定），其余为 0。
+    """
     issues = []
     infos = []
 
@@ -80,7 +78,7 @@ def main():
     seed_roles = seed.get("roles") or []
     if not seed_permissions or not seed_roles:
         print(f"[错误] 无法解析 {SEED_PATH} 的 permissions/roles 字面量")
-        sys.exit(2)
+        return issues, infos, 2
     seed_perm_codes = {p[0] for p in seed_permissions}
     seed_role_map = {r[0]: r for r in seed_roles}  # role_code -> (code,name,desc,csv,active)
 
@@ -99,7 +97,7 @@ def main():
         # CI / 全新检出场景没有本地数据库（instance/ 被 .gitignore 忽略）：
         # 无可校验，跳过而非失败。本地运行需先启动过服务生成 DB。
         print(f"[提示] 数据库不存在，跳过 RBAC 校验（本地运行需先初始化 DB）: {DB_PATH}")
-        sys.exit(0)
+        return issues, infos, 0
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA foreign_keys = ON")
     cur = conn.cursor()
@@ -109,7 +107,7 @@ def main():
         # 全新/CI 环境：DB 存在但未 seed RBAC（权限目录为空），校验无意义，跳过
         print("[提示] 权限目录为空（RBAC 未初始化/CI 环境），跳过校验")
         conn.close()
-        sys.exit(0)
+        return issues, infos, 0
 
     db_perms = {r[0] for r in cur.execute("SELECT code FROM permissions")}
     db_roles = {r[0] for r in cur.execute("SELECT role_code FROM role_permission")}
@@ -154,14 +152,14 @@ def main():
     for info in infos:
         print(f"[提示] {info}")
     if not issues:
-        print("[结果] 一致性 OK" + (", 无缺失需补齐" if not args.apply else ""))
+        print("[结果] 一致性 OK" + (", 无缺失需补齐" if not apply else ""))
     else:
         print(f"[结果] 发现 {len(issues)} 个不一致:")
         for i in issues:
             print(f"  - {i}")
 
     # ---- 5. --apply 幂等补齐 ----
-    if args.apply:
+    if apply:
         fixed = 0
         for code, name, category, desc in seed_permissions:
             if code not in db_perms:
@@ -175,9 +173,9 @@ def main():
             if role_code not in db_roles:
                 _, role_name, desc, csv_perms, active = role
                 cur.execute(
-                    'INSERT OR IGNORE INTO role_permission (role_code, role_name, description, permissions, is_active, created_at, updated_at) '
-                    'VALUES (?,?,?,?,?,datetime("now"),datetime("now"))',
-                    (role_code, role_name, desc, csv_perms, active),
+                    'INSERT OR IGNORE INTO role_permission (role_code, role_name, description, is_active, created_at, updated_at) '
+                    'VALUES (?,?,?,?,datetime("now"),datetime("now"))',
+                    (role_code, role_name, desc, active),
                 )
                 fixed += 1
             # 补齐该角色的映射（seed csv + 关键 teacher 权限）
@@ -201,7 +199,20 @@ def main():
 
     conn.close()
     # check-only 模式有 issue 时返回非 0（供 CI）
-    sys.exit(1 if (issues and not args.apply) else 0)
+    return issues, infos, (1 if (issues and not apply) else 0)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="RBAC 一致性校验与幂等补齐")
+    ap.add_argument("--apply", action="store_true", help="幂等补齐缺失项（INSERT OR IGNORE，绝不删除）")
+    ap.add_argument(
+        "--check-only",
+        action="store_true",
+        help="仅检查不补齐（默认行为，CI 中使用以显式声明）",
+    )
+    args = ap.parse_args()
+    _issues, _infos, code = run_check(check_only=not args.apply, apply=args.apply)
+    sys.exit(code)
 
 
 if __name__ == "__main__":

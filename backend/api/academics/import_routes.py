@@ -1,7 +1,8 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from datetime import datetime
-from models import db, ImportConfig
+from models import ImportConfig, get_by_id
+from services.academics_service import academics_service
 from utils.permission import requires_permission
 from utils.excel_utils import ExcelTemplateGenerator
 
@@ -103,24 +104,8 @@ class ImportConfigList(Resource):
         if existing:
             return APIResponse.error(message="该模块下已存在同名配置", status_code=400)
 
-        if data.get("is_default"):
-            ImportConfig.query.filter_by(module_name=module_name, is_default=True).update({"is_default": False})
-
-        config = ImportConfig(
-            module_name=module_name,
-            config_name=config_name,
-            field_mappings=data.get("field_mappings", []),
-            validation_rules=data.get("validation_rules", []),
-            conflict_strategy=data.get("conflict_strategy", "update"),
-            default_values=data.get("default_values", {}),
-            is_active=data.get("is_active", True),
-            is_default=data.get("is_default", False),
-            description=data.get("description"),
-            created_by=data.get("created_by"),
-        )
-
-        db.session.add(config)
-        db.session.commit()
+        config_id = academics_service.create_import_config(data)
+        config = get_by_id(ImportConfig, config_id)
 
         return APIResponse.success(data=config.to_dict(), message="配置创建成功", status_code=201)
 
@@ -151,28 +136,9 @@ class ImportConfigDetail(Resource):
             ).first()
             if existing:
                 return APIResponse.error(message="该模块下已存在同名配置", status_code=400)
-            config.config_name = data["config_name"]
 
-        if "is_default" in data and data["is_default"] and not config.is_default:
-            ImportConfig.query.filter_by(module_name=config.module_name, is_default=True).update({"is_default": False})
-
-        if "field_mappings" in data:
-            config.field_mappings = data["field_mappings"]
-        if "validation_rules" in data:
-            config.validation_rules = data["validation_rules"]
-        if "conflict_strategy" in data:
-            config.conflict_strategy = data["conflict_strategy"]
-        if "default_values" in data:
-            config.default_values = data["default_values"]
-        if "is_active" in data:
-            config.is_active = data["is_active"]
-        if "is_default" in data:
-            config.is_default = data["is_default"]
-        if "description" in data:
-            config.description = data["description"]
-
-        config.updated_at = datetime.now()
-        db.session.commit()
+        academics_service.update_import_config(id, data)
+        config = get_by_id(ImportConfig, id)
 
         return APIResponse.success(data=config.to_dict())
 
@@ -185,8 +151,7 @@ class ImportConfigDetail(Resource):
         if config.is_default:
             return APIResponse.error(message="默认配置不能删除", status_code=400)
 
-        db.session.delete(config)
-        db.session.commit()
+        academics_service.delete_import_config(id)
 
         return APIResponse.success(message="配置已删除")
 
@@ -216,11 +181,8 @@ class ImportConfigSetDefault(Resource):
         """将指定配置设置为模块默认配置"""
         config = ImportConfig.query.get_or_404(id)
 
-        ImportConfig.query.filter_by(module_name=config.module_name, is_default=True).update({"is_default": False})
-        config.is_default = True
-        config.updated_at = datetime.now()
-
-        db.session.commit()
+        academics_service.set_default_import_config(id)
+        config = get_by_id(ImportConfig, id)
 
         return APIResponse.success(message=f"{config.config_name} 已设置为 {config.module_name} 模块的默认配置")
 

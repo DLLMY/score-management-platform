@@ -106,8 +106,8 @@ function DeviceGroupPage() {
   // 数据加载失败标记（分组/统计/设备任一失败置位）
   const [loadError, setLoadError] = useState<boolean>(false);
   
-  // Selected devices for adding to group
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
+  // Selected devices for adding to group (device.device_id 业务键)
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   
   // 使用 useConfirmDialog 管理确认对话框
   useConfirmDialog();
@@ -305,7 +305,7 @@ function DeviceGroupPage() {
     }
   };
   
-  const handleRemoveDevicesFromGroup = async (deviceIds: number[]) => {
+  const handleRemoveDevicesFromGroup = async (deviceIds: string[]) => {
     if (!selectedGroup || deviceIds.length === 0) return;
     
     try {
@@ -792,10 +792,10 @@ function DeviceGroupPage() {
             <p className='text-center text-gray-500 py-8'>暂无可添加的设备</p>
           ) : (
             devices.map(device => {
-              // 检查设备是否已在分组中
-              const isInGroup = groupDevices.some(gd => gd.device_id === device.id);
-              const isSelected = selectedDeviceIds.includes(Number(device.id));
-              
+              // 检查设备是否已在分组中（device_id 为业务键）
+              const isInGroup = groupDevices.some(gd => gd.device_id === device.device_id);
+              const isSelected = selectedDeviceIds.includes(device.device_id);
+
               return (
                 <div
                   key={device.id}
@@ -810,8 +810,8 @@ function DeviceGroupPage() {
                     if (!isInGroup) {
                       setSelectedDeviceIds(prev =>
                         isSelected
-                          ? prev.filter(id => id !== Number(device.id))
-                          : [...prev, Number(device.id)]
+                          ? prev.filter(id => id !== device.device_id)
+                          : [...prev, device.device_id]
                       );
                     }
                   }}

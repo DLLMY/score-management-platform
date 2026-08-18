@@ -93,6 +93,10 @@ function Login() {
         localStorage.setItem('subaccount', JSON.stringify(userData));
       }
 
+      // M10: 双身份隔离——登录管理端时清除学生端凭证，防止 URL 串访
+      localStorage.removeItem('student');
+      localStorage.removeItem('student_token');
+
       if (result.access_token) {
         localStorage.setItem('access_token', result.access_token);
       }

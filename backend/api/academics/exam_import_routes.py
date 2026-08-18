@@ -2,10 +2,26 @@ from flask import request
 import openpyxl
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
-from models import db, Exam, Score, User, Admin, get_by_id
+from models import db, Exam, Score, User, Admin, Subject, get_by_id
 from utils.permission import requires_permission
 from io import BytesIO
 from services.excel_service import excel_import_service
+from services.academics_service import academics_service
+
+
+def _resolve_subject_id(subject_name, subject_id):
+    """将科目名称或科目ID解析为 subject.id；均缺失返回 None。"""
+    if subject_id:
+        return subject_id
+    if subject_name:
+        sub = Subject.query.filter_by(name=subject_name).first()
+        if sub:
+            return sub.id
+        sub = Subject.query.filter_by(code=subject_name).first()
+        if sub:
+            return sub.id
+    return None
+
 
 ns_exam_import = Namespace("exam-import", description="成绩导入增强功能")
 
@@ -256,12 +272,17 @@ class PreviewImportData(Resource):
                 if not subject:
                     errors.append(f"行{i+2}: 科目为空")
                     continue
+                # F2 修复: preview 此前未解析 subject_id → NameError 恒 500；与 execute 保持一致
+                subject_id = _resolve_subject_id(subject, None)
+                if subject_id is None:
+                    errors.append(f"行{i+2}: 科目「{subject}」未配置")
+                    continue
 
                 is_valid, msg = ScoreImportHelper.validate_score_range(score_val, full_score)
                 if not is_valid:
                     errors.append(f"行{i+2}: {student.name}-{subject} - {msg}")
 
-                existing_score = Score.query.filter_by(exam_id=exam_id, student_id=student.id, subject=subject).first()
+                existing_score = Score.query.filter_by(exam_id=exam_id, student_id=student.id, subject_id=subject_id).first()
 
                 results.append(
                     {
@@ -336,107 +357,18 @@ class ExecuteImport(Resource):
             if not validation["valid"]:
                 return APIResponse.error(message="文件格式错误", errors=validation["errors"], status_code=400)
 
-            card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
-            subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
-            score_idx = ScoreImportHelper.find_column_index(headers, "score")
-            full_score_idx = ScoreImportHelper.find_column_index(headers, "full_score")
-            remark_idx = ScoreImportHelper.find_column_index(headers, "remark")
-
-            success_count = 0
-            update_count = 0
-            insert_count = 0
-            failed_count = 0
-            errors = []
-
-            for i, row_data in enumerate(parsed_rows):
-                try:
-                    card_id = (
-                        str(row_data.get(headers[card_id_idx], "")).strip()
-                        if card_id_idx >= 0 and row_data.get(headers[card_id_idx])
-                        else None
-                    )
-                    subject = row_data.get(headers[subject_idx]) if subject_idx >= 0 else None  # noqa: F841
-                    score_val = (
-                        ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
-                        if score_idx >= 0
-                        else None
-                    )
-                    full_score = (
-                        ScoreImportHelper.parse_score_value(row_data.get(headers[full_score_idx]))
-                        if full_score_idx >= 0
-                        else 100
-                    )
-                    remark = (
-                        str(row_data.get(headers[remark_idx], "")).strip()
-                        if remark_idx >= 0 and row_data.get(headers[remark_idx])
-                        else None
-                    )
-
-                    if not card_id or not subject:
-                        failed_count += 1
-                        errors.append(f"行{i+2}: 必需字段为空")
-                        continue
-
-                    student = User.query.filter_by(card_id=card_id).first()
-                    if not student:
-                        failed_count += 1
-                        errors.append(f"行{i+2}: 学号{card_id}不存在")
-                        continue
-
-                    if validate_score:
-                        is_valid, msg = ScoreImportHelper.validate_score_range(score_val, full_score)
-                        if not is_valid:
-                            failed_count += 1
-                            errors.append(f"行{i+2}: {student.name}-{subject} - {msg}")
-                            continue
-
-                    existing_score = Score.query.filter_by(
-                        exam_id=exam_id, student_id=student.id, subject=subject
-                    ).first()
-
-                    if existing_score:
-                        if update_existing:
-                            existing_score.score = score_val
-                            existing_score.full_score = full_score
-                            existing_score.remark = remark
-                            existing_score.status = "pending"
-                            existing_score.entered_by = entered_by
-                            update_count += 1
-                        else:
-                            failed_count += 1
-                            errors.append(f"行{i+2}: {student.name}-{subject}已存在")
-                            continue
-                    else:
-                        score = Score(
-                            exam_id=exam_id,
-                            student_id=student.id,
-                            subject=subject,  # noqa: F841
-                            score=score_val,
-                            full_score=full_score,
-                            remark=remark,
-                            status="pending",
-                            entered_by=entered_by,
-                        )
-                        db.session.add(score)
-                        insert_count += 1
-
-                    success_count += 1
-
-                except Exception as e:
-                    failed_count += 1
-                    errors.append(f"行{i+2}: {str(e)}")
-
-            db.session.commit()
+            result = academics_service.execute_score_import(
+                exam_id=exam_id,
+                entered_by=entered_by,
+                update_existing=update_existing,
+                validate_score=validate_score,
+                parsed_rows=parsed_rows,
+                headers=headers,
+            )
 
             return APIResponse.success(
                 message="导入完成",
-                data={
-                    "imported_count": success_count,
-                    "insert_count": insert_count,
-                    "update_count": update_count,
-                    "failed_count": failed_count,
-                    "errors": errors[:50],
-                },
+                data=result,
             )
 
         except Exception as e:
@@ -640,11 +572,11 @@ class ImportHistory(Resource):
                     "exam_name": exam.name if exam else None,
                     "student_name": student.name if student else None,
                     "student_card_id": student.card_id if student else None,
-                    "subject": score.subject,
+                    "subject": score.subject_rel.name if score.subject_rel else "",
                     "score": score.score,
                     "full_score": score.full_score,
                     "status": score.status,
-                    "rank": score.rank,
+                    "rank": None,  # R7: Score.rank 列废弃，无排名上下文
                     "entered_by": entered_by_admin.username if entered_by_admin else None,
                     "entered_at": score.entered_at.isoformat() if score.entered_at else None,
                 }

@@ -111,15 +111,15 @@ def create_missing_indexes():
                 indexes_created.append("idx_alert_unread_severity")
             except Exception as e:
                 print(f"创建索引 idx_alert_unread_severity 失败: {e}")
-            # 11. RiskWarning: 风险预警查询
+            # 11. Alert(风险/心理预警): P0-6 合并后 student 预警落在 alert(source IN ('risk','mental'))
             try:
                 conn.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_risk_warning_user_resolved
-                    ON risk_warnings(user_id, is_resolved, risk_level)
+                    CREATE INDEX IF NOT EXISTS idx_alert_student_source_resolved
+                    ON alert(student_id, source, is_resolved)
                 """))
-                indexes_created.append("idx_risk_warning_user_resolved")
+                indexes_created.append("idx_alert_student_source_resolved")
             except Exception as e:
-                print(f"创建索引 idx_risk_warning_user_resolved 失败: {e}")
+                print(f"创建索引 idx_alert_student_source_resolved 失败: {e}")
             # 12. CompositeScore: 综合评分查询
             try:
                 conn.execute(text("""

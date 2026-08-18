@@ -2,16 +2,23 @@ from flask import request, send_file
 import os
 import time
 from flask_restx import Namespace, Resource, fields
-from models import db, OperationLog, FirmwareVersion, DeviceFirmwareUpdate, Device
-from datetime import datetime
+from models import FirmwareVersion, DeviceFirmwareUpdate, Device
 from utils.permission import requires_permission
 from werkzeug.utils import secure_filename
 
 from utils.response import APIResponse
-from hashlib import md5
 import hashlib
 from services.mqtt_service import mqtt_manager
 from services.ota_negotiation_service import build_download_url, negotiate_all_devices, sign_ota_command
+from services.firmware_service import (
+    create_firmware_version,
+    update_firmware_version,
+    delete_firmware_version,
+    report_ota_status,
+    create_uploaded_firmware,
+    log_batch_upgrade,
+    log_ota_upgrade,
+)
 
 ns_firmware = Namespace("firmware", description="Firmware management operations")
 
@@ -90,36 +97,9 @@ class FirmwareVersions(Resource):
         if existing:
             return APIResponse.error(message="Version already exists", status_code=400)
 
-        firmware = FirmwareVersion(
-            version=version,
-            description=data.get("description"),
-            file_path=data.get("file_path"),
-            file_size=data.get("file_size"),
-            md5=data.get("md5"),
-            min_compatible_version=data.get("min_compatible_version"),
-            is_mandatory=data.get("is_mandatory", False),
-            is_active=data.get("is_active", True),
-            created_by=getattr(request, "admin_id", None),
-        )
+        firmware_id = create_firmware_version(data, created_by=getattr(request, "admin_id", None))
 
-        try:
-            db.session.add(firmware)
-            db.session.commit()
-
-            log = OperationLog(
-                operation_type="firmware_create",
-                target_type="firmware",
-                target_id=firmware.id,
-                operator="Admin",
-                description=f"Created firmware version: {firmware.version}",
-            )
-            db.session.add(log)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            raise
-
-        return {"success": True, "message": "Firmware version created", "id": firmware.id}, 201
+        return {"success": True, "message": "Firmware version created", "id": firmware_id}, 201
 
 
 @ns_firmware.route("/versions/<int:id>")
@@ -160,14 +140,7 @@ class FirmwareVersionItem(Resource):
         firmware = FirmwareVersion.query.get_or_404(id)
         data = request.get_json()
 
-        if "description" in data:
-            firmware.description = data["description"]
-        if "is_mandatory" in data:
-            firmware.is_mandatory = data["is_mandatory"]
-        if "is_active" in data:
-            firmware.is_active = data["is_active"]
-
-        db.session.commit()
+        update_firmware_version(firmware, data)
 
         return APIResponse.success(message="Firmware version updated")
 
@@ -196,8 +169,7 @@ class FirmwareVersionItem(Resource):
                 except Exception:
                     pass
 
-        db.session.delete(firmware)
-        db.session.commit()
+        delete_firmware_version(firmware)
 
         return APIResponse.success(message="Firmware version deleted")
 
@@ -293,69 +265,15 @@ class OTAReport(Resource):
             return APIResponse.bad_request(message="device_id 与 status 为必填项")
 
         if status == "started":
-            update_record = DeviceFirmwareUpdate(
-                device_id=device_id,
-                device_name=device_name,
-                from_version=from_version,
-                to_version=to_version,
-                status="in_progress",
-                started_at=datetime.now(),
-            )
-            db.session.add(update_record)
-            db.session.commit()
-
+            report_ota_status("started", device_id, device_name, from_version, to_version)
             return APIResponse.success(message="Upgrade started")
 
         elif status == "completed":
-            update_record = (
-                DeviceFirmwareUpdate.query.filter_by(device_id=device_id, to_version=to_version, status="in_progress")
-                .order_by(DeviceFirmwareUpdate.started_at.desc())
-                .first()
-            )
-
-            if update_record:
-                update_record.status = "completed"
-                update_record.completed_at = datetime.now()
-                db.session.commit()
-
-            log = OperationLog(
-                operation_type="firmware_upgrade",
-                target_type="device",
-                target_id=device_id,
-                operator="OTA System",
-                description=f"Device {device_name} firmware upgrade successful: {from_version} -> {to_version}",
-            )
-            db.session.add(log)
-            db.session.commit()
-
+            report_ota_status("completed", device_id, device_name, from_version, to_version)
             return APIResponse.success(message="Upgrade completed")
 
         elif status == "failed":
-            update_record = (
-                DeviceFirmwareUpdate.query.filter_by(device_id=device_id, to_version=to_version, status="in_progress")
-                .order_by(DeviceFirmwareUpdate.started_at.desc())
-                .first()
-            )
-
-            if update_record:
-                update_record.status = "failed"
-                update_record.completed_at = datetime.now()
-                update_record.error_message = error_message
-                db.session.commit()
-
-            log = OperationLog(
-                operation_type="firmware_upgrade",
-                target_type="device",
-                target_id=device_id,
-                operator="OTA System",
-                description=(
-                    f"Device {device_name} firmware upgrade failed: "
-                    f"{from_version} -> {to_version}, error: {error_message}"
-                ),
-            )
-            db.session.add(log)
-            db.session.commit()
-
+            report_ota_status("failed", device_id, device_name, from_version, to_version, error_message)
             return APIResponse.success(message="Failed status recorded")
 
         return APIResponse.success()
@@ -440,7 +358,15 @@ class BatchUpgrade(Resource):
         device_ids = data.get("device_ids", [])
         target_version = data.get("target_version")
 
-        firmware = FirmwareVersion.query.filter_by(version=target_version, is_active=True).first()
+        # S5-A-P1-2 修复: 工具常下发 "latest" → 解析为最新激活版本（原直接按 version 查 → 404）
+        if str(target_version).strip().lower() == "latest":
+            firmware = (
+                FirmwareVersion.query.filter(FirmwareVersion.is_active)
+                .order_by(FirmwareVersion.created_at.desc())
+                .first()
+            )
+        else:
+            firmware = FirmwareVersion.query.filter_by(version=target_version, is_active=True).first()
 
         if not firmware:
             return APIResponse.error(message="Target version does not exist or is not active", status_code=404)
@@ -466,15 +392,7 @@ class BatchUpgrade(Resource):
 
             results.append({"device_id": device_id, "status": "command_sent"})
 
-        log = OperationLog(
-            operation_type="firmware_batch_upgrade",
-            target_type="firmware",
-            target_id=firmware.id,
-            operator="Admin",
-            description=f"Batch upgrade firmware: {len(device_ids)} devices -> {target_version}",
-        )
-        db.session.add(log)
-        db.session.commit()
+        log_batch_upgrade(firmware.id, len(device_ids), target_version)
 
         return {"success": True, "message": f"Upgrade commands sent to {len(device_ids)} devices", "results": results}
 
@@ -548,43 +466,25 @@ class FirmwareUpload(Resource):
             file_size = os.path.getsize(file_path)
 
             with open(file_path, "rb") as f:
-                sha256_hash = hashlib.sha256()
+                md5_hash = hashlib.md5()
                 for chunk in iter(lambda: f.read(4096), b""):
-                    sha256_hash.update(chunk)
-                sha256 = sha256_hash.hexdigest()
+                    md5_hash.update(chunk)
+                md5_hex = md5_hash.hexdigest()
 
-            firmware = FirmwareVersion(
-                version=version,
-                description=description,
-                file_path=file_path,
-                file_size=file_size,
-                md5=sha256,
-                min_compatible_version=min_compatible_version,
-                is_mandatory=is_mandatory,
-                is_active=True,
+            firmware_id = create_uploaded_firmware(
+                version, description, file_path, file_size, md5_hex,
+                min_compatible_version, is_mandatory,
                 created_by=getattr(request, "admin_id", None),
             )
-            db.session.add(firmware)
-            db.session.commit()
-
-            log = OperationLog(
-                operation_type="firmware_upload",
-                target_type="firmware",
-                target_id=firmware.id,
-                operator="Admin",
-                description=f"Uploaded firmware: {version} ({file_size} bytes, SHA256: {sha256})",
-            )
-            db.session.add(log)
-            db.session.commit()
 
             return {
                 "success": True,
                 "message": "Firmware uploaded successfully",
                 "firmware": {
-                    "id": firmware.id,
-                    "version": firmware.version,
+                    "id": firmware_id,
+                    "version": version,
                     "file_size": file_size,
-                    "md5": md5,
+                    "md5": md5_hex,
                     "description": description,
                     "is_mandatory": is_mandatory,
                 },
@@ -603,12 +503,15 @@ class FirmwareDownload(Resource):
     @ns_firmware.doc("download_firmware", description="Download firmware file")
     @ns_firmware.response(200, "Success")
     @ns_firmware.response(404, "Not found")
-    @requires_permission("view_devices")
+    # S1 修复: 固件 http.GET 无认证头 → 原 requires_permission 致 OTA 全链路 401。
+    # 匿名化依据：仅 GET 二进制 + realpath 目录校验 + OTA 指令携带 HMAC 签名（fwId:version:url），
+    # 固件验签通过才下载，签名即来源保证。
     def get(self, id):
         """
         Download firmware file
 
-        Download firmware file by firmware ID.
+        Download firmware file by firmware ID. 匿名可下载（固件 OTA 场景），
+        完整性由 OTA 指令 HMAC 签名 + 固件 MD5 校验保证。
         """
         firmware = FirmwareVersion.query.get_or_404(id)
 
@@ -699,15 +602,7 @@ class FirmwareOTAUpgrade(Resource):
 
             results.append({"device_id": device_id, "status": "command_sent"})
 
-        log = OperationLog(
-            operation_type="firmware_ota_upgrade",
-            target_type="firmware",
-            target_id=firmware.id,
-            operator="Admin",
-            description=f"OTA upgrade firmware: {len(device_ids)} devices -> {firmware.version}",
-        )
-        db.session.add(log)
-        db.session.commit()
+        log_ota_upgrade(firmware.id, len(device_ids), firmware.version)
 
         return APIResponse.success(
             data={"success": True, "message": f"Upgrade commands sent to {len(device_ids)} devices", "results": results}

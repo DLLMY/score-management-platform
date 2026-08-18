@@ -11,7 +11,7 @@
 本脚本：
   1) 确保 timetable.rule.manage 等权限码存在于 permissions 表（缺失则补）；
   2) 若不存在则新建角色 timetable_manager（角色名「排课教务」）；
-  3) 将排课相关权限批量授予该角色（role_permission.permissions CSV + 逐条映射），
+  3) 将排课相关权限批量授予该角色（仅逐条映射；CSV 冗余列已废弃），
      已存在则跳过；
   4) 运行前自动备份数据库（.db + -wal/-shm）。
 
@@ -105,28 +105,21 @@ def migrate(db_path: str) -> int:
         print(f"[ok] inserted missing permission: {perm}")
 
     # 1) 创建角色（若不存在）
-    cur.execute("SELECT id, permissions FROM role_permission WHERE role_code = ?", (ROLE_CODE,))
+    cur.execute("SELECT id FROM role_permission WHERE role_code = ?", (ROLE_CODE,))
     row = cur.fetchone()
     if row is None:
         cur.execute(
             "INSERT INTO role_permission "
-            "(role_code, role_name, description, permissions, is_active, created_at, updated_at) "
-            'VALUES (?,?,?,?,1,datetime("now"),datetime("now"))',
-            (ROLE_CODE, ROLE_NAME, ROLE_DESC, "",),
+            "(role_code, role_name, description, is_active, created_at, updated_at) "
+            'VALUES (?,?,?,1,datetime("now"),datetime("now"))',
+            (ROLE_CODE, ROLE_NAME, ROLE_DESC),
         )
         changed.append(f"role[{ROLE_CODE}]")
         print(f"[ok] created role: {ROLE_CODE} ({ROLE_NAME})")
     else:
         print(f"[skip] role already exists: {ROLE_CODE}")
 
-    # 2) 逐条授予权限（role_permission_mappings + role_permission.permissions CSV）
-    cur.execute(
-        "SELECT permissions FROM role_permission WHERE role_code = ?", (ROLE_CODE,)
-    )
-    csv_row = cur.fetchone()
-    csv_text = csv_row[0] if csv_row else ""
-    codes = [c.strip() for c in csv_text.split(",") if c.strip()]
-
+    # 2) 逐条授予权限（仅 role_permission_mappings；CSV 冗余列已废弃）
     for perm in ROLE_PERMS:
         cur.execute(
             "SELECT id FROM role_permission_mappings WHERE role_code = ? AND permission_code = ?",
@@ -143,23 +136,10 @@ def migrate(db_path: str) -> int:
             changed.append(f"mapping[{perm}]")
             print(f"[ok] inserted mapping: {ROLE_CODE} -> {perm}")
 
-        if perm not in codes:
-            codes.append(perm)
-
-    new_csv = ",".join(codes)
-    cur.execute(
-        'UPDATE role_permission SET permissions = ?, updated_at = datetime("now") WHERE role_code = ?',
-        (new_csv, ROLE_CODE),
-    )
-    if f"mapping" in str(changed) or not changed:
-        # 若 CSV 有变化但 mapping 已在 changed 中体现，这里仅同步 CSV；避免重复记
-        if new_csv != csv_text and f"role[{ROLE_CODE}]" not in changed:
-            changed.append(f"role_permission_csv[{ROLE_CODE}]")
-
     conn.commit()
 
     # 3) 验证
-    cur.execute("SELECT role_name, permissions FROM role_permission WHERE role_code = ?", (ROLE_CODE,))
+    cur.execute("SELECT role_name FROM role_permission WHERE role_code = ?", (ROLE_CODE,))
     vr = cur.fetchone()
     print("verify role:", vr)
     cur.execute(

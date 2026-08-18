@@ -23,7 +23,6 @@ from models import (
     ScoreRecord,
     Device,
     DeviceHeartbeat,
-    DeviceAlert,
     Exam,
     Score,
     Notification,
@@ -76,10 +75,10 @@ def create_indexes():
             ("ix_heartbeat_received_at", ["received_at"]),
         ]
 
-        # ========== DeviceAlert 表索引 ==========
-        alert_table = DeviceAlert.__tablename__
+        # ========== Alert 表索引（F9-A 合并 device_alert 后统一存放） ==========
+        alert_table = Alert.__tablename__
         alert_indexes = [
-            # 已存在的索引：device_id, is_resolved, created_at
+            # 已存在的索引：alert_type, severity, device_id, is_read, created_at, source, is_resolved
             ("ix_alert_device_resolved", ["device_id", "is_resolved"]),
             ("ix_alert_created_desc", ["created_at"]),
         ]
@@ -203,7 +202,6 @@ def check_existing_indexes():
             ScoreRecord.__tablename__,
             Device.__tablename__,
             DeviceHeartbeat.__tablename__,
-            DeviceAlert.__tablename__,
             Exam.__tablename__,
             Score.__tablename__,
             Notification.__tablename__,

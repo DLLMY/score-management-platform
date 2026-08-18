@@ -51,6 +51,7 @@ function AttendanceManage() {
   const [leavesError, setLeavesError] = useState(false);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showRecordModal, setShowRecordModal] = useState<boolean>(false);
@@ -134,6 +135,8 @@ function AttendanceManage() {
 
   const handleRecordSubmit = useCallback(async () => {
     if (!validateRecordForm()) return;
+    if (submitting) return; // M2: 防重复提交
+    setSubmitting(true);
 
     try {
       const data: AttendanceRecordInput = {
@@ -151,35 +154,55 @@ function AttendanceManage() {
     } catch (error) {
       logger.error('记录失败:', error);
       showToast('error', '考勤记录失败');
+    } finally {
+      setSubmitting(false);
     }
-  }, [recordForm, showToast, handleCloseRecordModal, fetchAttendances, fetchStats, validateRecordForm]);
+  }, [recordForm, showToast, handleCloseRecordModal, fetchAttendances, fetchStats, validateRecordForm, submitting]);
 
   const handleBatchRecord = useCallback(
     async (status: string) => {
-      if (!recordForm.class_id || !recordForm.student_id) {
-        showToast('warning', '请先设置班级和学生');
+      // M11: 批量操作按班级生效——需班级+日期+节次；不再要求单个学生
+      if (!recordForm.class_id) {
+        showToast('warning', '请先选择班级');
         return;
       }
+      if (!recordForm.date || !recordForm.period) {
+        showToast('warning', '请选择日期与节次');
+        return;
+      }
+      if (submitting) return; // 防连点
+      setSubmitting(true);
       try {
-        const records: AttendanceRecordInput[] = [
-          {
-            class_id: recordForm.class_id,
-            student_id: recordForm.student_id,
-            date: recordForm.date,
-            period: recordForm.period,
-            status,
-          },
-        ];
+        const usersRes = await api.users.getAll({
+          class_id: Number(recordForm.class_id),
+          per_page: 500,
+          skipCache: true,
+        });
+        const userList = Array.isArray(usersRes) ? usersRes : (usersRes as { users?: { id: number; role: string }[] }).users || [];
+        const students = userList.filter((u) => u.role === 'student');
+        if (students.length === 0) {
+          showToast('warning', '该班级暂无学生，无法批量记录');
+          return;
+        }
+        const records: AttendanceRecordInput[] = students.map((u) => ({
+          class_id: recordForm.class_id,
+          student_id: Number(u.id),
+          date: recordForm.date,
+          period: recordForm.period,
+          status,
+        }));
         await api.attendance.batchRecord(records);
-        showToast('success', `已批量记录 ${status}`);
+        showToast('success', `已批量记录 ${students.length} 名学生${status === 'present' ? '出勤' : '缺勤'}`);
         fetchAttendances();
         fetchStats();
       } catch (error) {
         logger.error('批量记录失败:', error);
         showToast('error', '批量记录失败');
+      } finally {
+        setSubmitting(false);
       }
     },
-    [recordForm, showToast, fetchAttendances, fetchStats]
+    [recordForm, submitting, showToast, fetchAttendances, fetchStats]
   );
 
   const handleOpenLeaveModal = useCallback(() => {
@@ -205,6 +228,8 @@ function AttendanceManage() {
 
   const handleLeaveSubmit = useCallback(async () => {
     if (!validateLeaveForm()) return;
+    if (submitting) return; // M2: 防重复提交
+    setSubmitting(true);
 
     try {
       const data: LeaveApplyInput = {
@@ -221,8 +246,10 @@ function AttendanceManage() {
     } catch (error) {
       logger.error('提交失败:', error);
       showToast('error', '提交请假申请失败');
+    } finally {
+      setSubmitting(false);
     }
-  }, [leaveForm, showToast, handleCloseLeaveModal, fetchLeaves, validateLeaveForm]);
+  }, [leaveForm, showToast, handleCloseLeaveModal, fetchLeaves, validateLeaveForm, submitting]);
 
   const handleApproveLeave = useCallback(
     async (leaveId: number, approve: boolean) => {
@@ -244,8 +271,9 @@ function AttendanceManage() {
       absent: { bg: 'bg-red-50 dark:bg-red-900/30', dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400', label: '缺勤' },
       late: { bg: 'bg-amber-50 dark:bg-amber-900/30', dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400', label: '迟到' },
       leave: { bg: 'bg-blue-50 dark:bg-blue-900/30', dot: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-400', label: '请假' },
+      unknown: { bg: 'bg-gray-50 dark:bg-gray-800', dot: 'bg-gray-400', text: 'text-gray-600 dark:text-gray-400', label: '未知' },
     };
-    const c = config[status] || config.present;
+    const c = config[status] || config.unknown;
     return (
       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${c.bg} ${c.text}`}>
         <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${c.dot}`} />
@@ -609,7 +637,7 @@ function AttendanceManage() {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">状态</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{/* 窄屏 2 列，防挤压 */}
                   {[
                     { value: 'present', label: '出勤', active: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' },
                     { value: 'absent', label: '缺勤', active: 'bg-red-500 text-white shadow-lg shadow-red-500/25' },
@@ -659,10 +687,11 @@ function AttendanceManage() {
               </button>
               <button
                 onClick={handleRecordSubmit}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 font-medium"
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-5 h-5" />
-                保存记录
+                {submitting ? '保存中...' : '保存记录'}
               </button>
             </div>
           </div>
@@ -773,10 +802,11 @@ function AttendanceManage() {
               </button>
               <button
                 onClick={handleLeaveSubmit}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium"
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-5 h-5" />
-                提交申请
+                {submitting ? '提交中...' : '提交申请'}
               </button>
             </div>
           </div>

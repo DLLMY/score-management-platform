@@ -66,6 +66,11 @@ class ExcelExportService:
             return str(value)
         if isinstance(value, float):
             return round(value, 10)
+        if isinstance(value, str):
+            # S8 修复: Excel 公式注入（= + - @ 开头 → 打开即执行公式/外链）
+            stripped = value.lstrip()
+            if stripped.startswith(("=", "+", "-", "@")):
+                return "'" + value
         return value
 
     @staticmethod

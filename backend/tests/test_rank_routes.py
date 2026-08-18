@@ -1,5 +1,3 @@
-
-
 class TestRankRoutes:
 
     def test_get_rank_rules_list(self, client, app, auth_headers):
@@ -52,10 +50,7 @@ class TestRankRoutes:
                 json={'name': '旧排名', 'min_score': 0, 'max_score': 50},
                 headers=auth_headers
             )
-            assert create_response.status_code in [201, 403]
-            if create_response.status_code != 201:
-                return
-
+            assert create_response.status_code == 201
             rule_id = create_response.get_json()['data']['rule_id']
 
             response = client.put(
@@ -63,7 +58,11 @@ class TestRankRoutes:
                 json={'name': '新排名', 'min_score': 50, 'max_score': 100},
                 headers=auth_headers
             )
-            assert response.status_code in [200, 401, 403]
+            assert response.status_code == 200
+            assert response.get_json()['message'] == '排名规则更新成功'
+
+            detail = client.get(f'/api/rank-rules/{rule_id}', headers=auth_headers)
+            assert detail.get_json()['data']['name'] == '新排名'
 
     def test_delete_rank_rule(self, client, app, auth_headers):
         with app.app_context():
@@ -76,8 +75,10 @@ class TestRankRoutes:
 
             response = client.delete(f'/api/rank-rules/{rule_id}', headers=auth_headers)
             assert response.status_code == 200
-            data = response.get_json()
-            assert data['success'] is True
+            assert response.get_json()['success'] is True
+
+            not_found = client.get(f'/api/rank-rules/{rule_id}', headers=auth_headers)
+            assert not_found.status_code == 404
 
     def test_delete_rank_rule_not_found(self, client, app, auth_headers):
         with app.app_context():

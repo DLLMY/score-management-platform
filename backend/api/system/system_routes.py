@@ -7,6 +7,7 @@ from utils.performance_monitor import performance_monitor
 from services.redis_cache_service import get_cache_service
 from services.mqtt_service import mqtt_manager
 from services.system_config_service import SystemConfigService
+from services.frontend_telemetry_service import persist_perf_metric, persist_frontend_error
 from models import db, FrontendPerfMetric, FrontendErrorLog, SystemMetric
 from datetime import datetime, timedelta
 from sqlalchemy import text
@@ -166,51 +167,6 @@ def validate_error_data(data):
             return False, "column 必须是整数"
 
     return True, ""
-
-
-def _persist_perf_metric(data):
-    """把单条前端性能指标落库（失败静默，绝不阻塞上报接口）。"""
-    try:
-        metric = FrontendPerfMetric(
-            metric_type=str(data.get("type", "custom"))[:30],
-            name=str(data.get("name", ""))[:200],
-            value=float(data.get("value", 0)),
-            unit=(str(data.get("unit"))[:20] if data.get("unit") is not None else None),
-            page=(str(data.get("page"))[:200] if data.get("page") else None),
-            user_agent=(str(data.get("user_agent"))[:500] if data.get("user_agent") else None),
-            screen_width=data.get("screen_width"),
-            screen_height=data.get("screen_height"),
-            detail=data.get("data"),
-        )
-        db.session.add(metric)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logger.warning(f"前端性能指标落库失败（已忽略）: {e}")
-
-
-def _persist_frontend_error(data):
-    """把单条前端错误上报落库（失败静默，绝不阻塞上报接口）。"""
-    try:
-        err = FrontendErrorLog(
-            error_type=str(data.get("type", "js_error"))[:30],
-            message=str(data.get("message", ""))[:2000],
-            stack=data.get("stack"),
-            file=(str(data.get("file"))[:500] if data.get("file") else None),
-            line=data.get("line"),
-            column=data.get("column"),
-            page=(str(data.get("page"))[:200] if data.get("page") else None),
-            url=(str(data.get("url"))[:500] if data.get("url") else None),
-            method=(str(data.get("method"))[:10] if data.get("method") else None),
-            status=data.get("status"),
-            user_agent=(str(data.get("user_agent"))[:500] if data.get("user_agent") else None),
-            detail=data.get("data"),
-        )
-        db.session.add(err)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logger.warning(f"前端错误落库失败（已忽略）: {e}")
 
 
 ns_system = Namespace("system", description="系统管理相关操作")
@@ -396,17 +352,38 @@ class SystemRestore(Resource):
 
             if not filename:
                 return APIResponse.error(message="请提供备份文件名", status_code=400)
+            # F14 修复: 路径穿越防护——只允许备份目录内的文件名
+            if filename != os.path.basename(filename):
+                return APIResponse.error(message="备份文件名非法", status_code=400)
 
             basedir = os.path.abspath(os.path.dirname(__file__))
             backup_dir = os.path.join(basedir, "..", "backups")
-            backup_path = os.path.join(backup_dir, filename)
+            backup_path = os.path.join(backup_dir, os.path.basename(filename))
             target_path = os.path.join(basedir, "..", "instance", "score_management.db")
 
             if not os.path.exists(backup_path):
                 return APIResponse.error(message="备份文件不存在", status_code=404)
 
+            # F14 修复: 校验备份文件为有效 SQLite 数据库（防止恢复损坏/伪造文件）
+            try:
+                with open(backup_path, "rb") as _f:
+                    magic = _f.read(16)
+            except OSError as _e:
+                return APIResponse.error(message=f"备份文件不可读: {_e}", status_code=500)
+            if not magic.startswith(b"SQLite format 3"):
+                return APIResponse.error(message="备份文件不是有效的 SQLite 数据库", status_code=400)
+
+            # F14 修复: 恢复前自动备份当前库（磁盘空间不足时仅告警不阻断恢复）
+            try:
+                pre_bak = os.path.join(
+                    backup_dir, f"pre_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+                )
+                shutil.copy2(target_path, pre_bak)
+            except Exception as _e:
+                print(f"[恢复] 当前库自动备份失败（继续恢复）: {_e}")
+
             shutil.copy2(backup_path, target_path)
-            return APIResponse.success(message="数据库恢复成功")
+            return APIResponse.success(message="数据库恢复成功（恢复前已尝试自动备份当前库）")
         except Exception as e:
             return APIResponse.error(message=f"恢复失败: {str(e)}", status_code=500)
 
@@ -761,7 +738,7 @@ class FrontendPerformance(Resource):
             if not valid:
                 return APIResponse.error(message=msg, status_code=400)
 
-            _persist_perf_metric(data)
+            persist_perf_metric(data)
             logger.info(f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}')
             return APIResponse.success(message="性能指标接收成功")
         except Exception as e:
@@ -801,8 +778,10 @@ class FrontendPerformanceBatch(Resource):
                 if not valid:
                     logger.warning(f"批量上报中跳过无效数据: {msg}")
                     continue
-                _persist_perf_metric(metric)
+                persist_perf_metric(metric, commit=False)
                 valid_count += 1
+            if valid_count:
+                db.session.commit()  # S10: 批量末尾统一提交
 
             logger.info(f"批量接收前端性能指标: {valid_count}/{len(metrics)} 条有效")
             return APIResponse.success(message=f"成功接收 {valid_count} 条性能指标")
@@ -833,7 +812,7 @@ class FrontendError(Resource):
             if not valid:
                 return APIResponse.error(message=msg, status_code=400)
 
-            _persist_frontend_error(data)
+            persist_frontend_error(data)
             logger.error(f'前端错误上报: {data.get("type")} - {data.get("message")}')
             return APIResponse.success(message="错误信息接收成功")
         except Exception as e:

@@ -119,7 +119,7 @@ class TestClusterService(unittest.TestCase):
     def test_get_cluster_by_user_found(self):
         """测试获取学生分群信息"""
         mock_cluster = MagicMock()
-        mock_cluster.user_id = 1
+        mock_cluster.student_id = 1
         mock_cluster.cluster_label = 0
         mock_cluster.features = {
             "cluster_name": "优秀群",

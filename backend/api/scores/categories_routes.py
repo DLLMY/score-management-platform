@@ -1,8 +1,12 @@
 from flask_restx import Namespace, Resource, fields
-from models import db, ScoreCategory, ScoreRule
+from models import ScoreCategory, ScoreRule
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from datetime import datetime
+from services.score_category_service import (
+    create_category,
+    update_category,
+    delete_category,
+)
 
 try:
     from app import csrf_exempt
@@ -54,17 +58,9 @@ class CategoryList(Resource):
     def post(self):
         data = ns_score_categories.payload
 
-        if ScoreCategory.query.filter_by(name=data.get("name")).first():
-            return APIResponse.error(message="分类名称已存在", status_code=400)
-
-        category = ScoreCategory(
-            name=data.get("name"),
-            description=data.get("description"),
-            color=data.get("color", "#3B82F6"),
-            is_active=data.get("is_active", True),
-        )
-        db.session.add(category)
-        db.session.commit()
+        category, err = create_category(data)
+        if err:
+            return APIResponse.error(message=err, status_code=400)
 
         return (
             APIResponse.success(
@@ -112,18 +108,9 @@ class CategoryResource(Resource):
         category = ScoreCategory.query.get_or_404(id)
         data = ns_score_categories.payload
 
-        existing = ScoreCategory.query.filter(ScoreCategory.name == data.get("name"), ScoreCategory.id != id).first()
-        if existing:
-            return APIResponse.error(message="分类名称已存在", status_code=400)
-
-        category.name = data.get("name", category.name)
-        category.description = data.get("description", category.description)
-        category.color = data.get("color", category.color)
-        if "is_active" in data:
-            category.is_active = data["is_active"]
-        category.updated_at = datetime.now()
-
-        db.session.commit()
+        err = update_category(category, data)
+        if err:
+            return APIResponse.error(message=err, status_code=400)
 
         return APIResponse.success(message="分类更新成功")
 
@@ -132,12 +119,9 @@ class CategoryResource(Resource):
     def delete(self, id):
         category = ScoreCategory.query.get_or_404(id)
 
-        rule_count = ScoreRule.query.filter_by(category_id=id).count()
-        if rule_count > 0:
-            return APIResponse.error(message=f"该分类下还有{rule_count}条规则，无法删除", status_code=400)
-
-        db.session.delete(category)
-        db.session.commit()
+        err = delete_category(category)
+        if err:
+            return APIResponse.error(message=err, status_code=400)
 
         return APIResponse.success(message="分类删除成功")
 

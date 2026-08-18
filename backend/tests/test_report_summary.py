@@ -17,7 +17,7 @@ from unittest import mock
 import pytest
 from openpyxl import load_workbook
 
-from models import db, ClassInfo, Exam, Score, User, Attendance, HomeworkAssignment, HomeworkSubmission, ScoreRecord
+from models import db, ClassInfo, Exam, Score, Subject, User, Attendance, HomeworkAssignment, HomeworkSubmission, ScoreRecord
 from services.report_summary_service import build_class_summary, summary_to_rows
 
 
@@ -171,9 +171,11 @@ def exam_factory(app_context, klass, students):
     def _make():
         e = Exam(name="SumExam_" + uuid.uuid4().hex[:6], status="published", class_id=klass.id)
         db.session.add(e)
+        math = Subject(name="数学", code="SX")
+        db.session.add(math)
         db.session.commit()
         for i, s in enumerate(students):
-            db.session.add(Score(exam_id=e.id, student_id=s.id, subject="数学", score=90 - i * 5))
+            db.session.add(Score(exam_id=e.id, student_id=s.id, subject_id=math.id, score=90 - i * 5))
         db.session.commit()
         return e
 

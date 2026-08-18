@@ -86,17 +86,17 @@ class CompositeScoreService:
         unlock_map = {}
         unlock_counts = (
             db.session.query(
-                ScoreRecord.user_id,
+                ScoreRecord.student_id,
                 func.count(ScoreRecord.id).label("count"),
             )
             .filter(
                 ScoreRecord.description.like("%开锁%"),
             )
-            .group_by(ScoreRecord.user_id)
+            .group_by(ScoreRecord.student_id)
             .all()
         )
         for count in unlock_counts:
-            unlock_map[count.user_id] = count.count
+            unlock_map[count.student_id] = count.count
 
         data = []
         for user in users:
@@ -228,8 +228,7 @@ class CompositeScoreService:
         CompositeScore.query.delete()
         with db_session_scope():
             for r in results:
-                composite = CompositeScore(
-                    user_id=r["user_id"],
+                composite = CompositeScore(student_id=r["user_id"],
                     behavior_score=r["behavior_score"],
                     academic_score=r["academic_score"],
                     composite_score=r["composite_score"],
@@ -252,7 +251,7 @@ class CompositeScoreService:
         Returns:
             dict: 综合评分结果
         """
-        query = CompositeScore.query.join(User, CompositeScore.user_id == User.id).filter(User.is_active)
+        query = CompositeScore.query.join(User, CompositeScore.student_id == User.id).filter(User.is_active)
         if class_name:
             query = query.filter(User.class_name == class_name)
         composites = query.order_by(CompositeScore.composite_score.desc()).all()
@@ -273,7 +272,7 @@ class CompositeScoreService:
             "social": w.get("social", 0),
         }
 
-        user_ids = [c.user_id for c in composites]
+        user_ids = [c.student_id for c in composites]
         academic_map = {}
         if user_ids:
             score_stats = (
@@ -294,14 +293,14 @@ class CompositeScoreService:
         user_map = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
         rankings = []
         for i, composite in enumerate(composites):
-            u = user_map.get(composite.user_id)
+            u = user_map.get(composite.student_id)
             rankings.append(
                 {
-                    "user_id": composite.user_id,
+                    "user_id": composite.student_id,
                     "name": u.name if u else None,
                     "class_name": u.class_name if u else None,
-                    "behavior_score": u.current_score if u else None,
-                    "academic_score": academic_map.get(composite.user_id),
+                    "behavior_score": composite.behavior_score if composite.behavior_score is not None else (u.current_score if u else None),  # R7: 与写入归一化语义一致（原被 current_score 覆盖）
+                    "academic_score": academic_map.get(composite.student_id),
                     "composite_score": composite.composite_score,
                     "ranking": i + 1,
                 }
@@ -340,7 +339,7 @@ class CompositeScoreService:
         Returns:
             dict or None: 综合评分信息
         """
-        composite = CompositeScore.query.filter_by(user_id=user_id).first()
+        composite = CompositeScore.query.filter_by(student_id=user_id).first()
         if not composite:
             return None
         rank = (
@@ -353,7 +352,7 @@ class CompositeScoreService:
         )
         w = composite.weights or {}
         return {
-            "user_id": composite.user_id,
+            "user_id": composite.student_id,
             "composite_score": composite.composite_score,
             "social_score": composite.social_score,
             "ranking": rank,
@@ -397,9 +396,15 @@ class CompositeScoreService:
             print(f"[CompositeScore] 学生不存在或已停用: user_id={user_id}")
             return None
 
-        active_user_ids = [c.user_id for c in CompositeScore.query.join(User, CompositeScore.user_id == User.id).filter(User.is_active).all()]
+        # R1-R9 复核补漏（原 P2-8）: 基数统一为全量活跃学生（与全量计算一致，原取 composite 表用户 → 结果不可比）
+        active_user_ids = [u.id for u in User.query.filter(User.is_active).all()]
         if not active_user_ids:
             print("[CompositeScore] 没有活跃学生的综合评分记录")
+            return None
+        # 学生无综合评分记录（首次积分变动即触发 recalc）→ 返回 None，由全量计算生成；
+        # 原实现直接 index() 抛 ValueError → 崩
+        if user_id not in active_user_ids:
+            print(f"[CompositeScore] 学生 {user_id} 无综合评分记录，跳过增量重算（首次需全量计算）")
             return None
 
         behavior_map = {u.id: u.current_score or 0 for u in User.query.filter(User.id.in_(active_user_ids)).all()}
@@ -423,17 +428,17 @@ class CompositeScoreService:
         unlock_map = {}
         unlock_stats = (
             db.session.query(
-                ScoreRecord.user_id,
+                ScoreRecord.student_id,
                 func.count(ScoreRecord.id).label("count"),
             )
             .filter(
                 ScoreRecord.description.like("%开锁%"),
             )
-            .group_by(ScoreRecord.user_id)
+            .group_by(ScoreRecord.student_id)
             .all()
         )
         for stat in unlock_stats:
-            unlock_map[stat.user_id] = stat.count
+            unlock_map[stat.student_id] = stat.count
 
         max_unlock = max(unlock_map.values()) if unlock_map else 1
         behavior_scores = [behavior_map.get(uid, 0) for uid in active_user_ids]
@@ -454,7 +459,7 @@ class CompositeScoreService:
         )
         composite_score = round(float(weighted_score * 100), 2)
 
-        composite = CompositeScore.query.filter_by(user_id=user_id).first()
+        composite = CompositeScore.query.filter_by(student_id=user_id).first()
         if composite:
             old_score = composite.composite_score
             composite.behavior_score = behavior_norm_value
@@ -462,9 +467,11 @@ class CompositeScoreService:
             composite.social_score = compliance_norm_value
             composite.composite_score = composite_score
             composite.computed_at = datetime.now()
+            # P2-6 修复: 原 `db_session_scope(): pass` 空提交 → 真实持久化增量更新
             with db_session_scope():
-                pass
-            CompositeScoreService._update_rankings()
+                rec = db.session.merge(composite)
+                db.session.commit()
+                _ = rec  # merge 后 rec 即最新行，仅用于确认提交成功
             print(
                 f"[CompositeScore] 增量更新成功: user_id={user_id}, "
                 f"old_score={old_score}, new_score={composite_score}"
@@ -474,16 +481,8 @@ class CompositeScoreService:
             print(f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}")
             return None
 
-    @staticmethod
-    def _update_rankings():
-        """更新所有学生的排名
-
-        根据综合得分重新排序并更新排名字段。
-        """
-        composites = CompositeScore.query.order_by(CompositeScore.composite_score.desc()).all()
-        with db_session_scope():
-            pass
-        print(f"[CompositeScore] 排名已更新，共 {len(composites)} 名学生")
+    # P2-6 修复: 移除 _update_rankings 空操作（无 rank 列 + 空提交 + 虚假"排名已更新"日志；
+    # 排名由 get_student_composite_score 动态 COUNT 计算，无需落库）
 
     @staticmethod
     def get_computation_progress():

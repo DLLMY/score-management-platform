@@ -14,7 +14,7 @@ class ScorePredictService:
 
         return (
             ScoreRecord.query.filter(
-                ScoreRecord.user_id == user_id,
+                ScoreRecord.student_id == user_id,
                 ScoreRecord.created_at >= start_date,
             )
             .order_by(ScoreRecord.created_at)
@@ -225,6 +225,8 @@ class ScorePredictService:
             "user_id": user_id,
             "name": features["name"],
             "class_name": features["class_name"],
+            # P2-5 修复: 诚实标注预测方法——当前为启发式规则模型，非机器学习
+            "model_type": "rule-based",
             "predicted_score": predicted_score,
             "confidence_interval": [
                 round(lower_bound, 1),
@@ -450,7 +452,9 @@ class ScorePredictService:
 
         return {
             "status": "success",
-            "message": f"模型训练完成，使用{valid_users}个学生的{len(features_list)}条记录",
+            # P2-5 修复: 诚实标注——train 仅做数据统计与规则权重微调，不产出可复用 ML 模型
+            "model_type": "rule-based",
+            "message": "规则模型已初始化（基于统计分布与启发式权重，非机器学习训练产物）",
             "model_info": {
                 "training_data_days": days,
                 "total_students": len(users),

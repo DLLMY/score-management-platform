@@ -60,8 +60,8 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
-const PERF_TYPE_OPTIONS = ['', 'web_vital', 'api', 'custom'];
-const ERROR_TYPE_OPTIONS = ['', 'js_error', 'api_error', 'resource_error'];
+const PERF_TYPE_OPTIONS = ['', 'web_vital', 'api_request', 'custom'];  // S7-C-P0-4: 与落库 metric_type 对齐（原 'api' 过滤恒空）
+const ERROR_TYPE_OPTIONS = ['', 'javascript_error', 'api_error', 'resource_error'];  // S7-C-P0-4: 与落库 error_type 对齐（原 'js_error' 过滤恒空）
 
 export const FrontendTelemetry: React.FC = () => {
   // ---- 性能/指标 ----

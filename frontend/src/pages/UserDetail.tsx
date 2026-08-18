@@ -246,6 +246,24 @@ function UserDetail() {
                 </div>
               </div>
 
+              <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-xl'>
+                <div className='w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center'>
+                  <AlertCircle className='w-5 h-5 text-gray-600' />
+                </div>
+                <div>
+                  <p className='text-xs text-gray-500'>账号状态</p>
+                  <p className='font-semibold'>
+                    {user.is_blacklisted ? (
+                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800'>黑名单</span>
+                    ) : user.is_active ? (
+                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'>启用</span>
+                    ) : (
+                      <span className='inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600'>禁用</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
               {(user.father_name ||
                 user.father_phone ||
                 user.mother_name ||

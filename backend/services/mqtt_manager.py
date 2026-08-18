@@ -44,6 +44,9 @@ class MQTTManager:
         self._telemetry_reconnect_thread = None
         self._state_lock = threading.Lock()
         self._config = None
+        # R2: 最近一次「已知好」配置（成功加载或成功连接时使用）。
+        # 当数据库配置读取失败 / 重连时配置源异常，可回退到此，避免 MQTT 配置彻底丢失。
+        self._last_known_good = None
         self._subscribed_topics = []
         self._message_callbacks = []
         self._reconnect_thread = None
@@ -68,8 +71,8 @@ class MQTTManager:
             "broker": "nc5233fc.ala.cn-hangzhou.emqxsl.cn",
             "port": 8883,
             "client_id": "score_backend",
-            "username": "phoneboxtest",
-            "password": "123456",
+            "username": "",
+            "password": "",
             "ssl": True,
             "timeout": 10,
             "keepalive": 60,
@@ -130,10 +133,18 @@ class MQTTManager:
                         "timeout": config.timeout,
                         "keepalive": config.keepalive,
                     }
+                    # R2: 记录最近一次已知好配置，供重连 / DB 读取失败时回退
+                    self._last_known_good = dict(self._config)
                     print(f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}")
                     return True
         except Exception as e:
             print(f"[MQTTManager] 从数据库加载配置失败: {e}")
+
+        # DB 读取失败：若有最近一次已知好配置，则回退到它（避免 MQTT 配置彻底丢失）
+        if self._last_known_good is not None:
+            self._config = dict(self._last_known_good)
+            print("[MQTTManager] 使用最近一次已知好配置（数据库读取失败回退）")
+            return False
 
         self._config = self.DEFAULT_CONFIG.copy()
         print("[MQTTManager] 使用默认配置")
@@ -151,6 +162,9 @@ class MQTTManager:
                 self._state = MQTTConnectionState.CONNECTED
                 self._reconnect_delay = 5
                 self._should_reconnect = True
+                # R2: 成功连上即视为「已知好」配置，记录以便后续回退
+                if self._config:
+                    self._last_known_good = dict(self._config)
                 print("[MQTTManager] 控制连接成功!")
             else:
                 self._state = MQTTConnectionState.ERROR
@@ -507,7 +521,19 @@ class MQTTManager:
                     db.session.add(log)
                     db.session.commit()
 
-                elif status == "failed" or status == "error":
+                # S5-A-P1-1 修复: 固件失败状态码全集映射（原仅 failed/error → 其余失败码不落 failed、
+                # device.ota_status 停 upgrading、can_auto_push 永久拒绝 → 自动推送死锁）
+                elif status in (
+                    "failed",
+                    "error",
+                    "download_failed",
+                    "space_insufficient",
+                    "begin_failed",
+                    "signature_failed",
+                    "version_check_failed",
+                    "resume_exhausted",
+                    "incomplete",
+                ):
                     record = (
                         DeviceFirmwareUpdate.query.filter_by(
                             device_id=device_id, to_version=to_version, status="in_progress"

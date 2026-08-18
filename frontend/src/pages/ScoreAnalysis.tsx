@@ -738,7 +738,7 @@ function ScoreAnalysis(): React.ReactElement {
                   <div className='p-3'>
                     <div className='space-y-2'>
                       {Object.entries(examAnalysis.subject_stats).map(([subject, data]) => (
-                        <div key={subject} className='flex items-center justify-between p-2.5 bg-gray-50/80 rounded-lg'>
+                        <div key={subject} className='flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-50/80 rounded-lg'>{/* 窄屏换行，防横向溢出 */}
                           <div className='flex items-center gap-2'>
                             <span className='px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary-100 text-primary-700 whitespace-nowrap'>
                               {subject}

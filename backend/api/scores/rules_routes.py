@@ -1,6 +1,6 @@
 from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from models import db, ScoreRule, ScoreCategory, get_by_id
+from models import db, ScoreRule, ScoreCategory, ScoreRecord, get_by_id
 from utils.permission import requires_permission
 from utils.logger import log_operation
 from utils.response import APIResponse
@@ -12,6 +12,13 @@ from utils.validation import (
     validation_error_response,
 )
 from services.redis_cache_service import get_cache_service
+from services.score_rule_service import (
+    create_rule,
+    update_rule,
+    delete_rule,
+    import_rules,
+    apply_rule_template,
+)
 from datetime import datetime
 import io
 import csv
@@ -163,17 +170,7 @@ class RuleList(Resource):
                 errors.append("最小间隔必须为正整数或0")
         if errors:
             return validation_error_response(errors)
-        rule = ScoreRule(
-            name=data.get("name").strip(),
-            description=data.get("description"),
-            category_id=data.get("category_id"),
-            score=float(data.get("score")),
-            is_active=data.get("is_active", True),
-            daily_limit=int(data.get("daily_limit", data.get("max_per_day", 0))),
-            min_interval=int(data.get("min_interval", 0)),
-        )
-        db.session.add(rule)
-        db.session.commit()
+        rule = create_rule(data)
         log_operation(
             "rule.create",
             "rule",
@@ -243,15 +240,7 @@ class RuleResource(Resource):
         """
         rule = ScoreRule.query.get_or_404(id)
         data = ns_rules.payload
-        rule.name = data.get("name", rule.name)
-        rule.description = data.get("description", rule.description)
-        rule.category_id = data.get("category_id", rule.category_id)
-        rule.score = data.get("score", rule.score)
-        rule.is_active = data.get("is_active", rule.is_active)
-        rule.daily_limit = data.get("daily_limit", data.get("max_per_day", rule.daily_limit))
-        rule.min_interval = data.get("min_interval", rule.min_interval)
-        rule.updated_at = datetime.now()
-        db.session.commit()
+        update_rule(rule, data)
         log_operation(
             "rule.update",
             "rule",
@@ -278,8 +267,7 @@ class RuleResource(Resource):
         """
         rule = ScoreRule.query.get_or_404(id)
         _deleted_name = rule.name
-        db.session.delete(rule)
-        db.session.commit()
+        delete_rule(rule)
         log_operation("rule.delete", "rule", id, f"删除积分规则: {_deleted_name}")
         get_cache_service().invalidate_by_tag("rules")
         return APIResponse.success(message="规则删除成功")
@@ -336,122 +324,10 @@ class RuleImport(Resource):
         rules_data = data.get("rules", [])
         if not rules_data:
             return APIResponse.error(message="没有导入数据", status_code=400)
-        imported_count = 0
-        error_count = 0
-        errors = []
-        messages = []
-        existing_names = set(r.name for r in ScoreRule.query.all())
-        for idx, rule_data in enumerate(rules_data):
-            try:
-                row_errors = []
-                row_data = rule_data.copy()
-                name = rule_data.get("name")
-                if not name:
-                    row_errors.append({"field": "name", "message": "规则名称不能为空"})
-                elif not isinstance(name, str) or len(str(name).strip()) == 0:
-                    row_errors.append({"field": "name", "message": "规则名称格式无效，必须为非空字符串"})
-                elif len(str(name).strip()) > 100:
-                    row_errors.append({"field": "name", "message": "规则名称长度超过限制（最大100字符）"})
-                if name:
-                    name_str = str(name).strip()
-                    if name_str in existing_names:
-                        row_errors.append({"field": "name", "message": f'规则名称"{name_str}"已存在'})
-                score = rule_data.get("score")
-                if score is None:
-                    row_errors.append({"field": "score", "message": "分数不能为空"})
-                else:
-                    try:
-                        score_float = float(score)
-                    except (ValueError, TypeError):
-                        row_errors.append({"field": "score", "message": f'分数"{score}"不是有效的数值'})
-                category_id = rule_data.get("category_id")
-                if category_id is not None:
-                    try:
-                        category_id_int = int(category_id)
-                        if category_id_int > 0:
-                            category = get_by_id(ScoreCategory, category_id_int)
-                            if not category:
-                                row_errors.append(
-                                    {"field": "category_id", "message": f'分类ID"{category_id_int}"不存在'}
-                                )
-                    except (ValueError, TypeError):
-                        row_errors.append({"field": "category_id", "message": f'分类ID"{category_id}"不是有效的整数'})
-                daily_limit = rule_data.get("daily_limit", 0)
-                try:
-                    daily_limit_int = int(daily_limit)
-                    if daily_limit_int < 0:
-                        row_errors.append({"field": "daily_limit", "message": "每日上限不能为负数"})
-                except (ValueError, TypeError):
-                    row_errors.append({"field": "daily_limit", "message": f'每日上限"{daily_limit}"不是有效的整数'})
-                min_interval = rule_data.get("min_interval", 0)
-                try:
-                    min_interval_int = int(min_interval)
-                    if min_interval_int < 0:
-                        row_errors.append({"field": "min_interval", "message": "最小间隔不能为负数"})
-                except (ValueError, TypeError):
-                    row_errors.append({"field": "min_interval", "message": f'最小间隔"{min_interval}"不是有效的整数'})
-                if row_errors:
-                    error_count += 1
-                    error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
-                    errors.append(
-                        {
-                            "row": idx + 1,
-                            "message": error_msg,
-                            "row_data": row_data,
-                            "error_fields": [err["field"] for err in row_errors],
-                        }
-                    )
-                    messages.append(
-                        {
-                            "name": str(name) if name else "未知",
-                            "action": "failed",
-                            "message": error_msg,
-                            "row_data": row_data,
-                            "error_fields": [err["field"] for err in row_errors],
-                        }
-                    )
-                    continue
-                name_str = str(name).strip()
-                score_float = float(score)
-                category_id_int = int(category_id) if category_id is not None else None
-                daily_limit_int = int(daily_limit)
-                min_interval_int = int(min_interval)
-                rule = ScoreRule(
-                    name=name_str,
-                    description=str(rule_data.get("description", "")).strip(),
-                    category_id=category_id_int,
-                    score=score_float,
-                    is_active=bool(rule_data.get("is_active", True)),
-                    daily_limit=daily_limit_int,
-                    min_interval=min_interval_int,
-                )
-                db.session.add(rule)
-                imported_count += 1
-                existing_names.add(name_str)
-                messages.append({"name": name_str, "action": "created", "message": f'规则"{name_str}"导入成功'})
-            except Exception as e:
-                error_count += 1
-                error_msg = str(e)
-                errors.append({"row": idx + 1, "message": error_msg, "row_data": rule_data, "error_fields": ["system"]})
-                messages.append(
-                    {
-                        "name": rule_data.get("name", "未知"),
-                        "action": "failed",
-                        "message": error_msg,
-                        "row_data": rule_data,
-                        "error_fields": ["system"],
-                    }
-                )
-        db.session.commit()
+        result = import_rules(rules_data)
         return APIResponse.success(
-            data={
-                "total": len(rules_data),
-                "success_count": imported_count,
-                "failed_count": error_count,
-                "errors": errors,
-                "messages": messages,
-            },
-            message=f"导入完成: 成功{imported_count}条, 失败{error_count}条",
+            data=result,
+            message=f"导入完成: 成功{result['success_count']}条, 失败{result['failed_count']}条",
         )
 
 
@@ -675,44 +551,16 @@ class ApplyRuleTemplate(Resource):
         if not template:
             return APIResponse.error(message="模板不存在", status_code=404)
         try:
-            # 如果没有指定分类ID，创建新分类
-            if not category_id:
-                category = ScoreCategory.query.filter_by(name=template["name"]).first()
-                if not category:
-                    category = ScoreCategory(
-                        name=template["name"], description=template["description"], color="#4A90D9"
-                    )
-                    db.session.add(category)
-                    db.session.flush()
-                category_id = category.id
-            else:
-                category = get_by_id(ScoreCategory, data.get("category_id"))
-                if not category:
-                    return APIResponse.error(message="指定的分类不存在", status_code=400)
-                category_id = category.id
-            created_rules = []
-            for rule_data in template["rules"]:
-                # 检查规则是否已存在（同名同分类）
-                existing = ScoreRule.query.filter_by(name=rule_data["name"], category_id=category_id).first()
-                if not existing:
-                    rule = ScoreRule(
-                        name=rule_data["name"],
-                        description=rule_data["description"],
-                        category_id=category_id,
-                        score=rule_data["score"],
-                        is_active=True,
-                        daily_limit=rule_data.get("daily_limit", 0),
-                        min_interval=rule_data.get("min_interval", 0),
-                    )
-                    db.session.add(rule)
-                    created_rules.append(rule_data["name"])
-            db.session.commit()
+            result, err = apply_rule_template(template, category_id)
+            if err:
+                db.session.rollback()
+                return APIResponse.error(message=err, status_code=400)
             # 清除所有rules相关缓存
             invalidated_count = get_cache_service().invalidate_by_tag("rules")
             print(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
             return APIResponse.success(
-                data={"created_count": len(created_rules), "created_rules": created_rules, "category_id": category_id},
-                message=f"成功应用模板，创建了 {len(created_rules)} 条规则",
+                data=result,
+                message=f"成功应用模板，创建了 {result['created_count']} 条规则",
             )
         except Exception as e:
             db.session.rollback()

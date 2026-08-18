@@ -14,9 +14,8 @@ class.edit 在全后端**仅**被这 4 个模块使用（班级本身的增删�
 本脚本可重复执行：
   1. 备份数据库
   2. permissions 目录表补 class.edit（缺失才插）
-  3. role_permission.permissions CSV 追加（去重排序）
-  4. role_permission_mappings 插入映射（已存在则跳过）
-  5. 打印校验结果
+  3. role_permission_mappings 插入映射（已存在则跳过）
+  4. 打印校验结果
 """
 import os
 import shutil
@@ -61,26 +60,7 @@ def main():
             )
             print("目录新增: %s" % code)
 
-    # --- 2. role_permission.permissions CSV ---
-    cur.execute("SELECT permissions FROM role_permission WHERE role_code=?", (ROLE,))
-    row = cur.fetchone()
-    if row is None:
-        print("角色 %s 不存在于 role_permission，终止" % ROLE)
-        conn.close()
-        return 1
-    items = [x.strip() for x in (row[0] or "").split(",") if x.strip()]
-    before = len(items)
-    for code, _, _ in NEW_PERMS:
-        if code not in items:
-            items.append(code)
-    items = sorted(set(items))
-    cur.execute(
-        "UPDATE role_permission SET permissions=? WHERE role_code=?",
-        (",".join(items), ROLE),
-    )
-    print("CSV 权限数 %d -> %d" % (before, len(items)))
-
-    # --- 3. role_permission_mappings ---
+    # --- 2. role_permission_mappings（CSV 冗余列已废弃，仅维护映射） ---
     for code, _, _ in NEW_PERMS:
         cur.execute(
             "SELECT 1 FROM role_permission_mappings WHERE role_code=? AND permission_code=?",

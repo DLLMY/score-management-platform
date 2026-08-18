@@ -1,6 +1,6 @@
 import pytest
-from models import db
-from models.mental_health import MentalHealthRecord, MentalHealthAlert
+from models import db, Alert
+from models.mental_health import MentalHealthRecord
 from services.mental_health_service import mental_health_service
 
 
@@ -17,7 +17,7 @@ class TestMentalHealthService:
             "student_id": 10, "mood_level": 1,
             "stress_level": 5, "sleep_hours": 5
         })
-        alerts = MentalHealthAlert.query.filter_by(student_id=10, is_resolved=False).all()
+        alerts = Alert.query.filter_by(source="mental", student_id=10, is_resolved=False).all()
         assert len(alerts) >= 2
 
     def test_list_records(self, app, db_session):
@@ -30,7 +30,7 @@ class TestMentalHealthService:
         mental_health_service.create_record({
             "student_id": 11, "mood_level": 1, "stress_level": 5
         })
-        alert = MentalHealthAlert.query.filter_by(student_id=11).first()
+        alert = Alert.query.filter_by(source="mental", student_id=11).first()
         result = mental_health_service.resolve_alert(alert.id)
         assert result["success"] is True
         assert result["data"]["is_resolved"] is True

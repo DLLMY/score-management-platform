@@ -101,7 +101,9 @@ function CultureBoard() {
         r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.content?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchCategory = activeCategory === '全部' || r.category === activeCategory;
-      return matchSearch && matchCategory;
+      // M5: 班级筛选联动（0 = 全部班级）
+      const matchClass = selectedClassId === 0 || r.class_id === selectedClassId;
+      return matchSearch && matchCategory && matchClass;
     })
     .sort((a, b) => a.display_order - b.display_order);
 

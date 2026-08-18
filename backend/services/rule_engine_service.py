@@ -207,8 +207,7 @@ class RuleExecutionEngine:
                     score_change = rule.get("score", 0)
                     confidence = rule_item.get("confidence", 0)
 
-                    record = ScoreRecord(
-                        user_id=user_context["user_id"],
+                    record = ScoreRecord(student_id=user_context["user_id"],
                         rule_id=rule["id"],
                         score_change=score_change,
                         reason=(f'规则自动应用: {rule["name"]} ' f"(置信度: {confidence:.3f})"),

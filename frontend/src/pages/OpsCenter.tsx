@@ -128,6 +128,10 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     const res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
     if (!res.ok) return null;
     const env = await res.json();
+    // M6: 检查业务信封，success===false 时不当作成功数据返回
+    if (env && typeof env === 'object' && 'success' in env && (env as { success?: boolean }).success === false) {
+      return null;
+    }
     return ((env && 'data' in env ? env.data : env) ?? null) as T | null;
   } catch {
     return null;
@@ -292,6 +296,14 @@ export const OpsCenter: React.FC = () => {
           刷新
         </PermissionButton>
       </div>
+
+      {/* M9: 首次加载反馈 */}
+      {isRefreshing && health === null && (
+        <div className='animate-pulse text-sm text-gray-400 dark:text-slate-400 flex items-center gap-2'>
+          <RefreshCw size={14} className='animate-spin' />
+          正在加载系统状态...
+        </div>
+      )}
 
       {partialError && (
         <div role='alert' className='flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300'>

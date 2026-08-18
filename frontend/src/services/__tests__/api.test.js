@@ -1,4 +1,10 @@
+import { vi } from 'vitest';
 import api from '../api';
+
+// 静音 ErrorMonitor：错误处理测试的上报日志是噪音（api 封装错误时主动 report）
+vi.mock('../../utils/errorMonitor', () => ({
+  errorMonitor: { report: () => {}, reportApiError: () => {}, reportConsoleError: () => {} },
+}));
 
 // Mock fetch
 const mockFetch = jest.fn();

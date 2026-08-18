@@ -309,7 +309,7 @@ def optimize_statistics_query(user_id=None, class_name=None, start_date=None, en
         func.sum(case((ScoreRecord.score_change < 0, ScoreRecord.score_change), else_=0)).label("total_subtract"),
     )
     if user_id:
-        query = query.filter(ScoreRecord.user_id == user_id)
+        query = query.filter(ScoreRecord.student_id == user_id)
     elif class_name:
         query = query.join(User).filter(User.class_name == class_name)
     if start_date:
@@ -335,7 +335,7 @@ def optimize_user_records_query(user_id, page=1, per_page=50):
 
     query = (
         ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
-        .filter(ScoreRecord.user_id == user_id)
+        .filter(ScoreRecord.student_id == user_id)
         .order_by(ScoreRecord.created_at.desc())
     )
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -343,7 +343,7 @@ def optimize_user_records_query(user_id, page=1, per_page=50):
         "records": [
             {
                 "id": r.id,
-                "user_id": r.user_id,
+                "user_id": r.student_id,
                 "user_name": r.user.name if r.user else None,
                 "rule_id": r.rule_id,
                 "rule_name": r.rule.name if r.rule else None,

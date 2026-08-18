@@ -1,7 +1,7 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, FormEvent, ChangeEvent } from 'react';
 import { User, Mail, Phone, Shield, Globe, Calendar, Edit2, Save, Check, ChevronRight, Key, RefreshCw, LucideIcon, AlertTriangle } from 'lucide-react';
-import { Card, Modal, PermissionButton, Skeleton } from '../components';
+import { Card, Modal, Button, Skeleton } from '../components';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 
@@ -132,6 +132,15 @@ function Profile() {
   }, [loadAdminInfo]);
 
   const handleSaveProfile = useCallback(async (): Promise<void> => {
+    // M3: 至少一项需修改，且姓名/电话基本校验
+    if (!editForm.real_name.trim() && !editForm.phone.trim() && !editForm.class_name.trim()) {
+      showToast('warning', '请至少填写一项要修改的信息');
+      return;
+    }
+    if (editForm.phone && !/^1[3-9]\d{9}$/.test(editForm.phone)) {
+      showToast('warning', '请输入正确的 11 位手机号');
+      return;
+    }
     try {
       setSaving(true);
       await api.admins.update(adminId, {
@@ -288,15 +297,15 @@ function Profile() {
               </div>
             </div>
           </div>
-          <PermissionButton
-            permission='profile.edit'
+          {/* S1: profile.edit 后端无此码；资料编辑为本人操作，无需权限门控 */}
+          <Button
             variant='secondary'
             onClick={() => setShowEditModal(true)}
             className='bg-white text-primary-600 hover:bg-gray-100'
           >
             <Edit2 className='w-4 h-4' />
             编辑资料
-          </PermissionButton>
+          </Button>
         </div>
       </div>
 
@@ -492,16 +501,15 @@ function Profile() {
             </div>
           </div>
           <div className='flex gap-3 pt-4 border-t border-gray-100'>
-            <PermissionButton
-              permission='profile.edit'
+            {/* S1: 本人资料编辑，无需权限门控 */}
+            <Button
               variant='outline'
               onClick={() => setShowEditModal(false)}
               disabled={saving}
             >
               取消
-            </PermissionButton>
-            <PermissionButton
-              permission='profile.edit'
+            </Button>
+            <Button
               type='submit'
               disabled={saving}
             >
@@ -511,14 +519,14 @@ function Profile() {
                 <Save className='w-4 h-4' />
               )}
               保存修改
-            </PermissionButton>
+            </Button>
           </div>
         </form>
       </Modal>
 
       <Modal
         isOpen={showPasswordModal}
-        onClose={() => setShowPasswordModal(false)}
+        onClose={() => { setShowPasswordModal(false); setPasswordForm({ old_password: '', new_password: '', confirm_password: '' }); }} /* L7: 关闭重置 */
         title='修改密码'
       >
         <form onSubmit={handlePasswordSubmit} className='space-y-5'>
@@ -553,16 +561,15 @@ function Profile() {
             />
           </div>
           <div className='flex gap-3 pt-4 border-t border-gray-100'>
-            <PermissionButton
-              permission='profile.change-password'
+            {/* S1: profile.change-password 后端无此码；改密为本人操作，无需权限门控 */}
+            <Button
               variant='outline'
-              onClick={() => setShowPasswordModal(false)}
+              onClick={() => { setShowPasswordModal(false); setPasswordForm({ old_password: '', new_password: '', confirm_password: '' }); }} /* L7: 关闭重置 */
               disabled={saving}
             >
               取消
-            </PermissionButton>
-            <PermissionButton
-              permission='profile.change-password'
+            </Button>
+            <Button
               type='submit'
               disabled={saving}
             >
@@ -572,7 +579,7 @@ function Profile() {
                 <Key className='w-4 h-4' />
               )}
               修改密码
-            </PermissionButton>
+            </Button>
           </div>
         </form>
       </Modal>

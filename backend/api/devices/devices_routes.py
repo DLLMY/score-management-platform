@@ -7,15 +7,24 @@ from flask_restx import Namespace, Resource, fields
 from models import db, Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
 from sqlalchemy.orm import joinedload
 from utils.permission import requires_permission, get_current_admin, get_admin_class_ids
-from utils.validation import validate_device_id, validate_name
 from utils.response import APIResponse
 from services.mqtt_service import publish_mqtt
 from services.heartbeat_service import is_device_online
+from services.device_service import (
+    create_device,
+    update_device,
+    delete_device,
+    bind_device_class,
+    bind_device_admin,
+    resolve_device_alert,
+    update_device_settings,
+    import_devices,
+)
 from utils.api_cache_middleware import cached_api
 from datetime import datetime
 from sqlalchemy import func
 
-from models import DeviceAlert
+from models import Alert
 
 from flask import request
 
@@ -254,10 +263,8 @@ class DeviceList(Resource):
         - name: 设备名称（可选，默认"设备 {device_id}"）
         """
         data = ns_devices.payload
-        device = Device(device_id=data.get("device_id"), name=data.get("name", f'设备 {data.get("device_id")}'))
-        db.session.add(device)
-        db.session.commit()
-        return APIResponse.created(data={"device_id": device.id}, message="设备创建成功")
+        device_id = create_device(data)
+        return APIResponse.created(data={"device_id": device_id}, message="设备创建成功")
 
 
 @ns_devices.route("/<int:id>")
@@ -313,9 +320,7 @@ class DeviceResource(Resource):
         """
         device = Device.query.get_or_404(id)
         data = ns_devices.payload
-        device.name = data.get("name", device.name)
-        device.updated_at = datetime.now()
-        db.session.commit()
+        update_device(device, data)
         return APIResponse.success(message="设备更新成功")
 
     @ns_devices.doc("delete_device", description="删除设备", security="Bearer")
@@ -329,8 +334,7 @@ class DeviceResource(Resource):
         删除指定的设备，需要管理员权限。
         """
         device = Device.query.get_or_404(id)
-        db.session.delete(device)
-        db.session.commit()
+        delete_device(device)
         return APIResponse.success(message="设备删除成功")
 
 
@@ -557,12 +561,8 @@ class BindDeviceClass(Resource):
             class_info = get_by_id(ClassInfo, class_id)
             if not class_info:
                 return APIResponse.not_found(message="班级不存在")
-            device.class_info_id = class_id
-        else:
-            device.class_info_id = None
 
-        device.updated_at = datetime.now()
-        db.session.commit()
+        bind_device_class(device, class_id)
 
         return APIResponse.success(
             data={
@@ -610,12 +610,8 @@ class BindDeviceAdmin(Resource):
             target_admin = get_by_id(Admin, admin_id)
             if not target_admin:
                 return APIResponse.not_found(message="管理员不存在")
-            device.admin_id = admin_id
-        else:
-            device.admin_id = None
 
-        device.updated_at = datetime.now()
-        db.session.commit()
+        bind_device_admin(device, admin_id)
 
         return APIResponse.success(
             data={
@@ -708,16 +704,17 @@ class DeviceAlerts(Resource):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 50, type=int)
 
-        query = DeviceAlert.query
+        # F9-A: device_alert 已合并进 alert，设备告警统一以 source='device' 过滤
+        query = Alert.query.filter(Alert.source == "device")
         if resolved:
-            query = query.filter(DeviceAlert.is_resolved)
+            query = query.filter(Alert.is_resolved == True)
         else:
-            query = query.filter(DeviceAlert.is_resolved)
+            query = query.filter(Alert.is_resolved == False)
 
         if severity:
-            query = query.filter(DeviceAlert.severity == severity)
+            query = query.filter(Alert.severity == severity)
 
-        pagination = query.order_by(DeviceAlert.created_at.desc()).paginate(
+        pagination = query.order_by(Alert.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         alerts = pagination.items
@@ -737,6 +734,8 @@ class DeviceAlerts(Resource):
                         "severity": a.severity,
                         "message": a.message,
                         "is_resolved": a.is_resolved,
+                        "is_read": a.is_read,
+                        "source": a.source,
                         "resolved_at": a.resolved_at.isoformat() if a.resolved_at else None,
                         "created_at": a.created_at.isoformat() if a.created_at else None,
                     }
@@ -746,30 +745,9 @@ class DeviceAlerts(Resource):
                 "page": page,
                 "per_page": per_page,
                 "pages": pagination.pages,
-                "unresolved_count": DeviceAlert.query.filter_by(is_resolved=False).count(),
+                "unresolved_count": Alert.query.filter_by(source="device", is_resolved=False).count(),
             }
         )
-
-
-@ns_devices.route("/<int:id>/resolve-alert/<int:alert_id>")
-@ns_devices.param("id", "设备ID")
-@ns_devices.param("alert_id", "告警ID")
-class ResolveDeviceAlert(Resource):
-
-    @ns_devices.doc("resolve_device_alert", description="解决设备告警", security="Bearer")
-    @ns_devices.response(200, "成功")
-    @requires_permission("device.edit")
-    def post(self, id, alert_id):
-        """
-        解决设备告警
-
-        将指定告警标记为已解决。
-        """
-        alert = DeviceAlert.query.get_or_404(alert_id)
-        alert.is_resolved = True
-        alert.resolved_at = datetime.now()
-        db.session.commit()
-        return APIResponse.success(message="告警已解决")
 
 
 @ns_devices.route("/<int:id>/alerts/<int:alert_id>/resolve")
@@ -786,10 +764,8 @@ class ResolveDeviceAlertAlt(Resource):
 
         将指定告警标记为已解决。
         """
-        alert = DeviceAlert.query.get_or_404(alert_id)
-        alert.is_resolved = True
-        alert.resolved_at = datetime.now()
-        db.session.commit()
+        alert = Alert.query.get_or_404(alert_id)
+        resolve_device_alert(alert)
         return APIResponse.success(message="告警已解决")
 
 
@@ -807,8 +783,9 @@ class DeviceAlertHistory(Resource):
         获取指定设备的所有告警记录。
         """
         device = Device.query.get_or_404(id)
-        base_query = DeviceAlert.query.filter_by(device_id=device.device_id)
-        alerts = base_query.order_by(DeviceAlert.created_at.desc()).limit(50).all()
+        # F9-A: 仅取来源为设备的告警
+        base_query = Alert.query.filter_by(device_id=device.device_id, source="device")
+        alerts = base_query.order_by(Alert.created_at.desc()).limit(50).all()
 
         return APIResponse.success(
             data={
@@ -819,6 +796,8 @@ class DeviceAlertHistory(Resource):
                         "severity": a.severity,
                         "message": a.message,
                         "is_resolved": a.is_resolved,
+                        "is_read": a.is_read,
+                        "source": a.source,
                         "resolved_at": a.resolved_at.isoformat() if a.resolved_at else None,
                         "created_at": a.created_at.isoformat() if a.created_at else None,
                     }
@@ -954,8 +933,8 @@ class DeviceAdvancedStats(Resource):
         # 无信号数据时保持 None（前端显示 '--'），0 dBm 会被误读为"极强信号"
         avg_signal = db.session.query(func.avg(Device.wifi_signal)).filter(Device.wifi_signal.isnot(None)).scalar()
 
-        alert_count = DeviceAlert.query.filter_by(is_resolved=False).count()
-        critical_alerts = DeviceAlert.query.filter_by(is_resolved=False, severity="critical").count()
+        alert_count = Alert.query.filter_by(source="device", is_resolved=False).count()
+        critical_alerts = Alert.query.filter_by(source="device", is_resolved=False, severity="critical").count()
 
         today = datetime.now().date()
         today_start = datetime.combine(today, datetime.min.time())
@@ -1035,25 +1014,13 @@ class DeviceSettings(Resource):
         device = Device.query.get_or_404(id)
         data = request.get_json()
 
-        if "alert_enabled" in data:
-            device.alert_enabled = data["alert_enabled"]
-        if "heartbeat_timeout" in data:
-            device.heartbeat_timeout = data["heartbeat_timeout"]
-        if "name" in data:
-            device.name = data["name"]
-
-        device.updated_at = datetime.now()
-        db.session.commit()
+        settings = update_device_settings(device, data)
 
         return APIResponse.success(
             data={
                 "success": True,
                 "message": "设备设置已更新",
-                "settings": {
-                    "alert_enabled": device.alert_enabled,
-                    "heartbeat_timeout": device.heartbeat_timeout,
-                    "name": device.name,
-                },
+                "settings": settings,
             }
         )
 
@@ -1253,144 +1220,17 @@ class DeviceImport(Resource):
 
         返回导入结果统计。
         """
+        if "file" not in request.files:
+            return APIResponse.bad_request(message="没有上传文件")
+
+        file = request.files["file"]
+
+        if not file.filename.endswith((".xlsx", ".xls")):
+            return APIResponse.bad_request(message="仅支持Excel文件格式")
+
         try:
-            if "file" not in request.files:
-                return APIResponse.bad_request(message="没有上传文件")
-
-            file = request.files["file"]
-
-            if not file.filename.endswith((".xlsx", ".xls")):
-                return APIResponse.bad_request(message="仅支持Excel文件格式")
-
-            wb = openpyxl.load_workbook(file)
-            sheet = wb.active
-
-            success_count = 0
-            failed_count = 0
-            messages = []
-
-            headers = [cell.value for cell in sheet[1]]
-
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                try:
-                    row_dict = dict(zip(headers, row))
-
-                    device_id = row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
-                    name = row_dict.get("设备名称") or row_dict.get("name")
-                    class_name = row_dict.get("班级名称") or row_dict.get("class_name")
-                    admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
-
-                    row_errors = []
-
-                    if not device_id:
-                        row_errors.append({"field": "device_id", "message": "设备标识不能为空"})
-                    elif not isinstance(device_id, (int, str)) or len(str(device_id).strip()) == 0:
-                        row_errors.append({"field": "device_id", "message": "设备标识格式无效"})
-                    elif len(str(device_id).strip()) > 100:
-                        row_errors.append({"field": "device_id", "message": "设备标识长度超过限制（最大100字符）"})
-                    else:
-                        device_id_str = str(device_id).strip()
-                        is_valid, msg = validate_device_id(device_id_str)
-                        if not is_valid:
-                            row_errors.append({"field": "device_id", "message": msg})
-
-                    if name and (not isinstance(name, str) or len(name.strip()) > 200):
-                        row_errors.append({"field": "name", "message": "设备名称长度超过限制（最大200字符）"})
-                    elif name:
-                        is_valid, msg = validate_name(name.strip())
-                        if not is_valid:
-                            row_errors.append({"field": "name", "message": msg})
-
-                    existing_device = Device.query.filter_by(device_id=str(device_id)).first()
-                    if existing_device:
-                        row_errors.append({"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'})
-
-                    class_info = None
-                    if class_name:
-                        if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                            row_errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
-                        elif len(class_name.strip()) > 100:
-                            row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
-                        else:
-                            class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                            if not class_info:
-                                row_errors.append(
-                                    {"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'}
-                                )
-
-                    admin = None
-                    if admin_name:
-                        if not isinstance(admin_name, str) or len(admin_name.strip()) == 0:
-                            row_errors.append(
-                                {"field": "admin_name", "message": "管理员姓名格式无效，必须为非空字符串"}
-                            )
-                        elif len(admin_name.strip()) > 50:
-                            row_errors.append(
-                                {"field": "admin_name", "message": "管理员姓名长度超过限制（最大50字符）"}
-                            )
-                        else:
-                            admin = Admin.query.filter(Admin.real_name == admin_name.strip()).first()
-                            if not admin:
-                                admin = Admin.query.filter(Admin.username == admin_name.strip()).first()
-                            if not admin:
-                                row_errors.append(
-                                    {"field": "admin_name", "message": f'管理员 "{admin_name}" 在系统中不存在'}
-                                )
-                            else:
-                                if admin.role not in ["admin", "teacher"]:
-                                    row_errors.append(
-                                        {
-                                            "field": "admin_name",
-                                            "message": f'用户 "{admin_name}" 的角色不是管理员或教师，无法担任设备管理员',
-                                        }
-                                    )
-
-                    if row_errors:
-                        failed_count += 1
-                        messages.append(
-                            {
-                                "action": "失败",
-                                "message": "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors]),
-                                "row_data": row_dict,
-                                "error_fields": [err["field"] for err in row_errors],
-                            }
-                        )
-                        continue
-
-                    new_device = Device(
-                        device_id=str(device_id),
-                        name=name or str(device_id),
-                        class_info_id=class_info.id if class_info else None,
-                        admin_id=admin.id if admin else None,
-                        status="offline",
-                    )
-
-                    db.session.add(new_device)
-                    success_count += 1
-                    messages.append({"action": "成功", "message": f"创建设备 {str(device_id)}", "row_data": row_dict})
-
-                except Exception as e:
-                    failed_count += 1
-                    messages.append(
-                        {
-                            "action": "失败",
-                            "message": str(e),
-                            "row_data": dict(zip(headers, row)) if row else None,
-                            "error_fields": ["system"],
-                        }
-                    )
-
-            db.session.commit()
-
-            return APIResponse.success(
-                data={
-                    "success": True,
-                    "total": success_count + failed_count,
-                    "success_count": success_count,
-                    "failed_count": failed_count,
-                    "messages": messages,
-                }
-            )
+            result = import_devices(file)
+            return APIResponse.success(data=result)
 
         except Exception as e:
             db.session.rollback()

@@ -2,8 +2,9 @@ import json
 import io
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
-from models import db, CourseSchedule, ClassInfo, Subject, ClassPeriod, Admin, ImportConfig, get_by_id
+from models import CourseSchedule, ClassInfo, Subject, ClassPeriod, Admin, ImportConfig, get_by_id
 from services.class_time_checker import ClassTimeChecker
+from services.academics_service import academics_service
 from utils.permission import requires_permission, get_allowed_classes, get_current_admin
 from utils.response import APIResponse
 from datetime import datetime
@@ -315,21 +316,21 @@ class CourseScheduleList(Resource):
         subject = get_by_id(Subject, data["subject_id"])  # noqa: F841
         color = data.get("color") or (subject.color if subject else "#3B82F6")
 
-        schedule = CourseSchedule(
-            class_info_id=data["class_info_id"],
-            subject_id=data["subject_id"],
-            day_of_week=data["day_of_week"],
-            period_number=data["period_number"],
-            teacher_id=teacher_id,
-            teacher_name=teacher_name,
-            classroom=classroom,
-            description=data.get("description"),
-            color=color,
-            is_active=data.get("is_active", True),
+        schedule_id = academics_service.create_course_schedule(
+            {
+                "class_info_id": data["class_info_id"],
+                "subject_id": data["subject_id"],
+                "day_of_week": data["day_of_week"],
+                "period_number": data["period_number"],
+                "teacher_id": teacher_id,
+                "teacher_name": teacher_name,
+                "classroom": classroom,
+                "description": data.get("description"),
+                "color": color,
+                "is_active": data.get("is_active", True),
+            }
         )
-
-        db.session.add(schedule)
-        db.session.commit()
+        schedule = get_by_id(CourseSchedule, schedule_id)
 
         period_info = get_period_info(schedule.period_number)
         return (
@@ -490,26 +491,29 @@ class CourseScheduleResource(Resource):
             if classroom_conflicts:
                 return APIResponse.bad_request(message="教室时间冲突", errors=classroom_conflicts)
 
-        schedule.class_info_id = new_class_info_id
-        schedule.subject_id = data.get("subject_id", schedule.subject_id)
-        schedule.day_of_week = new_day_of_week
-        schedule.period_number = new_period_number
-        schedule.teacher_id = new_teacher_id
-        schedule.teacher_name = new_teacher_name
-        schedule.classroom = new_classroom
-        schedule.description = data.get("description", schedule.description)
-
+        new_subject_id = data.get("subject_id", schedule.subject_id)
         if "color" in data:
-            schedule.color = data["color"]
+            final_color = data["color"]
         else:
-            subject = get_by_id(Subject, schedule.subject_id)  # noqa: F841
-            if subject:
-                schedule.color = subject.color
+            color_subject = get_by_id(Subject, new_subject_id)  # noqa: F841
+            final_color = color_subject.color if color_subject else None
 
-        schedule.is_active = data.get("is_active", schedule.is_active)
-        schedule.updated_at = datetime.now()
-
-        db.session.commit()
+        academics_service.update_course_schedule(
+            id,
+            {
+                "class_info_id": new_class_info_id,
+                "subject_id": new_subject_id,
+                "day_of_week": new_day_of_week,
+                "period_number": new_period_number,
+                "teacher_id": new_teacher_id,
+                "teacher_name": new_teacher_name,
+                "classroom": new_classroom,
+                "description": data.get("description", schedule.description),
+                "color": final_color,
+                "is_active": data.get("is_active", schedule.is_active),
+            },
+        )
+        schedule = get_by_id(CourseSchedule, id)
 
         period_info = get_period_info(schedule.period_number)
         return APIResponse.success(
@@ -552,8 +556,7 @@ class CourseScheduleResource(Resource):
             if schedule.class_info and schedule.class_info.name not in allowed_classes:
                 return APIResponse.forbidden(message="无权删除该课程")
 
-        db.session.delete(schedule)
-        db.session.commit()
+        academics_service.delete_course_schedule(id)
         return APIResponse.success(message="课程安排删除成功")
 
 
@@ -1010,6 +1013,8 @@ class CourseScheduleImport(Resource):
         failed_count = 0
         messages = []
         errors = []
+        creates = []
+        updates = []
 
         day_text_map = {
             "周一": 0,
@@ -1196,13 +1201,19 @@ class CourseScheduleImport(Resource):
                         )
                         continue
                     elif conflict_strategy == "update":
-                        existing.subject_id = subject.id
-                        existing.teacher_name = teacher_name or existing.teacher_name
-                        existing.classroom = classroom or existing.classroom
-                        existing.description = item.get("description", existing.description)
-                        existing.color = item.get("color", existing.color)
-                        existing.is_active = item.get("is_active", existing.is_active)
-                        existing.updated_at = datetime.now()
+                        updates.append(
+                            (
+                                existing.id,
+                                {
+                                    "subject_id": subject.id,
+                                    "teacher_name": teacher_name or existing.teacher_name,
+                                    "classroom": classroom or existing.classroom,
+                                    "description": item.get("description", existing.description),
+                                    "color": item.get("color", existing.color),
+                                    "is_active": item.get("is_active", existing.is_active),
+                                },
+                            )
+                        )
 
                         messages.append(
                             {
@@ -1230,18 +1241,19 @@ class CourseScheduleImport(Resource):
                         )
                         continue
                 else:
-                    new_schedule = CourseSchedule(
-                        class_info_id=class_info.id,
-                        subject_id=subject.id,
-                        day_of_week=day_of_week,
-                        period_number=period_number,
-                        teacher_name=teacher_name,
-                        classroom=classroom,
-                        description=item.get("description"),
-                        color=item.get("color", subject.color),
-                        is_active=item.get("is_active", True),
+                    creates.append(
+                        {
+                            "class_info_id": class_info.id,
+                            "subject_id": subject.id,
+                            "day_of_week": day_of_week,
+                            "period_number": period_number,
+                            "teacher_name": teacher_name,
+                            "classroom": classroom,
+                            "description": item.get("description"),
+                            "color": item.get("color", subject.color),
+                            "is_active": item.get("is_active", True),
+                        }
                     )
-                    db.session.add(new_schedule)
 
                     messages.append(
                         {
@@ -1268,7 +1280,7 @@ class CourseScheduleImport(Resource):
                 )
                 errors.append({"row": row_idx, "message": error_msg, "row_data": item, "error_fields": ["system"]})
 
-        db.session.commit()
+        academics_service.apply_course_schedule_import(creates, updates)
 
         return APIResponse.success(
             data={

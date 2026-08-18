@@ -125,14 +125,15 @@ function RankBoard() {
               <button
                 onClick={loadClassRanking}
                 disabled={loading}
-                className='text-sm text-amber-500 flex items-center gap-1 disabled:opacity-50'
+                className='text-sm text-amber-500 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed' /* L11: cursor 提示 */
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> 刷新
               </button>
             </div>
             {classRanking.length === 0 ? (
-              <p className='text-sm text-gray-400 py-6 text-center'>暂无数据</p>
+              <p className='text-sm text-gray-400 py-6 text-center'>暂无班级排行数据，请先完成积分录入</p>
             ) : (
+              <div className='overflow-x-auto'> {/* L4: 窄屏横向滚动 */}
               <table className='w-full text-sm'>
                 <thead>
                   <tr className='text-gray-400 text-left'>
@@ -157,6 +158,7 @@ function RankBoard() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )}
@@ -180,15 +182,16 @@ function RankBoard() {
               <button
                 onClick={() => loadStudentRanking(selectedClass || undefined)}
                 disabled={loading}
-                className='text-sm text-amber-500 flex items-center gap-1 disabled:opacity-50'
+                className='text-sm text-amber-500 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> 刷新
               </button>
             </div>
             <p className='text-xs text-gray-400 mb-2'>共 {studentTotal} 名学生</p>
             {studentRanking.length === 0 ? (
-              <p className='text-sm text-gray-400 py-6 text-center'>暂无数据</p>
+              <p className='text-sm text-gray-400 py-6 text-center'>暂无学生排行数据</p>
             ) : (
+              <div className='overflow-x-auto'> {/* L4: 窄屏横向滚动 */}
               <table className='w-full text-sm'>
                 <thead>
                   <tr className='text-gray-400 text-left'>
@@ -213,6 +216,7 @@ function RankBoard() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )}

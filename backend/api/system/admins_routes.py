@@ -13,7 +13,7 @@ from models import (
     get_by_id,
     cascade_delete_related_records,
 )
-from utils.permission import requires_permission, requires_admin
+from utils.permission import requires_permission, requires_admin, get_current_admin
 from utils.logger import log_operation, log_login_attempt
 from utils.security import (
     hash_password,
@@ -26,6 +26,15 @@ from utils.security import (
 )
 from datetime import datetime
 from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from services.admins_service import (
+    create_admin as _service_create_admin,
+    update_admin as _service_update_admin,
+    delete_admin as _service_delete_admin,
+    change_admin_password,
+    assign_class_link,
+    remove_class_link,
+    log_admin_permission_action,
+)
 
 try:
     from app import csrf_exempt
@@ -39,23 +48,19 @@ ns_admins = Namespace("admins", description="管理员管理相关操作")
 
 
 def log_permission_action(action, target_type, target_id=None, description=None):
-    """记录权限操作日志"""
+    """记录权限操作日志（F17：落库委托 services.admins_service）"""
     try:
-        admin_id = request.headers.get("X-Admin-Id")
-        log = PermissionLog(
-            operator_id=admin_id,
-            operator_type="admin",
+        admin = get_current_admin()  # F6: 从真实认证取操作人（原 X-Admin-Id 前端已不发）
+        admin_id = admin.id if admin else None
+        log_admin_permission_action(
             action=action,
             target_type=target_type,
             target_id=target_id,
             description=description,
+            operator_id=admin_id,
             ip_address=request.remote_addr if request else None,
-            created_at=datetime.now(),
         )
-        db.session.add(log)
-        db.session.commit()
     except Exception:
-        db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
         pass
 
 
@@ -66,40 +71,6 @@ ROLE_MAPPING = {
     "head_teacher": "head_teacher",
     "viewer": "viewer",
 }
-
-
-def sync_admin_rbac_role(admin_id, role):
-    """同步管理员角色到RBAC系统（兼容旧API，单个角色）"""
-    rbac_role_code = ROLE_MAPPING.get(role, role)
-    existing_role = AdminRole.query.filter_by(admin_id=admin_id).first()
-    if existing_role:
-        if existing_role.role_code != rbac_role_code:
-            existing_role.role_code = rbac_role_code
-    else:
-        rbac_role = RolePermission.query.filter_by(role_code=rbac_role_code).first()
-        if rbac_role:
-            admin_role = AdminRole(admin_id=admin_id, role_code=rbac_role_code)
-            db.session.add(admin_role)
-
-
-def sync_admin_rbac_roles(admin_id, roles):
-    """同步管理员多角色到RBAC系统"""
-    if not roles:
-        return
-    current_roles = AdminRole.query.filter_by(admin_id=admin_id).all()
-    current_role_codes = {ar.role_code for ar in current_roles}
-    new_role_codes = set()
-    for role in roles:
-        rbac_role_code = ROLE_MAPPING.get(role, role)
-        if RolePermission.query.filter_by(role_code=rbac_role_code).first():
-            new_role_codes.add(rbac_role_code)
-    for ar in current_roles:
-        if ar.role_code not in new_role_codes:
-            db.session.delete(ar)
-    for role_code in new_role_codes:
-        if role_code not in current_role_codes:
-            admin_role = AdminRole(admin_id=admin_id, role_code=role_code)
-            db.session.add(admin_role)
 
 
 admin_model = ns_admins.model(
@@ -115,6 +86,7 @@ admin_model = ns_admins.model(
         "real_name": fields.String(description="真实姓名"),
         "phone": fields.String(description="联系电话"),
         "class_name": fields.String(description="所属班级（教师角色）"),
+        "is_active": fields.Boolean(description="账号是否启用"),
     },
 )
 login_model = ns_admins.model(
@@ -169,6 +141,7 @@ class AdminList(Resource):
                     "real_name": a.real_name,
                     "phone": a.phone,
                     "class_name": a.class_name,
+                    "is_active": a.is_active,
                     "class_count": len(a.class_links),
                     "created_at": a.created_at.isoformat() if a.created_at else None,
                 }
@@ -200,21 +173,15 @@ class AdminList(Resource):
             return APIResponse.error(message="密码强度不足：至少8位，包含字母和数字", status_code=400)
         role = data.get("role", "admin")
         roles = data.get("roles")
-        admin = Admin(
+        admin = _service_create_admin(
             username=data.get("username"),
-            password=hash_password(password),
+            password=password,
             role=role,
             real_name=data.get("real_name"),
             phone=data.get("phone"),
             class_name=data.get("class_name"),
+            roles=roles,
         )
-        db.session.add(admin)
-        db.session.flush()
-        if roles:
-            sync_admin_rbac_roles(admin.id, roles)
-        else:
-            sync_admin_rbac_role(admin.id, role)
-        db.session.commit()
         log_permission_action(
             "创建管理员", "admin", admin.id, f"创建管理员: {data.get('username')} ({data.get('real_name')})"
         )
@@ -241,6 +208,7 @@ class AdminResource(Resource):
             "real_name": admin.real_name,
             "phone": admin.phone,
             "class_name": admin.class_name,
+            "is_active": admin.is_active,
             "created_at": admin.created_at.isoformat() if admin.created_at else None,
             "updated_at": admin.updated_at.isoformat() if admin.updated_at else None,
         }
@@ -264,20 +232,7 @@ class AdminResource(Resource):
         """
         admin = Admin.query.get_or_404(id)
         data = ns_admins.payload
-        admin.username = data.get("username", admin.username)
-        if data.get("password"):
-            admin.password = hash_password(data.get("password"))
-        admin.role = data.get("role", admin.role)
-        admin.real_name = data.get("real_name", admin.real_name)
-        admin.phone = data.get("phone", admin.phone)
-        admin.class_name = data.get("class_name", admin.class_name)
-        admin.updated_at = datetime.now()
-        roles = data.get("roles")
-        if roles:
-            sync_admin_rbac_roles(id, roles)
-        else:
-            sync_admin_rbac_role(id, admin.role)
-        db.session.commit()
+        _service_update_admin(admin, data)
         log_permission_action("更新管理员", "admin", id, f"更新管理员: {admin.username}")
         return APIResponse.success(message="管理员更新成功")
 
@@ -294,9 +249,7 @@ class AdminResource(Resource):
         username = admin.username
         # 先清理引用该管理员的子表记录：admin_roles 等 NOT NULL 外键会被删除，
         # scores.entered_by 等可空外键仅解除引用（不会连带删除业务数据）
-        cascade_delete_related_records(Admin, id)
-        db.session.delete(admin)
-        db.session.commit()
+        _service_delete_admin(admin)
         log_permission_action("删除管理员", "admin", id, f"删除管理员: {username}")
         return APIResponse.success(message="管理员删除成功")
 
@@ -457,10 +410,7 @@ class AdminChangePassword(Resource):
         # 使用bcrypt验证旧密码
         if not verify_password(old_password, admin.password):
             return APIResponse.error(message="旧密码错误", status_code=400)
-        admin.password = hash_password(new_password)
-        admin.force_password_change = False
-        admin.updated_at = datetime.now()
-        db.session.commit()
+        change_admin_password(admin, new_password)
         return APIResponse.success(message="密码修改成功")
 
 
@@ -488,15 +438,7 @@ class AdminAssignClass(Resource):
             return APIResponse.error(message="请提供班级ID", status_code=400)
         _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
         ClassInfo.query.get_or_404(class_id)
-        existing_link = AdminClass.query.filter_by(admin_id=admin_id, class_info_id=class_id).first()
-        if existing_link:
-            existing_link.is_primary = is_primary
-        else:
-            link = AdminClass(
-                admin_id=admin_id, class_info_id=class_id, is_primary=is_primary, assigned_at=datetime.now()
-            )
-            db.session.add(link)
-        db.session.commit()
+        assign_class_link(admin_id, class_id, is_primary)
         return APIResponse.success(message="班级分配成功")
 
 
@@ -516,6 +458,5 @@ class AdminRemoveClass(Resource):
         link = AdminClass.query.filter_by(admin_id=admin_id, class_info_id=class_id).first()
         if not link:
             return APIResponse.error(message="未找到关联记录", status_code=404)
-        db.session.delete(link)
-        db.session.commit()
+        remove_class_link(link)
         return APIResponse.success(message="班级移除成功")

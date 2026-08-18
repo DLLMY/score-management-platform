@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, memo, MouseEventHandler } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Users,
   BookOpen,
@@ -238,6 +238,7 @@ interface SidebarProps {
 
 function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const role = useMemo<string | null>(() => getCurrentRole(), []);
   const { hasPermission, hasAnyPermission, isAdmin: isSuperAdmin, permissions, isLoading } = usePermissionStore();
   
@@ -295,6 +296,13 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
     return () => window.removeEventListener('resize', handleResize);
   }, [closeMobileMenu]);
 
+  // L5: 监听 Header 汉堡触发的全局事件，打开移动端抽屉
+  useEffect(() => {
+    const openFromHeader = () => setInternalMobileMenuOpen(true);
+    window.addEventListener('mobile-menu-open', openFromHeader);
+    return () => window.removeEventListener('mobile-menu-open', openFromHeader);
+  }, []);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isMobileMenuOpen) {
@@ -313,17 +321,17 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
       }
       if ((e.ctrlKey || e.metaKey) && e.key === '1') {
         e.preventDefault();
-        window.location.href = '/dashboard';
+        navigate('/dashboard');
       }
       if ((e.ctrlKey || e.metaKey) && e.key === '2') {
         e.preventDefault();
-        window.location.href = '/users';
+        navigate('/users');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [navigate]);
 
   const toggleGroup = useCallback<(groupName: string) => void>((groupName) => {
     setExpandedGroups((prev) => ({
@@ -356,7 +364,6 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         { path: '/users', label: '学生管理', icon: Users, permission: 'student.view' },
         { path: '/analysis', label: '数据分析', icon: BarChart3, permission: 'algorithm.view' },
         { path: '/class-compare', label: '班级对比', icon: BarChart3, permission: 'algorithm.view' },
-        { path: '/operation-logs', label: '操作日志', icon: History, permission: 'system.logs' },
       ],
     },
     {
@@ -393,11 +400,11 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         { path: '/parent-contact', label: '家长联系', icon: Phone, permission: 'class.view' },
         { path: '/homework-check', label: '作业检查', icon: BookCheck, permission: 'homework.view' },
         { path: '/attendance', label: '考勤管理', icon: CalendarCheck, permission: 'attendance.view' },
-        { path: '/study-groups', label: '学习小组', icon: Users, permission: 'study_group.view' },
-        { path: '/mental-health', label: '心理健康', icon: Heart, permission: 'mental_health.view' },
-        { path: '/activity', label: '文体活动', icon: PartyPopper, permission: 'activity.view' },
+        { path: '/study-groups', label: '学习小组', icon: Users, permission: 'class.view' },
+        { path: '/mental-health', label: '心理健康', icon: Heart, permission: 'class.view' },
+        { path: '/activity', label: '文体活动', icon: PartyPopper, permission: 'class.view' },
         { path: '/culture', label: '班级文化', icon: Palette, permission: 'class.view' },
-        { path: '/study-guide', label: '学法指导', icon: GraduationCap, permission: 'study_guide.view' },
+        { path: '/study-guide', label: '学法指导', icon: GraduationCap, permission: 'class.view' },
         { path: '/phonebox-policy', label: '手机箱开箱策略', icon: Smartphone, permission: 'phonebox.unlock.manage' },
       ],
     },
@@ -421,7 +428,6 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
         { path: '/devices', label: '设备管理', icon: Box, permission: 'device.view' },
         { path: '/device-groups', label: '设备分组', icon: Server, permission: 'device.view' },
         { path: '/firmware', label: '固件管理', icon: Upload, permission: 'firmware.manage' },
-        { path: '/diagnostics', label: '系统诊断', icon: Server, permission: 'device.view' },
       ],
     },
     {
@@ -501,8 +507,8 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
     localStorage.removeItem('admin');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    window.location.href = '/login';
-  }, []);
+    navigate('/login');
+  }, [navigate]);
 
   return (
     <>

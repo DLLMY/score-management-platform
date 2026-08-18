@@ -17,7 +17,7 @@ from models import (
     User, ClassInfo, ScoreCategory, Subject, ScoreRule, ScoreRecord,
     SeatingChart, SeatingSeat, DutyGroup, DutyAssignment, ClassCommittee,
     ParentContact, ContactLog, HomeworkAssignment,
-    Attendance, LeaveApplication, StudyGroup, StudyGroupMember,
+    Attendance, Approval, StudyGroup, StudyGroupMember,
     MentalHealthRecord, Activity, CultureRecord, StudyGuide
 )
 
@@ -55,7 +55,7 @@ def clear_data():
         db.session.query(ContactLog).delete()
         db.session.query(ParentContact).delete()
         db.session.query(HomeworkAssignment).delete()
-        db.session.query(LeaveApplication).delete()
+        db.session.query(Approval).filter_by(type="leave").delete()
         db.session.query(Attendance).delete()
         db.session.query(StudyGroupMember).delete()
         db.session.query(StudyGroup).delete()

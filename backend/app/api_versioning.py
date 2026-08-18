@@ -174,10 +174,10 @@ def register_v1_routes(api, app):
     api.add_namespace(ns_admin_notifications)
     api.add_namespace(ns_consistency)
 
-    from api.dashboard_routes import ns_dashboard
-    from api.algorithm_routes import ns_algorithm
-    from api.analysis_routes import ns_analysis
-    from api.nlp_routes import ns_nlp
+    from api.analytics.dashboard_routes import ns_dashboard
+    from api.algorithm.algorithm_routes import ns_algorithm
+    from api.analytics.analysis_routes import ns_analysis
+    from api.nlp.nlp_routes import ns_nlp
 
     api.add_namespace(ns_dashboard)
     api.add_namespace(ns_algorithm)
@@ -221,11 +221,6 @@ def register_v1_routes(api, app):
         logger.warning(f"diagnostics 命名空间注册失败: {e}")
 
     # 角色与权限相关命名空间（已迁移至 api.users 包）
-    try:
-        from api.users.roles_routes import ns_roles
-        api.add_namespace(ns_roles)
-    except Exception as e:
-        logger.warning(f"roles 命名空间注册失败: {e}")
     try:
         from api.users.sub_accounts_routes import ns_sub_accounts
         api.add_namespace(ns_sub_accounts)

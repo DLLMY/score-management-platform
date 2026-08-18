@@ -48,7 +48,7 @@ score_change_model = ns_remote_notify.model(
     "ScoreChangeNotify",
     {
         "student_name": fields.String(required=True, description="学生姓名"),
-        "score_change": fields.Integer(required=True, description="积分变化（正数加分，负数扣分）"),
+        "score_change": fields.Float(required=True, description="积分变化（正数加分，负数扣分）"),
         "reason": fields.String(required=True, description="变动原因"),
         "course": fields.String(description="课程名称（可选）"),
         "device_id": fields.String(description="指定设备ID（可选，不指定则广播）"),
@@ -157,7 +157,14 @@ class RemoteNotifySend(Resource):
         topic = args.get("topic", "phonebox/remote/notify")
 
         try:
-            publish_mqtt(topic, json.dumps(message))
+            if not publish_mqtt(topic, json.dumps(message)):
+                # F11 修复: publish 返回 False（MQTT 不可用）时如实报失败，不再假装"已发送"
+                return {
+                    "success": False,
+                    "message": "MQTT 不可用，通知未发送",
+                    "topic": topic,
+                    "timestamp": datetime.now().isoformat(),
+                }
             if force_send:
                 _log_force("remote_notify", None, {"text": args.get("text")}, "强制发送通知")
             return {
@@ -211,8 +218,17 @@ class RemoteNotifyBroadcast(Resource):
         topics = ["phonebox/remote/notify", "phonebox/remote/notify/all", "remote/notify"]
 
         try:
+            sent_any = False
             for topic in topics:
-                publish_mqtt(topic, message_json)
+                if publish_mqtt(topic, message_json):
+                    sent_any = True
+            if not sent_any:
+                # F11 修复: 全部主题发布失败时如实报失败
+                return {
+                    "success": False,
+                    "message": "MQTT 不可用，广播未发送",
+                    "timestamp": datetime.now().isoformat(),
+                }
             if force_send:
                 _log_force("remote_notify", None, {"text": args.get("text")}, "强制广播通知")
             return {
@@ -267,7 +283,14 @@ class RemoteNotifySendToDevice(Resource):
         topic = f"phonebox/remote/notify/{device_id}"
 
         try:
-            publish_mqtt(topic, json.dumps(message))
+            # R8 修复: publish_mqtt 返回 False（连接不可用不抛异常）时如实报失败
+            if not publish_mqtt(topic, json.dumps(message)):
+                return {
+                    "success": False,
+                    "message": "MQTT 不可用，通知未发送",
+                    "topic": topic,
+                    "timestamp": datetime.now().isoformat(),
+                }
             if force_send:
                 _log_force("remote_notify", cls_id, {"device_id": device_id}, f"强制发送（设备 {device_id}）")
             return {
@@ -311,7 +334,7 @@ class ScoreChangeNotify(Resource):
 
         text_parts = [
             f"学生:{args.get('student_name')}",
-            f"{args.get('score_change', 0):+d}分",
+            f"{args.get('score_change', 0):+g}分",
             f"原因:{args.get('reason')}",
         ]
         if args.get("course"):
@@ -328,13 +351,20 @@ class ScoreChangeNotify(Resource):
         topic = f"phonebox/remote/notify/{device_id}" if device_id else "phonebox/remote/notify"
 
         try:
-            publish_mqtt(topic, json.dumps(message))
+            # R8 修复: publish_mqtt 返回 False 时如实报失败
+            if not publish_mqtt(topic, json.dumps(message)):
+                return {
+                    "success": False,
+                    "message": "MQTT 不可用，积分变化通知未发送",
+                    "topic": topic,
+                    "timestamp": datetime.now().isoformat(),
+                }
             if force_send:
                 _log_force("score_change", cls_id, {"student_name": args.get("student_name")},
                            "强制发送积分变化通知")
             return {
                 "success": True,
-                "message": f"积分变化通知已发送: {args.get('student_name')} {args.get('score_change', 0):+d}分",
+                "message": f"积分变化通知已发送: {args.get('student_name')} {args.get('score_change', 0):+g}分",
                 "topic": topic,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -381,7 +411,14 @@ class RemoteNotifyTest(Resource):
         message = {k: v for k, v in message.items() if v is not None}
 
         try:
-            publish_mqtt("phonebox/remote/notify", json.dumps(message))
+            # R8 修复: publish_mqtt 返回 False 时如实报失败
+            if not publish_mqtt("phonebox/remote/notify", json.dumps(message)):
+                return {
+                    "success": False,
+                    "message": "MQTT 不可用，测试通知未发送",
+                    "topic": "phonebox/remote/notify",
+                    "timestamp": datetime.now().isoformat(),
+                }
             if force_send:
                 _log_force("remote_notify", None, {"text": args.get("text")}, "强制发送测试通知")
             return {

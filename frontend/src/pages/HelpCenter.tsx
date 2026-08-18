@@ -23,6 +23,7 @@ interface Doc {
   title: string;
   description: string;
   icon: LucideIcon;
+  url?: string;
 }
 
 function HelpCenter() {
@@ -78,10 +79,11 @@ function HelpCenter() {
       faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // P3-1 修复: 文档卡接真实链接（README/API Swagger/MQTT 协议说明），原为无 onClick 死按钮
   const docs: Doc[] = [
-    { title: '系统使用指南', description: '详细介绍系统各项功能的使用方法', icon: BookOpen },
-    { title: 'API接口文档', description: '后端API接口说明和使用示例', icon: FileText },
-    { title: 'MQTT协议说明', description: '手机箱通信协议和消息格式', icon: MessageCircle },
+    { title: '系统使用指南', description: '详细介绍系统各项功能的使用方法', icon: BookOpen, url: '/docs/系统使用指南.md' },
+    { title: 'API接口文档', description: '后端API接口说明和使用示例（Swagger UI）', icon: FileText, url: '/api/docs/' },
+    { title: 'MQTT协议说明', description: '手机箱通信协议和消息格式', icon: MessageCircle, url: '/docs/MQTT协议说明.md' },
   ];
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -128,6 +130,12 @@ function HelpCenter() {
             return (
               <button
                 key={index}
+                onClick={() => {
+                  if (doc.url) {
+                    // P3-1: 文档卡打开真实链接；md 走新窗口，Swagger 同页打开
+                    window.open(doc.url, doc.url.endsWith('.md') ? '_blank' : '_self');
+                  }
+                }}
                 className='p-4 bg-white rounded-xl border border-gray-100 hover:border-primary-200 hover:shadow-md transition-all text-left group'
               >
                 <div className='w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center mb-3 group-hover:bg-primary-100 transition-colors'>

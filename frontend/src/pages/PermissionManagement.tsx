@@ -679,6 +679,7 @@ function PermissionManagement() {
                   <tr>
                     <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>用户</th>
                     <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>角色</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>状态</th>
                     <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>班级</th>
                     <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>电话</th>
                     <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>操作</th>
@@ -715,6 +716,13 @@ function PermissionManagement() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        {admin.is_active ? (
+                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800'>启用</span>
+                        ) : (
+                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600'>禁用</span>
+                        )}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{admin.class_name || '-'}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>{admin.phone || '-'}</td>

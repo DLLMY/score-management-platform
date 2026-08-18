@@ -64,12 +64,15 @@ def create_app(lightweight=False):
 
         check_route_duplicates(app)
 
-        from middleware import configure_csrf_exemptions
+        from middleware import configure_csrf_exemptions, configure_rate_limits
 
         csrf = app.config.get("csrf_instance")
         limiter = app.config.get("limiter_instance")
         if csrf:
             configure_csrf_exemptions(app, csrf, limiter)
+        # F7 修复: 启用登录/密码/设备写/规则写限流（此前 configure_rate_limits 从未被调用）
+        if limiter:
+            configure_rate_limits(app, limiter)
 
     return app
 

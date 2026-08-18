@@ -9,6 +9,7 @@ from flask import request
 from services.analysis_service import analysis_service
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api
 
 ns_rank = Namespace("rank", description="积分排行榜相关操作")
 
@@ -21,6 +22,8 @@ class StudentRankBoard(Resource):
     @ns_rank.param("order", "排序方向(desc/asc)")
     @ns_rank.param("limit", "返回数量限制")
     @requires_permission("score.view")
+    @cached_api(ttl=60)  # F13: 班级排行高频读缓存
+    @cached_api(ttl=60)  # F13: 排行高频读缓存
     def get(self):
         class_name = request.args.get("class_name")
         sort_by = request.args.get("sort_by", "score")

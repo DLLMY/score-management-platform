@@ -98,7 +98,6 @@ function ImportExportPanel({
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [reImportData, setReImportData] = useState<ImportMessage[] | null>(null);
-  const [isReImporting, setIsReImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -330,45 +329,34 @@ function ImportExportPanel({
     }
   };
 
-  const handleReImport = async () => {
+  // M9: 后端无 is_re_import 语义（原样重提必然再失败），改为导出失败数据 CSV，
+  // 用户在本地修正后走正常导入流程，形成真实闭环
+  const handleDownloadFailedData = () => {
     if (!reImportData || reImportData.length === 0) return;
-
-    setIsReImporting(true);
-    try {
-      const validRows = reImportData
-        .filter(msg => msg.row_data)
-        .map(msg => msg.row_data!);
-
-      if (validRows.length === 0) {
-        showToast('warning', '没有可修正重新导入的数据');
-        setReImportData(null);
-        setIsReImporting(false);
-        return;
-      }
-
-      const response = await fetch(`/api/import_export/import/${type}s`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ data: validRows, is_re_import: true }),
-      });
-
-      if (!response.ok) throw new Error('重新导入失败');
-
-      const result = await response.json();
-      if (result.success) {
-        showToast('success', `重新导入成功：${result.success_count || 0} 条`);
-        onImportComplete?.(result);
-        setReImportData(null);
-      } else {
-        showToast('error', result.message || '重新导入失败');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      showToast('error', '重新导入失败: ' + errorMessage);
-    } finally {
-      setIsReImporting(false);
-    }
+    const keys = new Set<string>();
+    reImportData.forEach((msg) => {
+      if (msg.row_data) Object.keys(msg.row_data).forEach((k) => keys.add(k));
+    });
+    const keyList = Array.from(keys);
+    const escapeCsv = (v: unknown): string => {
+      const s = v === undefined || v === null ? '' : String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const headers = ['行号', '失败原因', ...keyList];
+    const lines = reImportData.map((msg, idx) => [
+      escapeCsv(msg.row_number || idx + 1),
+      escapeCsv(msg.message || ''),
+      ...keyList.map((k) => escapeCsv(msg.row_data ? (msg.row_data as Record<string, unknown>)[k] : undefined)),
+    ]);
+    const csv = '\ufeff' + [headers.join(','), ...lines.map((row) => row.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `导入失败数据_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('success', `已导出 ${reImportData.length} 条失败数据，请修正后重新导入`);
   };
 
   const handleRemoveFile = () => {
@@ -732,16 +720,13 @@ function ImportExportPanel({
                   取消
                 </Button>
                 <Button
-                  onClick={handleReImport}
+                  /* M9: 原"重新导入"会原样重提失败数据（后端无 is_re_import 语义）必再失败；改为导出 CSV 供修正 */
+                  onClick={handleDownloadFailedData}
                   size="sm"
                   className="flex-1"
-                  disabled={isReImporting}
                 >
-                  {isReImporting ? (
-                    <><Loader2 className="w-3 h-3 animate-spin mr-1" />重新导入中</>
-                  ) : (
-                    '修正后重新导入'
-                  )}
+                  <Download className="w-3 h-3 mr-1" />
+                  下载失败数据
                 </Button>
               </div>
             </div>

@@ -1,9 +1,15 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, DeviceGroup, DeviceGroupMapping, Device, get_by_id
+from models import DeviceGroup, DeviceGroupMapping, Device, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from datetime import datetime
+from services.device_service import (
+    create_device_group,
+    update_device_group,
+    delete_device_group,
+    add_devices_to_group,
+    remove_device_from_group,
+)
 
 # -*- coding: utf-8 -*-
 """
@@ -47,7 +53,7 @@ device_in_group_model = ns_device_group.model(
     "DeviceInGroup",
     {
         "id": fields.Integer(description="映射ID"),
-        "device_id": fields.Integer(description="设备ID"),
+        "device_id": fields.String(description="设备ID（device.device_id 业务键）"),
         "device": fields.Raw(description="设备信息"),
         "added_at": fields.String(description="添加时间"),
     },
@@ -119,19 +125,7 @@ class DeviceGroupList(Resource):
             return APIResponse.bad_request(message="分组名称已存在")
 
         # 创建分组
-        group = DeviceGroup(
-            name=name,
-            description=data.get("description", ""),
-            location=data.get("location", ""),
-            icon=data.get("icon", "Layers"),
-            color=data.get("color", "#3B82F6"),
-            sort_order=data.get("sort_order", 0),
-            is_active=data.get("is_active", True),
-        )
-
-        db.session.add(group)
-        db.session.commit()
-
+        group = create_device_group(data)
         return APIResponse.success(data=group.to_dict(), message="创建成功", status_code=201)
 
 
@@ -176,25 +170,8 @@ class DeviceGroupItem(Resource):
                 existing = DeviceGroup.query.filter_by(name=name).first()
                 if existing:
                     return APIResponse.bad_request(message="分组名称已存在")
-            group.name = name
 
-        # 更新其他字段
-        if "description" in data:
-            group.description = data["description"]
-        if "location" in data:
-            group.location = data["location"]
-        if "icon" in data:
-            group.icon = data["icon"]
-        if "color" in data:
-            group.color = data["color"]
-        if "sort_order" in data:
-            group.sort_order = data["sort_order"]
-        if "is_active" in data:
-            group.is_active = data["is_active"]
-
-        group.updated_at = datetime.now()
-        db.session.commit()
-
+        update_device_group(group, data)
         return APIResponse.success(data=group.to_dict(), message="更新成功")
 
     @ns_device_group.doc("delete_device_group", description="删除设备分组", security="Bearer")
@@ -207,11 +184,7 @@ class DeviceGroupItem(Resource):
         if not group:
             return APIResponse.not_found(message="设备分组不存在")
 
-        # 删除关联的映射记录
-        DeviceGroupMapping.query.filter_by(group_id=group_id).delete()
-
-        db.session.delete(group)
-        db.session.commit()
+        delete_device_group(group)
 
         return APIResponse.success(message="删除成功")
 
@@ -252,37 +225,13 @@ class DeviceGroupDevices(Resource):
         if not isinstance(device_ids, list):
             return APIResponse.bad_request(message="device_ids必须是数组")
 
-        added = []
-        failed = []
-
-        for device_id in device_ids:
-            device = get_by_id(Device, device_id)
-            if not device:
-                failed.append({"device_id": device_id, "reason": "设备不存在"})
-                continue
-
-            # 检查是否已存在
-            existing = DeviceGroupMapping.query.filter_by(group_id=group_id, device_id=device_id).first()
-            if existing:
-                failed.append({"device_id": device_id, "reason": "设备已在分组中"})
-                continue
-
-            mapping = DeviceGroupMapping(group_id=group_id, device_id=device_id)
-            db.session.add(mapping)
-            added.append(device_id)
-
-        db.session.commit()
-
-        # 更新设备计数
-        group.device_count = DeviceGroupMapping.query.filter_by(group_id=group_id).count()
-        db.session.commit()
-
+        result = add_devices_to_group(group_id, device_ids)
         return APIResponse.success(
-            data={"added": added, "failed": failed}, message=f"成功添加 {len(added)} 个设备", status_code=201
+            data=result, message=f"成功添加 {len(result['added'])} 个设备", status_code=201
         )
 
 
-@ns_device_group.route("/<int:group_id>/devices/<int:device_id>")
+@ns_device_group.route("/<int:group_id>/devices/<string:device_id>")
 class DeviceGroupDeviceItem(Resource):
     """分组内单个设备操作"""
 
@@ -292,19 +241,9 @@ class DeviceGroupDeviceItem(Resource):
     @requires_permission("device.manage")
     def delete(self, group_id, device_id):
         """从分组中移除设备"""
-        mapping = DeviceGroupMapping.query.filter_by(group_id=group_id, device_id=device_id).first()
-
-        if not mapping:
+        ok = remove_device_from_group(group_id, device_id)
+        if not ok:
             return APIResponse.not_found(message="设备不在该分组中")
-
-        db.session.delete(mapping)
-        db.session.commit()
-
-        # 更新设备计数
-        group = get_by_id(DeviceGroup, group_id)
-        if group:
-            group.device_count = DeviceGroupMapping.query.filter_by(group_id=group_id).count()
-            db.session.commit()
 
         return APIResponse.success(message="移除成功")
 
@@ -340,7 +279,7 @@ class DeviceGroupStats(Resource):
         )
 
 
-@ns_device_group.route("/device/<int:device_id>/groups")
+@ns_device_group.route("/device/<string:device_id>/groups")
 class DeviceGroups(Resource):
     """设备所属的分组"""
 
@@ -350,7 +289,7 @@ class DeviceGroups(Resource):
     @requires_permission("device.view")
     def get(self, device_id):
         """获取设备所属的分组"""
-        device = get_by_id(Device, device_id)
+        device = Device.query.filter_by(device_id=device_id).first()
         if not device:
             return APIResponse.not_found(message="设备不存在")
 

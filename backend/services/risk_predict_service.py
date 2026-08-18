@@ -101,7 +101,7 @@ class RiskPredictService:
 
         records = (
             ScoreRecord.query.filter(
-                ScoreRecord.user_id == user_id,
+                ScoreRecord.student_id == user_id,
                 ScoreRecord.created_at >= start_date,
             )
             .order_by(ScoreRecord.created_at)
@@ -231,7 +231,7 @@ class RiskPredictService:
             - leave_days：统计窗口内已批准请假天数（不计入缺勤风险）。
         """
         try:
-            from models import Attendance, LeaveApplication
+            from models import Attendance, Approval
 
             s_date = start_date.date() if isinstance(start_date, datetime) else start_date
             e_date = end_date.date() if isinstance(end_date, datetime) else end_date
@@ -255,11 +255,12 @@ class RiskPredictService:
             rate = round(attended / total, 3)
 
             # 已批准的请假不计入缺勤风险
-            leaves = LeaveApplication.query.filter(
-                LeaveApplication.student_id == user_id,
-                LeaveApplication.status == "approved",
-                LeaveApplication.start_date <= e_date,
-                LeaveApplication.end_date >= s_date,
+            leaves = Approval.query.filter(
+                Approval.student_id == user_id,
+                Approval.type == "leave",
+                Approval.status == "approved",
+                Approval.start_date <= e_date,
+                Approval.end_date >= s_date,
             ).all()
             leave_days = 0
             for lv in leaves:
@@ -817,7 +818,7 @@ class RiskPredictService:
             "score_volatility": round(np.mean(volatilities) + np.std(volatilities) * 0.5, 2),
         }
 
-        # 风险类型权重（基于数据分布调整）
+        # 风险类型权重（P2-5 修复: 标注为启发式默认权重 + 分布微调；非监督学习训练产物）
         weights = {"academic": 0.4, "behavior": 0.35, "attendance": 0.25}
 
         # 根据数据分布调整权重

@@ -156,14 +156,8 @@ class NLPPerformanceOptimizer:
             print(f"[NLP优化器] 解析器预热失败: {e}")
         self._warmup_done = True
         self._models_loaded = True
-        common_queries = [
-            ("张三加分", {"intent": "add", "name": "张三", "score": 1}),
-            ("李四扣2分", {"intent": "deduct", "name": "李四", "score": 2}),
-            ("查询王五分数", {"intent": "query", "name": "王五"}),
-            ("给小明加5分", {"intent": "add", "name": "小明", "score": 5}),
-        ]
-        for text, expected in common_queries:
-            self._cache.set(text, expected)
+        # P2-1 修复: 删除写死解析结果的 common_queries 缓存（命中会绕过真实解析返回伪造数据）。
+        # 真实预热已由上方 warmup_texts 经 NLPParserService.parse 完成。
         elapsed = time.time() - start_time
         print(f"[NLP优化器] 预热完成! 耗时: {elapsed:.2f}s")
 

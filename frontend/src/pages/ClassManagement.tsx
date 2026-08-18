@@ -32,7 +32,7 @@ const defaultForm: FormData = {
 
 function ClassManagementPage() {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, page_size: 10, total: 0, pages: 1 });
+  const [pagination, setPagination] = useState({ page: 1, per_page: 10, total: 0, pages: 1 });
   const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { showToast } = useStableToast();
@@ -106,19 +106,19 @@ function ClassManagementPage() {
     try {
       const data: ClassListResponse = await api.classes.getAll({
         page,
-        page_size: pagination.page_size,
+        per_page: pagination.per_page,
         keyword: searchKeyword || undefined,
         skipCache
       });
       setClasses(data.classes || []);
-      setPagination(data.pagination || { page: 1, page_size: 10, total: 0, pages: 1 });
+      setPagination(data.pagination || { page: 1, per_page: 10, total: 0, pages: 1 });
     } catch (error) {
       logger.error('获取班级列表失败:', error);
       showToast('error', '获取班级列表失败');
     } finally {
       setIsLoading(false);
     }
-  }, [searchInput, pagination.page_size, showToast]);
+  }, [searchInput, pagination.per_page, showToast]);
 
   const fetchTeachers = useCallback(async () => {
     try {
@@ -226,8 +226,11 @@ function ClassManagementPage() {
       if (res) {
         setImportConfigs(res.map(c => ({ id: c.id, config_name: c.config_name })));
       }
-    }).catch((e) => logger.error(e)); // 配置列表加载失败静默（主功能不受影响），仅记录日志
-  }, []);
+    }).catch((e) => {
+      logger.error(e); // 主功能不受影响，仅记录日志
+      showToast('error', '导入配置列表加载失败'); // M5: 加载失败提示
+    }); // 配置列表加载失败静默（主功能不受影响），仅记录日志
+  }, [showToast]);
 
   const closeImportModal = useCallback(() => {
     setShowImportModal(false);
@@ -691,7 +694,8 @@ function ClassManagementPage() {
                             <Edit2 className='w-4 h-4' />
                           </PermissionButton>
                           <PermissionButton
-                            permission='class.delete'
+                            /* S1: class.delete 后端无此码，统一 class.manage */
+                            permission='class.manage'
                             onClick={() => handleDelete(cls.id)}
                             className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
                           >
@@ -711,7 +715,7 @@ function ClassManagementPage() {
             <div className='px-5 py-4 border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 to-white/50 dark:from-slate-800/50 dark:to-slate-800'>
               <div className='flex items-center justify-between'>
                 <p className='text-sm text-slate-500 dark:text-slate-400'>
-                  显示 {(pagination.page - 1) * pagination.page_size + 1} - {Math.min(pagination.page * pagination.page_size, pagination.total)} 条，共 {pagination.total} 条
+                  显示 {(pagination.page - 1) * pagination.per_page + 1} - {Math.min(pagination.page * pagination.per_page, pagination.total)} 条，共 {pagination.total} 条
                 </p>
                 <div className='flex items-center gap-2'>
                   <button

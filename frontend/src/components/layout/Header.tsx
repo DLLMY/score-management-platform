@@ -246,6 +246,14 @@ function Header() {
     localStorage.removeItem('admin');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    // S4 修复: 清权限持久化——原不清 → 同会话 A 登出后 B 登录复用 A 的权限渲染（前端越权门失效）
+    localStorage.removeItem('user_permissions');
+    localStorage.removeItem('user_roles');
+    try {
+      usePermissionStore.getState().clearPermissions();
+    } catch {
+      // 权限 store 未初始化时忽略
+    }
     navigate('/login');
   }, [navigate]);
 
@@ -310,7 +318,12 @@ function Header() {
 
       <div className='relative flex items-center justify-between'>
         <div className='flex items-center gap-3'>
-          <button className='md:hidden p-2.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 group touch-active no-tap-highlight'>
+          {/* L5: Header 汉堡与 Sidebar 移动端抽屉联动（Sidebar 监听 mobile-menu-open 事件） */}
+          <button
+            onClick={() => window.dispatchEvent(new Event('mobile-menu-open'))}
+            aria-label='打开菜单'
+            className='md:hidden p-2.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 group touch-active no-tap-highlight'
+          >
             <svg
               className='w-6 h-6 text-gray-600 dark:text-slate-300 group-hover:text-gray-800 dark:group-hover:text-slate-100 transition-colors'
               fill='none'

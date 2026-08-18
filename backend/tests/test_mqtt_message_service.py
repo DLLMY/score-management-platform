@@ -286,15 +286,18 @@ class TestMQTTMessageService:
     @patch('services.mqtt_message_service.publish_mqtt')
     @patch('services.mqtt_message_service.mqtt_manager')
     @patch('models.TimeRule')
-    def test_handle_unlock_message_score_low(self, mock_time_rule, mock_manager, mock_publish):
-        """测试解锁消息-积分不足"""
+    def test_handle_unlock_message_score_low(self, mock_time_rule, mock_manager, mock_publish, app):
+        """测试解锁消息-积分不足（R2 起走 UnlockValidator 真实校验，需真实学生记录）"""
         mock_time_rule.query.filter_by.return_value.all.return_value = []
-        mock_user = Mock()
-        mock_user.current_score = 50
-        mock_manager.get_cached_user.return_value = mock_user
+        from models import User, db
+        with app.app_context():
+            user = User(card_id="123", name="测试", current_score=50, is_active=True, daily_unlock_limit=5)
+            db.session.add(user)
+            db.session.commit()
+            mock_manager.get_cached_user.return_value = user
 
-        service = MQTTMessageService()
-        service.handle_unlock_message({'box_id': 'A', 'card_id': '123', 'hour': 10, 'minute': 30})
+            service = MQTTMessageService()
+            service.handle_unlock_message({'box_id': 'A', 'card_id': '123', 'hour': 10, 'minute': 30})
 
         mock_publish.assert_called_once()
         payload = json.loads(mock_publish.call_args[0][1])
@@ -306,22 +309,28 @@ class TestMQTTMessageService:
     @patch('models.TimeRule')
     @patch('services.mqtt_message_service.db_session_scope')
     def test_handle_unlock_message_success(self, mock_db_scope, mock_time_rule, mock_manager, mock_publish, app):
-        """测试解锁消息-成功"""
+        """测试解锁消息-成功（R2 起走 UnlockValidator 真实校验 + record_unlock 记账）"""
         mock_time_rule.query.filter_by.return_value.all.return_value = []
-        mock_user = Mock()
-        mock_user.current_score = 80
-        mock_user.id = 1
-        mock_manager.get_cached_user.return_value = mock_user
-
-        service = MQTTMessageService()
+        from models import User, db
         with app.app_context():
+            user = User(card_id="123", name="测试", current_score=80, is_active=True, daily_unlock_limit=5)
+            db.session.add(user)
+            db.session.commit()
+            mock_manager.get_cached_user.return_value = user
+
+            service = MQTTMessageService()
             service.handle_unlock_message({'box_id': 'A', 'card_id': '123', 'hour': 10, 'minute': 30})
 
-        mock_publish.assert_called_once()
-        payload = json.loads(mock_publish.call_args[0][1])
-        assert payload['result'] == 'true'
-        assert payload['reason'] == 'score_ok'
-        mock_manager.set_cached_user.assert_called_once()
+            mock_publish.assert_called_once()
+            payload = json.loads(mock_publish.call_args[0][1])
+            assert payload['result'] == 'true'
+            assert payload['reason'] == 'score_ok'
+            # R2: 开锁后扣分+计数+流水
+            db.session.expire_all()
+            updated = db.session.query(User).filter_by(card_id="123").first()
+            assert updated.current_score == 70
+            assert updated.today_unlock_count == 1
+            mock_manager.set_cached_user.assert_called_once()
 
     @patch('services.mqtt_message_service.publish_mqtt')
     def test_handle_points_add_no_card(self, mock_publish):
@@ -491,7 +500,7 @@ class TestMQTTMessageService:
         mock_record = Mock()
         mock_record.description = 'Test'
         mock_record.score_change = 10
-        mock_record.user_id = 1
+        mock_record.student_id = 1
 
         mock_user = Mock(spec=['id', 'current_score'])
         mock_user.id = 1

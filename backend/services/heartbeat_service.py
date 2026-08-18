@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from models import Device, DeviceAlert, db
+from models import Device, Alert, db
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,16 +57,18 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
 
     alerts_created = 0
     for device in timeout_devices:
-        existing_alert = DeviceAlert.query.filter_by(
-            device_id=device.device_id, alert_type="heartbeat_timeout", is_resolved=False
+        # F9-A: 心跳超时告警统一写入 alert 表，来源标记为 'device'
+        existing_alert = Alert.query.filter_by(
+            device_id=device.device_id, alert_type="heartbeat_timeout", is_resolved=False, source="device"
         ).first()
 
         if not existing_alert:
-            alert = DeviceAlert(
+            alert = Alert(
                 device_id=device.device_id,
                 alert_type="heartbeat_timeout",
                 severity="warning",
                 message=f"设备 {device.name or device.device_id} 心跳超时",
+                source="device",
             )
             db.session.add(alert)
             alerts_created += 1

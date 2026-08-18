@@ -1,12 +1,21 @@
 from flask import request
 import json
 from flask_restx import Namespace, Resource, fields
-from models import db, Approval, User, ScoreRecord, SystemConfig, get_by_id
+from models import Approval, User, ScoreRecord, SystemConfig, get_by_id
 from utils.permission import requires_permission, get_current_admin, get_allowed_classes
 from utils.response import APIResponse
 from services.class_time_checker import ClassTimeChecker
+from utils.score_utils import atomic_score_update
 from datetime import datetime
 from sqlalchemy.orm import joinedload
+
+from services.approval_service import (
+    create_approval,
+    update_approval,
+    delete_approval,
+    approve_approval,
+    reject_approval,
+)
 
 try:
     from services.mqtt_manager import mqtt_manager
@@ -37,7 +46,7 @@ approval_model = ns_approvals.model(
         "type": fields.String(required=True, description="审批类型"),
         "title": fields.String(description="标题"),
         "description": fields.String(description="描述"),
-        "score_change": fields.Integer(description="积分变化"),
+        "score_change": fields.Float(description="积分变化"),
         "status": fields.String(readOnly=True, description="状态"),
         "approver_id": fields.Integer(description="审批人ID"),
         "comment": fields.String(description="审批意见"),
@@ -113,7 +122,8 @@ class ApprovalList(Resource):
                 "approvals": [
                     {
                         "id": a.id,
-                        "user_id": a.user_id,
+                        "user_id": a.student_id,
+"student_id": a.student_id,
                         "user_name": a.user.name if a.user else None,
                         "type": a.type,
                         "title": a.title,
@@ -155,16 +165,10 @@ class ApprovalList(Resource):
         if not user:
             return APIResponse.error(message="学生不存在", status_code=404)
 
-        approval = Approval(
-            user_id=user_id,
-            type=data.get("type"),
-            title=data.get("title"),
-            description=data.get("description"),
-            score_change=data.get("score_change"),
-        )
-        db.session.add(approval)
-        db.session.commit()
-        return APIResponse.success(data={"approval_id": approval.id}, message="审批申请创建成功", status_code=201)
+        approval_id, err = create_approval(data)
+        if err:
+            return APIResponse.error(message=err, status_code=400)
+        return APIResponse.success(data={"approval_id": approval_id}, message="审批申请创建成功", status_code=201)
 
 
 @ns_approvals.route("/<int:id>")
@@ -176,12 +180,13 @@ class ApprovalResource(Resource):
     def get(self, id):
         """获取单个审批详情。非管理员用户只能查看关联班级的审批。"""
         approval = Approval.query.options(joinedload(Approval.user)).get_or_404(id)
-        if not _can_access_approval_user(approval.user_id):
+        if not _can_access_approval_user(approval.student_id):
             return APIResponse.error(message="无权查看该审批", status_code=403)
         return APIResponse.success(
             data={
                 "id": approval.id,
-                "user_id": approval.user_id,
+                "user_id": approval.student_id,
+                "student_id": approval.student_id,
                 "user_name": approval.user.name if approval.user else None,
                 "type": approval.type,
                 "title": approval.title,
@@ -201,13 +206,10 @@ class ApprovalResource(Resource):
     def put(self, id):
         """更新审批申请。非管理员用户只能更新关联班级的审批。"""
         approval = Approval.query.get_or_404(id)
-        if not _can_access_approval_user(approval.user_id):
+        if not _can_access_approval_user(approval.student_id):
             return APIResponse.error(message="无权更新该审批", status_code=403)
         data = ns_approvals.payload
-        approval.title = data.get("title", approval.title)
-        approval.description = data.get("description", approval.description)
-        approval.score_change = data.get("score_change", approval.score_change)
-        db.session.commit()
+        update_approval(approval, data)
         return APIResponse.success(message="审批更新成功")
 
     @ns_approvals.doc("delete_approval")
@@ -215,10 +217,9 @@ class ApprovalResource(Resource):
     def delete(self, id):
         """删除审批记录。非管理员用户只能删除关联班级的审批。"""
         approval = Approval.query.get_or_404(id)
-        if not _can_access_approval_user(approval.user_id):
+        if not _can_access_approval_user(approval.student_id):
             return APIResponse.error(message="无权删除该审批", status_code=403)
-        db.session.delete(approval)
-        db.session.commit()
+        delete_approval(approval)
         return APIResponse.success(message="审批记录删除成功")
 
 
@@ -231,35 +232,39 @@ class ApprovalApprove(Resource):
     def post(self, id):
         """批准审批。需要审批权限。非管理员用户只能审批关联班级的申请。"""
         approval = Approval.query.get_or_404(id)
-        if not _can_access_approval_user(approval.user_id):
+        if not _can_access_approval_user(approval.student_id):
             return APIResponse.error(message="无权审批该申请", status_code=403)
         data = request.get_json() or {}
 
         if approval.status != "pending":
             return APIResponse.error(message="该审批已被处理", status_code=400)
 
-        approval.status = "approved"
-        approval.approver_id = data.get("approver_id")
-        approval.comment = data.get("comment", "审批通过")
-        approval.approve_time = datetime.now()
+        # 事务收口到 service：状态/审批人/意见/时间 + 原子积分累加 + 生成 ScoreRecord + 单一提交
+        result = approve_approval(approval, data)
+        user = result["user"]
+        actual_change = result["actual_change"]
 
-        user = get_by_id(User, approval.user_id)
-        if user and approval.score_change:
-            before_score = user.current_score or 0
-            user.current_score = apply_score_limit(before_score + approval.score_change)
-            user.updated_at = datetime.now()
+        # R4: 审批通过改分后触发综合评分重算（原仅 score-entry 触发 → 两套行为）
+        if user:
+            try:
+                from services.composite_score_service import CompositeScoreService
+                CompositeScoreService.recalculate_user_score(user.id)
+            except Exception:
+                pass
 
-            actual_change = user.current_score - before_score
-
-            record = ScoreRecord(
-                user_id=approval.user_id,
-                score_change=actual_change,
-                description=f"审批通过: {approval.title}",
-                operator=f"admin_{approval.approver_id}",
-            )
-            db.session.add(record)
-
-        db.session.commit()
+        # D3/R4: 审批结果写入学生通知中心（学生端 /notifications 可见；原仅发 MQTT 无落库）
+        # 写入路径收口至 notification_service（F17 防腐层）：原路由内 Notification+commit/rollback 已迁出
+        if user:
+            try:
+                from services.notification_service import create_approval_result_notification
+                create_approval_result_notification(
+                    user_id=user.id,
+                    title="审批通过",
+                    content="您的申请「%s」已审批通过%s"
+                    % (approval.title, "，积分变动 %+g 分" % actual_change if actual_change else ""),
+                )
+            except Exception as e:
+                print(f"[Approval] 审批结果通知写入失败: {e}")
 
         # 更新用户缓存
         if mqtt_available and user:
@@ -289,7 +294,7 @@ class ApprovalApprove(Resource):
         if mqtt_available and user:
             try:
                 score_change_str = (
-                    f"{approval.score_change:+d}" if approval.score_change > 0 else str(approval.score_change)
+                    f"{approval.score_change:+g}" if approval.score_change > 0 else str(approval.score_change)
                 )
                 score_change_text = f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
 
@@ -319,7 +324,7 @@ class ApprovalApprove(Resource):
                     priority="medium",
                     extra_data={
                         "approval_id": approval.id,
-                        "user_id": approval.user_id,
+                        "user_id": approval.student_id,
                         "user_name": user.name,
                         "score_change": approval.score_change,
                         "title": approval.title,
@@ -349,21 +354,28 @@ class ApprovalReject(Resource):
     def post(self, id):
         """拒绝审批。需要审批权限。非管理员用户只能审批关联班级的申请。"""
         approval = Approval.query.get_or_404(id)
-        if not _can_access_approval_user(approval.user_id):
+        if not _can_access_approval_user(approval.student_id):
             return APIResponse.error(message="无权审批该申请", status_code=403)
         data = request.get_json() or {}
 
         if approval.status != "pending":
             return APIResponse.error(message="该审批已被处理", status_code=400)
 
-        approval.status = "rejected"
-        approval.approver_id = data.get("approver_id")
-        approval.comment = data.get("comment", "审批未通过")
-        approval.approve_time = datetime.now()
+        # 事务收口到 service：状态/审批人/意见/时间 + 单一提交
+        result = reject_approval(approval, data)
+        user = result["user"]
 
-        user = get_by_id(User, approval.user_id)
-
-        db.session.commit()
+        # D3/R4: 拒绝结果写入学生通知中心
+        if user:
+            try:
+                from services.notification_service import create_approval_result_notification
+                create_approval_result_notification(
+                    user_id=user.id,
+                    title="审批未通过",
+                    content="您的申请「%s」未通过审批：%s" % (approval.title, approval.comment or "审批未通过"),
+                )
+            except Exception as e:
+                print(f"[Approval] 审批结果通知写入失败: {e}")
 
         if mqtt_available and user:
             notification = {
@@ -409,12 +421,14 @@ class PendingApprovals(Resource):
                 "approvals": [
                     {
                         "id": a.id,
-                        "user_id": a.user_id,
+                        "user_id": a.student_id,
+"student_id": a.student_id,
                         "user_name": a.user.name if a.user else None,
                         "type": a.type,
                         "title": a.title,
                         "description": a.description,
                         "score_change": a.score_change,
+                        "status": a.status,
                         "created_at": a.created_at.isoformat() if a.created_at else None,
                     }
                     for a in approvals

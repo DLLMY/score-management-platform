@@ -11,7 +11,7 @@ from typing import Dict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import db, User, ScoreCategory, ScoreRule, ScoreRecord, Device, Approval, Admin, OperationLog, SystemConfig, MQTTConfig, ClassInfo, Subject, Exam, Score, CourseSchedule, ScoreRankRule, TimeRule, AdminNotification
+from models import db, User, ScoreCategory, ScoreRule, ScoreRecord, Device, Approval, Admin, OperationLog, SystemConfig, MQTTConfig, ClassInfo, Subject, Exam, Score, CourseSchedule, ScoreRankRule, TimeRule
 
 
 def get_db_model_fields(model) -> Dict[str, str]:
@@ -305,7 +305,7 @@ def check_data_integrity() -> Dict:
     # 检查ScoreRecord表
     record_count = ScoreRecord.query.count()
     records_without_user = (
-        db.session.query(ScoreRecord).outerjoin(User, ScoreRecord.user_id == User.id).filter(User.id.is_(None)).count()
+        db.session.query(ScoreRecord).outerjoin(User, ScoreRecord.student_id == User.id).filter(User.id.is_(None)).count()
     )
 
     # 检查Device表
@@ -373,12 +373,11 @@ def run_validation() -> Dict:
         "CourseSchedule": CourseSchedule,
         "ScoreRankRule": ScoreRankRule,
         "TimeRule": TimeRule,
-        "AdminNotification": AdminNotification,
         "NLPScoringRule": NLPScoringRule,
     }
 
     # 后端内部模型（不需要前端类型定义）
-    backend_internal_models = ["TimeRule", "AdminNotification", "NLPScoringRule", "ClassInfo"]
+    backend_internal_models = ["TimeRule", "NLPScoringRule", "ClassInfo"]
 
     comparison_results = []
     for model_name, model_class in model_mapping.items():

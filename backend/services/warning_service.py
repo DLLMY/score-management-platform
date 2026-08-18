@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from sqlalchemy import case
-from models import User, Score, ScoreRecord, RiskWarning, WarningConfig, CompositeScore, get_by_id, db
+from models import User, Score, ScoreRecord, Alert, WarningConfig, CompositeScore, get_by_id, db
 from utils.db_session import db_session_scope
 
 "\n"
@@ -85,7 +85,7 @@ class WarningService:
             if avg_score is not None and avg_score < float(config["low_score_threshold"]):
                 reasons.append(f"平均成绩低于{config['low_score_threshold']}分")
                 risk_level = WarningService.escalate_risk_level(risk_level, "high")
-            composite = CompositeScore.query.filter_by(user_id=user.id).first()
+            composite = CompositeScore.query.filter_by(student_id=user.id).first()
             if composite and composite.composite_score < 40:
                 reasons.append("综合评分偏低")
                 risk_level = WarningService.escalate_risk_level(risk_level, "medium")
@@ -126,7 +126,7 @@ class WarningService:
         for i in range(30):
             check_date = today - timedelta(days=i)
             records = ScoreRecord.query.filter(
-                ScoreRecord.user_id == user_id,
+                ScoreRecord.student_id == user_id,
                 ScoreRecord.score_change > 0,
                 ScoreRecord.created_at >= datetime(check_date.year, check_date.month, check_date.day),
                 ScoreRecord.created_at <= datetime(check_date.year, check_date.month, check_date.day, 23, 59, 59),
@@ -149,7 +149,7 @@ class WarningService:
         # 注意：.count() 已返回整数，不能再套 len()（原实现如此，会抛
         # TypeError: object of type 'int' has no len()，导致 evaluate_risk 整体 500）
         unlock_count = (
-            ScoreRecord.query.filter(ScoreRecord.user_id == user_id, ScoreRecord.description.like("%开锁%"))
+            ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.description.like("%开锁%"))
             .filter(ScoreRecord.created_at >= datetime(today.year, today.month, today.day))
             .count()
         )
@@ -213,24 +213,30 @@ class WarningService:
     @staticmethod
     def _create_warning_record(user_id, risk_level, reasons):
         """
-        创建预警记录
+        创建预警记录（P0-6 起写入统一 alert 表，source='risk'）
         Args:
             user_id (int): 用户ID
             risk_level (str): 风险等级
             reasons (list): 风险原因
         """
-        existing = RiskWarning.query.filter(RiskWarning.user_id == user_id, ~RiskWarning.is_resolved).first()
+        existing = Alert.query.filter(
+            Alert.source == "risk",
+            Alert.student_id == user_id,
+            ~Alert.is_resolved,
+        ).first()
         if existing:
             existing.risk_level = risk_level
-            existing.description = "; ".join(reasons)
-            existing.updated_at = datetime.now()
+            existing.message = "; ".join(reasons)
+            existing.created_at = datetime.now()
             db.session.commit()
         else:
-            warning = RiskWarning(
-                user_id=user_id,
+            warning = Alert(
+                source="risk",
+                student_id=user_id,
+                alert_type="comprehensive",
                 risk_level=risk_level,
-                risk_type="comprehensive",
-                description="; ".join(reasons),
+                message="; ".join(reasons),
+                status="active",
                 created_at=datetime.now(),
             )
             db.session.add(warning)
@@ -253,25 +259,25 @@ class WarningService:
     @staticmethod
     def get_warnings(class_name=None):
         """
-        获取风险预警列表
+        获取风险预警列表（P0-6 起从统一 alert 表读取，source='risk'）
         Args:
             class_name (str): 班级名称（可选）
         Returns:
             dict: 预警列表
         """
-        # RiskWarning.user_id 是普通整数列，模型上并没有 user 关系，
+        # Alert.student_id 是普通整数列，模型上并没有 user 关系，
         # 因此不能写 warning.user.name（会抛 AttributeError）。
         # 这里把 User 一并 select 出来，配对取用。
-        query = db.session.query(RiskWarning, User).join(User, RiskWarning.user_id == User.id).filter(
-            ~RiskWarning.is_resolved, User.is_active
+        query = db.session.query(Alert, User).join(User, Alert.student_id == User.id).filter(
+            Alert.source == "risk", ~Alert.is_resolved, User.is_active
         )
         if class_name:
             query = query.filter(User.class_name == class_name)
 
         # risk_level 是字符串列，直接 desc() 得到的是字典序（medium > low > high），
         # 会把最该置顶的 high 排到最后，故按显式严重度排序。
-        severity_order = case(WarningService.RISK_SEVERITY, value=RiskWarning.risk_level, else_=0)
-        rows = query.order_by(severity_order.desc(), RiskWarning.created_at.desc()).all()
+        severity_order = case(WarningService.RISK_SEVERITY, value=Alert.risk_level, else_=0)
+        rows = query.order_by(severity_order.desc(), Alert.created_at.desc()).all()
 
         result = []
         warning_reasons = {}
@@ -279,7 +285,7 @@ class WarningService:
             result.append(
                 {
                     "warning_id": warning.id,
-                    "user_id": warning.user_id,
+                    "user_id": warning.student_id,
                     "name": user.name,
                     "class_name": user.class_name,
                     "current_score": user.current_score,
@@ -287,7 +293,7 @@ class WarningService:
                     "created_at": warning.created_at.isoformat() if warning.created_at else None,
                 }
             )
-            warning_reasons[warning.user_id] = warning.description.split("; ") if warning.description else []
+            warning_reasons[warning.student_id] = warning.message.split("; ") if warning.message else []
         return {
             "risk_threshold": int(WarningService._get_config()["score_threshold"]),
             "risk_students": result,
@@ -304,8 +310,8 @@ class WarningService:
         Returns:
             bool: 是否成功
         """
-        warning = get_by_id(RiskWarning, warning_id)
-        if warning:
+        warning = get_by_id(Alert, warning_id)
+        if warning and warning.source == "risk":
             warning.is_resolved = True
             warning.resolved_at = datetime.now()
             with db_session_scope():

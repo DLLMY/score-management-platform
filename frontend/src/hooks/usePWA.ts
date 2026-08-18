@@ -36,8 +36,13 @@ export const usePWA = (): PWAReturnValue => {
       return;
     }
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setStatus(PWA_STATUS.INSTALLED);
+    // 环境 guard: 无 matchMedia 环境跳过 PWA 判定
+    try {
+      if (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) {
+        setStatus(PWA_STATUS.INSTALLED);
+      }
+    } catch {
+      // 忽略：PWA 判定失败不影响主流程
     }
 
     const handleAppInstalled = () => {
@@ -63,6 +68,9 @@ export const usePWA = (): PWAReturnValue => {
 
   const registerServiceWorker = async (): Promise<void> => {
     try {
+      if (!('serviceWorker' in navigator)) {
+        return; // 环境 guard: 无 ServiceWorker（旧浏览器/部分 WebView）跳过注册
+      }
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
       });

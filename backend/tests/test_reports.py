@@ -12,7 +12,7 @@ import uuid
 
 import pytest
 
-from models import db, ClassInfo, Exam, Score, User
+from models import db, ClassInfo, Exam, Score, Subject, User
 from utils.security import generate_student_token
 
 
@@ -45,13 +45,16 @@ def students(app_context, klass):
 def exam_with_scores(app_context, klass, students):
     e = Exam(name="RptExam_" + uuid.uuid4().hex[:6], status="published", class_id=klass.id)
     db.session.add(e)
+    math = Subject(name="数学", code="SX")
+    chinese = Subject(name="语文", code="YW")
+    db.session.add_all([math, chinese])
     db.session.commit()
     for i, s in enumerate(students):
         db.session.add(
-            Score(exam_id=e.id, student_id=s.id, subject="数学", score=90 - i * 5)
+            Score(exam_id=e.id, student_id=s.id, subject_id=math.id, score=90 - i * 5)
         )
         db.session.add(
-            Score(exam_id=e.id, student_id=s.id, subject="语文", score=85 + i * 3)
+            Score(exam_id=e.id, student_id=s.id, subject_id=chinese.id, score=85 + i * 3)
         )
     db.session.commit()
     return e

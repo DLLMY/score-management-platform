@@ -1,11 +1,17 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from models import db, SubAccount, PermissionLog
-from utils.permission import requires_permission
+from utils.permission import requires_permission, get_current_admin
 from utils.security import hash_password, verify_password, generate_subaccount_token
 from utils.response import APIResponse
 from datetime import datetime
 from api.system.security_routes import check_login_rate_limit, record_failed_login, clear_login_attempts
+from services.sub_accounts_service import (
+    create_sub_account,
+    update_sub_account,
+    delete_sub_account,
+    log_sub_account_action,
+)
 
 ns_sub_accounts = Namespace("sub-accounts", description="子账号管理相关操作")
 
@@ -13,21 +19,16 @@ ns_sub_accounts = Namespace("sub-accounts", description="子账号管理相关�
 def log_permission_action(action, target_id=None, description=None):
     """记录权限操作日志"""
     try:
-        admin_id = request.headers.get("X-Admin-Id")
-        log = PermissionLog(
-            operator_id=admin_id,
-            operator_type="admin",
+        admin = get_current_admin()  # F6: 从真实认证取操作人（原 X-Admin-Id 前端已不发）
+        admin_id = admin.id if admin else None
+        log_sub_account_action(
             action=action,
-            target_type="sub_account",
             target_id=target_id,
             description=description,
+            operator_id=admin_id,
             ip_address=request.remote_addr if request else None,
-            created_at=datetime.now(),
         )
-        db.session.add(log)
-        db.session.commit()
     except Exception:
-        db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
         pass
 
 
@@ -135,18 +136,7 @@ class SubAccountList(Resource):
         if not password:
             return APIResponse.error(message="请提供密码", status_code=400)
 
-        account = SubAccount(
-            parent_admin_id=data.get("parent_admin_id"),
-            username=data.get("username"),
-            password=hash_password(password),
-            real_name=data.get("real_name"),
-            phone=data.get("phone"),
-            role_type=data.get("role_type", "dashboard_viewer"),
-            permissions=data.get("permissions", ""),
-            is_active=data.get("is_active", True),
-        )
-        db.session.add(account)
-        db.session.commit()
+        account = create_sub_account(data)
 
         # 记录权限日志
         log_permission_action("create", account.id, f"创建子账号: {account.username}")
@@ -204,16 +194,7 @@ class SubAccountResource(Resource):
         """
         account = SubAccount.query.get_or_404(id)
         data = ns_sub_accounts.payload
-        account.username = data.get("username", account.username)
-        if data.get("password"):
-            account.password = hash_password(data.get("password"))
-        account.real_name = data.get("real_name", account.real_name)
-        account.phone = data.get("phone", account.phone)
-        account.role_type = data.get("role_type", account.role_type)
-        account.permissions = data.get("permissions", account.permissions)
-        account.is_active = data.get("is_active", account.is_active)
-        account.updated_at = datetime.now()
-        db.session.commit()
+        update_sub_account(account, data)
 
         # 记录权限日志
         log_permission_action("update", account.id, f"更新子账号: {account.username}")
@@ -235,8 +216,7 @@ class SubAccountResource(Resource):
         """
         account = SubAccount.query.get_or_404(id)
         username = account.username
-        db.session.delete(account)
-        db.session.commit()
+        delete_sub_account(account)
 
         # 记录权限日志
         log_permission_action("delete", id, f"删除子账号: {username}")

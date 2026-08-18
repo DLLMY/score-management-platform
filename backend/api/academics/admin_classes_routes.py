@@ -1,9 +1,9 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, Admin, AdminClass, ClassInfo, get_by_id
+from models import Admin, AdminClass, ClassInfo, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from datetime import datetime
+from services.academics_service import academics_service
 
 ns_admin_classes = Namespace("admin-classes", description="管理员班级关联相关操作")
 
@@ -99,40 +99,11 @@ class AdminAssignClass(Resource):
         class_id = data.get("class_id")
         is_primary = data.get("is_primary", False)
 
+        # 404 语义保留在路由层
         _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
         class_info = ClassInfo.query.get_or_404(class_id)
 
-        existing_link = AdminClass.query.filter_by(admin_id=admin_id, class_info_id=class_id).first()
-        if existing_link:
-            existing_link.is_primary = is_primary
-        else:
-            link = AdminClass(
-                admin_id=admin_id, class_info_id=class_id, is_primary=is_primary, assigned_at=datetime.now()
-            )
-            db.session.add(link)
-
-        # 如果设置为主要班级（班主任），更新 ClassInfo.head_teacher_id
-        if is_primary:
-            # 保存之前的班主任ID，用于后续清理
-            prev_head_teacher_id = class_info.head_teacher_id
-
-            # 将该班级的班主任设置为当前管理员
-            class_info.head_teacher_id = admin_id
-
-            # 将该管理员其他班级的 is_primary 设置为 False
-            AdminClass.query.filter(AdminClass.admin_id == admin_id, AdminClass.class_info_id != class_id).update(
-                {"is_primary": False}
-            )
-
-            # 将该班级之前的班主任的 is_primary 设置为 False（如果存在且不同）
-            if prev_head_teacher_id and prev_head_teacher_id != admin_id:
-                prev_admin_link = AdminClass.query.filter_by(
-                    admin_id=prev_head_teacher_id, class_info_id=class_id
-                ).first()
-                if prev_admin_link:
-                    prev_admin_link.is_primary = False
-
-        db.session.commit()
+        academics_service.assign_class_to_admin(admin_id, class_id, is_primary, class_info)
         return APIResponse.success(message="班级分配成功")
 
 
@@ -155,15 +126,7 @@ class AdminRemoveClass(Resource):
         - admin_id: 管理员ID（路径参数）
         - class_id: 班级ID（路径参数）
         """
-        link = AdminClass.query.filter_by(admin_id=admin_id, class_info_id=class_id).first()
-        if not link:
+        removed = academics_service.remove_class_from_admin(admin_id, class_id)
+        if not removed:
             return APIResponse.not_found(message="未找到关联记录")
-
-        # 如果移除的是主要班级（班主任），清空 ClassInfo.head_teacher_id
-        class_info = get_by_id(ClassInfo, class_id)
-        if class_info and class_info.head_teacher_id == admin_id:
-            class_info.head_teacher_id = None
-
-        db.session.delete(link)
-        db.session.commit()
         return APIResponse.success(message="班级移除成功")

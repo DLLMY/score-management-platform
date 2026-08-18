@@ -40,7 +40,8 @@ def init_limiter(app, redis_url):
 
 
 def configure_rate_limits(app, limiter):
-    login_endpoints = ["/api/admins/login", "/api/auth/login", "/api/admins/refresh-token"]
+    # F7 修复: 补 /api/student/login（学生登录此前完全不在限流名单）
+    login_endpoints = ["/api/admins/login", "/api/auth/login", "/api/admins/refresh-token", "/api/student/login"]
     for rule in app.url_map.iter_rules():
         if rule.rule in login_endpoints and "POST" in rule.methods:
             view_func = app.view_functions[rule.endpoint]

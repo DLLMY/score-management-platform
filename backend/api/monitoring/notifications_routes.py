@@ -1,10 +1,17 @@
 from flask import request, g
 from flask_restx import Namespace, Resource, fields
-from models import db, Notification, User
-from utils.permission import requires_permission, has_permission
-from datetime import datetime
+from models import Notification, User
+from utils.permission import requires_permission, has_permission, get_current_admin, get_allowed_classes
 
 from utils.response import APIResponse
+from services.notification_service import (
+    create_user_notification,
+    update_notification,
+    delete_notification,
+    mark_notification_read,
+    send_notification,
+    batch_send_notifications,
+)
 
 ns_notifications = Namespace("notifications", description="通知相关操作")
 
@@ -32,21 +39,36 @@ class NotificationList(Resource):
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 50, type=int)
 
-        pagination = Notification.query.order_by(Notification.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
+        # F9-B: 仅列出用户通知（管理员通知已合并进本表，需按 recipient_type 区分）
+        query = Notification.query.filter_by(recipient_type="user")
+        # R6 修复: 非超管按班级隔离（join User 取 class_name）
+        admin = get_current_admin()
+        allowed = get_allowed_classes(admin.id) if admin else None
+        if allowed is not None:
+            query = query.join(User, Notification.student_id == User.id).filter(User.class_name.in_(allowed))
+        pagination = (
+            query.order_by(Notification.created_at.desc())
+            .paginate(page=page, per_page=per_page, error_out=False)
         )
 
         return {
             "notifications": [
                 {
                     "id": n.id,
-                    "user_id": n.user_id,
+                    "user_id": n.student_id,
+                    "student_id": n.student_id,
                     "user_name": n.user.name if n.user else None,
                     "title": n.title,
                     "content": n.content,
                     "type": n.type,
                     "status": n.status,
                     "phone": n.phone,
+                    # F9-B 收尾：补齐合并后其余列出参，消除前后端字段错位
+                    "recipient_type": n.recipient_type,
+                    "priority": n.priority,
+                    "is_read": n.is_read,
+                    "read_at": n.read_at.isoformat() if n.read_at else None,
+                    "extra_data": n.extra_data,
                     "created_at": n.created_at.isoformat() if n.created_at else None,
                     "sent_at": n.sent_at.isoformat() if n.sent_at else None,
                 }
@@ -63,15 +85,7 @@ class NotificationList(Resource):
     @requires_permission("notification.send")
     def post(self):
         data = ns_notifications.payload
-        notification = Notification(
-            user_id=data.get("user_id"),
-            title=data.get("title"),
-            content=data.get("content"),
-            type=data.get("type", "info"),
-            phone=data.get("phone"),
-        )
-        db.session.add(notification)
-        db.session.commit()
+        notification = create_user_notification(data)
         return APIResponse.success(data={"notification_id": notification.id}, message="通知创建成功", status_code=201)
 
 
@@ -82,16 +96,22 @@ class NotificationResource(Resource):
     @ns_notifications.doc("get_notification")
     @requires_permission("notification.view")
     def get(self, id):
-        notification = Notification.query.get_or_404(id)
+        notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
         return {
             "id": notification.id,
-            "user_id": notification.user_id,
+            "user_id": notification.student_id,
+            "student_id": notification.student_id,
             "user_name": notification.user.name if notification.user else None,
             "title": notification.title,
             "content": notification.content,
             "type": notification.type,
             "status": notification.status,
             "phone": notification.phone,
+            "recipient_type": notification.recipient_type,
+            "priority": notification.priority,
+            "is_read": notification.is_read,
+            "read_at": notification.read_at.isoformat() if notification.read_at else None,
+            "extra_data": notification.extra_data,
             "created_at": notification.created_at.isoformat() if notification.created_at else None,
             "sent_at": notification.sent_at.isoformat() if notification.sent_at else None,
         }
@@ -100,23 +120,16 @@ class NotificationResource(Resource):
     @ns_notifications.expect(notification_model)
     @requires_permission("notification.send")
     def put(self, id):
-        notification = Notification.query.get_or_404(id)
+        notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
         data = ns_notifications.payload
-        notification.title = data.get("title", notification.title)
-        notification.content = data.get("content", notification.content)
-        notification.type = data.get("type", notification.type)
-        notification.status = data.get("status", notification.status)
-        if notification.status == "sent" and not notification.sent_at:
-            notification.sent_at = datetime.now()
-        db.session.commit()
+        update_notification(notification, data)
         return APIResponse.success(message="通知更新成功")
 
     @ns_notifications.doc("delete_notification")
     @requires_permission("notification.send")
     def delete(self, id):
-        notification = Notification.query.get_or_404(id)
-        db.session.delete(notification)
-        db.session.commit()
+        notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
+        delete_notification(notification)
         return APIResponse.success(message="通知删除成功")
 
 
@@ -127,9 +140,8 @@ class NotificationMarkRead(Resource):
     @ns_notifications.doc("mark_notification_read")
     @requires_permission("notification.send")
     def post(self, id):
-        notification = Notification.query.get_or_404(id)
-        notification.status = "read"
-        db.session.commit()
+        notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
+        mark_notification_read(notification)
         return APIResponse.success(message="通知已标记为已读")
 
 
@@ -140,24 +152,7 @@ class NotificationSend(Resource):
     @requires_permission("notification.send")
     def post(self):
         data = request.get_json()
-        user_id = data.get("user_id")
-        title = data.get("title")
-        content = data.get("content")
-        notification_type = data.get("type", "info")
-        phone = data.get("phone")
-
-        notification = Notification(
-            user_id=user_id,
-            title=title,
-            content=content,
-            type=notification_type,
-            status="sent",
-            phone=phone,
-            sent_at=datetime.now(),
-        )
-        db.session.add(notification)
-        db.session.commit()
-
+        notification = send_notification(data)
         return APIResponse.success(data={"notification_id": notification.id}, message="通知发送成功")
 
 
@@ -200,32 +195,16 @@ class NotificationBatch(Resource):
         if not target_ids:
             return APIResponse.bad_request(message="未找到接收通知的学生")
 
-        sent = 0
-        errors = []
-        for uid in target_ids:
-            try:
-                # 每条独立 savepoint：单条 add/flush 失败仅回滚该条，不影响其他（避免整批 session 进入 failed 状态）
-                with db.session.begin_nested():
-                    db.session.add(
-                        Notification(
-                            user_id=uid, title=title, content=content,
-                            type=notify_type, status="sent", sent_at=datetime.now(),
-                        )
-                    )
-                sent += 1
-            except Exception as e:  # noqa: BLE001
-                errors.append({"user_id": uid, "message": str(e)})
-        if sent:
-            db.session.commit()
+        sent, errors, total = batch_send_notifications(title, content, notify_type, target_ids)
         if not sent:
             # 全部失败：返回业务失败（success:False），避免前端误判"成功发送 0 条"
             return APIResponse.error(
                 message=f"群发通知全部失败，共{len(errors)}条",
-                data={"sent": 0, "errors": errors, "total": len(target_ids)},
+                data={"sent": 0, "errors": errors, "total": total},
                 status_code=400,
             )
         return APIResponse.success(
-            data={"sent": sent, "errors": errors, "total": len(target_ids)},
+            data={"sent": sent, "errors": errors, "total": total},
             message=f"成功发送 {sent} 条，{len(errors)} 条失败",
         )
 
@@ -241,9 +220,9 @@ class UserNotifications(Resource):
         per_page = request.args.get("per_page", 50, type=int)
 
         pagination = (
-            Notification.query.filter_by(user_id=user_id)
+            Notification.query.filter_by(student_id=user_id, recipient_type="user")
             .order_by(Notification.created_at.desc())
-            .order_by(Notification.created_at.desc())
+            .paginate(page=page, per_page=per_page, error_out=False)
         )
 
         return {
@@ -254,6 +233,11 @@ class UserNotifications(Resource):
                     "content": n.content,
                     "type": n.type,
                     "status": n.status,
+                    "recipient_type": n.recipient_type,
+                    "priority": n.priority,
+                    "is_read": n.is_read,
+                    "read_at": n.read_at.isoformat() if n.read_at else None,
+                    "extra_data": n.extra_data,
                     "created_at": n.created_at.isoformat() if n.created_at else None,
                 }
                 for n in pagination.items

@@ -10,14 +10,20 @@ import os
 from flask import request
 
 # JWT配置
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", os.getenv("FLASK_SECRET_KEY", "your_secret_key_here"))
-if JWT_SECRET_KEY == "your_secret_key_here":
+# F5 修复: 移除弱密钥兜底 "your_secret_key_here"。env 缺失时：
+#   - 测试模式（pytest 已加载）→ 使用固定测试密钥，保证测试可用
+#   - 生产/正常启动 → 抛 RuntimeError 拒绝启动，杜绝弱密钥签发
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", os.getenv("FLASK_SECRET_KEY"))
+if not JWT_SECRET_KEY:
     import sys
 
-    print("\n" + "=" * 60)
-    print("⚠️  安全警告: 正在使用默认 JWT_SECRET_KEY!")
-    print("⚠️  请在生产环境中设置 JWT_SECRET_KEY 环境变量")
-    print("=" * 60 + "\n", file=sys.stderr)
+    if "pytest" in sys.modules:
+        JWT_SECRET_KEY = "test_secret_key_for_pytest_only"
+        print("\n⚠️  测试模式: 使用固定测试 JWT 密钥\n", file=sys.stderr)
+    else:
+        raise RuntimeError(
+            "JWT_SECRET_KEY 未配置！请设置环境变量 JWT_SECRET_KEY 后启动（安全要求，禁止弱密钥签发）"
+        )
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 

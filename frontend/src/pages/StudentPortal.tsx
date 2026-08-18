@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, RefreshCw, Award, History, Bell, CalendarDays, Smartphone, Send, Trophy, TrendingUp, ShieldAlert, Target } from 'lucide-react';
+import { useStableToast } from '../hooks/useStableToast';
 import api, { StudentInfo, ScoreRecordItem, NotificationItem, LeaveItem, PhoneboxUnlockResult, MyRankResult, StudentInsight } from '../services/api';
 
 type TabKey = 'score' | 'notifications' | 'leaves' | 'phonebox' | 'rank' | 'growth';
@@ -16,6 +17,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 
 function StudentPortal() {
   const navigate = useNavigate();
+  const { showToast } = useStableToast();
   const [tab, setTab] = useState<TabKey>('score');
   const [student, setStudent] = useState<StudentInfo | null>(null);
 
@@ -92,7 +94,8 @@ function StudentPortal() {
     setError('');
     try {
       const res = await api.student.getNotifications({ page: 1, per_page: 20 });
-      setNotifications(res.data);
+      // M7: 数组赋值防护，非数组时置空避免渲染崩溃
+      setNotifications(Array.isArray(res.data) ? res.data : []);
       setNotifTotal(res.pagination.total);
     } catch (err: any) {
       setError(err?.message || '加载失败');
@@ -154,6 +157,7 @@ function StudentPortal() {
       await api.student.applyLeave(leaveForm);
       setLeaveForm({ leave_type: 'personal', start_date: '', end_date: '', reason: '' });
       await loadLeaves();
+      showToast('success', '请假申请已提交'); // L9: 成功反馈
     } catch (err: any) {
       setError(err?.message || '提交失败');
     } finally {

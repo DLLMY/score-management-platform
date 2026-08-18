@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app import app
-from models import db, Admin, User, Role
+from models import db, Admin
 from werkzeug.security import generate_password_hash
 
 with app.app_context():

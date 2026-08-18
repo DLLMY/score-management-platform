@@ -37,6 +37,11 @@ function StudentLogin() {
     setLoading(true);
     try {
       const result = await api.student.login({ card_id: cardId.trim(), name: name.trim() });
+      // M10: 双身份隔离——登录学生端时清除管理端凭证，防止 URL 串访
+      localStorage.removeItem('admin');
+      localStorage.removeItem('subaccount');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       localStorage.setItem('student_token', result.access_token);
       localStorage.setItem('student', JSON.stringify(result.student));
       navigate('/student', { replace: true });

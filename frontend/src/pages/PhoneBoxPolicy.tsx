@@ -49,7 +49,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
   useEffect(() => {
     if (isAdmin) {
       api.classes
-        .getAll({ page_size: 200 })
+        .getAll({ per_page: 200 })
         .then((res) => setClasses((res.classes || []).map((c) => ({ id: c.id, name: c.name }))))
         .catch(() => setClasses([]));
     }
@@ -84,6 +84,17 @@ const PhoneBoxPolicyInner: React.FC = () => {
   }, [loadPolicy]);
 
   const handleSaveBase = async () => {
+    // 边界：时段结束必须晚于开始（仅校验已配置 day 的窗口）
+    const invalidWindow = windows.find((w) => {
+      if (w.day < 0) return false;
+      const startMin = w.start_hour * 60 + w.start_minute;
+      const endMin = w.end_hour * 60 + w.end_minute;
+      return endMin <= startMin;
+    });
+    if (invalidWindow) {
+      showToast('error', '时段结束时间必须晚于开始时间');
+      return;
+    }
     setSaving(true);
     try {
       const data = await api.phoneBoxPolicy.update(
@@ -91,9 +102,9 @@ const PhoneBoxPolicyInner: React.FC = () => {
         classInfoId,
       );
       setPolicy(data);
-      showToast('策略已保存', 'success');
+      showToast('success', '策略已保存');
     } catch (err) {
-      showToast(err?.message || '保存失败', 'error');
+      showToast('error', err?.message || '保存失败');
     } finally {
       setSaving(false);
     }
@@ -101,16 +112,21 @@ const PhoneBoxPolicyInner: React.FC = () => {
 
   const handleOverride = async () => {
     if (!minutes || minutes <= 0) {
-      showToast('请输入有效的放行分钟数', 'error');
+      showToast('error', '请输入有效的放行分钟数');
+      return;
+    }
+    // M3: 放行时长上限校验，防止误输入超大值
+    if (minutes > 480) {
+      showToast('error', '放行时长不能超过 480 分钟（8 小时）');
       return;
     }
     setOverriding(true);
     try {
       const data = await api.phoneBoxPolicy.override(minutes, classInfoId);
       setPolicy(data);
-      showToast(`已允许本班开箱 ${minutes} 分钟`, 'success');
+      showToast('success', `已允许本班开箱 ${minutes} 分钟`);
     } catch (err) {
-      showToast(err?.message || '一键放行失败', 'error');
+      showToast('error', err?.message || '一键放行失败');
     } finally {
       setOverriding(false);
     }
@@ -120,9 +136,9 @@ const PhoneBoxPolicyInner: React.FC = () => {
     try {
       const data = await api.phoneBoxPolicy.cancelOverride(classInfoId);
       setPolicy(data);
-      showToast('已取消临时放行', 'success');
+      showToast('success', '已取消临时放行');
     } catch (err) {
-      showToast(err?.message || '取消失败', 'error');
+      showToast('error', err?.message || '取消失败');
     }
   };
 

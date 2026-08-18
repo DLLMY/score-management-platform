@@ -9,7 +9,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, g
 from datetime import datetime
-from models import User, ScoreRecord, Notification, LeaveApplication
+from models import User, ScoreRecord, Notification, Approval
 from utils.security import generate_student_token, validate_card_id
 from utils.permission import requires_student
 from utils.response import APIResponse
@@ -133,10 +133,16 @@ class StudentRecords(Resource):
         """获取当前学生的积分流水，按时间倒序分页返回。"""
         student = g.current_student
         page = request.args.get("page", 1, type=int)
-        # 分页参数统一 per_page（兼容旧 page_size）
-        page_size = min(max(request.args.get("per_page", request.args.get("page_size", 20, type=int), type=int), 1), 100)
+        if page is None or page < 1:
+            page = 1
+        # F10 修复: 原嵌套 get(type=int) 在 per_page/page_size 非数字时返回 None → min() 抛 TypeError
+        raw_per = request.args.get("per_page") or request.args.get("page_size") or 20
+        try:
+            page_size = max(1, min(int(raw_per), 100))
+        except (TypeError, ValueError):
+            page_size = 20
 
-        query = ScoreRecord.query.filter_by(user_id=student.id)
+        query = ScoreRecord.query.filter_by(student_id=student.id)
         total = query.count()
         items = (
             query.order_by(ScoreRecord.created_at.desc())
@@ -163,7 +169,8 @@ class StudentRecords(Resource):
 def _serialize_notification(n: Notification) -> dict:
     return {
         "id": n.id,
-        "user_id": n.user_id,
+        "user_id": n.student_id,
+        "student_id": n.student_id,
         "title": n.title,
         "content": n.content,
         "type": n.type,
@@ -172,16 +179,16 @@ def _serialize_notification(n: Notification) -> dict:
     }
 
 
-def _serialize_leave(leave: LeaveApplication) -> dict:
+def _serialize_leave(leave: Approval) -> dict:
     return {
         "id": leave.id,
         "student_id": leave.student_id,
         "leave_type": leave.leave_type,
         "start_date": leave.start_date.isoformat() if leave.start_date else None,
         "end_date": leave.end_date.isoformat() if leave.end_date else None,
-        "reason": leave.reason,
+        "reason": leave.description,
         "status": leave.status,
-        "approved_at": leave.approved_at.isoformat() if leave.approved_at else None,
+        "approved_at": leave.approve_time.isoformat() if leave.approve_time else None,
         "created_at": leave.created_at.isoformat() if leave.created_at else None,
     }
 
@@ -205,10 +212,16 @@ class StudentNotifications(Resource):
         """获取当前学生收到的通知，按时间倒序分页返回。"""
         student = g.current_student
         page = request.args.get("page", 1, type=int)
-        # 分页参数统一 per_page（兼容旧 page_size）
-        page_size = min(max(request.args.get("per_page", request.args.get("page_size", 20, type=int), type=int), 1), 100)
+        if page is None or page < 1:
+            page = 1
+        # F10 修复: 原嵌套 get(type=int) 在 per_page/page_size 非数字时返回 None → min() 抛 TypeError
+        raw_per = request.args.get("per_page") or request.args.get("page_size") or 20
+        try:
+            page_size = max(1, min(int(raw_per), 100))
+        except (TypeError, ValueError):
+            page_size = 20
 
-        query = Notification.query.filter_by(user_id=student.id)
+        query = Notification.query.filter_by(student_id=student.id)
         total = query.count()
         items = (
             query.order_by(Notification.created_at.desc())
@@ -228,8 +241,8 @@ class StudentLeaves(Resource):
         """列出当前学生提交的全部请假申请，按开始日期倒序。"""
         student = g.current_student
         leaves = (
-            LeaveApplication.query.filter_by(student_id=student.id)
-            .order_by(LeaveApplication.start_date.desc())
+            Approval.query.filter_by(student_id=student.id, type="leave")
+            .order_by(Approval.start_date.desc())
             .all()
         )
         return APIResponse.success(data=[_serialize_leave(lv) for lv in leaves])
@@ -268,7 +281,7 @@ class StudentLeaves(Resource):
             result, _ = attendance_service.apply_leave(payload)
         except Exception as e:  # 防御：服务层意外异常不泄露内部信息
             return APIResponse.error(message="提交失败，请稍后重试", status_code=400)
-        leave = LeaveApplication.query.get(result["data"]["id"])
+        leave = Approval.query.get(result["data"]["id"])
         return APIResponse.success(
             data=_serialize_leave(leave) if leave else result["data"],
             message="请假申请已提交，等待审批",
@@ -276,10 +289,28 @@ class StudentLeaves(Resource):
         )
 
 
+_UNLOCK_REASON_TEXT = {
+    "card_not_found": "未找到该学生",
+    "user_inactive": "账号已停用",
+    "user_blacklisted": "当前处于禁用期",
+    "user_permanently_blacklisted": "已被永久禁用",
+    "score_low": "积分不足",
+    "weekly_limit_exceeded": "本周开箱次数已达上限",
+    "daily_limit_exceeded": "今日开箱次数已达上限",
+    "not_in_time_window": "当前不在允许开箱时段",
+}
+
+
+def _unlock_reason_text(reason):
+    """UnlockValidator 原因码 → 用户可读中文（未知码原样返回）。"""
+    if not reason:
+        return "未知原因"
+    return _UNLOCK_REASON_TEXT.get(reason, reason)
+
+
 @ns_student.route("/phonebox/unlock")
 class StudentPhoneboxUnlock(Resource):
     @ns_student.doc("student_phonebox_unlock", description="学生自助申请手机箱开箱")
-    @requires_student
     def post(self):
         """依据本班手机箱策略判定是否允许开箱；允许则下发 MQTT 开箱指令（最佳努力）。
 
@@ -298,27 +329,47 @@ class StudentPhoneboxUnlock(Resource):
             phonebox_policy.POLICY_ALLOW_WINDOW,
         )
         dispatched = False
+        unlock_block_reason = None
         if allowed:
-            for box in ("A", "B"):
-                try:
-                    publish_mqtt(f"phonebox/unlock/{box}", "")
-                    dispatched = True
-                except Exception:
-                    # MQTT 不可用时不阻断请求，仅标记未下发
-                    pass
+            # R2 修复: 门户开箱与刷卡走同一校验/记账（原实现只发空载荷——不扣分/不记账/不累计，
+            # 与刷卡扣分激励不一致；且限额/黑名单从未执行）
+            from services.unlock_validator import UnlockValidator
+
+            v_allowed, v_reason, v_info = UnlockValidator.validate_unlock(
+                student.card_id, skip_time_window=True
+            )
+            if not v_allowed:
+                # 班主任策略放行但学生资格不满足（黑名单/分数不足/日/周限额）→ 拒绝并如实返回原因
+                allowed = False
+                unlock_block_reason = v_reason
+            else:
+                # 扣分 + 日/周计数 + 流水"开锁扣分"（record_unlock 内部 commit）
+                UnlockValidator.record_unlock(student)
+                for box in ("A", "B"):
+                    try:
+                        # F11 修复: 校验 publish_mqtt 返回值——返回 False（连接不可用但不抛异常）时不得置 dispatched
+                        if publish_mqtt(f"phonebox/unlock/{box}", ""):
+                            dispatched = True
+                    except Exception:
+                        # MQTT 不可用时不阻断请求，仅标记未下发
+                        pass
 
         return APIResponse.success(
             data={
                 "allowed": allowed,
                 "decision": decision,
-                "reason": evaluation.get("reason"),
+                "reason": unlock_block_reason or evaluation.get("reason"),
                 "override_until": evaluation.get("override_until"),
                 "dispatched": dispatched,
             },
             message=(
                 "开箱指令已下发" if allowed
-                else ("班主任已关闭本班自助开箱" if decision == phonebox_policy.POLICY_BLOCK
-                      else "本班暂未开放自助开箱，请联系老师")
+                else (
+                    "开箱请求被拒绝：" + _unlock_reason_text(unlock_block_reason)
+                    if unlock_block_reason
+                    else ("班主任已关闭本班自助开箱" if decision == phonebox_policy.POLICY_BLOCK
+                          else "本班暂未开放自助开箱，请联系老师")
+                )
             ),
             status_code=200 if allowed else 403,
         )
@@ -376,7 +427,7 @@ def _build_score_trend(user_id, weeks):
     from collections import defaultdict
 
     today = datetime.now().date()
-    recs = ScoreRecord.query.filter_by(user_id=user_id).all()
+    recs = ScoreRecord.query.filter_by(student_id=user_id).all()
     week_map = defaultdict(float)
     for r in recs:
         ca = r.created_at

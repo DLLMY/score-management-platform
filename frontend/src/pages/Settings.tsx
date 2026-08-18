@@ -104,6 +104,15 @@ function Settings() {
   }, [loadConfig, fetchBackups]);
 
   const handleSave = useCallback(async (): Promise<void> => {
+    // M3: 数值边界校验，防止 min>max 或非法范围写入
+    if (settings.minScore > settings.maxScore) {
+      showToast('error', '最低分不能大于最高分');
+      return;
+    }
+    if (settings.defaultScore < settings.minScore || settings.defaultScore > settings.maxScore) {
+      showToast('error', '默认分需在最低分与最高分之间');
+      return;
+    }
     try {
       setLoading((prev: LoadingState) => ({ ...prev, config: true }));
       await api.system.updateConfig({
@@ -132,6 +141,8 @@ function Settings() {
   }, [settings, showToast]);
 
   const handleReset = useCallback(async (): Promise<void> => {
+    // M1: 覆盖全部系统配置前二次确认
+    if (!window.confirm('确定要恢复默认设置吗？当前全部系统配置将被覆盖。')) return;
     const defaultSettings: SystemSettings = {
       systemName: '积分管理平台',
       systemLogo: '',
@@ -350,7 +361,7 @@ function Settings() {
                     <p className='text-sm text-gray-500'>接收系统通知和提醒</p>
                   </div>
                   <PermissionButton
-                    permission='system.manage'
+                    permission='system.settings'
                     onClick={() =>
                       updateSettingsField('enableNotifications', !settings.enableNotifications)
                     }
@@ -372,7 +383,7 @@ function Settings() {
                     <p className='text-sm text-gray-500'>收到通知时播放提示音</p>
                   </div>
                   <PermissionButton
-                    permission='system.manage'
+                    permission='system.settings'
                     onClick={() =>
                       updateSettingsField('notificationSound', !settings.notificationSound)
                     }
@@ -394,7 +405,7 @@ function Settings() {
                     <p className='text-sm text-gray-500'>自动保存更改，无需手动保存</p>
                   </div>
                   <PermissionButton
-                    permission='system.manage'
+                    permission='system.settings'
                     onClick={() => updateSettingsField('autoSave', !settings.autoSave)}
                     className={`relative w-12 h-6 rounded-full transition-colors ${
                       settings.autoSave ? 'bg-primary-600' : 'bg-gray-300'
@@ -423,7 +434,7 @@ function Settings() {
                   <div className='flex gap-3'>
                     {themeOptions.map((theme: ThemeOption) => (
                       <PermissionButton
-                        permission='system.manage'
+                        permission='system.settings'
                         key={theme.id}
                         onClick={() => setSettings({ ...settings, theme: theme.id })}
                         className={`flex-1 p-4 rounded-xl border-2 transition-all text-left ${
@@ -474,7 +485,7 @@ function Settings() {
                     <div className='text-xs text-blue-600'>导出所有数据到文件</div>
                   </PermissionButton>
                   <PermissionButton
-                    permission='system.restore'
+                    permission='system.backup'
                     onClick={() => fetchBackups()}
                     disabled={loading.restore}
                     className='p-4 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-2'
@@ -517,7 +528,7 @@ function Settings() {
                             </div>
                           </div>
                           <PermissionButton
-                            permission='system.restore'
+                            permission='system.backup'
                             onClick={() => handleRestore(backup.filename)}
                             className='px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200 transition-colors'
                           >
@@ -545,7 +556,7 @@ function Settings() {
 
             <div className='flex gap-3'>
               <PermissionButton
-                permission='system.manage'
+                permission='system.settings'
                 onClick={handleReset}
                 disabled={loading.config}
                 className='flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -554,7 +565,7 @@ function Settings() {
                 重置设置
               </PermissionButton>
               <PermissionButton
-                permission='system.manage'
+                permission='system.settings'
                 onClick={handleSave}
                 disabled={loading.config}
                 className='btn btn-primary flex-1 justify-center'

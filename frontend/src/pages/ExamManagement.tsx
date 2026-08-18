@@ -19,6 +19,7 @@ import {
 import { Card, Button, Modal, LoadingSpinner, PermissionButton, SearchFilter } from '../components';
 import ImportExportPanel from '../components/special/ImportExportPanel';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useForm, useModal, useConfirmDialog, useDebouncedValue } from '../hooks';
 import api, { getAuthHeaders } from '../services/api';
 
@@ -68,12 +69,15 @@ interface SubjectFormData {
 
 function ExamManagement(): React.ReactElement {
   const { showToast } = useStableToast();
+  const { submitting: examSubmitting, run: runExamSubmit } = useSubmitGuard();
   const [exams, setExams] = useState<Exam[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
+  // P1-1: 考试导入需指定目标考试（后端 /api/exam-import/execute 必填 exam_id）
+  const [importExamId, setImportExamId] = useState<number>(0);
 
   // 使用 useDebouncedValue 优化搜索
   const debouncedSearchInput = useDebouncedValue(searchInput, 300);
@@ -295,6 +299,30 @@ function ExamManagement(): React.ReactElement {
     }
   }, [fetchData]);
 
+  // P1-1: 考试导入走后端 /api/exam-import/execute（FormData: file + exam_id）
+  const handleImportFile = useCallback(
+    async (file: File): Promise<{ success: boolean; message?: string; success_count?: number; failed_count?: number }> => {
+      if (!importExamId) {
+        return { success: false, message: '请先在上方选择要导入成绩的考试' };
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('exam_id', String(importExamId));
+      const response = await fetch('/api/exam-import/execute', {
+        method: 'POST',
+        credentials: 'include',
+        headers: getAuthHeaders(),
+        body: formData,
+      });
+      const result = (await response.json()) as { success?: boolean; message?: string; success_count?: number; failed_count?: number };
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || '导入失败');
+      }
+      return result;
+    },
+    [importExamId]
+  );
+
   const handleSaveExam = useCallback(async (): Promise<void> => {
     if (!examFormData.name) {
       showToast('error', '请输入考试名称');
@@ -308,6 +336,12 @@ function ExamManagement(): React.ReactElement {
 
     if (!examFormData.subjects || examFormData.subjects.length === 0) {
       showToast('error', '请至少选择一个科目');
+      return;
+    }
+
+    // 边界：开始时间必须早于结束时间
+    if (new Date(examFormData.start_time) >= new Date(examFormData.end_time)) {
+      showToast('error', '结束时间必须晚于开始时间');
       return;
     }
 
@@ -420,20 +454,32 @@ function ExamManagement(): React.ReactElement {
           <p className='text-gray-500 mt-1'>创建和管理考试安排</p>
         </div>
         <div className='flex items-center gap-3'>
+          {/* P1-1: 导入改走 /api/exam-import/execute（带 exam_id）；权限码改真实后端码（exam.import/export/template 不存在） */}
+          <select
+            value={importExamId}
+            onChange={(e) => setImportExamId(Number(e.target.value))}
+            className='h-9 px-2 rounded-lg border border-gray-200 text-sm bg-white dark:bg-gray-800 dark:border-gray-700'
+            aria-label='选择导入目标考试'
+          >
+            <option value={0}>导入到考试…</option>
+            {exams.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
           <ImportExportPanel
             type="exam"
             showExport={true}
             showImport={true}
             showTemplate={true}
             exportUrl="/api/exams/export"
-            importUrl="/api/exams/import"
-            templateUrl="/api/exams/template"
+            templateUrl="/api/exam-import/template"
             onDataExport={handleExport}
+            onDataImport={handleImportFile}
             onImportComplete={handleImportComplete}
             permissions={{
-              import: 'exam.import',
-              export: 'exam.export',
-              template: 'exam.template',
+              import: 'score.entry',
+              export: 'score.view',
+              template: 'score.view',
             }}
           />
           <PermissionButton permission='exam.manage' onClick={handleCreateExam}>
@@ -722,7 +768,7 @@ function ExamManagement(): React.ReactElement {
             </select>
           </div>
           <div className='flex space-x-3 pt-4'>
-            <Button onClick={handleSaveExam}>保存</Button>
+            <Button onClick={() => runExamSubmit(handleSaveExam)} disabled={examSubmitting}>保存</Button>
             <Button variant='secondary' onClick={closeExamModal}>
               取消
             </Button>

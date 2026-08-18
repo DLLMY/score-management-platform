@@ -25,7 +25,7 @@ class PredictionService:
         """
         start_date = datetime.now() - timedelta(days=days)
         records = (
-            ScoreRecord.query.filter(ScoreRecord.user_id == user_id, ScoreRecord.created_at >= start_date)
+            ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date)
             .order_by(ScoreRecord.created_at.asc())
             .all()
         )

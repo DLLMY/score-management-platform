@@ -17,12 +17,17 @@
 import uuid
 import pytest
 
-from models import db, Exam, User, Notification, Score
+from models import db, Exam, User, Notification, Score, Subject
 from utils.security import generate_student_token
 
 
 @pytest.fixture
 def exam(app_context):
+    # P0-2: 成绩按 subject_id(FK→Subject) 存储，批量录分需科目存在于 Subject 表
+    for name, code in (("数学", "SX"), ("语文", "YW"), ("英语", "EN")):
+        if not Subject.query.filter_by(name=name).first():
+            db.session.add(Subject(name=name, code=code))
+    db.session.commit()
     e = Exam(name="BatchExam_" + uuid.uuid4().hex[:6], status="published")
     db.session.add(e)
     db.session.commit()
@@ -141,8 +146,8 @@ class TestBatchNotify:
         body = resp.get_json()
         assert body["success"] is True
         assert body["data"]["sent"] == 2
-        assert Notification.query.filter_by(user_id=s1.id).count() == 1
-        assert Notification.query.filter_by(user_id=s2.id).count() == 1
+        assert Notification.query.filter_by(student_id=s1.id).count() == 1
+        assert Notification.query.filter_by(student_id=s2.id).count() == 1
 
     def test_batch_by_user_ids(self, client, auth_headers, make_student):
         s = make_student("f")

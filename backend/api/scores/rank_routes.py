@@ -1,9 +1,9 @@
 from flask_restx import Namespace, Resource, fields
-from models import db, ScoreRankRule
+from models import ScoreRankRule
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from datetime import datetime
 from services.redis_cache_service import get_cache_service
+from services.score_rank_service import create_rank_rule, update_rank_rule, delete_rank_rule
 
 ns_rank = Namespace("rank-rules", description="排名规则相关操作")
 
@@ -63,19 +63,7 @@ class RankRuleList(Resource):
     @requires_permission("undefined")
     def post(self):
         data = ns_rank.payload
-        rule = ScoreRankRule(
-            name=data.get("name"),
-            min_score=data.get("min_score"),
-            max_score=data.get("max_score"),
-            color=data.get("color", "#0ea5e9"),
-            icon=data.get("icon", "Award"),
-            description=data.get("description"),
-            is_active=data.get("is_active", True),
-            unlock_min_score=data.get("unlock_min_score"),
-            weekly_unlock_limit=data.get("weekly_unlock_limit"),
-        )
-        db.session.add(rule)
-        db.session.commit()
+        rule = create_rank_rule(data)
 
         # 清除排名规则缓存
         get_cache_service().invalidate_by_tag("rank_rules")
@@ -121,19 +109,7 @@ class RankRuleResource(Resource):
     def put(self, id):
         rule = ScoreRankRule.query.get_or_404(id)
         data = ns_rank.payload
-        rule.name = data.get("name", rule.name)
-        rule.min_score = data.get("min_score", rule.min_score)
-        rule.max_score = data.get("max_score", rule.max_score)
-        rule.color = data.get("color", rule.color)
-        rule.icon = data.get("icon", rule.icon)
-        rule.description = data.get("description", rule.description)
-        rule.is_active = data.get("is_active", rule.is_active)
-        if "unlock_min_score" in data:
-            rule.unlock_min_score = data["unlock_min_score"]
-        if "weekly_unlock_limit" in data:
-            rule.weekly_unlock_limit = data["weekly_unlock_limit"]
-        rule.updated_at = datetime.now()
-        db.session.commit()
+        update_rank_rule(rule, data)
 
         # 清除排名规则缓存
         get_cache_service().invalidate_by_tag("rank_rules")
@@ -144,8 +120,7 @@ class RankRuleResource(Resource):
     @requires_permission("undefined")
     def delete(self, id):
         rule = ScoreRankRule.query.get_or_404(id)
-        db.session.delete(rule)
-        db.session.commit()
+        delete_rank_rule(rule)
 
         # 清除排名规则缓存
         get_cache_service().invalidate_by_tag("rank_rules")

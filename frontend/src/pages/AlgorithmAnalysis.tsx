@@ -2402,7 +2402,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                               if (s.has_data) {
                                 setEngagementTrendUserId(s.user_id);
                                 const el = document.getElementById('engagement-trend-section');
-                                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
                               }
                             }}
                           >

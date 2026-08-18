@@ -103,8 +103,8 @@ roles = [
 
 for r in roles:
     cur.execute(
-        'INSERT INTO role_permission (role_code, role_name, description, permissions, is_active, created_at, updated_at) VALUES (?,?,?,?,?,datetime("now"),datetime("now"))',
-        r
+        'INSERT INTO role_permission (role_code, role_name, description, is_active, created_at, updated_at) VALUES (?,?,?,?,datetime("now"),datetime("now"))',
+        (r[0], r[1], r[2], r[4])
     )
     # 创建 role_permission_mappings
     for pc in r[3].split(','):

@@ -139,10 +139,25 @@ class AlertService:
             return None
 
     def _trigger_notification(self, alert: Alert):
-        """触发告警通知（可扩展）"""
-        # 可以在这里添加邮件通知、短信通知、Webhook等
-        # 当前仅记录日志
+        """触发告警通知：写入管理员通知中心（P2-4 修复，原仅记日志无实际副作用）。
+        扩展点：邮件/短信/Webhook 可在此继续接入。"""
         log_info(f"触发告警通知: [{alert.severity}] {alert.alert_type} - {alert.message}")
+        try:
+            from models import Notification as AdminNotification
+
+            notification = AdminNotification(
+                type="alert",
+                title=f"系统告警: {alert.alert_type}",
+                content=alert.message[:500],
+                status="pending",
+                recipient_type="admin",
+                priority="high" if alert.severity in ("critical", "high") else "normal",
+            )
+            db.session.add(notification)
+            db.session.commit()
+            log_info(f"告警通知已写入管理员通知中心: id={notification.id}")
+        except Exception as e:
+            log_error(f"写入告警通知失败: {e}")
 
     def get_alerts(
         self,
@@ -193,6 +208,24 @@ class AlertService:
                 return True
             except Exception as e:
                 log_error(f"标记告警已读失败: {e}")
+                db.session.rollback()
+        return False
+
+    def update_alert_status(self, alert_id: int, is_read: bool) -> bool:
+        """更新告警已读状态（PUT /alerts/<id> 写入路径收口，F17 防腐层）。
+
+        与路由原内联 alert.is_read/read_at 赋值 + commit 行为完全等价；
+        路由仅保留 404 语义与响应构造。返回 False 表示告警不存在。
+        """
+        alert = Alert.query.get(alert_id)
+        if alert:
+            alert.is_read = is_read
+            alert.read_at = datetime.now() if is_read else None
+            try:
+                db.session.commit()
+                return True
+            except Exception as e:
+                log_error(f"更新告警状态失败: {e}")
                 db.session.rollback()
         return False
 

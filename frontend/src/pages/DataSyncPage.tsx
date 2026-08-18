@@ -47,7 +47,9 @@ const DataSyncPage: React.FC = () => {
       const result = await request('/api/consistency/check') as { issues?: ConsistencyIssue[]; healthy?: boolean; total_issues?: number };
       setIssues(result.issues || []);
       setHealthy(result.healthy ?? true);
-      if (!result.healthy) {
+      if (result.healthy) {
+        showToast('success', '数据一致性检查通过，未发现问题');
+      } else {
         showToast('warning', `发现 ${result.total_issues} 个数据一致性问题`);
       }
     } catch (error: unknown) {
@@ -57,6 +59,8 @@ const DataSyncPage: React.FC = () => {
   }, [showToast]);
 
   const handleFix = useCallback(async () => {
+    // M1: 执行修复会改动数据关联（自动建班+改关联），先确认
+    if (!window.confirm('确定要执行数据修复吗？系统将自动建班并修改数据关联。')) return;
     setFixing(true);
     try {
       // request() 剥信封：后端 success(data={"stats": ...}) → 直接是内层对象；失败会抛错进 catch
@@ -99,7 +103,7 @@ const DataSyncPage: React.FC = () => {
         </div>
         <div className="flex flex-wrap gap-3">
           <PermissionButton
-            permission='system.manage'
+            permission='system.settings'
             onClick={fetchStatus}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -108,7 +112,7 @@ const DataSyncPage: React.FC = () => {
             刷新状态
           </PermissionButton>
           <PermissionButton
-            permission='system.manage'
+            permission='system.settings'
             onClick={fetchCheck}
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
@@ -116,7 +120,7 @@ const DataSyncPage: React.FC = () => {
             一致性检查
           </PermissionButton>
           <PermissionButton
-            permission='system.manage'
+            permission='system.settings'
             onClick={handleFix}
             disabled={fixing}
             className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"

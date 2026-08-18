@@ -1,9 +1,11 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, User, ScoreRecord, ScoreRule, Device, get_by_id
+from models import User, ScoreRule, Device, ScoreRecord, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from datetime import datetime
+
+from services.device_service import box_add_score
 
 ns_box = Namespace("box", description="积分盒子相关操作")
 
@@ -40,7 +42,7 @@ def check_rule_limits(user_id, rule_id):
 
     if rule.daily_limit > 0:
         today_count = ScoreRecord.query.filter(
-            ScoreRecord.user_id == user_id,
+            ScoreRecord.student_id == user_id,
             ScoreRecord.rule_id == rule_id,
             ScoreRecord.created_at >= start_of_day,
             ScoreRecord.created_at <= end_of_day,
@@ -49,9 +51,10 @@ def check_rule_limits(user_id, rule_id):
             return False, f"今日已达到上限({rule.daily_limit}次)"
 
     if rule.min_interval > 0:
-        last_record = ScoreRecord.query.filter(ScoreRecord.user_id == user_id, ScoreRecord.rule_id == rule_id).order_by(
+        # F1 修复: 补 .first()，原 Query 恒真导致 last_record.created_at 抛 AttributeError → 刷卡 500
+        last_record = ScoreRecord.query.filter(ScoreRecord.student_id == user_id, ScoreRecord.rule_id == rule_id).order_by(
             ScoreRecord.created_at.desc()
-        )
+        ).first()
 
         if last_record:
             time_since_last = datetime.now() - last_record.created_at
@@ -115,18 +118,8 @@ class BoxVerify(Resource):
             if not allowed:
                 return APIResponse.bad_request(message=error_msg)
 
-            user.current_score += rule.score
-
-            record = ScoreRecord(
-                user_id=user.id,
-                rule_id=rule.id,
-                score_change=rule.score,
-                description=rule.description,
-                source="box",
-                source_info=f"device_id={device_id}",
-            )
-            db.session.add(record)
-            db.session.commit()
+            # 写入路径收口至防腐层 service（F17）：积分累加 + 明细落库 + 提交
+            new_score = box_add_score(user, rule)
 
             return APIResponse.success(
                 message=f"积分添加成功 +{rule.score}",
@@ -135,7 +128,7 @@ class BoxVerify(Resource):
                         "id": user.id,
                         "name": user.name,
                         "card_id": user.card_id,
-                        "current_score": user.current_score,
+                        "current_score": new_score,
                     }
                 },
             )

@@ -81,6 +81,11 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     const element = imgRef.current;
     if (!element) return;
 
+    // 环境 guard: 无 IntersectionObserver（旧浏览器/测试环境）→ 直接加载，不阻塞图片
+    if (typeof IntersectionObserver === 'undefined') {
+      setShouldLoad(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

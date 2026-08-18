@@ -1,8 +1,9 @@
 from flask_restx import Namespace, Resource, fields
-from models import db, TimeRule
+from models import TimeRule
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from datetime import datetime
+from services.time_rule_service import create_time_rule, update_time_rule, delete_time_rule
 
 ns_time_rules = Namespace("time-rules", description="时间规则相关操作")
 
@@ -126,19 +127,7 @@ class TimeRuleList(Resource):
         - allow_unlock: 是否允许开锁（可选，默认False）
         """
         data = ns_time_rules.payload
-        rule = TimeRule(
-            name=data.get("name"),
-            description=data.get("description"),
-            day_of_week=data.get("day_of_week", -1),
-            start_hour=data.get("start_hour"),
-            start_minute=data.get("start_minute"),
-            end_hour=data.get("end_hour"),
-            end_minute=data.get("end_minute"),
-            is_active=data.get("is_active", True),
-            allow_unlock=data.get("allow_unlock", False),
-        )
-        db.session.add(rule)
-        db.session.commit()
+        rule = create_time_rule(data)
         return {
             "id": rule.id,
             "name": rule.name,
@@ -205,17 +194,7 @@ class TimeRuleResource(Resource):
         """
         rule = TimeRule.query.get_or_404(id)
         data = ns_time_rules.payload
-        rule.name = data.get("name", rule.name)
-        rule.description = data.get("description", rule.description)
-        rule.day_of_week = data.get("day_of_week", rule.day_of_week)
-        rule.start_hour = data.get("start_hour", rule.start_hour)
-        rule.start_minute = data.get("start_minute", rule.start_minute)
-        rule.end_hour = data.get("end_hour", rule.end_hour)
-        rule.end_minute = data.get("end_minute", rule.end_minute)
-        rule.is_active = data.get("is_active", rule.is_active)
-        rule.allow_unlock = data.get("allow_unlock", rule.allow_unlock)
-        rule.updated_at = datetime.now()
-        db.session.commit()
+        update_time_rule(rule, data)
         return APIResponse.success(message="时间规则更新成功")
 
     @ns_time_rules.doc("delete_time_rule", description="删除时间规则", security="Bearer")
@@ -232,8 +211,7 @@ class TimeRuleResource(Resource):
         - id: 规则ID（路径参数）
         """
         rule = TimeRule.query.get_or_404(id)
-        db.session.delete(rule)
-        db.session.commit()
+        delete_time_rule(rule)
         return APIResponse.success(message="时间规则删除成功")
 
 

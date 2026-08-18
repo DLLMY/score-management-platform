@@ -6,7 +6,7 @@
 页面空白且报错。
 
 落库姿势（遵循既有约定，禁止在有数据的库上跑 seed_rbac.py）：
-- 仅改 role_permission_mappings（has_permission 实际查的表）+ role_permission.permissions CSV（一致性）。
+- 仅改 role_permission_mappings（has_permission 实际查的表；role_permission.permissions CSV 冗余列已废弃）。
 - 运行前自动备份 db。可重复执行。
 """
 import os
@@ -33,23 +33,7 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    # 1) role_permission.permissions CSV
-    cur.execute("SELECT permissions FROM role_permission WHERE role_code=?", (ROLE,))
-    row = cur.fetchone()
-    if row:
-        existing = set(p.strip() for p in (row[0] or '').split(',') if p.strip())
-        added = [p for p in NEW_PERMS if p not in existing]
-        if added:
-            existing.update(added)
-            new_csv = ','.join(sorted(existing))
-            cur.execute("UPDATE role_permission SET permissions=? WHERE role_code=?", (new_csv, ROLE))
-            print(f'[role_permission] +{added} -> teacher.permissions CSV 更新')
-        else:
-            print('[role_permission] teacher.permissions CSV 已含 culture.view/edit，跳过')
-    else:
-        print(f'[role_permission] 未找到角色 {ROLE}，跳过 CSV 更新')
-
-    # 2) role_permission_mappings（has_permission 实际查的表）
+    # 1) role_permission_mappings（has_permission 实际查的表；CSV 冗余列已废弃）
     cur.execute("SELECT permission_code FROM role_permission_mappings WHERE role_code=?", (ROLE,))
     mapped = set(r[0] for r in cur.fetchall())
     inserted = []

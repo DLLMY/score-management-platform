@@ -1,3 +1,4 @@
+import time
 from functools import wraps
 from flask import request, g
 from models import Admin, AdminClass, ClassInfo, Device, AdminRole, RolePermissionMapping, RoleHierarchy, User
@@ -215,10 +216,20 @@ def _get_inherited_permissions(role_code, visited=None):
     return permissions
 
 
+# F9 修复: 权限码 TTL 缓存（30s）——原每次请求重查 AdminRole/mappings/继承，全接口必经 has_permission
+_PERM_CACHE: dict = {}
+_PERM_CACHE_TTL = 30
+
+
 def _get_admin_permission_codes(admin):
-    """从数据库中获取管理员的所有有效权限码"""
+    """从数据库中获取管理员的所有有效权限码（带 30s TTL 缓存；角色变更最长 30s 生效）"""
     if not admin:
         return set()
+
+    cache_key = int(admin.id)
+    cached = _PERM_CACHE.get(cache_key)
+    if cached and time.time() - cached[0] < _PERM_CACHE_TTL:
+        return set(cached[1])
 
     permissions = set()
     # 通过AdminRole获取管理员的角色
@@ -238,6 +249,7 @@ def _get_admin_permission_codes(admin):
     if not role_codes and getattr(admin, "role", None):
         permissions.update(PERMISSIONS.get(admin.role, []))
 
+    _PERM_CACHE[cache_key] = (time.time(), frozenset(permissions))
     return permissions
 
 
@@ -279,15 +291,14 @@ def is_admin_or_super_admin(admin):
 
 
 def get_current_admin():
+    # F6 修复: 仅接受 Authorization: Bearer <token>。
+    # 原实现允许 X-Admin-Id 头作 token 回退，且 token 校验失败后直接按 id 查库返回 Admin——
+    # 知道 admin id 即可伪造身份（CRITICAL）。现彻底移除该通道，校验失败一律返回 None。
     auth_header = request.headers.get("Authorization")
-    admin_id = request.headers.get("X-Admin-Id")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
 
-    token = None
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-    elif admin_id:
-        token = admin_id
-
+    token = auth_header.replace("Bearer ", "").strip()
     if not token:
         return None
 
@@ -295,8 +306,7 @@ def get_current_admin():
         payload = validate_token(token, "access")
         if payload:
             return Admin.query.filter_by(id=int(payload["sub"])).first()
-        else:
-            return Admin.query.filter_by(id=token).first()
+        return None
     except Exception:
         return None
 

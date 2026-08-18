@@ -1,10 +1,23 @@
-"""管理员通知中心API"""
+"""管理员通知中心API
+
+F9-B 合并说明：
+- 原 admin_notifications 表已物理合并进 notification 表。
+- 本模块统一读写 notification 表，并以 recipient_type='admin' 区分管理员通知。
+- 对外契约（路径、响应字段形状，尤其 message 字段）保持不变：Notification.content 对外仍称 message。
+"""
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, AdminNotification, Admin, get_by_id
+from models import db, Notification, Admin, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from services.admin_notifications_service import (
+    create_notification,
+    delete_notification,
+    mark_notification_read,
+    mark_all_read,
+    create_admin_notification as _service_create_admin_notification,
+)
 from datetime import datetime
 
 ns_admin_notifications = Namespace("admin_notifications", description="管理员通知中心")
@@ -27,10 +40,21 @@ admin_notification_model = ns_admin_notifications.model(
     },
 )
 
-notification_count_response = ns_admin_notifications.model(
-    "NotificationCount",
-    {"unread_count": fields.Integer(description="未读通知数量"), "total_count": fields.Integer(description="通知总数")},
-)
+
+def _serialize(n):
+    """将 Notification(recipient_type='admin') 序列化为对外 AdminNotification 形状。"""
+    return {
+        "id": n.id,
+        "admin_id": n.admin_id,
+        "title": n.title,
+        "message": n.content,  # content 对外仍称 message
+        "type": n.type,
+        "priority": n.priority,
+        "is_read": n.is_read,
+        "extra_data": n.extra_data,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+        "read_at": n.read_at.isoformat() if n.read_at else None,
+    }
 
 
 @ns_admin_notifications.route("/")
@@ -46,7 +70,7 @@ class AdminNotificationList(Resource):
         notify_type = request.args.get("type", type=str)
         priority = request.args.get("priority", type=str)
 
-        query = AdminNotification.query
+        query = Notification.query.filter_by(recipient_type="admin")
         if admin_id:
             query = query.filter_by(admin_id=admin_id)
         if is_read is not None:
@@ -56,26 +80,11 @@ class AdminNotificationList(Resource):
         if priority:
             query = query.filter_by(priority=priority)
 
-        pagination = query.order_by(AdminNotification.created_at.desc()).paginate(
+        pagination = query.order_by(Notification.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
-        notifications = []
-        for n in pagination.items:
-            notifications.append(
-                {
-                    "id": n.id,
-                    "admin_id": n.admin_id,
-                    "title": n.title,
-                    "message": n.message,
-                    "type": n.type,
-                    "priority": n.priority,
-                    "is_read": n.is_read,
-                    "extra_data": n.extra_data,
-                    "created_at": n.created_at.isoformat() if n.created_at else None,
-                    "read_at": n.read_at.isoformat() if n.read_at else None,
-                }
-            )
+        notifications = [_serialize(n) for n in pagination.items]
 
         return APIResponse.success(
             data={
@@ -93,24 +102,14 @@ class AdminNotificationList(Resource):
     def post(self):
         data = ns_admin_notifications.payload
 
-        notification = AdminNotification(
-            admin_id=data.get("admin_id"),
-            title=data.get("title"),
-            message=data.get("message"),
-            type=data.get("type", "info"),
-            priority=data.get("priority", "medium"),
-            extra_data=data.get("extra_data", {}),
-        )
-
-        db.session.add(notification)
-        db.session.commit()
+        notification = create_notification(data)
 
         return APIResponse.success(
             data={
                 "notification": {
                     "id": notification.id,
                     "title": notification.title,
-                    "message": notification.message,
+                    "message": notification.content,
                     "type": notification.type,
                     "priority": notification.priority,
                     "is_read": notification.is_read,
@@ -130,26 +129,14 @@ class AdminNotificationResource(Resource):
     @ns_admin_notifications.marshal_with(admin_notification_model)
     @requires_permission("notification.view")
     def get(self, id):
-        notification = AdminNotification.query.get_or_404(id)
-        return {
-            "id": notification.id,
-            "admin_id": notification.admin_id,
-            "title": notification.title,
-            "message": notification.message,
-            "type": notification.type,
-            "priority": notification.priority,
-            "is_read": notification.is_read,
-            "extra_data": notification.extra_data,
-            "created_at": notification.created_at.isoformat() if notification.created_at else None,
-            "read_at": notification.read_at.isoformat() if notification.read_at else None,
-        }
+        notification = Notification.query.filter_by(id=id, recipient_type="admin").first_or_404()
+        return _serialize(notification)
 
     @ns_admin_notifications.doc("delete_admin_notification")
     @requires_permission("notification.send")
     def delete(self, id):
-        notification = AdminNotification.query.get_or_404(id)
-        db.session.delete(notification)
-        db.session.commit()
+        notification = Notification.query.filter_by(id=id, recipient_type="admin").first_or_404()
+        delete_notification(notification)
         return APIResponse.success(message="通知已删除")
 
 
@@ -160,11 +147,8 @@ class AdminNotificationMarkRead(Resource):
     @ns_admin_notifications.doc("mark_admin_notification_read")
     @requires_permission("notification.send")
     def post(self, id):
-        notification = AdminNotification.query.get_or_404(id)
-        if not notification.is_read:
-            notification.is_read = True
-            notification.read_at = datetime.now()
-            db.session.commit()
+        notification = Notification.query.filter_by(id=id, recipient_type="admin").first_or_404()
+        mark_notification_read(notification)
         return APIResponse.success(message="通知已标记为已读")
 
 
@@ -176,16 +160,8 @@ class AdminNotificationMarkAllRead(Resource):
     def post(self):
         admin_id = request.args.get("admin_id", type=int)
 
-        if admin_id:
-            count = AdminNotification.query.filter_by(admin_id=admin_id, is_read=False).update(
-                {"is_read": True, "read_at": datetime.now()}
-            )
-        else:
-            count = AdminNotification.query.filter_by(is_read=False).update(
-                {"is_read": True, "read_at": datetime.now()}
-            )
+        count = mark_all_read(admin_id)
 
-        db.session.commit()
         return APIResponse.success(data={"count": count}, message=f"已标记{count}条通知为已读")
 
 
@@ -193,17 +169,18 @@ class AdminNotificationMarkAllRead(Resource):
 class AdminNotificationCount(Resource):
 
     @ns_admin_notifications.doc("get_admin_notification_count")
-    @ns_admin_notifications.marshal_with(notification_count_response)
     @requires_permission("notification.view")
     def get(self):
         admin_id = request.args.get("admin_id", type=int)
 
         if admin_id:
-            unread_count = AdminNotification.query.filter_by(admin_id=admin_id, is_read=False).count()
-            total_count = AdminNotification.query.filter_by(admin_id=admin_id).count()
+            unread_count = Notification.query.filter_by(
+                admin_id=admin_id, recipient_type="admin", is_read=False
+            ).count()
+            total_count = Notification.query.filter_by(admin_id=admin_id, recipient_type="admin").count()
         else:
-            unread_count = AdminNotification.query.filter_by(is_read=False).count()
-            total_count = AdminNotification.query.count()
+            unread_count = Notification.query.filter_by(recipient_type="admin", is_read=False).count()
+            total_count = Notification.query.filter_by(recipient_type="admin").count()
 
         return APIResponse.success(data={"unread_count": unread_count, "total_count": total_count})
 
@@ -217,35 +194,21 @@ class AdminNotificationRecent(Resource):
         admin_id = request.args.get("admin_id", type=int)
         limit = request.args.get("limit", 10, type=int)
 
-        query = AdminNotification.query
+        query = Notification.query.filter_by(recipient_type="admin")
         if admin_id:
             query = query.filter_by(admin_id=admin_id)
 
-        notifications = query.order_by(AdminNotification.created_at.desc()).limit(limit).all()
+        notifications = query.order_by(Notification.created_at.desc()).limit(limit).all()
 
-        result = []
-        for n in notifications:
-            result.append(
-                {
-                    "id": n.id,
-                    "admin_id": n.admin_id,
-                    "title": n.title,
-                    "message": n.message,
-                    "type": n.type,
-                    "priority": n.priority,
-                    "is_read": n.is_read,
-                    "extra_data": n.extra_data,
-                    "created_at": n.created_at.isoformat() if n.created_at else None,
-                    "read_at": n.read_at.isoformat() if n.read_at else None,
-                }
-            )
-
-        return result
+        return [_serialize(n) for n in notifications]
 
 
 def create_admin_notification(title, message, notify_type="info", priority="medium", admin_id=None, extra_data=None):
     """
-    创建管理员通知
+    创建管理员通知（写入 notification 表，recipient_type='admin'）
+
+    F17：落库委托 services.admin_notifications_service（本函数保留以维持
+    approvals/records 懒加载与 api/system/__init__ 再导出的导入契约）。
 
     Args:
         title: 通知标题
@@ -258,34 +221,11 @@ def create_admin_notification(title, message, notify_type="info", priority="medi
     Returns:
         list: 创建的通知对象列表
     """
-    notifications = []
-
-    if admin_id:
-        admin = get_by_id(Admin, admin_id)
-        if admin:
-            notification = AdminNotification(
-                admin_id=admin_id,
-                title=title,
-                message=message,
-                type=notify_type,
-                priority=priority,
-                extra_data=extra_data or {},
-            )
-            db.session.add(notification)
-            notifications.append(notification)
-    else:
-        admins = Admin.query.all()
-        for admin in admins:
-            notification = AdminNotification(
-                admin_id=admin.id,
-                title=title,
-                message=message,
-                type=notify_type,
-                priority=priority,
-                extra_data=extra_data or {},
-            )
-            db.session.add(notification)
-            notifications.append(notification)
-
-    db.session.commit()
-    return notifications
+    return _service_create_admin_notification(
+        title=title,
+        message=message,
+        notify_type=notify_type,
+        priority=priority,
+        admin_id=admin_id,
+        extra_data=extra_data,
+    )

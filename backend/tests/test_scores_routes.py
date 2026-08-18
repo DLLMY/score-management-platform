@@ -59,7 +59,7 @@ class TestScoreRecordsRoutes:
             data = response.get_json()
             assert data['success'] is True
             # 记录已落库
-            rec = ScoreRecord.query.filter_by(user_id=uid).first()
+            rec = ScoreRecord.query.filter_by(student_id=uid).first()
             assert rec is not None
             assert rec.score_change == 5
             # 学生当前积分已同步更新

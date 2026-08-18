@@ -18,6 +18,12 @@ export async function openCacheDB(): Promise<IDBDatabase> {
     return dbInstance;
   }
 
+  // 环境检测快速降级：无 IndexedDB（旧浏览器/隐私模式/vitest jsdom）时直接失败，
+  // 由调用方 getCache/setCache 的 catch 降级为穿透（原 ReferenceError 被吞后行为不确定）
+  if (typeof indexedDB === 'undefined') {
+    return Promise.reject(new Error('IndexedDB is not supported in this environment'));
+  }
+
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 

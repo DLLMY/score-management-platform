@@ -243,7 +243,8 @@ const SlowRequestsTable: React.FC<{ requests: SlowRequest[] }> = ({ requests }) 
               requests.map((req, index) => (
                 <tr key={index} className='border-t border-gray-50 hover:bg-gray-50'>
                   <td className='px-4 py-2 text-gray-600'>
-                    {new Date(req.timestamp).toLocaleTimeString()}
+                    {/* L1: timestamp 空/非法时避免渲染 Invalid Date */}
+                    {req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : '-'}
                   </td>
                   <td className='px-4 py-2'>
                     <span
@@ -506,6 +507,14 @@ export const DiagnosticsPage: React.FC = () => {
           刷新
         </PermissionButton>
       </div>
+
+      {/* M9: 首次加载反馈 */}
+      {isRefreshing && healthData === null && (
+        <div className='animate-pulse text-sm text-gray-400 flex items-center gap-2'>
+          <RefreshCw size={14} className='animate-spin' />
+          正在加载诊断数据...
+        </div>
+      )}
 
       {loadError && (
         <div role='alert' className='flex items-center gap-2 px-4 py-3 mt-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-700'>

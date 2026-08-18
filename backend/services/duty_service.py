@@ -3,6 +3,7 @@ from models import db
 from models.duty import DutyGroup, DutyAssignment
 from utils.datetime_utils import parse_date
 from utils.permission import get_current_admin
+from utils.entity_guard import require_student, student_not_found_response
 from services.entity_names import names
 
 

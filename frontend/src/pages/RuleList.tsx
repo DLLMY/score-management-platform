@@ -614,7 +614,8 @@ function RuleList() {
                         >
                           <Edit2 className='w-4 h-4' />
                         </PermissionButton>
-                        <PermissionButton permission='rule.delete' onClick={() => handleDelete(rule.id)}
+                        {/* S1: rule.delete 后端无此码，统一 rule.manage */}
+                        <PermissionButton permission='rule.manage' onClick={() => handleDelete(rule.id)}
                           className='p-2 hover:bg-danger-50 rounded-lg text-gray-400 hover:text-danger-500 transition-all'
                           title='删除'
                         >

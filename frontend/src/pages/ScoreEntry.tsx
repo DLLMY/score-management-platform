@@ -1,6 +1,7 @@
 import logger from '../utils/logger';
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent, useMemo, useReducer } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Card, Button, Modal, LoadingSpinner, PermissionButton } from '../components';
 import ImportExportPanel from '../components/special/ImportExportPanel';
@@ -9,6 +10,7 @@ import { useModal, useConfirmDialog } from '../hooks';
 import api, { getAuthHeaders } from '../services/api';
 import type { User, Subject } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useDebouncedValue, useThrottledCallback } from '../hooks';
 
 // 班级信息类型
@@ -37,7 +39,6 @@ const {
   Filter,
   BarChart3,
   RotateCcw,
-  Copy,
 } = LucideIcons;
 
 // 成绩项接口
@@ -192,7 +193,9 @@ const initialState: ScoreEntryState = {
 
 const ScoreEntry: React.FC = () => {
   const { showToast } = useStableToast();
+  const navigate = useNavigate();
   usePermissions();
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const [state, dispatch] = useReducer(scoreEntryReducer, initialState);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -243,15 +246,20 @@ const ScoreEntry: React.FC = () => {
     }
   }, [showToast]);
 
+  // M8: 竞态防护——切换考试/班级时仅最新请求生效
+  const fetchSeqRef = useRef(0);
   const fetchStudentsAndScores = useCallback(async (): Promise<void> => {
     if (!selectedExam) return;
+    const seq = ++fetchSeqRef.current;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const usersRes = await api.users.getAll({ class_id: selectedClass ? Number(selectedClass) : undefined, skipCache: true });
+      if (seq !== fetchSeqRef.current) return;
       const allUsers = Array.isArray(usersRes) ? usersRes : (usersRes as { users?: User[] }).users || [];
       dispatch({ type: 'SET_STUDENTS', payload: allUsers.filter((u) => u.role === 'student') });
 
       const scoresRes = await api.scores.getAll({ exam_id: selectedExam });
+      if (seq !== fetchSeqRef.current) return;
       const scoresList: ScoreItem[] = Array.isArray(scoresRes) ? scoresRes : (scoresRes as { data?: ScoreItem[] }).data || [];
 
       const scoresMap: Record<string, ScoreItem> = {};
@@ -262,9 +270,10 @@ const ScoreEntry: React.FC = () => {
       dispatch({ type: 'SET_SCORES', payload: scoresMap });
       dispatch({ type: 'CLEAR_PENDING_CHANGES' });
     } catch (err: unknown) {
+      if (seq !== fetchSeqRef.current) return;
       showToast('error', '获取数据失败: ' + (err as Error).message);
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      if (seq === fetchSeqRef.current) dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, [selectedExam, selectedClass, showToast]);
 
@@ -496,6 +505,7 @@ const ScoreEntry: React.FC = () => {
   }, [importResult]);
 
   const handleConfirmAll = useCallback(async (): Promise<void> => {
+    if (!window.confirm('确定要确认全部学生的成绩吗？确认后将批量提交成绩状态。')) return;
     try {
       await api.scores.confirmAll(selectedExam);
       showToast('success', '确认成功');
@@ -593,13 +603,8 @@ const ScoreEntry: React.FC = () => {
     }
   }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal]);
 
-  const handleCopyLastScore = useCallback(async (): Promise<void> => {
-    if (!batchSubject) {
-      showToast('error', '请选择要复制成绩的科目');
-      return;
-    }
-    showToast('info', '复制功能开发中，敬请期待');
-  }, [batchSubject, showToast]);
+  // M9: 移除占位功能「复制上次成绩」（后端无对应接口，原实现仅提示"开发中"）
+  // 若需恢复：后端提供 GET /api/scores/last-exam 后在此实现
 
   const getEntryProgress = useMemo((): number => {
     if (students.length === 0 || visibleSubjects.length === 0) return 0;
@@ -881,7 +886,7 @@ const ScoreEntry: React.FC = () => {
                 permission='score.view'
                 variant='secondary'
                 onClick={() => {
-                  window.location.href = `/score-analysis?exam_id=${selectedExam}`;
+                  navigate(`/score-analysis?exam_id=${selectedExam}`);
                 }}
               >
                 <BarChart3 className='w-4 h-4 mr-2' />
@@ -891,8 +896,8 @@ const ScoreEntry: React.FC = () => {
             <PermissionButton
               permission='score.edit'
               variant='secondary'
-              onClick={handleSaveAll}
-              disabled={Object.keys(pendingChanges).length === 0}
+              onClick={() => runSubmit(handleSaveAll)}
+              disabled={submitting || Object.keys(pendingChanges).length === 0}
               title={Object.keys(pendingChanges).length === 0 ? '所有改动已在失焦时自动保存' : '批量保存尚未失焦的待保存改动'}
             >
               <Save className='w-4 h-4 mr-2' />
@@ -1026,7 +1031,7 @@ const ScoreEntry: React.FC = () => {
           <Button variant='secondary' onClick={closeImportModal}>
             取消
           </Button>
-          <PermissionButton permission='score.edit' onClick={handleImport} disabled={!importFile}>
+          <PermissionButton permission='score.edit' onClick={() => runSubmit(handleImport)} disabled={submitting || !importFile}>
             导入
           </PermissionButton>
         </div>
@@ -1052,22 +1057,20 @@ const ScoreEntry: React.FC = () => {
             </select>
           </div>
           <div className='flex flex-wrap gap-2 pt-4'>
-            <PermissionButton permission='score.approve' variant='secondary' onClick={handleBatchConfirm} disabled={!batchSubject}>
+            <PermissionButton permission='score.approve' variant='secondary' onClick={() => runSubmit(handleBatchConfirm)} disabled={submitting || !batchSubject}>
               <CheckCircle className='w-4 h-4 mr-2' />
               批量确认
             </PermissionButton>
-            <PermissionButton permission='score.edit' variant='secondary' onClick={handleBatchReset} disabled={!batchSubject}>
+            <PermissionButton permission='score.edit' variant='secondary' onClick={() => runSubmit(handleBatchReset)} disabled={submitting || !batchSubject}>
               <RotateCcw className='w-4 h-4 mr-2' />
               批量重置
             </PermissionButton>
-            <PermissionButton permission='score.edit' variant='danger' onClick={handleBatchDelete} disabled={!batchSubject}>
+            {/* S1: 批量删除与"修改成绩"分离，用 score.delete（teacher 无此权限不能删） */}
+            <PermissionButton permission='score.delete' variant='danger' onClick={() => runSubmit(handleBatchDelete)} disabled={submitting || !batchSubject}>
               <Trash2 className='w-4 h-4 mr-2' />
               批量删除
             </PermissionButton>
-            <PermissionButton permission='score.edit' variant='secondary' onClick={handleCopyLastScore} disabled={!batchSubject}>
-              <Copy className='w-4 h-4 mr-2' />
-              复制上次成绩
-            </PermissionButton>
+            {/* M9: 移除占位「复制上次成绩」按钮 */}
           </div>
           <div className='flex justify-end pt-4'>
             <Button onClick={closeBatchModal}>关闭</Button>

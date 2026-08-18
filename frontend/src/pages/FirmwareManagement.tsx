@@ -170,7 +170,7 @@ function FirmwareManagement() {
       await api.firmware.updateVersion(version.id, {
         is_active: !version.is_active,
       });
-      showToast('success', version.is_active ? '已禁用' : '已启用');
+      showToast('success', !version.is_active ? '已启用' : '已禁用');
       loadData(true);
     } catch (error: unknown) {
       logger.error('更新失败:', error);
@@ -219,7 +219,8 @@ function FirmwareManagement() {
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? '刷新中...' : '刷新'}
           </Button>
-          <PermissionButton permission='firmware.manage' onClick={() => openUploadModal()}>
+          {/* S1: 后端无 firmware 权限码，固件管理属系统级操作 → system.settings */}
+          <PermissionButton permission='system.settings' onClick={() => openUploadModal()}>
             <Upload className='w-4 h-4 mr-2' />
             上传固件
           </PermissionButton>
@@ -337,7 +338,8 @@ function FirmwareManagement() {
                     <td className='px-4 py-3'>
                       <div className='flex items-center gap-2'>
                         <PermissionButton
-                          permission='firmware.view'
+                          /* S1: firmware.view 后端无此码 → system.settings */
+                          permission='system.settings'
                           onClick={() => handleDownload(v)}
                           disabled={!v.file_path}
                           className='p-1 text-blue-600 hover:text-blue-800 disabled:text-gray-300 disabled:hover:text-gray-300'
@@ -346,7 +348,7 @@ function FirmwareManagement() {
                           <Download className='w-4 h-4' />
                         </PermissionButton>
                         <PermissionButton
-                          permission='firmware.manage'
+                          permission='system.settings'
                           onClick={() => handleToggleActive(v)}
                           className={`p-1 ${v.is_active ? 'text-yellow-600 hover:text-yellow-800' : 'text-green-600 hover:text-green-800'}`}
                           title={v.is_active ? '禁用' : '启用'}
@@ -358,7 +360,7 @@ function FirmwareManagement() {
                           )}
                         </PermissionButton>
                         <PermissionButton
-                          permission='firmware.manage'
+                          permission='system.settings'
                           onClick={() => handleDeleteVersion(v)}
                           className='p-1 text-red-600 hover:text-red-800'
                           title='删除'

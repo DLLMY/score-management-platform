@@ -13,7 +13,7 @@ ns_classes = Namespace("classes", description="班级管理相关操作")
 
 ns_classes.parser = ns_classes.parser()
 ns_classes.parser.add_argument("page", type=int, location="args", default=1, help="页码")
-ns_classes.parser.add_argument("page_size", type=int, location="args", default=10, help="每页数量")
+ns_classes.parser.add_argument("per_page", type=int, location="args", default=10, help="每页数量")
 ns_classes.parser.add_argument("keyword", type=str, location="args", help="搜索关键词")
 
 
@@ -72,10 +72,10 @@ class ClassList(Resource):
     def get(self):
         args = ns_classes.parser.parse_args()
         page = args.get("page", 1)
-        page_size = args.get("page_size", 10)
+        per_page = args.get("per_page", 10)
         keyword = args.get("keyword")
         admin = get_current_admin()
-        result = class_service.get_class_list(page, page_size, keyword, admin=admin)  # noqa: F841
+        result = class_service.get_class_list(page, per_page, keyword, admin=admin)  # noqa: F841
         return APIResponse.success(data=result)
 
     @ns_classes.doc("create_class")

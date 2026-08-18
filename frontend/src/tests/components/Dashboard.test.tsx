@@ -3,6 +3,7 @@
  */
 /// <reference types="jest" />
 import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 
 import Dashboard from '../../pages/Dashboard';
 import { mockLocalStorage, renderWithProviders } from '../utils/test-utils';
@@ -11,7 +12,8 @@ import { mockLocalStorage, renderWithProviders } from '../utils/test-utils';
 // Only the methods the Dashboard actually calls need to resolve.
 // Use plain function implementations (not jest.fn().mockResolvedValue) so that
 // any global mock-clearing cannot wipe the resolved values.
-jest.mock('../../services/api', () => ({
+// 注意: 必须用 vitest 原生 vi.mock（经全局 jest 兼容别名的 jest.mock 不 hoist → mock 失效 → 真实 fetch 噪音）
+vi.mock('../../services/api', () => ({
   __esModule: true,
   default: {
     classes: { getAll: () => Promise.resolve([]) },

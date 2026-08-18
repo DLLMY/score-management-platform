@@ -18,6 +18,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{js,jsx,ts,tsx}'],
+    // 默认 5s 在 Windows + 中文路径 + 并行任务竞争下偶发超时（UserList 冷启动 import 曾 5s 超时）
+    testTimeout: 15000,
+    hookTimeout: 15000,
     // Windows + 中文路径下 forks pool 启动 worker 常超时 → 本地用 threads；
     // CI（Linux）threads pool 报 webidl.markAsUncloneable → CI 用默认 forks。
     pool: process.env.CI ? 'forks' : 'threads',

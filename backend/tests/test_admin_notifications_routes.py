@@ -93,9 +93,12 @@ class TestAdminNotificationsRoutes:
 
             data = response.get_json()
 
-            assert 'unread_count' in data
+            # F9-B 合并后统一返回 APIResponse 信封 {success, code, data:{unread_count, total_count}}
+            assert 'data' in data
 
-            assert 'total_count' in data
+            assert 'unread_count' in data['data']
+
+            assert 'total_count' in data['data']
 
 
 
@@ -124,3 +127,27 @@ class TestAdminNotificationsRoutes:
             )
 
             assert response.status_code == 201 or response.status_code == 200
+
+    def test_mark_read(self, client, app, auth_headers):
+        with app.app_context():
+            resp = client.post(
+                '/api/admin_notifications/',
+                json={'title': '置读测试', 'message': '内容'},
+                headers=auth_headers,
+            )
+            nid = resp.get_json()['data']['notification']['id']
+            mark = client.post('/api/admin_notifications/%d/read' % nid, headers=auth_headers)
+            assert mark.status_code == 200
+            assert mark.get_json()['success'] is True
+            assert '已标记为已读' in mark.get_json()['message']
+
+    def test_mark_all_read(self, client, app, auth_headers):
+        with app.app_context():
+            client.post('/api/admin_notifications/', json={'title': 'A', 'message': 'a'}, headers=auth_headers)
+            client.post('/api/admin_notifications/', json={'title': 'B', 'message': 'b'}, headers=auth_headers)
+            resp = client.post('/api/admin_notifications/read_all', headers=auth_headers)
+            assert resp.status_code == 200
+            body = resp.get_json()
+            assert body['success'] is True
+            assert body['data']['count'] >= 2
+            assert '已标记' in body['message']

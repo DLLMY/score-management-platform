@@ -616,7 +616,8 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
             const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
             apiError.status = 401;
             setTimeout(() => {
-              window.location.replace('/student/login');
+              // S2: HashRouter 下必须带 #，否则整页加载服务器路径落到 404
+              window.location.hash = '#/student/login';
             }, 50);
             throw apiError;
           }
@@ -624,7 +625,8 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
           const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
           apiError.status = 401;
           setTimeout(() => {
-            window.location.replace('/login');
+            // S4 修复: HashRouter 下必须带 #，否则整页落到服务器 /login → 404
+            window.location.hash = '#/login';
           }, 50);
           throw apiError;
         }
@@ -671,12 +673,13 @@ const executeRequest = async (url: string, options: RequestOptions, retryCount: 
         if (studentStr) {
           clearStudentAuth();
           setTimeout(() => {
-            window.location.href = '/student/login';
+            // S2: HashRouter 下必须带 #，否则整页加载服务器路径且 hash 丢失 → 卡空白页
+            window.location.hash = '#/student/login';
           }, 100);
         } else {
           clearAuthData();
           setTimeout(() => {
-            window.location.href = '/login';
+            window.location.hash = '#/login';
           }, 100);
         }
         const apiError = new Error('登录状态已失效，请重新登录') as ApiError;
@@ -984,7 +987,7 @@ export interface ClassListResponse {
   classes: ClassInfo[];
   pagination: {
     page: number;
-    page_size: number;
+    per_page: number;
     total: number;
     pages: number;
   };
@@ -1450,10 +1453,12 @@ export interface Alert {
   id: number;
   device_id: string;
   device_name: string | null;
-  type?: string;
+  alert_type?: string;
   message: string;
   severity: 'critical' | 'error' | 'warning' | 'info';
   is_resolved?: boolean;
+  is_read?: boolean;
+  source?: string;
   created_at: string;
   resolved_at?: string;
 }
@@ -1483,7 +1488,7 @@ export interface DeviceGroup {
 
 export interface DeviceInGroup {
   id: number;
-  device_id: number;
+  device_id: string;
   device: {
     id: number;
     device_id: string;
@@ -1736,7 +1741,7 @@ export interface Api {
     batchSend: (data: { user_ids?: number[]; class_id?: number; title: string; content: string; type?: string; force_send?: boolean }) => Promise<BatchNotifyResult>;
   };
   classes: {
-    getAll: (params?: { page?: number; page_size?: number; keyword?: string; skipCache?: boolean }) => Promise<ClassListResponse>;
+    getAll: (params?: { page?: number; per_page?: number; keyword?: string; skipCache?: boolean }) => Promise<ClassListResponse>;
     getStudents: (className: string) => Promise<User[]>;
     create: (data: ClassCreateData) => Promise<ClassInfo>;
     update: (id: number, data: ClassCreateData) => Promise<ClassInfo>;
@@ -1857,7 +1862,6 @@ export interface Api {
     update: (id: number, data: Partial<Exam>) => Promise<Exam>;
     delete: (id: number) => Promise<void>;
     import: (data: FormData, url?: string) => Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>;
-    uploadScores: (examId: number, scores: { user_id: number; score: number }[]) => Promise<void>;
     publish: (id: number) => Promise<Exam>;
     close: (id: number) => Promise<Exam>;
   };
@@ -1984,10 +1988,9 @@ export interface Api {
     update: (id: number, data: Partial<DeviceGroup>) => Promise<DeviceGroup>;
     delete: (id: number) => Promise<void>;
     getDevices: (groupId: number) => Promise<DeviceInGroup[]>;
-    addDevices: (groupId: number, deviceIds: number[]) => Promise<{ added_count: number; skipped: { device_id: number; reason: string }[] }>;
-    removeDevices: (groupId: number, deviceIds: number[]) => Promise<{ removed_count: number }>;
-    getUngroupedDevices: () => Promise<Device[]>;
-    getByDevice: (deviceId: number) => Promise<DeviceGroup[]>;
+    addDevices: (groupId: number, deviceIds: string[]) => Promise<{ added_count: number; skipped: { device_id: string; reason: string }[] }>;
+    removeDevices: (groupId: number, deviceIds: string[]) => Promise<{ removed_count: number }>;
+    getByDevice: (deviceId: string) => Promise<DeviceGroup[]>;
     getStats: () => Promise<DeviceGroupStats[]>;
   };
   nlp: NLP;
@@ -2097,13 +2100,13 @@ export interface Api {
     login: (data: { card_id: string; name: string }) => Promise<{ access_token: string; expires_in: number; student: StudentInfo }>;
     getMe: () => Promise<StudentInfo>;
     getScore: () => Promise<{ current_score: number; name: string; card_id: string }>;
-    getRecords: (params?: { page?: number; page_size?: number }) => Promise<{
+    getRecords: (params?: { page?: number; per_page?: number }) => Promise<{
       data: ScoreRecordItem[];
-      pagination: { page: number; page_size: number; total: number; pages: number };
+      pagination: { page: number; per_page: number; total: number; pages: number };
     }>;
-    getNotifications: (params?: { page?: number; page_size?: number }) => Promise<{
+    getNotifications: (params?: { page?: number; per_page?: number }) => Promise<{
       data: NotificationItem[];
-      pagination: { page: number; page_size: number; total: number; pages: number };
+      pagination: { page: number; per_page: number; total: number; pages: number };
     }>;
     getLeaves: () => Promise<LeaveItem[]>;
     applyLeave: (data: { leave_type?: string; start_date: string; end_date: string; reason?: string }) => Promise<LeaveItem>;
@@ -3828,10 +3831,10 @@ const api: Api = {
     }) as Promise<BatchNotifyResult>,
   },
   classes: {
-    getAll: async (params?: { page?: number; page_size?: number; keyword?: string; skipCache?: boolean }) => {
+    getAll: async (params?: { page?: number; per_page?: number; keyword?: string; skipCache?: boolean }) => {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.append('page', params.page.toString());
-      if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
       if (params?.keyword) queryParams.append('keyword', params.keyword);
       const query = queryParams.toString();
       const url = query ? `/api/classes/?${query}` : '/api/classes/';
@@ -3915,7 +3918,8 @@ const api: Api = {
       body: JSON.stringify(data),
     }) as Promise<unknown>,
     delete: (id) => request(`/api/scores/${id}`, { method: 'DELETE' }) as Promise<void>,
-    importScores: (formData) => request('/api/scores/import', {
+    // P0-3 修复：后端无 /api/scores/import；成绩导入实际在 /api/exam-import/execute（FormData: file+exam_id，返回 success_count/errors 与前端期望一致）
+    importScores: (formData) => request('/api/exam-import/execute', {
       method: 'POST',
       body: formData,
       // 注意：勿手动设 Content-Type——FormData 需浏览器自动附带 boundary，手动指定会丢 boundary 致 Flask 解析失败
@@ -4185,10 +4189,7 @@ const api: Api = {
       method: 'POST',
       body: data,
     }) as Promise<{ success: boolean; total: number; success_count: number; failed_count: number; messages: Array<{ action: string; message: string }> }>,
-    uploadScores: (examId, scores) => request(`/api/exams/${examId}/scores`, {
-      method: 'POST',
-      body: JSON.stringify({ scores }),
-    }) as Promise<void>,
+    // P3-2: 删除 uploadScores（后端无 /api/exams/{id}/scores 路由，且零调用；成绩导入走 importScores → /api/exam-import/execute）
     publish: (id) => request(`/api/exams/${id}/publish`, {
       method: 'POST',
     }) as Promise<Exam>,
@@ -4282,8 +4283,8 @@ const api: Api = {
       method: 'DELETE',
       body: JSON.stringify({ device_ids: deviceIds }),
     }) as Promise<{ removed_count: number }>,
-    getUngroupedDevices: () => request('/api/device-group/ungrouped-devices') as Promise<Device[]>,
-    getByDevice: (deviceId: number) => request(`/api/device-group/by-device/${deviceId}`) as Promise<DeviceGroup[]>,
+    // P3-2: 删除 getUngroupedDevices（后端无此路由且零调用）；修正 getByDevice 路径为后端真实 /device/<id>/groups
+    getByDevice: (deviceId: number) => request(`/api/device-group/device/${deviceId}/groups`) as Promise<DeviceGroup[]>,
     getStats: async () => {
       const raw = (await request('/api/device-group/stats')) as unknown;
       // 后端实际返回 {total_groups, active_groups, total_mappings, groups: [...]}
@@ -4427,7 +4428,8 @@ const api: Api = {
     delete: (id: number) => request(`/api/import/configs/${id}`, {
       method: 'DELETE',
     }) as Promise<unknown>,
-    setDefault: (id: number) => request(`/api/import/configs/${id}/set-default`, {
+    // P1-2 修复：后端路径为 /configs/set-default/<id>（原 ${id}/set-default 顺序反 → 404）
+    setDefault: (id: number) => request(`/api/import/configs/set-default/${id}`, {
       method: 'POST',
     }) as Promise<unknown>,
     downloadTemplate: (templateType: string) => `${API_BASE_URL}/api/import/template/${templateType}`,
@@ -4576,6 +4578,12 @@ const api: Api = {
       body: JSON.stringify(data),
     }) as Promise<DutyGroup>,
     deleteGroup: (id) => request(`/api/duty/groups/${id}`, { method: 'DELETE' }) as Promise<void>,
+    // S3: 拉取值日任务（支持按组过滤），DutyRoster 首屏数据源
+    getAssignments: (group_id?: number) => {
+      const params = new URLSearchParams();
+      if (group_id) params.append('group_id', String(group_id));
+      return request(`/api/duty/assignments?${params.toString()}`) as Promise<DutyAssignment[]>;
+    },
     assignDuty: (data) => request('/api/duty/assignments', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -4824,24 +4832,24 @@ const api: Api = {
       }) as Promise<{ access_token: string; expires_in: number; student: StudentInfo }>,
     getMe: () => request('/api/student/me') as Promise<StudentInfo>,
     getScore: () => request('/api/student/score') as Promise<{ current_score: number; name: string; card_id: string }>,
-    getRecords: (params: { page?: number; page_size?: number } = {}) => {
+    getRecords: (params: { page?: number; per_page?: number } = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
-      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+      if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
       return request(`/api/student/records${query ? '?' + query : ''}`) as Promise<{
         data: ScoreRecordItem[];
-        pagination: { page: number; page_size: number; total: number; pages: number };
+        pagination: { page: number; per_page: number; total: number; pages: number };
       }>;
     },
-    getNotifications: (params: { page?: number; page_size?: number } = {}) => {
+    getNotifications: (params: { page?: number; per_page?: number } = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
-      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+      if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
       return request(`/api/student/notifications${query ? '?' + query : ''}`) as Promise<{
         data: NotificationItem[];
-        pagination: { page: number; page_size: number; total: number; pages: number };
+        pagination: { page: number; per_page: number; total: number; pages: number };
       }>;
     },
     getLeaves: () => request('/api/student/leaves') as Promise<LeaveItem[]>,

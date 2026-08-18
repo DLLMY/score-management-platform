@@ -1,6 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
-from models import db, NotifyHistory
+from models import NotifyHistory
 from utils.permission import requires_permission
 from datetime import datetime, timedelta
 
@@ -137,9 +137,9 @@ class HistoryClean(Resource):
     def delete(self):
         """清理历史记录"""
         days = int(request.args.get("days", 30))
-        cutoff_time = datetime.now() - timedelta(days=days)
-        deleted_count = NotifyHistory.query.filter(NotifyHistory.created_at < cutoff_time).delete()
-        db.session.commit()
+        # 写入路径收口至 notify_history_service（F17 防腐层）：原路由内 delete + commit 已迁出
+        from services.notify_history_service import clean_notify_history
+        deleted_count = clean_notify_history(days)
         return {
             "success": True,
             "message": f"已清理 {deleted_count} 条历史记录",

@@ -61,7 +61,7 @@ class TestCompositeScoreService:
                     mock_academic_stat2.avg_score = 92.0
 
                     mock_unlock_count = MagicMock()
-                    mock_unlock_count.user_id = 1
+                    mock_unlock_count.student_id = 1
                     mock_unlock_count.count = 2
 
                     mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = [
@@ -130,7 +130,7 @@ class TestCompositeScoreService:
         with app.app_context():
 
             mock_composite = MagicMock()
-            mock_composite.user_id = 1
+            mock_composite.student_id = 1
             mock_composite.behavior_weight = 0.3333
             mock_composite.academic_weight = 0.3333
             mock_composite.compliance_weight = 0.3334
@@ -171,7 +171,7 @@ class TestCompositeScoreService:
         with app.app_context():
 
             mock_composite = MagicMock()
-            mock_composite.user_id = 1
+            mock_composite.student_id = 1
             mock_composite.composite_score = 85.5
             mock_composite.ranking = 1
             mock_composite.behavior_weight = 0.3333

@@ -443,20 +443,23 @@ function DeviceManagement() {
       // API返回格式是 { classes: [...] }，需要提取数组
       setClasses(Array.isArray(classesData) ? classesData : ((classesData as { classes?: ClassInfo[] })?.classes || []));
     } catch {
-      // 忽略错误
+      // M5: 加载失败给用户提示，不静默
+      showToast('error', '加载班级列表失败');
     }
 
     try {
       const adminsData = await api.admins.getAll();
-      setAdmins(adminsData.map((admin) => ({
+      // M7: 数组赋值防护
+      const adminList = Array.isArray(adminsData) ? adminsData : [];
+      setAdmins(adminList.map((admin) => ({
         id: Number(admin.id),
         real_name: admin.real_name || admin.username,
         username: admin.username,
       })));
     } catch {
-      // 忽略错误
+      showToast('error', '加载管理员列表失败');
     }
-  }, []);
+  }, [showToast]);
 
   const loadOTAStatus = useCallback(async () => {
     try {
@@ -636,10 +639,11 @@ function DeviceManagement() {
       await api.devices.updateSettings(selectedDevice.id, deviceSettings as unknown as Record<string, unknown>);
       showToast('success', '设备设置已更新');
       closeSettingsModal();
+      loadDevices(true); // M3: 保存后立即刷新列表（含设备名/状态），避免等轮询
     } catch (error) {
       showToast('error', `操作失败: ${(error as Error).message}`);
     }
-  }, [selectedDevice, deviceSettings, showToast, closeSettingsModal]);
+  }, [selectedDevice, deviceSettings, showToast, closeSettingsModal, loadDevices]);
 
   const openControlModal = useCallback((device: Device) => {
     setSelectedDevice(device);

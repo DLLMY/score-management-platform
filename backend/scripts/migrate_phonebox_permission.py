@@ -48,29 +48,7 @@ def migrate(db_path: str) -> int:
         print(f"[ok] inserted permission: {PERM_CODE}")
 
     for role_code in TARGET_ROLES:
-        # 2) role_permission.permissions CSV
-        cur.execute(
-            "SELECT id, permissions FROM role_permission WHERE role_code = ?",
-            (role_code,),
-        )
-        row = cur.fetchone()
-        if row is None:
-            print(f"[warn] role not found, skip CSV update: {role_code}")
-        else:
-            role_id, csv_text = row[0], (row[1] or "")
-            codes = [c.strip() for c in csv_text.split(",") if c.strip()]
-            if PERM_CODE in codes:
-                print(f"[skip] {role_code}.permissions already contains {PERM_CODE}")
-            else:
-                codes.append(PERM_CODE)
-                cur.execute(
-                    'UPDATE role_permission SET permissions = ?, updated_at = datetime("now") WHERE id = ?',
-                    (",".join(codes), role_id),
-                )
-                changed.append(f"role_permission[{role_code}]")
-                print(f"[ok] appended {PERM_CODE} to role_permission[{role_code}]")
-
-        # 3) role_permission_mappings
+        # 2) role_permission_mappings（CSV 冗余列已废弃，仅维护映射）
         cur.execute(
             "SELECT id FROM role_permission_mappings WHERE role_code = ? AND permission_code = ?",
             (role_code, PERM_CODE),

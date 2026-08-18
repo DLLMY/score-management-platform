@@ -101,7 +101,6 @@ const FirmwareManagement = createLazyComponent(() => import('./pages/FirmwareMan
 const ExamManagement = createLazyComponent(() => import('./pages/ExamManagement'));
 const ScoreEntry = createLazyComponent(() => import('./pages/ScoreEntry'));
 const ScoreRecords = createLazyComponent(() => import('./pages/ScoreRecords'));
-const TeacherTools = createLazyComponent(() => import('./pages/TeacherTools'));
 const SemesterReport = createLazyComponent(() => import('./pages/SemesterReport'));
 const RankBoard = createLazyComponent(() => import('./pages/RankBoard'));
 const ScoreAnalysis = createLazyComponent(() => import('./pages/ScoreAnalysis'));
@@ -137,6 +136,7 @@ const SystemMetrics = createLazyComponent(() => import('./pages/SystemMetrics'))
 const Login = createLazyComponent(() => import('./pages/Login'), true);
 const StudentLogin = createLazyComponent(() => import('./pages/StudentLogin'));
 const StudentPortal = createLazyComponent(() => import('./pages/StudentPortal'));
+const NotFound = createLazyComponent(() => import('./pages/NotFound'));
 
 const preloadConfigs = [
   { route: '/users', component: UserList, priority: 'high' as const, preloadOnHover: true, preloadOnVisit: true },
@@ -332,7 +332,6 @@ function App() {
                 <Route path='class-compare' element={<PermissionGuard requiredPermission='algorithm.view'><ClassCompare /></PermissionGuard>} />
                 <Route path='exams' element={<PermissionGuard requiredPermission='exam.view'><ExamManagement /></PermissionGuard>} />
                 <Route path='score-entry' element={<PermissionGuard requiredPermission='score.entry'><ScoreEntry /></PermissionGuard>} />
-                <Route path='teacher-tools' element={<PermissionGuard requiredPermission='score.entry'><TeacherTools /></PermissionGuard>} />
                 <Route path='semester-report' element={<PermissionGuard requiredPermission='score.view'><SemesterReport /></PermissionGuard>} />
                 <Route path='rank-board' element={<PermissionGuard requiredPermission='score.view'><RankBoard /></PermissionGuard>} />
                 <Route path='score-records' element={<PermissionGuard requiredPermission='score.view'><ScoreRecords /></PermissionGuard>} />
@@ -344,7 +343,7 @@ function App() {
                 <Route path='remote-notify' element={<PermissionGuard requiredPermission='notification.send'><RemoteNotify /></PermissionGuard>} />
                 <Route path='nlp-management' element={<PermissionGuard requiredPermission='algorithm.view'><NLPManagement /></PermissionGuard>} />
                 <Route path='data-sync' element={<PermissionGuard requiredPermission='system.settings'><DataSyncPage /></PermissionGuard>} />
-                <Route path='import-config' element={<PermissionGuard requiredPermission='system.manage'><ImportConfigManagement /></PermissionGuard>} />
+                <Route path='import-config' element={<PermissionGuard requiredPermission='system.settings'><ImportConfigManagement /></PermissionGuard>} />
 
                 {/* 班主任工作台 - 班级日常管理 */}
                 <Route path='seating-chart' element={<PermissionGuard requiredPermission='class.view'><SeatingChart /></PermissionGuard>} />
@@ -371,6 +370,8 @@ function App() {
                 <Route path='ops-center/metrics' element={<PermissionGuard requiredPermission='ops_center.view'><SystemMetrics /></PermissionGuard>} />
                 <Route path='security-audit' element={<PermissionGuard requiredPermission='system.settings'><SecurityAudit /></PermissionGuard>} />
               </Route>
+              {/* S1: 404 兜底，任何未匹配路径展示 NotFound 而非白屏 */}
+              <Route path='*' element={<NotFound />} />
             </Routes>
           </HashRouter>
           <DevTools />

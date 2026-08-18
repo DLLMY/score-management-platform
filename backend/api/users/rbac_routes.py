@@ -1,5 +1,4 @@
 from flask import request
-import logging
 from flask_restx import Namespace, Resource, fields
 from models import (
     db,
@@ -14,6 +13,23 @@ from models import (
 )
 from utils.permission import requires_permission, has_permission, get_current_admin
 from utils.response import APIResponse
+from services.rbac_service import (
+    log_rbac_permission_action,
+    create_permission,
+    update_permission,
+    delete_permission,
+    create_role,
+    update_role,
+    delete_role,
+    assign_admin_roles,
+    add_admin_role,
+    remove_admin_role,
+    set_role_permissions,
+    add_role_permission,
+    remove_role_permission,
+    init_default_permissions as _service_init_default_permissions,
+    init_default_roles as _service_init_default_roles,
+)
 from datetime import datetime
 
 """RBAC权限管理系统路由"""
@@ -21,23 +37,19 @@ ns_rbac = Namespace("rbac", description="RBAC权限管理")
 
 
 def log_permission_action(action, target_type, target_id=None, description=None):
-    """记录权限操作日志"""
+    """记录权限操作日志（F17：落库委托 services.rbac_service）"""
     try:
-        admin_id = request.headers.get("X-Admin-Id")
-        log = PermissionLog(
-            operator_id=admin_id,
-            operator_type="admin",
+        admin = get_current_admin()  # F6: 从真实认证取操作人（原 X-Admin-Id 前端已不发）
+        admin_id = admin.id if admin else None
+        log_rbac_permission_action(
             action=action,
             target_type=target_type,
             target_id=target_id,
             description=description,
+            operator_id=admin_id,
             ip_address=request.remote_addr if request else None,
-            created_at=datetime.now(),
         )
-        db.session.add(log)
-        db.session.commit()
     except Exception:
-        db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
         pass
 
 
@@ -152,15 +164,7 @@ class PermissionList(Resource):
             return APIResponse.error(message="权限代码和名称不能为空", status_code=400)
         if Permission.query.filter_by(code=data["code"]).first():
             return APIResponse.error(message="权限代码已存在", status_code=409)
-        permission = Permission(
-            code=data["code"],
-            name=data["name"],
-            description=data.get("description", ""),
-            category=data.get("category", "general"),
-            is_active=data.get("is_active", True),
-        )
-        db.session.add(permission)
-        db.session.commit()
+        permission = create_permission(data)
         log_permission_action("创建权限", "permission", permission.id, f"创建权限: {data['code']} ({data['name']})")
         return APIResponse.success(data={"id": permission.id}, message="权限创建成功", status_code=201)
 
@@ -197,16 +201,7 @@ class PermissionResource(Resource):
         """更新权限信息"""
         permission = Permission.query.filter_by(code=code).first_or_404()
         data = request.json
-        if "name" in data:
-            permission.name = data["name"]
-        if "description" in data:
-            permission.description = data["description"]
-        if "category" in data:
-            permission.category = data["category"]
-        if "is_active" in data:
-            permission.is_active = data["is_active"]
-        permission.updated_at = datetime.now()
-        db.session.commit()
+        update_permission(permission, data)
         log_permission_action("更新权限", "permission", permission.id, f"更新权限: {code}")
         return APIResponse.success(message="权限更新成功")
 
@@ -222,8 +217,7 @@ class PermissionResource(Resource):
         used_by = RolePermissionMapping.query.filter_by(permission_code=code).first()
         if used_by:
             return APIResponse.error(message="该权限正在被角色使用，无法删除", status_code=409)
-        db.session.delete(permission)
-        db.session.commit()
+        delete_permission(permission)
         log_permission_action("删除权限", "permission", permission.id, f"删除权限: {code}")
         return APIResponse.success(message="权限删除成功")
 
@@ -293,23 +287,7 @@ class RoleList(Resource):
         existing = RolePermission.query.filter_by(role_code=data["role_code"]).first()
         if existing:
             return APIResponse.error(message="角色代码已存在", status_code=409)
-        role = RolePermission(
-            role_code=data["role_code"],
-            role_name=data.get("role_name", data["role_code"]),
-            description=data.get("description", ""),
-            permissions=",".join(data.get("permissions", [])),
-            is_active=data.get("is_active", True),
-        )
-        db.session.add(role)
-        # 添加权限关联
-        for perm_code in data.get("permissions", []):
-            mapping = RolePermissionMapping(role_code=data["role_code"], permission_code=perm_code)
-            db.session.add(mapping)
-        # 添加父角色关联
-        for parent_code in data.get("parent_roles", []):
-            hierarchy = RoleHierarchy(parent_role_code=parent_code, child_role_code=data["role_code"])
-            db.session.add(hierarchy)
-        db.session.commit()
+        role = create_role(data)
         log_permission_action(
             "创建角色", "role", None, f"创建角色: {data['role_code']} ({data.get('role_name', data['role_code'])})"
         )
@@ -355,30 +333,7 @@ class RoleResource(Resource):
         """更新角色信息"""
         rp = RolePermission.query.filter_by(role_code=role_code).first_or_404()
         data = request.json
-        if "role_name" in data:
-            rp.role_name = data["role_name"]
-        if "description" in data:
-            rp.description = data["description"]
-        if "is_active" in data:
-            rp.is_active = data["is_active"]
-        # 更新权限列表
-        if "permissions" in data:
-            # 删除旧权限
-            RolePermissionMapping.query.filter_by(role_code=role_code).delete()
-            # 添加新权限
-            for perm_code in data["permissions"]:
-                mapping = RolePermissionMapping(role_code=role_code, permission_code=perm_code)
-                db.session.add(mapping)
-        # 更新父角色列表
-        if "parent_roles" in data:
-            # 删除旧父角色
-            RoleHierarchy.query.filter_by(child_role_code=role_code).delete()
-            # 添加新父角色
-            for parent_code in data["parent_roles"]:
-                hierarchy = RoleHierarchy(parent_role_code=parent_code, child_role_code=role_code)
-                db.session.add(hierarchy)
-        rp.updated_at = datetime.now()
-        db.session.commit()
+        update_role(rp, data)
         log_permission_action("更新角色", "role", None, f"更新角色: {role_code}")
         return APIResponse.success(message="角色更新成功")
 
@@ -398,13 +353,8 @@ class RoleResource(Resource):
         has_users = AdminRole.query.filter_by(role_code=role_code).first()
         if has_users:
             return APIResponse.error(message="该角色正在被用户使用，无法删除", status_code=409)
-        # 删除角色权限关联
-        RolePermissionMapping.query.filter_by(role_code=role_code).delete()
-        # 删除角色层级关联（作为子角色）
-        RoleHierarchy.query.filter_by(child_role_code=role_code).delete()
-        # 删除角色
-        db.session.delete(rp)
-        db.session.commit()
+        # 删除角色权限关联/层级关联/角色本身
+        delete_role(rp)
         log_permission_action("删除角色", "role", None, f"删除角色: {role_code}")
         return APIResponse.success(message="角色删除成功")
 
@@ -435,18 +385,6 @@ class AdminRoleList(Resource):
             for role_code in role_codes:
                 role = RolePermission.query.filter_by(role_code=role_code).first()
                 if role:
-                    if role.permissions:
-                        if isinstance(role.permissions, str):
-                            perms = role.permissions.split(",")
-                            for perm in perms:
-                                if perm.strip():
-                                    all_permissions.add(perm.strip().replace("_", "."))
-                        else:
-                            logging.warning(
-                                "角色 %s 的 permissions 字段格式异常（期望字符串，实际 %s），已跳过",
-                                role_code,
-                                type(role.permissions).__name__,
-                            )
                     mappings = RolePermissionMapping.query.filter_by(role_code=role_code).all()
                     for mapping in mappings:
                         all_permissions.add(mapping.permission_code)
@@ -475,22 +413,12 @@ class AdminRoleList(Resource):
         _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
         data = request.json
         role_codes = data.get("role_codes", [])
-        # 删除旧的角色关联
-        AdminRole.query.filter_by(admin_id=admin_id).delete()
-        # 添加新的角色关联
-        for role_code in role_codes:
-            # 检查角色是否存在
-            rp = RolePermission.query.filter_by(role_code=role_code).first()
-            if not rp:
-                continue
-            admin_role = AdminRole(admin_id=admin_id, role_code=role_code)
-            db.session.add(admin_role)
-        db.session.commit()
+        assign_admin_roles(admin_id, role_codes)
         log_permission_action(
             "分配角色",
             "admin_role",
             admin_id,
-            f"为用户 {admin.username} 分配角色: {', '.join(role_codes) if role_codes else '无'}",
+            f"为用户 {_admin.username} 分配角色: {', '.join(role_codes) if role_codes else '无'}",
         )
         return APIResponse.success(message="角色分配成功")
 
@@ -510,9 +438,7 @@ class AdminRoleResource(Resource):
         existing = AdminRole.query.filter_by(admin_id=admin_id, role_code=role_code).first()
         if existing:
             return APIResponse.success(message="角色已分配")
-        admin_role = AdminRole(admin_id=admin_id, role_code=role_code)
-        db.session.add(admin_role)
-        db.session.commit()
+        add_admin_role(admin_id, role_code)
         return APIResponse.success(message="角色添加成功")
 
     @ns_rbac.doc("remove_admin_role", description="移除管理员的角色", security="Bearer")
@@ -522,8 +448,7 @@ class AdminRoleResource(Resource):
     def delete(self, admin_id, role_code):
         """移除管理员的单个角色"""
         admin_role = AdminRole.query.filter_by(admin_id=admin_id, role_code=role_code).first_or_404()
-        db.session.delete(admin_role)
-        db.session.commit()
+        remove_admin_role(admin_role)
         return APIResponse.success(message="角色移除成功")
 
 
@@ -550,14 +475,7 @@ class RolePermissionList(Resource):
         """设置角色的权限（覆盖式）"""
         rp = RolePermission.query.filter_by(role_code=role_code).first_or_404()
         data = request.json
-        # 删除旧权限
-        RolePermissionMapping.query.filter_by(role_code=role_code).delete()
-        # 添加新权限
-        for perm_code in data.get("permissions", []):
-            mapping = RolePermissionMapping(role_code=role_code, permission_code=perm_code)
-            db.session.add(mapping)
-        rp.updated_at = datetime.now()
-        db.session.commit()
+        set_role_permissions(rp, data.get("permissions", []))
         return APIResponse.success(message="权限设置成功")
 
 
@@ -576,9 +494,7 @@ class RolePermissionResource(Resource):
         existing = RolePermissionMapping.query.filter_by(role_code=role_code, permission_code=permission_code).first()
         if existing:
             return APIResponse.success(message="权限已分配")
-        mapping = RolePermissionMapping(role_code=role_code, permission_code=permission_code)
-        db.session.add(mapping)
-        db.session.commit()
+        add_role_permission(role_code, permission_code)
         return APIResponse.success(message="权限添加成功")
 
     @ns_rbac.doc("remove_role_permission", description="移除角色的权限", security="Bearer")
@@ -590,8 +506,7 @@ class RolePermissionResource(Resource):
         mapping = RolePermissionMapping.query.filter_by(
             role_code=role_code, permission_code=permission_code
         ).first_or_404()
-        db.session.delete(mapping)
-        db.session.commit()
+        remove_role_permission(mapping)
         return APIResponse.success(message="权限移除成功")
 
 
@@ -650,13 +565,6 @@ def get_inherited_permissions(role_code, visited=None):
     # 获取直接分配的权限
     role = RolePermission.query.filter_by(role_code=role_code).first()
     if role:
-        if role.permissions:
-            try:
-                perms = role.permissions.split(",")
-                for perm in perms:
-                    permissions.add(perm.strip().replace("_", "."))
-            except Exception:
-                pass
         mappings = RolePermissionMapping.query.filter_by(role_code=role_code).all()
         for mapping in mappings:
             permissions.add(mapping.permission_code)
@@ -699,312 +607,13 @@ def check_admin_permission(admin, permission_code):
     return False
 
 
+
+
 def init_default_permissions():
-    """初始化默认权限数据"""
-    default_permissions = [
-        # 系统管理
-        {"code": "system.settings", "name": "系统设置", "category": "system"},
-        {"code": "system.users", "name": "用户管理", "category": "system"},
-        {"code": "system.roles", "name": "角色管理", "category": "system"},
-        {"code": "system.logs", "name": "日志查看", "category": "system"},
-        {"code": "system.backup", "name": "备份恢复", "category": "system"},
-        {"code": "system.cache", "name": "缓存管理", "category": "system"},
-        {"code": "system.monitor", "name": "系统监控", "category": "system"},
-        # 设备管理
-        {"code": "device.view", "name": "查看设备", "category": "device"},
-        {"code": "device.create", "name": "创建设备", "category": "device"},
-        {"code": "device.edit", "name": "编辑设备", "category": "device"},
-        {"code": "device.delete", "name": "删除设备", "category": "device"},
-        {"code": "device.groups", "name": "设备分组管理", "category": "device"},
-        # 学生管理
-        {"code": "student.view", "name": "查看学生", "category": "academic"},
-        {"code": "student.create", "name": "添加学生", "category": "academic"},
-        {"code": "student.edit", "name": "编辑学生", "category": "academic"},
-        {"code": "student.delete", "name": "删除学生", "category": "academic"},
-        # 成绩管理
-        {"code": "score.view", "name": "查看成绩", "category": "academic"},
-        {"code": "score.entry", "name": "录入成绩", "category": "academic"},
-        {"code": "score.edit", "name": "修改成绩", "category": "academic"},
-        {"code": "score.delete", "name": "删除成绩", "category": "academic"},
-        {"code": "score.approve", "name": "审批成绩", "category": "academic"},
-        # 班级管理
-        {"code": "class.view", "name": "查看班级", "category": "academic"},
-        {"code": "class.manage", "name": "管理班级", "category": "academic"},
-        # 班主任工作台（座次/值日/班委/家长联系 共用 class.edit 把关写操作）
-        {"code": "class.edit", "name": "编辑班级事务(座次/值日/班委/家长联系)", "category": "班主任工作台"},
-        {"code": "homework.view", "name": "查看作业", "category": "班主任工作台"},
-        {"code": "homework.edit", "name": "布置作业", "category": "班主任工作台"},
-        {"code": "homework.check", "name": "检查作业", "category": "班主任工作台"},
-        {"code": "attendance.view", "name": "查看考勤", "category": "班主任工作台"},
-        {"code": "attendance.edit", "name": "登记考勤", "category": "班主任工作台"},
-        {"code": "attendance.approve", "name": "审批请假", "category": "班主任工作台"},
-        {"code": "study_group.view", "name": "查看学习小组", "category": "班主任工作台"},
-        {"code": "study_group.edit", "name": "管理学习小组", "category": "班主任工作台"},
-        {"code": "mental_health.view", "name": "查看心理健康", "category": "班主任工作台"},
-        {"code": "mental_health.edit", "name": "记录心理健康", "category": "班主任工作台"},
-        {"code": "activity.view", "name": "查看文体活动", "category": "班主任工作台"},
-        {"code": "activity.edit", "name": "管理文体活动", "category": "班主任工作台"},
-        {"code": "culture.view", "name": "查看班级文化", "category": "班主任工作台"},
-        {"code": "culture.edit", "name": "编辑班级文化", "category": "班主任工作台"},
-        {"code": "study_guide.view", "name": "查看学法指导", "category": "班主任工作台"},
-        {"code": "study_guide.edit", "name": "管理学法指导", "category": "班主任工作台"},
-        # 考试管理
-        {"code": "exam.view", "name": "查看考试", "category": "academic"},
-        {"code": "exam.manage", "name": "管理考试", "category": "academic"},
-        # 评分规则
-        {"code": "rule.view", "name": "查看规则", "category": "academic"},
-        {"code": "rule.manage", "name": "管理规则", "category": "academic"},
-        # 时段管理
-        {"code": "period.view", "name": "查看时段", "category": "academic"},
-        {"code": "period.manage", "name": "管理时段", "category": "academic"},
-        # 课表管理
-        {"code": "schedule.view", "name": "查看课表", "category": "academic"},
-        {"code": "schedule.manage", "name": "管理课表", "category": "academic"},
-        # 科目管理
-        {"code": "subject.view", "name": "查看科目", "category": "academic"},
-        {"code": "subject.manage", "name": "管理科目", "category": "academic"},
-        # 通知管理
-        {"code": "notification.view", "name": "查看通知", "category": "communication"},
-        {"code": "notification.send", "name": "发送通知", "category": "communication"},
-        {"code": "notification.force_send", "name": "强制发送通知", "category": "communication"},
-        {"code": "timetable.rule.manage", "name": "管理时间规则", "category": "academic"},
-        {"code": "phonebox.unlock.manage", "name": "管理本班手机箱开箱策略", "category": "device"},
-        # 数据分析
-        {"code": "algorithm.view", "name": "查看分析", "category": "analysis"},
-        {"code": "algorithm.manage", "name": "管理分析", "category": "analysis"},
-        # 报表管理
-        {"code": "report.export", "name": "导出报表", "category": "data"},
-        {"code": "report.import", "name": "导入数据", "category": "data"},
-        # 数据查看（保留兼容）
-        {"code": "data.view", "name": "查看数据", "category": "data"},
-        {"code": "data.export", "name": "导出数据", "category": "data"},
-        {"code": "data.import", "name": "导入数据", "category": "data"},
-        {"code": "data_analysis", "name": "数据分析", "category": "data"},
-        # 管理权限
-        {"code": "admin_manage", "name": "管理员管理", "category": "system"},
-        {"code": "all", "name": "全部权限", "category": "system"},
-    ]
-    for perm_data in default_permissions:
-        existing = Permission.query.filter_by(code=perm_data["code"]).first()
-        if not existing:
-            permission = Permission(**perm_data)
-            db.session.add(permission)
-    db.session.commit()
+    """初始化默认权限数据（F17：落库委托 services.rbac_service；scripts/fix_permissions_catalog 导入本函数）"""
+    _service_init_default_permissions()
 
 
 def init_default_roles():
-    """初始化默认角色数据"""
-    default_roles = [
-        {
-            "role_code": "super_admin",
-            "role_name": "超级管理员",
-            "description": "拥有所有权限",
-            "permissions": ["all", "system.backup", "system.cache", "system.monitor", "notification.force_send"],
-        },
-        {
-            "role_code": "admin",
-            "role_name": "管理员",
-            "description": "系统管理权限",
-            "permissions": [
-                "system.users",
-                "system.roles",
-                "system.settings",
-                "system.logs",
-                "system.backup",
-                "system.cache",
-                "system.monitor",
-                "admin_manage",
-                "student.view",
-                "student.create",
-                "student.edit",
-                "student.delete",
-                "score.view",
-                "score.entry",
-                "score.edit",
-                "score.delete",
-                "score.approve",
-                "class.view",
-                "class.manage",
-                "exam.view",
-                "exam.manage",
-                "rule.view",
-                "rule.manage",
-                "period.view",
-                "period.manage",
-                "schedule.view",
-                "schedule.manage",
-                "subject.view",
-                "subject.manage",
-                "notification.send",
-                "notification.view",
-                "timetable.rule.manage",
-                "algorithm.view",
-                "algorithm.manage",
-                "report.export",
-                "report.import",
-                "device.view",
-                "device.edit",
-                "device.delete",
-            ],
-        },
-        {
-            "role_code": "teacher",
-            "role_name": "班主任",
-            "description": "管理班级学生和成绩",
-            "permissions": [
-                "student.view",
-                "student.create",
-                "student.edit",
-                "student.delete",
-                "score.view",
-                "score.entry",
-                "score.edit",
-                "score.delete",
-                "class.view",
-                "exam.view",
-                "rule.view",
-                "period.view",
-                "schedule.view",
-                "subject.view",
-                "notification.send",
-                "notification.view",
-                "report.export",
-                "algorithm.view",
-                "phonebox.unlock.manage",
-                # 班主任工作台 12 个模块。class.edit 覆盖座次表/值日生/班委/家长联系
-                # 4 个模块的全部写端点，缺了这条这 4 个页面点新增就 403。
-                "class.edit",
-                "homework.view",
-                "homework.edit",
-                "homework.check",
-                "attendance.view",
-                "attendance.edit",
-                "attendance.approve",
-                "study_group.view",
-                "study_group.edit",
-                "mental_health.view",
-                "mental_health.edit",
-                "activity.view",
-                "activity.edit",
-                "culture.view",
-                "culture.edit",
-                "study_guide.view",
-                "study_guide.edit",
-            ],
-        },
-        {
-            "role_code": "subject_teacher",
-            "role_name": "任课教师",
-            "description": "查看授课班级成绩和数据",
-            "permissions": [
-                "student.view",
-                "score.view",
-                "score.entry",
-                "score.edit",
-                "class.view",
-                "exam.view",
-                "schedule.view",
-                "subject.view",
-                "notification.view",
-            ],
-        },
-        {
-            "role_code": "head_teacher",
-            "role_name": "年级组长",
-            "description": "管理年级多个班级",
-            "permissions": [
-                "student.view",
-                "student.create",
-                "student.edit",
-                "student.delete",
-                "score.view",
-                "score.entry",
-                "score.edit",
-                "score.delete",
-                "score.approve",
-                "class.view",
-                "exam.view",
-                "exam.manage",
-                "rule.view",
-                "rule.manage",
-                "period.view",
-                "period.manage",
-                "schedule.view",
-                "schedule.manage",
-                "subject.view",
-                "subject.manage",
-                "notification.send",
-                "notification.view",
-                "report.export",
-                "report.import",
-                "algorithm.view",
-            ],
-        },
-        {
-            "role_code": "dashboard_viewer",
-            "role_name": "数据大屏用户",
-            "description": "查看数据大屏展示",
-            "permissions": [
-                "student.view",
-                "score.view",
-                "class.view",
-                "exam.view",
-                "schedule.view",
-                "subject.view",
-                "algorithm.view",
-                "notification.view",
-            ],
-        },
-        {
-            "role_code": "operator",
-            "role_name": "运维人员",
-            "description": "负责设备运维管理",
-            "permissions": [
-                "device.view",
-                "device.edit",
-                "device.groups",
-                "system.logs",
-                "system.cache",
-                "system.monitor",
-                "notification.view",
-            ],
-        },
-        {
-            "role_code": "viewer",
-            "role_name": "查看者",
-            "description": "仅可查看数据",
-            "permissions": [
-                "student.view",
-                "score.view",
-                "class.view",
-                "exam.view",
-                "schedule.view",
-                "subject.view",
-                "rule.view",
-                "period.view",
-                "notification.view",
-            ],
-        },
-    ]
-    for role_data in default_roles:
-        existing = RolePermission.query.filter_by(role_code=role_data["role_code"]).first()
-        if not existing:
-            role = RolePermission(
-                role_code=role_data["role_code"],
-                role_name=role_data["role_name"],
-                description=role_data["description"],
-                permissions=",".join(role_data["permissions"]),
-                is_active=True,
-            )
-            db.session.add(role)
-        else:
-            existing.permissions = ",".join(role_data["permissions"])
-            existing.is_active = True
-        for perm_code in role_data["permissions"]:
-            mapping_exists = RolePermissionMapping.query.filter_by(
-                role_code=role_data["role_code"], permission_code=perm_code
-            ).first()
-            if not mapping_exists:
-                mapping = RolePermissionMapping(role_code=role_data["role_code"], permission_code=perm_code)
-                db.session.add(mapping)
-    db.session.commit()
+    """初始化默认角色数据（F17：落库委托 services.rbac_service）"""
+    _service_init_default_roles()

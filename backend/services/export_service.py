@@ -66,6 +66,11 @@ class ExportService:
                     value = value.strftime("%Y-%m-%d %H:%M:%S")
                 elif value is None:
                     value = ""
+                # S8 修复: Excel 公式注入清洗（xlsxwriter 对 = 开头值按公式写入）
+                if isinstance(value, str):
+                    stripped = value.lstrip()
+                    if stripped.startswith(("=", "+", "-", "@")):
+                        value = "'" + value
                 worksheet.write(row, col, value, data_style)
         for col in range(len(headers)):
             worksheet.set_column(col, col, 15)
@@ -176,8 +181,7 @@ class ExportService:
             "用户姓名",
             "卡片ID",
             "积分变化",
-            "操作后积分",
-            "规则ID",
+                        "规则ID",
             "规则名称",
             "分类",
             "描述",
@@ -193,8 +197,7 @@ class ExportService:
                     "用户姓名": record.get("user_name", ""),
                     "卡片ID": record.get("card_id", ""),
                     "积分变化": record.get("score_change", 0),
-                    "操作后积分": record.get("new_score", 0),
-                    "规则ID": record.get("rule_id", ""),
+                                        "规则ID": record.get("rule_id", ""),
                     "规则名称": record.get("rule_name", ""),
                     "分类": record.get("category_name", ""),
                     "描述": record.get("description", ""),
@@ -376,8 +379,7 @@ class ExportService:
                     "用户姓名": record.get("user_name", ""),
                     "卡片ID": record.get("card_id", ""),
                     "积分变化": record.get("score_change", 0),
-                    "操作后积分": record.get("new_score", 0),
-                    "规则名称": record.get("rule_name", ""),
+                                        "规则名称": record.get("rule_name", ""),
                     "描述": record.get("description", ""),
                     "操作时间": record.get("created_at", ""),
                 }

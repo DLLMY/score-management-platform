@@ -124,6 +124,7 @@ function RemoteNotify() {
   
   // 模板相关状态
   const [templates, setTemplates] = useState<NotifyTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false); // M9: 模板加载反馈
   const [editingTemplate, setEditingTemplate] = useState<NotifyTemplate | null>(null);
   // 数据加载失败标记（模板/定时/历史任一失败置位，页面显示警示条而非空态误导）
   const [loadError, setLoadError] = useState(false);
@@ -243,6 +244,7 @@ function RemoteNotify() {
   }, []);
 
   const loadTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
     try {
       const data = await api.notifyTemplates.getAll();
       setTemplates(data);
@@ -250,6 +252,8 @@ function RemoteNotify() {
     } catch (error) {
       logger.error('加载模板失败:', error);
       setLoadError(true);
+    } finally {
+      setTemplatesLoading(false);
     }
   }, []);
 
@@ -275,7 +279,8 @@ function RemoteNotify() {
         params.status = historyFilter;
       }
       const result = await api.notifyHistory.getAll(params);
-      setHistoryData(result.data);
+      // M7: 数组赋值防护
+      setHistoryData(Array.isArray(result.data) ? result.data : []);
       setHistoryTotal(result.total);
       setLoadError(false);
     } catch (error) {
@@ -484,6 +489,7 @@ function RemoteNotify() {
   }, [templateForm, editingTemplate, loadTemplates, showToast]);
 
   const handleDeleteTemplate = useCallback(async (id: number) => {
+    if (!window.confirm('确定要删除该通知模板吗？')) return; // 删除确认
     try {
       await api.notifyTemplates.delete(id);
       showToast('success', '模板已删除');
@@ -646,7 +652,9 @@ function RemoteNotify() {
                 新建
               </PermissionButton>
             </div>
-            {templates.length === 0 ? (
+            {templatesLoading ? (
+              <p className='text-sm text-gray-400 dark:text-slate-500 text-center py-4 animate-pulse'>正在加载模板...</p>
+            ) : templates.length === 0 ? (
               <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>暂无模板，点击新建按钮创建</p>
             ) : (
               <div className='space-y-2 max-h-60 overflow-y-auto'>
@@ -1164,8 +1172,8 @@ function RemoteNotify() {
 
       {/* 模板编辑弹窗 */}
       {showTemplateModal && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-          <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-md'>
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'> {/* L6: 移动端留边 */}
+          <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-md mx-auto'>
             <h3 className='text-lg font-semibold text-gray-800 dark:text-white mb-4'>
               {editingTemplate ? '编辑模板' : '新建模板'}
             </h3>
@@ -1249,8 +1257,8 @@ function RemoteNotify() {
 
       {/* 定时通知编辑弹窗 */}
       {showScheduledModal && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-          <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-lg'>
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'> {/* L6: 移动端留边 */}
+          <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-lg mx-auto'>
             <h3 className='text-lg font-semibold text-gray-800 dark:text-white mb-4'>
               {editingScheduled ? '编辑定时通知' : '新建定时通知'}
             </h3>
@@ -1479,7 +1487,7 @@ function RemoteNotify() {
             </div>
 
             {/* 历史记录列表 */}
-            <div className='overflow-y-auto max-h-[400px]'>
+            <div className='overflow-x-auto overflow-y-auto max-h-[400px]'> {/* L4: 窄屏横向滚动 */}
               {isLoadingHistory ? (
                 <div className='flex items-center justify-center py-8'>
                   <Loader2 className='w-6 h-6 animate-spin text-primary-500' />

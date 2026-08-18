@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from models import User, ScoreRecord, Notification, LeaveApplication, ClassInfo, PhoneBoxPolicy, db
+from models import User, ScoreRecord, Notification, Approval, ClassInfo, PhoneBoxPolicy, db
 
 
 @pytest.fixture
@@ -130,8 +130,8 @@ class TestStudentRecords:
     def test_records_pagination_and_shape(self, client, student_user, app_context):
         for i in range(3):
             db.session.add(
-                ScoreRecord(
-                    user_id=student_user.id,
+            ScoreRecord(
+                student_id=student_user.id,
                     score_change=10 - i,
                     description=f"record {i}",
                     operator="tester",
@@ -152,9 +152,9 @@ class TestStudentRecords:
         assert len(payload["data"]) == 2
         assert payload["pagination"]["total"] == 3
         assert payload["pagination"]["pages"] == 2
-        # 字段规整：score_change 为整数、created_at 为字符串（可 JSON 序列化）
+        # 字段规整：score_change 为数值（Float 列，序列化后为 float）、created_at 为字符串（可 JSON 序列化）
         first = payload["data"][0]
-        assert isinstance(first["score_change"], int)
+        assert isinstance(first["score_change"], (int, float))
         assert isinstance(first["created_at"], str)
 
         # 第 2 页取剩余 1 条
@@ -185,7 +185,7 @@ class TestStudentNotifications:
     def test_notifications_list_and_shape(self, client, student_user, app_context):
         db.session.add(
             Notification(
-                user_id=student_user.id,
+                student_id=student_user.id,
                 type="info",
                 title="测试通知",
                 content="这是一条通知",
@@ -226,12 +226,13 @@ class TestStudentLeaves:
 
     def test_list_leaves_and_shape(self, client, student_user, app_context):
         db.session.add(
-            LeaveApplication(
+            Approval(
                 student_id=student_user.id,
+                type="leave",
                 leave_type="sick",
                 start_date=datetime(2026, 8, 10).date(),
                 end_date=datetime(2026, 8, 11).date(),
-                reason="感冒",
+                description="感冒",
                 status="pending",
             )
         )
