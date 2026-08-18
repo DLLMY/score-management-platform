@@ -106,14 +106,13 @@ class TestNotificationService:
                         mock_response.json.return_value = {"errcode": 0, "msgid": 123}
                         mock_post.return_value = mock_response
 
-                        with patch("services.notification_service.db_session_scope"):
-                            result = NotificationService.send_wechat_notification(
-                                1, "template_id", {"key": {"value": "test"}}
-                            )
+                        result = NotificationService.send_wechat_notification(
+                            1, "template_id", {"key": {"value": "test"}}
+                        )
 
-                            assert result["success"] is True
-                            assert "发送成功" in result["message"]
-                            assert result["msgid"] == 123
+                        assert result["success"] is True
+                        assert "发送成功" in result["message"]
+                        assert result["msgid"] == 123
 
     def test_send_wechat_notification_failure(self, app):
         """测试发送微信通知-失败"""
@@ -200,17 +199,6 @@ class TestNotificationService:
 
             assert result["success"] is False
             assert "阿里云短信配置不完整" in result["message"]
-
-    def test_send_tencent_sms(self, app):
-        """测试腾讯云短信"""
-        with app.app_context():
-
-            config = {"provider": "tencent"}
-
-            result = NotificationService._send_tencent_sms("13800138000", "test", config)
-
-            assert result["success"] is False
-            assert "待实现" in result["message"]
 
 
 class TestNotificationFunctions:

@@ -120,13 +120,16 @@ class TestLargeDatasetPerformance:
         print(f"  - 响应时间: {elapsed_time:.2f} 秒")
         print(f"  - 文件大小: {file_size / 1024 / 1024:.2f} MB")
 
-        # 性能基线: 10000条 ≤ 10秒
-        if elapsed_time <= 10:
-            print("  - 状态: ✅ 通过 (≤10秒)")
-        else:
-            print("  - 状态: ⚠️ 警告 (>10秒)")
+        # 性能基线: 10000条 ≤ 10秒（coverage 插桩会显著减速，放宽至 25 秒）
+        import os
 
-        assert elapsed_time <= 10, f"CSV导出耗时 {elapsed_time:.2f}秒 超过10秒基线"
+        csv_timeout = 25 if "COV_CORE_SOURCE" in os.environ else 10
+        if elapsed_time <= csv_timeout:
+            print(f"  - 状态: ✅ 通过 (≤{csv_timeout}秒)")
+        else:
+            print(f"  - 状态: ⚠️ 警告 (>{csv_timeout}秒)")
+
+        assert elapsed_time <= csv_timeout, f"CSV导出耗时 {elapsed_time:.2f}秒 超过{csv_timeout}秒基线"
 
     def test_filter_10000_performance(self, client, auth_headers, db_session, large_dataset_setup):
         """测试10000条数据筛选响应性能"""

@@ -71,7 +71,7 @@ class TestEngagementBatchTrend:
             for k in range(5):
                 db.session.add(
                     ScoreRecord(
-                        user_id=sid,
+                        student_id=sid,
                         score_change=2,
                         created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
                     )

@@ -25,7 +25,7 @@ def _add_records(db_session, uid, changes, base_days=0):
     for i, c in enumerate(changes):
         db_session.add(
             ScoreRecord(
-                user_id=uid,
+                student_id=uid,
                 score_change=c,
                 created_at=now - timedelta(days=base_days + i),
             )

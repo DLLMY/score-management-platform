@@ -358,7 +358,8 @@ class TestNLPMLTrainingService:
 
                 assert result["success"] is True
                 assert result["training_data_count"] == 0
-                assert result["evaluation"]["accuracy"] == 0.85
+                # P2-2: 无数据不再伪造 0.85，指标归零
+                assert result["evaluation"]["accuracy"] == 0.0
 
     def test_predict_no_model(self, app):
         """Test predict when no model exists"""

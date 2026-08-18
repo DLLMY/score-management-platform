@@ -10,6 +10,7 @@ from models import (
     RolePermissionMapping,
     RoleHierarchy,
     User,
+    db,
 )
 from utils.security import validate_token
 from utils.logger import log_access_denied
@@ -241,7 +242,13 @@ def _get_admin_permission_codes(admin):
     if not admin:
         return set()
 
-    cache_key = int(admin.id)
+    if admin.id is None:
+        # 未持久化对象（id 未分配）：无法查询关联角色/权限，视为无权限
+        return set()
+
+    # 缓存 key 含 engine 标识：隔离不同数据库实例（测试每用例独立 :memory: 库，
+    # admin.id 会重复；单库生产环境行为不变）
+    cache_key = (id(db.engine), int(admin.id))
     cached = _PERM_CACHE.get(cache_key)
     if cached and time.time() - cached[0] < _PERM_CACHE_TTL:
         return set(cached[1])

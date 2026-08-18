@@ -87,7 +87,7 @@ def _seed_engagement(app, sid, cid, base=None):
         for k in range(4):
             db.session.add(
                 ScoreRecord(
-                    user_id=sid,
+                    student_id=sid,
                     score_change=2,
                     created_at=datetime.combine(base, datetime.min.time()) - timedelta(days=k),
                 )

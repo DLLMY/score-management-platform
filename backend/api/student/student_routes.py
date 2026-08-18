@@ -316,6 +316,7 @@ def _unlock_reason_text(reason):
 @ns_student.route("/phonebox/unlock")
 class StudentPhoneboxUnlock(Resource):
     @ns_student.doc("student_phonebox_unlock", description="学生自助申请手机箱开箱")
+    @requires_student
     def post(self):
         """依据本班手机箱策略判定是否允许开箱；允许则下发 MQTT 开箱指令（最佳努力）。
 

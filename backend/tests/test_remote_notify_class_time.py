@@ -51,8 +51,10 @@ class TestRemoteNotifyClassTime:
             cnt = NotifyAudit.query.filter_by(reason_code="GLOBAL_TIME_RULE").count()
             assert cnt >= 1
 
-    def test_send_allowed_with_force_send(self, app, client, auth_headers):
+    def test_send_allowed_with_force_send(self, app, client, auth_headers, monkeypatch):
         """/send：force_send=True 且 admin 拥有 all 权限 -> 放行并写 FORCE 审计。"""
+        # 测试环境 MQTT broker 不可用：mock 发布成功，专注校验 force_send 放行与审计
+        monkeypatch.setattr("api.scores.remote_notify_routes.publish_mqtt", lambda *a, **k: True)
         resp = client.post(
             "/api/remote_notify/send",
             json={"text": "强制通知", "force_send": True},

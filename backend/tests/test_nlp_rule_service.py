@@ -244,7 +244,8 @@ class TestNLPRuleManagementService:
 
             assert isinstance(result, dict)
             assert "status" in result
-            assert result["status"] == "completed"
+            # P2-2: 空数据不再伪造 completed，标记 untrained
+            assert result["status"] == "untrained"
             assert result["training_data_size"] == 0
 
     def test_train_model_with_data(self, app):

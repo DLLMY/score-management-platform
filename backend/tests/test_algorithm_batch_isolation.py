@@ -43,7 +43,7 @@ def _seed_all_negative_scores(app, sid):
         for k in range(6):
             db.session.add(
                 ScoreRecord(
-                    user_id=sid,
+                    student_id=sid,
                     score_change=-2,
                     created_at=datetime.combine(date.today(), datetime.min.time())
                     - timedelta(days=k),

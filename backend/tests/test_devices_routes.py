@@ -279,6 +279,10 @@ class TestDeviceWriteEndpoints:
         with app.app_context():
             with pytest.raises(IntegrityError):
                 client.post("/api/devices/", json={"name": "无标识设备"}, headers=auth_headers)
+            # 清理 IntegrityError 后的 PendingRollbackError 状态，避免污染同 session 后续用例
+            from models import db
+
+            db.session.rollback()
 
     def test_update_device(self, client, app, auth_headers, db_session):
         with app.app_context():

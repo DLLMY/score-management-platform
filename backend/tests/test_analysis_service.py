@@ -36,7 +36,7 @@ class TestAnalysisService:
         with app.app_context():
             for i in range(5):
                 record = ScoreRecord(
-                    user_id=sample_user.id,
+                    student_id=sample_user.id,
                     rule_id=1,
                     score_change=10 if i % 2 == 0 else -5,
                     description="测试记录",
@@ -75,7 +75,7 @@ class TestAnalysisService:
 
         with app.app_context():
             record = ScoreRecord(
-                user_id=sample_user.id,
+                student_id=sample_user.id,
                 rule_id=1,
                 score_change=-10,
                 description="开锁",

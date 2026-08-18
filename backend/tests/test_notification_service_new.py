@@ -152,13 +152,6 @@ class TestNotificationService:
             assert result["success"] is False
             assert "阿里云短信配置不完整" in result["message"]
 
-    def test_send_tencent_sms_not_implemented(self, app):
-        with app.app_context():
-
-            result = NotificationService._send_tencent_sms("13800138000", "test", {})
-            assert result["success"] is False
-            assert "待实现" in result["message"]
-
     def test_notify_unlock_success_user_not_found(self, app):
         with app.app_context():
             with patch("models.get_by_id") as mock_get_by_id:

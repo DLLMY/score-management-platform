@@ -150,6 +150,14 @@ def app():
 
         yield app
         db.drop_all()
+        # 清理缓存服务：get_cache_service() 为全局单例，内存/降级模式下跨用例共享，
+        # 缓存 key 若未含用例隔离会偶发污染（algorithm/dashboard 统计曾全量偶发读到旧值）
+        try:
+            from services.redis_cache_service import get_cache_service
+
+            get_cache_service().flush_all()
+        except Exception:  # noqa: BLE001
+            pass
 
 
 @pytest.fixture(scope="function")
