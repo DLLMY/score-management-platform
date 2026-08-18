@@ -23,8 +23,8 @@
 
 如果需要更多控制：
 
-1. **安装依赖** → 双击 `install_dependencies.bat`
-2. **启动服务** → 双击 `start.bat`
+1. **安装依赖** → 双击 `download_deps.py`
+2. **启动服务** → 双击 `start_server.bat`
 3. **访问系统** → 打开 http://localhost:3000
 
 ## 📂 文件说明
@@ -39,12 +39,12 @@
 ### 📦 标准部署文件
 | 文件 | 说明 |
 |------|------|
-| **start.bat** | 一键启动所有服务 |
-| **start_manual.bat** | 手动启动（备用方案） |
-| **stop.bat** | 停止所有服务 |
-| **check_services.bat** | 检查服务状态 |
-| **install_dependencies.bat** | 安装依赖 |
-| **verify_deployment.bat** | 部署包验证工具 |
+| **start_server.bat** | 一键启动所有服务 |
+| **start_server.bat** | 手动启动（备用方案） |
+| **stop_all.bat** | 停止所有服务 |
+| **check_deploy.py** | 检查服务状态 |
+| **download_deps.py** | 安装依赖 |
+| **check_deploy.py** | 部署包验证工具 |
 
 ### ⚙️ 核心文件
 | 文件 | 说明 |
@@ -58,7 +58,7 @@
 | **README.md** | 本文档 |
 | **QUICK_REFERENCE.md** | 快速参考文档 |
 | **DEPLOYMENT_GUIDE.md** | 完整部署指南 |
-| **DEPLOYMENT_UPDATE_SUMMARY.md** | 部署更新总结 |
+| **CHANGELOG.md** | 更新记录（位于仓库根目录） |
 
 ## 🎯 使用场景
 
@@ -70,19 +70,19 @@
 ### 场景2：日常启动
 ```
 运行：启动器.bat → 选择 [3] 仅启动服务
-或直接运行：start.bat
+或直接运行：start_server.bat
 ```
 
 ### 场景3：检查状态
 ```
 运行：启动器.bat → 选择 [4] 检查服务状态
-或直接运行：check_services.bat
+或直接运行：check_deploy.py
 ```
 
 ### 场景4：停止服务
 ```
 运行：启动器.bat → 选择 [5] 停止所有服务
-或直接运行：stop.bat
+或直接运行：stop_all.bat
 ```
 
 ## 🔐 登录信息
@@ -140,7 +140,7 @@ py .\one_click_deploy.py
 
 ### 问题1：端口被占用
 ```bash
-运行：stop.bat
+运行：stop_all.bat
 或手动清理：
 netstat -ano | findstr :5000
 taskkill /F /PID <进程ID>
@@ -176,7 +176,7 @@ netstat -ano | findstr :3000
 
 - 🌟 **推荐使用** `启动器.bat` 进行部署
 - 📝 **首次部署** 建议使用一键部署
-- 🔄 **日常使用** 可直接运行 `start.bat`
+- 🔄 **日常使用** 可直接运行 `start_server.bat`
 - 🛠️ **遇到问题** 查看 `DEPLOYMENT_GUIDE.md`
 - 📋 **快速参考** 查看 `QUICK_REFERENCE.md`
 
@@ -184,7 +184,7 @@ netstat -ano | findstr :3000
 
 - 查看 `DEPLOYMENT_GUIDE.md` 获取完整文档
 - 查看 `QUICK_REFERENCE.md` 获取快速帮助
-- 查看 `DEPLOYMENT_UPDATE_SUMMARY.md` 了解最新更新
+- 查看 `../CHANGELOG.md` 了解最新更新
 
 ---
 

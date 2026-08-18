@@ -1,11 +1,9 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from models import (
-    db,
     Admin,
     AdminRole,
     Permission,
-    PermissionLog,
     RolePermission,
     RolePermissionMapping,
     RoleHierarchy,
@@ -30,7 +28,6 @@ from services.rbac_service import (
     init_default_permissions as _service_init_default_permissions,
     init_default_roles as _service_init_default_roles,
 )
-from datetime import datetime
 
 """RBAC权限管理系统路由"""
 ns_rbac = Namespace("rbac", description="RBAC权限管理")
@@ -296,7 +293,7 @@ class RoleList(Resource):
         existing = RolePermission.query.filter_by(role_code=data["role_code"]).first()
         if existing:
             return APIResponse.error(message="角色代码已存在", status_code=409)
-        role = create_role(data)
+        _ = create_role(data)
         log_permission_action(
             "创建角色",
             "role",

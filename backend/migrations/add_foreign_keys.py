@@ -1,11 +1,7 @@
-""" """
-
 """
 添加外键关联字段迁移脚本
-"""
--course_schedule表添加teacher_id外键关联admin表
--scores表添加subject_id外键关联subject表
-"""
+- course_schedule表添加teacher_id外键关联admin表
+- scores表添加subject_id外键关联subject表
 """
 
 import os

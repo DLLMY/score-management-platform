@@ -1,5 +1,6 @@
-from flask import request, send_file
 import io
+import logging
+from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
 from models import User, ScoreRule, Device, ScoreRecord, ScoreCategory
 from utils.permission import requires_permission
@@ -8,6 +9,8 @@ from services.export_service import export_service
 from services.heartbeat_service import is_device_online
 from datetime import datetime
 from sqlalchemy.orm import joinedload
+
+logger = logging.getLogger(__name__)
 
 """
 数据导出API路由
@@ -196,7 +199,7 @@ class ExportData(Resource):
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
             # S8 修复: 不直返异常细节（泄露路径/实现）
-            print(f"[Export] 导出失败: {e}")
+            logger.warning(f"[Export] 导出失败: {e}")
             return APIResponse.server_error(message="导出失败，请稍后重试或联系管理员")
 
 

@@ -4,8 +4,6 @@ from app import app
 from models import db
 import os
 import sys
-from models import User
-from models import Admin
 
 """
 数据库索引优化脚本

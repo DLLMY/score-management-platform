@@ -25,7 +25,6 @@ try:
     from sqlalchemy import create_engine, inspect, MetaData, Table, text
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.exc import SQLAlchemyError
-    from models import db
 except ImportError as e:
     print(f"缺少必要的依赖: {e}")
     print("请安装: pip install pymysql psycopg2-binary")

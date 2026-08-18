@@ -12,7 +12,6 @@ F10: WOLDevice 并入 Device（数据迁移 + 建列；WOLDevice 模型类已删
 import os
 import sys
 import json
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

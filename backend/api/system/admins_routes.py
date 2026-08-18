@@ -3,20 +3,14 @@ from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
 from flask_wtf.csrf import generate_csrf
 from models import (
-    db,
     Admin,
     AdminClass,
     ClassInfo,
-    PermissionLog,
-    AdminRole,
-    RolePermission,
     get_by_id,
-    cascade_delete_related_records,
 )
 from utils.permission import requires_permission, requires_admin, get_current_admin
 from utils.logger import log_operation, log_login_attempt
 from utils.security import (
-    hash_password,
     is_strong_password,
     verify_password,
     generate_tokens,
@@ -24,7 +18,6 @@ from utils.security import (
     JWT_ACCESS_TOKEN_EXPIRES,
     set_auth_cookies,
 )
-from datetime import datetime
 from api.system.security_routes import (
     check_login_rate_limit,
     record_failed_login,

@@ -1,3 +1,4 @@
+import logging
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
@@ -14,6 +15,8 @@ from services.score_record_service import (
 )
 from datetime import datetime
 from sqlalchemy.orm import joinedload
+
+logger = logging.getLogger(__name__)
 
 try:
     from app import csrf_exempt
@@ -669,11 +672,11 @@ class ScoreEntryResource(Resource):
                 }
                 publish_mqtt("phonebox/rank_change", notification)
                 publish_mqtt(f"phonebox/rank_change/{user.card_id}", notification)
-                print(
+                logger.info(
                     f"[Rank] 排名变动通知已发送: {user_name} {before_rank_name} -> {after_rank_name}"
                 )
             except Exception as e:
-                print(f"[Rank] 发送排名变动通知失败: {e}")
+                logger.warning(f"[Rank] 发送排名变动通知失败: {e}")
 
         # 发送积分变动通知到远程客户端（积分窗口显示）
         try:
@@ -706,7 +709,7 @@ class ScoreEntryResource(Resource):
                     "timestamp": datetime.now().isoformat(),
                 }
                 publish_mqtt("phonebox/remote/notify", score_notification)
-                print(f"[ScoreChange] 积分变动通知已发送: {score_change_text}")
+                logger.info(f"[ScoreChange] 积分变动通知已发送: {score_change_text}")
             else:
                 ClassTimeChecker.log_notify_audit(
                     "score_change",
@@ -717,7 +720,7 @@ class ScoreEntryResource(Resource):
                     check_message,
                     force_send=False,
                 )
-                print(f"[ScoreChange] 积分变动通知被拦截（上课时间）: {score_change_text}")
+                logger.info(f"[ScoreChange] 积分变动通知被拦截（上课时间）: {score_change_text}")
 
             create_admin_notification(
                 title="积分变动通知",
@@ -733,14 +736,14 @@ class ScoreEntryResource(Resource):
                 },
             )
         except Exception as e:
-            print(f"[ScoreChange] 发送积分变动通知失败: {e}")
+            logger.warning(f"[ScoreChange] 发送积分变动通知失败: {e}")
 
         # 清除统计缓存
         try:
             invalidated = get_cache_service().invalidate_by_tag("statistics")
-            print(f"[Cache] 积分录入后清除了 {invalidated} 个statistics相关缓存")
+            logger.info(f"[Cache] 积分录入后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
-            print(f"[Cache] 清除缓存失败: {e}")
+            logger.warning(f"[Cache] 清除缓存失败: {e}")
 
         # 触发综合评分增量更新
         composite_score_updated = False
@@ -750,11 +753,11 @@ class ScoreEntryResource(Resource):
             result = CompositeScoreService.recalculate_user_score(user_id)  # noqa: F841
             if result:
                 composite_score_updated = True
-                print(
+                logger.info(
                     f"[CompositeScore] 用户{user_id}综合评分已更新: {result.get('composite_score')}"
                 )
         except Exception as e:
-            print(f"[CompositeScore] 综合评分更新失败: {e}")
+            logger.warning(f"[CompositeScore] 综合评分更新失败: {e}")
 
         return (
             APIResponse.success(
@@ -1030,9 +1033,9 @@ class RecordResource(Resource):
         # 清除统计缓存
         try:
             invalidated = get_cache_service().invalidate_by_tag("statistics")
-            print(f"[Cache] 删除记录后清除了 {invalidated} 个statistics相关缓存")
+            logger.info(f"[Cache] 删除记录后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
-            print(f"[Cache] 清除缓存失败: {e}")
+            logger.warning(f"[Cache] 清除缓存失败: {e}")
 
         # R4: 删除回滚后触发综合评分重算
         try:
@@ -1042,7 +1045,7 @@ class RecordResource(Resource):
         except Exception:
             pass
 
-        print(f"[Record] 删除记录: id={id}, user={user_name}, score_change={record.score_change}")
+        logger.info(f"[Record] 删除记录: id={id}, user={user_name}, score_change={record.score_change}")
 
         return APIResponse.success(
             data={"rollback_score": -record.score_change}, message="记录删除成功"

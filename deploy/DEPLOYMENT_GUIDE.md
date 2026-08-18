@@ -50,7 +50,7 @@
 cd 管理平台设计\deploy
 
 # 2. 一键启动所有服务
-start.bat
+start_server.bat
 ```
 
 ### 一键停止
@@ -60,7 +60,7 @@ start.bat
 cd 管理平台设计\deploy
 
 # 停止所有服务
-stop.bat
+stop_all.bat
 ```
 
 ---
@@ -73,7 +73,7 @@ stop.bat
 
 ```cmd
 cd 管理平台设计\deploy
-install_dependencies.bat
+download_deps.py
 ```
 
 ### 步骤2：启动后端服务
@@ -236,7 +236,7 @@ npm install
 
 ```cmd
 cd backend
-python backup_db.py
+python -c "from utils.backup_utils import backup_manager; backup_manager.create_backup(backup_type='full')"
 ```
 
 ### 4. 查看日志
@@ -258,14 +258,14 @@ python run.py  # 查看控制台输出
 管理平台设计/
 ├── deploy/                    # 部署目录
 │   ├── service_manager.py    # 服务管理器（自恢复）
-│   ├── start.bat             # 一键启动脚本
-│   ├── stop.bat              # 一键停止脚本
-│   ├── install_dependencies.bat  # 安装依赖脚本
+│   ├── start_server.bat             # 一键启动脚本
+│   ├── stop_all.bat              # 一键停止脚本
+│   ├── download_deps.py  # 安装依赖脚本
 │   ├── DEPLOYMENT_GUIDE.md  # 本文档
 │   └── ngrok/                # 内网穿透工具
 │       ├── ngrok.exe
 │       ├── ngrok.yml
-│       └── start.bat
+│       └── start_server.bat
 │
 ├── backend/                  # 后端服务
 │   ├── run.py               # Flask应用入口
@@ -296,10 +296,10 @@ netstat -ano | findstr ":3000 :5000 :4040"
 ```cmd
 # 先停止
 cd deploy
-stop.bat
+stop_all.bat
 
 # 再启动
-start.bat
+start_server.bat
 ```
 
 ### 查看ngrok外网地址

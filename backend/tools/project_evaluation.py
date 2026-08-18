@@ -310,7 +310,6 @@ def collect_api_coverage():
     }
     # 从路由文件扫描
     api_dir = os.path.join(BACKEND_DIR, "api")
-    all_routes = []
     for root, dirs, files in os.walk(api_dir):
         dirs[:] = [d for d in dirs if d not in ("__pycache__",)]
         for fname in files:
@@ -330,8 +329,6 @@ def collect_api_coverage():
                 )
                 for rm in route_matches:
                     ns_var = rm.group(1)
-                    route_path = rm.group(2)
-                    class_name = rm.group(3)
                     # 查找对应的namespace描述
                     ns_desc = ""
                     for nv, nd in ns_names:

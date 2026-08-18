@@ -1,5 +1,4 @@
 {
-  "project_name": "学生积分管理平台",
   "backend_port": 5000,
   "frontend_port": 3000,
   "ngrok_port": 4040,
@@ -10,14 +9,5 @@
     "frontend": 15,
     "ngrok": 3
   },
-  "health_check_timeout": 10,
-  "production": {
-    "backend_host": "0.0.0.0",
-    "backend_workers": 4,
-    "frontend_build_path": "../frontend/build"
-  },
-  "development": {
-    "backend_host": "localhost",
-    "frontend_dev_server": "localhost:3000"
-  }
+  "health_check_timeout": 10
 }

@@ -43,7 +43,6 @@ def main():
         from utils.permission import has_permission
 
         u = Admin.query.filter_by(username=args.username).first()
-        created = False
         if u is None:
             u = Admin(
                 username=args.username,
@@ -53,7 +52,6 @@ def main():
             )
             db.session.add(u)
             db.session.flush()
-            created = True
             print("[create] new admin username=%s id=%s" % (args.username, u.id))
         else:
             print(

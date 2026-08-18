@@ -137,9 +137,9 @@ def check_config_files():
     config_files = [
         ('backend/.env.example', True),
         ('frontend/.env.example', True),
-        ('deploy/一键部署.bat', True),
+        ('deploy/one_click_deploy.py', True),
         ('deploy/download_deps.py', True),
-        ('frontend/proxy-server.js', True)
+        ('frontend/setupProxy.js', True)
     ]
     
     all_exists = True
@@ -216,7 +216,7 @@ def main():
         print(f"\n已通过: {passed}/{total_checks}")
         print("\n可以运行一键部署脚本开始部署:")
         print("  cd deploy")
-        print("  一键部署.bat")
+        print("  python one_click_deploy.py")
         return 0
     else:
         print(f"[ERROR] 有 {failed} 项检查未通过")

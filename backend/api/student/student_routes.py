@@ -284,7 +284,7 @@ class StudentLeaves(Resource):
         }
         try:
             result, _ = attendance_service.apply_leave(payload)
-        except Exception as e:  # 防御：服务层意外异常不泄露内部信息
+        except Exception:  # 防御：服务层意外异常不泄露内部信息
             return APIResponse.error(message="提交失败，请稍后重试", status_code=400)
         leave = Approval.query.get(result["data"]["id"])
         return APIResponse.success(

@@ -6,7 +6,7 @@
 import time
 import json
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from models import db, Alert
 from utils.logger import log_info, log_error
 

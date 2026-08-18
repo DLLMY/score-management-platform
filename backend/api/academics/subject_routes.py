@@ -229,7 +229,7 @@ class SubjectResource(Resource):
     @requires_permission("score.entry")
     def delete(self, id):
         """删除科目（先级联清理关联数据，再删除科目本身）"""
-        subject = Subject.query.get_or_404(id)
+        subject = Subject.query.get_or_404(id)  # noqa: F841
         academics_service.delete_subject(id)
         return APIResponse.success(message="科目已删除")
 

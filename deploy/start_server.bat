@@ -40,7 +40,7 @@ if exist "C:\Users\53527\AppData\Local\Programs\Python\Python311\python.exe" (
 if "%PYTHON_EXE%"=="" (
     echo [ERROR] 未找到Python，请先安装Python 3.11+
     echo.
-    echo 请运行 install_env.ps1 安装环境依赖
+    echo 请先安装 Python 3.11+ 并安装依赖（python -m pip install -r backend\requirements.txt）后重试
     pause
     exit /b 1
 )

@@ -1,6 +1,6 @@
 from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
-from models import db, SecurityAudit, RateLimitRecord, LoginAttempt
+from models import db, SecurityAudit, RateLimitRecord
 from services.security_service import (
     check_login_rate_limit as _service_check_login_rate_limit,
     record_failed_login as _service_record_failed_login,

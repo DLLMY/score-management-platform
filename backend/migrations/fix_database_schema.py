@@ -1,7 +1,5 @@
-""" """
-
-数据库架构修复迁移脚本
 """
+数据库架构修复迁移脚本
 - 为admin表添加force_password_change字段
 - 创建scheduled_notify表（如果不存在）
 - 添加必要的索引

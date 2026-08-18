@@ -16,6 +16,7 @@ from datetime import datetime
 import logging
 import io
 
+import os
 import re
 
 logger = logging.getLogger(__name__)
@@ -518,7 +519,7 @@ class ImportUsers(Resource):
                         )
                         continue
 
-                    new_user = create_user_row(name, gender, class_name, phone, card_id)
+                    _ = create_user_row(name, gender, class_name, phone, card_id)
                     imported_count += 1
                     messages.append(
                         {"name": name, "action": "created", "message": f"学生 {name} 导入成功"}
@@ -661,7 +662,7 @@ class ImportRules(Resource):
                         failed_count += 1
                         continue
 
-                    new_rule = create_score_rule_row(
+                    _ = create_score_rule_row(
                         name, description, category.id, score, is_active, daily_limit, min_interval
                     )
                     imported_count += 1
@@ -760,7 +761,7 @@ class ImportCategories(Resource):
                         failed_count += 1
                         continue
 
-                    new_category = create_score_category_row(name, description, color)
+                    _ = create_score_category_row(name, description, color)
                     imported_count += 1
 
                 except Exception as e:

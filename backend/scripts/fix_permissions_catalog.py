@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from api.users.rbac_routes import init_default_permissions
-from models import Permission, db
+from models import Permission
 
 INSTANCE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance")
 DB_PATH = os.path.join(INSTANCE_DIR, "score_management.db")

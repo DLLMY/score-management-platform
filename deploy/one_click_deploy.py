@@ -6,6 +6,7 @@ import sys
 import subprocess
 import time
 import getpass
+import secrets
 
 def print_title(text):
     print(f"\n{'='*60}")
@@ -178,7 +179,7 @@ def main():
     admin_password = getpass.getpass("请输入管理员密码 (不显示): ")
     if not admin_password:
         admin_password = "admin123"
-        print(f"使用默认密码: {admin_password}")
+        print("已使用默认密码 admin123（首次登录后请尽快修改）")
     
     # 步骤1: 检查环境
     print_step(1, 7, "检查运行环境")
@@ -246,19 +247,23 @@ def main():
         os.makedirs(instance_dir)
         print_success(f"创建目录: {instance_dir}")
     
-    # 创建 .env 文件
+    # 创建 .env 文件（密钥随机生成，避免公开的硬编码开发密钥）
+    flask_secret_key = secrets.token_hex(32)
+    csrf_secret_key = secrets.token_hex(32)
+    jwt_secret_key = secrets.token_hex(32)
+    db_uri_path = db_path.replace('\\', '/')
     env_content = f"""\
 # 后端环境变量配置
 # Flask 配置
 FLASK_APP=app
 FLASK_ENV=development
 FLASK_DEBUG=true
-FLASK_SECRET_KEY=dev_secret_key_for_student_score_management_platform_2024
+FLASK_SECRET_KEY={flask_secret_key}
 FLASK_PORT={flask_port}
 FLASK_HOST=127.0.0.1
 
 # 数据库配置
-DATABASE_URI=sqlite:///{db_path.replace('\\', '/')}
+DATABASE_URI=sqlite:///{db_uri_path}
 
 # Redis 缓存配置（可选）
 REDIS_HOST=localhost
@@ -267,7 +272,7 @@ REDIS_DB=0
 REDIS_PASSWORD=
 
 # 安全配置
-CSRF_SECRET_KEY=csrf_dev_secret_key_for_development_only
+CSRF_SECRET_KEY={csrf_secret_key}
 
 # 限流配置
 RATE_LIMIT_ENABLED=false
@@ -286,7 +291,7 @@ MQTT_KEEPALIVE=60
 MQTT_TOPIC_PREFIX=score/management
 
 # JWT配置
-JWT_SECRET_KEY=jwt_dev_secret_key_for_development_only_2024
+JWT_SECRET_KEY={jwt_secret_key}
 JWT_ACCESS_TOKEN_EXPIRES=3600
 JWT_REFRESH_TOKEN_EXPIRES=604800
 

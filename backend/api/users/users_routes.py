@@ -1,4 +1,4 @@
-from flask import request, send_file
+from flask import request
 from utils.response import APIResponse
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -913,7 +913,7 @@ class UserBatchScore(Resource):
                         "timestamp": datetime.now().isoformat(),
                     }
                     publish_mqtt("phonebox/remote/notify", score_notification)
-                print(
+                logger.info(
                     f"[ScoreChange] 批量积分变动通知已发送: {updated_count}个用户, {score_change_str}分"
                 )
             else:
@@ -926,11 +926,11 @@ class UserBatchScore(Resource):
                     check_message,
                     force_send=False,
                 )
-                print(
+                logger.info(
                     f"[ScoreChange] 批量积分变动通知被拦截（上课时间）: {updated_count}个用户, {score_change_str}分"
                 )
         except Exception as e:
-            print(f"[ScoreChange] 批量发送积分变动通知失败: {e}")
+            logger.warning(f"[ScoreChange] 批量发送积分变动通知失败: {e}")
         return APIResponse.success(message=f"批量积分调整完成: 成功{updated_count}条")
 
 

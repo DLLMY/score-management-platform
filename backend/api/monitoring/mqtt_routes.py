@@ -1,5 +1,6 @@
 import json
 import traceback
+import logging
 from flask_restx import Namespace, Resource, fields
 from services.mqtt_service import publish_mqtt, mqtt_logs, connect_mqtt, mqtt_manager
 from services.mqtt_message_service import mqtt_message_service
@@ -8,6 +9,8 @@ from utils.permission import requires_permission
 from datetime import datetime
 from utils.rate_limit import RateLimitStrategy
 from utils.response import APIResponse
+
+logger = logging.getLogger(__name__)
 
 
 def get_flask_app():
@@ -203,10 +206,10 @@ class MQTTConnect(Resource):
     @ns_mqtt.response(500, "Connection failed")
     @requires_permission("manage_devices")
     def post(self):
-        print("=== MQTT connect API called ===")
+        logger.info("=== MQTT connect API called ===")
         try:
             if mqtt_manager.is_connected:
-                print("MQTT already connected, no need to reconnect")
+                logger.info("MQTT already connected, no need to reconnect")
                 return APIResponse.success(
                     data={"status": "connected"}, message="MQTT already connected"
                 )
@@ -275,7 +278,7 @@ class MQTTConnect(Resource):
                     config_dict["transport"] = "tcp"
                     config_dict["ws_path"] = "/mqtt"
 
-            print(
+            logger.info(
                 f"Using config: broker={config_dict['broker']}, "
                 f"port={config_dict['port']}, "
                 f"transport={config_dict['transport']}"
@@ -284,14 +287,14 @@ class MQTTConnect(Resource):
             result = connect_mqtt(config_dict)  # noqa: F841
 
             if result:
-                print("MQTT connection successful!")
+                logger.info("MQTT connection successful!")
                 return APIResponse.success(message="MQTT connection successful")
             else:
-                print("MQTT connection failed")
+                logger.warning("MQTT connection failed")
                 return APIResponse.error(message="MQTT connection failed", status_code=500)
 
         except Exception as e:
-            print(f"MQTT connection failed: {type(e).__name__}: {e}")
+            logger.warning(f"MQTT connection failed: {type(e).__name__}: {e}")
 
             traceback.print_exc()
             return APIResponse.error(message=f"MQTT connection failed: {str(e)}", status_code=500)

@@ -90,7 +90,6 @@ def extract_api_info(file_path):
     """从路由文件提取API信息"""
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    endpoints = []
     # 提取namespace定义
     ns_match = re.findall(r"(\w+)\s*=\s*Namespace\([\'\"]([^\'\"]+)[\'\"]", content)
     # 提取路由装饰器和资源类，匹配 @ns_xxx.route('/path') 后的 class 定义

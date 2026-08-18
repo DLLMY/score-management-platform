@@ -8,7 +8,7 @@ F9-B 合并说明：
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import db, Notification, Admin, get_by_id
+from models import Notification
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from services.admin_notifications_service import (
@@ -18,7 +18,6 @@ from services.admin_notifications_service import (
     mark_all_read,
     create_admin_notification as _service_create_admin_notification,
 )
-from datetime import datetime
 
 ns_admin_notifications = Namespace("admin_notifications", description="管理员通知中心")
 

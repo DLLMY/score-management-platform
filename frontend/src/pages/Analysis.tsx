@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { useStableToast } from '../hooks/useStableToast';
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import {
@@ -123,6 +124,7 @@ const RISK_COLORS: Record<string, { bg: string; text: string; light: string }> =
 };
 
 function Analysis() {
+  const { showToast } = useStableToast();
   const [users, setUsers] = useState<User[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | ''>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -421,7 +423,7 @@ function Analysis() {
   const handleExport = () => {
     // 无数据不导出空壳报告（此前直接下载空 JSON，用户无感知）
     if (filteredUsers.length === 0 && !statistics) {
-      window.alert('暂无数据可导出，请先加载学生数据');
+      showToast('warning', '暂无数据可导出，请先加载学生数据');
       return;
     }
     const exportData = {

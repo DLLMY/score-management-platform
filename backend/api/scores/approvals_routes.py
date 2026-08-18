@@ -1,11 +1,10 @@
 from flask import request
 import json
 from flask_restx import Namespace, Resource, fields
-from models import Approval, User, ScoreRecord, SystemConfig, get_by_id
+from models import Approval, User, SystemConfig, get_by_id
 from utils.permission import requires_permission, get_current_admin, get_allowed_classes
 from utils.response import APIResponse
 from services.class_time_checker import ClassTimeChecker
-from utils.score_utils import atomic_score_update
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 

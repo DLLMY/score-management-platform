@@ -2,6 +2,7 @@ from flask import request, g
 import time
 import json
 import traceback
+import logging
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
 from services.nlp_enhanced_service import get_nlp_parser
@@ -21,6 +22,8 @@ from services.nlp_correction_service import (
 )
 from sqlalchemy import text
 
+logger = logging.getLogger(__name__)
+
 ns_nlp = Namespace("nlp", description="NLP智能评分规则管理")
 
 
@@ -33,7 +36,7 @@ def get_context_memory():
                 return memory_data
             return json.loads(memory_data)
     except Exception as e:
-        print(f"[DEBUG] get_context_memory error: {e}")
+        logger.warning(f"[DEBUG] get_context_memory error: {e}")
     return {
         "recent_users": [],
         "recent_rules": [],
@@ -47,7 +50,7 @@ def save_context_memory(memory):
         cache = get_cache_service()
         cache.set("nlp_context_memory", memory, ttl=3600)
     except Exception as e:
-        print(f"[DEBUG] save_context_memory error: {e}")
+        logger.warning(f"[DEBUG] save_context_memory error: {e}")
 
 
 parse_input_model = ns_nlp.model(

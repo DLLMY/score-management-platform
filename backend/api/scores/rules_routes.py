@@ -1,6 +1,6 @@
 from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from models import db, ScoreRule, ScoreCategory, ScoreRecord, get_by_id
+from models import db, ScoreRule, ScoreCategory, get_by_id
 from utils.permission import requires_permission
 from utils.logger import log_operation
 from utils.response import APIResponse

@@ -12,7 +12,6 @@
 """
 
 from datetime import datetime, timedelta
-from apscheduler.schedulers.background import BackgroundScheduler
 
 scheduler = None
 

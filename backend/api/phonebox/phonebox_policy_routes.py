@@ -10,7 +10,7 @@
 
 from flask_restx import Namespace, Resource, fields
 from flask import request, g
-from models import PhoneBoxPolicy, db, ClassInfo
+from models import ClassInfo
 from services import phonebox_policy as policy_service
 from utils.permission import requires_permission, get_current_admin
 from utils.response import APIResponse

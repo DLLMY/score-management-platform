@@ -680,7 +680,6 @@ class RuleRecommendationService:
 
         # 获取已有规则
         existing_rules = ScoreRule.query.all()
-        existing_categories = set(r.category for r in existing_rules if r.category)
 
         # 统计规则覆盖情况
         category_stats = defaultdict(lambda: {"record_count": 0, "user_count": 0})
@@ -707,7 +706,6 @@ class RuleRecommendationService:
             if any(kw in desc for kw in rule_keywords):
                 covered += 1
         coverage_rate = round(covered / len(records), 4) if records else 0.0
-        covered_categories = set()  # 兼容下方 metrics 引用
 
         # 计算规则有效性
         effectiveness_scores = []

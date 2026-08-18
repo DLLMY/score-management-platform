@@ -1,6 +1,5 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
-from datetime import datetime
 from models import ImportConfig, get_by_id
 from services.academics_service import academics_service
 from utils.permission import requires_permission

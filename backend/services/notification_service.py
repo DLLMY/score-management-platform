@@ -4,8 +4,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, List
 from flask import current_app
-from utils.db_session import db_session_scope
-from models import db, Notification, User
+from models import db, Notification
 
 logger = logging.getLogger(__name__)
 

@@ -236,7 +236,7 @@ class ScheduledTrigger(Resource):
             for topic in topics:
                 try:
                     ok = publish_mqtt(topic, json.dumps(message))
-                except Exception as e:  # noqa: BLE001
+                except Exception:  # noqa: BLE001
                     ok = False
                 publish_results.append((topic, bool(ok)))
             if not all(ok for _, ok in publish_results):
@@ -309,12 +309,12 @@ def process_scheduled_notifications():
             for topic in topics:
                 try:
                     ok = publish_mqtt(topic, json.dumps(message))
-                except Exception as e:  # noqa: BLE001
+                except Exception:  # noqa: BLE001
                     ok = False
                 publish_results.append((topic, bool(ok)))
             if not all(ok for _, ok in publish_results):
                 failed_topics = [t for t, ok in publish_results if not ok]
-                print(f"定时通知(id={notify.id}) MQTT发布失败，保持pending待重试: {failed_topics}")
+                logger.warning(f"定时通知(id={notify.id}) MQTT发布失败，保持pending待重试: {failed_topics}")
                 continue
 
             record_scheduled_history(notify, topics)

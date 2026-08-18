@@ -1,6 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import User, get_by_id
+from models import User
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from datetime import datetime

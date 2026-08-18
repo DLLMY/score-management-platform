@@ -362,7 +362,7 @@ flask db downgrade <revision>
 
 ### A. 相关文档
 
-- [CI/CD 配置指南](./CICD_GUIDE.md)
+- [CI/CD 指南](../docs/CI-CD指南.md)
 - [部署指南](./DEPLOYMENT_GUIDE.md)
 - [开发规范](../DEVELOPMENT_GUIDELINES.md)
 

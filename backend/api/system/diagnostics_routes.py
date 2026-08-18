@@ -1,5 +1,4 @@
 from flask_restx import Namespace, Resource, fields
-from flask import request
 from utils.diagnostics import HealthChecker, error_tracker
 from utils.performance_monitor import PerformanceMonitor
 from utils.permission import requires_permission

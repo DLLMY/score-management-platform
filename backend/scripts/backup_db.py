@@ -2,7 +2,6 @@
 from datetime import datetime
 import os
 import sys
-from models import db
 
 # -*- coding: utf-8 -*-
 """

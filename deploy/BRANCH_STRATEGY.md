@@ -410,7 +410,7 @@ git tag -d v1.0.0                # 删除本地标签
 ### B. 相关文档
 
 - [发布流程指南](./RELEASE_GUIDE.md)
-- [CI/CD 配置指南](./CICD_GUIDE.md)
+- [CI/CD 指南](../docs/CI-CD指南.md)
 - [开发规范](../DEVELOPMENT_GUIDELINES.md)
 
 ---

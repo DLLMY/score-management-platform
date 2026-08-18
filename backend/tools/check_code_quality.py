@@ -174,7 +174,7 @@ def check_bandit():
         os.path.join(REPORT_DIR, "bandit_report.json"),
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=PROJECT_DIR)
+    _ = subprocess.run(cmd, capture_output=True, text=True, cwd=PROJECT_DIR)
 
     # 读取生成的报告
     high_count = 0

@@ -83,7 +83,7 @@ function Find-Python {
         }
     }
     Write-Error "未找到Python！"
-    Write-Host "请先安装Python 3.10+，或运行 'deploy.bat' 选择选项3安装依赖"
+    Write-Host "请先安装Python 3.10+，或运行 'deploy.ps1' 安装依赖"
     Read-Host "按 Enter 退出..."
     exit 1
 }
@@ -96,7 +96,7 @@ function Find-Node {
         return $true
     }
     Write-Error "未找到Node.js！"
-    Write-Host "请先安装Node.js 16+，或运行 'deploy.bat' 选择选项3安装依赖"
+    Write-Host "请先安装Node.js 16+，或运行 'deploy.ps1' 安装依赖"
     Read-Host "按 Enter 退出..."
     exit 1
 }

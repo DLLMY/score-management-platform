@@ -12,8 +12,6 @@ get_or_404（404 语义）、请求级校验、缓存失效、操作日志、跨
 import re
 from datetime import datetime
 
-from flask import current_app
-
 from models import (
     db,
     Admin,
@@ -26,7 +24,6 @@ from models import (
     Exam,
     CourseSchedule,
     ImportConfig,
-    ClassPeriod,
     get_by_id,
     cascade_delete_related_records,
 )

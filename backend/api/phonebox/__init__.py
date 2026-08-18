@@ -1,1 +1,0 @@
-from .phonebox_policy_routes import ns_phonebox_policy

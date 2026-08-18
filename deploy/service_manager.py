@@ -515,7 +515,7 @@ if __name__ == '__main__':
         if not check_environment():
             print("❌ 环境检查失败")
             print()
-            print("请先安装依赖！运行: install_dependencies.bat")
+            print("请先安装依赖！运行: python -m pip install -r backend/requirements.txt")
             print()
             input("按回车键退出...")
             sys.exit(1)

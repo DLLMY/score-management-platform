@@ -3,9 +3,7 @@ from app import app
 from models import db, Permission
 
 """
-"""
 RBAC权限系统数据库迁移脚本
-"""
 """
 import os
 import sys

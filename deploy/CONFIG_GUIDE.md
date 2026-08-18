@@ -11,25 +11,17 @@
   "backend_port": 5000,      // 后端API端口
   "frontend_port": 3000,     // 前端访问端口
   "ngrok_port": 4040,        // ngrok管理面板端口
-  "redis_port": 6379,        // Redis缓存端口
-  
+
+  "max_restarts": 5,         // 服务最大重启次数
+  "monitor_interval": 5,     // 健康检查轮询间隔(秒)
+
   "startup_delay": {
     "backend": 8,            // 后端启动等待时间(秒)
     "frontend": 15,          // 前端启动等待时间(秒)
-    "ngrok": 3,              // ngrok启动等待时间(秒)
-    "redis": 3               // Redis启动等待时间(秒)
+    "ngrok": 3               // ngrok启动等待时间(秒)
   },
-  
-  "server_mode": {
-    "backend_host": "0.0.0.0",    // 服务器模式监听地址
-    "backend_workers": 4,         // Waitress工作进程数
-    "use_waitress": true          // 是否使用Waitress生产服务器
-  },
-  
-  "laptop_mode": {
-    "backend_host": "localhost",  // 笔记本模式监听地址
-    "auto_open_browser": true     // 是否自动打开浏览器
-  }
+
+  "health_check_timeout": 10 // 健康检查超时(秒)
 }
 ```
 
@@ -126,7 +118,7 @@ maxmemory 256mb
 - 适合长期运行的服务器
 
 ### 笔记本模式启动
-**脚本**: `deploy/start_laptop.bat`
+**脚本**: `deploy/start_server.bat`
 **特点**:
 - 开发模式运行 (热重载)
 - 自动打开浏览器
@@ -144,7 +136,7 @@ maxmemory 256mb
 ### 步骤1: 环境安装
 ```bash
 # 运行环境安装脚本 (自动安装Python/Node.js/Redis/ngrok)
-双击 deploy/deploy.bat → 选择 [3] 仅安装依赖
+双击 deploy/deploy.ps1 → 选择 [3] 仅安装依赖
 ```
 
 ### 步骤2: 配置密钥
@@ -171,7 +163,7 @@ ngrok.exe authtoken <your_authtoken>
 双击 deploy/start_server.bat
 
 # 笔记本模式
-双击 deploy/start_laptop.bat
+双击 deploy/start_server.bat
 ```
 
 ---
@@ -199,7 +191,7 @@ print(secrets.token_urlsafe(32))
 {
   "backend_port": 5001,    // 改为其他端口
   "frontend_port": 3001,
-  "redis_port": 6380
+  "ngrok_port": 4041
 }
 ```
 

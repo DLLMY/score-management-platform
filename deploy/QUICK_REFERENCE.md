@@ -4,11 +4,11 @@
 
 | 文件 | 功能 | 使用场景 |
 |------|------|----------|
-| **start.bat** | 一键启动所有服务（推荐） | 正常启动 |
-| **start_manual.bat** | 手动启动（备用） | 自动启动失败时使用 |
-| **stop.bat** | 一键停止所有服务 | 停止服务 |
-| **check_services.bat** | 检查服务状态 | 查看哪些服务在运行 |
-| **install_dependencies.bat** | 安装依赖 | 首次部署时运行 |
+| **start_server.bat** | 一键启动所有服务（推荐） | 正常启动 |
+| **start_server.bat** | 手动启动（备用） | 自动启动失败时使用 |
+| **stop_all.bat** | 一键停止所有服务 | 停止服务 |
+| **check_deploy.py** | 检查服务状态 | 查看哪些服务在运行 |
+| **download_deps.py** | 安装依赖 | 首次部署时运行 |
 | **service_manager.py** | 服务管理器（核心） | 自动启动和监控 |
 | **DEPLOYMENT_GUIDE.md** | 完整部署指南 | 详细文档 |
 
@@ -20,15 +20,15 @@
 
 1. 安装 Python 3.10+
 2. 安装 Node.js 18+
-3. 运行 `install_dependencies.bat`
-4. 运行 `start.bat`
+3. 运行 `download_deps.py`
+4. 运行 `start_server.bat`
 5. 访问 http://localhost:3000
 
 ### 日常使用
 
-- **启动**: 双击 `start.bat`
-- **停止**: 双击 `stop.bat`
-- **检查**: 双击 `check_services.bat`
+- **启动**: 双击 `start_server.bat`
+- **停止**: 双击 `stop_all.bat`
+- **检查**: 双击 `check_deploy.py`
 
 ---
 
@@ -38,17 +38,17 @@
 
 ```cmd
 # 运行检查工具
-check_services.bat
+check_deploy.py
 
 # 或手动停止
-stop.bat
+stop_all.bat
 ```
 
 ### 问题：自动启动失败
 
 ```cmd
 # 使用备用方案
-start_manual.bat
+start_server.bat
 ```
 
 ### 问题：ngrok 失败
@@ -81,7 +81,7 @@ start_manual.bat
 
 ## 📋 服务状态检查
 
-运行 `check_services.bat` 会显示：
+运行 `check_deploy.py` 会显示：
 
 ```
 ✓ 后端服务运行中 (端口: 5000)
@@ -109,11 +109,11 @@ start_manual.bat
 
 ```
 deploy/
-├── start.bat                    ← 一键启动（推荐）
-├── start_manual.bat             ← 手动启动（备用）
-├── stop.bat                     ← 一键停止
-├── check_services.bat           ← 检查服务状态
-├── install_dependencies.bat      ← 安装依赖
+├── start_server.bat                    ← 一键启动（推荐）
+├── start_server.bat             ← 手动启动（备用）
+├── stop_all.bat                     ← 一键停止
+├── check_deploy.py           ← 检查服务状态
+├── download_deps.py      ← 安装依赖
 ├── service_manager.py           ← 服务管理器
 ├── DEPLOYMENT_GUIDE.md          ← 完整部署指南
 ├── QUICK_REFERENCE.md           ← 本文档
@@ -129,11 +129,11 @@ deploy/
 ```
 首次部署
    ↓
-install_dependencies.bat
+download_deps.py
    ↓
 检查环境（Python、Node.js）
    ↓
-start.bat
+start_server.bat
    ↓
 service_manager.py
    ↓
@@ -148,7 +148,7 @@ service_manager.py
 
 1. **Windows 防御者**: 如果提示安全警告，点击"更多信息" → "仍要运行"
 2. **首次启动**: 前端需要1-2分钟编译，请耐心等待
-3. **多个窗口**: start_manual.bat 会打开多个窗口，保持它们打开
+3. **多个窗口**: start_server.bat 会打开多个窗口，保持它们打开
 4. **日志文件**: service_manager.log 记录了详细日志
 5. **外网地址**: 查看 ngrok 窗口或 http://localhost:4040
 

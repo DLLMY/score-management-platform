@@ -13,7 +13,6 @@ F5: device_id 全项目统一 String(100)（语义迁移）。
 
 import os
 import sys
-import json
 from sqlalchemy import text
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,11 +36,6 @@ def upgrade():
     with app.app_context():
         db.session.execute(text("PRAGMA foreign_keys=OFF"))
         try:
-            wol_map = {}
-            if os.path.exists(MAP_PATH):
-                with open(MAP_PATH, encoding="utf-8") as f:
-                    wol_map = json.load(f)  # {str(wol_int_id): device_id_string}
-
             # ---- device_group_mappings ----
             if _table_exists("device_group_mappings"):
                 cols = [
