@@ -47,7 +47,12 @@ export default defineConfig(({ mode }) => {
           // 注意：不要把 react 单独拆成 react-vendor —— 那样 react-ecosystem
           // (react-router/zustand/lucide) 与 react 分属不同 chunk 会形成循环依赖，
           // 导致 React 未初始化（Cannot read 'useState'）白屏。react 与运行时依赖
-          // 统一留在 vendor；仅把体积大且单向依赖的 antd / recharts 抽成独立 chunk。
+          // 统一留在 vendor；仅把体积大且单向依赖的 recharts 抽成独立 chunk。
+          // antd 处理（M13 后 antd 仅被 ImportConfigManagement / SemesterReport 两个懒加载页引用）：
+          //   - 不能强制整包进 'antd'（manualChunks 阻止 tree-shake，产生 785KB 全量 chunk）；
+          //   - 也不能落入 'vendor' 兜底（会把 antd 全量拖进首屏 vendor，污染首屏 190KB→436KB）；
+          //   - 返回 undefined 交给 rollup 自动分包 → antd 模块进入仅被懒加载页引用的共享 chunk，
+          //     首屏不加载，页面级才拉取（且可按需 tree-shake）。
           manualChunks(id: string) {
             if (!id.includes('node_modules')) return undefined;
             if (
@@ -65,7 +70,7 @@ export default defineConfig(({ mode }) => {
               id.includes('/rc-') ||
               id.includes('rc-util')
             ) {
-              return 'antd';
+              return undefined; // 自动分包到页面级共享 chunk
             }
             return 'vendor';
           },

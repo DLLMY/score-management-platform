@@ -98,34 +98,6 @@ export function useUndoRedo(options: UseUndoRedoOptions = {}) {
   };
 }
 
-interface ConfirmDialogOptions {
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  type?: 'info' | 'warning' | 'danger' | 'success';
-  onConfirm: () => void | Promise<void>;
-  onCancel?: () => void;
-}
-
-export function useConfirmDialog() {
-  const [dialog, setDialog] = useState<ConfirmDialogOptions | null>(null);
-
-  const show = useCallback((options: ConfirmDialogOptions) => {
-    setDialog(options);
-  }, []);
-
-  const cancel = useCallback(() => {
-    dialog?.onCancel?.();
-    setDialog(null);
-  }, [dialog]);
-
-  return {
-    show,
-    cancel,
-  };
-}
-
 interface ToastNotificationProps {
   operation: Operation;
   onUndo?: () => void;

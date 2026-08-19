@@ -14,9 +14,9 @@ export type { ClassNowStatusResult, BlockScope } from './useClassNowStatus';
 export { useSplitState, useSmartSplitState } from './useSplitState';
 export { useOptimizedFetch } from './useOptimizedFetch';
 export { useForm } from './useForm';
-export { useModal, useConfirmDialog } from './useModal';
+export { useModal } from './useModal';
 export { useAutoSave } from './useAutoSave';
-export { useUndoRedo, useConfirmDialog as useConfirmDialogV2 } from './useUndoRedo';
+export { useUndoRedo } from './useUndoRedo';
 export {
   shallowEqual,
   deepEqual,

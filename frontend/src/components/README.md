@@ -13,7 +13,6 @@ components/
 ├── data-display/      # 数据展示组件
 │   ├── SearchFilter   # 搜索过滤器（带防抖）
 │   ├── SearchInput    # 搜索输入框
-│   ├── OptimizedList  # 优化列表组件
 │   ├── VirtualList    # 虚拟列表
 │   └── AnimatedList   # 动画列表
 ├── ui/                # 基础 UI 组件
@@ -98,76 +97,6 @@ import { SearchInput } from '../components';
 | debounceDelay | number | 300 | 防抖延迟(ms) |
 
 ---
-
-### OptimizedList
-
-优化的列表组件，支持分页、骨架屏、多选等功能。
-
-```tsx
-import { OptimizedList } from '../components';
-
-const columns = [
-  { key: 'name', label: '名称', width: '200px' },
-  { key: 'status', label: '状态', render: (val) => (
-    <span className={val === 'active' ? 'text-green-600' : 'text-gray-400'}>
-      {val === 'active' ? '启用' : '禁用'}
-    </span>
-  )},
-  { key: 'created_at', label: '创建时间' },
-];
-
-<OptimizedList
-  data={items}
-  columns={columns}
-  loading={loading}
-  total={total}
-  page={page}
-  pageSize={10}
-  onPageChange={setPage}
-  onEdit={handleEdit}
-  onDelete={handleDelete}
-  rowKey={(item) => item.id}
-  checkboxColumn={true}
-  selectedItems={selectedItems}
-  onSelect={handleSelect}
-/>
-```
-
-**Props**:
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| data | T[] | - | 列表数据 |
-| columns | ColumnDef[] | - | 列定义 |
-| loading | boolean | false | 加载状态 |
-| total | number | 0 | 总条数 |
-| page | number | 1 | 当前页码 |
-| pageSize | number | 10 | 每页条数 |
-| onPageChange | (page: number) => void | - | 分页回调 |
-| onEdit | (item: T) => void | - | 编辑回调 |
-| onDelete | (item: T) => void | - | 删除回调 |
-| onRowClick | (item: T) => void | - | 行点击回调 |
-| rowKey | (item: T) => string \| number | item.id | 行唯一标识 |
-| checkboxColumn | boolean | false | 是否显示复选框列 |
-| selectedItems | T[] | [] | 已选中项 |
-| onSelect | (item: T) => void | - | 选中回调 |
-| emptyMessage | string | '暂无数据' | 空状态提示 |
-| skeletonCount | number | 5 | 骨架屏数量 |
-
-**ColumnDef**:
-
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| key | keyof T | 字段名 |
-| label | string | 显示标签 |
-| render | (value, row) => ReactNode | 自定义渲染函数 |
-| className | string | 列样式类 |
-| sortable | boolean | 是否可排序 |
-| width | string | 列宽度 |
-
----
-
-## 自定义 Hook
 
 ### useForm
 
@@ -275,60 +204,6 @@ const { isOpen, data, open, close } = useModal<User>();
 
 ---
 
-### useConfirmDialog
-
-确认对话框 Hook，支持 Promise 方式调用。
-
-```tsx
-import { useConfirmDialog } from '../hooks';
-import { ConfirmDialog } from '../components';
-
-const { show, isOpen, options, confirm, cancel } = useConfirmDialog();
-
-const handleDelete = async (id: number) => {
-  const confirmed = await show({
-    title: '确认删除',
-    message: '删除后无法恢复，确定要继续吗？',
-    type: 'danger',
-    confirmText: '确认删除',
-    cancelText: '取消',
-  });
-  
-  if (confirmed) {
-    await api.delete(id);
-  }
-};
-
-<ConfirmDialog
-  isOpen={isOpen}
-  {...options}
-  onConfirm={confirm}
-  onCancel={cancel}
-/>
-```
-
-**返回值**:
-
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| show | (options) => Promise<boolean> | 显示对话框 |
-| isOpen | boolean | 是否打开 |
-| options | ConfirmDialogOptions | 对话框选项 |
-| confirm | () => void | 确认回调 |
-| cancel | () => void | 取消回调 |
-
-**ConfirmDialogOptions**:
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| title | string | - | 标题 |
-| message | string | - | 提示消息 |
-| confirmText | string | '确定' | 确认按钮文字 |
-| cancelText | string | '取消' | 取消按钮文字 |
-| type | 'danger' \| 'warning' \| 'info' \| 'success' | 'info' | 类型 |
-
----
-
 ### useOptimizedFetch
 
 优化的数据获取 Hook，支持防抖、请求取消和缓存。
@@ -388,7 +263,7 @@ return <UserList data={data} />;
 1. **组件记忆化**: 对接收对象/数组 props 的组件使用 `memo`
 2. **回调函数**: 使用 `useCallback` 包装传递给子组件的回调
 3. **计算属性**: 使用 `useMemo` 缓存复杂计算结果
-4. **列表渲染**: 使用 `OptimizedList` 或 `VirtualList` 处理大数据量
+4. **列表渲染**: 使用 `DataTable`（内置 VirtualList，≥200 行自动虚拟滚动）处理大数据量
 
 ### 命名规范
 
@@ -410,8 +285,8 @@ return <UserList data={data} />;
 
 ### v1.0.0
 - 初始版本发布
-- 包含 SearchFilter、SearchInput、OptimizedList 组件
-- 包含 useForm、useModal、useConfirmDialog、useOptimizedFetch Hook
+- 包含 SearchFilter、SearchInput 组件
+- 包含 useForm、useModal、useOptimizedFetch Hook
 
 ---
 

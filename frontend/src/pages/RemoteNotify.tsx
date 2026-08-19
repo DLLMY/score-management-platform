@@ -1764,33 +1764,34 @@ function RemoteNotify() {
 
                   {previewConfirm.expanded && (
                     <div className='mt-3 border-t border-gray-100 dark:border-slate-700 pt-3'>
-                      <table className='w-full text-sm'>
-                        <thead>
-                          <tr className='text-left text-xs text-gray-500 dark:text-slate-400'>
-                            <th className='py-1 pr-2 font-medium'>设备ID</th>
-                            <th className='py-1 pr-2 font-medium'>班级</th>
-                            <th className='py-1 font-medium'>最近心跳</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {previewConfirm.preview.online_sample.map((item) => (
-                            <tr
-                              key={item.device_id}
-                              className='border-t border-gray-50 dark:border-slate-700/60'
-                            >
-                              <td className='py-1.5 pr-2 font-mono text-xs text-gray-700 dark:text-slate-300'>
-                                {item.device_id}
-                              </td>
-                              <td className='py-1.5 pr-2 text-xs text-gray-600 dark:text-slate-400'>
-                                {item.class_name || '—'}
-                              </td>
-                              <td className='py-1.5 text-xs text-gray-500 dark:text-slate-400'>
-                                {formatLastSeen(item.last_seen)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      {/* M1 规范：小名单用 div 网格而非原生 table */}
+                      <div className='grid grid-cols-12 gap-2 text-xs'>
+                        <div className='col-span-4 font-medium text-gray-500 dark:text-slate-400'>
+                          设备ID
+                        </div>
+                        <div className='col-span-3 font-medium text-gray-500 dark:text-slate-400'>
+                          班级
+                        </div>
+                        <div className='col-span-5 font-medium text-gray-500 dark:text-slate-400'>
+                          最近心跳
+                        </div>
+                      </div>
+                      {previewConfirm.preview.online_sample.map((item) => (
+                        <div
+                          key={item.device_id}
+                          className='grid grid-cols-12 gap-2 border-t border-gray-50 py-1.5 text-xs dark:border-slate-700/60'
+                        >
+                          <div className='col-span-4 truncate font-mono text-gray-700 dark:text-slate-300'>
+                            {item.device_id}
+                          </div>
+                          <div className='col-span-3 truncate text-gray-600 dark:text-slate-400'>
+                            {item.class_name || '—'}
+                          </div>
+                          <div className='col-span-5 truncate text-gray-500 dark:text-slate-400'>
+                            {formatLastSeen(item.last_seen)}
+                          </div>
+                        </div>
+                      ))}
                       <p className='mt-2 text-xs text-gray-400 dark:text-slate-500'>
                         仅显示最近活跃前 20 台
                       </p>
