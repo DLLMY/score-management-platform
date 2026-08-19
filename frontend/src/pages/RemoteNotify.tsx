@@ -26,8 +26,14 @@ import {
   Pause,
   Filter,
   Trash,
+  X,
 } from 'lucide-react';
-import api, { NotifyTemplate, ScheduledNotify, NotifyHistory } from '../services/api';
+import api, {
+  NotifyTemplate,
+  ScheduledNotify,
+  NotifyHistory,
+  RemoteNotifyPreview,
+} from '../services/api';
 import { useForm, useModal, useClassNowStatus } from '../hooks';
 import { useAutoSave } from '../hooks/useAutoSave';
 import type { BlockScope } from '../hooks';
@@ -52,6 +58,36 @@ interface NotifyForm {
 }
 
 type NotifyMode = 'broadcast' | 'device' | 'test' | 'score_change';
+
+// M6: 立即发送的实际载荷（device/broadcast 共用）
+interface NotifyPayload {
+  text: string;
+  volume?: number;
+  speak: boolean;
+  popup: boolean;
+  timeout_sec: number;
+  urgent: boolean;
+  force_send: boolean;
+}
+
+// M6: 发送前预览确认弹窗状态（防误发）
+interface PreviewConfirmState {
+  open: boolean;
+  kind: 'broadcast' | 'device';
+  deviceId?: string;
+  notifyData: NotifyPayload;
+  /** preview 获取失败时为 null（弹窗仍展示，但不含名单） */
+  preview: RemoteNotifyPreview | null;
+  expanded: boolean;
+}
+
+// M6: 最近心跳时间本地化展示
+function formatLastSeen(value: string | null): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
 
 interface ScoreChangeForm {
   student_name: string;
@@ -197,6 +233,8 @@ function RemoteNotify() {
   // 强制发送开关（受 notification.force_send 权限门控，仅超管可见复选框）
   const [forceSend, setForceSend] = useState(false);
   const [scheduledForceSend, setScheduledForceSend] = useState(false);
+  // M6: 发送前预览确认弹窗（null=关闭）
+  const [previewConfirm, setPreviewConfirm] = useState<PreviewConfirmState | null>(null);
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -469,6 +507,60 @@ function RemoteNotify() {
     }
   }, [loadHistoryData, loadHistoryStats, showToast]);
 
+  // M6: 实际发送（broadcast/device 专用）。预览确认弹窗确认后调用；失败弹 [重试]/[关闭]，重试复用同一 notifyData 直接重发（不再弹预览）
+  const performSend = useCallback(
+    async (notifyData: NotifyPayload, kind: 'broadcast' | 'device', deviceId?: string) => {
+      setIsSending(true);
+      setLastResult(null);
+
+      const retry = (reason: string) => {
+        void confirmRef
+          .current({
+            title: '发送失败',
+            message: `发送失败：${reason}`,
+            confirmText: '重试',
+            cancelText: '关闭',
+            type: 'warning',
+          })
+          .then((ok) => {
+            if (ok) {
+              void performSend(notifyData, kind, deviceId);
+            }
+          });
+      };
+
+      try {
+        let result: unknown;
+        if (kind === 'broadcast') {
+          result = await api.remoteNotify.broadcast(notifyData);
+        } else {
+          result = await api.remoteNotify.sendToDevice(deviceId || '', notifyData);
+        }
+
+        const data = result as { success: boolean; message: string; topic: string };
+        setLastResult(data);
+
+        if (data.success) {
+          showToast('success', data.message);
+          clearDraft();
+          setForm((prev) => ({ ...prev, text: '' }));
+        } else {
+          showToast('error', data.message);
+          retry(data.message);
+        }
+      } catch (error) {
+        const errMsg = (error as Error).message || '发送失败';
+        showToast('error', errMsg);
+        setLastResult({ success: false, message: errMsg, topic: '' });
+        retry(errMsg);
+      } finally {
+        setIsSending(false);
+        checkMqttStatus();
+      }
+    },
+    [clearDraft, showToast, checkMqttStatus]
+  );
+
   const handleSubmit = useCallback(async () => {
     if (mode === 'score_change') {
       if (!scoreForm.student_name.trim()) {
@@ -493,53 +585,25 @@ function RemoteNotify() {
       return;
     }
 
-    setIsSending(true);
-    setLastResult(null);
+    if (mode === 'score_change') {
+      const scoreData = {
+        student_name: scoreForm.student_name.trim(),
+        score_change: scoreForm.score_change,
+        reason: scoreForm.reason.trim(),
+        course: scoreForm.course.trim() || undefined,
+        device_id: scoreForm.device_id.trim() || undefined,
+        force_send: forceSend,
+      };
+      setIsSending(true);
+      setLastResult(null);
+      try {
+        const result = await api.remoteNotify.scoreChange(scoreData);
+        const data = result as { success: boolean; message: string; topic: string };
+        setLastResult(data);
 
-    try {
-      let result: unknown;
-
-      if (mode === 'score_change') {
-        const scoreData = {
-          student_name: scoreForm.student_name.trim(),
-          score_change: scoreForm.score_change,
-          reason: scoreForm.reason.trim(),
-          course: scoreForm.course.trim() || undefined,
-          device_id: scoreForm.device_id.trim() || undefined,
-          force_send: forceSend,
-        };
-        result = await api.remoteNotify.scoreChange(scoreData);
-      } else {
-        const notifyData = {
-          text: form.text.trim(),
-          volume: form.speak ? form.volume : undefined,
-          speak: form.speak,
-          popup: form.popup,
-          timeout_sec: form.timeout_sec,
-          urgent: form.urgent,
-          force_send: forceSend,
-        };
-
-        switch (mode) {
-          case 'broadcast':
-            result = await api.remoteNotify.broadcast(notifyData);
-            break;
-          case 'device':
-            result = await api.remoteNotify.sendToDevice(form.device_id.trim(), notifyData);
-            break;
-          case 'test':
-            result = await api.remoteNotify.test({ force_send: forceSend });
-            break;
-        }
-      }
-
-      const data = result as { success: boolean; message: string; topic: string };
-      setLastResult(data);
-
-      if (data.success) {
-        showToast('success', data.message);
-        clearDraft();
-        if (mode === 'score_change') {
+        if (data.success) {
+          showToast('success', data.message);
+          clearDraft();
           setScoreForm({
             student_name: '',
             score_change: 0,
@@ -547,9 +611,60 @@ function RemoteNotify() {
             course: '',
             device_id: '',
           });
-        } else if (mode !== 'test') {
-          setForm((prev) => ({ ...prev, text: '' }));
+        } else {
+          showToast('error', data.message);
         }
+      } catch (error) {
+        const errMsg = (error as Error).message || '发送失败';
+        showToast('error', errMsg);
+        setLastResult({ success: false, message: errMsg, topic: '' });
+      } finally {
+        setIsSending(false);
+        checkMqttStatus();
+      }
+      return;
+    }
+
+    const notifyData: NotifyPayload = {
+      text: form.text.trim(),
+      volume: form.speak ? form.volume : undefined,
+      speak: form.speak,
+      popup: form.popup,
+      timeout_sec: form.timeout_sec,
+      urgent: form.urgent,
+      force_send: forceSend,
+    };
+
+    // M6: device/broadcast 发送前先获取在线预览（防误发）；失败静默降级，确认弹窗仍展示但不含名单
+    if (mode === 'broadcast' || mode === 'device') {
+      let preview: RemoteNotifyPreview | null = null;
+      try {
+        preview = await api.remoteNotify.preview();
+      } catch (error) {
+        logger.warn('发送前在线预览获取失败，将展示不含名单的确认弹窗:', error);
+      }
+      setPreviewConfirm({
+        open: true,
+        kind: mode,
+        deviceId: mode === 'device' ? form.device_id.trim() : undefined,
+        notifyData,
+        preview,
+        expanded: false,
+      });
+      return;
+    }
+
+    // mode === 'test'
+    setIsSending(true);
+    setLastResult(null);
+    try {
+      const result = await api.remoteNotify.test({ force_send: forceSend });
+      const data = result as { success: boolean; message: string; topic: string };
+      setLastResult(data);
+
+      if (data.success) {
+        showToast('success', data.message);
+        clearDraft();
       } else {
         showToast('error', data.message);
       }
@@ -561,7 +676,7 @@ function RemoteNotify() {
       setIsSending(false);
       checkMqttStatus();
     }
-  }, [form, mode, showToast, checkMqttStatus, scoreForm, clearDraft]);
+  }, [form, mode, showToast, checkMqttStatus, scoreForm, clearDraft, forceSend]);
 
   const handleReset = useCallback(() => {
     setForm({
@@ -1592,6 +1707,129 @@ function RemoteNotify() {
           </div>
         </div>
       </div>
+
+      {/* M6: 发送前预览确认弹窗（防误发；preview 失败时不含名单仍可发送） */}
+      {previewConfirm?.open && (
+        <div
+          className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
+          onClick={() => setPreviewConfirm((p) => (p ? { ...p, open: false } : p))}
+        >
+          <div
+            className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg mx-auto flex flex-col'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className='flex items-center justify-between border-b border-gray-100 dark:border-slate-700 px-6 py-4'>
+              <h3 className='text-lg font-semibold text-gray-800 dark:text-white'>确认发送通知</h3>
+              <button
+                onClick={() => setPreviewConfirm((p) => (p ? { ...p, open: false } : p))}
+                className='rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
+                aria-label='关闭'
+              >
+                <X className='h-5 w-5' />
+              </button>
+            </div>
+
+            <div className='px-6 py-4 space-y-3 overflow-y-auto max-h-[60vh]'>
+              <p className='text-sm text-gray-700 dark:text-slate-300'>
+                将发送到{' '}
+                <span className='font-semibold'>
+                  {previewConfirm.kind === 'broadcast'
+                    ? '全部设备（广播）'
+                    : `设备 ${previewConfirm.deviceId}`}
+                </span>
+              </p>
+
+              {previewConfirm.preview ? (
+                <div className='rounded-xl border border-gray-200 dark:border-slate-600 p-4'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <p className='text-sm text-gray-700 dark:text-slate-300'>
+                      设备总数{' '}
+                      <span className='font-semibold'>{previewConfirm.preview.total_devices}</span>{' '}
+                      台 · 当前在线{' '}
+                      <span className='font-semibold'>{previewConfirm.preview.online_count}</span> 台
+                      （{previewConfirm.preview.cutoff_minutes} 分钟内心跳）
+                    </p>
+                    {previewConfirm.preview.online_count > 0 &&
+                      previewConfirm.preview.online_sample.length > 0 && (
+                        <button
+                          onClick={() =>
+                            setPreviewConfirm((p) => (p ? { ...p, expanded: !p.expanded } : p))
+                          }
+                          className='shrink-0 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline'
+                        >
+                          {previewConfirm.expanded ? '收起名单' : '展开名单'}
+                        </button>
+                      )}
+                  </div>
+
+                  {previewConfirm.expanded && (
+                    <div className='mt-3 border-t border-gray-100 dark:border-slate-700 pt-3'>
+                      <table className='w-full text-sm'>
+                        <thead>
+                          <tr className='text-left text-xs text-gray-500 dark:text-slate-400'>
+                            <th className='py-1 pr-2 font-medium'>设备ID</th>
+                            <th className='py-1 pr-2 font-medium'>班级</th>
+                            <th className='py-1 font-medium'>最近心跳</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewConfirm.preview.online_sample.map((item) => (
+                            <tr
+                              key={item.device_id}
+                              className='border-t border-gray-50 dark:border-slate-700/60'
+                            >
+                              <td className='py-1.5 pr-2 font-mono text-xs text-gray-700 dark:text-slate-300'>
+                                {item.device_id}
+                              </td>
+                              <td className='py-1.5 pr-2 text-xs text-gray-600 dark:text-slate-400'>
+                                {item.class_name || '—'}
+                              </td>
+                              <td className='py-1.5 text-xs text-gray-500 dark:text-slate-400'>
+                                {formatLastSeen(item.last_seen)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className='mt-2 text-xs text-gray-400 dark:text-slate-500'>
+                        仅显示最近活跃前 20 台
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className='text-sm text-gray-400 dark:text-slate-500'>
+                  （在线预览暂不可用，仍可发送）
+                </p>
+              )}
+
+              <p className='text-xs text-amber-600 dark:text-amber-400'>
+                上课时间可能被系统拦截，可在选项勾选强制发送
+              </p>
+            </div>
+
+            <div className='flex justify-end gap-3 border-t border-gray-100 dark:border-slate-700 px-6 py-4'>
+              <button
+                onClick={() => setPreviewConfirm((p) => (p ? { ...p, open: false } : p))}
+                className='rounded-lg border border-gray-200 dark:border-slate-600 px-4 py-2 text-sm font-medium text-gray-600 dark:text-slate-300 transition-colors hover:bg-gray-50 dark:hover:bg-slate-700'
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  const pc = previewConfirm;
+                  setPreviewConfirm(null);
+                  void performSend(pc.notifyData, pc.kind, pc.deviceId);
+                }}
+                disabled={isSending}
+                className='rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:opacity-60'
+              >
+                确认发送
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 模板编辑弹窗 */}
       {showTemplateModal && (

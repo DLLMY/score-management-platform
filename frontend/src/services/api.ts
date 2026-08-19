@@ -1524,6 +1524,21 @@ export interface NotifyHistory {
   created_at?: string;
 }
 
+/** 发送前预览名单中的单个设备（最近活跃设备采样） */
+export interface RemoteNotifyPreviewSample {
+  device_id: string;
+  class_name: string | null;
+  last_seen: string | null;
+}
+
+/** GET /api/remote_notify/preview 返回的在线预览（发送前防误发） */
+export interface RemoteNotifyPreview {
+  total_devices: number;
+  online_count: number;
+  online_sample: RemoteNotifyPreviewSample[];
+  cutoff_minutes: number;
+}
+
 export interface Firmware {
   id: number;
   version: string;
@@ -2054,6 +2069,8 @@ export interface Api {
     exportClassSemester: (classId: number, format?: 'excel' | 'csv') => Promise<void>;
   };
   remoteNotify: {
+    /** 发送前在线预览（设备总数 / 在线数 / 最近活跃前 20 台），失败不阻塞发送 */
+    preview: () => Promise<RemoteNotifyPreview>;
     send: (data: {
       text: string;
       volume?: number;
@@ -4720,6 +4737,11 @@ const api: Api = {
     },
   },
   remoteNotify: {
+    preview: () =>
+      request('/api/remote_notify/preview', {
+        method: 'GET',
+        skipCache: true,
+      }) as Promise<RemoteNotifyPreview>,
     send: (data) =>
       request('/api/remote_notify/send', {
         method: 'POST',

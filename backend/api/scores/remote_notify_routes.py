@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from services.mqtt_service import publish_mqtt
 from services.class_time_checker import ClassTimeChecker
 from utils.permission import requires_permission, has_permission
+from utils.response import APIResponse
 from models import Device
 from flask import g
 from datetime import datetime
@@ -127,6 +128,49 @@ def _log_force(audit_type, target_class_info_id, payload, note):
     ClassTimeChecker.log_notify_audit(
         audit_type, target_class_info_id, admin_id, payload or {}, "FORCE", note, force_send=True
     )
+
+
+@ns_remote_notify.route("/preview")
+class RemoteNotifyPreview(Resource):
+
+    @ns_remote_notify.doc(
+        "remote_notify_preview",
+        description="发送前预览（防误发）：设备总数 / 在线数 / 最近活跃名单",
+    )
+    @requires_permission("notification.send")
+    def get(self):
+        """发送前预览：设备总数、在线数（last_heartbeat 5 分钟内且 is_active）、最近活跃前 20 台。"""
+        import datetime as _dt
+
+        now = _dt.datetime.now()
+        cutoff = now - _dt.timedelta(minutes=5)
+
+        devices = Device.query.all()
+        total = len(devices)
+        online = [
+            d
+            for d in devices
+            if d.is_active and d.last_heartbeat is not None and d.last_heartbeat >= cutoff
+        ]
+        online_sample = [
+            {
+                "device_id": d.device_id,
+                "class_name": d.class_info.name if d.class_info else None,
+                "last_seen": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+            }
+            for d in sorted(
+                online, key=lambda x: x.last_heartbeat or _dt.datetime.min, reverse=True
+            )[:20]
+        ]
+        return APIResponse.success(
+            data={
+                "total_devices": total,
+                "online_count": len(online),
+                "online_sample": online_sample,
+                "cutoff_minutes": 5,
+            },
+            message="预览成功",
+        )
 
 
 @ns_remote_notify.route("/send")
