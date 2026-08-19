@@ -2,11 +2,12 @@
 # ============================================================
 # 一键回归检查（改后端端点 / 权限 / 文档后必跑）
 # ------------------------------------------------------------
-# 串起三套契约保障 + 关键路由测试：
+# 串起四套契约保障 + 关键路由测试 + 索引闸门：
 #   1. RBAC 一致性校验（check-only，漂移即失败）
 #   2. OpenAPI 契约漂移校验（需后端 5000 已启动，否则跳过）
 #   3. 后端契约测试 test_api_envelope（0 5xx + shape 快照）
 #   4. 关键业务路由 pytest（rules / export / notify / classes）
+#   5. 核心索引完整性校验（M11，防新环境漏跑 create_indexes）
 #
 # 用法（项目根目录）：
 #   bash scripts/run_regression.sh          # 后端回归（需系统 Python 3.11）
@@ -49,7 +50,7 @@ else
   echo "[失败] 契约测试存在 5xx / shape 违规"; FAILED=1
 fi
 
-step "4/4 关键业务路由测试"
+step "4/5 关键业务路由测试"
 if "$PY" -m pytest tests/test_rules_routes.py tests/test_export_routes.py \
       tests/test_notify_history_routes.py tests/test_classes_routes.py \
       -p no:locust --timeout=300 -q; then
@@ -58,15 +59,22 @@ else
   echo "[失败] 关键路由测试"; FAILED=1
 fi
 
+step "5/5 核心索引完整性校验（M11 索引闸门）"
+if "$PY" scripts/verify_indexes.py; then
+  echo "[OK] 核心索引齐全"
+else
+  echo "[失败] 缺失核心索引（新环境漏跑 create_indexes 会静默全表扫描）"; FAILED=1
+fi
+
 if [ "$1" = "--full" ]; then
   cd "$ROOT/frontend"
-  step "5/6 前端单测（vitest，jsdom 无需后端）"
+  step "6/7 前端单测（vitest，jsdom 无需后端）"
   if npm test; then
     echo "[OK] 前端单测通过"
   else
     echo "[失败] 前端单测"; FAILED=1
   fi
-  step "6/6 前端 e2e 冒烟（需后端 5000 + 前端 3000）"
+  step "7/7 前端 e2e 冒烟（需后端 5000 + 前端 3000）"
   if npm run test:e2e -- --project=chrome smoke.spec.ts; then
     echo "[OK] 前端冒烟通过"
   else

@@ -7,9 +7,9 @@
 
 ## 已知架构裂缝（第七次评估确认，待路线图消化）
 - **~~前端组件库与页面脱节~~ ✅ M1 已闭环（2026-08-19）**：统一 `DataTable` 落地，24/56 页已迁移；原生 `<table>` 36→2（测试断言/Excel 字符串假阳性）；`window.confirm` 56→1（仅 ConfirmDialog 兜底）；OptimizedList + 旧 useConfirmDialog（state-only 半成品）死代码已删除。
-- **221 个索引靠手动脚本**：`backend/scripts/create_indexes.py` 无任何启动/部署调用 → 新环境漏跑则索引全失且闸门不报警。改幂等 + 启动校验 + `verify_indexes.py` 纳入 run_regression.sh。
+- **~~221 个索引靠手动脚本~~ ✅ M11 已闭环（2026-08-19）**：`create_indexes.py` 重构共享清单+`verify_indexes()`+`--verify`；新 `verify_indexes.py` 纳入 run_regression.sh 第 5 步；启动时 `init_index_check` 抽查核心索引告警。**曾修复脚本失效 import**（from app import app, db → from models import db——脚本从未被调用早已 ImportError）；开发库实际缺 2 个 alert 索引已补建。
 - **~~错误文案链路~~ ✅ M2 已闭环（2026-08-19）**：前端 `getErrorMessage` 优先级反转（error_code 文案表 → 业务 message 透传 → 技术报错屏蔽+HTTP 兜底，TECHNICAL_ERROR_PATTERNS 启发式）；后端 `api/` 响应内 `str(e)` 210→1（仅业务 ValueError 保留）。G5 --strict 461/461 零漂移。**改响应 message 的批改脚本须注意多行 import 会把 logger 插进括号（SyntaxError 崩热重载），必须全量 py_compile。**
-- **~~性能保护缺口~~ ✅ M9 已闭环（2026-08-19）**：`utils/pagination.py::get_pagination` 统一分页（max=200，api/ 43 处全替换，上限保护 26%→100%）；`@cached_api` 12→**96 处**（列表 ttl=30/聚合 60，强一致单条不加）；**修复 invalidate_cache 前缀重复拼接 bug**（曾拼 `api:api:/api/*` 导致按前缀失效永不命中），现传 `/api/<域>/*` 或 `api:/api/<域>/*` 均正确。剩余：NLP 推理 HTTP 线程同步（M10）、MQTT 连接超时阻塞启动（M10）、索引闸门（M11）。
+- **~~性能保护缺口~~ ✅ M9/M10 已闭环（2026-08-19）**：M9 分页上限 100% + 缓存 96 处 + 失效精准化（见下）；**M10 冷启动 55s→16s**（NLP 预热后台化 + torch 链懒加载：`nlp_routes` 的 `_get_parser`/`_get_ml_service` 函数内 import，`nlp_ml_service` import 23.7s 移出路由注册；MQTT 等待 15s→5s）；NLP 推理并发闸门 Semaphore(4)+`inference_slot_guard` 503 繁忙。
 - 交互统一：~~`window.confirm` 56 处~~ ✅ 全部换 `useConfirm`；~~`useAutoSave`/`useSubmitGuard` 仅 1–2 页~~ ✅ **M3 已闭环（2026-08-19）**：useAutoSave 加 draftAvailable+beforeunload 拦截，ScoreEntry/ExamManagement/AttendanceManage/RemoteNotify 四录入页草稿+恢复条（成绩录入刷新可恢复）；useSubmitGuard 推广 13 页。
 
 ## M1 DataTable 约定（✅ 已完成，2026-08-19）

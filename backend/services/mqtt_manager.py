@@ -762,7 +762,10 @@ class MQTTManager:
             traceback.print_exc()
             return None
 
-        timeout = cfg.get("timeout", 15)
+        # M10: 连接确认等待上限收紧到 5s——connect_async + loop_start 已自带
+        # paho 自动重连（reconnect_delay 1-30s），无需在调用线程同步等待太久；
+        # 过长等待会拖慢 MQTT 就绪（tcp+ws 串行最坏曾达 15s+）。
+        timeout = min(cfg.get("timeout", 15), 5)
         for i in range(timeout * 10):
             time.sleep(0.1)
             if i % 10 == 0:

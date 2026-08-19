@@ -20,6 +20,51 @@ def init_services(app, lightweight=False):
         init_websocket(app)
         init_notification_config(app)
         init_system_metric_sampler(app)
+        init_index_check(app)
+
+
+def init_index_check(app):
+    """M11: 启动时校验核心索引存在，缺失打印醒目告警（防新环境漏跑索引脚本导致静默全表扫描）。
+
+    清单与 scripts/create_indexes.py::get_all_indexes 同步维护（此处仅抽查最关键的子集，
+    完整校验走闸门 scripts/verify_indexes.py）。
+    """
+    try:
+        from models import db
+
+        inspector = db.inspect(db.engine)
+        core_indexes = {
+            "user": ["ix_user_card_id_is_active", "ix_user_created_at"],
+            "score_record": ["ix_score_record_created_desc", "ix_score_record_user_created"],
+            "score": ["ix_score_exam_student"],
+            "operation_log": ["ix_log_created_desc", "ix_log_operation_type"],
+            "alert": ["ix_alert_created_desc"],
+            "device": ["ix_device_last_heartbeat"],
+            "exam": ["ix_exam_start_time"],
+            "notification": ["ix_notification_user_status"],
+            "approval": ["ix_approval_status_type"],
+            "device_heartbeat": ["ix_heartbeat_received_at"],
+        }
+        missing = []
+        for table_name, index_names in core_indexes.items():
+            try:
+                existing = {idx["name"] for idx in inspector.get_indexes(table_name)}
+            except Exception:
+                existing = set()
+            for index_name in index_names:
+                if index_name not in existing:
+                    missing.append(f"{table_name}.{index_name}")
+        if missing:
+            print(
+                f"[索引告警] 缺失 {len(missing)} 个核心索引（新环境可能漏跑索引脚本）: "
+                + ", ".join(missing),
+                flush=True,
+            )
+            print("[索引告警] 请运行: python scripts/create_indexes.py --create", flush=True)
+        else:
+            print("[启动检查] 核心索引 OK", flush=True)
+    except Exception as e:
+        print(f"[索引检查] 跳过（{e}）", flush=True)
 
 
 def init_redis_cache(app):
@@ -242,20 +287,22 @@ def init_nlp_service(app):
 
         nlp_service = get_nlp_service()
         nlp_service.initialize(flask_app=app)
-        nlp_service.warmup()
+        # M10: 预热移出启动路径 → 后台 daemon 线程（BERT/jieba 加载不阻塞主进程就绪，
+        # 冷启动 55s → <25s；首个请求若早于预热完成会触发懒加载，属可接受的一次性代价）
+        nlp_service.async_warmup()
         app.nlp_service = nlp_service
 
-        # 预加载 NLP 解析器：/api/nlp/execute 走 get_nlp_parser()，其模块链
-        # (nlp_ml_service 的 torch/sklearn/jieba) 若在首个请求时才 import，
-        # 重型导入可超前端 30s 超时阈值(504)。启动期加载把冷代价移到 boot，
-        # 避免首个评分请求卡死；失败不影响主流程(首个请求将退回懒加载)。
-        try:
-            from services.nlp_enhanced_service import get_nlp_parser
+        # M10: 解析器（torch/sklearn/jieba 模块链）预加载也放后台线程，避免重型 import 拖慢启动
+        def _preload_parser():
+            try:
+                from services.nlp_enhanced_service import get_nlp_parser
 
-            get_nlp_parser()
-            print("NLP 解析器预加载完成")
-        except Exception as e:
-            print(f"NLP 解析器预加载失败(首个请求将懒加载): {e}")
+                get_nlp_parser()
+                print("NLP 解析器预加载完成")
+            except Exception as e:
+                print(f"NLP 解析器预加载失败(首个请求将懒加载): {e}")
+
+        threading.Thread(target=_preload_parser, daemon=True).start()
 
         print("NLP服务初始化完成")
     except Exception as e:

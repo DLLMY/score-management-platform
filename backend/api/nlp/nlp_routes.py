@@ -3,12 +3,11 @@ import time
 import json
 import traceback
 import logging
+import threading
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
 from utils.pagination import get_pagination
-from services.nlp_enhanced_service import get_nlp_parser
 from services.nlp_rule_service import NLPRuleManagementService
-from services.nlp_ml_service import NLPMLTrainingService
 from services.nlp_analyzer_service import nlp_analyzer, AlgorithmBenchmark
 from services.nlp_optimizer import get_nlp_optimizer, warmup_nlp
 from config.nlp_algorithm import nlp_optimizer, OptimizationStrategy, get_optimizer
@@ -27,6 +26,55 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 ns_nlp = Namespace("nlp", description="NLP智能评分规则管理")
+
+# M10: NLP 推理并发闸门——BERT/jieba 推理是 CPU/内存重型操作，无限制并发会占满
+# HTTP worker（报告 PF6）。同一时刻最多 MAX_INFERENCE_CONCURRENCY 个推理在跑，
+# 超出直接返回 503（"推理服务繁忙"），前端已有重试/友好提示。获取信号量须在
+# 线程锁内（acquire(blocking=False) 失败立即释放，避免计数器泄漏）。
+MAX_INFERENCE_CONCURRENCY = 4
+_inference_semaphore = threading.BoundedSemaphore(MAX_INFERENCE_CONCURRENCY)
+
+
+def _get_parser():
+    """M10: 延迟加载 NLP 解析器（torch 链约 22s，首次调用时才导入，避免拖慢启动）"""
+    from services.nlp_enhanced_service import get_nlp_parser
+
+    return get_nlp_parser()
+
+
+def _get_ml_service():
+    """M10: 延迟加载 NLP ML 服务（torch 链约 24s，首次调用时才导入，避免拖慢启动）"""
+    from services.nlp_ml_service import NLPMLTrainingService
+
+    return NLPMLTrainingService()
+
+
+def _acquire_inference_slot():
+    """尝试获取推理槽位；成功返回释放函数，繁忙返回 None。"""
+    if _inference_semaphore.acquire(blocking=False):
+        return _inference_semaphore.release
+    return None
+
+
+def inference_slot_guard(f):
+    """推理端点装饰器：槽位繁忙时立即返回 503，不排队占满 worker。"""
+    from functools import wraps
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        release = _acquire_inference_slot()
+        if release is None:
+            return APIResponse.error(
+                message="推理服务繁忙，请稍后重试",
+                error_code="INFERENCE_BUSY",
+                status_code=503,
+            )
+        try:
+            return f(*args, **kwargs)
+        finally:
+            release()
+
+    return wrapper
 
 
 def get_context_memory():
@@ -166,6 +214,7 @@ class NLPParse(Resource):
     @ns_nlp.expect(parse_input_model)
     @ns_nlp.response(200, "成功", parse_output_model)
     @requires_permission("score.entry")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         text = data.get("text", "")
@@ -174,7 +223,7 @@ class NLPParse(Resource):
             return APIResponse.error(message="输入文本不能为空")
 
         optimizer = get_nlp_optimizer()
-        parser = get_nlp_parser()
+        parser = _get_parser()
         context_memory = get_context_memory()
 
         result = optimizer.parse_with_cache(
@@ -190,6 +239,7 @@ class NLPExecute(Resource):
     @ns_nlp.doc("nlp_execute", description="执行评分")
     @ns_nlp.expect(execute_input_model)
     @requires_permission("score.entry")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         text = data.get("text", "")
@@ -198,7 +248,7 @@ class NLPExecute(Resource):
         if not text:
             return APIResponse.error(message="输入文本不能为空")
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         context_memory = get_context_memory()
         result = parser.execute_scoring(
             text, manual_correction, context_history=context_memory
@@ -246,6 +296,7 @@ class NLPPBatchParse(Resource):
 
     @ns_nlp.doc("nlp_batch_parse", description="批量解析自然语言文本")
     @requires_permission("score.entry")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         texts = data.get("texts", [])
@@ -254,7 +305,7 @@ class NLPPBatchParse(Resource):
             return APIResponse.error(message="文本列表不能为空")
 
         optimizer = get_nlp_optimizer()
-        parser = get_nlp_parser()
+        parser = _get_parser()
 
         results = optimizer.batch_parse(texts, lambda t: parser.parse(t))
 
@@ -267,6 +318,7 @@ class NLPSentiment(Resource):
     @ns_nlp.doc("nlp_sentiment", description="情感分析")
     @ns_nlp.expect(parse_input_model)
     @requires_permission("algorithm.view")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         text = data.get("text", "")
@@ -274,7 +326,7 @@ class NLPSentiment(Resource):
         if not text:
             return APIResponse.error(message="输入文本不能为空")
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         result = parser.analyze_sentiment(text)  # noqa: F841
 
         return APIResponse.success(data=result, message="success")
@@ -449,7 +501,7 @@ class NLPModelTrain(Resource):
         use_hyperparameter_tuning = data.get("use_hyperparameter_tuning", False)
         tuning_method = data.get("tuning_method", "random")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.train(
             algorithm, trained_by, use_cross_validation, use_hyperparameter_tuning, tuning_method
         )  # noqa: F841
@@ -469,7 +521,7 @@ class NLPModelTrainAll(Resource):
         data = request.get_json()
         trained_by = data.get("trained_by")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.train_all(trained_by)  # noqa: F841
 
         if result["success"]:
@@ -485,7 +537,7 @@ class NLPModelAlgorithms(Resource):
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
     def get(self):
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         algorithms = ml_service.get_available_algorithms()
 
         return APIResponse.success(data=algorithms, message="获取成功")
@@ -497,7 +549,7 @@ class NLPModelEvaluateAll(Resource):
     @ns_nlp.doc("nlp_evaluate_all_models", description="评估所有算法性能")
     @requires_permission("algorithm.view")
     def get(self):
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.evaluate_all()  # noqa: F841
 
         if result["success"]:
@@ -511,6 +563,7 @@ class NLPModelPredict(Resource):
 
     @ns_nlp.doc("nlp_model_predict", description="使用训练好的模型预测规则")
     @requires_permission("algorithm.view")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         text = data.get("text")
@@ -519,7 +572,7 @@ class NLPModelPredict(Resource):
         if not text:
             return APIResponse.error(message="文本不能为空")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.predict(text, algorithm)  # noqa: F841
 
         if result:
@@ -533,6 +586,7 @@ class NLPModelPredictMulti(Resource):
 
     @ns_nlp.doc("nlp_model_predict_multi", description="使用多个模型进行预测")
     @requires_permission("algorithm.view")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         text = data.get("text")
@@ -541,7 +595,7 @@ class NLPModelPredictMulti(Resource):
         if not text:
             return APIResponse.error(message="文本不能为空")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         results = ml_service.predict_with_multiple_models(text, top_n)
 
         if results:
@@ -555,6 +609,7 @@ class NLPModelEnsemblePredict(Resource):
 
     @ns_nlp.doc("nlp_model_ensemble_predict", description="使用集成模型进行预测")
     @requires_permission("algorithm.view")
+    @inference_slot_guard
     def post(self):
         data = request.get_json()
         text = data.get("text")
@@ -562,7 +617,7 @@ class NLPModelEnsemblePredict(Resource):
         if not text:
             return APIResponse.error(message="文本不能为空")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.ensemble_predict(text)  # noqa: F841
 
         if result:
@@ -655,7 +710,7 @@ class NLPModelDynamicWeightedPredict(Resource):
         if not text:
             return APIResponse.error(message="文本不能为空")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.dynamic_weighted_predict(text)  # noqa: F841
 
         if result:
@@ -677,7 +732,7 @@ class NLPModelPredictWithExplanation(Resource):
         if not text:
             return APIResponse.error(message="文本不能为空")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.predict_with_explanation(text, algorithm)  # noqa: F841
 
         if result:
@@ -703,7 +758,7 @@ class NLPModelIncrementalTrain(Resource):
         if len(texts) != len(labels):
             return APIResponse.error(message="文本和标签数量不一致")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.incremental_train(texts, labels, algorithm)  # noqa: F841
 
         if result["success"]:
@@ -725,7 +780,7 @@ class NLPModelOnlineTrain(Resource):
         if not text or label is None:
             return APIResponse.error(message="文本和标签不能为空")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.online_train(text, label)  # noqa: F841
 
         if result["success"]:
@@ -742,7 +797,7 @@ class NLPModelExplanation(Resource):
     def get(self):
         algorithm = request.args.get("algorithm")
 
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.get_model_explanation(algorithm)  # noqa: F841
 
         if result["success"]:
@@ -757,7 +812,7 @@ class NLPModelBiasAnalysis(Resource):
     @ns_nlp.doc("nlp_model_bias_analysis", description="分析模型偏差和类别分布")
     @requires_permission("algorithm.view")
     def get(self):
-        ml_service = NLPMLTrainingService()
+        ml_service = _get_ml_service()
         result = ml_service.analyze_model_bias()  # noqa: F841
 
         if result["success"]:
@@ -779,7 +834,7 @@ class NLPParseContextAware(Resource):
         if not text:
             return APIResponse.error(message="输入文本不能为空")
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         result = parser.parse(text, context_history)  # noqa: F841
 
         return APIResponse.success(data=result, message="success")
@@ -797,7 +852,7 @@ class NLPParseEntities(Resource):
         if not text:
             return APIResponse.error(message="输入文本不能为空")
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         name, _ = parser.extract_name(text)
         entities = parser.extract_entities(text, name)
 
@@ -816,7 +871,7 @@ class NLPParseMultiIntent(Resource):
         if not text:
             return APIResponse.error(message="输入文本不能为空")
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         behavior_result = parser.extract_behavior(text)
         intents = parser.multi_intent_detection(text, behavior_result)
 
@@ -837,7 +892,7 @@ class NLPParseDeepSemantic(Resource):
         if not text:
             return APIResponse.error(message="输入文本不能为空")
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         matches = parser.deep_semantic_match(text, intent, top_n)
 
         results = []
@@ -963,7 +1018,7 @@ class NLPBenchmarkIntentClassifier(Resource):
             {"text": "重置积分", "expected": "reset"},
         ]
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         classifier = parser.intent_classifier
 
         results = AlgorithmBenchmark.benchmark_intent_classifier(classifier, test_cases, iterations)
@@ -1126,7 +1181,7 @@ class NLPFeedbackRecord(Resource):
                 try:
                     from services.nlp_enhanced_service import get_nlp_parser
 
-                    parser = get_nlp_parser()
+                    parser = _get_parser()
                     if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
                         del parser._parse_cache[cache_key]
                 except Exception:
@@ -1234,7 +1289,7 @@ class NLPPerformanceMonitor(Resource):
         """
         获取实时性能监控数据
         """
-        get_nlp_parser()
+        _get_parser()
         perf = nlp_analyzer.get_performance_analysis()
 
         return APIResponse.success(
@@ -1266,7 +1321,7 @@ class NLPParseWithAnalysis(Resource):
         start_time = time.time()
         components = {}
 
-        parser = get_nlp_parser()
+        parser = _get_parser()
         context_memory = get_context_memory()
 
         # 记录各组件时间
