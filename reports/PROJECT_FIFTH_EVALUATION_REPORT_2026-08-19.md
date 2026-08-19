@@ -151,4 +151,20 @@
 
 ---
 
-**报告生成**: 2026-08-19 ｜ 分支 refactor/F17（HEAD 09fe8e1）
+## 八、修复执行结果（2026-08-19 当日闭环）
+
+评估后按用户指令**全部修复并提交**（`0952897`，已推送 refactor/F17）：
+
+- **P1 全部修复**：validation.py 三函数补 `fields` 导入；cache.py `invalidate` 改最近键闭包；batch_writer/diagnostics 补 datetime/time 导入（并修复 diagnostics 从未 import psutil 的更深缺陷）；nlp_enhanced_service 补 `corrected_pos` 赋值。修复后运行时复现全部通过。
+- **P2 全部修复**：export_routes 重复键、users_routes 重复 io、15 处 f-string、scripts 4 文件导入、test_nlp_service_comprehensive 模块级导入（从假 skip 恢复真执行）、data_sync_validation 补导入。
+- **验证**：pyflakes undefined name **50→1**（余 1 为闭包误报）、f-string 15→0、repeated 2→0；定向测试 78 passed；全量 157 文件 **0 FAILED / 0 ERROR**；G2 RBAC 68 条 OK。
+- **已知限制（记录）**：全量 pytest 会话 teardown 偶发 logging 死锁（后台 daemon 线程累积，如 nlp warmup/parser 线程），表现为 100% 后 summary 偶发缺失、用例结果不受影响；test_nlp_service_comprehensive 修复后单跑 71s（jieba 加载成本）。
+- **待排期（当日全部闭环，提交 6037dbc）**：
+  - ✅ print→logger：mqtt_manager 62 + redis_cache_service 28 处全部转 logger（error/warning/info 三级映射），144 passed 无回归
+  - ✅ backups/ 1.2G 治理（代码层）：clean_old_backups 支持数量上限 + 独立每天 3:00 清理任务 + backup 端点改读 Config.BACKUP_DIR + 两个测试 tmp_path 隔离（不再产生 backup_test）
+  - ✅ npm audit：官方 registry 跑通，11 漏洞 → 3（socket.io-client 4.8.3 / vite 6.4.3 / react-router-dom 7.18.2 / overrides socket.io-parser 4.2.7；余 3 为 dev-only 工具链）
+  - ⏳ 存量 backups/ 清理（约 1.5G）：备份文件删除为破坏性操作，待用户授权
+
+---
+
+**报告生成**: 2026-08-19 ｜ 分支 refactor/F17（HEAD 6037dbc）
