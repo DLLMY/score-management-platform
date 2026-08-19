@@ -153,6 +153,18 @@ def init_scheduler(app):
         except Exception as e:
             print(f"数据库定时备份异常: {e}")
 
+    def scheduled_cleanup_backups():
+        """独立备份保留策略清理（不依赖备份创建是否成功，防止磁盘膨胀）"""
+        try:
+            from utils.backup_utils import backup_manager
+            from config import Config
+
+            result = backup_manager.clean_old_backups(max_count=Config.BACKUP_MAX_COUNT)
+            if result["deleted_count"] > 0:
+                print(f"备份保留策略清理: 删除 {result['deleted_count']} 个旧备份")
+        except Exception as e:
+            print(f"备份保留策略清理异常: {e}")
+
     def scheduled_heartbeat_check():
         try:
             from services.heartbeat_service import check_heartbeat_timeout
@@ -168,6 +180,8 @@ def init_scheduler(app):
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(scheduled_backup, "cron", hour=2, minute=0)
+    # 备份保留策略独立于备份创建：每天 3:00 无条件清理过期/超量备份
+    scheduler.add_job(scheduled_cleanup_backups, "cron", hour=3, minute=0)
     scheduler.add_job(scheduled_heartbeat_check, "interval", seconds=30)
 
     # 补接审批超时提醒 + 定时通知任务（此前 tasks/scheduler.py 的 init_scheduler 从未被

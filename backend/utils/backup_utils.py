@@ -217,22 +217,39 @@ class BackupManager:
             return "数据备份"
         return "未知"
 
-    def clean_old_backups(self) -> Dict[str, Any]:
+    def clean_old_backups(self, max_count: int = None) -> Dict[str, Any]:
         """
         清理过期备份文件
 
+        :param max_count: 最多保留的备份数量（超出部分删除最旧的），None 表示不限制
         :return: 清理结果 {'deleted_count': int, 'message': str}
         """
         deleted_count = 0
         cutoff_date = datetime.now() - timedelta(days=self.retention_days)
 
         try:
+            # 1) 按保留天数清理
             for file in self.backup_dir.iterdir():
                 if file.is_file() and file.suffix == ".zip" and file.name.startswith("backup_"):
                     file_time = datetime.fromtimestamp(file.stat().st_ctime)
                     if file_time < cutoff_date:
                         file.unlink()
                         deleted_count += 1
+
+            # 2) 按数量上限清理（保留最新的 max_count 个，超出删除最旧）
+            if max_count is not None and max_count > 0:
+                backups = sorted(
+                    [
+                        f
+                        for f in self.backup_dir.iterdir()
+                        if f.is_file() and f.suffix == ".zip" and f.name.startswith("backup_")
+                    ],
+                    key=lambda f: f.stat().st_mtime,
+                    reverse=True,
+                )
+                for file in backups[max_count:]:
+                    file.unlink()
+                    deleted_count += 1
 
             return {
                 "success": True,

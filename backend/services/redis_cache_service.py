@@ -4,6 +4,7 @@ Redis缓存服务
 提供统一的缓存接口，支持数据缓存、分布式锁、消息队列等功能
 """
 
+import logging
 import json
 import os
 import pickle
@@ -16,6 +17,8 @@ from functools import wraps
 from typing import Any, Callable, Optional
 
 import redis
+
+logger = logging.getLogger(__name__)
 
 _warmup_completed = False
 
@@ -35,7 +38,7 @@ def _safe(default):
             try:
                 return fn(self, *args, **kwargs)
             except Exception as e:
-                print(f"Redis {fn.__name__} error (degraded): {e}")
+                logger.warning(f"Redis {fn.__name__} error (degraded): {e}")
                 return default() if callable(default) else default
 
         return wrapper
@@ -63,30 +66,30 @@ class RedisCache:
 
         # 1) 先尝试直连（Redis 可能已在本机运行）
         if self._connect(redis_url):
-            print(f"Redis connected: {redis_url}")
+            logger.info(f"Redis connected: {redis_url}")
             self._register(app)
             return
 
         # 2) 测试环境 / 未开启自动拉起 → 直接降级为内存缓存
         if app.config.get("TESTING"):
-            print("测试环境跳过 Redis 自动拉起")
+            logger.info("测试环境跳过 Redis 自动拉起")
             self.client = None
             self._register(app)
             return
         if not app.config.get("REDIS_AUTO_START", False):
-            print("REDIS_AUTO_START 未开启，使用内存缓存降级")
+            logger.warning("REDIS_AUTO_START 未开启，使用内存缓存降级")
             self.client = None
             self._register(app)
             return
 
         # 3) 自动拉起本地 Redis 子进程并重试
-        print("Redis 初始连接失败，尝试自动拉起本地 Redis ...")
+        logger.error("Redis 初始连接失败，尝试自动拉起本地 Redis ...")
         if self._try_auto_start_redis(app) and self._connect(redis_url):
-            print(f"Redis connected (auto-started): {redis_url}")
+            logger.info(f"Redis connected (auto-started): {redis_url}")
             self._register(app)
             return
 
-        print("Redis 自动拉起失败/未配置，使用内存缓存降级")
+        logger.warning("Redis 自动拉起失败/未配置，使用内存缓存降级")
         self.client = None
         self._register(app)
 
@@ -130,12 +133,12 @@ class RedisCache:
 
             host = app.config.get("REDIS_HOST", "localhost")
             if host not in ("localhost", "127.0.0.1"):
-                print("Redis 为非本地地址，跳过自动拉起")
+                logger.warning("Redis 为非本地地址，跳过自动拉起")
                 return False
 
             exe = self._resolve_redis_server_executable(app)
             if not exe:
-                print("未找到 redis-server 可执行文件，跳过自动拉起（可设置 REDIS_SERVER_COMMAND）")
+                logger.warning("未找到 redis-server 可执行文件，跳过自动拉起（可设置 REDIS_SERVER_COMMAND）")
                 return False
 
             port = int(app.config.get("REDIS_PORT", 6379))
@@ -166,9 +169,9 @@ class RedisCache:
 
             try:
                 proc = subprocess.Popen(args, **spawn_kwargs)
-                print(f"已启动 Redis 子进程 pid={proc.pid} exe={exe}")
+                logger.info(f"已启动 Redis 子进程 pid={proc.pid} exe={exe}")
             except Exception as e:
-                print(f"启动 Redis 子进程失败: {e}")
+                logger.error(f"启动 Redis 子进程失败: {e}")
                 return False
             finally:
                 if opened is not None:
@@ -188,7 +191,7 @@ class RedisCache:
                 except Exception:
                     pass
                 time.sleep(0.5)
-            print("Redis 子进程启动后超时未就绪")
+            logger.error("Redis 子进程启动后超时未就绪")
             return False
 
     def _get_key(self, key: str) -> str:
@@ -250,7 +253,7 @@ class RedisCache:
                 except Exception:
                     return value
         except Exception as e:
-            print(f"Redis get error: {e}")
+            logger.error(f"Redis get error: {e}")
             self.client = None
             return None
 
@@ -280,7 +283,7 @@ class RedisCache:
             self._store_tags(redis_key, tags, expire)
             return True
         except Exception as e:
-            print(f"Redis set error: {e}")
+            logger.error(f"Redis set error: {e}")
             self.client = None
             return False
 
@@ -305,7 +308,7 @@ class RedisCache:
             self._stats["deletes"] += 1
             return True
         except Exception as e:
-            print(f"Redis delete error: {e}")
+            logger.error(f"Redis delete error: {e}")
             self.client = None
             return False
 
@@ -330,7 +333,7 @@ class RedisCache:
         try:
             return self.client.incr(self._key(key), amount)
         except Exception as e:
-            print(f"Redis incr error: {e}")
+            logger.error(f"Redis incr error: {e}")
             self.client = None
             return None
 
@@ -340,7 +343,7 @@ class RedisCache:
         try:
             return self.client.decr(self._key(key), amount)
         except Exception as e:
-            print(f"Redis decr error: {e}")
+            logger.error(f"Redis decr error: {e}")
             self.client = None
             return None
 
@@ -357,7 +360,7 @@ class RedisCache:
             self.client.hset(self._key(name), key, value)
             return True
         except Exception as e:
-            print(f"Redis hset error: {e}")
+            logger.error(f"Redis hset error: {e}")
             return False
 
     @_safe({})
@@ -536,7 +539,7 @@ class RedisCache:
             self.client.delete(tag_key)
             return len(keys)
         except Exception as e:
-            print(f"Redis invalidate_by_tag error: {e}")
+            logger.error(f"Redis invalidate_by_tag error: {e}")
             self.client = None
             return 0
 
@@ -617,10 +620,10 @@ def warmup_cache(app):
     缓存预热函数 - 在应用启动时预加载常用数据到Redis缓存
     """
     if not cache.client:
-        print("Redis未连接，跳过缓存预热")
+        logger.warning("Redis未连接，跳过缓存预热")
         return
 
-    print("开始缓存预热...")
+    logger.info("开始缓存预热...")
 
     with app.app_context():
         try:
@@ -640,7 +643,7 @@ def warmup_cache(app):
                 for r in rules
             ]
             cache.set("rules:all", rules_data, expire=3600)
-            print(f"预热规则数据: {len(rules_data)} 条")
+            logger.info(f"预热规则数据: {len(rules_data)} 条")
 
             # 预热分类数据
             from models import ScoreCategory
@@ -651,7 +654,7 @@ def warmup_cache(app):
                 for c in categories
             ]
             cache.set("categories:all", categories_data, expire=3600)
-            print(f"预热分类数据: {len(categories_data)} 条")
+            logger.info(f"预热分类数据: {len(categories_data)} 条")
 
             # 预热设备在线状态
             from models import Device
@@ -661,7 +664,7 @@ def warmup_cache(app):
             if online_devices:
                 cache.client.delete(cache._key("devices:online"))
                 cache.client.sadd(cache._key("devices:online"), *online_devices)
-            print(f"预热设备在线状态: {len(online_devices)} 台在线")
+            logger.info(f"预热设备在线状态: {len(online_devices)} 台在线")
 
             # 预热排名规则
             from models import ScoreRankRule
@@ -679,7 +682,7 @@ def warmup_cache(app):
                 for r in rank_rules
             ]
             cache.set("rank_rules:all", rank_rules_data, expire=3600)
-            print(f"预热排名规则: {len(rank_rules_data)} 条")
+            logger.info(f"预热排名规则: {len(rank_rules_data)} 条")
 
             # 预热时间规则
             from models import TimeRule
@@ -699,14 +702,14 @@ def warmup_cache(app):
                 for t in time_rules
             ]
             cache.set("time_rules:all", time_rules_data, expire=3600)
-            print(f"预热时间规则: {len(time_rules_data)} 条")
+            logger.info(f"预热时间规则: {len(time_rules_data)} 条")
 
             # 设置缓存预热时间戳
             cache.set("cache_warmup:timestamp", datetime.now().isoformat(), expire=7200)
-            print("缓存预热完成")
+            logger.info("缓存预热完成")
 
         except Exception as e:
-            print(f"缓存预热失败: {e}")
+            logger.error(f"缓存预热失败: {e}")
             import traceback
 
             traceback.print_exc()

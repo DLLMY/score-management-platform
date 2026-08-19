@@ -343,12 +343,7 @@ function App() {
     <GlobalStateProvider>
       <ToastProvider>
         <ErrorBoundary fallback={<RouteError />}>
-          <HashRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
+          <HashRouter>
             <PreloadProvider />
             <Routes>
               <Route path='/login' element={<Login />} />

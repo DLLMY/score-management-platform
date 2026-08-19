@@ -71,12 +71,14 @@ class TestUtils:
         logger.info(LogCategory.SYSTEM, "Test structured info", extra={"key": "value"})
         logger.error(LogCategory.SYSTEM, "Test structured error", exc_info=True)
 
-    def test_backup_utils(self, app):
+    def test_backup_utils(self, app, tmp_path):
         with app.app_context():
-            from utils.backup_utils import backup_manager
+            # 使用临时目录隔离，避免向真实 backups/ 写入 189M 测试产物
+            from utils.backup_utils import BackupManager
 
-            assert backup_manager is not None
-            result = backup_manager.create_backup("test")
+            bm = BackupManager(backup_dir=str(tmp_path))
+            assert bm is not None
+            result = bm.create_backup("test")
             assert "success" in result
 
     def test_query_optimizer(self, app):

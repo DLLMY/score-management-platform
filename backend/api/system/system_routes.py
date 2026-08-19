@@ -267,7 +267,10 @@ class SystemBackup(Resource):
         """
         try:
             basedir = os.path.abspath(os.path.dirname(__file__))
-            backup_dir = os.path.join(basedir, "..", "backups")
+            # 备份目录统一走 Config.BACKUP_DIR（此前硬编码相对路径，BACKUP_DIR 配置从未生效）
+            from config import Config
+
+            backup_dir = Config.BACKUP_DIR
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = os.path.join(backup_dir, f"score_management_{timestamp}.db")
             source_path = os.path.join(basedir, "..", "instance", "score_management.db")

@@ -20,8 +20,12 @@ class TestSystemRoutes:
             response = client.get("/api/system/backups", headers=auth_headers)
             assert response.status_code == 200
 
-    def test_create_backup(self, client, app, auth_headers):
+    def test_create_backup(self, client, app, auth_headers, monkeypatch, tmp_path):
         with app.app_context():
+            # 备份目录指向临时目录，避免测试写入真实 backups/
+            from config import Config
+
+            monkeypatch.setattr(Config, "BACKUP_DIR", str(tmp_path))
             response = client.post("/api/system/backup", headers=auth_headers)
             assert response.status_code in [200, 400, 404]
 

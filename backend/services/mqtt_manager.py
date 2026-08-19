@@ -1,3 +1,4 @@
+import logging
 import paho.mqtt.client as mqtt
 import json
 import threading
@@ -8,6 +9,7 @@ from enum import Enum
 from collections import deque
 
 
+logger = logging.getLogger(__name__)
 class MQTTConnectionState(Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -140,21 +142,19 @@ class MQTTManager:
                     }
                     # R2: 记录最近一次已知好配置，供重连 / DB 读取失败时回退
                     self._last_known_good = dict(self._config)
-                    print(
-                        f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}"
-                    )
+                    logger.info(f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}")
                     return True
         except Exception as e:
-            print(f"[MQTTManager] 从数据库加载配置失败: {e}")
+            logger.error(f"[MQTTManager] 从数据库加载配置失败: {e}")
 
         # DB 读取失败：若有最近一次已知好配置，则回退到它（避免 MQTT 配置彻底丢失）
         if self._last_known_good is not None:
             self._config = dict(self._last_known_good)
-            print("[MQTTManager] 使用最近一次已知好配置（数据库读取失败回退）")
+            logger.warning("[MQTTManager] 使用最近一次已知好配置（数据库读取失败回退）")
             return False
 
         self._config = self.DEFAULT_CONFIG.copy()
-        print("[MQTTManager] 使用默认配置")
+        logger.info("[MQTTManager] 使用默认配置")
         return False
 
     def _get_config(self):
@@ -163,7 +163,7 @@ class MQTTManager:
         return self._config or self.DEFAULT_CONFIG
 
     def _on_connect_control(self, client, userdata, flags, rc):
-        print(f"[MQTTManager] 控制连接 _on_connect, rc={rc}, flags={flags}")
+        logger.info(f"[MQTTManager] 控制连接 _on_connect, rc={rc}, flags={flags}")
         with self._state_lock:
             if rc == 0:
                 self._state = MQTTConnectionState.CONNECTED
@@ -172,7 +172,7 @@ class MQTTManager:
                 # R2: 成功连上即视为「已知好」配置，记录以便后续回退
                 if self._config:
                     self._last_known_good = dict(self._config)
-                print("[MQTTManager] 控制连接成功!")
+                logger.info("[MQTTManager] 控制连接成功!")
             else:
                 self._state = MQTTConnectionState.ERROR
                 error_messages = {
@@ -182,46 +182,46 @@ class MQTTManager:
                     4: "用户名或密码错误",
                     5: "未授权",
                 }
-                print(f"[MQTTManager] 控制连接失败, rc={rc}: {error_messages.get(rc, '未知错误')}")
+                logger.error(f"[MQTTManager] 控制连接失败, rc={rc}: {error_messages.get(rc, '未知错误')}")
         if self.is_connected:
             self._subscribed_topics = []
             for topic, qos in self.CONTROL_SUBSCRIPTIONS:
                 client.subscribe(topic, qos=qos)
                 self._subscribed_topics.append(topic)
-            print(f"[MQTTManager] 控制连接已订阅: {[t[0] for t in self.CONTROL_SUBSCRIPTIONS]}")
+            logger.info(f"[MQTTManager] 控制连接已订阅: {[t[0] for t in self.CONTROL_SUBSCRIPTIONS]}")
 
     def _on_connect_telemetry(self, client, userdata, flags, rc):
-        print(f"[MQTTManager] 遥测连接 _on_connect, rc={rc}, flags={flags}")
+        logger.info(f"[MQTTManager] 遥测连接 _on_connect, rc={rc}, flags={flags}")
         with self._state_lock:
             if rc == 0:
                 self._telemetry_state = MQTTConnectionState.CONNECTED
-                print("[MQTTManager] 遥测连接成功!")
+                logger.info("[MQTTManager] 遥测连接成功!")
             else:
                 self._telemetry_state = MQTTConnectionState.ERROR
-                print(f"[MQTTManager] 遥测连接失败, rc={rc}")
+                logger.error(f"[MQTTManager] 遥测连接失败, rc={rc}")
         if self._telemetry_state == MQTTConnectionState.CONNECTED:
             self._telemetry_subscribed_topics = []
             for topic, qos in self.TELEMETRY_SUBSCRIPTIONS:
                 client.subscribe(topic, qos=qos)
                 self._telemetry_subscribed_topics.append(topic)
-            print(f"[MQTTManager] 遥测连接已订阅: {[t[0] for t in self.TELEMETRY_SUBSCRIPTIONS]}")
+            logger.info(f"[MQTTManager] 遥测连接已订阅: {[t[0] for t in self.TELEMETRY_SUBSCRIPTIONS]}")
 
     def _on_disconnect_control(self, client, userdata, rc):
         with self._state_lock:
             self._state = MQTTConnectionState.DISCONNECTED
             self._subscribed_topics = []
-        print(f"[MQTTManager] 控制连接断开, rc={rc}")
+        logger.info(f"[MQTTManager] 控制连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
-            print("[MQTTManager] 控制连接意外断开，准备重连...")
+            logger.warning("[MQTTManager] 控制连接意外断开，准备重连...")
             self._schedule_reconnect("control")
 
     def _on_disconnect_telemetry(self, client, userdata, rc):
         with self._state_lock:
             self._telemetry_state = MQTTConnectionState.DISCONNECTED
             self._telemetry_subscribed_topics = []
-        print(f"[MQTTManager] 遥测连接断开, rc={rc}")
+        logger.info(f"[MQTTManager] 遥测连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
-            print("[MQTTManager] 遥测连接意外断开，准备重连...")
+            logger.warning("[MQTTManager] 遥测连接意外断开，准备重连...")
             self._schedule_reconnect("telemetry")
 
     def _on_message_control(self, client, userdata, msg):
@@ -241,7 +241,7 @@ class MQTTManager:
             ):
                 self._process_critical_message(topic, message)
         except Exception as e:
-            print(f"[MQTTManager] 处理控制消息失败: {e}")
+            logger.error(f"[MQTTManager] 处理控制消息失败: {e}")
 
     def _on_message_telemetry(self, client, userdata, msg):
         try:
@@ -252,7 +252,7 @@ class MQTTManager:
                 return
             self._handle_telemetry(topic, message)
         except Exception as e:
-            print(f"[MQTTManager] 处理遥测消息失败: {e}")
+            logger.error(f"[MQTTManager] 处理遥测消息失败: {e}")
 
     def _handle_telemetry(self, topic, message):
         """遥测消息（phonebox/# 高频）：心跳实时推 WS，DB 落库与审计日志异步入 Celery；
@@ -278,14 +278,14 @@ class MQTTManager:
                 }
                 send_device_status(data.get("device_id"), device_data)
             except Exception as e:
-                print(f"[MQTTManager] 心跳WS推送失败: {e}")
+                logger.error(f"[MQTTManager] 心跳WS推送失败: {e}")
         # 异步入 Celery（mqtt 队列），失败再同步兜底
         try:
             from tasks.mqtt_tasks import process_phonebox_telemetry
 
             process_phonebox_telemetry.delay(topic, message)
         except Exception as e:
-            print(f"[MQTTManager] 遥测入Celery失败, 同步兜底: {e}")
+            logger.error(f"[MQTTManager] 遥测入Celery失败, 同步兜底: {e}")
             self._process_telemetry_fallback(topic, message)
 
     def _process_telemetry_fallback(self, topic, message):
@@ -316,7 +316,7 @@ class MQTTManager:
 
                     mqtt_message_service.handle_heartbeat_message(data)
         except Exception as e:
-            print(f"[MQTTManager] 遥测兜底处理失败: {e}")
+            logger.error(f"[MQTTManager] 遥测兜底处理失败: {e}")
 
     def _queue_message(self, topic, message):
         """将消息加入队列，批量处理"""
@@ -378,14 +378,14 @@ class MQTTManager:
             if logs_to_insert:
                 db.session.add_all(logs_to_insert)
                 db.session.commit()
-                print(f"[MQTTManager] 批量写入 {len(logs_to_insert)} 条日志")
+                logger.info(f"[MQTTManager] 批量写入 {len(logs_to_insert)} 条日志")
 
             # 处理心跳消息更新设备状态（逐条隔离：单条异常不影响其余心跳处理）
             for data in heartbeat_data:
                 try:
                     self._process_heartbeat(data["topic"], data["message"])
                 except Exception as e:
-                    print(f"[MQTTManager] 心跳处理异常(已跳过本条): {e}")
+                    logger.warning(f"[MQTTManager] 心跳处理异常(已跳过本条): {e}")
 
     def _process_critical_message(self, topic, message):
         """立即处理关键消息（如刷卡查询、OTA状态）"""
@@ -396,13 +396,13 @@ class MQTTManager:
                 elif topic.endswith("/register") or topic == "phonebox/ota/register":
                     self._process_ota_register(topic, message)
             except Exception as e:
-                print(f"[MQTTManager] OTA 消息处理异常(已隔离, 不影响其余回调): {e}")
+                logger.error(f"[MQTTManager] OTA 消息处理异常(已隔离, 不影响其余回调): {e}")
 
         for callback in self._message_callbacks:
             try:
                 callback(topic, message)
             except Exception as e:
-                print(f"[MQTTManager] 消息回调处理错误: {e}")
+                logger.error(f"[MQTTManager] 消息回调处理错误: {e}")
 
     def _process_ota_register(self, topic, message):
         """处理设备主动注册 / 类型上报（phonebox/ota/register 或 phonebox/ota/{device_id}/register）"""
@@ -438,16 +438,16 @@ class MQTTManager:
                 if device_type:
                     device.device_type = device_type
                 db.session.commit()
-                print(f"[OTA] 设备注册/类型上报: {device_id} type={device_type} fw={fw_version}")
+                logger.info(f"[OTA] 设备注册/类型上报: {device_id} type={device_type} fw={fw_version}")
                 # 版本协商 + 可能自动推送（无缝 OTA 闭环）
                 try:
                     from services.ota_negotiation_service import try_auto_negotiate
 
                     try_auto_negotiate(device)
                 except Exception as neg_e:
-                    print(f"[OTA] 协商跳过（异常）: {neg_e}")
+                    logger.warning(f"[OTA] 协商跳过（异常）: {neg_e}")
         except Exception as e:
-            print(f"[OTA] 处理设备注册失败: {e}")
+            logger.error(f"[OTA] 处理设备注册失败: {e}")
 
     def _process_ota_status(self, topic, message):
         """处理OTA状态消息
@@ -464,7 +464,7 @@ class MQTTManager:
             to_version = data.get("to_version")
             error_message = data.get("error_message")
 
-            print(f"[OTA] 设备 {device_id} OTA状态更新: status={status}, progress={progress}%")
+            logger.info(f"[OTA] 设备 {device_id} OTA状态更新: status={status}, progress={progress}%")
 
             from app import app
             from models import db, Device, DeviceFirmwareUpdate, OperationLog
@@ -483,7 +483,7 @@ class MQTTManager:
                     )
                     db.session.add(record)
                     db.session.commit()
-                    print(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
+                    logger.info(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
                     if device:
                         device_ota_status = "upgrading"
 
@@ -497,7 +497,7 @@ class MQTTManager:
                     )
 
                     if record:
-                        print(f"[OTA] 设备 {device_id} 升级进度: {progress}%")
+                        logger.info(f"[OTA] 设备 {device_id} 升级进度: {progress}%")
                     if device:
                         device_ota_status = "upgrading"
                     else:
@@ -524,7 +524,7 @@ class MQTTManager:
                         record.status = "completed"
                         record.completed_at = datetime.now()
                         db.session.commit()
-                        print(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
+                        logger.info(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
                     if device:
                         device_ota_status = "idle"
                         if to_version:
@@ -567,7 +567,7 @@ class MQTTManager:
                         record.completed_at = datetime.now()
                         record.error_message = error_message
                         db.session.commit()
-                        print(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
+                        logger.error(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
                     if device:
                         device_ota_status = "failed"
 
@@ -587,7 +587,7 @@ class MQTTManager:
                     db.session.commit()
 
         except Exception as e:
-            print(f"[OTA] 处理OTA状态消息失败: {e}")
+            logger.error(f"[OTA] 处理OTA状态消息失败: {e}")
 
     def _process_heartbeat(self, topic, message):
         """处理心跳消息，更新设备状态"""
@@ -608,7 +608,7 @@ class MQTTManager:
                             device_id=device_id, name=f"设备 {device_id}", status="online"
                         )
                         db.session.add(device)
-                        print(f"[设备注册] 新设备自动注册: {device_id}")
+                        logger.info(f"[设备注册] 新设备自动注册: {device_id}")
 
                     # 更新设备状态
                     device.status = "online"
@@ -648,14 +648,14 @@ class MQTTManager:
                         )
                         db.session.add(heartbeat)
                     db.session.commit()
-                    print(f"设备心跳更新成功: {device_id}")
+                    logger.info(f"设备心跳更新成功: {device_id}")
                     # 版本协商 + 可能自动推送（无缝 OTA 闭环）
                     try:
                         from services.ota_negotiation_service import try_auto_negotiate
 
                         try_auto_negotiate(device)
                     except Exception as neg_e:
-                        print(f"[OTA] 协商跳过（异常）: {neg_e}")
+                        logger.warning(f"[OTA] 协商跳过（异常）: {neg_e}")
 
                     # 通过WebSocket发送设备状态更新
                     try:
@@ -674,14 +674,14 @@ class MQTTManager:
                             ),
                         }
                         send_device_status(device_id, device_data)
-                        print(f"设备状态已通过WebSocket发送: {device_id}")
+                        logger.info(f"设备状态已通过WebSocket发送: {device_id}")
                     except Exception as ws_e:
-                        print(f"发送WebSocket消息失败: {ws_e}")
+                        logger.error(f"发送WebSocket消息失败: {ws_e}")
         except Exception as e:
-            print(f"处理心跳消息错误: {e}")
+            logger.error(f"处理心跳消息错误: {e}")
 
     def _on_error(self, client, userdata, error):
-        print(f"[MQTTManager] 客户端错误: {error}")
+        logger.error(f"[MQTTManager] 客户端错误: {error}")
         with self._state_lock:
             self._state = MQTTConnectionState.ERROR
 
@@ -700,11 +700,11 @@ class MQTTManager:
                 return
             if client_type == "telemetry":
                 if self._telemetry_state != MQTTConnectionState.CONNECTED:
-                    print("[MQTTManager] 执行遥测连接延迟重连...")
+                    logger.warning("[MQTTManager] 执行遥测连接延迟重连...")
                     self._connect_telemetry()
             else:
                 if self._state != MQTTConnectionState.CONNECTED:
-                    print("[MQTTManager] 执行控制连接延迟重连...")
+                    logger.warning("[MQTTManager] 执行控制连接延迟重连...")
                     self._connect_control()
 
         t = threading.Thread(target=delayed_reconnect, daemon=True)
@@ -751,12 +751,12 @@ class MQTTManager:
         client.on_error = self._on_error
         client.reconnect_delay_set(min_delay=1, max_delay=30)
 
-        print(f"[MQTTManager] 创建客户端({suffix}): {cid}, transport={transport}")
+        logger.info(f"[MQTTManager] 创建客户端({suffix}): {cid}, transport={transport}")
         try:
             client.loop_start()
             client.connect_async(broker, port, keepalive=keepalive)
         except Exception as e:
-            print(f"[MQTTManager] 客户端({suffix})连接异常: {type(e).__name__}: {e}")
+            logger.error(f"[MQTTManager] 客户端({suffix})连接异常: {type(e).__name__}: {e}")
             import traceback
 
             traceback.print_exc()
@@ -766,12 +766,12 @@ class MQTTManager:
         for i in range(timeout * 10):
             time.sleep(0.1)
             if i % 10 == 0:
-                print(f"[MQTTManager] 客户端({suffix})等待连接... {i // 10}秒")
+                logger.info(f"[MQTTManager] 客户端({suffix})等待连接... {i // 10}秒")
             st = self._telemetry_state if suffix == "telemetry" else self._state
             if st == MQTTConnectionState.CONNECTED:
-                print(f"[MQTTManager] 客户端({suffix})已连接!")
+                logger.info(f"[MQTTManager] 客户端({suffix})已连接!")
                 return client
-        print(f"[MQTTManager] 客户端({suffix})连接确认超时({timeout}秒)")
+        logger.error(f"[MQTTManager] 客户端({suffix})连接确认超时({timeout}秒)")
         return client
 
     def _connect_control(self):
@@ -804,7 +804,7 @@ class MQTTManager:
 
     def connect(self, config=None):
         if self.is_connected and self._telemetry_state == MQTTConnectionState.CONNECTED:
-            print("[MQTTManager] 双连接均已连接")
+            logger.info("[MQTTManager] 双连接均已连接")
             return True
         if config:
             self._config = config
@@ -815,7 +815,7 @@ class MQTTManager:
         return self.is_connected
 
     def disconnect(self):
-        print("[MQTTManager] 断开连接请求")
+        logger.info("[MQTTManager] 断开连接请求")
         self._should_reconnect = False
 
         with self._state_lock:
@@ -830,28 +830,25 @@ class MQTTManager:
                     c.disconnect()
                     c.loop_stop()
                 except Exception as e:
-                    print(f"[MQTTManager] 断开连接时出错: {e}")
+                    logger.error(f"[MQTTManager] 断开连接时出错: {e}")
         self._client = None
         self._telemetry_client = None
 
     def publish(self, topic, payload, qos=1):
         if not self.is_connected or not self._client:
-            print("[MQTTManager] 发布失败: 未连接", flush=True)
+            logger.warning("[MQTTManager] 发布失败: 未连接")
             return False
 
         try:
             if isinstance(payload, dict):
                 payload = json.dumps(payload)
 
-            print(
-                f"[MQTTManager] 准备发布消息 - topic: {topic}, payload_length: {len(payload) if payload else 0}, qos: {qos}",
-                flush=True,
-            )  # noqa: E501
+            logger.info(f"[MQTTManager] 准备发布消息 - topic: {topic}, payload_length: {len(payload) if payload else 0}, qos: {qos}")  # noqa: E501
             result = self._client.publish(topic, payload, qos=qos)
 
             # 检查发布结果
             if result.rc == 0:
-                print(f"[MQTTManager] 发布成功: {topic}", flush=True)
+                logger.info(f"[MQTTManager] 发布成功: {topic}")
                 return True
             else:
                 error_messages = {
@@ -861,13 +858,10 @@ class MQTTManager:
                     4: "权限不足",
                     5: "服务器不可用",
                 }
-                print(
-                    f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}",
-                    flush=True,
-                )
+                logger.error(f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}")
                 return False
         except Exception as e:
-            print(f"[MQTTManager] 发布异常: {type(e).__name__}: {e}", flush=True)
+            logger.error(f"[MQTTManager] 发布异常: {type(e).__name__}: {e}")
             import traceback
 
             traceback.print_exc()
@@ -875,17 +869,17 @@ class MQTTManager:
 
     def subscribe(self, topic, qos=1):
         if not self.is_connected or not self._client:
-            print("[MQTTManager] 订阅失败: 未连接")
+            logger.warning("[MQTTManager] 订阅失败: 未连接")
             return False
 
         try:
             self._client.subscribe(topic, qos=qos)
             if topic not in self._subscribed_topics:
                 self._subscribed_topics.append(topic)
-            print(f"[MQTTManager] 订阅主题: {topic}")
+            logger.info(f"[MQTTManager] 订阅主题: {topic}")
             return True
         except Exception as e:
-            print(f"[MQTTManager] 订阅异常: {e}")
+            logger.error(f"[MQTTManager] 订阅异常: {e}")
             return False
 
     def unsubscribe(self, topic):
@@ -896,10 +890,10 @@ class MQTTManager:
             self._client.unsubscribe(topic)
             if topic in self._subscribed_topics:
                 self._subscribed_topics.remove(topic)
-            print(f"[MQTTManager] 取消订阅: {topic}")
+            logger.info(f"[MQTTManager] 取消订阅: {topic}")
             return True
         except Exception as e:
-            print(f"[MQTTManager] 取消订阅异常: {e}")
+            logger.error(f"[MQTTManager] 取消订阅异常: {e}")
             return False
 
     def add_message_callback(self, callback):
@@ -974,7 +968,7 @@ class MQTTManager:
         ota_payload = {"action": "update", "timestamp": int(time.time())}
         ota_payload.update(payload)
 
-        print(f"[OTA] 发送OTA指令到 {topic}: {json.dumps(ota_payload)}")
+        logger.info(f"[OTA] 发送OTA指令到 {topic}: {json.dumps(ota_payload)}")
         return self.publish(topic, json.dumps(ota_payload), qos=1)
 
 
