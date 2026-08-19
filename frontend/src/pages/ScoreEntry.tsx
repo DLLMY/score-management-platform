@@ -1047,6 +1047,7 @@ const ScoreEntry: React.FC = () => {
                 defaultValue={scoreData?.score ?? ''}
                 data-sid={student.id}
                 data-subject={subject}
+                aria-label={`${student.name} 的 ${subject} 成绩`}
                 className='w-16 px-1.5 py-0.5 text-sm text-center border border-gray-300 rounded hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
                 onInput={(e) => {
                   // 越界即时红框：非受控 input 直接操作 classList（key 稳定时 React 不重渲染该 input）

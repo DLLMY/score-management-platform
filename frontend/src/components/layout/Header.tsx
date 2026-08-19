@@ -393,6 +393,7 @@ function Header() {
             {searchValue.length > 0 && (
               <button
                 onClick={() => setSearchValue('')}
+                aria-label='清除搜索'
                 className='absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 hover:bg-danger-100 dark:hover:bg-danger-500/20 hover:text-danger-500 flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95'
               >
                 <X className='w-4 h-4 text-gray-500 dark:text-slate-400' />
@@ -501,6 +502,7 @@ function Header() {
         <div className='flex items-center gap-1.5'>
           <button
             onClick={toggleTheme}
+            aria-label='切换主题'
             className='relative p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200 group dark:hover:bg-slate-700'
             title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
           >
@@ -520,6 +522,7 @@ function Header() {
           <div className='relative' data-header-menu ref={notificationRef}>
             <button
               onClick={toggleNotifications}
+              aria-label='通知'
               className={`relative p-2.5 rounded-xl transition-all duration-200 ${
                 showNotifications
                   ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-500/15 dark:to-blue-500/10 text-primary-600 dark:text-primary-400'
@@ -567,7 +570,10 @@ function Header() {
                       >
                         全部已读
                       </button>
-                      <button className='p-1.5 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors'>
+                      <button
+                        aria-label='通知设置'
+                        className='p-1.5 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors'
+                      >
                         <Settings className='w-4 h-4 text-blue-600 dark:text-blue-400' />
                       </button>
                     </div>
@@ -678,6 +684,7 @@ function Header() {
           <div className='relative ml-1' data-header-menu>
             <button
               onClick={toggleUserMenu}
+              aria-label='用户菜单'
               className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
                 showUserMenu
                   ? 'bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-500/15 dark:to-blue-500/10 shadow-lg shadow-primary-500/10'

@@ -442,15 +442,16 @@ class AnomalyService:
                 else:
                     results["summary"]["low_severity_count"] += 1
 
-                # score_change：只有 sudden_change 是单次积分变化；其它类型暂用 0 占位，
-                # 前端会再 .toFixed() / 比较，0 不会引发 NaN。
+                # A18 归因补全：sudden_change 用 z_score；trend 用连续同向总变化
+                # （total_change 带符号）；group 用与班级均值的标准差偏差（deviation）。
+                # 全部 int() 归一，前端 .toFixed() 不会 NaN。
                 score_change = 0
                 if atype == "sudden_change":
                     score_change = int(a.get("z_score", 0) or 0)
                 elif atype == "trend_anomaly":
-                    score_change = 0  # trend 用方向不展示绝对值
+                    score_change = int(a.get("total_change", 0) or 0)
                 elif atype == "group_anomaly":
-                    score_change = 0
+                    score_change = int(a.get("deviation", 0) or 0)
 
                 # detected_at：仅 sudden_change 带 date，其它用当前时间。
                 detected_at = a.get("date")
