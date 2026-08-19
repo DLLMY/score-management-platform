@@ -246,6 +246,16 @@ const ScoreEntry: React.FC = () => {
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
 
+  // 批量提交进度（真实进度 + 可取消）
+  const [batchProgress, setBatchProgress] = useState<{ processed: number; total: number } | null>(
+    null
+  );
+  // 保存失败详情条（前 5 条，可关闭）
+  const [batchFailures, setBatchFailures] = useState<Array<{ key: string; error: string }> | null>(
+    null
+  );
+  const cancelBatchRef = useRef(false);
+
   // 使用 useModal 管理弹窗状态
   const {
     isOpen: showImportModal,
@@ -536,60 +546,120 @@ const ScoreEntry: React.FC = () => {
     }
   };
 
+  // 键盘跳格定位：data-sid/data-subject 组合 + CSS.escape，规避科目名特殊字符
+  const focusCell = useCallback((studentId: number, subjectName: string): void => {
+    document
+      .querySelector<HTMLInputElement>(
+        `input[data-sid="${studentId}"][data-subject="${CSS.escape(subjectName)}"]`
+      )
+      ?.focus();
+  }, []);
+
+  // 分批并发提交通用逻辑：每批 20 条并发，逐批推进进度，支持中途取消
+  const runBatched = async <T,>(
+    items: T[],
+    fn: (item: T) => Promise<void>,
+    onBatchDone?: () => void
+  ): Promise<{ success: number; failed: Array<{ item: T; error: string }> }> => {
+    const total = items.length;
+    const failed: Array<{ item: T; error: string }> = [];
+    let success = 0;
+    setBatchProgress({ processed: 0, total });
+    cancelBatchRef.current = false;
+    const BATCH = 20;
+    for (let i = 0; i < total; i += BATCH) {
+      if (cancelBatchRef.current) break;
+      const chunk = items.slice(i, i + BATCH);
+      const results = await Promise.allSettled(chunk.map((item) => fn(item)));
+      for (let idx = 0; idx < results.length; idx++) {
+        const r = results[idx];
+        if (r.status === 'fulfilled') success++;
+        else failed.push({ item: chunk[idx], error: (r.reason as Error)?.message ?? '未知错误' });
+      }
+      setBatchProgress({ processed: Math.min(i + BATCH, total), total });
+      onBatchDone?.();
+    }
+    return { success, failed };
+  };
+
   const handleSaveAll = useCallback(async (): Promise<void> => {
     const keys = Object.keys(pendingChanges);
     if (keys.length === 0) {
       showToast('info', '没有待保存的更改');
       return;
     }
+    setBatchFailures(null);
 
-    let successCount = 0;
-    let failCount = 0;
+    // 防御性跳过：科目名含异常字符（历史脏数据/解析错位）跳过，避免写入脏 subject
     const skipReasons: string[] = [];
-
-    for (const key of keys) {
-      const { student_id, subject, subject_id, score } = pendingChanges[key];
-      // 防御性校验：科目名里若含异常字符（来自历史脏数据/解析错位），主动跳过，避免再写入 '["语文"' 这类脏 subject
+    const skippedKeys: string[] = [];
+    const validKeys = keys.filter((key) => {
+      const { student_id, subject } = pendingChanges[key];
       if (
         typeof subject !== 'string' ||
         /[[\]"'\\,]/.test(subject) ||
         /\\u[0-9a-f]{4}/i.test(subject)
       ) {
-        failCount++;
+        skippedKeys.push(key);
         skipReasons.push(`[${student_id}/${subject}] 非法的科目名`);
         logger.error(`[save-skip] bad subject "${subject}" for student ${student_id}`);
-        continue;
+        return false;
       }
-      try {
-        const existingScore = scores[key];
-        if (existingScore?.id) {
-          await api.scores.update(existingScore.id, { score });
-        } else {
-          await api.scores.create({
-            exam_id: parseInt(selectedExam),
-            student_id,
-            subject,
-            subject_id,
-            score,
-          });
-        }
-        successCount++;
-      } catch (err) {
-        failCount++;
-        logger.error(`保存失败 [${key}]:`, err);
-      }
-    }
+      return true;
+    });
 
-    if (failCount === 0) {
-      showToast('success', `已保存 ${successCount} 条成绩`);
+    const { success, failed } = await runBatched(validKeys, async (key) => {
+      const change = pendingChanges[key];
+      const existingScore = scores[key];
+      let resp: unknown;
+      if (existingScore?.id) {
+        resp = await api.scores.update(existingScore.id, { score: change.score });
+      } else {
+        resp = await api.scores.create({
+          exam_id: parseInt(selectedExam),
+          student_id: change.student_id,
+          subject: change.subject,
+          subject_id: change.subject_id,
+          score: change.score,
+        });
+      }
+      // 同步本地 scores（带上后端返回的 id），成功项逐条移除待保存
+      const returned = (resp && (resp as { data?: unknown }).data) || resp;
+      dispatch({
+        type: 'UPDATE_SCORE',
+        payload: {
+          key,
+          score: {
+            ...existingScore,
+            ...(returned as object),
+            student_id: change.student_id,
+            subject: change.subject,
+            subject_id: change.subject_id,
+            score: change.score,
+          },
+        },
+      });
+      dispatch({ type: 'REMOVE_PENDING_CHANGE', payload: key });
+    });
+
+    const failTotal = failed.length + skippedKeys.length;
+    setBatchProgress(null);
+
+    if (failTotal === 0) {
+      showToast('success', `已保存 ${success} 条成绩`);
       clearDraft();
+      dispatch({ type: 'CLEAR_PENDING_CHANGES' });
+      fetchStudentsAndScores();
     } else {
       const detail = skipReasons.length > 0 ? `（${skipReasons.length} 条因科目名异常被跳过）` : '';
-      showToast('error', `保存完成: ${successCount} 成功, ${failCount} 失败${detail}`);
+      showToast('error', `保存完成: ${success} 成功, ${failTotal} 失败${detail}`);
+      const failEntries = failed.slice(0, 5).map((f) => ({ key: f.item, error: f.error }));
+      const skipEntries = skippedKeys
+        .slice(0, 5 - failEntries.length)
+        .map((k) => ({ key: k, error: '非法的科目名' }));
+      setBatchFailures([...failEntries, ...skipEntries].slice(0, 5));
+      // 失败项保留在 pendingChanges 供重试；此处不刷新，避免 CLEAR_PENDING_CHANGES 清掉失败项
     }
-
-    dispatch({ type: 'CLEAR_PENDING_CHANGES' });
-    fetchStudentsAndScores();
   }, [pendingChanges, scores, selectedExam, showToast, fetchStudentsAndScores, clearDraft]);
 
   const handleExport = useCallback(
@@ -699,21 +769,25 @@ const ScoreEntry: React.FC = () => {
 
     try {
       const keysToDelete = Object.keys(scores).filter((key) => key.endsWith(`-${batchSubject}`));
-      let deletedCount = 0;
+      // 幂等：keys 天然去重，仅取已有 id 的记录删除
+      const items = keysToDelete
+        .map((key) => ({ key, id: scores[key]?.id }))
+        .filter((x): x is { key: string; id: number } => typeof x.id === 'number');
 
-      for (const key of keysToDelete) {
-        const scoreData = scores[key];
-        if (scoreData?.id) {
-          await api.scores.delete(scoreData.id);
-          deletedCount++;
-        }
-      }
+      const { success, failed } = await runBatched(items, async ({ id }) => {
+        await api.scores.delete(id);
+      });
+      setBatchProgress(null);
 
-      showToast('success', `已删除 ${deletedCount} 条 ${batchSubject} 成绩`);
+      showToast(
+        'success',
+        `已删除 ${success} 条 ${batchSubject} 成绩${failed.length > 0 ? `，${failed.length} 条失败` : ''}`
+      );
       closeBatchModal();
       dispatch({ type: 'SET_BATCH_SUBJECT', payload: '' });
       fetchStudentsAndScores();
     } catch (err: unknown) {
+      setBatchProgress(null);
       showToast('error', '批量删除失败: ' + (err as Error).message);
     }
   }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal]);
@@ -735,19 +809,24 @@ const ScoreEntry: React.FC = () => {
 
     try {
       const keysToReset = Object.keys(scores).filter((key) => key.endsWith(`-${batchSubject}`));
+      const items = keysToReset
+        .map((key) => ({ key, id: scores[key]?.id }))
+        .filter((x): x is { key: string; id: number } => typeof x.id === 'number');
 
-      for (const key of keysToReset) {
-        const scoreData = scores[key];
-        if (scoreData?.id) {
-          await api.scores.delete(scoreData.id);
-        }
-      }
+      const { success, failed } = await runBatched(items, async ({ id }) => {
+        await api.scores.delete(id);
+      });
+      setBatchProgress(null);
 
-      showToast('success', `已重置 ${keysToReset.length} 条 ${batchSubject} 成绩`);
+      showToast(
+        'success',
+        `已重置 ${success} 条 ${batchSubject} 成绩${failed.length > 0 ? `，${failed.length} 条失败` : ''}`
+      );
       closeBatchModal();
       dispatch({ type: 'SET_BATCH_SUBJECT', payload: '' });
       fetchStudentsAndScores();
     } catch (err: unknown) {
+      setBatchProgress(null);
       showToast('error', '批量重置失败: ' + (err as Error).message);
     }
   }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal]);
@@ -759,28 +838,31 @@ const ScoreEntry: React.FC = () => {
     }
 
     try {
-      let confirmedCount = 0;
-      const keysToConfirm = Object.keys(scores).filter(
-        (key) =>
-          key.endsWith(`-${batchSubject}`) &&
-          scores[key]?.score !== undefined &&
-          scores[key]?.score !== null
+      const confirmItems: Array<{ key: string; id: number; score: number }> = Object.entries(
+        scores
+      )
+        .filter(([key]) => key.endsWith(`-${batchSubject}`))
+        .flatMap(([key, s]) =>
+          s?.id && s.score !== undefined && s.score !== null
+            ? [{ key, id: s.id, score: s.score }]
+            : []
+        );
+
+      const { success, failed } = await runBatched(confirmItems, async ({ id, score }) => {
+        await api.scores.update(id, { score });
+      });
+      setBatchProgress(null);
+
+      showToast(
+        'success',
+        `已确认 ${success} 条 ${batchSubject} 成绩${failed.length > 0 ? `，${failed.length} 条失败` : ''}`
       );
-
-      for (const key of keysToConfirm) {
-        const scoreData = scores[key];
-        if (scoreData?.id && scoreData.score !== undefined && scoreData.score !== null) {
-          await api.scores.update(scoreData.id, { score: scoreData.score });
-          confirmedCount++;
-        }
-      }
-
-      showToast('success', `已确认 ${confirmedCount} 条 ${batchSubject} 成绩`);
       clearDraft();
       closeBatchModal();
       dispatch({ type: 'SET_BATCH_SUBJECT', payload: '' });
       fetchStudentsAndScores();
     } catch (err: unknown) {
+      setBatchProgress(null);
       showToast('error', '批量确认失败: ' + (err as Error).message);
     }
   }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal, clearDraft]);
@@ -963,7 +1045,17 @@ const ScoreEntry: React.FC = () => {
                 step={0.5}
                 placeholder='-'
                 defaultValue={scoreData?.score ?? ''}
+                data-sid={student.id}
+                data-subject={subject}
                 className='w-16 px-1.5 py-0.5 text-sm text-center border border-gray-300 rounded hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+                onInput={(e) => {
+                  // 越界即时红框：非受控 input 直接操作 classList（key 稳定时 React 不重渲染该 input）
+                  const v = e.currentTarget.value.trim();
+                  const num = parseFloat(v);
+                  const invalid = v !== '' && (Number.isNaN(num) || num < 0 || num > 100);
+                  e.currentTarget.classList.toggle('border-red-500', invalid);
+                  e.currentTarget.classList.toggle('focus:ring-red-400', invalid);
+                }}
                 onBlur={(e) => {
                   const v = e.target.value.trim();
                   const old = scoreData?.score ?? null;
@@ -981,12 +1073,66 @@ const ScoreEntry: React.FC = () => {
                   handleScoreBlur(Number(student.id), subject, v);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    (e.target as HTMLInputElement).blur();
-                  } else if (e.key === 'Escape') {
-                    (e.target as HTMLInputElement).value = String(scoreData?.score ?? '');
-                    (e.target as HTMLInputElement).blur();
+                  const target = e.target as HTMLInputElement;
+                  if (e.key === 'Escape') {
+                    target.value = String(scoreData?.score ?? '');
+                    target.blur();
+                    return;
                   }
+                  const subjectIdx = visibleSubjects.indexOf(subject);
+                  const studentIdx = students.findIndex((s) => s.id === student.id);
+                  if (e.key === 'Enter' || e.key === 'Tab') {
+                    // 保存并跳下一格：同学生下一科目；末尾则换行到下一学生首列
+                    e.preventDefault();
+                    target.blur();
+                    if (subjectIdx >= 0 && subjectIdx < visibleSubjects.length - 1) {
+                      focusCell(Number(student.id), visibleSubjects[subjectIdx + 1]);
+                    } else if (studentIdx >= 0 && studentIdx < students.length - 1) {
+                      focusCell(Number(students[studentIdx + 1].id), visibleSubjects[0]);
+                    }
+                    return;
+                  }
+                  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    // 保存并切到相邻学生同一科目
+                    const nextIdx = e.key === 'ArrowDown' ? studentIdx + 1 : studentIdx - 1;
+                    if (studentIdx >= 0 && nextIdx >= 0 && nextIdx < students.length) {
+                      target.blur();
+                      focusCell(Number(students[nextIdx].id), subject);
+                    }
+                    return;
+                  }
+                }}
+                onPaste={(e) => {
+                  // 粘贴批量填充：按行/列拆分，从当前格向右、向下填，逐格走与 onBlur 相同的 0-100 校验
+                  e.preventDefault();
+                  const text = e.clipboardData.getData('text');
+                  if (!text) return;
+                  const studentIdx = students.findIndex((s) => s.id === student.id);
+                  const subjectIdx = visibleSubjects.indexOf(subject);
+                  if (studentIdx < 0 || subjectIdx < 0) return;
+                  const rows = text.split(/\r?\n/);
+                  rows.forEach((row, rIdx) => {
+                    const targetStudentIdx = studentIdx + rIdx;
+                    if (targetStudentIdx >= students.length) return;
+                    const values = row
+                      .split(/\t|,|，/)
+                      .map((v) => v.trim())
+                      .filter(Boolean);
+                    values.forEach((val, cIdx) => {
+                      const targetSubjectIdx = subjectIdx + cIdx;
+                      if (targetSubjectIdx >= visibleSubjects.length) return;
+                      const num = parseFloat(val);
+                      if (Number.isNaN(num) || num < 0 || num > 100) {
+                        showToast('error', `粘贴值 ${val} 需在 0-100，已跳过`);
+                        return;
+                      }
+                      handleScoreBlur(
+                        Number(students[targetStudentIdx].id),
+                        visibleSubjects[targetSubjectIdx],
+                        val
+                      );
+                    });
+                  });
                 }}
               />
               {scoreData?.status && getStatusBadge(scoreData.status)}
@@ -995,7 +1141,7 @@ const ScoreEntry: React.FC = () => {
         },
       })),
     ],
-    [visibleSubjects, scores, pendingChanges, handleScoreBlur, getStatusBadge, showToast]
+    [visibleSubjects, scores, pendingChanges, handleScoreBlur, getStatusBadge, showToast, students, focusCell]
   );
 
   const selectedExamData = exams.find((e) => e.id.toString() === selectedExam);
@@ -1165,6 +1311,9 @@ const ScoreEntry: React.FC = () => {
                   ({Object.keys(pendingChanges).length} 条待保存)
                 </span>
               )}
+              <span className='hidden xl:inline text-xs text-gray-400'>
+                Tab/Enter 跳格 · ↑↓ 切学生 · 粘贴可批量填充
+              </span>
             </div>
             <div className='flex gap-2'>
               {getEntryProgress === 100 && (
@@ -1214,6 +1363,60 @@ const ScoreEntry: React.FC = () => {
               </PermissionButton>
             </div>
           </div>
+
+          {batchProgress && (
+            <div className='flex items-center gap-3 px-4 py-2 mx-4 mt-4 rounded-lg bg-primary-50 border border-primary-200 text-sm'>
+              <div className='flex-1'>
+                <div className='flex justify-between text-primary-700 mb-1'>
+                  <span>
+                    正在保存 {batchProgress.processed}/{batchProgress.total} 条
+                  </span>
+                  <span>
+                    预计剩余 {Math.ceil((batchProgress.total - batchProgress.processed) * 0.8)} 秒
+                  </span>
+                </div>
+                <div className='h-1.5 bg-primary-100 rounded-full overflow-hidden'>
+                  <div
+                    className='h-full bg-primary-500 rounded-full transition-all duration-200'
+                    style={{
+                      width: `${batchProgress.total ? (batchProgress.processed / batchProgress.total) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  cancelBatchRef.current = true;
+                }}
+                className='text-xs text-primary-700 border border-primary-300 rounded px-2 py-1 hover:bg-primary-100'
+              >
+                取消
+              </button>
+            </div>
+          )}
+
+          {batchFailures && batchFailures.length > 0 && (
+            <div className='flex items-start justify-between gap-3 px-4 py-2 mx-4 mt-4 rounded-lg bg-red-50 border border-red-200 text-sm'>
+              <div>
+                <div className='text-red-700 font-medium mb-1'>
+                  {batchFailures.length} 条保存失败（已保留待保存，可重试）：
+                </div>
+                <ul className='space-y-0.5'>
+                  {batchFailures.map((f, index) => (
+                    <li key={index} className='text-xs text-red-600'>
+                      [{f.key}] {f.error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button
+                onClick={() => setBatchFailures(null)}
+                className='shrink-0 text-xs text-red-400 hover:text-red-600'
+              >
+                关闭
+              </button>
+            </div>
+          )}
 
           <DataTable<User>
             columns={columns}
