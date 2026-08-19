@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
-import { ClipboardCheck, Check, X, Filter, RefreshCw, Plus } from 'lucide-react';
+import { ClipboardCheck, Check, X, Filter, RefreshCw, Plus, AlertCircle } from 'lucide-react';
 import { Card, Button, Modal, PermissionButton, DataTable } from '../components';
 import type { ColumnType } from '../components/data-display/DataTable';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -37,6 +37,27 @@ interface Pagination {
   total: number;
 }
 
+/** 常用拒绝理由模板（下拉即选，可再编辑） */
+const REJECT_REASONS = [
+  '请假理由不充分',
+  '请假时间与课程冲突',
+  '证明材料缺失',
+  '申请信息不完整',
+  '不符合学校规定',
+  '需与家长进一步确认',
+];
+
+interface FailedBatchItem {
+  id: number;
+  message: string;
+}
+
+interface FailedBatch {
+  action: 'approve' | 'reject';
+  comment?: string;
+  items: FailedBatchItem[];
+}
+
 function Approvals() {
   const { showToast } = useStableToast();
   const confirmFn = useConfirm();
@@ -59,6 +80,11 @@ function Approvals() {
   });
   const [actionLoading, setActionLoading] = useState(false);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, per_page: 20, total: 0 });
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Array<string | number>>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [showBatchRejectModal, setShowBatchRejectModal] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
+  const [failedBatch, setFailedBatch] = useState<FailedBatch | null>(null);
 
   const loadApprovals = useCallback(async () => {
     try {
@@ -96,6 +122,13 @@ function Approvals() {
   useEffect(() => {
     loadApprovals();
   }, [loadApprovals]);
+
+  // 列表变化后收敛 activeIndex，避免越界
+  useEffect(() => {
+    if (approvals.length > 0 && activeIndex >= approvals.length) {
+      setActiveIndex(approvals.length - 1);
+    }
+  }, [approvals.length, activeIndex]);
 
   const handleViewDetail = useCallback(
     async (id: number) => {
@@ -161,6 +194,102 @@ function Approvals() {
   },
   [showToast]
 );
+
+  /** 批量通过/拒绝的公共执行逻辑，含失败明细与重试数据维护 */
+  const processBatch = useCallback(
+    async (action: 'approve' | 'reject', ids: number[], comment?: string) => {
+      if (ids.length === 0) return;
+      try {
+        setActionLoading(true);
+        const res =
+          action === 'approve'
+            ? await api.approvals.batchApprove(ids)
+            : await api.approvals.batchReject(ids, comment);
+        const failedItems = res.results
+          .filter((r) => !r.success)
+          .map((r) => ({ id: r.id, message: r.message }));
+        setFailedBatch(failedItems.length > 0 ? { action, comment, items: failedItems } : null);
+        showToast(
+          res.failed_count > 0 ? 'warning' : 'success',
+          `成功 ${res.success_count} 条，失败 ${res.failed_count} 条`
+        );
+        await loadApprovals();
+        setSelectedRowKeys([]);
+        setActiveIndex(0);
+      } catch (error) {
+        logger.error('批量审批失败:', error);
+        showToast('error', '操作失败: ' + ((error as Error).message || ''));
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [loadApprovals, showToast]
+  );
+
+  const handleBatchApprove = useCallback(async () => {
+    const ids = selectedRowKeys.map(Number).filter((n) => !Number.isNaN(n));
+    if (ids.length === 0) return;
+    const ok = await confirmRef.current({
+      title: '批量通过',
+      message: `确定批量通过选中的 ${ids.length} 条申请吗？`,
+      confirmText: '通过',
+      cancelText: '取消',
+      type: 'success',
+    });
+    if (!ok) return;
+    await processBatch('approve', ids);
+  }, [selectedRowKeys, processBatch]);
+
+  const handleBatchRejectConfirm = useCallback(async () => {
+    if (rejectComment.trim() === '') {
+      showToast('warning', '拒绝理由不能为空');
+      return;
+    }
+    const ids = selectedRowKeys.map(Number).filter((n) => !Number.isNaN(n));
+    setShowBatchRejectModal(false);
+    await processBatch('reject', ids, rejectComment.trim());
+  }, [rejectComment, selectedRowKeys, processBatch, showToast]);
+
+  /** 重试失败项：对失败 id 集合重新执行同类型批量操作 */
+  const handleRetryFailed = useCallback(() => {
+    if (!failedBatch || failedBatch.items.length === 0) return;
+    const ids = failedBatch.items.map((i) => i.id);
+    setShowBatchRejectModal(false);
+    processBatch(failedBatch.action, ids, failedBatch.comment);
+  }, [failedBatch, processBatch]);
+
+  const handleSelectionChange = useCallback((keys: Array<string | number>) => {
+    setSelectedRowKeys(keys);
+  }, []);
+
+  // 键盘流：J/K 移动，Y 通过，N 拒绝（输入框聚焦时不生效）
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+        return;
+      }
+      if (approvals.length === 0) return;
+      const key = e.key;
+      if (key === 'j' || key === 'J') {
+        e.preventDefault();
+        setActiveIndex((prev) => Math.min(prev + 1, approvals.length - 1));
+      } else if (key === 'k' || key === 'K') {
+        e.preventDefault();
+        setActiveIndex((prev) => Math.max(prev - 1, 0));
+      } else if (key === 'y' || key === 'Y') {
+        const item = approvals[activeIndex];
+        if (item && item.status === 'pending') handleApprove(item.id);
+      } else if (key === 'n' || key === 'N') {
+        const item = approvals[activeIndex];
+        if (item && item.status === 'pending') handleReject(item.id);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [approvals, activeIndex, handleApprove, handleReject]);
 
   const handleCreateApproval = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -358,13 +487,72 @@ function Approvals() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
+          {selectedRowKeys.length > 0 && (
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='primary'
+                size='sm'
+                onClick={handleBatchApprove}
+                disabled={actionLoading}
+              >
+                <Check className='w-3 h-3' />
+                批量通过({selectedRowKeys.length})
+              </Button>
+              <Button
+                variant='danger'
+                size='sm'
+                onClick={() => setShowBatchRejectModal(true)}
+                disabled={actionLoading}
+              >
+                <X className='w-3 h-3' />
+                批量拒绝({selectedRowKeys.length})
+              </Button>
+              <Button variant='outline' size='sm' onClick={() => setSelectedRowKeys([])}>
+                清空选择
+              </Button>
+            </div>
+          )}
+          <span className='ml-auto text-xs text-gray-400'>键盘：J/K 移动 · Y 通过 · N 拒绝</span>
         </div>
+
+        {failedBatch && failedBatch.items.length > 0 && (
+          <div className='mb-4 rounded-lg border border-red-200 bg-red-50 p-3'>
+            <div className='flex items-center justify-between mb-2'>
+              <span className='text-sm font-medium text-red-700'>
+                <AlertCircle className='w-4 h-4 inline mr-1 -mt-0.5' />
+                以下 {failedBatch.items.length} 条申请操作失败
+              </span>
+              <Button
+                variant='outline'
+                size='sm'
+                className='text-red-600 border-red-200 hover:bg-red-100'
+                onClick={handleRetryFailed}
+                disabled={actionLoading}
+              >
+                <RefreshCw className='w-3 h-3' />
+                重试失败项
+              </Button>
+            </div>
+            <ul className='space-y-1 max-h-40 overflow-y-auto'>
+              {failedBatch.items.map((item) => (
+                <li key={item.id} className='flex items-start gap-1.5 text-xs text-red-600'>
+                  <span className='font-medium whitespace-nowrap'>#{item.id}</span>
+                  <span>{item.message || '操作失败'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <DataTable<Approval>
           columns={columns}
           dataSource={approvals}
           loading={loading}
           rowKey='id'
+          selectable
+          selectedRowKeys={selectedRowKeys}
+          onSelectChange={handleSelectionChange}
+          rowClassName={(_, index) => (index === activeIndex ? 'bg-primary-50' : '')}
           total={pagination.total}
           page={pagination.page}
           pageSize={pagination.per_page}
@@ -590,6 +778,65 @@ function Approvals() {
           </div>
         </Modal>
       )}
+
+      <Modal
+        isOpen={showBatchRejectModal}
+        onClose={() => setShowBatchRejectModal(false)}
+        title='批量拒绝'
+        size='md'
+      >
+        <div className='space-y-4'>
+          <p className='text-sm text-gray-600'>
+            将对选中的 {selectedRowKeys.length} 条申请执行拒绝操作，请填写拒绝理由。
+          </p>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>常用拒绝理由</label>
+            <select
+              value={rejectComment}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setRejectComment(e.target.value)}
+              className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
+            >
+              <option value=''>请选择或手动输入</option>
+              {REJECT_REASONS.map((reason) => (
+                <option key={reason} value={reason}>
+                  {reason}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              拒绝理由 <span className='text-red-500'>*</span>
+            </label>
+            <textarea
+              value={rejectComment}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setRejectComment(e.target.value)}
+              className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[100px]'
+              placeholder='请输入拒绝理由'
+            />
+            {rejectComment.trim() === '' && (
+              <p className='text-xs text-red-500 mt-1'>拒绝理由不能为空</p>
+            )}
+          </div>
+          <div className='flex gap-3 pt-4 border-t border-gray-100'>
+            <Button
+              variant='outline'
+              onClick={() => setShowBatchRejectModal(false)}
+              disabled={actionLoading}
+            >
+              取消
+            </Button>
+            <Button
+              variant='danger'
+              onClick={handleBatchRejectConfirm}
+              disabled={actionLoading || rejectComment.trim() === ''}
+            >
+              <X className='w-4 h-4' />
+              确认拒绝
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

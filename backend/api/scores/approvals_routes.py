@@ -66,6 +66,170 @@ def apply_score_limit(score):
     return max(min_score, min(score, max_score))
 
 
+def _execute_approve(approval, data):
+    """单条审批通过完整链路（单条/批量共用）。返回 (ok, message, detail)。"""
+    if not _can_access_approval_user(approval.student_id):
+        return False, "无权审批该申请", {"code": 403}
+    if approval.status != "pending":
+        return False, "该审批已被处理", {"code": 400}
+
+    # 事务收口到 service：状态/审批人/意见/时间 + 原子积分累加 + 生成 ScoreRecord + 单一提交
+    result = approve_approval(approval, data)
+    user = result["user"]
+    actual_change = result["actual_change"]
+
+    # R4: 审批通过改分后触发综合评分重算（原仅 score-entry 触发 → 两套行为）
+    if user:
+        try:
+            from services.composite_score_service import CompositeScoreService
+
+            CompositeScoreService.recalculate_user_score(user.id)
+        except Exception:
+            pass
+
+    # D3/R4: 审批结果写入学生通知中心（学生端 /notifications 可见）
+    if user:
+        try:
+            from services.notification_service import create_approval_result_notification
+
+            create_approval_result_notification(
+                user_id=user.id,
+                title="审批通过",
+                content="您的申请「%s」已审批通过%s"
+                % (
+                    approval.title,
+                    "，积分变动 %+g 分" % actual_change if actual_change else "",
+                ),
+            )
+        except Exception as e:
+            print(f"[Approval] 审批结果通知写入失败: {e}")
+
+    # 更新用户缓存
+    if mqtt_available and user:
+        mqtt_manager.set_cached_user(user.card_id, user)
+
+    # 发送审批结果通知到设备端
+    if mqtt_available and user:
+        notification = {
+            "type": "approval_result",
+            "approval_id": approval.id,
+            "user_name": user.name,
+            "card_id": user.card_id,
+            "score_change": approval.score_change,
+            "new_points": user.current_score,
+            "status": "approved",
+            "comment": approval.comment,
+            "timestamp": datetime.now().isoformat(),
+        }
+        publish_mqtt("phonebox/notification", json.dumps(notification))
+        publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
+
+    # 发送积分变动通知到远程客户端（积分窗口显示）
+    if mqtt_available and user:
+        try:
+            score_change_str = (
+                f"{approval.score_change:+g}" if approval.score_change > 0 else str(approval.score_change)
+            )
+            score_change_text = f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
+
+            allowed, check_message, reason_code, rule_info = (
+                ClassTimeChecker.is_notification_allowed(
+                    target_class_info_id=getattr(user, "class_info_id", None), force_send=False
+                )
+            )
+            if allowed:
+                score_notification = {
+                    "type": "score_change",
+                    "text": score_change_text,
+                    "popup": True,
+                    "timestamp": datetime.now().isoformat(),
+                }
+                publish_mqtt("phonebox/remote/notify", score_notification)
+            else:
+                ClassTimeChecker.log_notify_audit(
+                    "score_change",
+                    getattr(user, "class_info_id", None),
+                    None,
+                    {"text": score_change_text},
+                    reason_code or "GLOBAL_TIME_RULE",
+                    check_message,
+                    force_send=False,
+                )
+
+            create_admin_notification(
+                title="审批通过通知",
+                message=score_change_text,
+                type="success",
+                priority="medium",
+                extra_data={
+                    "approval_id": approval.id,
+                    "user_id": approval.student_id,
+                    "user_name": user.name,
+                    "score_change": approval.score_change,
+                    "title": approval.title,
+                },
+            )
+        except Exception as e:
+            print(f"[ScoreChange] 审批积分变动通知发送失败: {e}")
+
+    invalidate_cache("api:/api/approvals/*")
+    return True, "审批已通过", {
+        "approval_id": approval.id,
+        "user_name": user.name if user else None,
+        "score_change": approval.score_change,
+        "new_points": user.current_score if user else None,
+        "notification_sent": mqtt_available,
+    }
+
+
+def _execute_reject(approval, data):
+    """单条审批拒绝完整链路（单条/批量共用）。返回 (ok, message, detail)。"""
+    if not _can_access_approval_user(approval.student_id):
+        return False, "无权审批该申请", {"code": 403}
+    if approval.status != "pending":
+        return False, "该审批已被处理", {"code": 400}
+
+    # 事务收口到 service：状态/审批人/意见/时间 + 单一提交
+    result = reject_approval(approval, data)
+    user = result["user"]
+
+    # D3/R4: 拒绝结果写入学生通知中心
+    if user:
+        try:
+            from services.notification_service import create_approval_result_notification
+
+            create_approval_result_notification(
+                user_id=user.id,
+                title="审批未通过",
+                content="您的申请「%s」未通过审批：%s"
+                % (approval.title, approval.comment or "审批未通过"),
+            )
+        except Exception as e:
+            print(f"[Approval] 审批结果通知写入失败: {e}")
+
+    if mqtt_available and user:
+        notification = {
+            "type": "approval_result",
+            "approval_id": approval.id,
+            "user_name": user.name,
+            "card_id": user.card_id,
+            "score_change": approval.score_change,
+            "new_points": user.current_score,
+            "status": "rejected",
+            "comment": approval.comment,
+            "timestamp": datetime.now().isoformat(),
+        }
+        publish_mqtt("phonebox/notification", json.dumps(notification))
+        publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
+
+    invalidate_cache("api:/api/approvals/*")
+    return True, "审批已拒绝", {
+        "approval_id": approval.id,
+        "comment": approval.comment,
+        "notification_sent": mqtt_available,
+    }
+
+
 def _can_access_approval_user(user_id):
     """检查当前管理员是否有权限审批指定学生的申请"""
     admin = get_current_admin()
@@ -244,138 +408,10 @@ class ApprovalApprove(Resource):
     def post(self, id):
         """批准审批。需要审批权限。非管理员用户只能审批关联班级的申请。"""
         approval = Approval.query.get_or_404(id)
-        if not _can_access_approval_user(approval.student_id):
-            return APIResponse.error(message="无权审批该申请", status_code=403)
-        data = request.get_json() or {}
-
-        if approval.status != "pending":
-            return APIResponse.error(message="该审批已被处理", status_code=400)
-
-        # 事务收口到 service：状态/审批人/意见/时间 + 原子积分累加 + 生成 ScoreRecord + 单一提交
-        result = approve_approval(approval, data)
-        user = result["user"]
-        actual_change = result["actual_change"]
-
-        # R4: 审批通过改分后触发综合评分重算（原仅 score-entry 触发 → 两套行为）
-        if user:
-            try:
-                from services.composite_score_service import CompositeScoreService
-
-                CompositeScoreService.recalculate_user_score(user.id)
-            except Exception:
-                pass
-
-        # D3/R4: 审批结果写入学生通知中心（学生端 /notifications 可见；原仅发 MQTT 无落库）
-        # 写入路径收口至 notification_service（F17 防腐层）：原路由内 Notification+commit/rollback 已迁出
-        if user:
-            try:
-                from services.notification_service import create_approval_result_notification
-
-                create_approval_result_notification(
-                    user_id=user.id,
-                    title="审批通过",
-                    content="您的申请「%s」已审批通过%s"
-                    % (
-                        approval.title,
-                        "，积分变动 %+g 分" % actual_change if actual_change else "",
-                    ),
-                )
-            except Exception as e:
-                print(f"[Approval] 审批结果通知写入失败: {e}")
-
-        # 更新用户缓存
-        if mqtt_available and user:
-            mqtt_manager.set_cached_user(user.card_id, user)
-            print(
-                f"[Approval] 已更新用户缓存: card_id={user.card_id}, new_score={user.current_score}"
-            )
-
-        # 发送审批结果通知到设备端
-        if mqtt_available and user:
-            notification = {
-                "type": "approval_result",
-                "approval_id": approval.id,
-                "user_name": user.name,
-                "card_id": user.card_id,
-                "score_change": approval.score_change,
-                "new_points": user.current_score,
-                "status": "approved",
-                "comment": approval.comment,
-                "timestamp": datetime.now().isoformat(),
-            }
-            # 发送到通用通知主题
-            publish_mqtt("phonebox/notification", json.dumps(notification))
-            # 发送到用户特定主题
-            publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
-            print(f"[Approval] 已发送审批通过通知: card_id={user.card_id}")
-
-        # 发送积分变动通知到远程客户端（积分窗口显示）
-        if mqtt_available and user:
-            try:
-                score_change_str = (
-                    f"{approval.score_change:+g}"
-                    if approval.score_change > 0
-                    else str(approval.score_change)
-                )
-                score_change_text = (
-                    f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
-                )
-
-                allowed, check_message, reason_code, rule_info = (
-                    ClassTimeChecker.is_notification_allowed(
-                        target_class_info_id=getattr(user, "class_info_id", None), force_send=False
-                    )
-                )
-                if allowed:
-                    score_notification = {
-                        "type": "score_change",
-                        "text": score_change_text,
-                        "popup": True,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                    publish_mqtt("phonebox/remote/notify", score_notification)
-                    print(f"[ScoreChange] 审批积分变动通知已发送: {score_change_text}")
-                else:
-                    ClassTimeChecker.log_notify_audit(
-                        "score_change",
-                        getattr(user, "class_info_id", None),
-                        None,
-                        {"text": score_change_text},
-                        reason_code or "GLOBAL_TIME_RULE",
-                        check_message,
-                        force_send=False,
-                    )
-                    print(f"[ScoreChange] 审批积分变动通知被拦截（上课时间）: {score_change_text}")
-
-                create_admin_notification(
-                    title="审批通过通知",
-                    message=score_change_text,
-                    type="success",
-                    priority="medium",
-                    extra_data={
-                        "approval_id": approval.id,
-                        "user_id": approval.student_id,
-                        "user_name": user.name,
-                        "score_change": approval.score_change,
-                        "title": approval.title,
-                    },
-                )
-            except Exception as e:
-                print(f"[ScoreChange] 审批积分变动通知发送失败: {e}")
-
-        invalidate_cache("api:/api/approvals/*")
-        return APIResponse.success(
-            data={
-                "approval_id": approval.id,
-                "user_name": user.name if user else None,
-                "score_change": approval.score_change,
-                "new_points": user.current_score if user else None,
-                "notification_sent": mqtt_available,
-            },
-            message="审批已通过",
-        )
-
-
+        ok, message, detail = _execute_approve(approval, request.get_json() or {})
+        if not ok:
+            return APIResponse.error(message=message, status_code=detail.get("code", 400))
+        return APIResponse.success(data=detail, message=message)
 @ns_approvals.route("/<int:id>/reject")
 @ns_approvals.param("id", "审批ID")
 class ApprovalReject(Resource):
@@ -385,55 +421,79 @@ class ApprovalReject(Resource):
     def post(self, id):
         """拒绝审批。需要审批权限。非管理员用户只能审批关联班级的申请。"""
         approval = Approval.query.get_or_404(id)
-        if not _can_access_approval_user(approval.student_id):
-            return APIResponse.error(message="无权审批该申请", status_code=403)
+        ok, message, detail = _execute_reject(approval, request.get_json() or {})
+        if not ok:
+            return APIResponse.error(message=message, status_code=detail.get("code", 400))
+        return APIResponse.success(data=detail, message=message)
+@ns_approvals.route("/batch-approve")
+class ApprovalBatchApprove(Resource):
+
+    @ns_approvals.doc("batch_approve_approvals", description="批量通过审批（逐条处理，返回逐条结果）")
+    @requires_permission("score.approve")
+    def post(self):
+        """批量通过。逐条执行完整审批链路；单条失败不影响其余。"""
         data = request.get_json() or {}
-
-        if approval.status != "pending":
-            return APIResponse.error(message="该审批已被处理", status_code=400)
-
-        # 事务收口到 service：状态/审批人/意见/时间 + 单一提交
-        result = reject_approval(approval, data)
-        user = result["user"]
-
-        # D3/R4: 拒绝结果写入学生通知中心
-        if user:
+        ids = data.get("ids") or []
+        comment = data.get("comment")
+        if not ids:
+            return APIResponse.error(message="请选择要审批的申请")
+        if len(ids) > 100:
+            return APIResponse.error(message="单次最多批量审批 100 条")
+        results = []
+        for aid in ids:
+            approval = Approval.query.get(aid)
+            if not approval:
+                results.append({"id": aid, "success": False, "message": "申请不存在"})
+                continue
             try:
-                from services.notification_service import create_approval_result_notification
-
-                create_approval_result_notification(
-                    user_id=user.id,
-                    title="审批未通过",
-                    content="您的申请「%s」未通过审批：%s"
-                    % (approval.title, approval.comment or "审批未通过"),
-                )
+                ok, message, _detail = _execute_approve(approval, {"comment": comment})
+                results.append({"id": aid, "success": ok, "message": message})
             except Exception as e:
-                print(f"[Approval] 审批结果通知写入失败: {e}")
-
-        if mqtt_available and user:
-            notification = {
-                "type": "approval_result",
-                "approval_id": approval.id,
-                "user_name": user.name,
-                "card_id": user.card_id,
-                "score_change": approval.score_change,
-                "new_points": user.current_score,
-                "status": "rejected",
-                "comment": approval.comment,
-                "timestamp": datetime.now().isoformat(),
-            }
-            publish_mqtt("phonebox/notification", json.dumps(notification))
-            publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
-            print(f"[Approval] 已发送审批拒绝通知: card_id={user.card_id}")
-
-        invalidate_cache("api:/api/approvals/*")
+                results.append({"id": aid, "success": False, "message": str(e)})
+        ok_count = sum(1 for r in results if r["success"])
         return APIResponse.success(
             data={
-                "approval_id": approval.id,
-                "comment": approval.comment,
-                "notification_sent": mqtt_available,
+                "results": results,
+                "success_count": ok_count,
+                "failed_count": len(results) - ok_count,
             },
-            message="审批已拒绝",
+            message="成功 %d 条，失败 %d 条" % (ok_count, len(results) - ok_count),
+        )
+
+
+@ns_approvals.route("/batch-reject")
+class ApprovalBatchReject(Resource):
+
+    @ns_approvals.doc("batch_reject_approvals", description="批量拒绝审批（逐条处理，返回逐条结果）")
+    @requires_permission("score.approve")
+    def post(self):
+        """批量拒绝。逐条执行完整审批链路；单条失败不影响其余。"""
+        data = request.get_json() or {}
+        ids = data.get("ids") or []
+        comment = data.get("comment")
+        if not ids:
+            return APIResponse.error(message="请选择要拒绝的申请")
+        if len(ids) > 100:
+            return APIResponse.error(message="单次最多批量拒绝 100 条")
+        results = []
+        for aid in ids:
+            approval = Approval.query.get(aid)
+            if not approval:
+                results.append({"id": aid, "success": False, "message": "申请不存在"})
+                continue
+            try:
+                ok, message, _detail = _execute_reject(approval, {"comment": comment})
+                results.append({"id": aid, "success": ok, "message": message})
+            except Exception as e:
+                results.append({"id": aid, "success": False, "message": str(e)})
+        ok_count = sum(1 for r in results if r["success"])
+        return APIResponse.success(
+            data={
+                "results": results,
+                "success_count": ok_count,
+                "failed_count": len(results) - ok_count,
+            },
+            message="成功 %d 条，失败 %d 条" % (ok_count, len(results) - ok_count),
         )
 
 

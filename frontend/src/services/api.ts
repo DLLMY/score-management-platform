@@ -1600,6 +1600,13 @@ interface Approval {
   comment?: string;
 }
 
+/** 批量审批返回的逐条结果与汇总 */
+export interface BatchApprovalResult {
+  results: Array<{ id: number; success: boolean; message: string }>;
+  success_count: number;
+  failed_count: number;
+}
+
 export interface Alert {
   id: number;
   device_id: string;
@@ -2340,6 +2347,8 @@ export interface Api {
     create: (data: Partial<Approval>) => Promise<Approval>;
     approve: (id: number, data: { comment?: string }) => Promise<Approval>;
     reject: (id: number, data: { comment: string }) => Promise<Approval>;
+    batchApprove: (ids: number[], comment?: string) => Promise<BatchApprovalResult>;
+    batchReject: (ids: number[], comment?: string) => Promise<BatchApprovalResult>;
     delete: (id: number) => Promise<void>;
   };
   algorithm: {
@@ -5194,6 +5203,16 @@ const api: Api = {
         method: 'POST',
         body: JSON.stringify(data),
       }) as Promise<Approval>,
+    batchApprove: (ids, comment) =>
+      request('/api/approvals/batch-approve', {
+        method: 'POST',
+        body: JSON.stringify({ ids, ...(comment ? { comment } : {}) }),
+      }) as Promise<BatchApprovalResult>,
+    batchReject: (ids, comment) =>
+      request('/api/approvals/batch-reject', {
+        method: 'POST',
+        body: JSON.stringify({ ids, ...(comment ? { comment } : {}) }),
+      }) as Promise<BatchApprovalResult>,
     delete: (id) => request(`/api/approvals/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   deviceGroup: {
