@@ -17,12 +17,27 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-# 后端必须用系统 Python 3.11（带 torch，托管 3.13 缺 torch 契约测试会失败）
-PY="C:/Users/53527/AppData/Local/Programs/Python/Python311/python.exe"
-if [ ! -f "$PY" ]; then
-  echo "[错误] 未找到系统 Python 3.11: $PY"
+# Python 解析器选择（CI/跨机可移植）：
+#   1. 环境变量 PYTHON_BIN 显式指定（CI 用，如 PYTHON_BIN=python3）
+#   2. 本机默认：系统 Python 3.11（带 torch）
+#   3. 兜底：python3 / python 自动探测
+if [ -n "$PYTHON_BIN" ]; then
+  PY="$PYTHON_BIN"
+else
+  PY="C:/Users/53527/AppData/Local/Programs/Python/Python311/python.exe"
+  if [ ! -f "$PY" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+      PY="python3"
+    else
+      PY="python"
+    fi
+  fi
+fi
+if ! command -v "$PY" >/dev/null 2>&1 && [ ! -f "$PY" ]; then
+  echo "[错误] 未找到 Python（可用 PYTHON_BIN 环境变量指定，如 PYTHON_BIN=python3）: $PY"
   exit 2
 fi
+echo "[Python] $PY"
 
 FAILED=0
 step() { echo ""; echo "========== $1 =========="; }

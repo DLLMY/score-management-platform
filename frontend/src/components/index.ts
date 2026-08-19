@@ -56,7 +56,7 @@ export { SkeletonText, SkeletonAvatar, SkeletonCard, SkeletonList } from './data
 export type { SearchCondition, SavedSearch } from './data-display/AdvancedSearchFilter';
 
 // 布局组件
-export { Header, Sidebar, PageTransition } from './layout';
+export { Header, Sidebar, PageTransition, KeyboardShortcutHelp } from './layout';
 
 // 特殊组件
 export { default as ImportExportPanel } from './special/ImportExportPanel';

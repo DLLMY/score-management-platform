@@ -1,105 +1,79 @@
-name: CI
+name: CI 回归基线
 
-# 前后端自动回归（P2 改进项）。
-# 触发：push / pull_request 到 main；也可手动运行（workflow_dispatch）。
-#
-# ⚠️ 本地资产依赖说明：
-#   - 后端 NLP/算法模块需要本地训练的 BERT 模型（backend/models/bert 目录），
-#     该目录属运行资产、未随代码仓库分发。因此 CI 的 backend job 只跑
-#     「不依赖模型」的契约/业务测试子集；全量契约遍历
-#     （tests/test_api_envelope.py::test_all_get_endpoints_return_envelope）
-#     与全量 pytest 需在具备模型的本地环境执行。
-#   - 前端 e2e（Playwright）需要真实后端 + 模型，CI 中不自动执行；
-#     本地运行：先起后端 `python run.py ...`，再 `npm run test:e2e`。
+# 第九次评估建议落地：把 scripts/run_regression.sh 五步闸门固化进 CI。
+# 设计要点：
+#   - 后端不安装 torch（requirements 中 torch 为可选注释）；M10 懒加载后契约/路由测试无需 torch。
+#   - 后端 job 不启动服务进程：G5 OpenAPI 走脚本"跳过不阻塞"分支，契约由 pytest test_api_envelope 兜底。
+#   - 索引闸门前置：create_app 建表 + create_indexes --create（幂等）→ verify_indexes 全绿。
+#   - PYTHON_BIN 环境变量让 run_regression.sh 在 CI（python）与本机（系统 3.11）通用。
 
 on:
   push:
-    branches: [main]
+    branches: ['main', 'master', 'refactor/**']
   pull_request:
-    branches: [main]
-  workflow_dispatch:
 
 jobs:
-  backend-tests:
-    name: 后端 pytest（契约 + 业务子集）
+  backend:
+    name: 后端回归（RBAC/契约/关键路由/索引）
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v4
 
-      - name: 安装 Python 3.11
-        uses: actions/setup-python@v7.0.0
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
-      - name: 安装依赖
+      - name: 安装后端依赖
+        run: pip install -r backend/requirements.txt
+
+      - name: 初始化数据库与索引（闸门前置）
+        working-directory: backend
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-timeout
+          python -c "from app import app; print('[CI] DB init ok')"
+          python scripts/create_indexes.py --create > /dev/null
+          echo "[CI] 索引就绪"
 
-      - name: 跑契约 shape 快照（不依赖模型）
-        run: |
-          python -m pytest tests/test_api_envelope.py::TestAPIEnvelope::test_known_list_endpoints_data_shape \
-            -p no:locust --timeout=300 -q
+      - name: 运行回归基线（G2 RBAC / G5 OpenAPI / 契约 / 关键路由 / 索引闸门）
+        env:
+          PYTHON_BIN: python
+        run: bash scripts/run_regression.sh
 
-      - name: RBAC 一致性校验（check-only，漂移即失败）
-        run: |
-          python scripts/verify_rbac_consistency.py --check-only
-
-      - name: 跑 MQTT 消息链路测试
-        run: |
-          python -m pytest tests/test_mqtt_message_service.py tests/test_mqtt_service.py \
-            -p no:locust --timeout=300 -q
-
-      - name: 跑核心业务路由测试
-        run: |
-          python -m pytest tests/test_rules_routes.py tests/test_users_routes.py \
-            tests/test_export_routes.py tests/test_notify_history_routes.py \
-            -p no:locust --timeout=300 -q
-
-      - name: 跑算法/报表/学生新增测试组（不依赖模型）
-        # 覆盖：参与度批量/周趋势、归因批量、单生异常隔离、composite 权重敏感、
-        # 算法导出、学期报告摘要、学生 insights、anomaly/score_predict/risk_predict/prediction 边界
-        run: |
-          python -m pytest tests/test_algorithm_batch_isolation.py tests/test_algorithm_export.py \
-            tests/test_report_summary.py tests/test_student_insights.py tests/test_engagement_batch_trend.py \
-            tests/test_attribution_batch.py tests/test_anomaly_service.py tests/test_score_predict_service.py \
-            tests/test_risk_predict_service.py tests/test_prediction_service.py \
-            tests/test_composite_score_service.py \
-            -p no:locust --timeout=300 -q
-
-  frontend-checks:
-    name: 前端 build + lint
+  frontend:
+    name: 前端（vitest / build / lint）
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v4
 
-      - name: 安装 Node 22
-        uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v4
         with:
-          # vitest 4 依赖 node >= 22（webidl.util.markAsUncloneable），与本地 node 22 一致
-          node-version: '22'
-          cache: npm
+          node-version: 20
+          cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: 安装依赖
+        working-directory: frontend
         run: npm ci
 
-      - name: 生产构建
-        run: npm run build
-
-      - name: 前端单测（vitest，jsdom）
+      - name: 单测（vitest）
+        working-directory: frontend
         run: npm test
 
-      - name: ESLint 检查
-        run: npm run lint
+      - name: 生产构建
+        working-directory: frontend
+        run: npm run build
 
-  # 前端 e2e 冒烟（需要真实后端 + 本地模型，本地执行）：
-  #   1) 后端：python run.py --env development --host 127.0.0.1 --port 5000
-  #   2) 前端：cd frontend && npm run test:e2e -- --project=chrome smoke.spec.ts
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint

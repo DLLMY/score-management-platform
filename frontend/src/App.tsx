@@ -10,6 +10,7 @@ import {
   NetworkStatusIndicator,
   PreloadProvider,
   PermissionGuard,
+  KeyboardShortcutHelp,
 } from './components';
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcut';
 import { fetchCsrfToken } from './services/api';
@@ -304,6 +305,7 @@ function AppLayout() {
   return (
     <div className='flex min-h-screen bg-gray-50 dark:bg-slate-900'>
       <NetworkStatusIndicator />
+      <KeyboardShortcutHelp />
       <Sidebar />
       <div className='flex-1 min-w-0 flex flex-col bg-white dark:bg-slate-800'>
         <Header />

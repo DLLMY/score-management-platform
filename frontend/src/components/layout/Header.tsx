@@ -308,6 +308,12 @@ function Header() {
     return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
 
+  // UX: 未读通知数同步到浏览器标签页标题（多标签场景即时感知）
+  useEffect(() => {
+    const base = '积分管理平台';
+    document.title = unreadCount > 0 ? `(${unreadCount > 9 ? '9+' : unreadCount}) ${base}` : base;
+  }, [unreadCount]);
+
   const { isAdmin: isSuperAdmin } = usePermissionStore();
 
   const roleLabel = useMemo<string>(() => {
@@ -517,6 +523,21 @@ function Header() {
                 <div className='absolute inset-0 bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800 rounded-lg opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-300' />
               </div>
             )}
+          </button>
+
+          <button
+            onClick={() => {
+              document.querySelector<HTMLElement>('[data-help-modal]')?.click();
+            }}
+            aria-label='键盘快捷键帮助'
+            title='快捷键（Shift + ?）'
+            className='p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-all duration-200'
+          >
+            <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+              <circle cx='12' cy='12' r='10' />
+              <path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' />
+              <line x1='12' y1='17' x2='12.01' y2='17' />
+            </svg>
           </button>
 
           <div className='relative' data-header-menu ref={notificationRef}>
