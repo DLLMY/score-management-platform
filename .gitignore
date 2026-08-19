@@ -177,3 +177,6 @@ frontend/test-results/
 # Playwright e2e 产物（报告/失败截图/视频）
 frontend/playwright-report/
 frontend/test-results/
+
+# OpenAPI 快照自动备份（verify_openapi_contract.py --update 生成）
+api-docs/*.bak_*
