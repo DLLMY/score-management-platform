@@ -428,9 +428,9 @@ def main():
     print("=" * 50)
     print(f"\n班级: {CLASS_NAME}")
     print(f"学生: {STUDENT_COUNT}名")
-    print(f"科目: 9门")
-    print(f"积分规则: 多条")
-    print(f"班主工作台: 全部已配置\n")
+    print("科目: 9门")
+    print("积分规则: 多条")
+    print("班主工作台: 全部已配置\n")
 
 
 if __name__ == "__main__":

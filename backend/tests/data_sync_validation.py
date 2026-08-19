@@ -30,6 +30,7 @@ from models import (
     CourseSchedule,
     ScoreRankRule,
     TimeRule,
+    NLPScoringRule,
 )
 
 

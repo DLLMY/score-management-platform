@@ -1,5 +1,6 @@
 import os
 import json
+import subprocess
 
 
 def run_bandit():

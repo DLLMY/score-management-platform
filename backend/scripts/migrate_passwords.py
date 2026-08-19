@@ -81,7 +81,7 @@ def migrate_passwords():
     conn.close()
 
     print("-" * 50)
-    print(f"迁移完成!")
+    print("迁移完成!")
     print(f"迁移数量: {migrated_count}")
     print(f"跳过数量: {skipped_count}")
 

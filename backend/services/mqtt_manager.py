@@ -212,7 +212,7 @@ class MQTTManager:
             self._subscribed_topics = []
         print(f"[MQTTManager] 控制连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
-            print(f"[MQTTManager] 控制连接意外断开，准备重连...")
+            print("[MQTTManager] 控制连接意外断开，准备重连...")
             self._schedule_reconnect("control")
 
     def _on_disconnect_telemetry(self, client, userdata, rc):
@@ -221,7 +221,7 @@ class MQTTManager:
             self._telemetry_subscribed_topics = []
         print(f"[MQTTManager] 遥测连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
-            print(f"[MQTTManager] 遥测连接意外断开，准备重连...")
+            print("[MQTTManager] 遥测连接意外断开，准备重连...")
             self._schedule_reconnect("telemetry")
 
     def _on_message_control(self, client, userdata, msg):

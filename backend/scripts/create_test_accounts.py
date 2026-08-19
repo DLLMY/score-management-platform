@@ -36,7 +36,7 @@ with app.app_context():
         print(f"  教师账号已存在: ID={teacher.id}")
         teacher.password = generate_password_hash("123456")
         db.session.commit()
-        print(f"  已重置密码为: 123456")
+        print("  已重置密码为: 123456")
     else:
         teacher = Admin(
             username="teacher",
@@ -56,7 +56,7 @@ with app.app_context():
         print(f"  学生账号(Admin)已存在: ID={student_admin.id}")
         student_admin.password = generate_password_hash("123456")
         db.session.commit()
-        print(f"  已重置密码为: 123456")
+        print("  已重置密码为: 123456")
     else:
         student_admin = Admin(
             username="student",

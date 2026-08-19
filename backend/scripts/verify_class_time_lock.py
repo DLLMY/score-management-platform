@@ -64,7 +64,7 @@ def verify(app, class_info_id=None):
     print("  [1] 全局上课时段 (TimeRule)")
     print("-" * 64)
     if is_class_time and rule_info:
-        print(f"  状态       : 命中全局时段")
+        print("  状态       : 命中全局时段")
         print(f"  规则名称   : {rule_info.get('name')}")
         print(
             f"  时段       : {rule_info.get('start_hour'):02d}:{rule_info.get('start_minute'):02d}"
@@ -128,7 +128,7 @@ def verify(app, class_info_id=None):
         print(f"  目标班级   : {class_info_id}")
     else:
         allowed, msg, code, _ = ClassTimeChecker.is_notification_allowed(force_send=False)
-        print(f"  目标班级   : (全局)")
+        print("  目标班级   : (全局)")
     print(f"  是否允许   : {'是' if allowed else '否'}")
     print(f"  拦截码     : {code}")
     print(f"  提示       : {msg}")

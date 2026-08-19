@@ -628,7 +628,7 @@ def main():
     tester = IntegrationTest()
     print("\n📋 0. 登录")
     if tester.login():
-        print(f"  ✓ [PASS] 管理员登录成功")
+        print("  ✓ [PASS] 管理员登录成功")
     else:
         print("  ✗ [FAIL] 登录失败")
         return

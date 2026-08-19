@@ -2603,6 +2603,7 @@ class EnhancedNLPParserService:
                     original_name = corr.original_value
                     if corrected_name and original_name:
                         original_pos = text.find(original_name)
+                        corrected_pos = text.find(corrected_name)
 
                         if original_pos != -1 and corrected_pos != -1:
                             if original_pos < corrected_pos:

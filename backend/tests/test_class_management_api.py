@@ -379,7 +379,7 @@ def run_tests():
                             test_result["alt_url_used"] = True
                             results["passed"] += 1
                             test_result["error"] = None
-                            print(f"    ✓ 用户指定路径成功!")
+                            print("    ✓ 用户指定路径成功!")
                         else:
                             print(f"    ✗ 用户指定路径也返回 {alt_response.status_code}")
                             test_result["warnings"].append(
@@ -447,7 +447,7 @@ def run_tests():
             print(f"   JSON有效: {detail['response_valid']}")
             print(f"   格式合规: {detail['response_format_valid']}")
             if detail.get("alt_url_used"):
-                print(f"   注: 使用了备用路径")
+                print("   注: 使用了备用路径")
             for warning in detail.get("warnings", []):
                 print(f"   ⚠ {warning}")
             if detail.get("error"):

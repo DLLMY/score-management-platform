@@ -107,7 +107,7 @@ def upgrade():
                 json.dump(map_wol_int_id, f, ensure_ascii=False, indent=2)
 
             print(f"OK: wol_devices 合并 {merged} 行；map 写入 {MAP_PATH}")
-            print(f"INFO: wol_devices 表保留（F5 验证后再删）")
+            print("INFO: wol_devices 表保留（F5 验证后再删）")
         finally:
             db.session.execute(text("PRAGMA foreign_keys=ON"))
             db.session.commit()

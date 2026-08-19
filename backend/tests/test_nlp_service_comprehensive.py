@@ -1,13 +1,16 @@
 import pytest
 
+try:
+    from services.nlp_service import get_nlp_service
+except ImportError:
+    get_nlp_service = None  # 依赖缺失时各用例 pytest.skip
+
 
 class TestNLPServiceComprehensive:
 
     def test_nlp_parse_basic(self, app):
         with app.app_context():
             try:
-                from services.nlp_service import get_nlp_service
-
                 nlp_service = get_nlp_service()
                 nlp_service.initialize(flask_app=app)
 

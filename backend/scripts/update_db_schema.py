@@ -83,7 +83,7 @@ with app.app_context():
             if missing_columns:
                 print(f"\n表 {table_name} 缺少字段: {missing_columns}")
                 print(f"  现有字段: {existing_columns}")
-                print(f"  正在添加缺失的字段...")
+                print("  正在添加缺失的字段...")
 
                 # 使用 ALTER TABLE 添加缺失的列
                 for col in missing_columns:

@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import json
+import statistics
 
 """
 性能基准测试脚本

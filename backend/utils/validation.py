@@ -551,6 +551,7 @@ def get_common_fields():
 
 def get_user_fields():
     """获取用户相关字段定义"""
+    from flask_restx import fields
 
     return {
         "id": fields.Integer(readOnly=True, description="学生ID"),
@@ -572,6 +573,7 @@ def get_user_fields():
 
 def get_score_fields():
     """获取积分相关字段定义"""
+    from flask_restx import fields
 
     return {
         "score_change": fields.Integer(
@@ -586,6 +588,7 @@ def get_score_fields():
 
 def get_pagination_fields():
     """获取分页相关字段定义"""
+    from flask_restx import fields
 
     return {
         "page": fields.Integer(description="当前页码"),

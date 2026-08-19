@@ -5,6 +5,7 @@ import os
 import ctypes
 import platform
 import logging
+import time
 
 """
 问题诊断与性能监控模块
@@ -12,6 +13,8 @@ import logging
 """
 logger = logging.getLogger(__name__)
 try:
+    import psutil
+
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False

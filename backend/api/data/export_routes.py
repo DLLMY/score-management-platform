@@ -162,7 +162,6 @@ class ExportData(Resource):
                         "id": r.id,
                         "user_id": r.student_id,
                         "student_id": r.student_id,
-                        "student_id": r.student_id,
                         "user_name": r.user.name if r.user else None,
                         "card_id": r.user.card_id if r.user else None,
                         "score_change": r.score_change,

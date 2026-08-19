@@ -28,7 +28,6 @@ import csv
 import re
 import logging
 from pypinyin import lazy_pinyin
-import io
 from flask_restx import Namespace, Resource, fields
 
 logger = logging.getLogger(__name__)

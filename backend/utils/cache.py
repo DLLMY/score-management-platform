@@ -168,6 +168,8 @@ def cached(ttl: int = 300, cache: Optional[ResponseCache] = None):
         def wrapper(*args, **kwargs):
             # 生成缓存键
             cache_key = f"{func.__module__}.{func.__name__}:{_cache._generate_key(*args, **kwargs)}"
+            # 记录最近一次调用生成的缓存键（供 invalidate 使用）
+            wrapper._last_cache_key = cache_key
             # 尝试获取缓存
             cached_value = _cache.get(cache_key)
             if cached_value is not None:
@@ -184,7 +186,14 @@ def cached(ttl: int = 300, cache: Optional[ResponseCache] = None):
 
         # 添加缓存控制方法
         wrapper.clear_cache = lambda: _cache.clear()
-        wrapper.invalidate = lambda: _cache.delete(cache_key)
+
+        def _invalidate() -> None:
+            """清除最近一次调用生成的缓存键（无调用记录时为空操作）"""
+            key = getattr(wrapper, "_last_cache_key", None)
+            if key is not None:
+                _cache.delete(key)
+
+        wrapper.invalidate = _invalidate
         wrapper.get_cache_stats = lambda: _cache.get_stats()
         return wrapper
 
