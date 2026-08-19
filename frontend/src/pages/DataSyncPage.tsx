@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw,
   AlertTriangle,
@@ -12,6 +12,7 @@ import {
 import { request } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton } from '../components';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface ConsistencyStats {
   classes: { total: number; used_by_users: number; used_by_admins: number; missing: number };
@@ -31,6 +32,9 @@ interface ConsistencyIssue {
 
 const DataSyncPage: React.FC = () => {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const [stats, setStats] = useState<ConsistencyStats | null>(null);
   const [issues, setIssues] = useState<ConsistencyIssue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +76,13 @@ const DataSyncPage: React.FC = () => {
 
   const handleFix = useCallback(async () => {
     // M1: 执行修复会改动数据关联（自动建班+改关联），先确认
-    if (!window.confirm('确定要执行数据修复吗？系统将自动建班并修改数据关联。')) return;
+    const ok = await confirmRef.current({
+      message: '确定要执行数据修复吗？系统将自动建班并修改数据关联。',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!ok) return;
     setFixing(true);
     try {
       // request() 剥信封：后端 success(data={"stats": ...}) → 直接是内层对象；失败会抛错进 catch

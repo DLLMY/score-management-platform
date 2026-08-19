@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.activity_service import activity_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_activity = Namespace("activity", description="文体活动管理")
 
@@ -37,6 +38,7 @@ class ActivityList(Resource):
         },
     )
     @requires_permission("activity.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         is_published = request.args.get("is_published")
@@ -49,7 +51,9 @@ class ActivityList(Resource):
     @requires_permission("activity.edit")
     def post(self):
         data = request.get_json()
-        return activity_service.create_activity(data)
+        result = activity_service.create_activity(data)
+        invalidate_cache("api:/api/activity/*")
+        return result
 
 
 @ns_activity.route("/<int:activity_id>")
@@ -65,11 +69,15 @@ class ActivityDetail(Resource):
     @requires_permission("activity.edit")
     def put(self, activity_id):
         data = request.get_json()
-        return activity_service.update_activity(activity_id, data)
+        result = activity_service.update_activity(activity_id, data)
+        invalidate_cache("api:/api/activity/*")
+        return result
 
     @requires_permission("activity.edit")
     def delete(self, activity_id):
-        return activity_service.delete_activity(activity_id)
+        result = activity_service.delete_activity(activity_id)
+        invalidate_cache("api:/api/activity/*")
+        return result
 
 
 @ns_activity.route("/<int:activity_id>/register")
@@ -78,10 +86,14 @@ class ActivityRegister(Resource):
     @requires_permission("activity.edit")
     def post(self, activity_id):
         data = request.get_json()
-        return activity_service.register_student(activity_id, data["student_id"])
+        result = activity_service.register_student(activity_id, data["student_id"])
+        invalidate_cache("api:/api/activity/*")
+        return result
 
     @ns_activity.expect(register_model)
     @requires_permission("activity.edit")
     def delete(self, activity_id):
         data = request.get_json()
-        return activity_service.cancel_registration(activity_id, data["student_id"])
+        result = activity_service.cancel_registration(activity_id, data["student_id"])
+        invalidate_cache("api:/api/activity/*")
+        return result

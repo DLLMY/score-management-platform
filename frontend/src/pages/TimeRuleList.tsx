@@ -1,5 +1,13 @@
 import logger from '../utils/logger';
-import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  FormEvent,
+  ChangeEvent,
+} from 'react';
 import {
   Plus,
   Edit2,
@@ -13,9 +21,12 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useForm, useModal } from '../hooks';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useStableToast } from '../hooks/useStableToast';
 import { validateForm } from '../utils/validation';
-import { Button, PermissionButton } from '../components';
+import { Button, PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useDebouncedValue } from '../hooks';
 
 interface TimeRule {
@@ -68,6 +79,10 @@ const weekDays = [
 
 const TimeRuleList: React.FC = () => {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const [rules, setRules] = useState<TimeRule[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
@@ -171,7 +186,13 @@ const TimeRuleList: React.FC = () => {
   };
 
   const handleDelete = async (id: number): Promise<void> => {
-    if (!window.confirm('确定要删除这条规则吗？')) return;
+    const ok = await confirmRef.current({
+      title: '删除确认',
+      message: '确定要删除这条规则吗？',
+      confirmText: '删除',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.timeRules.delete(id);
       setRules((prev) => prev.filter((r) => r.id !== id));
@@ -181,8 +202,8 @@ const TimeRuleList: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent<HTMLFormElement>): Promise<void> => {
+    e?.preventDefault();
 
     const { isValid, errors } = validateForm(formData, validationRules);
 
@@ -245,6 +266,59 @@ const TimeRuleList: React.FC = () => {
     });
   }, [rules, debouncedSearchTerm, statusFilter]);
 
+  const columns = useMemo<ColumnType<TimeRule>[]>(
+    () => [
+      {
+        title: '规则名称',
+        key: 'name',
+        dataIndex: 'name',
+        render: (_, rule) => (
+          <div className='flex items-center gap-2'>
+            <span className='font-medium text-gray-800'>{rule.name}</span>
+            {rule.description && (
+              <span className='text-xs text-gray-400'>- {rule.description}</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        title: '时间段',
+        key: 'time_range',
+        render: (_, rule) => (
+          <span className='text-gray-600'>
+            {formatTime(rule.start_hour, rule.start_minute)} -{' '}
+            {formatTime(rule.end_hour, rule.end_minute)}
+          </span>
+        ),
+      },
+      {
+        title: '适用星期',
+        key: 'day_of_week',
+        dataIndex: 'day_of_week',
+        render: (value) => <span className='text-gray-600'>{getDayLabel(value as number)}</span>,
+      },
+      {
+        title: '状态',
+        key: 'status',
+        render: (_, rule) => (
+          <div className='flex items-center gap-2'>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                rule.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {rule.is_active ? '启用' : '禁用'}
+            </span>
+            <span className={`badge ${rule.allow_unlock ? 'badge-success' : 'badge-danger'}`}>
+              {rule.allow_unlock ? '允许开锁' : '禁止开锁'}
+            </span>
+          </div>
+        ),
+      },
+    ],
+    [formatTime, getDayLabel]
+  );
+
   return (
     <div className='space-y-6'>
       {loadError && (
@@ -296,98 +370,37 @@ const TimeRuleList: React.FC = () => {
               </select>
             </div>
           </div>
-          <div className='overflow-x-auto'>
-            <table className='table'>
-              <thead>
-                <tr>
-                  <th className='px-6 py-4 text-left text-sm font-semibold text-gray-600'>
-                    规则名称
-                  </th>
-                  <th className='px-6 py-4 text-left text-sm font-semibold text-gray-600'>
-                    时间段
-                  </th>
-                  <th className='px-6 py-4 text-left text-sm font-semibold text-gray-600'>
-                    适用星期
-                  </th>
-                  <th className='px-6 py-4 text-left text-sm font-semibold text-gray-600'>状态</th>
-                  <th className='px-6 py-4 text-left text-sm font-semibold text-gray-600'>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className='px-6 py-12 text-center text-gray-400'>
-                      加载中...
-                    </td>
-                  </tr>
-                ) : filteredRules.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className='px-6 py-12 text-center text-gray-400'>
-                      暂无时间规则，点击上方按钮添加
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRules.map((rule) => (
-                    <tr key={rule.id}>
-                      <td className='px-6 py-4'>
-                        <div className='flex items-center gap-2'>
-                          <span className='font-medium text-gray-800'>{rule.name}</span>
-                          {rule.description && (
-                            <span className='text-xs text-gray-400'>- {rule.description}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 text-gray-600'>
-                        {formatTime(rule.start_hour, rule.start_minute)} -{' '}
-                        {formatTime(rule.end_hour, rule.end_minute)}
-                      </td>
-                      <td className='px-6 py-4 text-gray-600'>{getDayLabel(rule.day_of_week)}</td>
-                      <td className='px-6 py-4'>
-                        <div className='flex items-center gap-2'>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              rule.is_active
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-gray-100 text-gray-500'
-                            }`}
-                          >
-                            {rule.is_active ? '启用' : '禁用'}
-                          </span>
-                          <span
-                            className={`badge ${
-                              rule.allow_unlock ? 'badge-success' : 'badge-danger'
-                            }`}
-                          >
-                            {rule.allow_unlock ? '允许开锁' : '禁止开锁'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className='px-6 py-4'>
-                        <div className='flex items-center gap-2'>
-                          <PermissionButton
-                            permission='timetable.rule.manage'
-                            onClick={() => handleEdit(rule)}
-                            className='btn-icon text-gray-500 hover:text-primary-600'
-                            title='编辑'
-                          >
-                            <Edit2 className='w-4 h-4' />
-                          </PermissionButton>
-                          <PermissionButton
-                            permission='timetable.rule.manage'
-                            onClick={() => handleDelete(rule.id)}
-                            className='btn-icon text-gray-500 hover:text-danger-600'
-                            title='删除'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </PermissionButton>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable<TimeRule>
+            columns={columns}
+            dataSource={filteredRules}
+            loading={loading}
+            rowKey='id'
+            empty={{
+              title: '暂无时间规则',
+              description: '点击上方按钮添加',
+            }}
+            scroll={{ x: 800 }}
+            rowActions={(rule) => (
+              <div className='flex items-center gap-2'>
+                <PermissionButton
+                  permission='timetable.rule.manage'
+                  onClick={() => handleEdit(rule)}
+                  className='btn-icon text-gray-500 hover:text-primary-600'
+                  title='编辑'
+                >
+                  <Edit2 className='w-4 h-4' />
+                </PermissionButton>
+                <PermissionButton
+                  permission='timetable.rule.manage'
+                  onClick={() => handleDelete(rule.id)}
+                  className='btn-icon text-gray-500 hover:text-danger-600'
+                  title='删除'
+                >
+                  <Trash2 className='w-4 h-4' />
+                </PermissionButton>
+              </div>
+            )}
+          />
         </div>
       </div>
 
@@ -419,7 +432,13 @@ const TimeRuleList: React.FC = () => {
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className='modal-body'>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runSubmit(handleSubmit);
+              }}
+              className='modal-body'
+            >
               <div className='form-group'>
                 <label className='form-label'>
                   规则名称 <span className='text-danger-500'>*</span>
@@ -640,7 +659,7 @@ const TimeRuleList: React.FC = () => {
                 <Button variant='outline' onClick={closeModal}>
                   取消
                 </Button>
-                <Button type='submit'>
+                <Button type='submit' disabled={submitting}>
                   <Save className='w-4 h-4' />
                   保存
                 </Button>

@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.study_guide_service import study_guide_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_study_guide = Namespace("study_guide", description="学法指导管理")
 
@@ -49,6 +50,7 @@ class StudyGuideList(Resource):
         },
     )
     @requires_permission("study_guide.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         guide_type = request.args.get("guide_type")
@@ -63,7 +65,9 @@ class StudyGuideList(Resource):
     @requires_permission("study_guide.edit")
     def post(self):
         data = request.get_json()
-        return study_guide_service.create_guide(data)
+        result = study_guide_service.create_guide(data)
+        invalidate_cache("api:/api/study_guide/*")
+        return result
 
 
 @ns_study_guide.route("/guides/<int:guide_id>")
@@ -72,11 +76,15 @@ class StudyGuideDetail(Resource):
     @requires_permission("study_guide.edit")
     def put(self, guide_id):
         data = request.get_json()
-        return study_guide_service.update_guide(guide_id, data)
+        result = study_guide_service.update_guide(guide_id, data)
+        invalidate_cache("api:/api/study_guide/*")
+        return result
 
     @requires_permission("study_guide.edit")
     def delete(self, guide_id):
-        return study_guide_service.delete_guide(guide_id)
+        result = study_guide_service.delete_guide(guide_id)
+        invalidate_cache("api:/api/study_guide/*")
+        return result
 
 
 @ns_study_guide.route("/plans")
@@ -90,6 +98,7 @@ class ImprovementPlanList(Resource):
         },
     )
     @requires_permission("study_guide.view")
+    @cached_api(ttl=30)
     def get(self):
         student_id = request.args.get("student_id", type=int)
         plan_type = request.args.get("plan_type")
@@ -104,7 +113,9 @@ class ImprovementPlanList(Resource):
     @requires_permission("study_guide.edit")
     def post(self):
         data = request.get_json()
-        return study_guide_service.create_plan(data)
+        result = study_guide_service.create_plan(data)
+        invalidate_cache("api:/api/study_guide/*")
+        return result
 
 
 @ns_study_guide.route("/plans/<int:plan_id>/progress")
@@ -113,4 +124,6 @@ class UpdatePlanProgress(Resource):
     @requires_permission("study_guide.edit")
     def put(self, plan_id):
         data = request.get_json()
-        return study_guide_service.update_plan_progress(plan_id, data["progress"])
+        result = study_guide_service.update_plan_progress(plan_id, data["progress"])
+        invalidate_cache("api:/api/study_guide/*")
+        return result

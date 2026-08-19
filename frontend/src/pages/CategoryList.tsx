@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
 import { Plus, Search, Edit2, Trash2, AlertCircle, X, RefreshCw, Tag, Palette } from 'lucide-react';
 import api, { Category } from '../services/api';
-import { useForm, useModal, useConfirmDialog } from '../hooks';
+import { useForm, useModal } from '../hooks';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useStableToast } from '../hooks/useStableToast';
 import { validateForm } from '../utils/validation';
 import { EmptyState, CategoryCardSkeleton, Button, PermissionButton } from '../components';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
 import ImportExportPanel from '../components/special/ImportExportPanel';
 import { useDebouncedValue } from '../hooks';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface FormData {
   name: string;
@@ -43,7 +45,10 @@ function CategoryList() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useStableToast();
-  useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
 
   const {
     formData,
@@ -99,8 +104,8 @@ function CategoryList() {
     fetchCategories();
   }, [fetchCategories]);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent<HTMLFormElement>): Promise<void> => {
+    e?.preventDefault();
 
     const { isValid, errors } = validateForm(formData, validationRules);
 
@@ -129,7 +134,13 @@ function CategoryList() {
   };
 
   const handleDelete = async (id: number): Promise<void> => {
-    if (!window.confirm('确定要删除该分类吗？此操作不可撤销。')) return;
+    const ok = await confirmRef.current({
+      message: '确定要删除该分类吗？此操作不可撤销。',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await api.scoreCategories.delete(id);
@@ -355,7 +366,13 @@ function CategoryList() {
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className='modal-body'>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runSubmit(handleSubmit);
+              }}
+              className='modal-body'
+            >
               <div className='form-group'>
                 <label className='form-label'>
                   分类名称 <span className='text-danger-500'>*</span>
@@ -450,7 +467,9 @@ function CategoryList() {
                 <Button variant='outline' onClick={closeModal}>
                   取消
                 </Button>
-                <Button type='submit'>{editingCategory ? '保存修改' : '添加分类'}</Button>
+                <Button type='submit' disabled={submitting}>
+                  {editingCategory ? '保存修改' : '添加分类'}
+                </Button>
               </div>
             </form>
           </div>

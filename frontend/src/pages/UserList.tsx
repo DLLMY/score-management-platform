@@ -8,8 +8,7 @@ import {
   Download,
   Zap,
   Filter,
-  CheckSquare,
-  Square,
+  Edit2,
   ChevronUp,
   ChevronDown,
   User as UserIcon,
@@ -22,15 +21,17 @@ import {
   SearchFilter,
   SearchCondition,
   ImportExportPanel,
-  Pagination,
   PermissionButton,
   BatchActionBar,
   AdvancedSearch,
   EmptyState,
   TableSkeleton,
-  UserTableRow,
+  AnimatedScore,
+  DataTable,
 } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import { useStableToast } from '../hooks/useStableToast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { validateForm } from '../utils/validation';
 import { useAppState } from '../hooks/useAppState';
 import { usePermissions } from '../hooks/usePermissions';
@@ -292,6 +293,10 @@ function UserList() {
   usePermissions();
 
   const { addOperation } = useUndoRedo({ maxHistory: 50 });
+
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const autoSave = useAutoSave({
     key: 'user-form',
@@ -610,7 +615,14 @@ function UserList() {
 
   const handleDelete = useCallback(
     async (userId: number) => {
-      if (!window.confirm('确定要删除该学生吗？此操作不可恢复。')) return; // 删除确认（单条，批量删除已有确认）
+      const ok = await confirmRef.current({
+        title: '删除学生',
+        message: '确定要删除该学生吗？此操作不可恢复。',
+        confirmText: '删除',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       const deletedUser = state.users.find((u) => u.id === userId);
 
       await wrapAsync(
@@ -834,12 +846,12 @@ function UserList() {
     }
   }, [showToast]);
 
-  const handleToggleUserSelection = useCallback((userId: number) => {
-    dispatch({ type: 'TOGGLE_USER_SELECTION', payload: userId });
-  }, []);
-
   const handleClearSelection = useCallback(() => {
     dispatch({ type: 'CLEAR_USER_SELECTION' });
+  }, []);
+
+  const handleSelectionChange = useCallback((keys: Array<string | number>) => {
+    dispatch({ type: 'SET_SELECTED_USERS', payload: new Set(keys.map((k) => Number(k))) });
   }, []);
 
   const batchActions = useMemo(
@@ -924,6 +936,112 @@ function UserList() {
       },
     ],
     [state.advancedConditions, classes]
+  );
+
+  const userColumns = useMemo<ColumnType<User>[]>(
+    () => [
+      {
+        title: '学生信息',
+        key: 'name',
+        dataIndex: 'name',
+        width: 240,
+        render: (_v, record) => (
+          <div className='flex items-center'>
+            <div className='flex-shrink-0 h-10 w-10'>
+              <div className='h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium'>
+                {record.name.charAt(0)}
+              </div>
+            </div>
+            <div className='ml-4'>
+              <div className='text-sm font-medium text-gray-900'>{record.name}</div>
+              <div className='text-sm text-gray-500'>{record.card_id}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: '班级',
+        key: 'class_name',
+        dataIndex: 'class_name',
+        width: 140,
+        render: (_v, record) => (
+          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
+            {record.class_name}
+          </span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'is_active',
+        width: 120,
+        render: (_v, record) =>
+          record.is_blacklisted ? (
+            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800'>
+              黑名单
+            </span>
+          ) : record.is_active ? (
+            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'>
+              启用
+            </span>
+          ) : (
+            <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600'>
+              禁用
+            </span>
+          ),
+      },
+      {
+        title: '当前积分',
+        key: 'current_score',
+        dataIndex: 'current_score',
+        width: 120,
+        sorter: (a, b) => (a.current_score ?? 0) - (b.current_score ?? 0),
+        render: (_v, record) => (
+          <AnimatedScore
+            value={record.current_score != null ? record.current_score : undefined}
+          />
+        ),
+      },
+      {
+        title: '操作',
+        key: 'actions',
+        dataIndex: 'actions',
+        width: 200,
+        fixed: 'right',
+        render: (_v, record) => (
+          <div className='flex items-center gap-2'>
+            <PermissionButton
+              permission='score.entry'
+              size='sm'
+              variant='secondary'
+              onClick={() => handleOpenQuickScore(record)}
+            >
+              <Zap className='w-3 h-3 mr-1' />
+              评分
+            </PermissionButton>
+            <PermissionButton
+              permission='student.edit'
+              size='sm'
+              variant='secondary'
+              onClick={() => handleOpenModal(record)}
+            >
+              <Edit2 className='w-3 h-3 mr-1' />
+              编辑
+            </PermissionButton>
+            <PermissionButton
+              permission='student.delete'
+              size='sm'
+              variant='danger'
+              onClick={() => handleDelete(Number(record.id))}
+            >
+              <Trash2 className='w-3 h-3 mr-1' />
+              删除
+            </PermissionButton>
+          </div>
+        ),
+      },
+    ],
+    [handleOpenQuickScore, handleOpenModal, handleDelete]
   );
 
   if (state.isLoading) {
@@ -1112,74 +1230,21 @@ function UserList() {
       )}
 
       <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead className='bg-gray-50 border-b border-gray-200'>
-              <tr>
-                <th className='px-4 py-3 text-left'>
-                  <button
-                    onClick={() => {
-                      const allSelected = filteredUsers.every((user) =>
-                        state.selectedUsers.has(Number(user.id))
-                      );
-                      if (allSelected) {
-                        dispatch({ type: 'CLEAR_USER_SELECTION' });
-                      } else {
-                        const allIds = new Set(filteredUsers.map((u) => Number(u.id)));
-                        dispatch({ type: 'SET_SELECTED_USERS', payload: allIds });
-                      }
-                    }}
-                    className='p-1 hover:bg-gray-100 rounded transition-colors'
-                  >
-                    {filteredUsers.every((user) => state.selectedUsers.has(Number(user.id))) ? (
-                      <CheckSquare className='w-5 h-5 text-primary-500' />
-                    ) : (
-                      <Square className='w-5 h-5 text-gray-400' />
-                    )}
-                  </button>
-                </th>
-                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  学生信息
-                </th>
-                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  班级
-                </th>
-                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  状态
-                </th>
-                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  当前积分
-                </th>
-                <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-gray-200'>
-              {filteredUsers.map((user) => (
-                <UserTableRow
-                  key={user.id}
-                  user={user}
-                  isSelected={state.selectedUsers.has(Number(user.id))}
-                  onToggleSelection={handleToggleUserSelection}
-                  onOpenQuickScore={handleOpenQuickScore}
-                  onOpenEdit={handleOpenModal}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className='px-4 py-3 border-t border-gray-200'>
-          <Pagination
-            currentPage={state.pagination.page}
-            totalPages={state.pagination.pages}
-            totalItems={state.pagination.total}
-            itemsPerPage={state.pagination.per_page}
-            onPageChange={handlePageChange}
-          />
-        </div>
+        <DataTable<User>
+          rowKey='id'
+          columns={userColumns}
+          dataSource={state.users}
+          loading={state.isLoading || state.isFetching}
+          total={state.pagination.total}
+          page={state.pagination.page}
+          pageSize={state.pagination.per_page}
+          onPageChange={handlePageChange}
+          selectable
+          selectedRowKeys={selectedUsersArray}
+          onSelectChange={handleSelectionChange}
+          scroll={{ x: 'max-content' }}
+          empty={{ icon: 'users', title: '暂无学生', description: '添加或导入学生开始管理' }}
+        />
       </div>
 
       <Modal

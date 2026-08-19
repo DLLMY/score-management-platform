@@ -7,6 +7,7 @@ from services.class_time_checker import ClassTimeChecker
 from services.academics_service import academics_service
 from utils.permission import requires_permission, get_allowed_classes, get_current_admin
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -215,6 +216,7 @@ class CourseScheduleList(Resource):
     @ns_course_schedule.doc("list_course_schedule", description="获取课程表列表")
     @ns_course_schedule.response(200, "成功")
     @requires_permission("schedule.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取课程表列表。非管理员用户只能查看关联班级的课程表。
@@ -360,6 +362,7 @@ class CourseScheduleList(Resource):
         schedule = get_by_id(CourseSchedule, schedule_id)
 
         period_info = get_period_info(schedule.period_number)
+        invalidate_cache("api:/api/course-schedules/*")
         return (
             APIResponse.success(
                 data={
@@ -555,6 +558,7 @@ class CourseScheduleResource(Resource):
         schedule = get_by_id(CourseSchedule, id)
 
         period_info = get_period_info(schedule.period_number)
+        invalidate_cache("api:/api/course-schedules/*")
         return APIResponse.success(
             data={
                 "success": True,
@@ -596,6 +600,7 @@ class CourseScheduleResource(Resource):
                 return APIResponse.forbidden(message="无权删除该课程")
 
         academics_service.delete_course_schedule(id)
+        invalidate_cache("api:/api/course-schedules/*")
         return APIResponse.success(message="课程安排删除成功")
 
 
@@ -606,6 +611,7 @@ class CourseScheduleByClass(Resource):
     @ns_course_schedule.doc("get_course_schedule_by_class", description="获取班级课程表")
     @ns_course_schedule.response(200, "成功")
     @requires_permission("schedule.view")
+    @cached_api(ttl=30)
     def get(self, class_info_id):
         """获取指定班级的完整课程表。非管理员用户只能查看关联班级的课程表。"""
         # 数据隔离：非管理员只能查看关联班级的课程
@@ -715,6 +721,7 @@ class CourseScheduleOptions(Resource):
     @ns_course_schedule.doc("get_course_schedule_options", description="获取课程表选项")
     @ns_course_schedule.response(200, "成功")
     @requires_permission("view_classes")
+    @cached_api(ttl=60)
     def get(self):
         """获取课程表相关选项（班级、科目、节次）"""
         classes = ClassInfo.query.filter_by(is_active=True).order_by(ClassInfo.name).all()
@@ -1419,6 +1426,7 @@ class CourseScheduleImport(Resource):
                 )
 
         academics_service.apply_course_schedule_import(creates, updates)
+        invalidate_cache("api:/api/course-schedules/*")
 
         return APIResponse.success(
             data={

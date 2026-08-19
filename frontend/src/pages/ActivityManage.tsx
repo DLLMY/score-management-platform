@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus,
   Edit2,
@@ -19,6 +19,7 @@ import { useStableToast } from '../hooks/useStableToast';
 import { Activity, ActivityCreateInput } from '../types';
 import { ClassSelect } from '../components/form/EntitySelect';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface ActivityFormData {
   id: number | null;
@@ -56,6 +57,9 @@ function ActivityManage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const fetchActivities = useCallback(async () => {
     setIsLoading(true);
@@ -162,7 +166,13 @@ function ActivityManage() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个活动吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这个活动吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.activity.delete(id);
         showToast('success', '活动删除成功');
@@ -196,7 +206,13 @@ function ActivityManage() {
 
   const handleCancelRegistration = useCallback(
     async (activityId: number) => {
-      if (!window.confirm('确定要取消报名吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要取消报名吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'warning',
+      });
+      if (!ok) return;
       try {
         const studentId = Number(localStorage.getItem('studentId') || 0);
         if (!studentId) {

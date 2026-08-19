@@ -253,7 +253,8 @@ class ExportUsers(Resource):
                 mimetype = "application/pdf"
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
 
 
 @ns_export.route("/rules")
@@ -304,7 +305,8 @@ class ExportRules(Resource):
                 mimetype = "application/pdf"
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
 
 
 @ns_export.route("/devices")
@@ -354,7 +356,8 @@ class ExportDevices(Resource):
                 mimetype = "application/pdf"
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
 
 
 @ns_export.route("/records")
@@ -409,7 +412,8 @@ class ExportRecords(Resource):
                 mimetype = "application/pdf"
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
 
 
 @ns_export.route("/categories")
@@ -456,7 +460,8 @@ class ExportCategories(Resource):
                 mimetype = "application/pdf"
             return send_file(output, mimetype=mimetype, as_attachment=True, download_name=filename)
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
 
 
 @ns_export.route("/summary")
@@ -484,7 +489,8 @@ class ExportSummary(Resource):
                 output, mimetype="application/pdf", as_attachment=True, download_name=filename
             )
         except Exception as e:
-            return APIResponse.server_error(message=f"导出失败: {str(e)}")
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
 
 
 @ns_export.route("/errors")

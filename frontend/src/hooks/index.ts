@@ -36,3 +36,5 @@ export {
   useDelayedValue,
   useAccumulatedValue,
 } from './useDebouncedValue';
+export { useTableUrlState } from './useTableUrlState';
+export type { SortOrder as TableSortOrder } from './useTableUrlState';

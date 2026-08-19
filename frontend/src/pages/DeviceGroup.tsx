@@ -4,7 +4,7 @@ import logger from '../utils/logger';
  * 设备分组管理页面
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Layers,
   Plus,
@@ -18,10 +18,12 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import api from '../services/api';
-import { useForm, useModal, useConfirmDialog } from '../hooks';
+import { useForm, useModal } from '../hooks';
 import { Button, Modal, Badge, EmptyState, PermissionButton } from '../components';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { Device } from '../types';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 // ========== Types ==========
 
@@ -95,6 +97,10 @@ const COLOR_OPTIONS = [
 
 function DeviceGroupPage() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
 
   // State
   const [groups, setGroups] = useState<DeviceGroup[]>([]);
@@ -109,9 +115,6 @@ function DeviceGroupPage() {
 
   // Selected devices for adding to group (device.device_id 业务键)
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
-
-  // 使用 useConfirmDialog 管理确认对话框
-  useConfirmDialog();
 
   // 使用 useForm 管理表单状态
   const {
@@ -276,7 +279,13 @@ function DeviceGroupPage() {
   };
 
   const handleDeleteGroup = async (group: DeviceGroup) => {
-    if (!window.confirm(`确定要删除分组"${group.name}"吗？`)) return;
+    const ok = await confirmRef.current({
+      message: `确定要删除分组"${group.name}"吗？`,
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await api.deviceGroup.delete(group.id);
@@ -648,7 +657,7 @@ function DeviceGroupPage() {
           <Button variant='outline' onClick={closeCreateModal}>
             取消
           </Button>
-          <Button variant='primary' onClick={handleCreateGroup}>
+          <Button variant='primary' onClick={() => runSubmit(handleCreateGroup)} disabled={submitting}>
             创建
           </Button>
         </div>
@@ -736,7 +745,7 @@ function DeviceGroupPage() {
           <Button variant='outline' onClick={closeEditModal}>
             取消
           </Button>
-          <Button variant='primary' onClick={handleUpdateGroup}>
+          <Button variant='primary' onClick={() => runSubmit(handleUpdateGroup)} disabled={submitting}>
             保存
           </Button>
         </div>
@@ -877,8 +886,8 @@ function DeviceGroupPage() {
             </Button>
             <Button
               variant='primary'
-              onClick={handleAddDevicesToGroup}
-              disabled={selectedDeviceIds.length === 0}
+              onClick={() => runSubmit(handleAddDevicesToGroup)}
+              disabled={submitting || selectedDeviceIds.length === 0}
             >
               添加选中设备
             </Button>

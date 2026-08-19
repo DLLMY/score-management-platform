@@ -8,8 +8,9 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
-import { Activity, RefreshCw, Gauge, ChevronLeft, ChevronRight, Filter, Bug } from 'lucide-react';
-import { PermissionButton, EmptyState } from '../components';
+import { Activity, RefreshCw, Gauge, Filter, Bug } from 'lucide-react';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import { getAuthHeaders } from '../services/api';
 
 interface PerfMetric {
@@ -60,7 +61,6 @@ export const FrontendTelemetry: React.FC = () => {
   const [metrics, setMetrics] = useState<PerfMetric[]>([]);
   const [perfTotal, setPerfTotal] = useState(0);
   const [perfPage, setPerfPage] = useState(1);
-  const [perfPages, setPerfPages] = useState(1);
   const [perfFilters, setPerfFilters] = useState<{ metric_type: string; name: string }>({
     metric_type: '',
     name: '',
@@ -72,7 +72,6 @@ export const FrontendTelemetry: React.FC = () => {
   const [errors, setErrors] = useState<FrontendError[]>([]);
   const [errTotal, setErrTotal] = useState(0);
   const [errPage, setErrPage] = useState(1);
-  const [errPages, setErrPages] = useState(1);
   const [errFilters, setErrFilters] = useState<{ error_type: string }>({ error_type: '' });
   const [errLoading, setErrLoading] = useState(true);
   const [errError, setErrError] = useState(false);
@@ -90,7 +89,6 @@ export const FrontendTelemetry: React.FC = () => {
     if (data) {
       setMetrics(data.items || []);
       setPerfTotal(data.total || 0);
-      setPerfPages(data.pages || 1);
       setPerfError(false);
     } else {
       setPerfError(true);
@@ -110,7 +108,6 @@ export const FrontendTelemetry: React.FC = () => {
     if (data) {
       setErrors(data.items || []);
       setErrTotal(data.total || 0);
-      setErrPages(data.pages || 1);
       setErrError(false);
     } else {
       setErrError(true);
@@ -137,8 +134,139 @@ export const FrontendTelemetry: React.FC = () => {
       setErrPage(1);
     };
 
-  const perfPagesSafe = useMemo(() => Math.max(1, perfPages), [perfPages]);
-  const errPagesSafe = useMemo(() => Math.max(1, errPages), [errPages]);
+  const handlePerfPageChange = useCallback((page: number) => {
+    setPerfPage(page);
+  }, []);
+
+  const handleErrPageChange = useCallback((page: number) => {
+    setErrPage(page);
+  }, []);
+
+  const perfColumns = useMemo<ColumnType<PerfMetric>[]>(
+    () => [
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <span className='text-gray-500 dark:text-slate-400 whitespace-nowrap'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '类型',
+        key: 'metric_type',
+        dataIndex: 'metric_type',
+        render: (value) => (
+          <span className='px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'>
+            {value as string}
+          </span>
+        ),
+      },
+      {
+        title: '名称',
+        key: 'name',
+        dataIndex: 'name',
+        render: (value) => (
+          <span className='text-gray-700 dark:text-slate-200'>{value as string}</span>
+        ),
+      },
+      {
+        title: '值',
+        key: 'value',
+        dataIndex: 'value',
+        render: (value, record) => (
+          <span className='text-gray-800 dark:text-slate-100 font-medium'>
+            {value as number}
+            {record.unit ? ` ${record.unit}` : ''}
+          </span>
+        ),
+      },
+      {
+        title: '页面',
+        key: 'page',
+        dataIndex: 'page',
+        render: (value) => (
+          <span className='text-gray-500 dark:text-slate-400'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const errColumns = useMemo<ColumnType<FrontendError>[]>(
+    () => [
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <span className='text-gray-500 dark:text-slate-400 whitespace-nowrap'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '类型',
+        key: 'error_type',
+        dataIndex: 'error_type',
+        render: (value) => (
+          <span
+            className={`px-2 py-0.5 rounded text-xs font-medium ${
+              value === 'api_error'
+                ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300'
+                : value === 'resource_error'
+                ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'
+                : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300'
+            }`}
+          >
+            {value as string}
+          </span>
+        ),
+      },
+      {
+        title: '消息',
+        key: 'message',
+        dataIndex: 'message',
+        render: (value) => (
+          <span
+            className='text-gray-700 dark:text-slate-200 max-w-md truncate block'
+            title={value ? (value as string) : ''}
+          >
+            {value as string}
+          </span>
+        ),
+      },
+      {
+        title: '页面',
+        key: 'page',
+        dataIndex: 'page',
+        render: (value) => (
+          <span className='text-gray-500 dark:text-slate-400'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '请求',
+        key: 'request',
+        render: (_value, record) => (
+          <span className='text-gray-500 dark:text-slate-400 whitespace-nowrap'>
+            {record.method ? `${record.method} ${record.status ?? ''}` : '-'}
+            {record.url ? (
+              <div className='text-xs text-gray-400 truncate max-w-[200px]' title={record.url}>
+                {record.url}
+              </div>
+            ) : null}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className='space-y-6'>
@@ -197,93 +325,27 @@ export const FrontendTelemetry: React.FC = () => {
           />
         </div>
 
-        <div className='overflow-x-auto'>
-          <table className='w-full text-sm'>
-            <thead>
-              <tr className='bg-gray-50 dark:bg-slate-700/40 text-gray-600 dark:text-slate-300'>
-                <th className='px-4 py-2.5 text-left font-medium'>时间</th>
-                <th className='px-4 py-2.5 text-left font-medium'>类型</th>
-                <th className='px-4 py-2.5 text-left font-medium'>名称</th>
-                <th className='px-4 py-2.5 text-left font-medium'>值</th>
-                <th className='px-4 py-2.5 text-left font-medium'>页面</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perfLoading ? (
-                <tr>
-                  <td colSpan={5} className='px-4 py-10 text-center text-gray-400'>
-                    加载中...
-                  </td>
-                </tr>
-              ) : perfError ? (
-                <tr>
-                  <td colSpan={5} className='px-4 py-10 text-center text-amber-600'>
-                    指标加载失败，请刷新重试
-                  </td>
-                </tr>
-              ) : metrics.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>
-                    <EmptyState
-                      title='暂无性能指标'
-                      description='前端尚未上报数据，或当前筛选无匹配记录'
-                    />
-                  </td>
-                </tr>
-              ) : (
-                metrics.map((m) => (
-                  <tr
-                    key={m.id}
-                    className='border-t border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                  >
-                    <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400 whitespace-nowrap'>
-                      {m.created_at ? new Date(m.created_at).toLocaleString('zh-CN') : '--'}
-                    </td>
-                    <td className='px-4 py-2.5'>
-                      <span className='px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'>
-                        {m.metric_type}
-                      </span>
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>{m.name}</td>
-                    <td className='px-4 py-2.5 text-gray-800 dark:text-slate-100 font-medium'>
-                      {m.value}
-                      {m.unit ? ` ${m.unit}` : ''}
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400'>
-                      {m.page || '-'}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {perfPagesSafe > 1 && (
-          <div className='px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between'>
-            <div className='text-sm text-gray-500 dark:text-slate-400'>共 {perfTotal} 条</div>
-            <div className='flex items-center gap-2'>
-              <button
-                onClick={() => setPerfPage((p) => Math.max(1, p - 1))}
-                disabled={perfPage <= 1}
-                className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                <ChevronLeft size={15} />
-                上一页
-              </button>
-              <span className='text-sm text-gray-600 dark:text-slate-300'>
-                第 {perfPage} / {perfPagesSafe} 页
-              </span>
-              <button
-                onClick={() => setPerfPage((p) => Math.min(perfPagesSafe, p + 1))}
-                disabled={perfPage >= perfPagesSafe}
-                className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                下一页
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
-        )}
+        <DataTable<PerfMetric>
+          columns={perfColumns}
+          dataSource={metrics}
+          loading={perfLoading}
+          rowKey='id'
+          total={perfTotal}
+          page={perfPage}
+          pageSize={50}
+          pageSizeOptions={[50]}
+          onPageChange={handlePerfPageChange}
+          error={
+            perfError
+              ? { message: '指标加载失败，请刷新重试', onRetry: loadMetrics }
+              : null
+          }
+          empty={{
+            icon: 'folder',
+            title: '暂无性能指标',
+            description: '前端尚未上报数据，或当前筛选无匹配记录',
+          }}
+        />
       </section>
 
       {/* 前端错误 */}
@@ -312,107 +374,27 @@ export const FrontendTelemetry: React.FC = () => {
           </select>
         </div>
 
-        <div className='overflow-x-auto'>
-          <table className='w-full text-sm'>
-            <thead>
-              <tr className='bg-gray-50 dark:bg-slate-700/40 text-gray-600 dark:text-slate-300'>
-                <th className='px-4 py-2.5 text-left font-medium'>时间</th>
-                <th className='px-4 py-2.5 text-left font-medium'>类型</th>
-                <th className='px-4 py-2.5 text-left font-medium'>消息</th>
-                <th className='px-4 py-2.5 text-left font-medium'>页面</th>
-                <th className='px-4 py-2.5 text-left font-medium'>请求</th>
-              </tr>
-            </thead>
-            <tbody>
-              {errLoading ? (
-                <tr>
-                  <td colSpan={5} className='px-4 py-10 text-center text-gray-400'>
-                    加载中...
-                  </td>
-                </tr>
-              ) : errError ? (
-                <tr>
-                  <td colSpan={5} className='px-4 py-10 text-center text-amber-600'>
-                    错误日志加载失败，请刷新重试
-                  </td>
-                </tr>
-              ) : errors.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>
-                    <EmptyState title='暂无前端错误' description='前端未捕获到错误上报' />
-                  </td>
-                </tr>
-              ) : (
-                errors.map((e) => (
-                  <tr
-                    key={e.id}
-                    className='border-t border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                  >
-                    <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400 whitespace-nowrap'>
-                      {e.created_at ? new Date(e.created_at).toLocaleString('zh-CN') : '--'}
-                    </td>
-                    <td className='px-4 py-2.5'>
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          e.error_type === 'api_error'
-                            ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300'
-                            : e.error_type === 'resource_error'
-                            ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'
-                            : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300'
-                        }`}
-                      >
-                        {e.error_type}
-                      </span>
-                    </td>
-                    <td
-                      className='px-4 py-2.5 text-gray-700 dark:text-slate-200 max-w-md truncate'
-                      title={e.message}
-                    >
-                      {e.message}
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400'>
-                      {e.page || '-'}
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400 whitespace-nowrap'>
-                      {e.method ? `${e.method} ${e.status ?? ''}` : '-'}
-                      {e.url ? (
-                        <div className='text-xs text-gray-400 truncate max-w-[200px]' title={e.url}>
-                          {e.url}
-                        </div>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {errPagesSafe > 1 && (
-          <div className='px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between'>
-            <div className='text-sm text-gray-500 dark:text-slate-400'>共 {errTotal} 条</div>
-            <div className='flex items-center gap-2'>
-              <button
-                onClick={() => setErrPage((p) => Math.max(1, p - 1))}
-                disabled={errPage <= 1}
-                className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                <ChevronLeft size={15} />
-                上一页
-              </button>
-              <span className='text-sm text-gray-600 dark:text-slate-300'>
-                第 {errPage} / {errPagesSafe} 页
-              </span>
-              <button
-                onClick={() => setErrPage((p) => Math.min(errPagesSafe, p + 1))}
-                disabled={errPage >= errPagesSafe}
-                className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                下一页
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
-        )}
+        <DataTable<FrontendError>
+          columns={errColumns}
+          dataSource={errors}
+          loading={errLoading}
+          rowKey='id'
+          total={errTotal}
+          page={errPage}
+          pageSize={50}
+          pageSizeOptions={[50]}
+          onPageChange={handleErrPageChange}
+          error={
+            errError
+              ? { message: '错误日志加载失败，请刷新重试', onRetry: loadErrors }
+              : null
+          }
+          empty={{
+            icon: 'folder',
+            title: '暂无前端错误',
+            description: '前端未捕获到错误上报',
+          }}
+        />
       </section>
 
       {/* 说明 */}

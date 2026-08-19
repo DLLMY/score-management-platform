@@ -5,6 +5,20 @@
 - 前端：Vite dev，proxy /api、/ws → 5000；build `node node_modules/vite/bin/vite.js build --logLevel warn`；lint `eslint src --ext .ts,.tsx`。
 - pytest：系统 3.11 + `-p no:locust --timeout=300`，勿跑全量；闸门 `bash scripts/run_regression.sh`（G2 RBAC 68 / G5 OpenAPI 461/461 / 关键路由 33 / 契约）。
 
+## 已知架构裂缝（第七次评估确认，待路线图消化）
+- **~~前端组件库与页面脱节~~ ✅ M1 已闭环（2026-08-19）**：统一 `DataTable` 落地，24/56 页已迁移；原生 `<table>` 36→2（测试断言/Excel 字符串假阳性）；`window.confirm` 56→1（仅 ConfirmDialog 兜底）；OptimizedList + 旧 useConfirmDialog（state-only 半成品）死代码已删除。
+- **221 个索引靠手动脚本**：`backend/scripts/create_indexes.py` 无任何启动/部署调用 → 新环境漏跑则索引全失且闸门不报警。改幂等 + 启动校验 + `verify_indexes.py` 纳入 run_regression.sh。
+- **~~错误文案链路~~ ✅ M2 已闭环（2026-08-19）**：前端 `getErrorMessage` 优先级反转（error_code 文案表 → 业务 message 透传 → 技术报错屏蔽+HTTP 兜底，TECHNICAL_ERROR_PATTERNS 启发式）；后端 `api/` 响应内 `str(e)` 210→1（仅业务 ValueError 保留）。G5 --strict 461/461 零漂移。**改响应 message 的批改脚本须注意多行 import 会把 logger 插进括号（SyntaxError 崩热重载），必须全量 py_compile。**
+- **~~性能保护缺口~~ ✅ M9 已闭环（2026-08-19）**：`utils/pagination.py::get_pagination` 统一分页（max=200，api/ 43 处全替换，上限保护 26%→100%）；`@cached_api` 12→**96 处**（列表 ttl=30/聚合 60，强一致单条不加）；**修复 invalidate_cache 前缀重复拼接 bug**（曾拼 `api:api:/api/*` 导致按前缀失效永不命中），现传 `/api/<域>/*` 或 `api:/api/<域>/*` 均正确。剩余：NLP 推理 HTTP 线程同步（M10）、MQTT 连接超时阻塞启动（M10）、索引闸门（M11）。
+- 交互统一：~~`window.confirm` 56 处~~ ✅ 全部换 `useConfirm`；~~`useAutoSave`/`useSubmitGuard` 仅 1–2 页~~ ✅ **M3 已闭环（2026-08-19）**：useAutoSave 加 draftAvailable+beforeunload 拦截，ScoreEntry/ExamManagement/AttendanceManage/RemoteNotify 四录入页草稿+恢复条（成绩录入刷新可恢复）；useSubmitGuard 推广 13 页。
+
+## M1 DataTable 约定（✅ 已完成，2026-08-19）
+- 组件 `frontend/src/components/data-display/DataTable.tsx`，从 `../components` 导入 `DataTable`，`ColumnType` 从 `../components/data-display/DataTable` 导入。**新建表格一律用 DataTable，禁止手写原生 `<table>`**。
+- 接口 antd 兼容：`columns[{title,key,dataIndex,render(value:unknown,record,index),width,align,sorter,className,ellipsis}]` + `dataSource` + `rowKey`(必填)。内置五件套：loading 骨架 / 空态(empty prop) / 分页(20/50/100/200 硬上限 200，受控传 total+page+pageSize+onPageChange，客户端数组自动分页) / overflow-x-auto 横滚 / 非受控且行数≥200 自动切 VirtualList。
+- 确认弹窗：`import { useConfirm } from '../components/ui/ConfirmDialog'`（ConfirmProvider 已挂 App 根）。**lint 铁律**：`const confirmRef = useRef(confirmFn); confirmRef.current = confirmFn;` 回调里 `await confirmRef.current({message, type:'danger'|...})`，ref 不进 deps。
+- 迁移范式：columns useMemo 必须放所有 early return **之前**；render 的 value 需显式断言 `as string/number`；受控分页下页大小选择器须与后端 per_page 一致（或 `pageSizeOptions` 锁死）。
+- 测试：`DataTable.test.tsx` 7 用例；全量 vitest 171 用例是回归基准。
+
 ## 架构铁律
 - 路由唯一源 `app/api_versioning.py::register_v1_routes`（conftest walk_packages 动态注册）。API 统一信封 {success,code,data}；create 端点历史双元组 `[env,201]` 契约勿改。
 - **F17 防腐层渐进**：写入/事务路径内联 `db.session` → `services/*_service.py` 薄封装；路由保留 get_or_404(404)、请求校验、缓存失效、跨切面副作用(MQTT/FTS/管理员通知)、响应构造。只读 query 暂缓。**逐字节复刻**响应体/状态码/错误。每域：快照→测试先行→service→改写→py_compile+定向 pytest+G2/G5→memory。禁一次性全改、禁 git commit。
@@ -20,6 +34,7 @@
 - score/add 幂等：add(record) 后须 `db.session.flush()` 再读 record.id。
 - 缓存单套 `redis_cache_service.RedisCache.get_cache_service()` + `utils.api_cache_middleware.cached_api`（兼容元组/裸 dict、仅 200、降级）。
 - C 盘满：删 `.bak_*`/`pre_F*` 不释放空间（NTFS 去重）；释放只能删非重复内容。safe-delete 钩子>50 阻断→`cmd /c rmdir /s /q <绝对路径>`。
+- **git-bash 内 `python` 解析为 managed 3.13（缺项目依赖，`run.py` 起不来 / G5 连不上）**：启动后端、跑 G5、pytest 须显式用系统 3.11 绝对路径 `C:/Users/53527/AppData/Local/Programs/Python/Python311/python.exe`。py_compile 语法检查可用任意版本。
 
 ## 已完成专项
 - OTA(P0-P3)、ops_center、F9 通知合并、P0-6 预警合并、F16 模型拆包(60 类拆 8 子模块，__init__ 仅再导出) 均已落地。
@@ -35,5 +50,5 @@
 - **G2/G5 现状**：rbac 迁移后 G2 一致性 OK(68)；G5 461/461 待迁移后全量复核（backend 5000 强杀重启后跑 `verify_openapi_contract.py --strict`）。
 
 ## 约定
-- 不主动 git commit。git push 经 Steam++(Watt Toolkit) 接管 80/443。
+- 不主动 git commit（破坏性操作需用户授权）。git push 走 `origin-ssh`（`ssh://git@ssh.github.com:443/...`，id_rsa 已注册，SSH-over-443 绕过代理）；`origin`(https) 直连被重置不可用于 push。
 - 规模：后端 433 .py/98k LOC；前端 179 .tsx/.ts/63k LOC。

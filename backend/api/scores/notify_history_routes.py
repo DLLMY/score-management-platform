@@ -2,6 +2,8 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from models import NotifyHistory
 from utils.permission import requires_permission
+from utils.pagination import get_pagination
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime, timedelta
 
 ns_notify_history = Namespace("notify_history", description="通知历史记录")
@@ -33,10 +35,10 @@ class HistoryList(Resource):
     @ns_notify_history.param("status", "状态筛选", _in="query")
     @ns_notify_history.param("days", "最近天数", _in="query")
     @requires_permission("notification.view")
+    @cached_api(ttl=30)
     def get(self):
         """获取通知历史记录列表"""
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 20))
+        page, per_page = get_pagination(default=20)
         status = request.args.get("status")
         days = request.args.get("days")
         query = NotifyHistory.query.order_by(NotifyHistory.created_at.desc())
@@ -101,6 +103,7 @@ class HistoryDetail(Resource):
 class HistoryStats(Resource):
     @ns_notify_history.doc("get_history_stats")
     @requires_permission("notification.view")
+    @cached_api(ttl=60)
     def get(self):
         """获取通知统计数据"""
         today = datetime.now().date()
@@ -141,6 +144,7 @@ class HistoryClean(Resource):
         from services.notify_history_service import clean_notify_history
 
         deleted_count = clean_notify_history(days)
+        invalidate_cache("api:/api/notify_history/*")
         return {
             "success": True,
             "message": f"已清理 {deleted_count} 条历史记录",

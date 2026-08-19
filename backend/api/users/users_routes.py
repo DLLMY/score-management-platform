@@ -1,5 +1,6 @@
 from flask import request
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from models import User, ClassInfo, get_by_id
@@ -20,6 +21,7 @@ from utils.validation import (
     validation_error_response,
 )
 from services.redis_cache_service import get_cache_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.class_time_checker import ClassTimeChecker
 from services.user_service import user_service
 from datetime import datetime
@@ -122,6 +124,7 @@ class UserList(Resource):
     )
     @ns_users.response(200, "成功", user_list_response)
     @requires_permission("student.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取学生列表
@@ -134,8 +137,7 @@ class UserList(Resource):
         返回分页结果，包含用户列表和分页信息。
         """
         admin = get_current_admin()
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 100, type=int)
+        page, per_page = get_pagination(default=100)
         search = request.args.get("search", "")
         class_name = request.args.get("class_name", "")
         class_id = request.args.get("class_id", type=int)
@@ -427,6 +429,7 @@ class UserList(Resource):
             after_data=data,
         )
         get_cache_service().invalidate_by_tag("users")
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(
             data={
                 "user": {
@@ -555,6 +558,7 @@ class UserResource(Resource):
             after_data=data,
         )
         get_cache_service().invalidate_by_tag("users")
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(
             data={
                 "user": {
@@ -619,6 +623,7 @@ class UserResource(Resource):
             before_data=before_data,
         )
         get_cache_service().invalidate_by_tag("users")
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(message="用户删除成功")
 
 
@@ -819,6 +824,7 @@ class UserImport(Resource):
                 data={"imported": 0, "errors": errors},
                 status_code=400,
             )
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(
             data={"imported": imported_count, "errors": errors},
             message=f"导入完成: 成功{imported_count}条, 失败{error_count}条",
@@ -858,6 +864,7 @@ class UserBatchDelete(Resource):
             if user:
                 target_ids.append(user_id)
         deleted_count = user_service.bulk_delete_users(target_ids)
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(message=f"批量删除完成: 成功{deleted_count}条")
 
 
@@ -930,6 +937,7 @@ class UserBatchScore(Resource):
                 )
         except Exception as e:
             logger.warning(f"[ScoreChange] 批量发送积分变动通知失败: {e}")
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(message=f"批量积分调整完成: 成功{updated_count}条")
 
 
@@ -1285,9 +1293,11 @@ class UserImportFile(Resource):
                         }
                     )
         except Exception as e:
-            return APIResponse.error(message=f"导入失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "导入失败", e)
+            return APIResponse.error(message="导入失败", status_code=500)
         user_service.apply_csv_import(pending_users, pending_updates)
         failed_count = len(errors)
+        invalidate_cache("api:/api/users/*")
         return APIResponse.success(
             data={
                 "total": imported + updated + failed_count,

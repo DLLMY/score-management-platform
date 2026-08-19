@@ -4,7 +4,7 @@ import logger from '../utils/logger';
  * 提供系统健康检查、性能监控和错误追踪功能
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -24,7 +24,8 @@ import {
   Zap,
   LucideIcon,
 } from 'lucide-react';
-import { PermissionButton } from '../components';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import { getAuthHeaders } from '../services/api';
 
 // 健康检查接口
@@ -217,78 +218,91 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
 // 慢请求表格组件
 const SlowRequestsTable: React.FC<{ requests: SlowRequest[] }> = ({ requests }) => {
+  const columns = useMemo<ColumnType<SlowRequest>[]>(
+    () => [
+      {
+        title: '时间',
+        key: 'timestamp',
+        dataIndex: 'timestamp',
+        render: (value) => (
+          <span className='text-gray-600'>
+            {/* L1: timestamp 空/非法时避免渲染 Invalid Date */}
+            {value ? new Date(value as string).toLocaleTimeString() : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '方法',
+        key: 'method',
+        dataIndex: 'method',
+        render: (value) => (
+          <span
+            className={`px-2 py-0.5 rounded text-xs font-medium ${
+              value === 'GET'
+                ? 'bg-blue-100 text-blue-600'
+                : value === 'POST'
+                ? 'bg-green-100 text-green-600'
+                : value === 'PUT'
+                ? 'bg-yellow-100 text-yellow-600'
+                : 'bg-red-100 text-red-600'
+            }`}
+          >
+            {value as string}
+          </span>
+        ),
+      },
+      {
+        title: '端点',
+        key: 'endpoint',
+        dataIndex: 'endpoint',
+        render: (value) => <span className='text-gray-700'>{value as string}</span>,
+      },
+      {
+        title: '状态',
+        key: 'status_code',
+        dataIndex: 'status_code',
+        render: (value) => (
+          <span
+            className={`px-2 py-0.5 rounded text-xs font-medium ${
+              (value as number) >= 200 && (value as number) < 300
+                ? 'bg-green-100 text-green-600'
+                : (value as number) >= 400 && (value as number) < 500
+                ? 'bg-yellow-100 text-yellow-600'
+                : 'bg-red-100 text-red-600'
+            }`}
+          >
+            {value as number}
+          </span>
+        ),
+      },
+      {
+        title: '耗时',
+        key: 'duration',
+        dataIndex: 'duration',
+        render: (value) => (
+          <span className='text-red-600 font-medium'>{(value as number).toFixed(2)}s</span>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
-    <div className='bg-white rounded-xl border border-gray-100 overflow-hidden'>
-      <div className='px-4 py-3 border-b border-gray-100 bg-gray-50'>
+    <DataTable<SlowRequest>
+      columns={columns}
+      dataSource={requests}
+      rowKey={(_, index) => index}
+      title={
         <h3 className='font-semibold text-gray-800 flex items-center gap-2'>
           <Clock size={16} />
           慢请求记录
         </h3>
-      </div>
-      <div className='overflow-x-auto'>
-        <table className='w-full text-sm'>
-          <thead>
-            <tr className='bg-gray-50'>
-              <th className='px-4 py-2 text-left font-medium text-gray-600'>时间</th>
-              <th className='px-4 py-2 text-left font-medium text-gray-600'>方法</th>
-              <th className='px-4 py-2 text-left font-medium text-gray-600'>端点</th>
-              <th className='px-4 py-2 text-left font-medium text-gray-600'>状态</th>
-              <th className='px-4 py-2 text-left font-medium text-gray-600'>耗时</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.length === 0 ? (
-              <tr>
-                <td colSpan={5} className='px-4 py-8 text-center text-gray-500'>
-                  暂无慢请求记录
-                </td>
-              </tr>
-            ) : (
-              requests.map((req, index) => (
-                <tr key={index} className='border-t border-gray-50 hover:bg-gray-50'>
-                  <td className='px-4 py-2 text-gray-600'>
-                    {/* L1: timestamp 空/非法时避免渲染 Invalid Date */}
-                    {req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : '-'}
-                  </td>
-                  <td className='px-4 py-2'>
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        req.method === 'GET'
-                          ? 'bg-blue-100 text-blue-600'
-                          : req.method === 'POST'
-                          ? 'bg-green-100 text-green-600'
-                          : req.method === 'PUT'
-                          ? 'bg-yellow-100 text-yellow-600'
-                          : 'bg-red-100 text-red-600'
-                      }`}
-                    >
-                      {req.method}
-                    </span>
-                  </td>
-                  <td className='px-4 py-2 text-gray-700'>{req.endpoint}</td>
-                  <td className='px-4 py-2'>
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        req.status_code >= 200 && req.status_code < 300
-                          ? 'bg-green-100 text-green-600'
-                          : req.status_code >= 400 && req.status_code < 500
-                          ? 'bg-yellow-100 text-yellow-600'
-                          : 'bg-red-100 text-red-600'
-                      }`}
-                    >
-                      {req.status_code}
-                    </span>
-                  </td>
-                  <td className='px-4 py-2'>
-                    <span className='text-red-600 font-medium'>{req.duration.toFixed(2)}s</span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      }
+      empty={{
+        icon: 'data',
+        title: '暂无慢请求记录',
+      }}
+    />
   );
 };
 

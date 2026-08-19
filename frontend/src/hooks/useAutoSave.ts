@@ -34,6 +34,9 @@ export function useAutoSave<T>({
     isDirty: false,
   });
 
+  // M3: 是否存在可恢复的草稿（挂载时检测，驱动"恢复上次未提交内容"提示条）
+  const [draftAvailable, setDraftAvailable] = useState<boolean>(false);
+
   const [previousData, setPreviousData] = useState<T>(data);
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export function useAutoSave<T>({
               ...prev,
               hasUnsavedChanges: true,
             }));
+            setDraftAvailable(true);
           }
         }
       } catch (error) {
@@ -69,6 +73,18 @@ export function useAutoSave<T>({
       }
     }
   }, [key]);
+
+  // M3: 离开拦截——存在未保存变更或可恢复草稿时，阻止意外关闭/刷新
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (state.hasUnsavedChanges || state.isDirty || draftAvailable) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [state.hasUnsavedChanges, state.isDirty, draftAvailable]);
 
   const saveDraft = useCallback(
     (currentData: T) => {
@@ -105,6 +121,7 @@ export function useAutoSave<T>({
 
   const clearDraft = useCallback(() => {
     localStorage.removeItem(`draft_${key}`);
+    setDraftAvailable(false);
     setState((prev) => ({
       ...prev,
       hasUnsavedChanges: false,
@@ -121,6 +138,7 @@ export function useAutoSave<T>({
     const draft = loadDraft();
     if (draft) {
       setPreviousData(draft);
+      setDraftAvailable(false);
       setState((prev) => ({
         ...prev,
         hasUnsavedChanges: false,
@@ -158,6 +176,7 @@ export function useAutoSave<T>({
 
   return {
     ...state,
+    draftAvailable,
     loadDraft,
     clearDraft,
     discardChanges,

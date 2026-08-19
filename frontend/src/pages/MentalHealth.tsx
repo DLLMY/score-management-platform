@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Brain,
   Plus,
@@ -19,6 +19,8 @@ import {
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { MentalHealthRecord, MentalHealthRecordCreateInput, MentalHealthAlert } from '../types';
+import { DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 
 interface RecordFormData {
   student_id: number;
@@ -150,13 +152,13 @@ function MentalHealth() {
     [showToast, fetchAlerts]
   );
 
-  const getMoodIcon = (level: number) => {
+  const getMoodIcon = useCallback((level: number) => {
     if (level <= 2) return <Frown className='w-5 h-5 text-red-500' />;
     if (level === 3) return <Meh className='w-5 h-5 text-amber-500' />;
     return <Smile className='w-5 h-5 text-emerald-500' />;
-  };
+  }, []);
 
-  const getMoodLabel = (level: number) => {
+  const getMoodLabel = useCallback((level: number) => {
     const labels: Record<number, string> = {
       1: '很差',
       2: '较差',
@@ -165,9 +167,9 @@ function MentalHealth() {
       5: '优秀',
     };
     return labels[level] || '未知';
-  };
+  }, []);
 
-  const getStressLabel = (level: number) => {
+  const getStressLabel = useCallback((level: number) => {
     const labels: Record<number, string> = {
       1: '极低',
       2: '较低',
@@ -176,7 +178,7 @@ function MentalHealth() {
       5: '极高',
     };
     return labels[level] || '未知';
-  };
+  }, []);
 
   const getAlertSeverityColor = (severity: number) => {
     if (severity >= 4)
@@ -191,6 +193,98 @@ function MentalHealth() {
     if (severity >= 3) return '中等';
     return '低';
   };
+
+  const columns = useMemo<ColumnType<MentalHealthRecord>[]>(
+    () => [
+      {
+        title: '学生',
+        key: 'student',
+        render: (_value, record) => (
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/30 dark:to-blue-900/30 flex items-center justify-center'>
+              <Brain className='w-5 h-5 text-cyan-600 dark:text-cyan-400' />
+            </div>
+            <p className='font-medium text-slate-800 dark:text-slate-200'>
+              {record.student_name || `学生 #${record.student_id}`}
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: '心情',
+        key: 'mood_level',
+        dataIndex: 'mood_level',
+        align: 'center',
+        render: (value) => (
+          <div className='flex items-center justify-center gap-1.5'>
+            {value != null ? (
+              getMoodIcon(value as number)
+            ) : (
+              <span className='w-5 h-5 text-slate-400 dark:text-slate-500'>--</span>
+            )}
+            <span className='text-sm text-slate-600 dark:text-slate-300'>
+              {value != null ? getMoodLabel(value as number) : '--'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: '压力',
+        key: 'stress_level',
+        dataIndex: 'stress_level',
+        align: 'center',
+        render: (value) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              value == null
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                : (value as number) >= 4
+                ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                : (value as number) >= 3
+                ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+            }`}
+          >
+            {value != null ? getStressLabel(value as number) : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '睡眠',
+        key: 'sleep_hours',
+        dataIndex: 'sleep_hours',
+        align: 'center',
+        render: (value) => (
+          <span className='inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300'>
+            <Moon className='w-4 h-4 text-indigo-400' />
+            {value as number}h
+          </span>
+        ),
+      },
+      {
+        title: '备注',
+        key: 'notes',
+        dataIndex: 'notes',
+        render: (value) => (
+          <span className='text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <div className='flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400'>
+            <Clock className='w-4 h-4' />
+            {value as string}
+          </div>
+        ),
+      },
+    ],
+    [getMoodIcon, getMoodLabel, getStressLabel]
+  );
 
   const avgMood =
     records.length > 0
@@ -328,121 +422,18 @@ function MentalHealth() {
 
           {activeTab === 'records' ? (
             <div>
-              {isLoading ? (
-                <div className='px-5 py-16 text-center'>
-                  <div className='flex flex-col items-center gap-3'>
-                    <div className='w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin' />
-                    <p className='text-sm text-slate-500 dark:text-slate-400'>加载中...</p>
-                  </div>
-                </div>
-              ) : filteredRecords.length === 0 ? (
-                <div className='px-5 py-16 text-center'>
-                  <div className='flex flex-col items-center gap-3'>
-                    <div className='w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center'>
-                      <Brain className='w-8 h-8 text-slate-400' />
-                    </div>
-                    <p className='text-slate-500 dark:text-slate-400'>暂无心理健康记录</p>
-                    <button
-                      onClick={handleOpenForm}
-                      className='text-cyan-500 hover:text-cyan-600 font-medium text-sm'
-                    >
-                      创建第一条记录
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className='overflow-x-auto'>
-                  <table className='w-full'>
-                    <thead>
-                      <tr className='bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-700/30'>
-                        <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                          学生
-                        </th>
-                        <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                          心情
-                        </th>
-                        <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                          压力
-                        </th>
-                        <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                          睡眠
-                        </th>
-                        <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                          备注
-                        </th>
-                        <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                          时间
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className='divide-y divide-slate-100 dark:divide-slate-700/50'>
-                      {filteredRecords.map((record) => (
-                        <tr
-                          key={record.id}
-                          className='group hover:bg-gradient-to-r hover:from-cyan-50/50 hover:to-blue-50/50 dark:hover:from-slate-700/50 dark:hover:to-slate-700/30 transition-all duration-200'
-                        >
-                          <td className='px-5 py-4'>
-                            <div className='flex items-center gap-3'>
-                              <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/30 dark:to-blue-900/30 flex items-center justify-center'>
-                                <Brain className='w-5 h-5 text-cyan-600 dark:text-cyan-400' />
-                              </div>
-                              <p className='font-medium text-slate-800 dark:text-slate-200'>
-                                {record.student_name || `学生 #${record.student_id}`}
-                              </p>
-                            </div>
-                          </td>
-                          <td className='px-5 py-4 text-center'>
-                            <div className='flex items-center justify-center gap-1.5'>
-                              {record.mood_level != null ? (
-                                getMoodIcon(record.mood_level)
-                              ) : (
-                                <span className='w-5 h-5 text-slate-400 dark:text-slate-500'>
-                                  --
-                                </span>
-                              )}
-                              <span className='text-sm text-slate-600 dark:text-slate-300'>
-                                {record.mood_level != null ? getMoodLabel(record.mood_level) : '--'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className='px-5 py-4 text-center'>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                record.stress_level == null
-                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                                  : record.stress_level >= 4
-                                  ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                                  : record.stress_level >= 3
-                                  ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                                  : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                              }`}
-                            >
-                              {record.stress_level != null
-                                ? getStressLabel(record.stress_level)
-                                : '--'}
-                            </span>
-                          </td>
-                          <td className='px-5 py-4 text-center'>
-                            <span className='inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300'>
-                              <Moon className='w-4 h-4 text-indigo-400' />
-                              {record.sleep_hours}h
-                            </span>
-                          </td>
-                          <td className='px-5 py-4 text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate'>
-                            {record.notes || '-'}
-                          </td>
-                          <td className='px-5 py-4'>
-                            <div className='flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400'>
-                              <Clock className='w-4 h-4' />
-                              {record.created_at}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable<MentalHealthRecord>
+                columns={columns}
+                dataSource={filteredRecords}
+                loading={isLoading}
+                rowKey='id'
+                empty={{
+                  icon: 'data',
+                  title: '暂无心理健康记录',
+                  actionLabel: '创建第一条记录',
+                  onAction: handleOpenForm,
+                }}
+              />
             </div>
           ) : (
             <div>

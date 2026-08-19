@@ -137,22 +137,24 @@ class StudentRecords(Resource):
     def get(self):
         """获取当前学生的积分流水，按时间倒序分页返回。"""
         student = g.current_student
-        page = request.args.get("page", 1, type=int)
-        if page is None or page < 1:
-            page = 1
-        # F10 修复: 原嵌套 get(type=int) 在 per_page/page_size 非数字时返回 None → min() 抛 TypeError
-        raw_per = request.args.get("per_page") or request.args.get("page_size") or 20
+        # F10 修复: 保留 per_page/page_size 双别名，非法输入回退 20，per_page 钳制 1-200
         try:
-            page_size = max(1, min(int(raw_per), 100))
+            per_page = int(request.args.get("per_page") or request.args.get("page_size") or 20)
         except (TypeError, ValueError):
-            page_size = 20
+            per_page = 20
+        per_page = min(200, max(1, per_page))
+        try:
+            page = int(request.args.get("page", 1))
+        except (TypeError, ValueError):
+            page = 1
+        page = max(1, page)
 
         query = ScoreRecord.query.filter_by(student_id=student.id)
         total = query.count()
         items = (
             query.order_by(ScoreRecord.created_at.desc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
             .all()
         )
 
@@ -168,7 +170,7 @@ class StudentRecords(Resource):
             for r in items
         ]
 
-        return APIResponse.success(APIResponse.pagination(data, page, page_size, total))
+        return APIResponse.success(APIResponse.pagination(data, page, per_page, total))
 
 
 def _serialize_notification(n: Notification) -> dict:
@@ -216,26 +218,28 @@ class StudentNotifications(Resource):
     def get(self):
         """获取当前学生收到的通知，按时间倒序分页返回。"""
         student = g.current_student
-        page = request.args.get("page", 1, type=int)
-        if page is None or page < 1:
-            page = 1
-        # F10 修复: 原嵌套 get(type=int) 在 per_page/page_size 非数字时返回 None → min() 抛 TypeError
-        raw_per = request.args.get("per_page") or request.args.get("page_size") or 20
+        # F10 修复: 保留 per_page/page_size 双别名，非法输入回退 20，per_page 钳制 1-200
         try:
-            page_size = max(1, min(int(raw_per), 100))
+            per_page = int(request.args.get("per_page") or request.args.get("page_size") or 20)
         except (TypeError, ValueError):
-            page_size = 20
+            per_page = 20
+        per_page = min(200, max(1, per_page))
+        try:
+            page = int(request.args.get("page", 1))
+        except (TypeError, ValueError):
+            page = 1
+        page = max(1, page)
 
         query = Notification.query.filter_by(student_id=student.id)
         total = query.count()
         items = (
             query.order_by(Notification.created_at.desc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
             .all()
         )
         data = [_serialize_notification(n) for n in items]
-        return APIResponse.success(APIResponse.pagination(data, page, page_size, total))
+        return APIResponse.success(APIResponse.pagination(data, page, per_page, total))
 
 
 @ns_student.route("/leaves")

@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Award,
   Plus,
@@ -17,6 +17,9 @@ import api from '../services/api';
 import type { ClassCommittee, CommitteeCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
 import { ClassSelect, StudentSelect } from '../components/form/EntitySelect';
+import { DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface CommitteeFormData {
   position: string;
@@ -55,6 +58,9 @@ function CommitteeListPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CommitteeFormData>(defaultForm);
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const fetchCommittee = useCallback(async () => {
     setIsLoading(true);
@@ -133,7 +139,13 @@ function CommitteeListPage() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这条班委记录吗？')) return;
+      const ok = await confirmRef.current({
+        title: '删除确认',
+        message: '确定要删除这条班委记录吗？',
+        confirmText: '删除',
+        type: 'danger',
+      });
+      if (!ok) return;
       setIsLoading(true);
       try {
         await api.committee.delete(id);
@@ -170,6 +182,102 @@ function CommitteeListPage() {
 
   const activeCount = committee.filter((c) => c.is_active).length;
   const ratedCount = committee.filter((c) => c.rating && c.rating > 0).length;
+
+  const columns = useMemo<ColumnType<ClassCommittee>[]>(
+    () => [
+      {
+        title: '职位',
+        key: 'position',
+        dataIndex: 'position',
+        render: (_, item) => (
+          <div className='flex items-center gap-2'>
+            <span className='text-lg'>{getPositionIcon(item.position)}</span>
+            <span className='font-medium text-slate-800 dark:text-slate-200'>
+              {getPositionLabel(item.position)}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: '学生',
+        key: 'student_name',
+        dataIndex: 'student_name',
+        render: (_, item) => (
+          <div className='flex items-center gap-2'>
+            <div className='w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center'>
+              <User className='w-4 h-4 text-white' />
+            </div>
+            <span className='text-sm text-slate-700 dark:text-slate-300'>
+              {item.student_name || `学生${item.student_id}`}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: '职责',
+        key: 'responsibilities',
+        dataIndex: 'responsibilities',
+        render: (_, item) => (
+          <span className='text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate block'>
+            {item.responsibilities || '-'}
+          </span>
+        ),
+      },
+      {
+        title: '任期',
+        key: 'term',
+        dataIndex: 'term_start',
+        render: (_, item) => (
+          <div className='flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400'>
+            <Calendar className='w-3 h-3' />
+            <span>
+              {item.term_start || '-'} ~ {item.term_end || '至今'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: '评价',
+        key: 'rating',
+        dataIndex: 'rating',
+        align: 'center',
+        render: (_, item) =>
+          item.rating ? (
+            <div className='flex items-center justify-center gap-1'>
+              <Star className='w-4 h-4 text-amber-500 fill-amber-500' />
+              <span className='font-medium text-slate-700 dark:text-slate-300'>
+                {item.rating.toFixed(1)}
+              </span>
+            </div>
+          ) : (
+            <span className='text-slate-400'>-</span>
+          ),
+      },
+      {
+        title: '状态',
+        key: 'is_active',
+        dataIndex: 'is_active',
+        align: 'center',
+        render: (_, item) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              item.is_active
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                item.is_active ? 'bg-emerald-500' : 'bg-slate-400'
+              }`}
+            />
+            {item.is_active ? '在任' : '离任'}
+          </span>
+        ),
+      },
+    ],
+    [getPositionIcon, getPositionLabel]
+  );
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
@@ -243,141 +351,36 @@ function CommitteeListPage() {
       </div>
 
       <div className='flex-1 px-6 pb-6 overflow-auto'>
-        {isLoading && committee.length === 0 ? (
-          <div className='flex flex-col items-center justify-center h-full gap-3'>
-            <div className='w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin' />
-            <p className='text-sm text-slate-500 dark:text-slate-400'>加载中...</p>
-          </div>
-        ) : committee.length === 0 ? (
-          <div className='flex flex-col items-center justify-center py-20 gap-4'>
-            <div className='w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center'>
-              <Award className='w-10 h-10 text-slate-400' />
+        <DataTable<ClassCommittee>
+          columns={columns}
+          dataSource={committee}
+          loading={isLoading && committee.length === 0}
+          rowKey='id'
+          rowClassName={() => 'group'}
+          empty={{
+            icon: 'folder',
+            title: '暂无班委数据',
+            actionLabel: '添加第一位班委',
+            onAction: openCreateModal,
+          }}
+          scroll={{ x: 900 }}
+          rowActions={(item) => (
+            <div className='flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
+              <button
+                onClick={() => openEditModal(item)}
+                className='p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all'
+              >
+                <Edit2 className='w-4 h-4' />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
+              >
+                <Trash2 className='w-4 h-4' />
+              </button>
             </div>
-            <p className='text-slate-500 dark:text-slate-400 text-lg'>暂无班委数据</p>
-            <button
-              onClick={openCreateModal}
-              className='text-amber-500 hover:text-amber-600 font-medium'
-            >
-              添加第一位班委
-            </button>
-          </div>
-        ) : (
-          <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/50 dark:border-slate-700/50 overflow-hidden'>
-            <div className='overflow-x-auto'>
-              <table className='w-full'>
-                <thead>
-                  <tr className='bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-700/30'>
-                    <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      职位
-                    </th>
-                    <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      学生
-                    </th>
-                    <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      职责
-                    </th>
-                    <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      任期
-                    </th>
-                    <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      评价
-                    </th>
-                    <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      状态
-                    </th>
-                    <th className='px-5 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y divide-slate-100 dark:divide-slate-700/50'>
-                  {committee.map((item) => (
-                    <tr
-                      key={item.id}
-                      className='group hover:bg-gradient-to-r hover:from-amber-50/50 hover:to-orange-50/50 dark:hover:from-slate-700/50 dark:hover:to-slate-700/30 transition-all duration-200'
-                    >
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-2'>
-                          <span className='text-lg'>{getPositionIcon(item.position)}</span>
-                          <span className='font-medium text-slate-800 dark:text-slate-200'>
-                            {getPositionLabel(item.position)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-2'>
-                          <div className='w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center'>
-                            <User className='w-4 h-4 text-white' />
-                          </div>
-                          <span className='text-sm text-slate-700 dark:text-slate-300'>
-                            {item.student_name || `学生${item.student_id}`}
-                          </span>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <span className='text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate block'>
-                          {item.responsibilities || '-'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400'>
-                          <Calendar className='w-3 h-3' />
-                          <span>
-                            {item.term_start || '-'} ~ {item.term_end || '至今'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        {item.rating ? (
-                          <div className='flex items-center justify-center gap-1'>
-                            <Star className='w-4 h-4 text-amber-500 fill-amber-500' />
-                            <span className='font-medium text-slate-700 dark:text-slate-300'>
-                              {item.rating.toFixed(1)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className='text-slate-400'>-</span>
-                        )}
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            item.is_active
-                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              item.is_active ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          />
-                          {item.is_active ? '在任' : '离任'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
-                          <button
-                            onClick={() => openEditModal(item)}
-                            className='p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all'
-                          >
-                            <Edit2 className='w-4 h-4' />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+          )}
+        />
       </div>
 
       {showFormModal && (

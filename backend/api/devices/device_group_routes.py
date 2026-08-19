@@ -3,6 +3,7 @@ from flask_restx import Namespace, Resource, fields
 from models import DeviceGroup, DeviceGroupMapping, Device, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.device_service import (
     create_device_group,
     update_device_group,
@@ -86,6 +87,7 @@ class DeviceGroupList(Resource):
     @ns_device_group.doc("list_device_groups", description="获取设备分组列表", security="Bearer")
     @ns_device_group.response(200, "成功", [device_group_model])
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self):
         """获取设备分组列表"""
         # 获取查询参数
@@ -126,6 +128,7 @@ class DeviceGroupList(Resource):
 
         # 创建分组
         group = create_device_group(data)
+        invalidate_cache("api:/api/device-group/*")
         return APIResponse.success(data=group.to_dict(), message="创建成功", status_code=201)
 
 
@@ -172,6 +175,7 @@ class DeviceGroupItem(Resource):
                     return APIResponse.bad_request(message="分组名称已存在")
 
         update_device_group(group, data)
+        invalidate_cache("api:/api/device-group/*")
         return APIResponse.success(data=group.to_dict(), message="更新成功")
 
     @ns_device_group.doc("delete_device_group", description="删除设备分组", security="Bearer")
@@ -185,6 +189,7 @@ class DeviceGroupItem(Resource):
             return APIResponse.not_found(message="设备分组不存在")
 
         delete_device_group(group)
+        invalidate_cache("api:/api/device-group/*")
 
         return APIResponse.success(message="删除成功")
 
@@ -197,6 +202,7 @@ class DeviceGroupDevices(Resource):
     @ns_device_group.response(200, "成功", [device_in_group_model])
     @ns_device_group.response(404, "分组不存在")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self, group_id):
         """获取分组内的设备列表"""
         group = get_by_id(DeviceGroup, group_id)
@@ -226,6 +232,7 @@ class DeviceGroupDevices(Resource):
             return APIResponse.bad_request(message="device_ids必须是数组")
 
         result = add_devices_to_group(group_id, device_ids)
+        invalidate_cache("api:/api/device-group/*")
         return APIResponse.success(
             data=result, message=f"成功添加 {len(result['added'])} 个设备", status_code=201
         )
@@ -246,6 +253,7 @@ class DeviceGroupDeviceItem(Resource):
         ok = remove_device_from_group(group_id, device_id)
         if not ok:
             return APIResponse.not_found(message="设备不在该分组中")
+        invalidate_cache("api:/api/device-group/*")
 
         return APIResponse.success(message="移除成功")
 
@@ -259,6 +267,7 @@ class DeviceGroupStats(Resource):
     )
     @ns_device_group.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=60)
     def get(self):
         """获取设备分组统计"""
         total_groups = DeviceGroup.query.count()
@@ -325,6 +334,7 @@ class DeviceGroupOptions(Resource):
     )
     @ns_device_group.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=60)
     def get(self):
         """获取分组选项"""
         groups = (

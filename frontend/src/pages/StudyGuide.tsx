@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 // 删除操作修复：404自动刷新列表 v2
 import {
   Plus,
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { ClassSelect, StudentSelect, SubjectSelect } from '../components/form/EntitySelect';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
 import {
@@ -92,6 +94,10 @@ function StudyGuidePage() {
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
 
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
 
   const fetchGuides = useCallback(async () => {
     try {
@@ -295,7 +301,13 @@ function StudyGuidePage() {
 
   const handleDeleteGuide = useCallback(
     async (guideId: number) => {
-      if (!window.confirm('确定要删除这篇指导文章吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这篇指导文章吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.studyGuide.deleteGuide(guideId);
         showToast('success', '指导文章删除成功');
@@ -320,7 +332,13 @@ function StudyGuidePage() {
 
   const handleDeletePlan = useCallback(
     async (planId: number) => {
-      if (!window.confirm('确定要删除这个改进计划吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这个改进计划吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.studyGuide.deletePlan(planId);
         showToast('success', '改进计划删除成功');
@@ -801,11 +819,12 @@ function StudyGuidePage() {
                 取消
               </button>
               <button
-                onClick={handleGuideSubmit}
-                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all duration-200 font-medium'
+                onClick={() => runSubmit(handleGuideSubmit)}
+                disabled={submitting}
+                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <Check className='w-5 h-5' />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </button>
             </div>
           </div>
@@ -981,8 +1000,8 @@ function StudyGuidePage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handlePlanSubmit();
-              }} /* L8: 支持回车提交 */
+                void runSubmit(handlePlanSubmit);
+              }} /* L8: 支持回车提交（经 run 防重） */
               className='px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3'
             >
               <button
@@ -994,11 +1013,11 @@ function StudyGuidePage() {
               </button>
               <button
                 type='submit'
-                onClick={handlePlanSubmit}
-                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-200 font-medium'
+                disabled={submitting}
+                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <Check className='w-5 h-5' />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </button>
             </form>
           </div>

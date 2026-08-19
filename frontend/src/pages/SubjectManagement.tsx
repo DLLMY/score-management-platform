@@ -21,9 +21,11 @@ import {
 } from 'lucide-react';
 import api, { Subject, SubjectClassLink, ClassInfo, getAuthHeaders } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { PermissionButton, SearchFilter } from '../components';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
 import ImportExportPanel from '../components/special/ImportExportPanel';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { usePermissions, useForm, useModal } from '../hooks';
 import { useDebouncedValue } from '../hooks';
 
@@ -73,6 +75,7 @@ const presetColors = [
 ];
 
 function SubjectManagementPage() {
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -80,6 +83,9 @@ function SubjectManagementPage() {
   // 数据加载失败标记（科目/教师/班级/关联任一失败置位）
   const [loadError, setLoadError] = useState<boolean>(false);
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const showToastRef = useRef(showToast);
 
   useEffect(() => {
@@ -343,7 +349,13 @@ function SubjectManagementPage() {
   const handleRemoveClass = useCallback(
     async (classInfoId: number) => {
       if (!selectedSubject) return;
-      if (!window.confirm('确定要移除该班级关联吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要移除该班级关联吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.subjects.removeClass(selectedSubject.id, classInfoId);
         showToast('success', '已移除班级关联');
@@ -415,7 +427,13 @@ function SubjectManagementPage() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个科目吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这个科目吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.subjects.delete(id);
         showToast('success', '科目删除成功');
@@ -891,15 +909,18 @@ function SubjectManagementPage() {
               </button>
               <PermissionButton
                 permission='score.entry'
-                onClick={async () => {
-                  const isValid = validateAll();
-                  if (!isValid) return;
-                  await onSubmit(formData);
-                }}
-                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-200 font-medium'
+                onClick={() =>
+                  runSubmit(async () => {
+                    const isValid = validateAll();
+                    if (!isValid) return;
+                    await onSubmit(formData);
+                  })
+                }
+                disabled={submitting}
+                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <Check className='w-5 h-5' />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </PermissionButton>
             </div>
           </div>
@@ -988,8 +1009,9 @@ function SubjectManagementPage() {
                   <div className='flex items-end'>
                     <PermissionButton
                       permission='score.entry'
-                      onClick={handleAssignClass}
-                      className='w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium text-sm'
+                      onClick={() => runSubmit(handleAssignClass)}
+                      disabled={submitting}
+                      className='w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium text-sm disabled:opacity-50'
                     >
                       <Plus className='w-4 h-4' />
                       添加关联
@@ -1152,11 +1174,12 @@ function SubjectManagementPage() {
               </button>
               <PermissionButton
                 permission='score.entry'
-                onClick={handleSaveTeacher}
-                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium'
+                onClick={() => runSubmit(handleSaveTeacher)}
+                disabled={submitting}
+                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <Check className='w-5 h-5' />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </PermissionButton>
             </div>
           </div>

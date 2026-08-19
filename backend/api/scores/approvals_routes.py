@@ -4,6 +4,8 @@ from flask_restx import Namespace, Resource, fields
 from models import Approval, User, SystemConfig, get_by_id
 from utils.permission import requires_permission, get_current_admin, get_allowed_classes
 from utils.response import APIResponse
+from utils.pagination import get_pagination
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.class_time_checker import ClassTimeChecker
 from datetime import datetime
 from sqlalchemy.orm import joinedload
@@ -102,10 +104,10 @@ class ApprovalList(Resource):
         },
     )
     @requires_permission("score.view")
+    @cached_api(ttl=30)
     def get(self):
         """获取审批列表。非管理员用户只能查看关联班级的审批。"""
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 10, type=int)
+        page, per_page = get_pagination(default=10)
         status = request.args.get("status")
 
         query = Approval.query.options(joinedload(Approval.user))
@@ -171,6 +173,7 @@ class ApprovalList(Resource):
         approval_id, err = create_approval(data)
         if err:
             return APIResponse.error(message=err, status_code=400)
+        invalidate_cache("api:/api/approvals/*")
         return APIResponse.success(
             data={"approval_id": approval_id}, message="审批申请创建成功", status_code=201
         )
@@ -217,6 +220,7 @@ class ApprovalResource(Resource):
             return APIResponse.error(message="无权更新该审批", status_code=403)
         data = ns_approvals.payload
         update_approval(approval, data)
+        invalidate_cache("api:/api/approvals/*")
         return APIResponse.success(message="审批更新成功")
 
     @ns_approvals.doc("delete_approval")
@@ -227,6 +231,7 @@ class ApprovalResource(Resource):
         if not _can_access_approval_user(approval.student_id):
             return APIResponse.error(message="无权删除该审批", status_code=403)
         delete_approval(approval)
+        invalidate_cache("api:/api/approvals/*")
         return APIResponse.success(message="审批记录删除成功")
 
 
@@ -358,6 +363,7 @@ class ApprovalApprove(Resource):
             except Exception as e:
                 print(f"[ScoreChange] 审批积分变动通知发送失败: {e}")
 
+        invalidate_cache("api:/api/approvals/*")
         return APIResponse.success(
             data={
                 "approval_id": approval.id,
@@ -420,6 +426,7 @@ class ApprovalReject(Resource):
             publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
             print(f"[Approval] 已发送审批拒绝通知: card_id={user.card_id}")
 
+        invalidate_cache("api:/api/approvals/*")
         return APIResponse.success(
             data={
                 "approval_id": approval.id,
@@ -437,10 +444,10 @@ class PendingApprovals(Resource):
         "get_pending_approvals", params={"page": "页码（默认1）", "per_page": "每页数量（默认10）"}
     )
     @requires_permission("score.view")
+    @cached_api(ttl=30)
     def get(self):
         """获取待审批列表。非管理员用户只能查看关联班级的待审批。"""
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 10, type=int)
+        page, per_page = get_pagination(default=10)
 
         query = Approval.query.filter_by(status="pending")
         # 数据隔离

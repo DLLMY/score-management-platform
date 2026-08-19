@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.alert_service import alert_service
 
 from utils.response import APIResponse
@@ -37,6 +38,7 @@ class AlertList(Resource):
     @ns_alerts.doc("list_alerts", description="获取告警列表", security="Bearer")
     @ns_alerts.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取告警列表
@@ -122,6 +124,7 @@ class AlertResource(Resource):
             ok = alert_service.update_alert_status(alert_id, bool(data["is_read"]))
             if not ok:
                 return APIResponse.error(message="告警不存在", status_code=404)
+        invalidate_cache("api:/api/alerts/*")
         return APIResponse.success(message="告警状态更新成功")
 
     @ns_alerts.doc("delete_alert", description="删除告警", security="Bearer")
@@ -136,6 +139,7 @@ class AlertResource(Resource):
         result = alert_service.delete_alert(alert_id)  # noqa: F841
         if not result:
             return APIResponse.error(message="告警不存在", status_code=404)
+        invalidate_cache("api:/api/alerts/*")
         return APIResponse.success(message="告警删除成功")
 
 
@@ -153,6 +157,7 @@ class AlertRead(Resource):
         result = alert_service.mark_as_read(alert_id)  # noqa: F841
         if not result:
             return APIResponse.error(message="告警不存在", status_code=404)
+        invalidate_cache("api:/api/alerts/*")
         return APIResponse.success(message="告警已标记为已读")
 
 
@@ -169,6 +174,7 @@ class AlertReadAll(Resource):
         count = alert_service.mark_all_as_read()
         if count is None:
             return APIResponse.error(message="标记所有告警已读失败", status_code=500)
+        invalidate_cache("api:/api/alerts/*")
         return APIResponse.success(data={"count": count}, message=f"已标记 {count} 条告警为已读")
 
 
@@ -177,6 +183,7 @@ class AlertStats(Resource):
     @ns_alerts.doc("get_alert_stats", description="获取告警统计信息", security="Bearer")
     @ns_alerts.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取告警统计信息
@@ -203,6 +210,7 @@ class AlertCleanup(Resource):
         count = alert_service.delete_old_alerts(days=args["days"])
         if count is None:
             return APIResponse.error(message="清理过期告警失败", status_code=500)
+        invalidate_cache("api:/api/alerts/*")
         return APIResponse.success(
             data={"deleted_count": count}, message=f"已删除 {count} 条过期告警"
         )
@@ -227,6 +235,7 @@ class AlertTest(Resource):
             suppress=False,
         )
         if alert:
+            invalidate_cache("api:/api/alerts/*")
             return APIResponse.success(data={"alert_id": alert.id}, message="测试告警创建成功")
         else:
             return APIResponse.error(message="测试告警创建失败", status_code=500)

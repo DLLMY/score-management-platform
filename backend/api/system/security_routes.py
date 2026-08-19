@@ -13,6 +13,8 @@ from services.security_service import (
 from datetime import datetime, timedelta
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 from functools import wraps
 
 import jwt
@@ -183,6 +185,7 @@ class SecurityAuditLogs(Resource):
     @ns_security.param("per_page", "每页数量")
     @ns_security.response(200, "成功")
     @requires_permission("system.settings")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取安全审计日志
@@ -194,8 +197,7 @@ class SecurityAuditLogs(Resource):
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
         user_id = request.args.get("user_id")
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 50))
+        page, per_page = get_pagination(default=50)
 
         query = SecurityAudit.query
         if event_type:
@@ -244,6 +246,7 @@ class SecurityAuditStats(Resource):
     @ns_security.doc("get_security_stats", description="获取安全统计")
     @ns_security.response(200, "成功")
     @requires_permission("system.settings")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取安全统计数据
@@ -311,6 +314,7 @@ class SuspiciousIPs(Resource):
     @ns_security.doc("get_suspicious_ips", description="获取可疑IP列表")
     @ns_security.response(200, "成功")
     @requires_permission("system.settings")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取可疑IP列表
@@ -358,6 +362,7 @@ class RateLimitStatus(Resource):
     @ns_security.param("ip", "IP地址")
     @ns_security.response(200, "成功")
     @requires_permission("system.settings")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取IP的限流状态
@@ -409,6 +414,7 @@ class ClearRateLimit(Resource):
             return APIResponse.error(message="请提供IP地址", status_code=400)
 
         deleted = clear_rate_limit_records(ip)
+        invalidate_cache("api:/api/security/*")
 
         return APIResponse.success(data={"deleted": deleted}, message=f"已清除 {deleted} 条记录")
 

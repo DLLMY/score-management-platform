@@ -1,8 +1,10 @@
 import logger from '../utils/logger';
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { useForm, useModal, useConfirmDialog } from '../hooks';
+import { useForm, useModal } from '../hooks';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import {
   Plus,
   Edit2,
@@ -103,7 +105,10 @@ function RuleList() {
   const [applyingTemplate, setApplyingTemplate] = useState<boolean>(false);
 
   const { showToast } = useStableToast();
-  const { show: showConfirm } = useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
   usePermissions();
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -236,8 +241,8 @@ function RuleList() {
   }, [fetchRules, fetchCategories, fetchTemplates]);
 
   const handleSubmit = useCallback(
-    async (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
+    async (e?: FormEvent<HTMLFormElement>) => {
+      e?.preventDefault();
 
       const { isValid, errors } = validateForm(formData, validationRules);
 
@@ -275,8 +280,13 @@ function RuleList() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      // useConfirmDialog hook 无 UI 渲染，window.confirm 是稳定替代
-      if (!window.confirm('确定要删除该规则吗？此操作不可撤销。')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除该规则吗？此操作不可撤销。',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
 
       try {
         await api.rules.delete(id);
@@ -287,7 +297,7 @@ function RuleList() {
         showToast('error', '删除失败: ' + (err as Error).message);
       }
     },
-    [showToast, showConfirm]
+    [showToast]
   );
 
   const handleExport = useCallback(async () => {
@@ -773,7 +783,13 @@ function RuleList() {
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className='modal-body'>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runSubmit(handleSubmit);
+              }}
+              className='modal-body'
+            >
               <div className='form-group'>
                 <label className='form-label'>
                   规则名称 <span className='text-danger-500'>*</span>
@@ -940,7 +956,9 @@ function RuleList() {
                 <Button variant='outline' onClick={closeModal}>
                   取消
                 </Button>
-                <Button type='submit'>{editingRule ? '保存修改' : '添加规则'}</Button>
+                <Button type='submit' disabled={submitting}>
+                  {editingRule ? '保存修改' : '添加规则'}
+                </Button>
               </div>
             </form>
           </div>

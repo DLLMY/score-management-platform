@@ -2,6 +2,7 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from models import User
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.response import APIResponse
 from datetime import datetime
 from services.user_service import user_service
@@ -64,6 +65,7 @@ class UserBlacklist(Resource):
     @ns_user_management.doc("get_blacklisted_users", description="获取黑名单用户列表")
     @ns_user_management.response(200, "成功")
     @requires_permission("user.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取黑名单用户列表
@@ -120,6 +122,7 @@ class UserBlacklistItem(Resource):
 
         if not success:
             return APIResponse.error(message=message, status_code=404)
+        invalidate_cache("api:/api/user-management/*")
 
         return APIResponse.success(message=message)
 
@@ -137,6 +140,7 @@ class UserBlacklistItem(Resource):
 
         if not success:
             return APIResponse.error(message=message, status_code=404)
+        invalidate_cache("api:/api/user-management/*")
 
         return APIResponse.success(message=message)
 
@@ -175,6 +179,7 @@ class UserUnlockLimit(Resource):
         if not success:
             status_code = 404 if message == "user_not_found" else 400
             return APIResponse.error(message=message, status_code=status_code)
+        invalidate_cache("api:/api/user-management/*")
 
         return APIResponse.success(message=message)
 

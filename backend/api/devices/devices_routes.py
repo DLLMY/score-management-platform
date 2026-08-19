@@ -1,3 +1,5 @@
+import logging
+
 import time
 import json
 import threading
@@ -8,6 +10,7 @@ from models import db, Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
 from sqlalchemy.orm import joinedload
 from utils.permission import requires_permission, get_current_admin, get_admin_class_ids
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from services.mqtt_service import publish_mqtt
 from services.heartbeat_service import is_device_online
 from services.device_service import (
@@ -20,7 +23,8 @@ from services.device_service import (
     update_device_settings,
     import_devices,
 )
-from utils.api_cache_middleware import cached_api
+logger = logging.getLogger(__name__)
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from sqlalchemy import func
 
@@ -187,6 +191,7 @@ class DeviceList(Resource):
     @ns_devices.param("class_id", "班级ID")
     @ns_devices.response(200, "成功", device_list_response)
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取设备列表
@@ -195,8 +200,7 @@ class DeviceList(Resource):
         超级管理员可以看到所有设备，普通管理员只能看到自己班级或绑定到自己的设备。
         """
         admin = get_current_admin()
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 20, type=int)
+        page, per_page = get_pagination(default=20)
         device_id = request.args.get("device_id")
         name = request.args.get("name")
         status = request.args.get("status")
@@ -270,6 +274,7 @@ class DeviceList(Resource):
         """
         data = ns_devices.payload
         device_id = create_device(data)
+        invalidate_cache("api:/api/devices/*")
         return APIResponse.created(data={"device_id": device_id}, message="设备创建成功")
 
 
@@ -329,6 +334,7 @@ class DeviceResource(Resource):
         device = Device.query.get_or_404(id)
         data = ns_devices.payload
         update_device(device, data)
+        invalidate_cache("api:/api/devices/*")
         return APIResponse.success(message="设备更新成功")
 
     @ns_devices.doc("delete_device", description="删除设备", security="Bearer")
@@ -343,6 +349,7 @@ class DeviceResource(Resource):
         """
         device = Device.query.get_or_404(id)
         delete_device(device)
+        invalidate_cache("api:/api/devices/*")
         return APIResponse.success(message="设备删除成功")
 
 
@@ -357,14 +364,14 @@ class DeviceHeartbeats(Resource):
     @ns_devices.response(200, "成功")
     @ns_devices.response(404, "设备不存在")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self, id):
         """
         获取设备心跳记录
 
         获取指定设备的所有心跳历史记录，支持分页。
         """
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
+        page, per_page = get_pagination(default=50)
 
         device = Device.query.get_or_404(id)
         pagination = (
@@ -408,14 +415,14 @@ class DeviceHeartbeatsByDeviceId(Resource):
     @ns_devices.response(200, "成功")
     @ns_devices.response(404, "设备不存在")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self, device_id):
         """
         通过设备标识获取心跳记录
 
         使用设备标识（如 phonebox_001）获取心跳历史记录，支持分页。
         """
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
+        page, per_page = get_pagination(default=50)
 
         device = Device.query.filter_by(device_id=device_id).first_or_404()
         pagination = (
@@ -573,6 +580,7 @@ class BindDeviceClass(Resource):
                 return APIResponse.not_found(message="班级不存在")
 
         bind_device_class(device, class_id)
+        invalidate_cache("api:/api/devices/*")
 
         return APIResponse.success(
             data={
@@ -622,6 +630,7 @@ class BindDeviceAdmin(Resource):
                 return APIResponse.not_found(message="管理员不存在")
 
         bind_device_admin(device, admin_id)
+        invalidate_cache("api:/api/devices/*")
 
         return APIResponse.success(
             data={
@@ -640,6 +649,7 @@ class DevicesByClass(Resource):
     @ns_devices.doc("get_devices_by_class", description="获取班级的设备列表")
     @ns_devices.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self, class_id):
         """
         获取班级的设备列表
@@ -672,6 +682,7 @@ class DevicesByAdmin(Resource):
     @ns_devices.doc("get_devices_by_admin", description="获取管理员的设备列表")
     @ns_devices.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self, admin_id):
         """
         获取管理员的设备列表
@@ -707,6 +718,7 @@ class DeviceAlerts(Resource):
     @ns_devices.param("per_page", "每页数量（默认50）")
     @ns_devices.response(200, "成功")
     @requires_permission("device.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取设备告警列表
@@ -715,8 +727,7 @@ class DeviceAlerts(Resource):
         """
         resolved = request.args.get("resolved", "false").lower() == "true"
         severity = request.args.get("severity")
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
+        page, per_page = get_pagination(default=50)
 
         # F9-A: device_alert 已合并进 alert，设备告警统一以 source='device' 过滤
         query = Alert.query.filter(Alert.source == "device")
@@ -1273,7 +1284,8 @@ class DeviceImport(Resource):
 
         except Exception as e:
             db.session.rollback()
-            return APIResponse.server_error(message=str(e))
+            logger.error("devices_routes.py: %s", e)
+            return APIResponse.server_error(message="设备操作失败，请稍后重试")
 
 
 @ns_devices.route("/export")
@@ -1408,4 +1420,5 @@ class DeviceExport(Resource):
                 )
 
         except Exception as e:
-            return APIResponse.server_error(message=str(e))
+            logger.error("devices_routes.py: %s", e)
+            return APIResponse.server_error(message="设备操作失败，请稍后重试")

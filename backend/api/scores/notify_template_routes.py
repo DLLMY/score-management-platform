@@ -1,3 +1,5 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
 from flask import g
 from models import db, NotifyTemplate, Device
@@ -12,6 +14,7 @@ from services.notify_template_service import (
     delete_template,
     record_template_usage,
 )
+logger = logging.getLogger(__name__)
 import json
 
 
@@ -247,7 +250,8 @@ class TemplateUse(Resource):
             }
         except Exception as e:
             db.session.rollback()  # 失败回滚，避免脏 session 污染后续请求
-            return APIResponse.error(message=f"发送失败: {str(e)}")
+            logger.error("%s: %s", "发送失败", e)
+            return APIResponse.error(message="发送失败")
 
 
 @ns_notify_template.route("/categories")

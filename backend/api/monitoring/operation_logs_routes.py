@@ -1,7 +1,9 @@
 from flask import request
 from flask_restx import Namespace, Resource
+from utils.pagination import get_pagination
 from models import db, OperationLog
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
@@ -13,6 +15,7 @@ class OperationLogList(Resource):
 
     @ns_operation_logs.doc("list_operation_logs")
     @requires_permission("system.settings")
+    @cached_api(ttl=30)
     def get(self):
         operation_type = request.args.get("operation_type")
         target_type = request.args.get("target_type")
@@ -22,8 +25,7 @@ class OperationLogList(Resource):
         device_id = request.args.get("device_id")
         event_type = request.args.get("event_type")
         result = request.args.get("result")  # noqa: F841
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 20, type=int)
+        page, per_page = get_pagination(default=20)
 
         query = OperationLog.query.order_by(OperationLog.created_at.desc())
 
@@ -77,6 +79,7 @@ class OperationLogStats(Resource):
 
     @ns_operation_logs.doc("get_operation_log_stats")
     @requires_permission("system.settings")
+    @cached_api(ttl=60)
     def get(self):
         start_time = request.args.get("start_time")
         end_time = request.args.get("end_time")
@@ -158,6 +161,7 @@ class OperationLogSummary(Resource):
 
     @ns_operation_logs.doc("get_operation_log_summary")
     @requires_permission("system.settings")
+    @cached_api(ttl=60)
     def get(self):
         today = datetime.now().date()
         week_ago = today - timedelta(days=7)

@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Send,
   Radio,
@@ -25,15 +25,16 @@ import {
   Play,
   Pause,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Trash,
 } from 'lucide-react';
 import api, { NotifyTemplate, ScheduledNotify, NotifyHistory } from '../services/api';
-import { useForm, useModal, useConfirmDialog, useClassNowStatus } from '../hooks';
+import { useForm, useModal, useClassNowStatus } from '../hooks';
+import { useAutoSave } from '../hooks/useAutoSave';
 import type { BlockScope } from '../hooks';
 import { useStableToast } from '../hooks/useStableToast';
-import { PermissionButton, ClassStatusBadge } from '../components';
+import { PermissionButton, ClassStatusBadge, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface NotifyForm {
   text: string;
@@ -59,6 +60,82 @@ interface ScoreChangeForm {
   course: string;
   device_id: string;
   [key: string]: unknown;
+}
+
+interface ScheduledFormData {
+  text: string;
+  volume: number;
+  speak: boolean;
+  popup: boolean;
+  timeout_sec: number;
+  urgent: boolean;
+  send_mode: string;
+  device_id: string;
+  scheduled_at: string;
+  repeat_type: string;
+  repeat_interval: number;
+  repeat_day_of_week: number[];
+  repeat_end_at: string;
+  [key: string]: unknown;
+}
+
+// M3: 远程通知草稿——发送表单/积分表单/定时表单（均可序列化）
+interface RemoteNotifyDraft {
+  mode: NotifyMode;
+  form: NotifyForm;
+  scoreForm: ScoreChangeForm;
+  scheduledForm: ScheduledFormData;
+  activeScheduledModal: boolean;
+}
+
+// M3: 各表单默认值（用于草稿空值判定）
+const DEFAULT_NOTIFY_FORM: NotifyForm = {
+  text: '',
+  volume: 0.7,
+  speak: true,
+  popup: true,
+  timeout_sec: 8,
+  urgent: false,
+  device_id: '',
+  bg_color: '#000000',
+  text_color: '#FF0000',
+  font_size: 48,
+  language: 'zh',
+};
+
+const DEFAULT_SCORE_FORM: ScoreChangeForm = {
+  student_name: '',
+  score_change: 0,
+  reason: '',
+  course: '',
+  device_id: '',
+};
+
+const DEFAULT_SCHEDULED_FORM: ScheduledFormData = {
+  text: '',
+  volume: 0.7,
+  speak: true,
+  popup: true,
+  timeout_sec: 8,
+  urgent: false,
+  send_mode: 'broadcast',
+  device_id: '',
+  scheduled_at: '',
+  repeat_type: 'once',
+  repeat_interval: 1,
+  repeat_day_of_week: [0, 1, 2, 3, 4],
+  repeat_end_at: '',
+};
+
+// M3: 草稿是否有实质内容（内容/接收对象均空时静默清理）
+function isDraftMeaningful(d: RemoteNotifyDraft): boolean {
+  return (
+    d.form.text.trim() !== '' ||
+    d.form.device_id.trim() !== '' ||
+    d.scoreForm.student_name.trim() !== '' ||
+    d.scheduledForm.text.trim() !== '' ||
+    d.scheduledForm.scheduled_at !== ''
+  );
 }
 
 // 快捷预设模板
@@ -120,38 +197,17 @@ function RemoteNotify() {
   // 强制发送开关（受 notification.force_send 权限门控，仅超管可见复选框）
   const [forceSend, setForceSend] = useState(false);
   const [scheduledForceSend, setScheduledForceSend] = useState(false);
-
-  // 使用 useConfirmDialog 管理确认对话框
-  const { show: showConfirm } = useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   // 使用 useForm 管理表单状态
-  const { formData: form, setFormData: setForm } = useForm<NotifyForm>(
-    {
-      text: '',
-      volume: 0.7,
-      speak: true,
-      popup: true,
-      timeout_sec: 8,
-      urgent: false,
-      device_id: '',
-      bg_color: '#000000',
-      text_color: '#FF0000',
-      font_size: 48,
-      language: 'zh',
-    },
-    {
-      text: { required: true, minLength: 1 },
-    }
-  );
+  const { formData: form, setFormData: setForm } = useForm<NotifyForm>(DEFAULT_NOTIFY_FORM, {
+    text: { required: true, minLength: 1 },
+  });
 
   const { formData: scoreForm, setFormData: setScoreForm } = useForm<ScoreChangeForm>(
-    {
-      student_name: '',
-      score_change: 0,
-      reason: '',
-      course: '',
-      device_id: '',
-    },
+    DEFAULT_SCORE_FORM,
     {
       student_name: { required: true, minLength: 1 },
     }
@@ -243,42 +299,10 @@ function RemoteNotify() {
     formData: scheduledForm,
     setFormData: setScheduledForm,
     resetForm: resetScheduledForm,
-  } = useForm<{
-    text: string;
-    volume: number;
-    speak: boolean;
-    popup: boolean;
-    timeout_sec: number;
-    urgent: boolean;
-    send_mode: string;
-    device_id: string;
-    scheduled_at: string;
-    repeat_type: string;
-    repeat_interval: number;
-    repeat_day_of_week: number[];
-    repeat_end_at: string;
-    [key: string]: unknown;
-  }>(
-    {
-      text: '',
-      volume: 0.7,
-      speak: true,
-      popup: true,
-      timeout_sec: 8,
-      urgent: false,
-      send_mode: 'broadcast',
-      device_id: '',
-      scheduled_at: '',
-      repeat_type: 'once',
-      repeat_interval: 1,
-      repeat_day_of_week: [0, 1, 2, 3, 4],
-      repeat_end_at: '',
-    },
-    {
-      text: { required: true, minLength: 1 },
-      scheduled_at: { required: true, minLength: 1 },
-    }
-  );
+  } = useForm<ScheduledFormData>(DEFAULT_SCHEDULED_FORM, {
+    text: { required: true, minLength: 1 },
+    scheduled_at: { required: true, minLength: 1 },
+  });
 
   const {
     isOpen: showScheduledModal,
@@ -290,6 +314,50 @@ function RemoteNotify() {
       setEditingScheduled(null);
     },
   });
+
+  // M3: 远程通知本地草稿——发送表单/积分表单/定时表单，中途刷新可恢复
+  const draftData = useMemo<RemoteNotifyDraft>(
+    () => ({
+      mode,
+      form,
+      scoreForm,
+      scheduledForm,
+      activeScheduledModal: showScheduledModal,
+    }),
+    [mode, form, scoreForm, scheduledForm, showScheduledModal]
+  );
+
+  const { draftAvailable, loadDraft, restoreDraft, discardChanges, clearDraft } =
+    useAutoSave<RemoteNotifyDraft>({
+      key: 'remote-notify',
+      data: draftData,
+    });
+
+  // 空草稿静默清理：无实质内容时不弹恢复条
+  useEffect(() => {
+    if (!draftAvailable) return;
+    const d = loadDraft();
+    if (d && !isDraftMeaningful(d)) {
+      clearDraft();
+    }
+  }, [draftAvailable, loadDraft, clearDraft]);
+
+  const handleRestoreDraft = useCallback((): void => {
+    const draft = restoreDraft();
+    if (!draft) return;
+    setMode(draft.mode);
+    setForm({ ...draft.form });
+    setScoreForm({ ...draft.scoreForm });
+    setScheduledForm({ ...draft.scheduledForm });
+    if (draft.activeScheduledModal) {
+      setEditingScheduled(null);
+      openScheduledModal();
+    }
+  }, [restoreDraft, setForm, setScoreForm, setScheduledForm, openScheduledModal]);
+
+  const handleDiscardDraft = useCallback((): void => {
+    discardChanges();
+  }, [discardChanges]);
 
   const checkMqttStatus = useCallback(async () => {
     try {
@@ -384,7 +452,13 @@ function RemoteNotify() {
   }, [showHistory, historyPage, historyFilter, loadHistoryData, loadHistoryStats]);
 
   const handleCleanHistory = useCallback(async () => {
-    if (!window.confirm(`确定要清理30天前的历史记录吗？`)) return;
+    const ok = await confirmRef.current({
+      title: '清理历史记录',
+      message: '确定要清理30天前的历史记录吗？',
+      confirmText: '清理',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.notifyHistory.clean(30);
       showToast('success', '历史记录已清理');
@@ -393,7 +467,7 @@ function RemoteNotify() {
     } catch (error) {
       showToast('error', '清理失败');
     }
-  }, [loadHistoryData, loadHistoryStats, showToast, showConfirm]);
+  }, [loadHistoryData, loadHistoryStats, showToast]);
 
   const handleSubmit = useCallback(async () => {
     if (mode === 'score_change') {
@@ -464,6 +538,7 @@ function RemoteNotify() {
 
       if (data.success) {
         showToast('success', data.message);
+        clearDraft();
         if (mode === 'score_change') {
           setScoreForm({
             student_name: '',
@@ -486,7 +561,7 @@ function RemoteNotify() {
       setIsSending(false);
       checkMqttStatus();
     }
-  }, [form, mode, showToast, checkMqttStatus, scoreForm]);
+  }, [form, mode, showToast, checkMqttStatus, scoreForm, clearDraft]);
 
   const handleReset = useCallback(() => {
     setForm({
@@ -560,7 +635,13 @@ function RemoteNotify() {
 
   const handleDeleteTemplate = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除该通知模板吗？')) return; // 删除确认
+      const ok = await confirmRef.current({
+        title: '删除确认',
+        message: '确定要删除该通知模板吗？',
+        confirmText: '删除',
+        type: 'danger',
+      });
+      if (!ok) return; // 删除确认
       try {
         await api.notifyTemplates.delete(id);
         showToast('success', '模板已删除');
@@ -590,12 +671,13 @@ function RemoteNotify() {
         await api.scheduledNotify.create(scheduledForm);
         showToast('success', '定时通知已创建');
       }
+      clearDraft();
       loadScheduledNotifications();
       closeScheduledModal();
     } catch (error) {
       showToast('error', '保存失败');
     }
-  }, [scheduledForm, editingScheduled, loadScheduledNotifications, showToast]);
+  }, [scheduledForm, editingScheduled, loadScheduledNotifications, showToast, clearDraft]);
 
   const handleDeleteScheduled = useCallback(
     async (id: number) => {
@@ -655,8 +737,99 @@ function RemoteNotify() {
     openScheduledModal();
   }, [form, mode, openScheduledModal]);
 
+  const historyColumns = useMemo<ColumnType<NotifyHistory>[]>(
+    () => [
+      {
+        title: '内容',
+        key: 'text',
+        dataIndex: 'text',
+        render: (_, item) => (
+          <div className='flex items-center gap-2'>
+            {item.urgent && <AlertTriangle className='w-4 h-4 text-red-500' />}
+            <span className='text-sm text-gray-800 dark:text-white truncate max-w-xs'>
+              {item.text}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: '发送模式',
+        key: 'send_mode',
+        dataIndex: 'send_mode',
+        render: (value) => (
+          <span
+            className={`px-2 py-1 rounded text-xs ${
+              value === 'broadcast'
+                ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600'
+                : 'bg-green-100 dark:bg-green-500/20 text-green-600'
+            }`}
+          >
+            {value === 'broadcast' ? '广播' : '指定设备'}
+          </span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'status',
+        render: (value) => (
+          <span
+            className={`px-2 py-1 rounded text-xs ${
+              value === 'sent'
+                ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
+                : value === 'pending'
+                ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600'
+                : value === 'failed'
+                ? 'bg-red-100 dark:bg-red-500/20 text-red-600'
+                : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
+            }`}
+          >
+            {value === 'sent'
+              ? '成功'
+              : value === 'pending'
+              ? '待发送'
+              : value === 'failed'
+              ? '失败'
+              : '未知'}
+          </span>
+        ),
+      },
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <span className='text-sm text-gray-500 dark:text-slate-400'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '-'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
     <div className='max-w-6xl mx-auto'>
+      {draftAvailable && (
+        <div className='flex items-center justify-between gap-3 px-4 py-2.5 mb-4 rounded-lg bg-amber-50 border border-amber-200 text-sm'>
+          <span className='text-amber-800'>检测到上次未提交的内容，是否恢复？</span>
+          <div className='flex items-center gap-2'>
+            <button
+              onClick={handleRestoreDraft}
+              className='px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 text-xs'
+            >
+              恢复
+            </button>
+            <button
+              onClick={handleDiscardDraft}
+              className='px-3 py-1 rounded-md border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs'
+            >
+              放弃
+            </button>
+          </div>
+        </div>
+      )}
+
       {loadError && (
         <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
           <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
@@ -1805,118 +1978,21 @@ function RemoteNotify() {
             <div className='overflow-x-auto overflow-y-auto max-h-[400px]'>
               {' '}
               {/* L4: 窄屏横向滚动 */}
-              {isLoadingHistory ? (
-                <div className='flex items-center justify-center py-8'>
-                  <Loader2 className='w-6 h-6 animate-spin text-primary-500' />
-                </div>
-              ) : historyData.length === 0 ? (
-                <p className='text-center py-8 text-gray-500 dark:text-slate-400'>暂无历史记录</p>
-              ) : (
-                <table className='w-full'>
-                  <thead className='bg-gray-50 dark:bg-slate-700/50 sticky top-0'>
-                    <tr>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
-                        内容
-                      </th>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
-                        发送模式
-                      </th>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
-                        状态
-                      </th>
-                      <th className='text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-slate-400'>
-                        时间
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyData.map((item) => (
-                      <tr
-                        key={item.id}
-                        className='border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50'
-                      >
-                        <td className='px-4 py-3'>
-                          <div className='flex items-center gap-2'>
-                            {item.urgent && <AlertTriangle className='w-4 h-4 text-red-500' />}
-                            <span className='text-sm text-gray-800 dark:text-white truncate max-w-xs'>
-                              {item.text}
-                            </span>
-                          </div>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${
-                              item.send_mode === 'broadcast'
-                                ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600'
-                                : 'bg-green-100 dark:bg-green-500/20 text-green-600'
-                            }`}
-                          >
-                            {item.send_mode === 'broadcast' ? '广播' : '指定设备'}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${
-                              item.status === 'sent'
-                                ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
-                                : item.status === 'pending'
-                                ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600'
-                                : item.status === 'failed'
-                                ? 'bg-red-100 dark:bg-red-500/20 text-red-600'
-                                : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
-                            }`}
-                          >
-                            {item.status === 'sent'
-                              ? '成功'
-                              : item.status === 'pending'
-                              ? '待发送'
-                              : item.status === 'failed'
-                              ? '失败'
-                              : '未知'}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3'>
-                          <span className='text-sm text-gray-500 dark:text-slate-400'>
-                            {item.created_at
-                              ? new Date(item.created_at).toLocaleString('zh-CN')
-                              : '-'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <DataTable<NotifyHistory>
+                columns={historyColumns}
+                dataSource={historyData}
+                loading={isLoadingHistory}
+                rowKey='id'
+                total={historyTotal}
+                page={historyPage}
+                pageSize={20}
+                pageSizeOptions={[20]}
+                onPageChange={(page) => setHistoryPage(page)}
+                empty={{
+                  title: '暂无历史记录',
+                }}
+              />
             </div>
-
-            {/* 分页 */}
-            {historyTotal > 20 && (
-              <div className='flex items-center justify-between p-4 border-t border-gray-200 dark:border-slate-700'>
-                <p className='text-sm text-gray-500 dark:text-slate-400'>
-                  显示 {(historyPage - 1) * 20 + 1} - {Math.min(historyPage * 20, historyTotal)}{' '}
-                  条，共 {historyTotal} 条
-                </p>
-                <div className='flex items-center gap-2'>
-                  <button
-                    onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))}
-                    disabled={historyPage === 1}
-                    className='p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    <ChevronLeft className='w-4 h-4' />
-                  </button>
-                  <span className='text-sm text-gray-600 dark:text-slate-300'>{historyPage}</span>
-                  <button
-                    onClick={() =>
-                      setHistoryPage((prev) => Math.min(Math.ceil(historyTotal / 20), prev + 1))
-                    }
-                    disabled={historyPage >= Math.ceil(historyTotal / 20)}
-                    className='p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    <ChevronRight className='w-4 h-4' />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

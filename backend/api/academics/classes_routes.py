@@ -1,13 +1,19 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
 from flask import send_file, request
 from services.class_service import class_service
 from utils.permission import requires_permission, get_current_admin
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 from utils.logger import log_operation
 
 from models import User
 from models import ClassInfo
 from models import get_by_id
+
+logger = logging.getLogger(__name__)
 
 ns_classes = Namespace("classes", description="班级管理相关操作")
 
@@ -70,10 +76,10 @@ class ClassList(Resource):
     @ns_classes.doc("list_classes")
     @ns_classes.response(200, "成功")
     @requires_permission("class.view")
+    @cached_api(ttl=60)
     def get(self):
         args = ns_classes.parser.parse_args()
-        page = args.get("page", 1)
-        per_page = args.get("per_page", 10)
+        page, per_page = get_pagination(default=10)
         keyword = args.get("keyword")
         admin = get_current_admin()
         result = class_service.get_class_list(page, per_page, keyword, admin=admin)  # noqa: F841
@@ -87,6 +93,7 @@ class ClassList(Resource):
         data = ns_classes.payload
         result = class_service.create_class(data)
         _audit_class_op("class.create", data.get("name"), result, data)
+        invalidate_cache("api:/api/classes/*")
         return result
 
 
@@ -112,6 +119,7 @@ class ClassResource(Resource):
         admin = get_current_admin()
         result = class_service.update_class(id, data, admin=admin)
         _audit_class_op("class.update", data.get("name"), result, data, target_id=id)
+        invalidate_cache("api:/api/classes/*")
         return result
 
     @ns_classes.doc("delete_class")
@@ -120,6 +128,7 @@ class ClassResource(Resource):
         admin = get_current_admin()
         result = class_service.delete_class(id, admin=admin)
         _audit_class_op("class.delete", f"id={id}", result, None, target_id=id)
+        invalidate_cache("api:/api/classes/*")
         return result
 
 
@@ -128,6 +137,7 @@ class ClassStudents(Resource):
 
     @ns_classes.doc("get_class_students", description="获取班级学生列表")
     @requires_permission("class.view")
+    @cached_api(ttl=30)
     def get(self, class_param):
         """
         获取班级学生列表
@@ -161,7 +171,8 @@ class ClassStudents(Resource):
 
             return APIResponse.success(data={"students": student_list})
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("classes_routes.py: %s", e)
+            return APIResponse.error(message="操作失败，请稍后重试")
 
 
 @ns_classes.route("/validate-associations")
@@ -332,4 +343,6 @@ class ClassImport(Resource):
         else:
             return APIResponse.bad_request(message="不支持的文件格式")
 
-        return class_service.import_classes(import_list, config)
+        result = class_service.import_classes(import_list, config)
+        invalidate_cache("api:/api/classes/*")
+        return result

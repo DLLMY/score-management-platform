@@ -11,15 +11,18 @@ import React, {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
-import { Card, Button, Modal, LoadingSpinner, PermissionButton } from '../components';
+import { Card, Button, Modal, PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import ImportExportPanel from '../components/special/ImportExportPanel';
 import { useStableToast } from '../hooks/useStableToast';
-import { useModal, useConfirmDialog } from '../hooks';
+import { useModal } from '../hooks';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import api, { getAuthHeaders } from '../services/api';
 import type { User, Subject } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
 import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useDebouncedValue, useThrottledCallback } from '../hooks';
+import { useAutoSave } from '../hooks/useAutoSave';
 
 // 班级信息类型
 interface ClassInfo {
@@ -72,6 +75,16 @@ interface PendingChange {
   subject: string;
   subject_id?: number;
   score: number;
+}
+
+// 成绩录入草稿（仅可序列化字段，用于 M3 本地暂存/恢复）
+interface ScoreEntryDraft {
+  selectedExam: string;
+  selectedClass: string;
+  scores: Record<string, ScoreItem>;
+  pendingChanges: Record<string, PendingChange>;
+  batchSubject: string;
+  filterSubject: string;
 }
 
 // 导入结果接口
@@ -210,7 +223,6 @@ const ScoreEntry: React.FC = () => {
   usePermissions();
   const { submitting, run: runSubmit } = useSubmitGuard();
   const [state, dispatch] = useReducer(scoreEntryReducer, initialState);
-  const tableRef = useRef<HTMLDivElement>(null);
 
   const {
     exams,
@@ -230,8 +242,9 @@ const ScoreEntry: React.FC = () => {
     pendingChanges,
   } = state;
 
-  // 使用 useConfirmDialog 管理确认对话框
-  const { show: showConfirm } = useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   // 使用 useModal 管理弹窗状态
   const {
@@ -358,6 +371,55 @@ const ScoreEntry: React.FC = () => {
       fetchStudentsAndScores();
     }
   }, [selectedExam, selectedClass, fetchStudentsAndScores]);
+
+  // M3: 成绩录入本地草稿——把"录入会话"可序列化状态合成草稿数据，供中途刷新后恢复
+  const draftData = useMemo<ScoreEntryDraft>(
+    () => ({
+      selectedExam,
+      selectedClass,
+      scores,
+      pendingChanges,
+      batchSubject,
+      filterSubject,
+    }),
+    [selectedExam, selectedClass, scores, pendingChanges, batchSubject, filterSubject]
+  );
+
+  const { draftAvailable, loadDraft, restoreDraft, discardChanges, clearDraft } =
+    useAutoSave<ScoreEntryDraft>({
+      key: 'score-entry',
+      data: draftData,
+    });
+
+  // 空草稿静默清理：无考试/无成绩时恢复条不出现
+  useEffect(() => {
+    if (!draftAvailable) return;
+    const d = loadDraft();
+    if (
+      d &&
+      d.selectedExam === '' &&
+      Object.keys(d.scores).length === 0 &&
+      Object.keys(d.pendingChanges).length === 0
+    ) {
+      clearDraft();
+    }
+  }, [draftAvailable, loadDraft, clearDraft]);
+
+  const handleRestoreDraft = useCallback((): void => {
+    const draft = restoreDraft();
+    if (!draft) return;
+    dispatch({ type: 'SET_SELECTED_EXAM', payload: draft.selectedExam });
+    setClassInput(draft.selectedClass);
+    dispatch({ type: 'SET_SELECTED_CLASS', payload: draft.selectedClass });
+    dispatch({ type: 'SET_SCORES', payload: draft.scores });
+    dispatch({ type: 'SET_PENDING_CHANGES', payload: draft.pendingChanges });
+    dispatch({ type: 'SET_BATCH_SUBJECT', payload: draft.batchSubject });
+    dispatch({ type: 'SET_FILTER_SUBJECT', payload: draft.filterSubject });
+  }, [restoreDraft]);
+
+  const handleDiscardDraft = useCallback((): void => {
+    discardChanges();
+  }, [discardChanges]);
 
   const examSubjects = useMemo((): string[] => {
     const exam = exams.find((e) => e.id.toString() === selectedExam);
@@ -520,6 +582,7 @@ const ScoreEntry: React.FC = () => {
 
     if (failCount === 0) {
       showToast('success', `已保存 ${successCount} 条成绩`);
+      clearDraft();
     } else {
       const detail = skipReasons.length > 0 ? `（${skipReasons.length} 条因科目名异常被跳过）` : '';
       showToast('error', `保存完成: ${successCount} 成功, ${failCount} 失败${detail}`);
@@ -527,7 +590,7 @@ const ScoreEntry: React.FC = () => {
 
     dispatch({ type: 'CLEAR_PENDING_CHANGES' });
     fetchStudentsAndScores();
-  }, [pendingChanges, scores, selectedExam, showToast, fetchStudentsAndScores]);
+  }, [pendingChanges, scores, selectedExam, showToast, fetchStudentsAndScores, clearDraft]);
 
   const handleExport = useCallback(
     async (format: 'excel' | 'csv'): Promise<Blob> => {
@@ -601,15 +664,23 @@ const ScoreEntry: React.FC = () => {
   }, [importResult]);
 
   const handleConfirmAll = useCallback(async (): Promise<void> => {
-    if (!window.confirm('确定要确认全部学生的成绩吗？确认后将批量提交成绩状态。')) return;
+    const ok = await confirmRef.current({
+      title: '确认全部成绩',
+      message: '确定要确认全部学生的成绩吗？确认后将批量提交成绩状态。',
+      confirmText: '确认',
+      cancelText: '取消',
+      type: 'info',
+    });
+    if (!ok) return;
     try {
       await api.scores.confirmAll(selectedExam);
       showToast('success', '确认成功');
+      clearDraft();
       fetchStudentsAndScores();
     } catch (err: unknown) {
       showToast('error', '确认失败: ' + (err as Error).message);
     }
-  }, [selectedExam, showToast, fetchStudentsAndScores]);
+  }, [selectedExam, showToast, fetchStudentsAndScores, clearDraft]);
 
   const handleBatchDelete = useCallback(async (): Promise<void> => {
     if (!batchSubject) {
@@ -617,7 +688,14 @@ const ScoreEntry: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`确定要删除所有学生的 ${batchSubject} 成绩吗？`)) return;
+    const ok = await confirmRef.current({
+      title: '批量删除成绩',
+      message: `确定要删除所有学生的 ${batchSubject} 成绩吗？`,
+      confirmText: '删除',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     try {
       const keysToDelete = Object.keys(scores).filter((key) => key.endsWith(`-${batchSubject}`));
@@ -638,7 +716,7 @@ const ScoreEntry: React.FC = () => {
     } catch (err: unknown) {
       showToast('error', '批量删除失败: ' + (err as Error).message);
     }
-  }, [batchSubject, scores, showToast, fetchStudentsAndScores, showConfirm, closeBatchModal]);
+  }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal]);
 
   const handleBatchReset = useCallback(async (): Promise<void> => {
     if (!batchSubject) {
@@ -646,7 +724,14 @@ const ScoreEntry: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`确定要重置所有学生的 ${batchSubject} 成绩为空吗？`)) return;
+    const ok = await confirmRef.current({
+      title: '批量重置成绩',
+      message: `确定要重置所有学生的 ${batchSubject} 成绩为空吗？`,
+      confirmText: '重置',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!ok) return;
 
     try {
       const keysToReset = Object.keys(scores).filter((key) => key.endsWith(`-${batchSubject}`));
@@ -665,7 +750,7 @@ const ScoreEntry: React.FC = () => {
     } catch (err: unknown) {
       showToast('error', '批量重置失败: ' + (err as Error).message);
     }
-  }, [batchSubject, scores, showToast, fetchStudentsAndScores, showConfirm, closeBatchModal]);
+  }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal]);
 
   const handleBatchConfirm = useCallback(async (): Promise<void> => {
     if (!batchSubject) {
@@ -691,13 +776,14 @@ const ScoreEntry: React.FC = () => {
       }
 
       showToast('success', `已确认 ${confirmedCount} 条 ${batchSubject} 成绩`);
+      clearDraft();
       closeBatchModal();
       dispatch({ type: 'SET_BATCH_SUBJECT', payload: '' });
       fetchStudentsAndScores();
     } catch (err: unknown) {
       showToast('error', '批量确认失败: ' + (err as Error).message);
     }
-  }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal]);
+  }, [batchSubject, scores, showToast, fetchStudentsAndScores, closeBatchModal, clearDraft]);
 
   // M9: 移除占位功能「复制上次成绩」（后端无对应接口，原实现仅提示"开发中"）
   // 若需恢复：后端提供 GET /api/scores/last-exam 后在此实现
@@ -838,6 +924,80 @@ const ScoreEntry: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const columns = useMemo<ColumnType<User>[]>(
+    () => [
+      {
+        title: '学号',
+        key: 'card_id',
+        dataIndex: 'card_id',
+        className: 'sticky left-0 bg-white z-10',
+        render: (value) => <span className='text-gray-600'>{String(value ?? '')}</span>,
+      },
+      {
+        title: '姓名',
+        key: 'name',
+        dataIndex: 'name',
+        className: 'sticky left-16 bg-white z-10',
+        render: (value) => (
+          <span className='font-medium text-gray-900'>{String(value ?? '')}</span>
+        ),
+      },
+      ...visibleSubjects.map((subject) => ({
+        title: subject,
+        key: `subject-${subject}`,
+        width: 100,
+        align: 'center' as const,
+        render: (_v: unknown, student: User) => {
+          const key = `${student.id}-${subject}`;
+          const scoreData = scores[key];
+          const isPending = !!pendingChanges[key];
+          return (
+            <div
+              className={`flex items-center justify-center gap-1.5 ${isPending ? 'bg-orange-50' : ''}`}
+            >
+              <input
+                key={`${student.id}-${subject}-${scoreData?.id ?? 'empty'}`}
+                type='number'
+                min={0}
+                max={100}
+                step={0.5}
+                placeholder='-'
+                defaultValue={scoreData?.score ?? ''}
+                className='w-16 px-1.5 py-0.5 text-sm text-center border border-gray-300 rounded hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  const old = scoreData?.score ?? null;
+                  const num = v === '' ? null : parseFloat(v);
+                  if (
+                    v !== '' &&
+                    (Number.isNaN(num as number) ||
+                      (num as number) < 0 ||
+                      (num as number) > 100)
+                  ) {
+                    showToast('error', '分数需在 0-100');
+                    return;
+                  }
+                  if (num === old) return;
+                  handleScoreBlur(Number(student.id), subject, v);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    (e.target as HTMLInputElement).blur();
+                  } else if (e.key === 'Escape') {
+                    (e.target as HTMLInputElement).value = String(scoreData?.score ?? '');
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+              />
+              {scoreData?.status && getStatusBadge(scoreData.status)}
+            </div>
+          );
+        },
+      })),
+    ],
+    [visibleSubjects, scores, pendingChanges, handleScoreBlur, getStatusBadge, showToast]
+  );
+
   const selectedExamData = exams.find((e) => e.id.toString() === selectedExam);
 
   return (
@@ -852,6 +1012,26 @@ const ScoreEntry: React.FC = () => {
         }
         .print-only { display: none; }
       `}</style>
+
+      {draftAvailable && (
+        <div className='flex items-center justify-between gap-3 px-4 py-2.5 mb-4 rounded-lg bg-amber-50 border border-amber-200 text-sm'>
+          <span className='text-amber-800'>检测到上次未提交的内容，是否恢复？</span>
+          <div className='flex items-center gap-2'>
+            <button
+              onClick={handleRestoreDraft}
+              className='px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 text-xs'
+            >
+              恢复
+            </button>
+            <button
+              onClick={handleDiscardDraft}
+              className='px-3 py-1 rounded-md border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs'
+            >
+              放弃
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
         <div>
@@ -1035,109 +1215,16 @@ const ScoreEntry: React.FC = () => {
             </div>
           </div>
 
-          {loading ? (
-            <div className='flex items-center justify-center py-12'>
-              <LoadingSpinner />
-            </div>
-          ) : (
-            <div className='overflow-x-auto' ref={tableRef}>
-              <table className='w-full text-sm'>
-                <thead>
-                  <tr className='bg-gray-50'>
-                    <th className='px-4 py-3 text-left font-medium text-gray-600 sticky left-0 bg-gray-50 z-10'>
-                      学号
-                    </th>
-                    <th className='px-4 py-3 text-left font-medium text-gray-600 sticky left-16 bg-gray-50 z-10'>
-                      姓名
-                    </th>
-                    {visibleSubjects.map((subject) => (
-                      <th
-                        key={subject}
-                        className='px-4 py-3 text-center font-medium text-gray-600 min-w-[100px]'
-                      >
-                        {subject}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={2 + visibleSubjects.length}
-                        className='px-4 py-8 text-center text-gray-500'
-                      >
-                        暂无学生数据
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map((student) => (
-                      <tr key={student.id} className='border-t border-gray-100 hover:bg-gray-50'>
-                        <td className='px-4 py-2 text-gray-600 sticky left-0 bg-white z-10'>
-                          {student.card_id}
-                        </td>
-                        <td className='px-4 py-2 font-medium text-gray-900 sticky left-16 bg-white z-10'>
-                          {student.name}
-                        </td>
-                        {visibleSubjects.map((subject) => {
-                          const key = `${student.id}-${subject}`;
-                          const scoreData = scores[key];
-                          const isPending = !!pendingChanges[key];
-
-                          return (
-                            <td
-                              key={subject}
-                              className={`px-4 py-2 text-center ${isPending ? 'bg-orange-50' : ''}`}
-                            >
-                              <div className='flex items-center justify-center gap-1.5'>
-                                <input
-                                  key={`${student.id}-${subject}-${scoreData?.id ?? 'empty'}`}
-                                  type='number'
-                                  min={0}
-                                  max={100}
-                                  step={0.5}
-                                  placeholder='-'
-                                  defaultValue={scoreData?.score ?? ''}
-                                  className='w-16 px-1.5 py-0.5 text-sm text-center border border-gray-300 rounded hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
-                                  onBlur={(e) => {
-                                    const v = e.target.value.trim();
-                                    const old = scoreData?.score ?? null;
-                                    const num = v === '' ? null : parseFloat(v);
-                                    if (
-                                      v !== '' &&
-                                      (Number.isNaN(num as number) ||
-                                        (num as number) < 0 ||
-                                        (num as number) > 100)
-                                    ) {
-                                      showToast('error', '分数需在 0-100');
-                                      return;
-                                    }
-                                    if (num === old) return;
-                                    handleScoreBlur(Number(student.id), subject, v);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      (e.target as HTMLInputElement).blur();
-                                    } else if (e.key === 'Escape') {
-                                      (e.target as HTMLInputElement).value = String(
-                                        scoreData?.score ?? ''
-                                      );
-                                      (e.target as HTMLInputElement).blur();
-                                    }
-                                  }}
-                                />
-                                {scoreData?.status && getStatusBadge(scoreData.status)}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable<User>
+            columns={columns}
+            dataSource={filteredStudents}
+            rowKey='id'
+            loading={loading}
+            empty={{
+              title: '暂无学生数据',
+            }}
+            scroll={{ x: 220 + visibleSubjects.length * 100 }}
+          />
         </Card>
       )}
 

@@ -136,17 +136,19 @@ def invalidate_cache(path_pattern=None):
     缓存失效函数
     当数据变更时，清除相关的API缓存。
     Args:
-        path_pattern: 路径模式（可选），如 'users:*' 清除所有用户相关缓存
+        path_pattern: 路径模式（可选），如 '/api/users/*' 或 'api:/api/users/*' 清除所有用户相关缓存
     使用示例:
-        invalidate_cache('users:*')  # 清除所有用户缓存
-        invalidate_cache()           # 清除所有API缓存
+        invalidate_cache('/api/users/*')  # 清除所有用户缓存
+        invalidate_cache()                # 清除所有API缓存
+    注意: cached_api 的键格式为 `api:{path}:{hash}`，此处必须确保最终 pattern 以 `api:` 开头，
+          且不要重复拼接 `api:` 前缀（历史 bug：曾拼成 `api:api:/api/...` 导致按前缀失效永不命中）。
     """
     cache = get_cache_service()
     if not cache:
         return
     if path_pattern:
-        # 清除特定路径的缓存
-        pattern = f"api:{path_pattern}"
+        # 兼容两种传法：'/api/users/*' 与 'api:/api/users/*'
+        pattern = path_pattern if path_pattern.startswith("api:") else f"api:{path_pattern}"
         cache.flush(pattern)
     else:
         # 清除所有API缓存
@@ -159,8 +161,7 @@ def invalidate_user_cache(user_id):
     Args:
         user_id: 用户ID
     """
-    invalidate_cache("users:*")
-    invalidate_cache("api:/api/users/*")
+    invalidate_cache("/api/users/*")
 
 
 def invalidate_device_cache(device_id):
@@ -169,8 +170,7 @@ def invalidate_device_cache(device_id):
     Args:
         device_id: 设备ID
     """
-    invalidate_cache("devices:*")
-    invalidate_cache("api:/api/devices/*")
+    invalidate_cache("/api/devices/*")
 
 
 def invalidate_rule_cache(rule_id):
@@ -179,8 +179,7 @@ def invalidate_rule_cache(rule_id):
     Args:
         rule_id: 规则ID
     """
-    invalidate_cache("rules:*")
-    invalidate_cache("api:/api/rules/*")
+    invalidate_cache("/api/rules/*")
 
 
 def setup_cache_middleware(app):

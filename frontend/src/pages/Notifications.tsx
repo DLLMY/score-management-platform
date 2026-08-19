@@ -4,6 +4,7 @@ import { Bell, Filter, Check, Trash2, RefreshCw, Sparkles, X, Info } from 'lucid
 import { Card, Button, Modal, PermissionButton } from '../components';
 import api, { AdminNotification } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface SendForm {
   title: string;
@@ -21,6 +22,9 @@ interface Pagination {
 
 function Notifications() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -132,7 +136,13 @@ function Notifications() {
 
   const handleDelete = useCallback(
     async (id: number): Promise<void> => {
-      if (!window.confirm('确定要删除这条通知吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这条通知吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.adminNotifications.delete(id);
         setNotifications((prev: AdminNotification[]) =>

@@ -1,12 +1,17 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from models import ImportConfig, get_by_id
 from services.academics_service import academics_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api
 from utils.excel_utils import ExcelTemplateGenerator
 
 from utils.response import APIResponse
 import io
+
+logger = logging.getLogger(__name__)
 
 ns_import = Namespace("import", description="导入配置管理")
 
@@ -67,6 +72,7 @@ class ImportConfigList(Resource):
 
     @ns_import.doc("list_import_configs", description="获取导入配置列表")
     @requires_permission("system.manage")
+    @cached_api(ttl=60)
     def get(self):
         """获取所有导入配置"""
         module_name = request.args.get("module_name")
@@ -316,4 +322,5 @@ class ImportTemplate(Resource):
                 download_name=filename,
             )
         except Exception as e:
-            return APIResponse.error(message=f"生成模板失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "生成模板失败", e)
+            return APIResponse.error(message="生成模板失败", status_code=500)

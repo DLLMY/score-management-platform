@@ -1,5 +1,6 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback, ChangeEvent } from 'react';
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useState, useEffect, useCallback, useMemo, useRef, ChangeEvent } from 'react';
 import {
   RefreshCw,
   Upload,
@@ -11,8 +12,10 @@ import {
   Activity,
 } from 'lucide-react';
 import api, { Firmware, FirmwareRecord, OTAStatus, getAuthHeaders } from '../services/api';
-import { useForm, useModal, useConfirmDialog } from '../hooks';
-import { Button, Modal, Badge, PermissionButton } from '../components';
+import { useForm, useModal } from '../hooks';
+import { Button, Modal, Badge, PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useStableToast } from '../hooks/useStableToast';
 
 interface UploadFormData {
@@ -48,8 +51,9 @@ function FirmwareManagement() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
-  // 使用 useConfirmDialog 管理确认对话框
-  useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   // 使用 useForm 管理表单状态
   const {
@@ -160,7 +164,14 @@ function FirmwareManagement() {
   };
 
   const handleDeleteVersion = async (version: Firmware): Promise<void> => {
-    if (!window.confirm(`确定要删除固件版本 ${version.version} 吗？`)) return;
+    const ok = await confirmRef.current({
+      title: '删除固件',
+      message: `确定要删除固件版本 ${version.version} 吗？`,
+      confirmText: '删除',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await api.firmware.deleteVersion(version.id);
@@ -208,6 +219,177 @@ function FirmwareManagement() {
       showToast('error', '下载失败: ' + ((err as Error).message || ''));
     }
   };
+
+  const versionColumns = useMemo<ColumnType<Firmware>[]>(
+    () => [
+      {
+        title: '版本',
+        key: 'version',
+        dataIndex: 'version',
+        render: (value) => <span className='font-medium text-blue-600'>{String(value)}</span>,
+      },
+      {
+        title: '描述',
+        key: 'description',
+        dataIndex: 'description',
+        render: (value) => <span className='text-gray-600 text-sm'>{String(value || '-')}</span>,
+      },
+      {
+        title: '文件大小',
+        key: 'file_size',
+        dataIndex: 'file_size',
+        render: (value) => (
+          <span className='text-gray-600 text-sm'>{formatFileSize(value as number)}</span>
+        ),
+      },
+      {
+        title: 'MD5',
+        key: 'md5',
+        dataIndex: 'md5',
+        render: (value) => (
+          <span className='text-gray-600 text-xs font-mono'>
+            {(value as string)?.substring(0, 12)}...
+          </span>
+        ),
+      },
+      {
+        title: '强制更新',
+        key: 'is_mandatory',
+        dataIndex: 'is_mandatory',
+        render: (value) =>
+          value ? <Badge variant='danger'>是</Badge> : <Badge variant='default'>否</Badge>,
+      },
+      {
+        title: '状态',
+        key: 'is_active',
+        dataIndex: 'is_active',
+        render: (value) =>
+          value ? <Badge variant='success'>已启用</Badge> : <Badge variant='warning'>已禁用</Badge>,
+      },
+      {
+        title: '创建时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <span className='text-gray-600 text-sm'>{formatTime(value as string)}</span>
+        ),
+      },
+      {
+        title: '操作',
+        key: 'actions',
+        dataIndex: 'actions',
+        render: (_v, v) => (
+          <div className='flex items-center gap-2'>
+            <PermissionButton
+              /* S1: firmware.view 后端无此码 → system.settings */
+              permission='system.settings'
+              onClick={() => handleDownload(v)}
+              disabled={!v.file_path}
+              className='p-1 text-blue-600 hover:text-blue-800 disabled:text-gray-300 disabled:hover:text-gray-300'
+              title={v.file_path ? '下载' : '该版本无固件文件，无法下载'}
+            >
+              <Download className='w-4 h-4' />
+            </PermissionButton>
+            <PermissionButton
+              permission='system.settings'
+              onClick={() => handleToggleActive(v)}
+              className={`p-1 ${
+                v.is_active
+                  ? 'text-yellow-600 hover:text-yellow-800'
+                  : 'text-green-600 hover:text-green-800'
+              }`}
+              title={v.is_active ? '禁用' : '启用'}
+            >
+              {v.is_active ? (
+                <XCircle className='w-4 h-4' />
+              ) : (
+                <CheckCircle className='w-4 h-4' />
+              )}
+            </PermissionButton>
+            <PermissionButton
+              permission='system.settings'
+              onClick={() => handleDeleteVersion(v)}
+              className='p-1 text-red-600 hover:text-red-800'
+              title='删除'
+            >
+              <Trash2 className='w-4 h-4' />
+            </PermissionButton>
+          </div>
+        ),
+      },
+    ],
+    [handleDownload, handleToggleActive, handleDeleteVersion]
+  );
+
+  const recordColumns = useMemo<ColumnType<FirmwareRecord>[]>(
+    () => [
+      {
+        title: '设备ID',
+        key: 'device_id',
+        dataIndex: 'device_id',
+        render: (value) => <span className='font-mono text-sm'>{String(value)}</span>,
+      },
+      {
+        title: '设备名称',
+        key: 'device_name',
+        dataIndex: 'device_name',
+        render: (value) => <span className='text-sm'>{String(value || '-')}</span>,
+      },
+      {
+        title: '原版本',
+        key: 'from_version',
+        dataIndex: 'from_version',
+        render: (value) => <span className='text-sm'>{String(value || '-')}</span>,
+      },
+      {
+        title: '目标版本',
+        key: 'to_version',
+        dataIndex: 'to_version',
+        render: (value) => <span className='font-medium text-blue-600'>{String(value)}</span>,
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'status',
+        render: (value) => {
+          const status = value as FirmwareRecord['status'];
+          return (
+            <>
+              {status === 'completed' && <Badge variant='success'>成功</Badge>}
+              {status === 'in_progress' && <Badge variant='warning'>进行中</Badge>}
+              {status === 'failed' && <Badge variant='danger'>失败</Badge>}
+              {status === 'pending' && <Badge variant='default'>等待中</Badge>}
+            </>
+          );
+        },
+      },
+      {
+        title: '开始时间',
+        key: 'started_at',
+        dataIndex: 'started_at',
+        render: (value) => (
+          <span className='text-gray-600 text-sm'>{formatTime(value as string)}</span>
+        ),
+      },
+      {
+        title: '完成时间',
+        key: 'completed_at',
+        dataIndex: 'completed_at',
+        render: (value) => (
+          <span className='text-gray-600 text-sm'>{formatTime(value as string)}</span>
+        ),
+      },
+      {
+        title: '错误信息',
+        key: 'error_message',
+        dataIndex: 'error_message',
+        render: (value) => (
+          <span className='text-red-600 text-sm'>{String(value || '-')}</span>
+        ),
+      },
+    ],
+    []
+  );
 
   if (isLoading) {
     return (
@@ -289,170 +471,29 @@ function FirmwareManagement() {
 
       <div className='card'>
         <h2 className='text-lg font-semibold mb-4'>固件版本列表</h2>
-        {versions.length === 0 ? (
-          <div className='text-center py-8 text-gray-500'>暂无固件版本，请上传固件</div>
-        ) : (
-          <div className='overflow-x-auto'>
-            <table className='min-w-full divide-y divide-gray-200'>
-              <thead className='bg-gray-50'>
-                <tr>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    版本
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    描述
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    文件大小
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    MD5
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    强制更新
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    状态
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    创建时间
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='bg-white divide-y divide-gray-200'>
-                {versions.map((v) => (
-                  <tr key={v.id} className='hover:bg-gray-50'>
-                    <td className='px-4 py-3 font-medium text-blue-600'>{v.version}</td>
-                    <td className='px-4 py-3 text-gray-600 text-sm'>{v.description || '-'}</td>
-                    <td className='px-4 py-3 text-gray-600 text-sm'>
-                      {formatFileSize(v.file_size)}
-                    </td>
-                    <td className='px-4 py-3 text-gray-600 text-xs font-mono'>
-                      {v.md5?.substring(0, 12)}...
-                    </td>
-                    <td className='px-4 py-3'>
-                      {v.is_mandatory ? (
-                        <Badge variant='danger'>是</Badge>
-                      ) : (
-                        <Badge variant='default'>否</Badge>
-                      )}
-                    </td>
-                    <td className='px-4 py-3'>
-                      {v.is_active ? (
-                        <Badge variant='success'>已启用</Badge>
-                      ) : (
-                        <Badge variant='warning'>已禁用</Badge>
-                      )}
-                    </td>
-                    <td className='px-4 py-3 text-gray-600 text-sm'>{formatTime(v.created_at)}</td>
-                    <td className='px-4 py-3'>
-                      <div className='flex items-center gap-2'>
-                        <PermissionButton
-                          /* S1: firmware.view 后端无此码 → system.settings */
-                          permission='system.settings'
-                          onClick={() => handleDownload(v)}
-                          disabled={!v.file_path}
-                          className='p-1 text-blue-600 hover:text-blue-800 disabled:text-gray-300 disabled:hover:text-gray-300'
-                          title={v.file_path ? '下载' : '该版本无固件文件，无法下载'}
-                        >
-                          <Download className='w-4 h-4' />
-                        </PermissionButton>
-                        <PermissionButton
-                          permission='system.settings'
-                          onClick={() => handleToggleActive(v)}
-                          className={`p-1 ${
-                            v.is_active
-                              ? 'text-yellow-600 hover:text-yellow-800'
-                              : 'text-green-600 hover:text-green-800'
-                          }`}
-                          title={v.is_active ? '禁用' : '启用'}
-                        >
-                          {v.is_active ? (
-                            <XCircle className='w-4 h-4' />
-                          ) : (
-                            <CheckCircle className='w-4 h-4' />
-                          )}
-                        </PermissionButton>
-                        <PermissionButton
-                          permission='system.settings'
-                          onClick={() => handleDeleteVersion(v)}
-                          className='p-1 text-red-600 hover:text-red-800'
-                          title='删除'
-                        >
-                          <Trash2 className='w-4 h-4' />
-                        </PermissionButton>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable<Firmware>
+          columns={versionColumns}
+          dataSource={versions}
+          rowKey='id'
+          empty={{
+            title: '暂无固件版本',
+            description: '请上传固件',
+          }}
+          scroll={{ x: 1000 }}
+        />
       </div>
 
       <div className='card'>
         <h2 className='text-lg font-semibold mb-4'>升级记录</h2>
-        {upgradeRecords.length === 0 ? (
-          <div className='text-center py-8 text-gray-500'>暂无升级记录</div>
-        ) : (
-          <div className='overflow-x-auto'>
-            <table className='min-w-full divide-y divide-gray-200'>
-              <thead className='bg-gray-50'>
-                <tr>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    设备ID
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    设备名称
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    原版本
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    目标版本
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    状态
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    开始时间
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    完成时间
-                  </th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                    错误信息
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='bg-white divide-y divide-gray-200'>
-                {upgradeRecords.map((r) => (
-                  <tr key={r.id} className='hover:bg-gray-50'>
-                    <td className='px-4 py-3 font-mono text-sm'>{r.device_id}</td>
-                    <td className='px-4 py-3 text-sm'>{r.device_name || '-'}</td>
-                    <td className='px-4 py-3 text-sm'>{r.from_version || '-'}</td>
-                    <td className='px-4 py-3 font-medium text-blue-600'>{r.to_version}</td>
-                    <td className='px-4 py-3'>
-                      {r.status === 'completed' && <Badge variant='success'>成功</Badge>}
-                      {r.status === 'in_progress' && <Badge variant='warning'>进行中</Badge>}
-                      {r.status === 'failed' && <Badge variant='danger'>失败</Badge>}
-                      {r.status === 'pending' && <Badge variant='default'>等待中</Badge>}
-                    </td>
-                    <td className='px-4 py-3 text-gray-600 text-sm'>{formatTime(r.started_at)}</td>
-                    <td className='px-4 py-3 text-gray-600 text-sm'>
-                      {formatTime(r.completed_at)}
-                    </td>
-                    <td className='px-4 py-3 text-red-600 text-sm'>{r.error_message || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable<FirmwareRecord>
+          columns={recordColumns}
+          dataSource={upgradeRecords}
+          rowKey='id'
+          empty={{
+            title: '暂无升级记录',
+          }}
+          scroll={{ x: 1000 }}
+        />
       </div>
 
       <Modal isOpen={showUploadModal} onClose={closeUploadModal} title='上传固件'>

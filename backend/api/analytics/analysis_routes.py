@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource
 from flask import request
 from services.analysis_service import analysis_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api
 from utils.response import APIResponse
 
 ns_analysis = Namespace("analysis", description="数据分析相关操作")
@@ -45,6 +46,7 @@ class UnlockStats(Resource):
     @ns_analysis.param("class_name", "班级名称")
     @ns_analysis.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
@@ -64,6 +66,7 @@ class ClassRanking(Resource):
     @ns_analysis.param("limit", "返回数量限制")
     @ns_analysis.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         sort_by = request.args.get("sort_by", "total_score")
         order = request.args.get("order", "desc")
@@ -81,6 +84,7 @@ class StudentRanking(Resource):
     @ns_analysis.param("limit", "返回数量限制")
     @ns_analysis.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         class_name = request.args.get("class_name")
         sort_by = request.args.get("sort_by", "score")
@@ -97,6 +101,7 @@ class ClassCompare(Resource):
     @ns_analysis.param("period", "统计周期(7d/30d/90d)")
     @ns_analysis.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         class_names_param = request.args.get("class_names", "")
         period = request.args.get("period", "30d")
@@ -114,5 +119,6 @@ class DashboardSummary(Resource):
     @ns_analysis.doc("get_dashboard_summary", description="获取仪表盘汇总数据")
     @ns_analysis.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         return APIResponse.success(data=analysis_service.get_dashboard_summary())

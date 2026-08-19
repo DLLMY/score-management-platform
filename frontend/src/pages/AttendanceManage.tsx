@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar,
   UserCheck,
@@ -17,7 +17,10 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useAutoSave } from '../hooks/useAutoSave';
 import { ClassSelect, StudentSelect } from '../components/form/EntitySelect';
+import { DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import {
   Attendance,
   AttendanceRecordInput,
@@ -58,6 +61,13 @@ const defaultLeaveForm: LeaveFormData = {
   reason: '',
 };
 
+// M3: 考勤录入草稿（记录/请假表单 + 当前打开的弹窗）
+interface AttendanceDraft {
+  recordForm: QuickRecordForm;
+  leaveForm: LeaveFormData;
+  activeModal: 'record' | 'leave' | null;
+}
+
 function AttendanceManage() {
   const { showToast } = useStableToast();
   const [attendances, setAttendances] = useState<Attendance[]>([]);
@@ -74,6 +84,52 @@ function AttendanceManage() {
   const [recordForm, setRecordForm] = useState<QuickRecordForm>(defaultQuickRecord);
   const [leaveForm, setLeaveForm] = useState<LeaveFormData>(defaultLeaveForm);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
+
+  // M3: 考勤录入本地草稿——记录/请假表单 + 当前弹窗，中途刷新可恢复
+  const draftData = useMemo<AttendanceDraft>(
+    () => ({
+      recordForm,
+      leaveForm,
+      activeModal: showRecordModal ? 'record' : showLeaveModal ? 'leave' : null,
+    }),
+    [recordForm, leaveForm, showRecordModal, showLeaveModal]
+  );
+
+  const { draftAvailable, loadDraft, restoreDraft, discardChanges, clearDraft } =
+    useAutoSave<AttendanceDraft>({
+      key: 'attendance-entry',
+      data: draftData,
+    });
+
+  // 空草稿静默清理：两个表单均为默认值时恢复条不出现
+  useEffect(() => {
+    if (!draftAvailable) return;
+    const d = loadDraft();
+    if (
+      d &&
+      JSON.stringify(d.recordForm) === JSON.stringify(defaultQuickRecord) &&
+      JSON.stringify(d.leaveForm) === JSON.stringify(defaultLeaveForm)
+    ) {
+      clearDraft();
+    }
+  }, [draftAvailable, loadDraft, clearDraft]);
+
+  const handleRestoreDraft = useCallback((): void => {
+    const draft = restoreDraft();
+    if (!draft) return;
+    setRecordForm({ ...draft.recordForm });
+    setLeaveForm({ ...draft.leaveForm });
+    setErrors({});
+    if (draft.activeModal === 'leave') {
+      setShowLeaveModal(true);
+    } else {
+      setShowRecordModal(true);
+    }
+  }, [restoreDraft]);
+
+  const handleDiscardDraft = useCallback((): void => {
+    discardChanges();
+  }, [discardChanges]);
 
   const fetchAttendances = useCallback(async () => {
     setIsLoading(true);
@@ -163,6 +219,7 @@ function AttendanceManage() {
       };
       await api.attendance.record(data);
       showToast('success', '考勤记录成功');
+      clearDraft();
       handleCloseRecordModal();
       fetchAttendances();
       fetchStats();
@@ -180,6 +237,7 @@ function AttendanceManage() {
     fetchStats,
     validateRecordForm,
     submitting,
+    clearDraft,
   ]);
 
   const handleBatchRecord = useCallback(
@@ -221,6 +279,7 @@ function AttendanceManage() {
           'success',
           `已批量记录 ${students.length} 名学生${status === 'present' ? '出勤' : '缺勤'}`
         );
+        clearDraft();
         fetchAttendances();
         fetchStats();
       } catch (error) {
@@ -230,7 +289,7 @@ function AttendanceManage() {
         setSubmitting(false);
       }
     },
-    [recordForm, submitting, showToast, fetchAttendances, fetchStats]
+    [recordForm, submitting, showToast, fetchAttendances, fetchStats, clearDraft]
   );
 
   const handleOpenLeaveModal = useCallback(() => {
@@ -269,6 +328,7 @@ function AttendanceManage() {
       };
       await api.attendance.applyLeave(data);
       showToast('success', '请假申请已提交');
+      clearDraft();
       handleCloseLeaveModal();
       fetchLeaves();
     } catch (error) {
@@ -277,7 +337,7 @@ function AttendanceManage() {
     } finally {
       setSubmitting(false);
     }
-  }, [leaveForm, showToast, handleCloseLeaveModal, fetchLeaves, validateLeaveForm, submitting]);
+  }, [leaveForm, showToast, handleCloseLeaveModal, fetchLeaves, validateLeaveForm, submitting, clearDraft]);
 
   const handleApproveLeave = useCallback(
     async (leaveId: number, approve: boolean) => {
@@ -293,7 +353,7 @@ function AttendanceManage() {
     [showToast, fetchLeaves]
   );
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     const config: Record<string, { bg: string; dot: string; text: string; label: string }> = {
       present: {
         bg: 'bg-emerald-50 dark:bg-emerald-900/30',
@@ -335,12 +395,92 @@ function AttendanceManage() {
         {c.label}
       </span>
     );
-  };
+  }, []);
+
+  const columns = useMemo<ColumnType<Attendance>[]>(
+    () => [
+      {
+        title: '学生',
+        key: 'student',
+        render: (_value, record) => (
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center'>
+              <UserCheck className='w-5 h-5 text-emerald-600 dark:text-emerald-400' />
+            </div>
+            <div>
+              <p className='font-medium text-slate-800 dark:text-slate-200'>
+                {record.student_name || `学生 #${record.student_id}`}
+              </p>
+              <p className='text-xs text-slate-400 dark:text-slate-500'>
+                {record.class_name || `班级 #${record.class_id}`}
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: '日期',
+        key: 'date',
+        dataIndex: 'date',
+        render: (value) => (
+          <span className='text-sm text-slate-600 dark:text-slate-300'>{value as string}</span>
+        ),
+      },
+      {
+        title: '时段',
+        key: 'period',
+        dataIndex: 'period',
+        render: (value) => (
+          <span className='text-sm text-slate-600 dark:text-slate-300'>{value as string}</span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'status',
+        align: 'center',
+        render: (value) => getStatusBadge(value as string),
+      },
+      {
+        title: '备注',
+        key: 'notes',
+        dataIndex: 'notes',
+        render: (value) => (
+          <span className='text-sm text-slate-500 dark:text-slate-400'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+    ],
+    [getStatusBadge]
+  );
 
   const pendingLeaves = leaves.filter((l) => l.status === 'pending');
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
+      {draftAvailable && (
+        <div className='px-6 pt-5'>
+          <div className='flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-sm'>
+            <span className='text-amber-800'>检测到上次未提交的内容，是否恢复？</span>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={handleRestoreDraft}
+                className='px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 text-xs'
+              >
+                恢复
+              </button>
+              <button
+                onClick={handleDiscardDraft}
+                className='px-3 py-1 rounded-md border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs'
+              >
+                放弃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className='px-6 py-5 border-b border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-4'>
@@ -550,85 +690,16 @@ function AttendanceManage() {
             </div>
           </div>
 
-          <div className='overflow-x-auto'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-700/30'>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    学生
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    日期
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    时段
-                  </th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    状态
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    备注
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-slate-100 dark:divide-slate-700/50'>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className='px-5 py-12 text-center'>
-                      <div className='flex flex-col items-center gap-3'>
-                        <div className='w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin' />
-                        <p className='text-sm text-slate-500 dark:text-slate-400'>加载中...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredAttendances.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className='px-5 py-16 text-center'>
-                      <div className='flex flex-col items-center gap-3'>
-                        <div className='w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center'>
-                          <Calendar className='w-8 h-8 text-slate-400' />
-                        </div>
-                        <p className='text-slate-500 dark:text-slate-400'>暂无考勤数据</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAttendances.map((record) => (
-                    <tr
-                      key={record.id}
-                      className='group hover:bg-gradient-to-r hover:from-emerald-50/50 hover:to-teal-50/50 dark:hover:from-slate-700/50 dark:hover:to-slate-700/30 transition-all duration-200'
-                    >
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-3'>
-                          <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center'>
-                            <UserCheck className='w-5 h-5 text-emerald-600 dark:text-emerald-400' />
-                          </div>
-                          <div>
-                            <p className='font-medium text-slate-800 dark:text-slate-200'>
-                              {record.student_name || `学生 #${record.student_id}`}
-                            </p>
-                            <p className='text-xs text-slate-400 dark:text-slate-500'>
-                              {record.class_name || `班级 #${record.class_id}`}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4 text-sm text-slate-600 dark:text-slate-300'>
-                        {record.date}
-                      </td>
-                      <td className='px-5 py-4 text-sm text-slate-600 dark:text-slate-300'>
-                        {record.period}
-                      </td>
-                      <td className='px-5 py-4 text-center'>{getStatusBadge(record.status)}</td>
-                      <td className='px-5 py-4 text-sm text-slate-500 dark:text-slate-400'>
-                        {record.notes || '-'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable<Attendance>
+            columns={columns}
+            dataSource={filteredAttendances}
+            loading={isLoading}
+            rowKey='id'
+            empty={{
+              icon: 'data',
+              title: '暂无考勤数据',
+            }}
+          />
         </div>
       </div>
 

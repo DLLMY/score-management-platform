@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { abortAllRequests, abortControllers } from '../services/api';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface UseRouteChangeAbortOptions {
   enabled?: boolean;
@@ -50,18 +51,27 @@ export const usePendingRequestCount = (): number => {
 
 export const useConfirmRouteChange = (
   message: string = '有未完成的请求，确定要离开吗？'
-): ((nextLocation: { pathname: string }) => boolean | undefined) => {
+): ((nextLocation: { pathname: string }) => Promise<boolean | undefined>) => {
   const location = useLocation();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   return useCallback(
-    (nextLocation) => {
+    async (nextLocation) => {
       if (nextLocation.pathname === location.pathname) {
         return undefined;
       }
 
       const pendingCount = abortControllers.size;
       if (pendingCount > 0) {
-        if (window.confirm(`${message}（${pendingCount} 个请求进行中）`)) {
+        const ok = await confirmRef.current({
+          message: `${message}（${pendingCount} 个请求进行中）`,
+          confirmText: '离开',
+          cancelText: '留下',
+          type: 'warning',
+        });
+        if (ok) {
           abortAllRequests();
           return undefined;
         }

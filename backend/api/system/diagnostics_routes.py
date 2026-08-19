@@ -1,3 +1,5 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
 from utils.diagnostics import HealthChecker, error_tracker
 from utils.performance_monitor import PerformanceMonitor
@@ -8,6 +10,8 @@ import psutil
 import platform
 
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 """
 系统诊断API路由
@@ -158,7 +162,8 @@ class HealthCheck(Resource):
                     result["status"] = "degraded"
             return APIResponse.success(data=result)
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/performance")
@@ -184,7 +189,8 @@ class PerformanceInfo(Resource):
             }
             return APIResponse.success(data=result)
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/errors")
@@ -200,7 +206,8 @@ class ErrorInfo(Resource):
             }
             return APIResponse.success(data=result)
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/system")
@@ -242,7 +249,8 @@ class SystemInfo(Resource):
             }
             return APIResponse.success(data=result)
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/memory")
@@ -256,7 +264,8 @@ class MemoryInfo(Resource):
             memory_info = checker.check_memory_usage()
             return APIResponse.success(data={"memory": memory_info})
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/cpu")
@@ -270,7 +279,8 @@ class CPUInfo(Resource):
             cpu_info = checker.check_cpu_usage()
             return APIResponse.success(data={"cpu": cpu_info})
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/disk")
@@ -284,7 +294,8 @@ class DiskInfo(Resource):
             disk_info = checker.check_disk_space()
             return APIResponse.success(data={"disk": disk_info})
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 
 @ns_diagnostics.route("/clear-cache")
@@ -298,4 +309,5 @@ class ClearCache(Resource):
             monitor.clear_stats()
             return APIResponse.success(message="缓存已清除")
         except Exception as e:
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("diagnostics_routes.py: %s", e)
+            return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)

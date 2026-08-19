@@ -10,6 +10,7 @@ from models import (
     get_by_id,
 )
 from utils.permission import requires_permission, has_permission, get_current_admin
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.response import APIResponse
 from services.rbac_service import (
     log_rbac_permission_action,
@@ -122,6 +123,7 @@ class PermissionList(Resource):
     @ns_rbac.param("is_active", "按状态筛选")
     @ns_rbac.response(200, "成功")
     @requires_permission("system.roles")
+    @cached_api(ttl=60)
     def get(self):
         """获取所有权限定义"""
         category = request.args.get("category")
@@ -165,6 +167,7 @@ class PermissionList(Resource):
         log_permission_action(
             "创建权限", "permission", permission.id, f"创建权限: {data['code']} ({data['name']})"
         )
+        invalidate_cache("api:/api/rbac/*")
         return APIResponse.success(
             data={"id": permission.id}, message="权限创建成功", status_code=201
         )
@@ -204,6 +207,7 @@ class PermissionResource(Resource):
         data = request.json
         update_permission(permission, data)
         log_permission_action("更新权限", "permission", permission.id, f"更新权限: {code}")
+        invalidate_cache("api:/api/rbac/*")
         return APIResponse.success(message="权限更新成功")
 
     @ns_rbac.doc("delete_permission", description="删除权限", security="Bearer")
@@ -220,6 +224,7 @@ class PermissionResource(Resource):
             return APIResponse.error(message="该权限正在被角色使用，无法删除", status_code=409)
         delete_permission(permission)
         log_permission_action("删除权限", "permission", permission.id, f"删除权限: {code}")
+        invalidate_cache("api:/api/rbac/*")
         return APIResponse.success(message="权限删除成功")
 
 
@@ -230,6 +235,7 @@ class RoleList(Resource):
     )
     @ns_rbac.response(200, "成功")
     @requires_permission("system.roles")
+    @cached_api(ttl=30)
     def get(self):
         """获取所有角色及其权限信息"""
         # 获取所有角色（1次查询）
@@ -300,6 +306,7 @@ class RoleList(Resource):
             None,
             f"创建角色: {data['role_code']} ({data.get('role_name', data['role_code'])})",
         )
+        invalidate_cache("api:/api/rbac/*")
         return APIResponse.success(message="角色创建成功", status_code=201)
 
 
@@ -346,6 +353,7 @@ class RoleResource(Resource):
         data = request.json
         update_role(rp, data)
         log_permission_action("更新角色", "role", None, f"更新角色: {role_code}")
+        invalidate_cache("api:/api/rbac/*")
         return APIResponse.success(message="角色更新成功")
 
     @ns_rbac.doc("delete_role", description="删除角色", security="Bearer")
@@ -367,6 +375,7 @@ class RoleResource(Resource):
         # 删除角色权限关联/层级关联/角色本身
         delete_role(rp)
         log_permission_action("删除角色", "role", None, f"删除角色: {role_code}")
+        invalidate_cache("api:/api/rbac/*")
         return APIResponse.success(message="角色删除成功")
 
 

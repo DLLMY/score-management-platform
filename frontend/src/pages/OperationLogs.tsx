@@ -4,16 +4,15 @@ import {
   Clock,
   Filter,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   User,
   Database,
   Settings,
   Activity,
 } from 'lucide-react';
 import api from '../services/api';
-import { EmptyState, PermissionButton } from '../components';
-import { useDebouncedValue } from '../hooks';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useDebouncedValue, useTableUrlState } from '../hooks';
 
 interface OperationLog {
   id: number;
@@ -52,6 +51,10 @@ const OperationLogs: React.FC = () => {
     total: 0,
   });
 
+  // 分页 / 排序状态持久化到 URL query（报告要求）
+  const { page, pageSize, sortField, sortOrder, setPage, setPageSize, setSort } =
+    useTableUrlState('oplogs');
+
   // 防抖搜索操作者 - 延迟 300ms 更新
   const debouncedOperator = useDebouncedValue(filters.operator, 300);
 
@@ -59,17 +62,23 @@ const OperationLogs: React.FC = () => {
     try {
       setLoading(true);
       const params: Record<string, string | number> = {
-        page: pagination.page,
-        per_page: pagination.per_page,
+        page,
+        per_page: pageSize,
       };
       if (filters.operation_type) params.operation_type = filters.operation_type;
       if (filters.target_type) params.target_type = filters.target_type;
       if (debouncedOperator) params.operator = debouncedOperator;
+      if (sortField) {
+        params.sort_by = sortField;
+        params.sort_order = sortOrder === 'descend' ? 'desc' : 'asc';
+      }
 
       const data = await api.operationLogs.getAll(params);
       setLogs(data.data || []);
       setPagination((prev) => ({
         ...prev,
+        page,
+        per_page: pageSize,
         total: data.total || 0,
       }));
     } catch (error) {
@@ -79,8 +88,10 @@ const OperationLogs: React.FC = () => {
       setLoading(false);
     }
   }, [
-    pagination.page,
-    pagination.per_page,
+    page,
+    pageSize,
+    sortField,
+    sortOrder,
     filters.operation_type,
     filters.target_type,
     debouncedOperator,
@@ -92,12 +103,13 @@ const OperationLogs: React.FC = () => {
 
   const handleFilterChange = useCallback((key: keyof Filters, value: string): void => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+    setPage(1);
+  }, [setPage]);
 
-  const handlePageChange = useCallback((newPage: number): void => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
-  }, []);
+  const handlePageChange = useCallback((newPage: number, newPageSize: number): void => {
+    setPage(newPage);
+    if (newPageSize !== pageSize) setPageSize(newPageSize);
+  }, [pageSize, setPage, setPageSize]);
 
   const getOperationIcon = useMemo(() => {
     return (type: string) => {
@@ -139,9 +151,65 @@ const OperationLogs: React.FC = () => {
     };
   }, []);
 
-  const totalPages = useMemo(() => {
-    return Math.ceil(pagination.total / pagination.per_page);
-  }, [pagination.total, pagination.per_page]);
+  const columns = useMemo<ColumnType<OperationLog>[]>(
+    () => [
+      {
+        title: '操作',
+        key: 'operation_type',
+        dataIndex: 'operation_type',
+        width: 160,
+        sorter: true,
+        render: (_, log) => (
+          <div className='flex items-center gap-2'>
+            <div className={`p-2 rounded-lg ${getOperationColor(log.operation_type)}`}>
+              {getOperationIcon(log.operation_type)}
+            </div>
+            <span className='text-sm font-medium text-gray-900'>{log.operation_type}</span>
+          </div>
+        ),
+      },
+      {
+        title: '目标类型',
+        key: 'target_type',
+        dataIndex: 'target_type',
+        width: 120,
+        render: (value) => <span className='text-sm text-gray-600'>{String(value ?? '-')}</span>,
+      },
+      {
+        title: '描述',
+        key: 'description',
+        dataIndex: 'description',
+        render: (value) => <span className='text-sm text-gray-600'>{String(value ?? '-')}</span>,
+      },
+      {
+        title: '操作者',
+        key: 'operator',
+        dataIndex: 'operator',
+        width: 140,
+        render: (value) => <span className='text-sm text-gray-600'>{String(value ?? '-')}</span>,
+      },
+      {
+        title: 'IP地址',
+        key: 'ip_address',
+        dataIndex: 'ip_address',
+        width: 140,
+        render: (value) => <span className='text-sm text-gray-500'>{String(value ?? '-')}</span>,
+      },
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        width: 180,
+        sorter: true,
+        render: (value) => (
+          <span className='text-sm text-gray-500'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+    ],
+    [getOperationColor, getOperationIcon]
+  );
 
   return (
     <div className='min-h-screen bg-gray-50'>
@@ -228,116 +296,26 @@ const OperationLogs: React.FC = () => {
         </div>
 
         {/* 日志列表 */}
-        <div className='bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-          {loading ? (
-            <div className='flex flex-col items-center justify-center py-20'>
-              <RefreshCw className='w-10 h-10 text-primary-500 animate-spin mb-4' />
-              <p className='text-gray-500'>加载中...</p>
-            </div>
-          ) : logError ? (
-            <div role='alert' className='px-4 py-12 text-center'>
-              <p className='text-sm text-amber-600'>日志加载失败，请刷新重试</p>
-            </div>
-          ) : logs.length === 0 ? (
-            <EmptyState
-              icon='search'
-              title='暂无操作记录'
-              description='没有找到符合条件的操作记录'
-            />
-          ) : (
-            <>
-              <div className='overflow-x-auto'>
-                <table className='w-full'>
-                  <thead className='bg-gray-50 border-b border-gray-100'>
-                    <tr>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        操作
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        目标类型
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        描述
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        操作者
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        IP地址
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        时间
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y divide-gray-100'>
-                    {logs.map((log) => (
-                      <tr key={log.id} className='hover:bg-gray-50 transition-colors'>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <div className='flex items-center gap-2'>
-                            <div
-                              className={`p-2 rounded-lg ${getOperationColor(log.operation_type)}`}
-                            >
-                              {getOperationIcon(log.operation_type)}
-                            </div>
-                            <span className='text-sm font-medium text-gray-900'>
-                              {log.operation_type}
-                            </span>
-                          </div>
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <span className='text-sm text-gray-600'>{log.target_type || '-'}</span>
-                        </td>
-                        <td className='px-6 py-4'>
-                          <span className='text-sm text-gray-600'>{log.description || '-'}</span>
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <span className='text-sm text-gray-600'>{log.operator || '-'}</span>
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <span className='text-sm text-gray-500'>{log.ip_address || '-'}</span>
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <span className='text-sm text-gray-500'>
-                            {log.created_at
-                              ? new Date(log.created_at).toLocaleString('zh-CN')
-                              : '--'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 分页 */}
-              {totalPages > 1 && (
-                <div className='px-6 py-4 border-t border-gray-100 flex items-center justify-between'>
-                  <div className='text-sm text-gray-500'>共 {pagination.total} 条记录</div>
-                  <div className='flex items-center gap-2'>
-                    <button
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page <= 1}
-                      className='p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                    >
-                      <ChevronLeft className='w-4 h-4' />
-                    </button>
-                    <span className='text-sm text-gray-600'>
-                      第 {pagination.page} 页 / 共 {totalPages} 页
-                    </span>
-                    <button
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page >= totalPages}
-                      className='p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                    >
-                      <ChevronRight className='w-4 h-4' />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <DataTable<OperationLog>
+          columns={columns}
+          dataSource={logs}
+          loading={loading}
+          rowKey='id'
+          total={pagination.total}
+          page={pagination.page}
+          pageSize={pagination.per_page}
+          onPageChange={handlePageChange}
+          sortField={sortField || undefined}
+          sortOrder={sortOrder}
+          onSortChange={(field, order) => setSort(field, order)}
+          error={logError ? { message: '日志加载失败，请刷新重试', onRetry: loadLogs } : null}
+          empty={{
+            icon: 'search',
+            title: '暂无操作记录',
+            description: '没有找到符合条件的操作记录',
+          }}
+          scroll={{ x: 900 }}
+        />
       </div>
     </div>
   );

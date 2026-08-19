@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.duty_service import duty_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_duty = Namespace("duty", description="值日生表管理")
 
@@ -16,6 +17,7 @@ class DutyGroupList(Resource):
         },
     )
     @requires_permission("class.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         keyword = request.args.get("keyword", "")
@@ -35,7 +37,9 @@ class DutyGroupList(Resource):
     @requires_permission("class.edit")
     def post(self):
         data = request.get_json()
-        return duty_service.create_group(data)
+        result = duty_service.create_group(data)
+        invalidate_cache("api:/api/duty/*")
+        return result
 
 
 @ns_duty.route("/groups/<int:group_id>")
@@ -43,16 +47,21 @@ class DutyGroupDetail(Resource):
     @requires_permission("class.edit")
     def put(self, group_id):
         data = request.get_json()
-        return duty_service.update_group(group_id, data)
+        result = duty_service.update_group(group_id, data)
+        invalidate_cache("api:/api/duty/*")
+        return result
 
     @requires_permission("class.edit")
     def delete(self, group_id):
-        return duty_service.delete_group(group_id)
+        result = duty_service.delete_group(group_id)
+        invalidate_cache("api:/api/duty/*")
+        return result
 
 
 @ns_duty.route("/assignments")
 class DutyAssignmentList(Resource):
     @requires_permission("class.view")
+    @cached_api(ttl=30)
     def get(self):
         group_id = request.args.get("group_id", type=int)
         student_id = request.args.get("student_id", type=int)
@@ -62,14 +71,18 @@ class DutyAssignmentList(Resource):
     @requires_permission("class.edit")
     def post(self):
         data = request.get_json()
-        return duty_service.create_assignment(data)
+        result = duty_service.create_assignment(data)
+        invalidate_cache("api:/api/duty/*")
+        return result
 
 
 @ns_duty.route("/assignments/<int:assignment_id>/complete")
 class CompleteDuty(Resource):
     @requires_permission("class.edit")
     def post(self, assignment_id):
-        return duty_service.mark_complete(assignment_id)
+        result = duty_service.mark_complete(assignment_id)
+        invalidate_cache("api:/api/duty/*")
+        return result
 
 
 @ns_duty.route("/rotate")

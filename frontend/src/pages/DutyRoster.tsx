@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -16,6 +16,7 @@ import api from '../services/api';
 import { DutyGroup, DutyAssignment, DutyGroupCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
 import { ClassSelect, StudentSelect } from '../components/form/EntitySelect';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface DutyFormData {
   name: string;
@@ -72,6 +73,9 @@ function DutyRosterPage() {
   const [dutyForm, setDutyForm] = useState<DutyFormData>(defaultDutyForm);
   const [assignmentForm, setAssignmentForm] = useState<AssignmentFormData>(defaultAssignmentForm);
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
@@ -130,7 +134,13 @@ function DutyRosterPage() {
 
   const handleDeleteGroup = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个值日组吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这个值日组吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       setIsLoading(true);
       try {
         await api.duty.deleteGroup(id);

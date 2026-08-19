@@ -5,6 +5,7 @@ import traceback
 import logging
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from services.nlp_enhanced_service import get_nlp_parser
 from services.nlp_rule_service import NLPRuleManagementService
 from services.nlp_ml_service import NLPMLTrainingService
@@ -13,6 +14,7 @@ from services.nlp_optimizer import get_nlp_optimizer, warmup_nlp
 from config.nlp_algorithm import nlp_optimizer, OptimizationStrategy, get_optimizer
 from models import db, NLPCorrection
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from services.redis_cache_service import get_cache_service
 from services.nlp_correction_service import (
@@ -289,9 +291,9 @@ class NLPRuleList(Resource):
     @ns_nlp.param("sort_by", "排序字段")
     @ns_nlp.param("sort_order", "排序顺序")
     @requires_permission("rule.view")
+    @cached_api(ttl=30)
     def get(self):
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 20))
+        page, per_page = get_pagination(default=20)
         keyword = request.args.get("keyword")
         score_type = request.args.get("score_type")
         sort_by = request.args.get("sort_by", "created_at")
@@ -346,6 +348,7 @@ class NLPRule(Resource):
         result = service.update_rule(rule_id, data)  # noqa: F841
 
         if result["success"]:
+            invalidate_cache("api:/api/nlp/*")
             return APIResponse.success(data=result, message="规则更新成功")
         else:
             return APIResponse.error(message=result["message"])
@@ -357,6 +360,7 @@ class NLPRule(Resource):
         result = service.delete_rule(rule_id)  # noqa: F841
 
         if result["success"]:
+            invalidate_cache("api:/api/nlp/*")
             return APIResponse.success(message="规则删除成功")
         else:
             return APIResponse.error(message=result["message"])
@@ -370,8 +374,7 @@ class NLPRuleUsage(Resource):
     @ns_nlp.param("per_page", "每页数量")
     @requires_permission("rule.view")
     def get(self, rule_id):
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 20))
+        page, per_page = get_pagination(default=20)
 
         service = NLPRuleManagementService()
         result = service.get_rule_usage(rule_id, page, per_page)  # noqa: F841
@@ -384,6 +387,7 @@ class NLPRuleStatistics(Resource):
 
     @ns_nlp.doc("nlp_get_statistics", description="获取规则统计信息")
     @requires_permission("rule.view")
+    @cached_api(ttl=60)
     def get(self):
         service = NLPRuleManagementService()
         result = service.get_rule_statistics()  # noqa: F841
@@ -425,6 +429,7 @@ class NLPRuleBatchImport(Resource):
         result = service.batch_import_rules(rules_data)  # noqa: F841
 
         if result["success"]:
+            invalidate_cache("api:/api/nlp/*")
             return APIResponse.success(data=result, message=result["message"])
         else:
             return APIResponse.error(message=result["message"])
@@ -478,6 +483,7 @@ class NLPModelAlgorithms(Resource):
 
     @ns_nlp.doc("nlp_get_algorithms", description="获取可用算法列表")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         ml_service = NLPMLTrainingService()
         algorithms = ml_service.get_available_algorithms()
@@ -572,9 +578,9 @@ class NLPModelTrainingHistory(Resource):
     @ns_nlp.param("page", "页码")
     @ns_nlp.param("per_page", "每页数量")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=30)
     def get(self):
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 10))
+        page, per_page = get_pagination(default=10)
 
         service = NLPRuleManagementService()
         result = service.get_training_history(page, per_page)  # noqa: F841
@@ -1136,7 +1142,8 @@ class NLPFeedbackRecord(Resource):
             from utils.logger import logger
 
             logger.error(f"Feedback record error: {str(e)}\n{traceback.format_exc()}")
-            return APIResponse.error(message=f"记录失败: {str(e)}")
+            logger.error("%s: %s", "记录失败", e)
+            return APIResponse.error(message="记录失败")
 
 
 @ns_nlp.route("/corrections")
@@ -1149,8 +1156,7 @@ class NLPCorrectionsList(Resource):
         获取所有纠正记录，支持按状态筛选
         """
         status = request.args.get("status")
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 20))
+        page, per_page = get_pagination(default=20)
 
         query = NLPCorrection.query
         if status:
@@ -1342,7 +1348,8 @@ class NLPPerformanceWarmup(Resource):
 
             return APIResponse.success(data=stats, message="预热完成")
         except Exception as e:
-            return APIResponse.error(message=f"预热失败: {str(e)}")
+            logger.error("%s: %s", "预热失败", e)
+            return APIResponse.error(message="预热失败")
 
 
 @ns_nlp.route("/performance/clear-cache")

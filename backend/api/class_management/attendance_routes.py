@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.attendance_service import attendance_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_attendance = Namespace("attendance", description="考勤管理")
 
@@ -50,6 +51,7 @@ class AttendanceList(Resource):
         },
     )
     @requires_permission("attendance.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         student_id = request.args.get("student_id", type=int)
@@ -66,7 +68,9 @@ class AttendanceList(Resource):
     @requires_permission("attendance.edit")
     def post(self):
         data = request.get_json()
-        return attendance_service.record_attendance(data)
+        result = attendance_service.record_attendance(data)
+        invalidate_cache("api:/api/attendance/*")
+        return result
 
 
 @ns_attendance.route("/batch")
@@ -75,7 +79,9 @@ class BatchAttendance(Resource):
     @requires_permission("attendance.edit")
     def post(self):
         data = request.get_json()
-        return attendance_service.batch_record(data.get("records", []))
+        result = attendance_service.batch_record(data.get("records", []))
+        invalidate_cache("api:/api/attendance/*")
+        return result
 
 
 @ns_attendance.route("/leaves")
@@ -88,6 +94,7 @@ class LeaveList(Resource):
         },
     )
     @requires_permission("attendance.view")
+    @cached_api(ttl=30)
     def get(self):
         student_id = request.args.get("student_id", type=int)
         status = request.args.get("status")
@@ -100,7 +107,9 @@ class LeaveList(Resource):
     @requires_permission("attendance.edit")
     def post(self):
         data = request.get_json()
-        return attendance_service.apply_leave(data)
+        result = attendance_service.apply_leave(data)
+        invalidate_cache("api:/api/attendance/*")
+        return result
 
 
 @ns_attendance.route("/leaves/<int:leave_id>/approve")
@@ -109,7 +118,9 @@ class LeaveApprove(Resource):
     def post(self, leave_id):
         data = request.get_json() or {}
         approve = data.get("approve", True)
-        return attendance_service.approve_leave(leave_id, approve)
+        result = attendance_service.approve_leave(leave_id, approve)
+        invalidate_cache("api:/api/attendance/*")
+        return result
 
 
 @ns_attendance.route("/stats")
@@ -123,6 +134,7 @@ class AttendanceStats(Resource):
         },
     )
     @requires_permission("attendance.view")
+    @cached_api(ttl=60)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         start_date = request.args.get("start_date")

@@ -6,6 +6,7 @@ from services.mqtt_service import publish_mqtt, mqtt_logs, connect_mqtt, mqtt_ma
 from services.mqtt_message_service import mqtt_message_service
 from services.mqtt_management_service import mqtt_management_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from utils.rate_limit import RateLimitStrategy
 from utils.response import APIResponse
@@ -110,6 +111,7 @@ class MQTTLogs(Resource):
     @ns_mqtt.doc("get_mqtt_logs", description="Get MQTT logs")
     @ns_mqtt.response(200, "Success")
     @requires_permission("manage_devices")
+    @cached_api(ttl=30)
     def get(self):
         logs = mqtt_management_service.get_mqtt_logs()
         return APIResponse.success(data=logs)
@@ -121,6 +123,7 @@ class MQTTConfigResource(Resource):
     @ns_mqtt.doc("get_mqtt_config", description="Get MQTT config")
     @ns_mqtt.response(200, "Success")
     @requires_permission("manage_devices")
+    @cached_api(ttl=60)
     def get(self):
         config = mqtt_management_service.get_mqtt_config()
         return APIResponse.success(data=config)
@@ -132,6 +135,7 @@ class MQTTConfigResource(Resource):
     def put(self):
         data = ns_mqtt.payload
         mqtt_management_service.update_mqtt_config(data)
+        invalidate_cache("api:/api/monitoring/mqtt/*")
         return APIResponse.success(message="MQTT config updated successfully")
 
 
@@ -140,6 +144,7 @@ class MQTTStatus(Resource):
 
     @ns_mqtt.doc("get_mqtt_status", description="Get MQTT connection status")
     @ns_mqtt.response(200, "Success", mqtt_status_response)
+    @cached_api(ttl=30)
     def get(self):
         status = mqtt_manager.get_status()
         return {"connected": status["connected"], "subscribed_topics": status["subscribed_topics"]}
@@ -193,6 +198,7 @@ class MQTTRecentLogs(Resource):
     @ns_mqtt.doc("get_recent_mqtt_logs", description="Get recent MQTT logs")
     @ns_mqtt.response(200, "Success")
     @requires_permission("manage_devices")
+    @cached_api(ttl=30)
     def get(self):
         return mqtt_logs[-50:] if len(mqtt_logs) > 50 else mqtt_logs
 
@@ -297,7 +303,8 @@ class MQTTConnect(Resource):
             logger.warning(f"MQTT connection failed: {type(e).__name__}: {e}")
 
             traceback.print_exc()
-            return APIResponse.error(message=f"MQTT connection failed: {str(e)}", status_code=500)
+            logger.error("%s: %s", "MQTT connection failed", e)
+            return APIResponse.error(message="MQTT connection failed", status_code=500)
 
 
 @ns_mqtt.route("/disconnect")
@@ -312,7 +319,8 @@ class MQTTDisconnect(Resource):
             mqtt_manager.disconnect()
             return APIResponse.success(message="MQTT disconnected")
         except Exception as e:
-            return APIResponse.error(message=f"MQTT disconnect error: {str(e)}", status_code=500)
+            logger.error("%s: %s", "MQTT disconnect error", e)
+            return APIResponse.error(message="MQTT disconnect error", status_code=500)
 
 
 @ns_mqtt.route("/subscribe")
@@ -397,7 +405,8 @@ class MQTTUnlock(Resource):
             else:
                 return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
         except Exception as e:
-            return APIResponse.error(message=f"Send error: {str(e)}", status_code=500)
+            logger.error("%s: %s", "Send error", e)
+            return APIResponse.error(message="Send error", status_code=500)
 
 
 @ns_mqtt.route("/command")
@@ -440,7 +449,8 @@ class MQTTCommand(Resource):
             else:
                 return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
         except Exception as e:
-            return APIResponse.error(message=f"Send error: {str(e)}", status_code=500)
+            logger.error("%s: %s", "Send error", e)
+            return APIResponse.error(message="Send error", status_code=500)
 
 
 def register_mqtt_message_handler():

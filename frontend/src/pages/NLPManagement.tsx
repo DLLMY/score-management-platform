@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Send,
   Plus,
@@ -25,7 +25,9 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
-import { PermissionButton } from '../components';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface ParseResult {
   success: boolean;
@@ -252,6 +254,9 @@ const NLPScoringManagement = () => {
   const [correctionStatusFilter, setCorrectionStatusFilter] = useState('');
 
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const parseText = useCallback(async () => {
     if (!inputText.trim()) {
@@ -565,7 +570,14 @@ const NLPScoringManagement = () => {
 
   const handleDeleteRule = useCallback(
     async (ruleId: number) => {
-      if (!window.confirm('确定要删除这个规则吗？')) return;
+      const ok = await confirmRef.current({
+        title: '删除规则',
+        message: '确定要删除这个规则吗？',
+        confirmText: '删除',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
 
       try {
         const response = await api.nlp.deleteRule(ruleId);
@@ -838,11 +850,11 @@ const NLPScoringManagement = () => {
   }, [fetchAnalysisData, showToast]);
 
   // 获取纠正记录列表
-  const fetchCorrections = useCallback(async () => {
+  const fetchCorrections = useCallback(async (page?: number) => {
     setCorrectionsLoading(true);
     try {
       const response = await api.nlp.getCorrections({
-        page: correctionsPage,
+        page: page ?? correctionsPage,
         per_page: 20,
         status: correctionStatusFilter || undefined,
       });
@@ -910,7 +922,14 @@ const NLPScoringManagement = () => {
   // 删除纠正记录
   const handleDeleteCorrection = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这条纠正记录吗？')) return;
+      const ok = await confirmRef.current({
+        title: '删除纠正记录',
+        message: '确定要删除这条纠正记录吗？',
+        confirmText: '删除',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         const response = await api.nlp.deleteCorrection(id);
         if (response) {
@@ -924,6 +943,317 @@ const NLPScoringManagement = () => {
       }
     },
     [fetchCorrections, showToast]
+  );
+
+  // —— 规则表格列定义 ——
+  const ruleColumns = useMemo<ColumnType<Rule>[]>(
+    () => [
+      {
+        title: '关键词',
+        key: 'behavior_keyword',
+        dataIndex: 'behavior_keyword',
+        render: (value) => (
+          <span className='text-sm font-medium text-gray-800'>{String(value ?? '')}</span>
+        ),
+      },
+      {
+        title: '描述',
+        key: 'behavior_description',
+        dataIndex: 'behavior_description',
+        render: (value) => <span className='text-sm text-gray-600'>{String(value ?? '')}</span>,
+      },
+      {
+        title: '分数',
+        key: 'score_value',
+        dataIndex: 'score_value',
+        render: (_, rule) => (
+          <span
+            className={`text-sm font-semibold ${
+              rule.score_type === 'add' ? 'text-green-600' : 'text-red-600'
+            }`}
+          >
+            {rule.score_type === 'add' ? '+' : ''}
+            {rule.score_value}
+          </span>
+        ),
+      },
+      {
+        title: '类型',
+        key: 'score_type',
+        dataIndex: 'score_type',
+        render: (value) => {
+          const scoreType = String(value ?? '');
+          return (
+            <span
+              className={`px-2 py-1 rounded-full text-xs ${
+                scoreType === 'add' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {scoreType === 'add' ? '加分' : '扣分'}
+            </span>
+          );
+        },
+      },
+      {
+        title: '标签',
+        key: 'behavior_tags',
+        dataIndex: 'behavior_tags',
+        render: (value) => (
+          <>
+            {(value as string[])?.map((tag, i) => (
+              <span key={i} className='px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs mr-1'>
+                {tag}
+              </span>
+            ))}
+          </>
+        ),
+      },
+      {
+        title: '使用次数',
+        key: 'usage_count',
+        dataIndex: 'usage_count',
+        render: (value) => <span className='text-sm text-gray-600'>{String(value ?? '')}</span>,
+      },
+      {
+        title: '准确率',
+        key: 'accuracy_rate',
+        dataIndex: 'accuracy_rate',
+        render: (value) => (
+          <span className='text-sm text-gray-600'>
+            {value != null ? `${(Number(value) * 100).toFixed(1)}%` : '--'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  // —— 训练对比表格列定义 ——
+  const trainingResultColumns = useMemo<ColumnType<MLAlgorithmResult>[]>(
+    () => [
+      {
+        title: '算法',
+        key: 'algorithm',
+        dataIndex: 'algorithm_name',
+        render: (value, result) => (
+          <>
+            <span className='font-medium'>{String(value)}</span>
+            {trainAllResult?.best_algorithm === result.algorithm && (
+              <span className='ml-2 px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded'>
+                最佳
+              </span>
+            )}
+          </>
+        ),
+      },
+      {
+        title: '准确率',
+        key: 'accuracy',
+        align: 'right',
+        render: (_, result) => (
+          <span>{result.evaluation ? `${(result.evaluation.accuracy * 100).toFixed(1)}%` : '-'}</span>
+        ),
+      },
+      {
+        title: '精确率',
+        key: 'precision',
+        align: 'right',
+        render: (_, result) => (
+          <span>
+            {result.evaluation ? `${(result.evaluation.precision * 100).toFixed(1)}%` : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '召回率',
+        key: 'recall',
+        align: 'right',
+        render: (_, result) => (
+          <span>{result.evaluation ? `${(result.evaluation.recall * 100).toFixed(1)}%` : '-'}</span>
+        ),
+      },
+      {
+        title: 'F1分数',
+        key: 'f1_score',
+        align: 'right',
+        render: (_, result) => (
+          <span className='font-medium'>
+            {result.evaluation ? `${(result.evaluation.f1_score * 100).toFixed(1)}%` : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '交叉验证F1',
+        key: 'cross_validation',
+        align: 'right',
+        render: (_, result) => (
+          <span>
+            {result.cross_validation ? `${(result.cross_validation.mean_f1 * 100).toFixed(1)}%` : '-'}
+          </span>
+        ),
+      },
+    ],
+    [trainAllResult]
+  );
+
+  // —— 组件性能表格列定义 ——
+  const performanceColumns = useMemo<ColumnType<{ name: string; stats: any }>[]>(
+    () => [
+      {
+        title: '组件',
+        key: 'name',
+        dataIndex: 'name',
+        render: (value) => <span className='text-sm font-medium text-gray-800'>{String(value)}</span>,
+      },
+      {
+        title: '调用次数',
+        key: 'calls',
+        align: 'right',
+        render: (_, record) => (
+          <span className='text-sm text-gray-600'>{record.stats.calls ?? '--'}</span>
+        ),
+      },
+      {
+        title: '平均耗时',
+        key: 'avg_time',
+        align: 'right',
+        render: (_, record) => (
+          <span
+            className={`text-sm ${
+              record.stats.avg_time != null && record.stats.avg_time > 0.1
+                ? 'text-red-600'
+                : 'text-gray-600'
+            }`}
+          >
+            {record.stats.avg_time != null ? `${(record.stats.avg_time * 1000).toFixed(2)}ms` : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '错误率',
+        key: 'error_rate',
+        align: 'right',
+        render: (_, record) => (
+          <span
+            className={`text-sm ${
+              record.stats.error_rate != null && record.stats.error_rate > 0.05
+                ? 'text-red-600'
+                : 'text-gray-600'
+            }`}
+          >
+            {record.stats.error_rate != null
+              ? `${(record.stats.error_rate * 100).toFixed(2)}%`
+              : '--'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  // —— 纠正记录表格列定义 ——
+  const correctionColumns = useMemo<ColumnType<any>[]>(
+    () => [
+      {
+        title: '原文',
+        key: 'original_text',
+        dataIndex: 'original_text',
+        width: 200,
+        ellipsis: true,
+        render: (value) => (
+          <span title={value ? String(value) : undefined} className='text-sm text-gray-800'>
+            {String(value ?? '')}
+          </span>
+        ),
+      },
+      {
+        title: '字段',
+        key: 'field_type',
+        dataIndex: 'field_type',
+        render: (value) => {
+          const fieldType = String(value ?? '');
+          return (
+            <span
+              className={`px-2 py-1 rounded-full text-xs ${
+                fieldType === 'name'
+                  ? 'bg-blue-100 text-blue-600'
+                  : fieldType === 'intent'
+                    ? 'bg-green-100 text-green-600'
+                    : fieldType === 'score'
+                      ? 'bg-yellow-100 text-yellow-600'
+                      : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {fieldType === 'name'
+                ? '姓名'
+                : fieldType === 'intent'
+                  ? '意图'
+                  : fieldType === 'score'
+                    ? '分数'
+                    : fieldType}
+            </span>
+          );
+        },
+      },
+      {
+        title: '原值',
+        key: 'original_value',
+        dataIndex: 'original_value',
+        render: (value) => (
+          <span className='text-sm text-gray-600'>{value ? String(value) : '-'}</span>
+        ),
+      },
+      {
+        title: '纠正值',
+        key: 'corrected_value',
+        dataIndex: 'corrected_value',
+        render: (value) => (
+          <span className='text-sm font-medium text-blue-600'>{value ? String(value) : '-'}</span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'status',
+        render: (value) => {
+          const status = String(value ?? '');
+          return (
+            <span
+              className={`px-2 py-1 rounded-full text-xs ${
+                status === 'pending'
+                  ? 'bg-yellow-100 text-yellow-600'
+                  : status === 'verified'
+                    ? 'bg-green-100 text-green-600'
+                    : status === 'learned'
+                      ? 'bg-purple-100 text-purple-600'
+                      : status === 'rejected'
+                        ? 'bg-red-100 text-red-600'
+                        : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {status === 'pending'
+                ? '待验证'
+                : status === 'verified'
+                  ? '已验证'
+                  : status === 'learned'
+                    ? '已学习'
+                    : status === 'rejected'
+                      ? '已拒绝'
+                      : status}
+            </span>
+          );
+        },
+      },
+      {
+        title: '学习次数',
+        key: 'learn_count',
+        dataIndex: 'learn_count',
+        render: (value) => (
+          <span className='text-sm text-gray-600'>{value ? Number(value) : 0}</span>
+        ),
+      },
+    ],
+    []
   );
 
   return (
@@ -1337,131 +1667,36 @@ const NLPScoringManagement = () => {
               </select>
             </div>
 
-            {rulesLoading ? (
-              <div className='flex items-center justify-center py-8'>
-                <RefreshCw className='w-8 h-8 text-blue-500 animate-spin' />
-              </div>
-            ) : (
-              <div className='overflow-x-auto'>
-                <table className='w-full'>
-                  <thead>
-                    <tr className='bg-gray-50'>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        关键词
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        描述
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        分数
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        类型
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        标签
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        使用次数
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        准确率
-                      </th>
-                      <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rules.map((rule) => (
-                      <tr key={rule.id} className='border-b border-gray-100 hover:bg-gray-50'>
-                        <td className='px-4 py-3 text-sm font-medium text-gray-800'>
-                          {rule.behavior_keyword}
-                        </td>
-                        <td className='px-4 py-3 text-sm text-gray-600'>
-                          {rule.behavior_description}
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-sm font-semibold ${
-                            rule.score_type === 'add' ? 'text-green-600' : 'text-red-600'
-                          }`}
-                        >
-                          {rule.score_type === 'add' ? '+' : ''}
-                          {rule.score_value}
-                        </td>
-                        <td className='px-4 py-3 text-sm'>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${
-                              rule.score_type === 'add'
-                                ? 'bg-green-100 text-green-600'
-                                : 'bg-red-100 text-red-600'
-                            }`}
-                          >
-                            {rule.score_type === 'add' ? '加分' : '扣分'}
-                          </span>
-                        </td>
-                        <td className='px-4 py-3 text-sm text-gray-600'>
-                          {rule.behavior_tags.map((tag, i) => (
-                            <span
-                              key={i}
-                              className='px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs mr-1'
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </td>
-                        <td className='px-4 py-3 text-sm text-gray-600'>{rule.usage_count}</td>
-                        <td className='px-4 py-3 text-sm text-gray-600'>
-                          {rule.accuracy_rate != null
-                            ? `${(rule.accuracy_rate * 100).toFixed(1)}%`
-                            : '--'}
-                        </td>
-                        <td className='px-4 py-3'>
-                          <div className='flex gap-2'>
-                            <PermissionButton
-                              permission='rule.manage'
-                              onClick={() => openEditModal(rule)}
-                              className='text-blue-500 hover:text-blue-700'
-                            >
-                              <Edit2 className='w-4 h-4' />
-                            </PermissionButton>
-                            <PermissionButton
-                              permission='rule.manage'
-                              onClick={() => handleDeleteRule(rule.id)}
-                              className='text-red-500 hover:text-red-700'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </PermissionButton>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {ruleTotal > 20 && (
-              <div className='flex items-center justify-center gap-3 mt-4'>
-                <button
-                  onClick={() => setRulePage(Math.max(1, rulePage - 1))}
-                  disabled={rulePage === 1}
-                  className='px-4 py-2 border border-gray-200 rounded-lg disabled:opacity-50'
-                >
-                  上一页
-                </button>
-                <span className='text-sm text-gray-600'>
-                  第 {rulePage} 页 / 共 {Math.ceil(ruleTotal / 20)} 页
-                </span>
-                <button
-                  onClick={() => setRulePage(Math.min(Math.ceil(ruleTotal / 20), rulePage + 1))}
-                  disabled={rulePage >= Math.ceil(ruleTotal / 20)}
-                  className='px-4 py-2 border border-gray-200 rounded-lg disabled:opacity-50'
-                >
-                  下一页
-                </button>
-              </div>
-            )}
+            <DataTable<Rule>
+              columns={ruleColumns}
+              dataSource={rules}
+              loading={rulesLoading}
+              rowKey='id'
+              total={ruleTotal}
+              page={rulePage}
+              pageSize={20}
+              onPageChange={(newPage) => setRulePage(newPage)}
+              empty={{ icon: 'data', title: '暂无规则', description: '还没有添加任何评分规则' }}
+              scroll={{ x: 900 }}
+              rowActions={(rule) => (
+                <div className='flex gap-2'>
+                  <PermissionButton
+                    permission='rule.manage'
+                    onClick={() => openEditModal(rule)}
+                    className='text-blue-500 hover:text-blue-700'
+                  >
+                    <Edit2 className='w-4 h-4' />
+                  </PermissionButton>
+                  <PermissionButton
+                    permission='rule.manage'
+                    onClick={() => handleDeleteRule(rule.id)}
+                    className='text-red-500 hover:text-red-700'
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </PermissionButton>
+                </div>
+              )}
+            />
           </div>
         </div>
       )}
@@ -1628,80 +1863,15 @@ const NLPScoringManagement = () => {
             {(trainAllResult || evaluationAllResult) && (
               <div className='mb-6'>
                 <h3 className='text-sm font-medium text-gray-700 mb-3'>算法对比</h3>
-                <div className='overflow-x-auto'>
-                  <table className='w-full border-collapse'>
-                    <thead>
-                      <tr className='bg-gray-50'>
-                        <th className='px-4 py-2 text-left text-sm font-medium text-gray-600 border'>
-                          算法
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600 border'>
-                          准确率
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600 border'>
-                          精确率
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600 border'>
-                          召回率
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600 border'>
-                          F1分数
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600 border'>
-                          交叉验证F1
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(trainAllResult?.results || evaluationAllResult?.results || []).map(
-                        (result) => (
-                          <tr
-                            key={result.algorithm}
-                            className={
-                              trainAllResult?.best_algorithm === result.algorithm
-                                ? 'bg-green-50'
-                                : ''
-                            }
-                          >
-                            <td className='px-4 py-2 border'>
-                              <span className='font-medium'>{result.algorithm_name}</span>
-                              {trainAllResult?.best_algorithm === result.algorithm && (
-                                <span className='ml-2 px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded'>
-                                  最佳
-                                </span>
-                              )}
-                            </td>
-                            <td className='px-4 py-2 border text-right'>
-                              {result.evaluation
-                                ? `${(result.evaluation.accuracy * 100).toFixed(1)}%`
-                                : '-'}
-                            </td>
-                            <td className='px-4 py-2 border text-right'>
-                              {result.evaluation
-                                ? `${(result.evaluation.precision * 100).toFixed(1)}%`
-                                : '-'}
-                            </td>
-                            <td className='px-4 py-2 border text-right'>
-                              {result.evaluation
-                                ? `${(result.evaluation.recall * 100).toFixed(1)}%`
-                                : '-'}
-                            </td>
-                            <td className='px-4 py-2 border text-right font-medium'>
-                              {result.evaluation
-                                ? `${(result.evaluation.f1_score * 100).toFixed(1)}%`
-                                : '-'}
-                            </td>
-                            <td className='px-4 py-2 border text-right'>
-                              {result.cross_validation
-                                ? `${(result.cross_validation.mean_f1 * 100).toFixed(1)}%`
-                                : '-'}
-                            </td>
-                          </tr>
-                        )
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable<MLAlgorithmResult>
+                  columns={trainingResultColumns}
+                  dataSource={trainAllResult?.results || evaluationAllResult?.results || []}
+                  rowKey='algorithm'
+                  rowClassName={(result) =>
+                    trainAllResult?.best_algorithm === result.algorithm ? 'bg-green-50' : ''
+                  }
+                  empty={{ icon: 'data', title: '暂无对比数据', description: '训练或评估后即可查看算法对比' }}
+                />
               </div>
             )}
 
@@ -2068,63 +2238,18 @@ const NLPScoringManagement = () => {
               {/* 组件性能分析 */}
               <div className='bg-white rounded-xl shadow-sm p-6'>
                 <h3 className='text-sm font-medium text-gray-600 mb-4'>组件性能</h3>
-                <div className='overflow-x-auto'>
-                  <table className='w-full'>
-                    <thead>
-                      <tr className='bg-gray-50'>
-                        <th className='px-4 py-2 text-left text-sm font-medium text-gray-600'>
-                          组件
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600'>
-                          调用次数
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600'>
-                          平均耗时
-                        </th>
-                        <th className='px-4 py-2 text-right text-sm font-medium text-gray-600'>
-                          错误率
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {performanceAnalysis?.components &&
-                        Object.entries(performanceAnalysis.components).map(
-                          ([name, stats]: [string, any]) => (
-                            <tr key={name} className='border-b border-gray-100'>
-                              <td className='px-4 py-3 text-sm font-medium text-gray-800'>
-                                {name}
-                              </td>
-                              <td className='px-4 py-3 text-sm text-right text-gray-600'>
-                                {stats.calls ?? '--'}
-                              </td>
-                              <td
-                                className={`px-4 py-3 text-sm text-right ${
-                                  stats.avg_time != null && stats.avg_time > 0.1
-                                    ? 'text-red-600'
-                                    : 'text-gray-600'
-                                }`}
-                              >
-                                {stats.avg_time != null
-                                  ? `${(stats.avg_time * 1000).toFixed(2)}ms`
-                                  : '--'}
-                              </td>
-                              <td
-                                className={`px-4 py-3 text-sm text-right ${
-                                  stats.error_rate != null && stats.error_rate > 0.05
-                                    ? 'text-red-600'
-                                    : 'text-gray-600'
-                                }`}
-                              >
-                                {stats.error_rate != null
-                                  ? `${(stats.error_rate * 100).toFixed(2)}%`
-                                  : '--'}
-                              </td>
-                            </tr>
-                          )
-                        )}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  columns={performanceColumns}
+                  dataSource={
+                    performanceAnalysis?.components
+                      ? Object.entries(performanceAnalysis.components).map(
+                          ([name, stats]) => ({ name, stats })
+                        )
+                      : []
+                  }
+                  rowKey='name'
+                  empty={{ icon: 'data', title: '暂无组件数据', description: '暂无组件性能统计数据' }}
+                />
               </div>
 
               {/* 基准测试结果 */}
@@ -2612,7 +2737,7 @@ const NLPScoringManagement = () => {
               onChange={(e) => {
                 setCorrectionStatusFilter(e.target.value);
                 setCorrectionsPage(1);
-                fetchCorrections();
+                fetchCorrections(1);
               }}
               className='px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500'
             >
@@ -2624,151 +2749,50 @@ const NLPScoringManagement = () => {
             </select>
           </div>
 
-          {correctionsLoading ? (
-            <div className='flex items-center justify-center py-8'>
-              <RefreshCw className='w-8 h-8 text-blue-500 animate-spin' />
-            </div>
-          ) : (
-            <div className='overflow-x-auto'>
-              <table className='w-full'>
-                <thead>
-                  <tr className='bg-gray-50'>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>原文</th>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>字段</th>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>原值</th>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                      纠正值
-                    </th>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>状态</th>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>
-                      学习次数
-                    </th>
-                    <th className='px-4 py-3 text-left text-sm font-medium text-gray-600'>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {corrections.map((correction) => (
-                    <tr key={correction.id} className='border-b border-gray-100 hover:bg-gray-50'>
-                      <td
-                        className='px-4 py-3 text-sm text-gray-800 max-w-xs truncate'
-                        title={correction.original_text}
-                      >
-                        {correction.original_text}
-                      </td>
-                      <td className='px-4 py-3 text-sm'>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            correction.field_type === 'name'
-                              ? 'bg-blue-100 text-blue-600'
-                              : correction.field_type === 'intent'
-                              ? 'bg-green-100 text-green-600'
-                              : correction.field_type === 'score'
-                              ? 'bg-yellow-100 text-yellow-600'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {correction.field_type === 'name'
-                            ? '姓名'
-                            : correction.field_type === 'intent'
-                            ? '意图'
-                            : correction.field_type === 'score'
-                            ? '分数'
-                            : correction.field_type}
-                        </span>
-                      </td>
-                      <td className='px-4 py-3 text-sm text-gray-600'>
-                        {correction.original_value || '-'}
-                      </td>
-                      <td className='px-4 py-3 text-sm font-medium text-blue-600'>
-                        {correction.corrected_value || '-'}
-                      </td>
-                      <td className='px-4 py-3 text-sm'>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            correction.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-600'
-                              : correction.status === 'verified'
-                              ? 'bg-green-100 text-green-600'
-                              : correction.status === 'learned'
-                              ? 'bg-purple-100 text-purple-600'
-                              : correction.status === 'rejected'
-                              ? 'bg-red-100 text-red-600'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {correction.status === 'pending'
-                            ? '待验证'
-                            : correction.status === 'verified'
-                            ? '已验证'
-                            : correction.status === 'learned'
-                            ? '已学习'
-                            : correction.status === 'rejected'
-                            ? '已拒绝'
-                            : correction.status}
-                        </span>
-                      </td>
-                      <td className='px-4 py-3 text-sm text-gray-600'>
-                        {correction.learn_count || 0}
-                      </td>
-                      <td className='px-4 py-3'>
-                        <div className='flex gap-2'>
-                          {correction.status === 'pending' && (
-                            <button
-                              onClick={() => handleUpdateCorrection(correction.id, 'verified')}
-                              className='text-green-500 hover:text-green-700'
-                              title='验证'
-                            >
-                              <Check className='w-4 h-4' />
-                            </button>
-                          )}
-                          {correction.status === 'verified' && (
-                            <button
-                              onClick={() => handleUpdateCorrection(correction.id, 'learned')}
-                              className='text-purple-500 hover:text-purple-700'
-                              title='标记已学习'
-                            >
-                              <Brain className='w-4 h-4' />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteCorrection(correction.id)}
-                            className='text-red-500 hover:text-red-700'
-                            title='删除'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {correctionTotal > 20 && (
-            <div className='flex items-center justify-center gap-3 mt-4'>
-              <button
-                onClick={() => setCorrectionsPage(Math.max(1, correctionsPage - 1))}
-                disabled={correctionsPage === 1}
-                className='px-4 py-2 border border-gray-200 rounded-lg disabled:opacity-50'
-              >
-                上一页
-              </button>
-              <span className='text-sm text-gray-600'>
-                第 {correctionsPage} 页 / 共 {Math.ceil(correctionTotal / 20)} 页
-              </span>
-              <button
-                onClick={() =>
-                  setCorrectionsPage(Math.min(Math.ceil(correctionTotal / 20), correctionsPage + 1))
-                }
-                disabled={correctionsPage >= Math.ceil(correctionTotal / 20)}
-                className='px-4 py-2 border border-gray-200 rounded-lg disabled:opacity-50'
-              >
-                下一页
-              </button>
-            </div>
-          )}
+          <DataTable
+            columns={correctionColumns}
+            dataSource={corrections}
+            loading={correctionsLoading}
+            rowKey='id'
+            total={correctionTotal}
+            page={correctionsPage}
+            pageSize={20}
+            onPageChange={(newPage) => {
+              setCorrectionsPage(newPage);
+              fetchCorrections(newPage);
+            }}
+            empty={{ icon: 'data', title: '暂无纠正记录', description: '暂无自学习纠正记录' }}
+            scroll={{ x: 900 }}
+            rowActions={(correction) => (
+              <div className='flex gap-2'>
+                {correction.status === 'pending' && (
+                  <button
+                    onClick={() => handleUpdateCorrection(correction.id, 'verified')}
+                    className='text-green-500 hover:text-green-700'
+                    title='验证'
+                  >
+                    <Check className='w-4 h-4' />
+                  </button>
+                )}
+                {correction.status === 'verified' && (
+                  <button
+                    onClick={() => handleUpdateCorrection(correction.id, 'learned')}
+                    className='text-purple-500 hover:text-purple-700'
+                    title='标记已学习'
+                  >
+                    <Brain className='w-4 h-4' />
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDeleteCorrection(correction.id)}
+                  className='text-red-500 hover:text-red-700'
+                  title='删除'
+                >
+                  <Trash2 className='w-4 h-4' />
+                </button>
+              </div>
+            )}
+          />
         </div>
       )}
     </div>

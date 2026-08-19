@@ -1,7 +1,10 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
-import { ClipboardCheck, Check, X, Filter, RefreshCw, Clock, User, Plus } from 'lucide-react';
-import { Card, Button, Modal, PermissionButton } from '../components';
+import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
+import { ClipboardCheck, Check, X, Filter, RefreshCw, Plus } from 'lucide-react';
+import { Card, Button, Modal, PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useTableUrlState } from '../hooks';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { StudentSelect } from '../components/form/EntitySelect';
@@ -36,6 +39,11 @@ interface Pagination {
 
 function Approvals() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { page, pageSize, sortField, sortOrder, setPage, setPageSize, setSort } =
+    useTableUrlState('approvals');
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -49,17 +57,21 @@ function Approvals() {
     type: 'score_adjust',
     score_change: 0,
   });
-  const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, per_page: 20, total: 0 });
 
   const loadApprovals = useCallback(async () => {
     try {
       setLoading(true);
       const params: Record<string, unknown> = {
-        page: pagination.page,
-        per_page: pagination.per_page,
+        page,
+        per_page: pageSize,
       };
       if (filterStatus) params.status = filterStatus;
+      if (sortField) {
+        params.sort_by = sortField;
+        params.sort_order = sortOrder === 'descend' ? 'desc' : 'asc';
+      }
       const data = await api.approvals.getAll(params);
       // API返回格式是 { approvals: [...], pagination: { total } }
       const approvalsList = Array.isArray(data)
@@ -69,6 +81,8 @@ function Approvals() {
       // total 用后端 pagination.total（此前用当前页长度冒充导致分页栏隐藏无法翻页）
       setPagination((prev) => ({
         ...prev,
+        page,
+        per_page: pageSize,
         total:
           (data as { pagination?: { total?: number } }).pagination?.total ?? approvalsList.length,
       }));
@@ -77,7 +91,7 @@ function Approvals() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.per_page, filterStatus, showToast]);
+  }, [page, pageSize, sortField, sortOrder, filterStatus, showToast]);
 
   useEffect(() => {
     loadApprovals();
@@ -89,16 +103,23 @@ function Approvals() {
         const data = await api.approvals.getById(id);
         setSelectedApproval(data as Approval);
         setShowDetailModal(true);
-      } catch (error) {
-        showToast('error', '获取详情失败');
-      }
-    },
-    [showToast]
-  );
+    } catch (error) {
+      showToast('error', '获取详情失败');
+    }
+  },
+  [showToast]
+);
 
   const handleApprove = useCallback(
     async (id: number, comment = '') => {
-      if (!window.confirm('确定要通过这个申请吗？')) return;
+      const ok = await confirmRef.current({
+        title: '通过申请',
+        message: '确定要通过这个申请吗？',
+        confirmText: '通过',
+        cancelText: '取消',
+        type: 'success',
+      });
+      if (!ok) return;
       try {
         setActionLoading(true);
         await api.approvals.approve(id, { comment });
@@ -108,16 +129,23 @@ function Approvals() {
       } catch (error) {
         logger.error('审批操作失败:', error);
         showToast('error', '操作失败: ' + ((error as Error).message || ''));
-      } finally {
-        setActionLoading(false);
-      }
-    },
-    [showToast]
-  );
+    } finally {
+      setActionLoading(false);
+    }
+  },
+  [showToast]
+);
 
   const handleReject = useCallback(
     async (id: number, comment = '') => {
-      if (!window.confirm('确定要拒绝这个申请吗？')) return;
+      const ok = await confirmRef.current({
+        title: '拒绝申请',
+        message: '确定要拒绝这个申请吗？',
+        confirmText: '拒绝',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         setActionLoading(true);
         await api.approvals.reject(id, { comment });
@@ -127,12 +155,12 @@ function Approvals() {
       } catch (error) {
         logger.error('审批操作失败:', error);
         showToast('error', '操作失败: ' + ((error as Error).message || ''));
-      } finally {
-        setActionLoading(false);
-      }
-    },
-    [showToast]
-  );
+    } finally {
+      setActionLoading(false);
+    }
+  },
+  [showToast]
+);
 
   const handleCreateApproval = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -210,9 +238,85 @@ function Approvals() {
     };
   }, []);
 
-  const totalPages = useMemo(() => {
-    return Math.ceil(pagination.total / pagination.per_page);
-  }, [pagination.total, pagination.per_page]);
+  const columns = useMemo<ColumnType<Approval>[]>(
+    () => [
+      {
+        title: '标题',
+        key: 'title',
+        dataIndex: 'title',
+        width: 200,
+        ellipsis: true,
+        sorter: true,
+      },
+      {
+        title: '类型',
+        key: 'type',
+        dataIndex: 'type',
+        width: 110,
+        render: (value) => (
+          <span className='px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium'>
+            {getTypeLabel(String(value ?? ''))}
+          </span>
+        ),
+      },
+      {
+        title: '用户',
+        key: 'user_name',
+        dataIndex: 'user_name',
+        width: 140,
+        render: (_, approval) => (
+          <span className='text-sm text-gray-700'>
+            {approval.user_name || `用户 ${approval.user_id}`}
+          </span>
+        ),
+      },
+      {
+        title: '积分变化',
+        key: 'score_change',
+        dataIndex: 'score_change',
+        width: 110,
+        sorter: true,
+        render: (value) => {
+          if (value === null || value === undefined) return <span className='text-gray-400'>-</span>;
+          const n = Number(value);
+          return (
+            <span className={`text-sm font-medium ${n >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {n >= 0 ? '+' : ''}
+              {n}
+            </span>
+          );
+        },
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'status',
+        width: 100,
+        render: (value) => getStatusBadge(String(value ?? '')),
+      },
+      {
+        title: '申请时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        width: 170,
+        sorter: true,
+        render: (value) => (
+          <span className='text-sm text-gray-500'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+    ],
+    [getTypeLabel, getStatusBadge]
+  );
+
+  const handlePageChange = useCallback(
+    (newPage: number, newPageSize: number) => {
+      setPage(newPage);
+      if (newPageSize !== pageSize) setPageSize(newPageSize);
+    },
+    [pageSize, setPage, setPageSize]
+  );
 
   return (
     <div className='max-w-4xl mx-auto px-4 sm:px-6'>
@@ -240,7 +344,7 @@ function Approvals() {
               value={filterStatus}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                 setFilterStatus(e.target.value);
-                setPagination((prev) => ({ ...prev, page: 1 }));
+                setPage(1);
               }}
               className='px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500'
             >
@@ -256,126 +360,54 @@ function Approvals() {
           </Button>
         </div>
 
-        {loading ? (
-          <div className='flex flex-col items-center justify-center py-12'>
-            <RefreshCw className='w-8 h-8 text-primary-500 animate-spin mb-4' />
-            <p className='text-gray-500'>加载中...</p>
-          </div>
-        ) : approvals.length === 0 ? (
-          <div className='flex flex-col items-center justify-center py-12'>
-            <ClipboardCheck className='w-12 h-12 text-gray-300 mb-4' />
-            <p className='text-gray-500'>暂无申请</p>
-          </div>
-        ) : (
-          <div className='space-y-3'>
-            {approvals.map((approval) => (
-              <div
-                key={approval.id}
-                className='p-3 sm:p-4 rounded-xl border bg-white border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer'
-                onClick={() => handleViewDetail(approval.id)}
-              >
-                <div className='flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3'>
-                  <div className='flex-1 w-full'>
-                    <div className='flex flex-wrap items-center gap-2 mb-2'>
-                      <h4 className='font-medium text-gray-900 text-sm sm:text-base'>
-                        {approval.title}
-                      </h4>
-                      {getStatusBadge(approval.status)}
-                      <span className='px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium'>
-                        {getTypeLabel(approval.type)}
-                      </span>
-                    </div>
-                    <p className='text-sm text-gray-600 mb-2 hidden sm:block'>
-                      {approval.description}
-                    </p>
-                    {approval.score_change !== null && approval.score_change !== undefined && (
-                      <p className='text-sm font-medium mb-2'>
-                        积分变化:{' '}
-                        <span
-                          className={approval.score_change >= 0 ? 'text-green-600' : 'text-red-600'}
-                        >
-                          {approval.score_change >= 0 ? '+' : ''}
-                          {approval.score_change}
-                        </span>
-                      </p>
-                    )}
-                    <div className='flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500'>
-                      <div className='flex items-center gap-1'>
-                        <User className='w-3 h-3' />
-                        <span>用户ID: {approval.user_id}</span>
-                      </div>
-                      <div className='flex items-center gap-1'>
-                        <Clock className='w-3 h-3' />
-                        <span>
-                          {approval.created_at
-                            ? new Date(approval.created_at).toLocaleString('zh-CN')
-                            : '--'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {approval.status === 'pending' && (
-                    <div className='flex items-center gap-2 sm:ml-4'>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        className='text-green-600 border-green-200 hover:bg-green-50 py-1.5 px-2 text-xs sm:py-2 sm:px-3 sm:text-sm'
-                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                          e.stopPropagation();
-                          handleApprove(approval.id);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <Check className='w-3 h-3' />
-                        通过
-                      </Button>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        className='text-red-600 border-red-200 hover:bg-red-50 py-1.5 px-2 text-xs sm:py-2 sm:px-3 sm:text-sm'
-                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                          e.stopPropagation();
-                          handleReject(approval.id);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <X className='w-3 h-3' />
-                        拒绝
-                      </Button>
-                    </div>
-                  )}
-                </div>
+        <DataTable<Approval>
+          columns={columns}
+          dataSource={approvals}
+          loading={loading}
+          rowKey='id'
+          total={pagination.total}
+          page={pagination.page}
+          pageSize={pagination.per_page}
+          onPageChange={handlePageChange}
+          sortField={sortField || undefined}
+          sortOrder={sortOrder}
+          onSortChange={(field, order) => setSort(field, order)}
+          onRowClick={(approval) => handleViewDetail(approval.id)}
+          scroll={{ x: 820 }}
+          empty={{ icon: 'file', title: '暂无申请', description: '还没有任何审批申请' }}
+          rowActions={(approval) =>
+            approval.status === 'pending' ? (
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='text-green-600 border-green-200 hover:bg-green-50'
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    handleApprove(approval.id);
+                  }}
+                  disabled={actionLoading}
+                >
+                  <Check className='w-3 h-3' />
+                  通过
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='text-red-600 border-red-200 hover:bg-red-50'
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    handleReject(approval.id);
+                  }}
+                  disabled={actionLoading}
+                >
+                  <X className='w-3 h-3' />
+                  拒绝
+                </Button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className='flex items-center justify-between mt-6 pt-4 border-t border-gray-100'>
-            <p className='text-sm text-gray-500'>共 {pagination.total} 条记录</p>
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                disabled={pagination.page <= 1}
-                onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
-              >
-                上一页
-              </Button>
-              <span className='text-sm text-gray-600'>
-                第 {pagination.page} 页 / 共 {totalPages} 页
-              </span>
-              <Button
-                variant='outline'
-                size='sm'
-                disabled={pagination.page >= totalPages}
-                onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
-        )}
+            ) : null
+          }
+        />
       </Card>
 
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title='创建申请'>

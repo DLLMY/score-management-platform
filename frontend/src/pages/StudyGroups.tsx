@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users,
   Plus,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { StudyGroup, StudyGroupCreateInput, StudyGroupMember } from '../types';
 import { ClassSelect, StudentSelect } from '../components/form/EntitySelect';
 
@@ -40,6 +41,9 @@ const defaultGroupForm: GroupFormData = {
 
 function StudyGroups() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,7 +148,13 @@ function StudyGroups() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个学习小组吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这个学习小组吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.studyGroup.delete(id);
         showToast('success', '小组删除成功');
@@ -180,7 +190,13 @@ function StudyGroups() {
 
   const handleRemoveMember = useCallback(
     async (groupId: number, studentId: number) => {
-      if (!window.confirm('确定要移除该成员吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要移除该成员吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.studyGroup.removeMember(groupId, studentId);
         showToast('success', '成员移除成功');

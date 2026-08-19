@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 """班主任手机箱自助开箱策略 API。
 
 设计要点（与用户确认）：
@@ -182,7 +186,8 @@ class PhoneBoxPolicyResource(Resource):
             return APIResponse.success(data=_serialize(policy, cid))
         except ValueError as e:
             # 时段格式非法属于用户输入问题，返回 400 并带上具体原因
-            return APIResponse.error(message=str(e), status_code=400)
+            logger.error("phonebox_policy_routes.py: %s", e)
+            return APIResponse.error(message="操作失败，请稍后重试", status_code=400)
         except Exception as e:
             return APIResponse.error(message=f"更新失败: {e}", status_code=500)
 

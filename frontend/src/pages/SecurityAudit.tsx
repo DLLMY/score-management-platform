@@ -15,12 +15,11 @@ import {
   XCircle,
   Info,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   LucideIcon,
 } from 'lucide-react';
-import { PermissionButton, EmptyState } from '../components';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import { getAuthHeaders } from '../services/api';
 
 interface AuditLog {
@@ -160,8 +159,6 @@ export const SecurityAuditPage: React.FC = () => {
     loadStats();
   }, [loadStats]);
 
-  const totalPages = useMemo(() => Math.max(1, pagination.pages), [pagination.pages]);
-
   const onFilterChange =
     (key: keyof typeof filters) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setFilters((prev) => ({ ...prev, [key]: e.target.value }));
@@ -169,6 +166,86 @@ export const SecurityAuditPage: React.FC = () => {
     };
 
   const severityOptions = ['', 'info', 'debug', 'warning', 'error', 'critical'];
+
+  const handlePageChange = useCallback(
+    (page: number, perPage: number) => {
+      setPagination((prev) => ({ ...prev, page, per_page: perPage }));
+    },
+    []
+  );
+
+  const columns = useMemo<ColumnType<AuditLog>[]>(
+    () => [
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <span className='text-gray-500 dark:text-slate-400 whitespace-nowrap'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '类型',
+        key: 'event_type',
+        dataIndex: 'event_type',
+        render: (value) => (
+          <span className='text-gray-700 dark:text-slate-200'>{value as string}</span>
+        ),
+      },
+      {
+        title: '级别',
+        key: 'severity',
+        dataIndex: 'severity',
+        render: (value) => <SeverityBadge severity={value as string} />,
+      },
+      {
+        title: '用户ID',
+        key: 'user_id',
+        dataIndex: 'user_id',
+        render: (value) => (
+          <span className='text-gray-700 dark:text-slate-200'>
+            {value != null ? (value as number) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: 'IP',
+        key: 'ip_address',
+        dataIndex: 'ip_address',
+        render: (value) => (
+          <span className='text-gray-700 dark:text-slate-200'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '路径',
+        key: 'request_path',
+        dataIndex: 'request_path',
+        render: (value) => (
+          <span className='text-gray-700 dark:text-slate-200'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '详情',
+        key: 'event_details',
+        dataIndex: 'event_details',
+        render: (value) => (
+          <span
+            className='text-gray-600 dark:text-slate-300 max-w-xs truncate block'
+            title={value ? (value as string) : ''}
+          >
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className='space-y-6'>
@@ -282,105 +359,21 @@ export const SecurityAuditPage: React.FC = () => {
       </div>
 
       {/* 日志表 */}
-      <div className='bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden'>
-        <div className='overflow-x-auto'>
-          <table className='w-full text-sm'>
-            <thead>
-              <tr className='bg-gray-50 dark:bg-slate-700/40 text-gray-600 dark:text-slate-300'>
-                <th className='px-4 py-2.5 text-left font-medium'>时间</th>
-                <th className='px-4 py-2.5 text-left font-medium'>类型</th>
-                <th className='px-4 py-2.5 text-left font-medium'>级别</th>
-                <th className='px-4 py-2.5 text-left font-medium'>用户ID</th>
-                <th className='px-4 py-2.5 text-left font-medium'>IP</th>
-                <th className='px-4 py-2.5 text-left font-medium'>路径</th>
-                <th className='px-4 py-2.5 text-left font-medium'>详情</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className='px-4 py-10 text-center text-gray-400'>
-                    加载中...
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <EmptyState
-                      title='暂无安全审计日志'
-                      description='当前筛选条件下没有匹配的记录'
-                    />
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className='border-t border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                  >
-                    <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400 whitespace-nowrap'>
-                      {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
-                      {log.event_type}
-                    </td>
-                    <td className='px-4 py-2.5'>
-                      <SeverityBadge severity={log.severity} />
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
-                      {log.user_id ?? '-'}
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
-                      {log.ip_address || '-'}
-                    </td>
-                    <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
-                      {log.request_path || '-'}
-                    </td>
-                    <td
-                      className='px-4 py-2.5 text-gray-600 dark:text-slate-300 max-w-xs truncate'
-                      title={log.event_details}
-                    >
-                      {log.event_details || '-'}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* 分页 */}
-        {totalPages > 1 && (
-          <div className='px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between'>
-            <div className='text-sm text-gray-500 dark:text-slate-400'>
-              共 {pagination.total} 条记录
-            </div>
-            <div className='flex items-center gap-2'>
-              <button
-                onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
-                disabled={pagination.page <= 1}
-                className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                <ChevronLeft size={15} />
-                上一页
-              </button>
-              <span className='text-sm text-gray-600 dark:text-slate-300'>
-                第 {pagination.page} / {totalPages} 页
-              </span>
-              <button
-                onClick={() =>
-                  setPagination((p) => ({ ...p, page: Math.min(totalPages, p.page + 1) }))
-                }
-                disabled={pagination.page >= totalPages}
-                className='flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                下一页
-                <ChevronRight size={15} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <DataTable<AuditLog>
+        columns={columns}
+        dataSource={logs}
+        loading={loading}
+        rowKey='id'
+        total={pagination.total}
+        page={pagination.page}
+        pageSize={pagination.per_page}
+        onPageChange={handlePageChange}
+        empty={{
+          icon: 'folder',
+          title: '暂无安全审计日志',
+          description: '当前筛选条件下没有匹配的记录',
+        }}
+      />
     </div>
   );
 };

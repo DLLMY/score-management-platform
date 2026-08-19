@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.study_group_service import study_group_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_study_group = Namespace("study_group", description="学习小组管理")
 
@@ -42,6 +43,7 @@ class StudyGroupList(Resource):
         },
     )
     @requires_permission("study_group.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         is_active = request.args.get("is_active")
@@ -54,7 +56,9 @@ class StudyGroupList(Resource):
     @requires_permission("study_group.edit")
     def post(self):
         data = request.get_json()
-        return study_group_service.create_group(data)
+        result = study_group_service.create_group(data)
+        invalidate_cache("api:/api/study_group/*")
+        return result
 
 
 @ns_study_group.route("/groups/<int:group_id>")
@@ -70,11 +74,15 @@ class StudyGroupDetail(Resource):
     @requires_permission("study_group.edit")
     def put(self, group_id):
         data = request.get_json()
-        return study_group_service.update_group(group_id, data)
+        result = study_group_service.update_group(group_id, data)
+        invalidate_cache("api:/api/study_group/*")
+        return result
 
     @requires_permission("study_group.edit")
     def delete(self, group_id):
-        return study_group_service.delete_group(group_id)
+        result = study_group_service.delete_group(group_id)
+        invalidate_cache("api:/api/study_group/*")
+        return result
 
 
 @ns_study_group.route("/groups/<int:group_id>/members")
@@ -83,13 +91,17 @@ class GroupMembers(Resource):
     @requires_permission("study_group.edit")
     def post(self, group_id):
         data = request.get_json()
-        return study_group_service.add_member(group_id, data["student_id"])
+        result = study_group_service.add_member(group_id, data["student_id"])
+        invalidate_cache("api:/api/study_group/*")
+        return result
 
     @ns_study_group.expect(member_model)
     @requires_permission("study_group.edit")
     def delete(self, group_id):
         data = request.get_json()
-        return study_group_service.remove_member(group_id, data["student_id"])
+        result = study_group_service.remove_member(group_id, data["student_id"])
+        invalidate_cache("api:/api/study_group/*")
+        return result
 
 
 @ns_study_group.route("/groups/<int:group_id>/score")
@@ -98,8 +110,10 @@ class GroupScore(Resource):
     @requires_permission("study_group.edit")
     def post(self, group_id):
         data = request.get_json()
-        return study_group_service.add_score(
+        result = study_group_service.add_score(
             group_id,
             data["score_change"],
             data.get("reason", ""),
         )
+        invalidate_cache("api:/api/study_group/*")
+        return result

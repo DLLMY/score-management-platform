@@ -5,7 +5,7 @@ import logger from '../utils/logger';
  * 创建和管理考试安排
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Calendar,
   Plus,
@@ -16,11 +16,22 @@ import {
   Clock,
   GripVertical,
 } from 'lucide-react';
-import { Card, Button, Modal, LoadingSpinner, PermissionButton, SearchFilter } from '../components';
+import {
+  Card,
+  Button,
+  Modal,
+  LoadingSpinner,
+  PermissionButton,
+  SearchFilter,
+  DataTable,
+} from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import ImportExportPanel from '../components/special/ImportExportPanel';
 import { useStableToast } from '../hooks/useStableToast';
 import { useSubmitGuard } from '../hooks/useSubmitGuard';
-import { useForm, useModal, useConfirmDialog, useDebouncedValue } from '../hooks';
+import { useForm, useModal, useDebouncedValue } from '../hooks';
+import { useAutoSave } from '../hooks/useAutoSave';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import api, { getAuthHeaders } from '../services/api';
 
 interface Exam {
@@ -60,6 +71,18 @@ interface ExamFormData {
   [key: string]: unknown;
 }
 
+// M3: 考试表单默认值（用于草稿空值判定）
+const DEFAULT_EXAM_FORM: ExamFormData = {
+  name: '',
+  description: '',
+  subjects: ['语文', '数学', '英语'],
+  start_time: '',
+  end_time: '',
+  importance: 'medium',
+  class_id: '',
+  status: 'draft',
+};
+
 interface SubjectFormData {
   name: string;
   description: string;
@@ -82,8 +105,9 @@ function ExamManagement(): React.ReactElement {
   // 使用 useDebouncedValue 优化搜索
   const debouncedSearchInput = useDebouncedValue(searchInput, 300);
 
-  // 使用 useConfirmDialog 管理删除确认
-  const { show: showDeleteConfirm } = useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   // 使用 useForm 管理考试表单
   const {
@@ -92,21 +116,9 @@ function ExamManagement(): React.ReactElement {
     handleChange: handleExamFormChange,
     setFormData: setExamFormData,
     resetForm: resetExamForm,
-  } = useForm<ExamFormData>(
-    {
-      name: '',
-      description: '',
-      subjects: ['语文', '数学', '英语'],
-      start_time: '',
-      end_time: '',
-      importance: 'medium',
-      class_id: '',
-      status: 'draft',
-    },
-    {
-      name: { required: true, minLength: 1, maxLength: 100 },
-    }
-  );
+  } = useForm<ExamFormData>(DEFAULT_EXAM_FORM, {
+    name: { required: true, minLength: 1, maxLength: 100 },
+  });
 
   // 使用 useForm 管理科目表单
   const {
@@ -149,6 +161,34 @@ function ExamManagement(): React.ReactElement {
 
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+
+  // M3: 考试新增/编辑表单草稿（含科目勾选），中途刷新可恢复
+  const { draftAvailable, loadDraft, restoreDraft, discardChanges, clearDraft } =
+    useAutoSave<ExamFormData>({
+      key: 'exam-form',
+      data: examFormData,
+    });
+
+  // 空草稿静默清理：默认值草稿（如取消后回写）不弹恢复条
+  useEffect(() => {
+    if (!draftAvailable) return;
+    const d = loadDraft();
+    if (d && JSON.stringify(d) === JSON.stringify(DEFAULT_EXAM_FORM)) {
+      clearDraft();
+    }
+  }, [draftAvailable, loadDraft, clearDraft]);
+
+  const handleRestoreDraft = useCallback((): void => {
+    const draft = restoreDraft();
+    if (!draft) return;
+    setExamFormData({ ...draft });
+    setEditingExam(null);
+    openExamModal(null);
+  }, [restoreDraft, setExamFormData, openExamModal]);
+
+  const handleDiscardDraft = useCallback((): void => {
+    discardChanges();
+  }, [discardChanges]);
 
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -306,7 +346,14 @@ function ExamManagement(): React.ReactElement {
 
   const handleDeleteSubject = useCallback(
     async (subject: Subject): Promise<void> => {
-      if (!window.confirm(`确定要删除科目 ${subject.name} 吗？`)) return;
+      const ok = await confirmRef.current({
+        title: '删除科目',
+        message: `确定要删除科目 ${subject.name} 吗？`,
+        confirmText: '删除',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
 
       try {
         await api.subjects.delete(subject.id);
@@ -316,7 +363,7 @@ function ExamManagement(): React.ReactElement {
         showToast('error', '删除失败: ' + (err as Error).message);
       }
     },
-    [showDeleteConfirm, showToast, fetchData]
+    [showToast, fetchData]
   );
 
   const handleExport = useCallback(async (format: 'excel' | 'csv'): Promise<Blob> => {
@@ -415,16 +462,24 @@ function ExamManagement(): React.ReactElement {
         showToast('success', '考试创建成功');
       }
 
+      clearDraft();
       closeExamModal();
       fetchData();
     } catch (err: unknown) {
       showToast('error', '保存失败: ' + (err as Error).message);
     }
-  }, [examFormData, editingExam, showToast, fetchData, closeExamModal]);
+  }, [examFormData, editingExam, showToast, fetchData, closeExamModal, clearDraft]);
 
   const handlePublishExam = useCallback(
     async (exam: Exam): Promise<void> => {
-      if (!window.confirm(`确定要发布考试 ${exam.name} 吗？`)) return;
+      const ok = await confirmRef.current({
+        title: '发布考试',
+        message: `确定要发布考试 ${exam.name} 吗？`,
+        confirmText: '发布',
+        cancelText: '取消',
+        type: 'info',
+      });
+      if (!ok) return;
 
       try {
         await api.exams.publish(exam.id);
@@ -435,12 +490,19 @@ function ExamManagement(): React.ReactElement {
         fetchData();
       }
     },
-    [showDeleteConfirm, showToast, fetchData]
+    [showToast, fetchData]
   );
 
   const handleCloseExam = useCallback(
     async (exam: Exam): Promise<void> => {
-      if (!window.confirm(`确定要结束考试 ${exam.name} 吗？`)) return;
+      const ok = await confirmRef.current({
+        title: '结束考试',
+        message: `确定要结束考试 ${exam.name} 吗？`,
+        confirmText: '结束',
+        cancelText: '取消',
+        type: 'warning',
+      });
+      if (!ok) return;
 
       try {
         await api.exams.close(exam.id);
@@ -451,12 +513,19 @@ function ExamManagement(): React.ReactElement {
         fetchData();
       }
     },
-    [showDeleteConfirm, showToast, fetchData]
+    [showToast, fetchData]
   );
 
   const handleDeleteExam = useCallback(
     async (exam: Exam): Promise<void> => {
-      if (!window.confirm(`确定要删除考试 ${exam.name} 吗？`)) return;
+      const ok = await confirmRef.current({
+        title: '删除考试',
+        message: `确定要删除考试 ${exam.name} 吗？`,
+        confirmText: '删除',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
 
       try {
         await api.exams.delete(exam.id);
@@ -467,7 +536,7 @@ function ExamManagement(): React.ReactElement {
         fetchData();
       }
     },
-    [showDeleteConfirm, showToast, fetchData]
+    [showToast, fetchData]
   );
 
   const getStatusBadge = (status?: string): React.ReactElement => {
@@ -512,10 +581,143 @@ function ExamManagement(): React.ReactElement {
     );
   };
 
+  const columns = useMemo<ColumnType<Exam>[]>(
+    () => [
+      {
+        title: '考试信息',
+        key: 'name',
+        dataIndex: 'name',
+        render: (_v, exam) => (
+          <div className='flex items-center'>
+            <div className='flex-shrink-0 h-10 w-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center'>
+              <Calendar className='w-5 h-5 text-white' />
+            </div>
+            <div className='ml-4'>
+              <div className='text-sm font-medium text-gray-900'>{exam.name}</div>
+              <div className='text-sm text-gray-500'>{exam.class_name || '全部班级'}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: '科目',
+        key: 'subjects',
+        dataIndex: 'subjects',
+        render: (_v, exam) => (
+          <div className='text-sm text-gray-900'>
+            {Array.isArray(exam.subjects) ? exam.subjects.join(', ') : exam.subjects || '-'}
+          </div>
+        ),
+      },
+      {
+        title: '时间',
+        key: 'time',
+        render: (_v, exam) => (
+          <div className='text-sm text-gray-900'>
+            <div className='flex items-center gap-1'>
+              <Clock className='w-4 h-4 text-gray-400' />
+              {exam.start_time ? new Date(exam.start_time).toLocaleString('zh-CN') : '-'}
+            </div>
+            {exam.end_time && (
+              <div className='text-gray-500 text-xs mt-1'>
+                至 {new Date(exam.end_time).toLocaleString('zh-CN')}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'status',
+        render: (_v, exam) => (
+          <div className='flex items-center gap-2'>
+            {getStatusBadge(exam.status)}
+            {getImportanceBadge(exam.importance)}
+          </div>
+        ),
+      },
+      {
+        title: '操作',
+        key: 'actions',
+        align: 'right',
+        render: (_v, exam) => (
+          <div className='text-sm font-medium space-x-2'>
+            {exam.status === 'draft' && (
+              <>
+                <Button variant='secondary' size='sm' onClick={() => handleEditExam(exam)}>
+                  <Edit2 className='w-4 h-4' />
+                </Button>
+                <PermissionButton
+                  permission='exam.manage'
+                  size='sm'
+                  onClick={() => handlePublishExam(exam)}
+                >
+                  <CheckCircle className='w-4 h-4' />
+                </PermissionButton>
+                <PermissionButton
+                  permission='exam.manage'
+                  variant='danger'
+                  size='sm'
+                  onClick={() => handleDeleteExam(exam)}
+                >
+                  <Trash2 className='w-4 h-4' />
+                </PermissionButton>
+              </>
+            )}
+            {exam.status === 'published' && (
+              <PermissionButton
+                permission='exam.manage'
+                variant='secondary'
+                size='sm'
+                onClick={() => handleCloseExam(exam)}
+              >
+                <XCircle className='w-4 h-4' />
+              </PermissionButton>
+            )}
+            {exam.status === 'closed' && (
+              <Button variant='secondary' size='sm' onClick={() => handleEditExam(exam)}>
+                <Edit2 className='w-4 h-4' />
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [
+      getStatusBadge,
+      getImportanceBadge,
+      handleEditExam,
+      handlePublishExam,
+      handleDeleteExam,
+      handleCloseExam,
+    ]
+  );
+
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className='space-y-6'>
+      {draftAvailable && (
+        <div className='flex items-center justify-between gap-3 px-4 py-2.5 mb-4 rounded-lg bg-amber-50 border border-amber-200 text-sm'>
+          <span className='text-amber-800'>检测到上次未提交的内容，是否恢复？</span>
+          <div className='flex items-center gap-2'>
+            <button
+              onClick={handleRestoreDraft}
+              className='px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 text-xs'
+            >
+              恢复
+            </button>
+            <button
+              onClick={handleDiscardDraft}
+              className='px-3 py-1 rounded-md border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs'
+            >
+              放弃
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-4'>
         <div>
           <h1 className='text-2xl font-bold text-gray-900'>考试管理</h1>
@@ -589,128 +791,16 @@ function ExamManagement(): React.ReactElement {
       </Card>
 
       <Card>
-        <div className='overflow-x-auto'>
-          <table className='min-w-full divide-y divide-gray-200'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                  考试信息
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                  科目
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                  时间
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                  状态
-                </th>
-                <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {filteredExams.length > 0 ? (
-                filteredExams.map((exam) => (
-                  <tr key={exam.id} className='hover:bg-gray-50'>
-                    <td className='px-6 py-4 whitespace-nowrap'>
-                      <div className='flex items-center'>
-                        <div className='flex-shrink-0 h-10 w-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center'>
-                          <Calendar className='w-5 h-5 text-white' />
-                        </div>
-                        <div className='ml-4'>
-                          <div className='text-sm font-medium text-gray-900'>{exam.name}</div>
-                          <div className='text-sm text-gray-500'>
-                            {exam.class_name || '全部班级'}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className='px-6 py-4'>
-                      <div className='text-sm text-gray-900'>
-                        {Array.isArray(exam.subjects)
-                          ? exam.subjects.join(', ')
-                          : exam.subjects || '-'}
-                      </div>
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap'>
-                      <div className='text-sm text-gray-900'>
-                        <div className='flex items-center gap-1'>
-                          <Clock className='w-4 h-4 text-gray-400' />
-                          {exam.start_time
-                            ? new Date(exam.start_time).toLocaleString('zh-CN')
-                            : '-'}
-                        </div>
-                        {exam.end_time && (
-                          <div className='text-gray-500 text-xs mt-1'>
-                            至 {new Date(exam.end_time).toLocaleString('zh-CN')}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap'>
-                      <div className='flex items-center gap-2'>
-                        {getStatusBadge(exam.status)}
-                        {getImportanceBadge(exam.importance)}
-                      </div>
-                    </td>
-                    <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                      {exam.status === 'draft' && (
-                        <>
-                          <Button
-                            variant='secondary'
-                            size='sm'
-                            onClick={() => handleEditExam(exam)}
-                          >
-                            <Edit2 className='w-4 h-4' />
-                          </Button>
-                          <PermissionButton
-                            permission='exam.manage'
-                            size='sm'
-                            onClick={() => handlePublishExam(exam)}
-                          >
-                            <CheckCircle className='w-4 h-4' />
-                          </PermissionButton>
-                          <PermissionButton
-                            permission='exam.manage'
-                            variant='danger'
-                            size='sm'
-                            onClick={() => handleDeleteExam(exam)}
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </PermissionButton>
-                        </>
-                      )}
-                      {exam.status === 'published' && (
-                        <PermissionButton
-                          permission='exam.manage'
-                          variant='secondary'
-                          size='sm'
-                          onClick={() => handleCloseExam(exam)}
-                        >
-                          <XCircle className='w-4 h-4' />
-                        </PermissionButton>
-                      )}
-                      {exam.status === 'closed' && (
-                        <Button variant='secondary' size='sm' onClick={() => handleEditExam(exam)}>
-                          <Edit2 className='w-4 h-4' />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className='px-6 py-12 text-center text-gray-500'>
-                    <Calendar className='w-12 h-12 mx-auto mb-3 text-gray-300' />
-                    <p>暂无考试数据</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<Exam>
+          columns={columns}
+          dataSource={filteredExams}
+          rowKey='id'
+          empty={{
+            icon: 'file',
+            title: '暂无考试数据',
+          }}
+          scroll={{ x: 900 }}
+        />
       </Card>
 
       <Modal

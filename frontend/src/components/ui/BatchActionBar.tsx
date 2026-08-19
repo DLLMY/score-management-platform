@@ -1,7 +1,8 @@
 import logger from '../../utils/logger';
-import { useState, useCallback, ReactNode } from 'react';
+import { useState, useCallback, useRef, ReactNode } from 'react';
 import { CheckSquare, X, MoreVertical } from 'lucide-react';
 import Button from './Button';
+import { useConfirm } from './ConfirmDialog';
 
 export interface BatchAction<T = unknown> {
   id: string;
@@ -30,18 +31,24 @@ function BatchActionBar<T = unknown>({
 }: BatchActionBarProps<T>) {
   const [showActionMenu, setShowActionMenu] = useState<boolean>(false);
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const handleAction = useCallback(
     async (action: BatchAction<T>) => {
       if (selectedItems.length === 0) return;
 
       if (action.confirmMessage) {
-        const confirmed = window.confirm(
-          `${action.confirmMessage}\n\n已选择 ${selectedItems.length} 项：\n${selectedItems
+        const confirmed = await confirmRef.current({
+          message: `${action.confirmMessage}\n\n已选择 ${selectedItems.length} 项：\n${selectedItems
             .slice(0, 3)
             .map(getItemName)
-            .join('\n')}${selectedItems.length > 3 ? '\n...' : ''}`
-        );
+            .join('\n')}${selectedItems.length > 3 ? '\n...' : ''}`,
+          confirmText: '确认',
+          cancelText: '取消',
+          type: 'warning',
+        });
         if (!confirmed) return;
       }
 

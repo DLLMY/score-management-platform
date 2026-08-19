@@ -2,6 +2,7 @@ from flask import request
 from flask_restx import Namespace, Resource
 from models import PermissionLog
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_permission_logs = Namespace("permission-logs", description="权限操作日志相关操作")
 
@@ -11,6 +12,7 @@ class PermissionLogList(Resource):
 
     @ns_permission_logs.doc("list_permission_logs")
     @requires_permission("user.view")
+    @cached_api(ttl=30)
     def get(self):
         operator_id = request.args.get("operator_id")
         operator_type = request.args.get("operator_type")

@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from models import ScoreCategory, ScoreRule
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.score_category_service import (
     create_category,
     update_category,
@@ -34,6 +35,7 @@ class CategoryList(Resource):
 
     @ns_score_categories.doc("list_score_categories", security="Bearer")
     @requires_permission("rule.view")
+    @cached_api(ttl=30)
     def get(self):
         categories = ScoreCategory.query.all()
         result = []  # noqa: F841
@@ -61,6 +63,7 @@ class CategoryList(Resource):
         category, err = create_category(data)
         if err:
             return APIResponse.error(message=err, status_code=400)
+        invalidate_cache("api:/api/score-categories/*")
 
         return (
             APIResponse.success(
@@ -111,6 +114,7 @@ class CategoryResource(Resource):
         err = update_category(category, data)
         if err:
             return APIResponse.error(message=err, status_code=400)
+        invalidate_cache("api:/api/score-categories/*")
 
         return APIResponse.success(message="分类更新成功")
 
@@ -122,6 +126,7 @@ class CategoryResource(Resource):
         err = delete_category(category)
         if err:
             return APIResponse.error(message=err, status_code=400)
+        invalidate_cache("api:/api/score-categories/*")
 
         return APIResponse.success(message="分类删除成功")
 
@@ -130,6 +135,7 @@ class CategoryResource(Resource):
 class CategoryRules(Resource):
 
     @ns_score_categories.doc("get_score_category_rules")
+    @cached_api(ttl=30)
     def get(self, id):
         category = ScoreCategory.query.get_or_404(id)
 

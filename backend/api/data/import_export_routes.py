@@ -575,8 +575,9 @@ class ImportUsers(Resource):
 
         except Exception as e:
             db.session.rollback()
+            logger.error("导入失败: %s", e)
             return APIResponse.server_error(
-                message=f"导入失败: {str(e)}",
+                message="导入失败",
                 data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
             )
 
@@ -668,7 +669,7 @@ class ImportRules(Resource):
                     imported_count += 1
 
                 except Exception as e:
-                    errors.append(f"第{row_idx}行导入失败: {str(e)}")
+                    errors.append(f"第{row_idx}行导入失败")
                     failed_count += 1
 
             db.session.commit()
@@ -685,8 +686,9 @@ class ImportRules(Resource):
 
         except Exception as e:
             db.session.rollback()
+            logger.error("导入失败: %s", e)
             return APIResponse.server_error(
-                message=f"导入失败: {str(e)}",
+                message="导入失败",
                 data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
             )
 
@@ -765,7 +767,7 @@ class ImportCategories(Resource):
                     imported_count += 1
 
                 except Exception as e:
-                    errors.append(f"第{row_idx}行导入失败: {str(e)}")
+                    errors.append(f"第{row_idx}行导入失败")
                     failed_count += 1
 
             db.session.commit()
@@ -782,8 +784,9 @@ class ImportCategories(Resource):
 
         except Exception as e:
             db.session.rollback()
+            logger.error("导入失败: %s", e)
             return APIResponse.server_error(
-                message=f"导入失败: {str(e)}",
+                message="导入失败",
                 data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
             )
 
@@ -849,7 +852,8 @@ class DeleteBackup(Resource):
             else:
                 return APIResponse.not_found(message="备份文件不存在")
         except Exception as e:
-            return APIResponse.server_error(message=f"删除失败: {str(e)}")
+            logger.error("%s: %s", "删除失败", e)
+            return APIResponse.server_error(message="删除失败")
 
 
 @ns_import_export.route("/backup/stats")

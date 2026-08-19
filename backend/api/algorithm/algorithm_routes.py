@@ -1,9 +1,12 @@
+import logging
+
 from io import BytesIO
 
 from flask_restx import Namespace, Resource
 from flask import request, send_file
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api
 from utils.excel_utils import ExcelUtils
 from services.algorithm_service import AlgorithmService
 from services.cluster_service import ClusterService
@@ -21,6 +24,8 @@ from services.score_distribution_service import ScoreDistributionController, Sco
 from services.score_ecosystem_service import ScoreEcosystem
 from services.reward_service import PhoneAccessHandler, RewardSystem, RewardInteractionController
 
+logger = logging.getLogger(__name__)
+
 """
 算法分析API路由模块
 提供统计分析、学生分群、综合评分、风险预警等功能
@@ -34,6 +39,7 @@ class Statistics(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取综合统计分析
@@ -44,7 +50,8 @@ class Statistics(Resource):
             result = AlgorithmService.calculate_statistics(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/cluster")
@@ -53,6 +60,7 @@ class Cluster(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取学生分群结果
@@ -62,7 +70,8 @@ class Cluster(Resource):
             result = ClusterService.get_cluster_results(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
     @ns_algorithm.doc("post_cluster", description="触发分群重新计算")
     @ns_algorithm.param("class_name", "班级名称(可选)")
@@ -79,7 +88,8 @@ class Cluster(Resource):
             result = ClusterService.perform_clustering(class_name, n_clusters)  # noqa: F841
             return APIResponse.success(data=result, message="分群计算完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/cluster/<int:user_id>")
@@ -99,7 +109,8 @@ class ClusterByUser(Resource):
             else:
                 return APIResponse.error(message="未找到分群信息")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/composite-score")
@@ -117,7 +128,8 @@ class CompositeScore(Resource):
             result = CompositeScoreService.get_composite_scores(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
     @ns_algorithm.doc("post_composite_score_recalculate", description="重新计算综合评分")
     @ns_algorithm.param("class_name", "班级名称(可选)")
@@ -132,7 +144,8 @@ class CompositeScore(Resource):
             result = CompositeScoreService.calculate_composite_score(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="综合评分计算完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/composite-score/<int:user_id>")
@@ -152,7 +165,8 @@ class CompositeScoreByUser(Resource):
             else:
                 return APIResponse.error(message="未找到综合评分信息")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/composite-score/progress")
@@ -169,7 +183,8 @@ class CompositeScoreProgress(Resource):
             progress = CompositeScoreService.get_computation_progress()
             return APIResponse.success(data=progress, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/warning")
@@ -178,6 +193,7 @@ class Warning(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取风险预警列表
@@ -187,7 +203,8 @@ class Warning(Resource):
             result = WarningService.get_warnings(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
     @ns_algorithm.doc("post_warning_evaluate", description="执行风险评估")
     @ns_algorithm.param("class_name", "班级名称(可选)")
@@ -202,7 +219,8 @@ class Warning(Resource):
             result = WarningService.evaluate_risk(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="风险评估完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/warning/config")
@@ -210,6 +228,7 @@ class WarningConfig(Resource):
     @ns_algorithm.doc("get_warning_config", description="获取预警配置")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取预警配置
@@ -218,7 +237,8 @@ class WarningConfig(Resource):
             config = WarningService.get_config()
             return APIResponse.success(data=config, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
     @ns_algorithm.doc("post_warning_config", description="更新预警配置")
     @ns_algorithm.response(200, "成功")
@@ -244,7 +264,8 @@ class WarningConfig(Resource):
             else:
                 return APIResponse.error(message="无效的配置键")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/warning/<int:warning_id>/resolve")
@@ -265,7 +286,8 @@ class WarningResolve(Resource):
             else:
                 return APIResponse.error(message="预警不存在或已处理")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/prediction/<int:user_id>")
@@ -284,7 +306,8 @@ class StudentPrediction(Resource):
             result = PredictionService.predict_future_scores(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/prediction/batch")
@@ -304,7 +327,8 @@ class BatchPrediction(Resource):
             result = PredictionService.predict_batch(class_name, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/prediction/risk")
@@ -313,6 +337,7 @@ class RiskStudents(Resource):
     @ns_algorithm.param("days", "预测天数，默认7")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取有下降风险的学生
@@ -322,7 +347,8 @@ class RiskStudents(Resource):
             result = PredictionService.get_risk_students(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/anomaly/<int:user_id>")
@@ -341,7 +367,8 @@ class UserAnomaly(Resource):
             result = AnomalyService.detect_all_anomalies(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/anomaly/batch")
@@ -351,6 +378,7 @@ class BatchAnomaly(Resource):
     @ns_algorithm.param("days", "历史天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         批量获取异常检测
@@ -361,7 +389,8 @@ class BatchAnomaly(Resource):
             result = AnomalyService.get_all_anomalies(class_name, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/anomaly/sudden/<int:user_id>")
@@ -380,7 +409,8 @@ class SuddenChange(Resource):
             result = AnomalyService.detect_sudden_change(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/anomaly/trend/<int:user_id>")
@@ -399,7 +429,8 @@ class TrendAnomaly(Resource):
             result = AnomalyService.detect_trend_anomaly(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/anomaly/group/<int:user_id>")
@@ -418,7 +449,8 @@ class GroupAnomaly(Resource):
             result = AnomalyService.detect_group_anomaly(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/engagement/batch")
@@ -428,6 +460,7 @@ class BatchEngagement(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         批量计算某班级（或全部）学生的参与度指数并排名。
@@ -439,7 +472,8 @@ class BatchEngagement(Resource):
             result = EngagementService.batch_rank(class_name, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/engagement/<int:user_id>")
@@ -459,7 +493,8 @@ class UserEngagement(Resource):
             result = EngagementService.calculate_engagement(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/engagement/<int:user_id>/weekly-trend")
@@ -478,7 +513,8 @@ class UserEngagementTrend(Resource):
             result = EngagementService.weekly_trend(user_id, weeks)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend")
@@ -500,7 +536,8 @@ class RuleRecommend(Resource):
             )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend/new")
@@ -522,7 +559,8 @@ class NewRuleRecommend(Resource):
             )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend/optimization")
@@ -544,7 +582,8 @@ class RuleOptimization(Resource):
             )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend/combination")
@@ -566,7 +605,8 @@ class RuleCombination(Resource):
             )  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend/statistics")
@@ -584,7 +624,8 @@ class RuleStatistics(Resource):
             result = RuleRecommendationService.get_rule_statistics(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend/train")
@@ -602,7 +643,8 @@ class RuleRecommendTrain(Resource):
             result = RuleRecommendationService.train_recommendation_model(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-recommend/evaluate")
@@ -620,7 +662,8 @@ class RuleRecommendEvaluate(Resource):
             result = RuleRecommendationService.evaluate_model(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-predict/<int:user_id>")
@@ -639,7 +682,8 @@ class ScorePredict(Resource):
             result = ScorePredictService.predict_exam_score(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/attribution/batch")
@@ -660,7 +704,8 @@ class BatchScoreAttribution(Resource):
             result = AttributionService.batch_analyze(class_name, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/attribution/<int:user_id>")
@@ -679,7 +724,8 @@ class ScoreAttribution(Resource):
             result = AttributionService.analyze_score_attribution(user_id, days)
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-predict/batch")
@@ -699,7 +745,8 @@ class BatchScorePredict(Resource):
             result = ScorePredictService.predict_batch(class_name, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-predict/distribution")
@@ -717,7 +764,8 @@ class ScoreDistribution(Resource):
             result = ScorePredictService.get_score_distribution(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-predict/train")
@@ -735,7 +783,8 @@ class ScorePredictTrain(Resource):
             result = ScorePredictService.train_score_model(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-predict/evaluate")
@@ -753,7 +802,8 @@ class ScorePredictEvaluate(Resource):
             result = ScorePredictService.evaluate_score_model(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/risk-predict/<int:user_id>")
@@ -772,7 +822,8 @@ class RiskPredict(Resource):
             result = RiskPredictService.predict_risk(user_id, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/risk-predict/batch")
@@ -792,7 +843,8 @@ class BatchRiskPredict(Resource):
             result = RiskPredictService.predict_batch(class_name, days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/risk-predict/high-risk")
@@ -810,7 +862,8 @@ class HighRiskStudents(Resource):
             result = RiskPredictService.get_high_risk_students(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/risk-predict/train")
@@ -828,7 +881,8 @@ class RiskPredictTrain(Resource):
             result = RiskPredictService.train_risk_model(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/risk-predict/evaluate")
@@ -846,7 +900,8 @@ class RiskPredictEvaluate(Resource):
             result = RiskPredictService.evaluate_risk_model(days)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-engine/execute")
@@ -866,7 +921,8 @@ class RuleEngineExecute(Resource):
             result = engine.execute_rules(model_output, user_context)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/rule-engine/apply-by-behavior")
@@ -887,7 +943,8 @@ class RuleEngineApplyByBehavior(Resource):
             result = engine.apply_rule_by_behavior(user_id, behavior_type, context)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-distribution/statistics")
@@ -906,7 +963,8 @@ class ScoreDistributionStats(Resource):
             result = controller.get_distribution_statistics(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-distribution/adjust")
@@ -925,7 +983,8 @@ class ScoreDistributionAdjust(Resource):
             result = controller.adjust_class_scores(class_name)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-distribution/validate")
@@ -944,7 +1003,8 @@ class ScoreDistributionValidate(Resource):
             result = controller.validate_distribution(scores)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-validator/detect-outliers")
@@ -963,7 +1023,8 @@ class ScoreValidatorDetectOutliers(Resource):
             result = validator.detect_outliers(scores)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-validator/validate-and-correct")
@@ -982,7 +1043,8 @@ class ScoreValidatorValidateAndCorrect(Resource):
             result = validator.validate_and_correct(scores)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-ecosystem/earn")
@@ -1003,7 +1065,8 @@ class ScoreEcosystemEarn(Resource):
             result = ecosystem.earn_score(user_id, behavior_type, context)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-ecosystem/spend")
@@ -1024,7 +1087,8 @@ class ScoreEcosystemSpend(Resource):
             result = ecosystem.spend_score(user_id, spending_type, amount)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-ecosystem/earning-rules")
@@ -1041,7 +1105,8 @@ class ScoreEcosystemEarningRules(Resource):
             result = ecosystem.get_earning_rules()  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-ecosystem/spending-rules")
@@ -1058,7 +1123,8 @@ class ScoreEcosystemSpendingRules(Resource):
             result = ecosystem.get_spending_rules()  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/score-ecosystem/balance/<int:user_id>")
@@ -1076,7 +1142,8 @@ class ScoreEcosystemBalance(Resource):
             result = ecosystem.get_user_balance(user_id)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/reward/phone-access")
@@ -1096,7 +1163,8 @@ class RewardPhoneAccess(Resource):
             result = handler.handle_phone_access(user_id, access_count)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/reward/types")
@@ -1113,7 +1181,8 @@ class RewardTypes(Resource):
             result = system.get_reward_types()  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/reward/eligible/<int:user_id>")
@@ -1131,7 +1200,8 @@ class RewardEligible(Resource):
             result = system.get_user_eligible_rewards(user_id)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/reward/redeem")
@@ -1151,7 +1221,8 @@ class RewardRedeem(Resource):
             result = system.redeem_reward(user_id, reward_type)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/reward/daily-usage/<int:user_id>")
@@ -1169,7 +1240,8 @@ class RewardDailyUsage(Resource):
             result = controller.get_daily_usage(user_id)  # noqa: F841
             return APIResponse.success(data=result, message="success")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/all")
@@ -1189,7 +1261,8 @@ class AlgorithmAll(Resource):
                 data={"statistics": statistics, "clusters": clusters, "warnings": warnings}
             )
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/run")
@@ -1205,7 +1278,8 @@ class AlgorithmRun(Resource):
             result = AlgorithmService().run_analysis()  # noqa: F841
             return APIResponse.success(data=result, message="算法分析完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/cluster/recalculate")
@@ -1222,7 +1296,8 @@ class ClusterRecalculate(Resource):
             result = service.recalculate_clusters()  # noqa: F841
             return APIResponse.success(data=result, message="分群重新计算完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/composite-score/recalculate")
@@ -1239,7 +1314,8 @@ class CompositeScoreRecalculate(Resource):
             result = service.recalculate_all()  # noqa: F841
             return APIResponse.success(data=result, message="综合评分重新计算完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 @ns_algorithm.route("/warning/evaluate")
@@ -1256,7 +1332,8 @@ class WarningEvaluate(Resource):
             result = service.evaluate_all()  # noqa: F841
             return APIResponse.success(data=result, message="预警评估完成")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("algorithm_routes: %s", e)
+            return APIResponse.error(message="算法计算失败，请稍后重试")
 
 
 ALGORITHM_EXPORT_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

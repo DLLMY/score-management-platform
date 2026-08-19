@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import React, { useState, useEffect, useCallback, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useRef, FormEvent, ChangeEvent } from 'react';
 import {
   Plus,
   Edit2,
@@ -22,6 +22,7 @@ import { useStableToast } from '../hooks/useStableToast';
 import api, { ClassPeriod } from '../services/api';
 import { PermissionButton } from '../components';
 import { usePermissions } from '../hooks/usePermissions';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const minuteOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
@@ -65,6 +66,9 @@ const getPeriodType = (startHour: number) => {
 
 const ClassPeriodSettings: React.FC = () => {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const [periods, setPeriods] = useState<ClassPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -122,7 +126,13 @@ const ClassPeriodSettings: React.FC = () => {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`确定要删除「${name}」吗？此操作不可恢复。`)) return;
+    const ok = await confirmRef.current({
+      message: `确定要删除「${name}」吗？此操作不可恢复。`,
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.classPeriods.delete(id);
       setPeriods((prev) => prev.filter((p) => p.id !== id));
@@ -166,7 +176,13 @@ const ClassPeriodSettings: React.FC = () => {
   };
 
   const handleReset = async () => {
-    if (!window.confirm('确定要重置为默认节次吗？所有自定义节次将被删除。')) return;
+    const ok = await confirmRef.current({
+      message: '确定要重置为默认节次吗？所有自定义节次将被删除。',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!ok) return;
     try {
       await api.classPeriods.reset();
       await fetchData();

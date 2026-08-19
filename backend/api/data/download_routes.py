@@ -1,8 +1,12 @@
+import logging
+
 import json
 import io
 import openpyxl
 from flask import Blueprint, request, send_file
 from utils.response import APIResponse
+
+logger = logging.getLogger(__name__)
 
 """
 文件下载路由模块
@@ -99,6 +103,7 @@ def download_score_template():
                 download_name=filename,
             )
         except Exception as e:
-            return APIResponse.error(message=f"生成模板失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "生成模板失败", e)
+            return APIResponse.error(message="生成模板失败", status_code=500)
 
     return generate_template()

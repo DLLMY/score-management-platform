@@ -17,6 +17,7 @@ import { preloadService } from './services/preloadService';
 import { useWebSocketStore, initStores } from './stores';
 import { ToastProvider } from './context/ToastContext';
 import { GlobalStateProvider } from './context/GlobalStateContext';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 
 interface RouteErrorProps {
   error?: Error | null;
@@ -342,9 +343,10 @@ function App() {
   return (
     <GlobalStateProvider>
       <ToastProvider>
-        <ErrorBoundary fallback={<RouteError />}>
-          <HashRouter>
-            <PreloadProvider />
+        <ConfirmProvider>
+          <ErrorBoundary fallback={<RouteError />}>
+            <HashRouter>
+              <PreloadProvider />
             <Routes>
               <Route path='/login' element={<Login />} />
               <Route path='/student/login' element={<StudentLogin />} />
@@ -798,6 +800,7 @@ function App() {
           <GlobalErrorBoundary />
           <NetworkStatusIndicator />
         </ErrorBoundary>
+          </ConfirmProvider>
       </ToastProvider>
     </GlobalStateProvider>
   );

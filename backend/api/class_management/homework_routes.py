@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.homework_service import homework_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_homework = Namespace("homework", description="作业检查管理")
 
@@ -43,6 +44,7 @@ class HomeworkList(Resource):
         },
     )
     @requires_permission("homework.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         subject_id = request.args.get("subject_id", type=int)
@@ -57,7 +59,9 @@ class HomeworkList(Resource):
     @requires_permission("homework.edit")
     def post(self):
         data = request.get_json()
-        return homework_service.create_assignment(data)
+        result = homework_service.create_assignment(data)
+        invalidate_cache("api:/api/homework/*")
+        return result
 
 
 @ns_homework.route("/assignments/<int:assignment_id>")
@@ -70,11 +74,15 @@ class HomeworkDetail(Resource):
     @requires_permission("homework.edit")
     def put(self, assignment_id):
         data = request.get_json()
-        return homework_service.update_assignment(assignment_id, data)
+        result = homework_service.update_assignment(assignment_id, data)
+        invalidate_cache("api:/api/homework/*")
+        return result
 
     @requires_permission("homework.edit")
     def delete(self, assignment_id):
-        return homework_service.delete_assignment(assignment_id)
+        result = homework_service.delete_assignment(assignment_id)
+        invalidate_cache("api:/api/homework/*")
+        return result
 
 
 @ns_homework.route("/assignments/<int:assignment_id>/submit")
@@ -83,7 +91,9 @@ class HomeworkSubmit(Resource):
     @requires_permission("homework.check")
     def post(self, assignment_id):
         data = request.get_json()
-        return homework_service.mark_submitted(assignment_id, data["student_id"])
+        result = homework_service.mark_submitted(assignment_id, data["student_id"])
+        invalidate_cache("api:/api/homework/*")
+        return result
 
 
 @ns_homework.route("/assignments/<int:assignment_id>/check")
@@ -92,8 +102,10 @@ class HomeworkCheck(Resource):
     @requires_permission("homework.check")
     def post(self, assignment_id):
         data = request.get_json()
-        return homework_service.mark_checked(
+        result = homework_service.mark_checked(
             assignment_id,
             data["student_id"],
             data.get("notes", ""),
         )
+        invalidate_cache("api:/api/homework/*")
+        return result

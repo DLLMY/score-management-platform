@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.seating_service import seating_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_seating = Namespace("seating", description="座次表管理")
 
@@ -27,6 +28,7 @@ class SeatingChartList(Resource):
         },
     )
     @requires_permission("class.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         keyword = request.args.get("keyword", "")
@@ -36,7 +38,9 @@ class SeatingChartList(Resource):
     @requires_permission("class.edit")
     def post(self):
         data = request.get_json()
-        return seating_service.create_chart(data)
+        result = seating_service.create_chart(data)
+        invalidate_cache("api:/api/seating/*")
+        return result
 
 
 @ns_seating.route("/charts/<int:chart_id>")
@@ -48,11 +52,15 @@ class SeatingChartDetail(Resource):
     @requires_permission("class.edit")
     def put(self, chart_id):
         data = request.get_json()
-        return seating_service.update_chart(chart_id, data)
+        result = seating_service.update_chart(chart_id, data)
+        invalidate_cache("api:/api/seating/*")
+        return result
 
     @requires_permission("class.edit")
     def delete(self, chart_id):
-        return seating_service.delete_chart(chart_id)
+        result = seating_service.delete_chart(chart_id)
+        invalidate_cache("api:/api/seating/*")
+        return result
 
 
 @ns_seating.route("/charts/<int:chart_id>/auto-arrange")
@@ -60,9 +68,11 @@ class AutoArrangeSeating(Resource):
     @requires_permission("class.edit")
     def post(self, chart_id):
         data = request.get_json()
-        return seating_service.auto_arrange(
+        result = seating_service.auto_arrange(
             chart_id, data.get("strategy", "manual"), data.get("class_id", 1)
         )
+        invalidate_cache("api:/api/seating/*")
+        return result
 
 
 @ns_seating.route("/charts/<int:chart_id>/seats")
@@ -70,6 +80,8 @@ class UpdateSeat(Resource):
     @requires_permission("class.edit")
     def put(self, chart_id):
         data = request.get_json()
-        return seating_service.update_seat(
+        result = seating_service.update_seat(
             chart_id, data.get("row"), data.get("col"), data.get("student_id")
         )
+        invalidate_cache("api:/api/seating/*")
+        return result

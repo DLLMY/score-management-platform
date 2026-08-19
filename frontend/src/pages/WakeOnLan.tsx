@@ -1,12 +1,16 @@
 import logger from '../utils/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Power, Plus, Trash2, Zap, Check, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import type { WOLDevice } from '../services/api';
 import { useClassNowStatus } from '../hooks';
 import { PermissionButton, ClassStatusBadge } from '../components';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 export default function WakeOnLan() {
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const [devices, setDevices] = useState<WOLDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +86,13 @@ export default function WakeOnLan() {
     }
 
     // M1: 批量唤醒为群发操作，先确认
-    if (!window.confirm(`确定要向 ${validMacs.length} 台设备发送唤醒指令吗？`)) return;
+    const ok = await confirmRef.current({
+      message: `确定要向 ${validMacs.length} 台设备发送唤醒指令吗？`,
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!ok) return;
 
     setIsLoading(true);
     setWakeResult(null);
@@ -158,7 +168,13 @@ export default function WakeOnLan() {
   // Delete device
   const handleDeleteDevice = async (id: number) => {
     // M1: 删除设备不可恢复，先确认
-    if (!window.confirm('确定要删除该设备吗？此操作不可恢复。')) return;
+    const ok = await confirmRef.current({
+      message: '确定要删除该设备吗？此操作不可恢复。',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
     setIsLoading(true);
     try {
       await api.wakeOnLan.deleteDevice(id);

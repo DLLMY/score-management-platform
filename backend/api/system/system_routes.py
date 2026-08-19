@@ -2,7 +2,9 @@ from flask_restx import Namespace, Resource, fields
 from flask_wtf.csrf import generate_csrf
 from flask import request
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.performance_monitor import performance_monitor
 from services.redis_cache_service import get_cache_service
 from services.mqtt_service import mqtt_manager
@@ -293,7 +295,8 @@ class SystemBackup(Resource):
             else:
                 return APIResponse.error(message="数据库文件不存在", status_code=404)
         except Exception as e:
-            return APIResponse.error(message=f"备份失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "备份失败", e)
+            return APIResponse.error(message="备份失败", status_code=500)
 
 
 @ns_system.route("/backups")
@@ -332,7 +335,8 @@ class SystemBackupsList(Resource):
                 data=sorted(backups, key=lambda x: x["created_at"], reverse=True)
             )
         except Exception as e:
-            return APIResponse.error(message=f"获取备份列表失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "获取备份列表失败", e)
+            return APIResponse.error(message="获取备份列表失败", status_code=500)
 
 
 @ns_system.route("/restore")
@@ -396,7 +400,8 @@ class SystemRestore(Resource):
             shutil.copy2(backup_path, target_path)
             return APIResponse.success(message="数据库恢复成功（恢复前已尝试自动备份当前库）")
         except Exception as e:
-            return APIResponse.error(message=f"恢复失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "恢复失败", e)
+            return APIResponse.error(message="恢复失败", status_code=500)
 
 
 @ns_system.route("/clear-cache")
@@ -426,7 +431,8 @@ class SystemClearCache(Resource):
 
             return APIResponse.success(message="缓存清理成功")
         except Exception as e:
-            return APIResponse.error(message=f"清理失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "清理失败", e)
+            return APIResponse.error(message="清理失败", status_code=500)
 
 
 @ns_system.route("/cache-stats")
@@ -518,7 +524,7 @@ class SystemHealth(Resource):
             health_status["status"] = "unhealthy"
             health_status["components"]["database"] = {
                 "status": "unhealthy",
-                "message": f"数据库连接失败: {str(e)}",
+                "message": "数据库连接失败",
             }
 
         # 检查Redis缓存
@@ -534,7 +540,7 @@ class SystemHealth(Resource):
             health_status["status"] = "unhealthy"
             health_status["components"]["redis"] = {
                 "status": "unhealthy",
-                "message": f"Redis连接失败: {str(e)}",
+                "message": "Redis连接失败",
             }
 
         # 检查MQTT连接
@@ -552,7 +558,7 @@ class SystemHealth(Resource):
         except Exception as e:
             health_status["components"]["mqtt"] = {
                 "status": "unknown",
-                "message": f"MQTT状态检查失败: {str(e)}",
+                "message": "MQTT状态检查失败",
             }
 
         # 检查CPU状态
@@ -704,7 +710,8 @@ class SystemPerformance(Resource):
                 "optimization_suggestions": suggestions,
             }
         except Exception as e:
-            return APIResponse.error(message=f"获取性能指标失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "获取性能指标失败", e)
+            return APIResponse.error(message="获取性能指标失败", status_code=500)
 
 
 frontend_performance_model = ns_system.model(
@@ -783,7 +790,8 @@ class FrontendPerformance(Resource):
             return APIResponse.success(message="性能指标接收成功")
         except Exception as e:
             logger.error(f"接收前端性能指标失败: {str(e)}")
-            return APIResponse.error(message=f"接收失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "接收失败", e)
+            return APIResponse.error(message="接收失败", status_code=500)
 
 
 @ns_system.route("/frontend-performance/batch")
@@ -830,7 +838,8 @@ class FrontendPerformanceBatch(Resource):
             return APIResponse.success(message=f"成功接收 {valid_count} 条性能指标")
         except Exception as e:
             logger.error(f"批量接收前端性能指标失败: {str(e)}")
-            return APIResponse.error(message=f"接收失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "接收失败", e)
+            return APIResponse.error(message="接收失败", status_code=500)
 
 
 @ns_system.route("/frontend-error")
@@ -860,7 +869,8 @@ class FrontendError(Resource):
             return APIResponse.success(message="错误信息接收成功")
         except Exception as e:
             logger.error(f"接收前端错误失败: {str(e)}")
-            return APIResponse.error(message=f"接收失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "接收失败", e)
+            return APIResponse.error(message="接收失败", status_code=500)
 
 
 @ns_system.route("/stats")
@@ -869,6 +879,7 @@ class SystemStats(Resource):
     @ns_system.doc("get_system_stats", description="获取系统统计信息")
     @ns_system.response(200, "成功")
     @requires_permission("system.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取系统统计信息
@@ -966,7 +977,8 @@ class SystemStats(Resource):
                 "cache": cache_stats,
             }
         except Exception as e:
-            return APIResponse.error(message=f"获取系统统计失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "获取系统统计失败", e)
+            return APIResponse.error(message="获取系统统计失败", status_code=500)
 
 
 # ---------- 运维中心：前端遥测 / 系统指标查看 ----------
@@ -984,8 +996,7 @@ class FrontendMetricsList(Resource):
             metric_type = request.args.get("metric_type")
             name = request.args.get("name")
             hours = int(request.args.get("hours", 24))
-            page = int(request.args.get("page", 1))
-            per_page = min(int(request.args.get("per_page", 50)), 200)
+            page, per_page = get_pagination(default=50)
 
             query = FrontendPerfMetric.query
             if metric_type:
@@ -1022,7 +1033,8 @@ class FrontendMetricsList(Resource):
                 }
             )
         except Exception as e:
-            return APIResponse.error(message=f"获取前端指标失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "获取前端指标失败", e)
+            return APIResponse.error(message="获取前端指标失败", status_code=500)
 
 
 @ns_system.route("/frontend-errors")
@@ -1036,8 +1048,7 @@ class FrontendErrorList(Resource):
         try:
             error_type = request.args.get("error_type")
             hours = int(request.args.get("hours", 24))
-            page = int(request.args.get("page", 1))
-            per_page = min(int(request.args.get("per_page", 50)), 200)
+            page, per_page = get_pagination(default=50)
 
             query = FrontendErrorLog.query
             if error_type:
@@ -1072,7 +1083,8 @@ class FrontendErrorList(Resource):
                 }
             )
         except Exception as e:
-            return APIResponse.error(message=f"获取前端错误失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "获取前端错误失败", e)
+            return APIResponse.error(message="获取前端错误失败", status_code=500)
 
 
 @ns_system.route("/metrics")
@@ -1087,8 +1099,7 @@ class SystemMetricsList(Resource):
             metric_name = request.args.get("metric_name")
             category = request.args.get("category")
             hours = int(request.args.get("hours", 24))
-            page = int(request.args.get("page", 1))
-            per_page = min(int(request.args.get("per_page", 200)), 500)
+            page, per_page = get_pagination(default=200)
 
             query = SystemMetric.query
             if metric_name:
@@ -1144,4 +1155,5 @@ class SystemMetricsList(Resource):
                 }
             )
         except Exception as e:
-            return APIResponse.error(message=f"获取系统指标失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "获取系统指标失败", e)
+            return APIResponse.error(message="获取系统指标失败", status_code=500)

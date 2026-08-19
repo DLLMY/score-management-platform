@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   LayoutGrid,
   Plus,
@@ -16,6 +16,7 @@ import {
 import api from '../services/api';
 import { SeatingChart, SeatingChartCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { ClassSelect } from '../components/form/EntitySelect';
 
 interface SeatPosition {
@@ -57,6 +58,9 @@ function SeatingChartPage() {
   const [draggedSeat, setDraggedSeat] = useState<SeatPosition | null>(null);
   const [isArranging, setIsArranging] = useState(false);
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const fetchCharts = useCallback(async () => {
     setIsLoading(true);
@@ -125,7 +129,13 @@ function SeatingChartPage() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个座次表吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这个座次表吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       setIsLoading(true);
       try {
         await api.seating.delete(id);
@@ -147,7 +157,13 @@ function SeatingChartPage() {
   const handleAutoArrange = useCallback(async () => {
     if (!selectedChart) return;
     // M1: 自动排列会覆盖当前整张座次表，先确认
-    if (!window.confirm('自动排列将覆盖当前座次表的全部座位，确定继续吗？')) return;
+    const ok = await confirmRef.current({
+      message: '自动排列将覆盖当前座次表的全部座位，确定继续吗？',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!ok) return;
     setIsArranging(true);
     try {
       const result = await api.seating.autoArrange(

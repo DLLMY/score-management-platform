@@ -1,12 +1,17 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
 from flask import request, g, send_file
 from models import Exam, Score, User, Subject, get_by_id
 from sqlalchemy.exc import IntegrityError
 from utils.permission import requires_permission, get_current_admin, get_allowed_classes
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.academics_service import academics_service
 from services.export_service import export_service
 
+
+logger = logging.getLogger(__name__)
 
 def _resolve_subject_id(subject_name, subject_id):
     """将科目名称或科目ID解析为 subject.id；均缺失返回 None。"""
@@ -66,6 +71,7 @@ score_model = ns_scores.model(
 class ExamList(Resource):
     @ns_exam.doc("list_exams", description="获取考试列表")
     @requires_permission("score.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         status = request.args.get("status")
@@ -88,6 +94,7 @@ class ExamList(Resource):
             return APIResponse.bad_request(message="考试日期 date 为必填项")
         new_id = academics_service.create_exam(data)
         exam = get_by_id(Exam, new_id)
+        invalidate_cache("api:/api/exams/*")
         return APIResponse.success(data=exam.to_dict(), message="创建成功")
 
 
@@ -113,6 +120,7 @@ class ExamResource(Resource):
         # R9 修复: date 分支此前不可达（key 列表未含 date）——补回使 Exam.date 可更新
         academics_service.update_exam(exam_id, data)
         exam = get_by_id(Exam, exam_id)
+        invalidate_cache("api:/api/exams/*")
         return APIResponse.success(data=exam.to_dict(), message="更新成功")
 
     @ns_exam.doc("delete_exam", description="删除考试")
@@ -124,6 +132,7 @@ class ExamResource(Resource):
             return APIResponse.success(message="考试不存在或已删除")
         # scores.exam_id 为 NOT NULL 外键，必须先清理该考试下的成绩再删除考试
         academics_service.delete_exam(exam_id)
+        invalidate_cache("api:/api/exams/*")
         return APIResponse.success(message="删除成功")
 
 
@@ -143,6 +152,7 @@ class ExamPublish(Resource):
             return APIResponse.error(message="只能发布草稿状态的考试")
         academics_service.publish_exam(exam_id)
         exam = get_by_id(Exam, exam_id)
+        invalidate_cache("api:/api/exams/*")
         return APIResponse.success(data=exam.to_dict(), message="发布成功")
 
 
@@ -162,6 +172,7 @@ class ExamClose(Resource):
             return APIResponse.error(message="只能关闭已发布的考试")
         academics_service.close_exam(exam_id)
         exam = get_by_id(Exam, exam_id)
+        invalidate_cache("api:/api/exams/*")
         return APIResponse.success(data=exam.to_dict(), message="关闭成功")
 
 
@@ -371,7 +382,8 @@ class ScoreResource(Resource):
             academics_service.update_score(score_id, data)
         except ValueError as e:
             # E13 修复: 更新后分数格式非法 / 越界（消息逐字节保留）
-            return APIResponse.bad_request(message=str(e))
+            logger.error("exam_routes.py: %s", e)
+            return APIResponse.bad_request(message="操作失败，请稍后重试")
         except IntegrityError:
             return APIResponse.error(
                 message="更新失败：该学生此科目成绩已存在（唯一冲突）", status_code=400

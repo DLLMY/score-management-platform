@@ -184,7 +184,7 @@ class RemoteNotifySend(Resource):
         except Exception as e:
             return {
                 "success": False,
-                "message": f"发送失败: {str(e)}",
+                "message": "发送失败",
                 "topic": topic,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -254,7 +254,7 @@ class RemoteNotifyBroadcast(Resource):
         except Exception as e:
             return {
                 "success": False,
-                "message": f"发送失败: {str(e)}",
+                "message": "发送失败",
                 "topic": ",".join(topics),
                 "timestamp": datetime.now().isoformat(),
             }
@@ -325,7 +325,7 @@ class RemoteNotifySendToDevice(Resource):
         except Exception as e:
             return {
                 "success": False,
-                "message": f"发送失败: {str(e)}",
+                "message": "发送失败",
                 "topic": topic,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -401,7 +401,7 @@ class ScoreChangeNotify(Resource):
         except Exception as e:
             return {
                 "success": False,
-                "message": f"发送失败: {str(e)}",
+                "message": "发送失败",
                 "topic": topic,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -463,7 +463,7 @@ class RemoteNotifyTest(Resource):
         except Exception as e:
             return {
                 "success": False,
-                "message": f"测试失败: {str(e)}",
+                "message": "测试失败",
                 "topic": "phonebox/remote/notify",
                 "timestamp": datetime.now().isoformat(),
             }

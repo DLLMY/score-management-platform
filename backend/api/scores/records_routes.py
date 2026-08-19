@@ -2,10 +2,12 @@ import logging
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from models import db, ScoreRecord, User, ScoreRule, get_by_id
 from utils.permission import requires_permission, get_current_admin, get_allowed_classes
 from utils.logger import log_operation
 from services.redis_cache_service import get_cache_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.class_time_checker import ClassTimeChecker
 from services.score_record_service import (
     create_record,
@@ -170,6 +172,7 @@ class RecordList(Resource):
     )
     @ns_records.response(200, "成功", record_list_response)
     @requires_permission("score.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取积分记录列表
@@ -177,14 +180,7 @@ class RecordList(Resource):
         支持分页、学生筛选、规则筛选和日期范围筛选。
         非管理员用户只能查看关联班级的数据。
         """
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
-        # F10 修复: 分页钳制（page>=1、per_page 1-200），防 page=0/负/超大
-        if page is None or page < 1:
-            page = 1
-        if per_page is None or per_page < 1:
-            per_page = 50
-        per_page = min(per_page, 200)
+        page, per_page = get_pagination(default=50)
         user_id = request.args.get("user_id", type=int)
         rule_id = request.args.get("rule_id", type=int)
         start_date = request.args.get("start_date")
@@ -295,7 +291,8 @@ class RecordList(Resource):
             )
         except Exception as e:
             db.session.rollback()
-            return APIResponse.error(message=f"创建积分记录失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "创建积分记录失败", e)
+            return APIResponse.error(message="创建积分记录失败", status_code=500)
 
         # R4: 手动创建积分记录同样触发综合评分重算（原仅 score-entry 路径触发 → 两套行为）
         try:
@@ -320,6 +317,8 @@ class RecordList(Resource):
             )
         except Exception:
             pass
+
+        invalidate_cache("api:/api/records/*")
 
         return APIResponse.success(
             data={"record_id": record.id}, message="记录创建成功", status_code=201
@@ -347,8 +346,7 @@ class RecordByUser(Resource):
         if not _can_access_student(user_id):
             return APIResponse.error(message="无权查看该学生的记录", status_code=403)
 
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
+        page, per_page = get_pagination(default=50)
 
         # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
         pagination = (
@@ -744,6 +742,7 @@ class ScoreEntryResource(Resource):
             logger.info(f"[Cache] 积分录入后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
             logger.warning(f"[Cache] 清除缓存失败: {e}")
+        invalidate_cache("api:/api/records/*")
 
         # 触发综合评分增量更新
         composite_score_updated = False
@@ -897,6 +896,7 @@ class BatchScoreEntryResource(Resource):
             get_cache_service().invalidate_by_tag("statistics")
         except Exception:
             pass
+        invalidate_cache("api:/api/records/*")
 
         # R4: 批量录入后对涉及学生触发综合评分重算
         if results:
@@ -1036,6 +1036,7 @@ class RecordResource(Resource):
             logger.info(f"[Cache] 删除记录后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
             logger.warning(f"[Cache] 清除缓存失败: {e}")
+        invalidate_cache("api:/api/records/*")
 
         # R4: 删除回滚后触发综合评分重算
         try:

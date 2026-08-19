@@ -1,9 +1,12 @@
+import logging
+
 from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
 from models import db, ScoreRule, ScoreCategory, get_by_id
 from utils.permission import requires_permission
 from utils.logger import log_operation
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from utils.validation import (
     ValidationRules,
     validate_score,
@@ -11,7 +14,9 @@ from utils.validation import (
     validate_positive_int,
     validation_error_response,
 )
+logger = logging.getLogger(__name__)
 from services.redis_cache_service import get_cache_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.score_rule_service import (
     create_rule,
     update_rule,
@@ -63,13 +68,13 @@ class RuleList(Resource):
     )
     @ns_rules.response(200, "成功", rule_list_response)
     @requires_permission("rule.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取积分规则列表
         支持分页、分类筛选和状态筛选。需要规则查看权限。
         """
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 100, type=int)
+        page, per_page = get_pagination(default=100)
         category_id = request.args.get("category_id", type=int)
         is_active = request.args.get("is_active")
         cache_key = f"rules_list:{page}:{per_page}:{category_id}:{is_active}"
@@ -181,6 +186,7 @@ class RuleList(Resource):
             after_data=data,
         )
         get_cache_service().invalidate_by_tag("rules")
+        invalidate_cache("api:/api/rules/*")
         return APIResponse.success(
             data={
                 "id": rule.id,
@@ -256,6 +262,7 @@ class RuleResource(Resource):
             after_data=data,
         )
         get_cache_service().invalidate_by_tag("rules")
+        invalidate_cache("api:/api/rules/*")
         return APIResponse.success(message="规则更新成功")
 
     @ns_rules.doc("delete_rule", description="删除规则", security="Bearer")
@@ -272,6 +279,7 @@ class RuleResource(Resource):
         delete_rule(rule)
         log_operation("rule.delete", "rule", id, f"删除积分规则: {_deleted_name}")
         get_cache_service().invalidate_by_tag("rules")
+        invalidate_cache("api:/api/rules/*")
         return APIResponse.success(message="规则删除成功")
 
 
@@ -557,6 +565,7 @@ class RuleTemplates(Resource):
     @ns_rules.doc("list_rule_templates", description="获取预设规则模板列表", security="Bearer")
     @ns_rules.response(200, "成功")
     @requires_permission("rule.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取预设规则模板列表
@@ -602,13 +611,15 @@ class ApplyRuleTemplate(Resource):
             # 清除所有rules相关缓存
             invalidated_count = get_cache_service().invalidate_by_tag("rules")
             print(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
+            invalidate_cache("api:/api/rules/*")
             return APIResponse.success(
                 data=result,
                 message=f"成功应用模板，创建了 {result['created_count']} 条规则",
             )
         except Exception as e:
             db.session.rollback()
-            return APIResponse.error(message=f"应用模板失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "应用模板失败", e)
+            return APIResponse.error(message="应用模板失败", status_code=500)
 
 
 @ns_rules.route("/statistics")
@@ -616,6 +627,7 @@ class RuleStatistics(Resource):
     @ns_rules.doc("rule_statistics", description="获取规则使用统计", security="Bearer")
     @ns_rules.response(200, "成功")
     @requires_permission("rule.view")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取规则使用统计

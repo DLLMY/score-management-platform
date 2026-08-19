@@ -11,6 +11,8 @@ from flask_restx import Namespace, Resource, fields
 from models import Notification
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 from services.admin_notifications_service import (
     create_notification,
     delete_notification,
@@ -64,10 +66,10 @@ class AdminNotificationList(Resource):
 
     @ns_admin_notifications.doc("get_admin_notifications")
     @requires_permission("notification.view")
+    @cached_api(ttl=30)
     def get(self):
         admin_id = request.args.get("admin_id", type=int)
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 20, type=int)
+        page, per_page = get_pagination(default=20)
         is_read = request.args.get("is_read", type=str)
         notify_type = request.args.get("type", type=str)
         priority = request.args.get("priority", type=str)
@@ -105,6 +107,7 @@ class AdminNotificationList(Resource):
         data = ns_admin_notifications.payload
 
         notification = create_notification(data)
+        invalidate_cache("api:/api/admin_notifications/*")
 
         return APIResponse.success(
             data={
@@ -141,6 +144,7 @@ class AdminNotificationResource(Resource):
     def delete(self, id):
         notification = Notification.query.filter_by(id=id, recipient_type="admin").first_or_404()
         delete_notification(notification)
+        invalidate_cache("api:/api/admin_notifications/*")
         return APIResponse.success(message="通知已删除")
 
 
@@ -153,6 +157,7 @@ class AdminNotificationMarkRead(Resource):
     def post(self, id):
         notification = Notification.query.filter_by(id=id, recipient_type="admin").first_or_404()
         mark_notification_read(notification)
+        invalidate_cache("api:/api/admin_notifications/*")
         return APIResponse.success(message="通知已标记为已读")
 
 
@@ -165,6 +170,7 @@ class AdminNotificationMarkAllRead(Resource):
         admin_id = request.args.get("admin_id", type=int)
 
         count = mark_all_read(admin_id)
+        invalidate_cache("api:/api/admin_notifications/*")
 
         return APIResponse.success(data={"count": count}, message=f"已标记{count}条通知为已读")
 
@@ -174,6 +180,7 @@ class AdminNotificationCount(Resource):
 
     @ns_admin_notifications.doc("get_admin_notification_count")
     @requires_permission("notification.view")
+    @cached_api(ttl=30)
     def get(self):
         admin_id = request.args.get("admin_id", type=int)
 
@@ -198,6 +205,7 @@ class AdminNotificationRecent(Resource):
 
     @ns_admin_notifications.doc("get_recent_admin_notifications")
     @requires_permission("notification.view")
+    @cached_api(ttl=30)
     def get(self):
         admin_id = request.args.get("admin_id", type=int)
         limit = request.args.get("limit", 10, type=int)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
 import {
   Plus,
   Search,
@@ -23,11 +23,13 @@ import {
   Rocket,
 } from 'lucide-react';
 import api, { RankRule } from '../services/api';
-import { useForm, useModal, useConfirmDialog } from '../hooks';
+import { useForm, useModal } from '../hooks';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useStableToast } from '../hooks/useStableToast';
 import { validateForm } from '../utils/validation';
 import { PermissionButton } from '../components';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useDebouncedValue } from '../hooks';
 
 const ICONS = [
@@ -106,7 +108,10 @@ const ICON_MAP: Record<
 
 function RankRuleList() {
   const { showToast } = useStableToast();
-  useConfirmDialog();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const [rankRules, setRankRules] = useState<RankRule[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [editingRule, setEditingRule] = useState<RankRule | null>(null);
@@ -176,8 +181,8 @@ function RankRuleList() {
     fetchRankRules();
   }, [fetchRankRules]);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent<HTMLFormElement>): Promise<void> => {
+    e?.preventDefault();
 
     const { isValid, errors } = validateForm(formData, validationRules);
 
@@ -211,7 +216,13 @@ function RankRuleList() {
   };
 
   const handleDelete = async (id: number): Promise<void> => {
-    if (!window.confirm('确定要删除该排名规则吗？此操作不可撤销。')) return;
+    const ok = await confirmRef.current({
+      message: '确定要删除该排名规则吗？此操作不可撤销。',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await api.rankRules.delete(id);
@@ -496,7 +507,13 @@ function RankRuleList() {
                 <X className='w-5 h-5 text-gray-500' />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className='px-6 py-6 space-y-5'>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runSubmit(handleSubmit);
+              }}
+              className='px-6 py-6 space-y-5'
+            >
               <div className='mb-5'>
                 <label className='block text-sm font-semibold text-gray-700 mb-2.5'>
                   等级名称 <span className='text-red-500'>*</span>
@@ -665,7 +682,8 @@ function RankRuleList() {
                 </button>
                 <button
                   type='submit'
-                  className='flex-1 px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-primary-500/30 transition-all'
+                  disabled={submitting}
+                  className='flex-1 px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-primary-500/30 transition-all disabled:opacity-50'
                 >
                   {editingRule ? '保存修改' : '添加等级'}
                 </button>

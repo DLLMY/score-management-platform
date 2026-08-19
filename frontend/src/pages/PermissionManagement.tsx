@@ -3,7 +3,7 @@
  * 统一权限管理页面 - 整合用户管理、角色管理、权限管理
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Users,
   Shield,
@@ -18,8 +18,19 @@ import {
 } from 'lucide-react';
 import api, { ClassInfo } from '../services/api';
 import rbacApi, { Permission, RoleWithPermissions } from '../services/rbacApi';
-import { Card, Button, Modal, LoadingSpinner, SearchFilter, PermissionButton } from '../components';
+import {
+  Card,
+  Button,
+  Modal,
+  LoadingSpinner,
+  SearchFilter,
+  PermissionButton,
+  DataTable,
+} from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { UserRole, Admin, ID } from '../types';
 
 interface PermissionLog {
@@ -65,6 +76,10 @@ interface PermissionFormData {
 
 function PermissionManagement() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const [activeTab, setActiveTab] = useState<string>('admins');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -267,7 +282,13 @@ function PermissionManagement() {
 
   const handleDeleteAdmin = useCallback(
     async (admin: Admin): Promise<void> => {
-      if (!window.confirm(`确定要删除管理员 ${admin.real_name} 吗？`)) return;
+      const ok = await confirmRef.current({
+        title: '删除确认',
+        message: `确定要删除管理员 ${admin.real_name} 吗？`,
+        confirmText: '删除',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.admins.delete(Number(admin.id));
         showToast('success', '管理员删除成功');
@@ -355,7 +376,13 @@ function PermissionManagement() {
 
   const handleDeleteClass = useCallback(
     async (cls: ClassInfo): Promise<void> => {
-      if (!window.confirm(`确定要删除班级 ${cls.name} 吗？`)) return;
+      const ok = await confirmRef.current({
+        title: '删除确认',
+        message: `确定要删除班级 ${cls.name} 吗？`,
+        confirmText: '删除',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.classes.delete(cls.id);
         showToast('success', '班级删除成功');
@@ -425,9 +452,13 @@ function PermissionManagement() {
   };
 
   const handleDeleteRole = async (role: RoleWithPermissions) => {
-    if (!window.confirm(`确定要删除角色 "${role.role_name}" 吗？`)) {
-      return;
-    }
+    const ok = await confirmRef.current({
+      title: '删除确认',
+      message: `确定要删除角色 "${role.role_name}" 吗？`,
+      confirmText: '删除',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await rbacApi.deleteRole(role.role_code);
       showToast('success', '角色删除成功');
@@ -485,9 +516,13 @@ function PermissionManagement() {
   };
 
   const handleDeletePermission = async (permission: Permission) => {
-    if (!window.confirm(`确定要删除权限 "${permission.name}" 吗？`)) {
-      return;
-    }
+    const ok = await confirmRef.current({
+      title: '删除确认',
+      message: `确定要删除权限 "${permission.name}" 吗？`,
+      confirmText: '删除',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await rbacApi.deletePermission(permission.code);
       showToast('success', '权限删除成功');
@@ -593,6 +628,247 @@ function PermissionManagement() {
     }, {} as Record<string, Permission[]>);
   }, [filteredPermissions]);
 
+  // ========== DataTable Columns ==========
+  const adminColumns = useMemo<ColumnType<Admin>[]>(
+    () => [
+      {
+        title: '用户',
+        key: 'user',
+        dataIndex: 'real_name',
+        width: 200,
+        render: (_, admin) => (
+          <div className='flex items-center'>
+            <div className='flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center'>
+              <span className='text-white font-bold'>
+                {(admin.real_name || admin.username)[0]}
+              </span>
+            </div>
+            <div className='ml-4'>
+              <div className='text-sm font-medium text-gray-900'>{admin.real_name}</div>
+              <div className='text-sm text-gray-500'>{admin.username}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: '角色',
+        key: 'roles',
+        width: 220,
+        render: (_, admin) => (
+          <div className='flex flex-wrap gap-1'>
+            {adminRolesMap[admin.id]?.map((roleCode) => {
+              const role = roles.find((r) => r.role_code === roleCode);
+              const roleName = role?.role_name || getRoleLabel(roleCode);
+              const colorClass = getRoleBadgeColor(roleCode);
+              return (
+                <span
+                  key={roleCode}
+                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}`}
+                >
+                  {roleName}
+                </span>
+              );
+            }) || (
+              <span
+                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
+                  admin.role
+                )}`}
+              >
+                {getRoleLabel(admin.role)}
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'is_active',
+        width: 80,
+        render: (value) =>
+          value ? (
+            <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800'>
+              启用
+            </span>
+          ) : (
+            <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600'>
+              禁用
+            </span>
+          ),
+      },
+      {
+        title: '班级',
+        key: 'class_name',
+        dataIndex: 'class_name',
+        width: 120,
+        render: (value) => <span className='text-sm text-gray-500'>{String(value || '-')}</span>,
+      },
+      {
+        title: '电话',
+        key: 'phone',
+        dataIndex: 'phone',
+        width: 130,
+        render: (value) => <span className='text-sm text-gray-500'>{String(value || '-')}</span>,
+      },
+    ],
+    [adminRolesMap, roles, getRoleLabel, getRoleBadgeColor]
+  );
+
+  const classColumns = useMemo<ColumnType<ClassInfo>[]>(
+    () => [
+      {
+        title: '班级名称',
+        key: 'name',
+        dataIndex: 'name',
+        width: 180,
+        render: (value) => (
+          <div className='text-sm font-medium text-gray-900'>{value as string}</div>
+        ),
+      },
+      {
+        title: '年级',
+        key: 'grade',
+        dataIndex: 'grade',
+        width: 120,
+        render: (value) => <span className='text-sm text-gray-500'>{String(value || '-')}</span>,
+      },
+      {
+        title: '描述',
+        key: 'description',
+        dataIndex: 'description',
+        render: (value) => <span className='text-sm text-gray-500'>{String(value || '-')}</span>,
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (value) =>
+          value !== false ? (
+            <span className='flex items-center text-green-600'>
+              <CheckCircle className='w-5 h-5' />
+              <span className='ml-1 text-sm'>启用</span>
+            </span>
+          ) : (
+            <span className='flex items-center text-red-600'>
+              <XCircle className='w-5 h-5' />
+              <span className='ml-1 text-sm'>禁用</span>
+            </span>
+          ),
+      },
+    ],
+    []
+  );
+
+  const roleColumns = useMemo<ColumnType<RoleWithPermissions>[]>(
+    () => [
+      {
+        title: '角色名称',
+        key: 'role_name',
+        dataIndex: 'role_name',
+        width: 200,
+        render: (_, role) => (
+          <div>
+            <div className='font-medium text-gray-900'>{role.role_name}</div>
+            {role.description && <div className='text-sm text-gray-500'>{role.description}</div>}
+          </div>
+        ),
+      },
+      {
+        title: '角色代码',
+        key: 'role_code',
+        dataIndex: 'role_code',
+        width: 140,
+        render: (value) => <span className='text-sm text-gray-500 font-mono'>{value as string}</span>,
+      },
+      {
+        title: '权限数量',
+        key: 'permission_count',
+        width: 100,
+        render: (_, role) => (
+          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800'>
+            {role.permissions?.length || 0}
+          </span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'status',
+        dataIndex: 'is_active',
+        width: 80,
+        render: (value) => (
+          <span
+            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}
+          >
+            {value ? '启用' : '禁用'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const logColumns = useMemo<ColumnType<PermissionLog>[]>(
+    () => [
+      {
+        title: '操作',
+        key: 'action',
+        dataIndex: 'action',
+        width: 120,
+        render: (value) => {
+          const action = value as string;
+          return (
+            <span
+              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                action.includes('创建')
+                  ? 'bg-green-100 text-green-800'
+                  : action.includes('删除')
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-blue-100 text-blue-800'
+              }`}
+            >
+              {action}
+            </span>
+          );
+        },
+      },
+      {
+        title: '目标类型',
+        key: 'target_type',
+        dataIndex: 'target_type',
+        width: 120,
+        render: (value) => <span className='text-sm text-gray-500'>{value as string}</span>,
+      },
+      {
+        title: '描述',
+        key: 'description',
+        dataIndex: 'description',
+        render: (value) => <span className='text-sm text-gray-500'>{value as string}</span>,
+      },
+      {
+        title: 'IP地址',
+        key: 'ip_address',
+        dataIndex: 'ip_address',
+        width: 150,
+        render: (value) => <span className='text-sm text-gray-500 font-mono'>{value as string}</span>,
+      },
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        width: 180,
+        render: (value) => (
+          <span className='text-sm text-gray-500'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
   // ========== Render ==========
   if (loading) return <LoadingSpinner />;
 
@@ -696,123 +972,47 @@ function PermissionManagement() {
           </div>
 
           <Card>
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      用户
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      角色
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      状态
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      班级
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      电话
-                    </th>
-                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {admins.map((admin) => (
-                    <tr key={admin.id} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        <div className='flex items-center'>
-                          <div className='flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center'>
-                            <span className='text-white font-bold'>
-                              {(admin.real_name || admin.username)[0]}
-                            </span>
-                          </div>
-                          <div className='ml-4'>
-                            <div className='text-sm font-medium text-gray-900'>
-                              {admin.real_name}
-                            </div>
-                            <div className='text-sm text-gray-500'>{admin.username}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        <div className='flex flex-wrap gap-1'>
-                          {adminRolesMap[admin.id]?.map((roleCode) => {
-                            const role = roles.find((r) => r.role_code === roleCode);
-                            const roleName = role?.role_name || getRoleLabel(roleCode);
-                            const colorClass = getRoleBadgeColor(roleCode);
-                            return (
-                              <span
-                                key={roleCode}
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}`}
-                              >
-                                {roleName}
-                              </span>
-                            );
-                          }) || (
-                            <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
-                                admin.role
-                              )}`}
-                            >
-                              {getRoleLabel(admin.role)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        {admin.is_active ? (
-                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800'>
-                            启用
-                          </span>
-                        ) : (
-                          <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600'>
-                            禁用
-                          </span>
-                        )}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {admin.class_name || '-'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {admin.phone || '-'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                        <PermissionButton
-                          permission='system.users'
-                          variant='secondary'
-                          size='sm'
-                          onClick={() => handleEditAdmin(admin)}
-                        >
-                          <Edit2 className='w-4 h-4' />
-                        </PermissionButton>
-                        <PermissionButton
-                          permission='system.roles'
-                          variant='outline'
-                          size='sm'
-                          onClick={() => handleOpenRoleAssign(admin)}
-                        >
-                          <Crown className='w-4 h-4' />
-                        </PermissionButton>
-                        {admin.username !== 'admin' && (
-                          <PermissionButton
-                            permission='system.users'
-                            variant='danger'
-                            size='sm'
-                            onClick={() => handleDeleteAdmin(admin)}
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </PermissionButton>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<Admin>
+              columns={adminColumns}
+              dataSource={admins}
+              rowKey='id'
+              scroll={{ x: 900 }}
+              empty={{
+                icon: 'users',
+                title: '暂无管理员',
+                description: '点击「添加管理员」创建第一个管理员',
+              }}
+              rowActions={(admin) => (
+                <div className='flex items-center justify-end gap-2'>
+                  <PermissionButton
+                    permission='system.users'
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => handleEditAdmin(admin)}
+                  >
+                    <Edit2 className='w-4 h-4' />
+                  </PermissionButton>
+                  <PermissionButton
+                    permission='system.roles'
+                    variant='outline'
+                    size='sm'
+                    onClick={() => handleOpenRoleAssign(admin)}
+                  >
+                    <Crown className='w-4 h-4' />
+                  </PermissionButton>
+                  {admin.username !== 'admin' && (
+                    <PermissionButton
+                      permission='system.users'
+                      variant='danger'
+                      size='sm'
+                      onClick={() => handleDeleteAdmin(admin)}
+                    >
+                      <Trash2 className='w-4 h-4' />
+                    </PermissionButton>
+                  )}
+                </div>
+              )}
+            />
           </Card>
         </div>
       )}
@@ -829,75 +1029,37 @@ function PermissionManagement() {
           </div>
 
           <Card>
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      班级名称
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      年级
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      描述
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      状态
-                    </th>
-                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {classes.map((cls) => (
-                    <tr key={cls.id} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        <div className='text-sm font-medium text-gray-900'>{cls.name}</div>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {cls.grade || '-'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {cls.description || '-'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        {cls.is_active !== false ? (
-                          <span className='flex items-center text-green-600'>
-                            <CheckCircle className='w-5 h-5' />
-                            <span className='ml-1 text-sm'>启用</span>
-                          </span>
-                        ) : (
-                          <span className='flex items-center text-red-600'>
-                            <XCircle className='w-5 h-5' />
-                            <span className='ml-1 text-sm'>禁用</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                        <PermissionButton
-                          permission='class.manage'
-                          variant='secondary'
-                          size='sm'
-                          onClick={() => handleEditClass(cls)}
-                        >
-                          <Edit2 className='w-4 h-4' />
-                        </PermissionButton>
-                        <PermissionButton
-                          permission='class.manage'
-                          variant='danger'
-                          size='sm'
-                          onClick={() => handleDeleteClass(cls)}
-                        >
-                          <Trash2 className='w-4 h-4' />
-                        </PermissionButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<ClassInfo>
+              columns={classColumns}
+              dataSource={classes}
+              rowKey='id'
+              scroll={{ x: 720 }}
+              empty={{
+                icon: 'data',
+                title: '暂无班级',
+                description: '点击「添加班级」创建第一个班级',
+              }}
+              rowActions={(cls) => (
+                <div className='flex items-center justify-end gap-2'>
+                  <PermissionButton
+                    permission='class.manage'
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => handleEditClass(cls)}
+                  >
+                    <Edit2 className='w-4 h-4' />
+                  </PermissionButton>
+                  <PermissionButton
+                    permission='class.manage'
+                    variant='danger'
+                    size='sm'
+                    onClick={() => handleDeleteClass(cls)}
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </PermissionButton>
+                </div>
+              )}
+            />
           </Card>
         </div>
       )}
@@ -914,78 +1076,37 @@ function PermissionManagement() {
           </div>
 
           <Card>
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      角色名称
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      角色代码
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      权限数量
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      状态
-                    </th>
-                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase'>
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {roles.map((role) => (
-                    <tr key={role.role_code} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4'>
-                        <div className='font-medium text-gray-900'>{role.role_name}</div>
-                        {role.description && (
-                          <div className='text-sm text-gray-500'>{role.description}</div>
-                        )}
-                      </td>
-                      <td className='px-6 py-4 text-sm text-gray-500 font-mono'>
-                        {role.role_code}
-                      </td>
-                      <td className='px-6 py-4'>
-                        <span className='px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800'>
-                          {role.permissions?.length || 0}
-                        </span>
-                      </td>
-                      <td className='px-6 py-4'>
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            role.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {role.is_active ? '启用' : '禁用'}
-                        </span>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                        <PermissionButton
-                          permission='system.roles'
-                          variant='secondary'
-                          size='sm'
-                          onClick={() => handleOpenEditRole(role)}
-                        >
-                          <Edit2 className='w-4 h-4' />
-                        </PermissionButton>
-                        <PermissionButton
-                          permission='system.roles'
-                          variant='danger'
-                          size='sm'
-                          onClick={() => handleDeleteRole(role)}
-                        >
-                          <Trash2 className='w-4 h-4' />
-                        </PermissionButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<RoleWithPermissions>
+              columns={roleColumns}
+              dataSource={roles}
+              rowKey='role_code'
+              scroll={{ x: 720 }}
+              empty={{
+                icon: 'data',
+                title: '暂无角色',
+                description: '点击「创建角色」创建第一个角色',
+              }}
+              rowActions={(role) => (
+                <div className='flex items-center justify-end gap-2'>
+                  <PermissionButton
+                    permission='system.roles'
+                    variant='secondary'
+                    size='sm'
+                    onClick={() => handleOpenEditRole(role)}
+                  >
+                    <Edit2 className='w-4 h-4' />
+                  </PermissionButton>
+                  <PermissionButton
+                    permission='system.roles'
+                    variant='danger'
+                    size='sm'
+                    onClick={() => handleDeleteRole(role)}
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </PermissionButton>
+                </div>
+              )}
+            />
           </Card>
         </div>
       )}
@@ -1084,60 +1205,17 @@ function PermissionManagement() {
         <div>
           <h2 className='text-lg font-semibold text-gray-900 mb-4'>权限操作日志</h2>
           <Card>
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      操作
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      目标类型
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      描述
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      IP地址
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
-                      时间
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {permissionLogs.map((log) => (
-                    <tr key={log.id} className='hover:bg-gray-50'>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            log.action.includes('创建')
-                              ? 'bg-green-100 text-green-800'
-                              : log.action.includes('删除')
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}
-                        >
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {log.target_type}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {log.description}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono'>
-                        {log.ip_address}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                        {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<PermissionLog>
+              columns={logColumns}
+              dataSource={permissionLogs}
+              rowKey='id'
+              scroll={{ x: 800 }}
+              empty={{
+                icon: 'data',
+                title: '暂无权限日志',
+                description: '这里还没有任何操作记录',
+              }}
+            />
           </Card>
         </div>
       )}
@@ -1246,7 +1324,7 @@ function PermissionManagement() {
             <Button variant='secondary' onClick={() => setShowAdminModal(false)}>
               取消
             </Button>
-            <Button onClick={handleSaveAdmin}>保存</Button>
+            <Button onClick={() => runSubmit(handleSaveAdmin)} disabled={submitting}>保存</Button>
           </div>
         </div>
       </Modal>
@@ -1296,7 +1374,7 @@ function PermissionManagement() {
             <Button variant='secondary' onClick={() => setShowRoleAssignModal(false)}>
               取消
             </Button>
-            <Button onClick={handleSaveAdminRoles}>保存分配</Button>
+            <Button onClick={() => runSubmit(handleSaveAdminRoles)} disabled={submitting}>保存分配</Button>
           </div>
         </div>
       </Modal>
@@ -1341,7 +1419,7 @@ function PermissionManagement() {
             <Button variant='secondary' onClick={() => setShowClassModal(false)}>
               取消
             </Button>
-            <Button onClick={handleSaveClass}>保存</Button>
+            <Button onClick={() => runSubmit(handleSaveClass)} disabled={submitting}>保存</Button>
           </div>
         </div>
       </Modal>
@@ -1443,7 +1521,7 @@ function PermissionManagement() {
             <Button variant='secondary' onClick={() => setShowRoleModal(false)}>
               取消
             </Button>
-            <Button onClick={handleSaveRole}>保存</Button>
+            <Button onClick={() => runSubmit(handleSaveRole)} disabled={submitting}>保存</Button>
           </div>
         </div>
       </Modal>
@@ -1529,7 +1607,7 @@ function PermissionManagement() {
             <Button variant='secondary' onClick={() => setShowPermissionModal(false)}>
               取消
             </Button>
-            <Button onClick={handleSavePermission}>保存</Button>
+            <Button onClick={() => runSubmit(handleSavePermission)} disabled={submitting}>保存</Button>
           </div>
         </div>
       </Modal>

@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.mental_health_service import mental_health_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_mental_health = Namespace("mental_health", description="心理健康管理")
 
@@ -26,6 +27,7 @@ class MentalHealthList(Resource):
         },
     )
     @requires_permission("mental_health.view")
+    @cached_api(ttl=30)
     def get(self):
         student_id = request.args.get("student_id", type=int)
         return mental_health_service.list_records(student_id=student_id)
@@ -34,7 +36,9 @@ class MentalHealthList(Resource):
     @requires_permission("mental_health.edit")
     def post(self):
         data = request.get_json()
-        return mental_health_service.create_record(data)
+        result = mental_health_service.create_record(data)
+        invalidate_cache("api:/api/mental_health/*")
+        return result
 
 
 @ns_mental_health.route("/alerts")
@@ -47,6 +51,7 @@ class MentalHealthAlerts(Resource):
         },
     )
     @requires_permission("mental_health.view")
+    @cached_api(ttl=30)
     def get(self):
         student_id = request.args.get("student_id", type=int)
         is_resolved = request.args.get("is_resolved")
@@ -60,4 +65,6 @@ class MentalHealthAlerts(Resource):
 class ResolveAlert(Resource):
     @requires_permission("mental_health.edit")
     def post(self, alert_id):
-        return mental_health_service.resolve_alert(alert_id)
+        result = mental_health_service.resolve_alert(alert_id)
+        invalidate_cache("api:/api/mental_health/*")
+        return result

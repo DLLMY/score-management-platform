@@ -1,13 +1,18 @@
+import logging
+
 from flask import request
 import openpyxl
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 from models import db, Exam, Score, User, Admin, Subject, get_by_id
 from utils.permission import requires_permission
 from io import BytesIO
 from services.excel_service import excel_import_service
 from services.academics_service import academics_service
 
+
+logger = logging.getLogger(__name__)
 
 def _resolve_subject_id(subject_name, subject_id):
     """将科目名称或科目ID解析为 subject.id；均缺失返回 None。"""
@@ -196,7 +201,8 @@ class ValidateImportFile(Resource):
             )
 
         except Exception as e:
-            return APIResponse.error(message=f"验证失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "验证失败", e)
+            return APIResponse.error(message="验证失败", status_code=500)
 
 
 @ns_exam_import.route("/preview")
@@ -326,7 +332,8 @@ class PreviewImportData(Resource):
             )
 
         except Exception as e:
-            return APIResponse.error(message=f"预览失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "预览失败", e)
+            return APIResponse.error(message="预览失败", status_code=500)
 
 
 @ns_exam_import.route("/execute")
@@ -387,7 +394,8 @@ class ExecuteImport(Resource):
 
         except Exception as e:
             db.session.rollback()
-            return APIResponse.error(message=f"导入失败: {str(e)}", status_code=500)
+            logger.error("%s: %s", "导入失败", e)
+            return APIResponse.error(message="导入失败", status_code=500)
 
 
 @ns_exam_import.route("/template")
@@ -580,8 +588,7 @@ class ImportHistory(Resource):
         获取成绩导入历史记录
         """
         exam_id = request.args.get("exam_id", type=int)
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 20, type=int)
+        page, per_page = get_pagination(default=20)
 
         query = Score.query.filter(Score.entered_by.isnot(None))
 

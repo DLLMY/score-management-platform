@@ -9,6 +9,7 @@ from models import (
     get_by_id,
 )
 from utils.permission import requires_permission, requires_admin, get_current_admin
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.logger import log_operation, log_login_attempt
 from utils.security import (
     is_strong_password,
@@ -125,6 +126,7 @@ assign_class_model = ns_admins.model(
 class AdminList(Resource):
     @ns_admins.doc("list_admins", description="获取管理员列表", security="Bearer")
     @requires_permission("system.users")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取所有管理员列表
@@ -189,6 +191,7 @@ class AdminList(Resource):
             admin.id,
             f"创建管理员: {data.get('username')} ({data.get('real_name')})",
         )
+        invalidate_cache("api:/api/admins/*")
         return APIResponse.success(
             data={"admin_id": admin.id}, message="管理员创建成功", status_code=201
         )
@@ -240,6 +243,7 @@ class AdminResource(Resource):
         data = ns_admins.payload
         _service_update_admin(admin, data)
         log_permission_action("更新管理员", "admin", id, f"更新管理员: {admin.username}")
+        invalidate_cache("api:/api/admins/*")
         return APIResponse.success(message="管理员更新成功")
 
     @ns_admins.doc("delete_admin", description="删除管理员", security="Bearer")
@@ -257,6 +261,7 @@ class AdminResource(Resource):
         # scores.entered_by 等可空外键仅解除引用（不会连带删除业务数据）
         _service_delete_admin(admin)
         log_permission_action("删除管理员", "admin", id, f"删除管理员: {username}")
+        invalidate_cache("api:/api/admins/*")
         return APIResponse.success(message="管理员删除成功")
 
 
@@ -453,6 +458,7 @@ class AdminAssignClass(Resource):
         _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
         ClassInfo.query.get_or_404(class_id)
         assign_class_link(admin_id, class_id, is_primary)
+        invalidate_cache("api:/api/admins/*")
         return APIResponse.success(message="班级分配成功")
 
 
@@ -473,4 +479,5 @@ class AdminRemoveClass(Resource):
         if not link:
             return APIResponse.error(message="未找到关联记录", status_code=404)
         remove_class_link(link)
+        invalidate_cache("api:/api/admins/*")
         return APIResponse.success(message="班级移除成功")

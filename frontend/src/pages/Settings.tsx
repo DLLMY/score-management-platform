@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import {
   Settings as SettingsIcon,
   Bell,
@@ -20,6 +20,7 @@ import {
 import api, { SystemConfig, BackupInfo } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, FormSkeleton, Skeleton } from '../components';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface SystemSettings {
   systemName: string;
@@ -49,6 +50,9 @@ interface ThemeOption {
 
 function Settings() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
   const [settings, setSettings] = useState<SystemSettings>({
     systemName: '积分管理平台',
     systemLogo: '',
@@ -161,7 +165,13 @@ function Settings() {
 
   const handleReset = useCallback(async (): Promise<void> => {
     // M1: 覆盖全部系统配置前二次确认
-    if (!window.confirm('确定要恢复默认设置吗？当前全部系统配置将被覆盖。')) return;
+    const ok = await confirmRef.current({
+      message: '确定要恢复默认设置吗？当前全部系统配置将被覆盖。',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!ok) return;
     const defaultSettings: SystemSettings = {
       systemName: '积分管理平台',
       systemLogo: '',
@@ -214,9 +224,13 @@ function Settings() {
 
   const handleRestore = useCallback(
     async (filename: string): Promise<void> => {
-      if (!window.confirm(`确定要从备份文件 ${filename} 恢复数据吗？此操作将覆盖当前数据！`)) {
-        return;
-      }
+      const ok = await confirmRef.current({
+        message: `确定要从备份文件 ${filename} 恢复数据吗？此操作将覆盖当前数据！`,
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'warning',
+      });
+      if (!ok) return;
       setLoading((prev: LoadingState) => ({ ...prev, restore: true }));
       try {
         await api.system.restore(filename);
@@ -232,9 +246,13 @@ function Settings() {
   );
 
   const handleClearCache = useCallback(async (): Promise<void> => {
-    if (!window.confirm('确定要清理缓存吗？')) {
-      return;
-    }
+    const ok = await confirmRef.current({
+      message: '确定要清理缓存吗？',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'info',
+    });
+    if (!ok) return;
     setLoading((prev: LoadingState) => ({ ...prev, cache: true }));
     try {
       await api.system.clearCache();

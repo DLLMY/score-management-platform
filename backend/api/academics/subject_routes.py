@@ -1,13 +1,18 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from models import db, Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from services.excel_service import excel_export_service, excel_import_service
 from services.academics_service import academics_service
 import json
 import io
+
+logger = logging.getLogger(__name__)
 
 ns_subjects = Namespace("subjects", description="科目管理")
 
@@ -58,6 +63,7 @@ class SubjectList(Resource):
     @ns_subjects.doc("list_subjects", description="获取所有科目列表")
     @ns_subjects.response(200, "成功")
     @requires_permission("score.view")
+    @cached_api(ttl=60)
     def get(self):
         """获取所有科目"""
         include_inactive = request.args.get("include_inactive", "false").lower() == "true"
@@ -115,6 +121,7 @@ class SubjectList(Resource):
 
         new_id = academics_service.create_subject(data)
         subject = Subject.query.get(new_id)
+        invalidate_cache("api:/api/subjects/*")
 
         return {
             "id": subject.id,
@@ -144,6 +151,7 @@ class SubjectToggle(Resource):
         subject = Subject.query.get_or_404(id)
         academics_service.toggle_subject(subject)
         subject = Subject.query.get(id)
+        invalidate_cache("api:/api/subjects/*")
 
         class_count = SubjectClass.query.filter_by(subject_id=id).count()
 
@@ -206,6 +214,7 @@ class SubjectResource(Resource):
 
         academics_service.update_subject(subject, data)
         subject = Subject.query.get(id)
+        invalidate_cache("api:/api/subjects/*")
 
         class_count = SubjectClass.query.filter_by(subject_id=id).count()
 
@@ -231,6 +240,7 @@ class SubjectResource(Resource):
         """删除科目（先级联清理关联数据，再删除科目本身）"""
         subject = Subject.query.get_or_404(id)  # noqa: F841
         academics_service.delete_subject(id)
+        invalidate_cache("api:/api/subjects/*")
         return APIResponse.success(message="科目已删除")
 
 
@@ -242,6 +252,7 @@ class SubjectClasses(Resource):
     @ns_subjects.response(200, "成功")
     @ns_subjects.response(404, "科目不存在")
     @requires_permission("score.view")
+    @cached_api(ttl=30)
     def get(self, id):
         """获取科目关联的班级列表"""
         subject = Subject.query.get_or_404(id)  # noqa: F841
@@ -289,6 +300,7 @@ class SubjectClasses(Resource):
         link_id = academics_service.create_subject_class(
             id, data["class_info_id"], data.get("teacher_id")
         )
+        invalidate_cache("api:/api/subjects/*")
 
         link = get_by_id(SubjectClass, link_id)
         subject = Subject.query.get(id)
@@ -326,6 +338,7 @@ class SubjectClassResource(Resource):
 
         if "teacher_id" in data:
             academics_service.update_subject_class(link, data["teacher_id"])
+        invalidate_cache("api:/api/subjects/*")
 
         link = get_by_id(SubjectClass, link.id)
         teacher = get_by_id(Admin, link.teacher_id) if link.teacher_id else None
@@ -354,6 +367,7 @@ class SubjectClassResource(Resource):
         ).first_or_404()
 
         academics_service.delete_subject_class(link)
+        invalidate_cache("api:/api/subjects/*")
 
         return APIResponse.success(message="科目与班级关联已删除")
 
@@ -696,7 +710,8 @@ class SubjectImport(Resource):
                             message="JSON格式错误：应为数组或包含data字段的对象", status_code=400
                         )
                 except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                    return APIResponse.error(message=f"JSON解析失败: {str(e)}", status_code=400)
+                    logger.error("%s: %s", "JSON解析失败", e)
+                    return APIResponse.error(message="JSON解析失败", status_code=400)
             elif filename.endswith(".xlsx") or filename.endswith(".xls"):
                 file_content = file.read()
                 parse_result = excel_import_service.parse_excel_file(file_content)
@@ -769,6 +784,7 @@ class SubjectImport(Resource):
             validation_rules=validation_rules,
             conflict_strategy=conflict_strategy,
         )
+        invalidate_cache("api:/api/subjects/*")
         return result
 
 
@@ -783,6 +799,8 @@ class SubjectOrder(Resource):
             return APIResponse.error(message="无效数据: 应为 [{id, order}] 列表", status_code=400)
         try:
             academics_service.update_subject_order(data)
+            invalidate_cache("api:/api/subjects/*")
             return APIResponse.success(message="排序更新成功")
         except Exception as e:
-            return APIResponse.error(message=str(e))
+            logger.error("subject_routes.py: %s", e)
+            return APIResponse.error(message="操作失败，请稍后重试")

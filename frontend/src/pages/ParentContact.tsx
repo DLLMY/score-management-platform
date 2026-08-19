@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Phone,
   Mail,
@@ -20,6 +20,7 @@ import {
 import api from '../services/api';
 import type { ParentContact, ParentContactCreateInput, ContactLog } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface ContactFormData {
   student_id: number;
@@ -71,6 +72,9 @@ function ParentContactPage() {
   const [contactForm, setContactForm] = useState<ContactFormData>(defaultContactForm);
   const [logForm, setLogForm] = useState<LogFormData>(defaultLogForm);
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const fetchContacts = useCallback(async () => {
     setIsLoading(true);
@@ -182,7 +186,13 @@ function ParentContactPage() {
 
   const handleDeleteContact = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这位家长的联系方式吗？')) return;
+      const ok = await confirmRef.current({
+        message: '确定要删除这位家长的联系方式吗？',
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'danger',
+      });
+      if (!ok) return;
       setIsLoading(true);
       try {
         await api.parent.delete(id);

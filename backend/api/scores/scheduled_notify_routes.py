@@ -249,7 +249,8 @@ class ScheduledTrigger(Resource):
             return APIResponse.success(message="通知已发送")
         except Exception as e:
             db.session.rollback()  # 失败回滚，避免脏 session 污染后续请求
-            return APIResponse.error(message=f"发送失败: {str(e)}")
+            logger.error("%s: %s", "发送失败", e)
+            return APIResponse.error(message="发送失败")
 
 
 def process_scheduled_notifications():

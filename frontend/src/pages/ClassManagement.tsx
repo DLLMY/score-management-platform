@@ -8,8 +8,6 @@ import {
   GraduationCap,
   Users,
   Search,
-  ChevronLeft,
-  ChevronRight,
   X,
   Check,
   UserCheck,
@@ -23,9 +21,11 @@ import {
 } from 'lucide-react';
 import api, { ClassInfo, ClassListResponse, getAuthHeaders } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
-import { PermissionButton, SearchFilter } from '../components';
+import { PermissionButton, SearchFilter, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
-import { useForm, useModal, useConfirmDialog } from '../hooks';
+import { useForm, useModal } from '../hooks';
 import { Admin } from '../types';
 
 interface FormData {
@@ -56,6 +56,9 @@ function ClassManagementPage() {
   const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
 
   const [teachers, setTeachers] = useState<Admin[]>([]);
   const [searchTeacherTerm, setSearchTeacherTerm] = useState('');
@@ -101,8 +104,6 @@ function ClassManagementPage() {
     },
   });
 
-  const { isOpen: confirmDialogOpen, confirm, cancel, options } = useConfirmDialog();
-
   const [lastOperation, setLastOperation] = useState<{
     type: 'assign' | 'remove';
     teacherId: number;
@@ -135,12 +136,12 @@ function ClassManagementPage() {
   const performRemoveHeadTeacherRef = useRef<(() => Promise<void>) | null>(null);
 
   const fetchClasses = useCallback(
-    async (page = 1, searchKeyword = searchInput, skipCache = false) => {
+    async (page = 1, searchKeyword = searchInput, skipCache = false, perPage = pagination.per_page) => {
       setIsLoading(true);
       try {
         const data: ClassListResponse = await api.classes.getAll({
           page,
-          per_page: pagination.per_page,
+          per_page: perPage,
           keyword: searchKeyword || undefined,
           skipCache,
         });
@@ -181,9 +182,9 @@ function ClassManagementPage() {
   }, [searchInput, fetchClasses]);
 
   const handlePageChange = useCallback(
-    (newPage: number) => {
+    (newPage: number, newPageSize: number) => {
       if (newPage >= 1 && newPage <= pagination.pages) {
-        fetchClasses(newPage, searchInput);
+        fetchClasses(newPage, searchInput, false, newPageSize);
       }
     },
     [fetchClasses, searchInput, pagination.pages]
@@ -239,7 +240,13 @@ function ClassManagementPage() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个班级吗？')) return;
+      const ok = await confirmRef.current({
+        title: '删除确认',
+        message: '确定要删除这个班级吗？',
+        confirmText: '删除',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.classes.delete(id);
         showToast('success', '班级删除成功');
@@ -477,12 +484,13 @@ function ClassManagementPage() {
   const showRemoveConfirmDialog = useCallback(async () => {
     if (!selectedClass || !selectedClass.head_teacher_id) return;
 
-    if (
-      !window.confirm(
-        `确定要从 ${selectedClass.name} 移除班主任 ${selectedClass.head_teacher_name} 吗？移除后该班级将暂时没有班主任。`
-      )
-    )
-      return;
+    const ok = await confirmRef.current({
+      title: '移除班主任',
+      message: `确定要从 ${selectedClass.name} 移除班主任 ${selectedClass.head_teacher_name} 吗？移除后该班级将暂时没有班主任。`,
+      confirmText: '移除',
+      type: 'danger',
+    });
+    if (!ok) return;
 
     performRemoveHeadTeacherRef.current?.();
   }, [selectedClass]);
@@ -526,7 +534,6 @@ function ClassManagementPage() {
         undoLabel: '恢复',
       });
 
-      cancel();
       closeHeadTeacherModal();
       setSelectedClass(null);
       fetchClasses(1, searchInput, true);
@@ -541,7 +548,6 @@ function ClassManagementPage() {
     fetchClasses,
     searchInput,
     lastOperation,
-    cancel,
     closeHeadTeacherModal,
   ]);
 
@@ -562,6 +568,117 @@ function ClassManagementPage() {
   const classesWithTeacher = useMemo(() => {
     return classes.filter((cls) => cls.head_teacher_id).length;
   }, [classes]);
+
+  const columns = useMemo<ColumnType<ClassInfo>[]>(
+    () => [
+      {
+        title: '班级名称',
+        key: 'name',
+        dataIndex: 'name',
+        render: (_, cls) => (
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center'>
+              <GraduationCap className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+            </div>
+            <div>
+              <p className='font-medium text-slate-800 dark:text-slate-200'>{cls.name}</p>
+              {cls.description && (
+                <p className='text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs'>
+                  {cls.description}
+                </p>
+              )}
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: '年级',
+        key: 'grade',
+        dataIndex: 'grade',
+        render: (_, cls) => (
+          <span className='inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium'>
+            {cls.grade || '-'}
+          </span>
+        ),
+      },
+      {
+        title: '班主任',
+        key: 'head_teacher_name',
+        dataIndex: 'head_teacher_name',
+        render: (_, cls) =>
+          cls.head_teacher_name ? (
+            <div className='flex items-center gap-2'>
+              <div className='w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center'>
+                <span className='text-xs font-medium text-white'>
+                  {cls.head_teacher_name.charAt(0)}
+                </span>
+              </div>
+              <span className='text-sm text-slate-700 dark:text-slate-300'>
+                {cls.head_teacher_name}
+              </span>
+            </div>
+          ) : (
+            <span className='text-sm text-slate-400 dark:text-slate-500'>未分配</span>
+          ),
+      },
+      {
+        title: '关联状态',
+        key: 'head_teacher_id',
+        dataIndex: 'head_teacher_id',
+        align: 'center',
+        render: (_, cls) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              cls.head_teacher_id
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                cls.head_teacher_id ? 'bg-emerald-500' : 'bg-slate-400'
+              }`}
+            />
+            {cls.head_teacher_id ? '已关联' : '未关联'}
+          </span>
+        ),
+      },
+      {
+        title: '学生数',
+        key: 'student_count',
+        dataIndex: 'student_count',
+        align: 'center',
+        render: (_, cls) => (
+          <span className='inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold'>
+            {cls.student_count != null ? cls.student_count : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'is_active',
+        dataIndex: 'is_active',
+        align: 'center',
+        render: (_, cls) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              cls.is_active
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                cls.is_active ? 'bg-emerald-500' : 'bg-slate-400'
+              }`}
+            />
+            {cls.is_active ? '启用' : '禁用'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
@@ -688,231 +805,50 @@ function ClassManagementPage() {
           </div>
 
           {/* Table */}
-          <div className='overflow-x-auto'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-700/30'>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    班级名称
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    年级
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    班主任
-                  </th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    关联状态
-                  </th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    学生数
-                  </th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    状态
-                  </th>
-                  <th className='px-5 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-slate-100 dark:divide-slate-700/50'>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className='px-5 py-12 text-center'>
-                      <div className='flex flex-col items-center gap-3'>
-                        <div className='w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin' />
-                        <p className='text-sm text-slate-500 dark:text-slate-400'>加载中...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : classes.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className='px-5 py-16 text-center'>
-                      <div className='flex flex-col items-center gap-3'>
-                        <div className='w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center'>
-                          <Building2 className='w-8 h-8 text-slate-400' />
-                        </div>
-                        <p className='text-slate-500 dark:text-slate-400'>暂无班级数据</p>
-                        <PermissionButton
-                          permission='class.manage'
-                          onClick={() => handleOpenModal(false)}
-                          className='text-blue-500 hover:text-blue-600 font-medium text-sm'
-                        >
-                          添加第一个班级
-                        </PermissionButton>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  classes.map((cls, index) => (
-                    <tr
-                      key={cls.id}
-                      className='group hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 dark:hover:from-slate-700/50 dark:hover:to-slate-700/30 transition-all duration-200'
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-3'>
-                          <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center'>
-                            <GraduationCap className='w-5 h-5 text-blue-600 dark:text-blue-400' />
-                          </div>
-                          <div>
-                            <p className='font-medium text-slate-800 dark:text-slate-200'>
-                              {cls.name}
-                            </p>
-                            {cls.description && (
-                              <p className='text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs'>
-                                {cls.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <span className='inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium'>
-                          {cls.grade || '-'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4'>
-                        {cls.head_teacher_name ? (
-                          <div className='flex items-center gap-2'>
-                            <div className='w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center'>
-                              <span className='text-xs font-medium text-white'>
-                                {cls.head_teacher_name.charAt(0)}
-                              </span>
-                            </div>
-                            <span className='text-sm text-slate-700 dark:text-slate-300'>
-                              {cls.head_teacher_name}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className='text-sm text-slate-400 dark:text-slate-500'>未分配</span>
-                        )}
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            cls.head_teacher_id
-                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              cls.head_teacher_id ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          />
-                          {cls.head_teacher_id ? '已关联' : '未关联'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        <span className='inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold'>
-                          {cls.student_count != null ? cls.student_count : '--'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            cls.is_active
-                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              cls.is_active ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          />
-                          {cls.is_active ? '启用' : '禁用'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
-                          <PermissionButton
-                            permission='class.manage'
-                            onClick={() => openHeadTeacherModal(cls)}
-                            className='p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-all'
-                          >
-                            <UserPlus className='w-4 h-4' />
-                          </PermissionButton>
-                          <PermissionButton
-                            permission='class.manage'
-                            onClick={() => handleOpenModal(true, cls)}
-                            className='p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all'
-                          >
-                            <Edit2 className='w-4 h-4' />
-                          </PermissionButton>
-                          <PermissionButton
-                            /* S1: class.delete 后端无此码，统一 class.manage */
-                            permission='class.manage'
-                            onClick={() => handleDelete(cls.id)}
-                            className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </PermissionButton>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className='px-5 py-4 border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 to-white/50 dark:from-slate-800/50 dark:to-slate-800'>
-              <div className='flex items-center justify-between'>
-                <p className='text-sm text-slate-500 dark:text-slate-400'>
-                  显示 {(pagination.page - 1) * pagination.per_page + 1} -{' '}
-                  {Math.min(pagination.page * pagination.per_page, pagination.total)} 条，共{' '}
-                  {pagination.total} 条
-                </p>
-                <div className='flex items-center gap-2'>
-                  <button
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page <= 1}
-                    className='p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                  >
-                    <ChevronLeft className='w-5 h-5' />
-                  </button>
-                  <div className='flex items-center gap-1'>
-                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                      let pageNum: number;
-                      if (pagination.pages <= 5) {
-                        pageNum = i + 1;
-                      } else if (pagination.page <= 3) {
-                        pageNum = i + 1;
-                      } else if (pagination.page >= pagination.pages - 2) {
-                        pageNum = pagination.pages - 4 + i;
-                      } else {
-                        pageNum = pagination.page - 2 + i;
-                      }
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                            pagination.page === pageNum
-                              ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25'
-                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page >= pagination.pages}
-                    className='p-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                  >
-                    <ChevronRight className='w-5 h-5' />
-                  </button>
-                </div>
+          <DataTable<ClassInfo>
+            columns={columns}
+            dataSource={classes}
+            loading={isLoading}
+            rowKey='id'
+            total={pagination.total}
+            page={pagination.page}
+            pageSize={pagination.per_page}
+            onPageChange={handlePageChange}
+            rowClassName={() => 'group'}
+            empty={{
+              icon: 'folder',
+              title: '暂无班级数据',
+              actionLabel: '添加第一个班级',
+              onAction: () => handleOpenModal(false),
+            }}
+            scroll={{ x: 900 }}
+            rowActions={(cls) => (
+              <div className='flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
+                <PermissionButton
+                  permission='class.manage'
+                  onClick={() => openHeadTeacherModal(cls)}
+                  className='p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-all'
+                >
+                  <UserPlus className='w-4 h-4' />
+                </PermissionButton>
+                <PermissionButton
+                  permission='class.manage'
+                  onClick={() => handleOpenModal(true, cls)}
+                  className='p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all'
+                >
+                  <Edit2 className='w-4 h-4' />
+                </PermissionButton>
+                <PermissionButton
+                  /* S1: class.delete 后端无此码，统一 class.manage */
+                  permission='class.manage'
+                  onClick={() => handleDelete(cls.id)}
+                  className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
+                >
+                  <Trash2 className='w-4 h-4' />
+                </PermissionButton>
               </div>
-            </div>
-          )}
+            )}
+          />
         </div>
       </div>
 
@@ -1274,88 +1210,6 @@ function ClassManagementPage() {
                   <Check className='w-5 h-5' />
                 )}
                 确认分配
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Dialog */}
-      {confirmDialogOpen && (
-        <div
-          className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4'
-          onClick={cancel}
-        >
-          <div
-            className='bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200'
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className='relative px-6 py-5 border-b border-slate-100 dark:border-slate-700'>
-              <div
-                className={`absolute top-0 left-0 right-0 h-1 ${
-                  options?.type === 'danger'
-                    ? 'bg-gradient-to-r from-red-500 via-rose-500 to-pink-500'
-                    : options?.type === 'warning'
-                    ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500'
-                    : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'
-                }`}
-              />
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-3'>
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      options?.type === 'danger'
-                        ? 'bg-gradient-to-br from-red-500 to-rose-500'
-                        : options?.type === 'warning'
-                        ? 'bg-gradient-to-br from-amber-500 to-orange-500'
-                        : 'bg-gradient-to-br from-blue-500 to-indigo-500'
-                    }`}
-                  >
-                    <AlertTriangle className='w-5 h-5 text-white' />
-                  </div>
-                  <h3 className='text-lg font-bold text-slate-800 dark:text-slate-100'>
-                    {options?.title}
-                  </h3>
-                </div>
-                <button
-                  onClick={cancel}
-                  className='p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors'
-                >
-                  <X className='w-5 h-5' />
-                </button>
-              </div>
-            </div>
-
-            <div className='px-6 py-6'>
-              <p className='text-slate-600 dark:text-slate-300 leading-relaxed'>
-                {options?.message}
-              </p>
-            </div>
-
-            <div className='px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3'>
-              <button
-                onClick={cancel}
-                className='px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors font-medium'
-              >
-                {options?.cancelText || '取消'}
-              </button>
-              <button
-                onClick={confirm}
-                disabled={isLoading}
-                className={`flex items-center gap-2 px-6 py-2.5 text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium disabled:opacity-50 ${
-                  options?.type === 'danger'
-                    ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:shadow-red-500/25'
-                    : options?.type === 'warning'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-amber-500/25'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:shadow-blue-500/25'
-                }`}
-              >
-                {isLoading ? (
-                  <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                ) : (
-                  <Check className='w-5 h-5' />
-                )}
-                {options?.confirmText || '确认'}
               </button>
             </div>
           </div>

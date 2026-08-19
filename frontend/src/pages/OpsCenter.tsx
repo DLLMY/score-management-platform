@@ -4,7 +4,7 @@
  * 为管理员/运维角色提供一站式运维总览。纯前端聚合，零后端改动（复用现有 /api/system/*、/api/mqtt/* 等端点）。
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -30,7 +30,8 @@ import {
   Layers,
   LucideIcon,
 } from 'lucide-react';
-import { PermissionButton } from '../components';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import { getAuthHeaders } from '../services/api';
 
 // ---------- 类型定义 ----------
@@ -279,6 +280,55 @@ export const OpsCenter: React.FC = () => {
     const interval = setInterval(refreshAll, 30000);
     return () => clearInterval(interval);
   }, [refreshAll]);
+
+  const columns = useMemo<ColumnType<OperationLog>[]>(
+    () => [
+      {
+        title: '时间',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        render: (value) => (
+          <span className='text-gray-500 dark:text-slate-400 whitespace-nowrap'>
+            {value ? new Date(value as string).toLocaleString('zh-CN') : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '操作人',
+        key: 'operator',
+        dataIndex: 'operator',
+        render: (value) => (
+          <span className='text-gray-700 dark:text-slate-200'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '类型',
+        key: 'operation_type',
+        dataIndex: 'operation_type',
+        render: (value) => (
+          <span className='px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'>
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+      {
+        title: '描述',
+        key: 'description',
+        dataIndex: 'description',
+        render: (value) => (
+          <span
+            className='text-gray-700 dark:text-slate-200 max-w-xs truncate block'
+            title={value ? (value as string) : ''}
+          >
+            {value ? (value as string) : '-'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   const overallStatus = (health?.status as StatusType) || 'unknown';
   const overallColor =
@@ -602,54 +652,15 @@ export const OpsCenter: React.FC = () => {
       {/* 最近操作日志 */}
       <section>
         <SectionTitle icon={<Clock size={18} />} title='最近操作日志' />
-        <div className='bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden'>
-          <div className='overflow-x-auto'>
-            <table className='w-full text-sm'>
-              <thead>
-                <tr className='bg-gray-50 dark:bg-slate-700/40 text-gray-600 dark:text-slate-300'>
-                  <th className='px-4 py-2.5 text-left font-medium'>时间</th>
-                  <th className='px-4 py-2.5 text-left font-medium'>操作人</th>
-                  <th className='px-4 py-2.5 text-left font-medium'>类型</th>
-                  <th className='px-4 py-2.5 text-left font-medium'>描述</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className='px-4 py-8 text-center text-gray-400'>
-                      暂无操作日志
-                    </td>
-                  </tr>
-                ) : (
-                  logs.map((log, i) => (
-                    <tr
-                      key={log.id ?? i}
-                      className='border-t border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                    >
-                      <td className='px-4 py-2.5 text-gray-500 dark:text-slate-400 whitespace-nowrap'>
-                        {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '--'}
-                      </td>
-                      <td className='px-4 py-2.5 text-gray-700 dark:text-slate-200'>
-                        {log.operator || '-'}
-                      </td>
-                      <td className='px-4 py-2.5'>
-                        <span className='px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'>
-                          {log.operation_type || '-'}
-                        </span>
-                      </td>
-                      <td
-                        className='px-4 py-2.5 text-gray-700 dark:text-slate-200 max-w-xs truncate'
-                        title={log.description}
-                      >
-                        {log.description || '-'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable<OperationLog>
+          columns={columns}
+          dataSource={logs}
+          rowKey={(log, index) => log.id ?? index}
+          empty={{
+            icon: 'data',
+            title: '暂无操作日志',
+          }}
+        />
       </section>
     </div>
   );

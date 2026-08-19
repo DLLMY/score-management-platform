@@ -49,7 +49,8 @@ class ConsistencyCheck(Resource):
             )
         except Exception as e:
             logger.error(f"Consistency check failed: {e}")
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("consistency_routes.py: %s", e)
+            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
 
 
 @ns_consistency.route("/report")
@@ -64,7 +65,8 @@ class ConsistencyReport(Resource):
             return APIResponse.success(data={"report": report})
         except Exception as e:
             logger.error(f"Report generation failed: {e}")
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("consistency_routes.py: %s", e)
+            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
 
 
 @ns_consistency.route("/fix", methods=["POST"])
@@ -81,7 +83,8 @@ class ConsistencyFix(Resource):
             )
         except Exception as e:
             logger.error(f"Data fix failed: {e}")
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("consistency_routes.py: %s", e)
+            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
 
 
 @ns_consistency.route("/status")
@@ -96,4 +99,5 @@ class ConsistencyStatus(Resource):
             return APIResponse.success(data={"status": status})
         except Exception as e:
             logger.error(f"Get status failed: {e}")
-            return APIResponse.error(message=str(e), status_code=500)
+            logger.error("consistency_routes.py: %s", e)
+            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)

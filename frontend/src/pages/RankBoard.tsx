@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Trophy, Users, GraduationCap, RefreshCw } from 'lucide-react';
 import api, { StudentRankItem, ClassRankItem } from '../services/api';
+import { DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 
 type TabKey = 'class' | 'student';
 
@@ -78,6 +80,95 @@ function RankBoard() {
     loadStudentRanking(name || undefined);
   };
 
+  const classColumns = useMemo<ColumnType<ClassRankItem>[]>(
+    () => [
+      {
+        title: '#',
+        key: 'rank',
+        render: (_value, _record, index) => (
+          <span className='font-bold text-gray-400'>{index + 1}</span>
+        ),
+      },
+      {
+        title: '班级',
+        key: 'class_name',
+        dataIndex: 'class_name',
+        render: (value) => (
+          <span className='text-gray-800 dark:text-gray-100'>{value as string}</span>
+        ),
+      },
+      {
+        title: '人数',
+        key: 'student_count',
+        dataIndex: 'student_count',
+        render: (value) => <span>{value as number}</span>,
+      },
+      {
+        title: '总分',
+        key: 'total_score',
+        dataIndex: 'total_score',
+        render: (value) => <span>{value as number}</span>,
+      },
+      {
+        title: '平均分',
+        key: 'avg_score',
+        dataIndex: 'avg_score',
+        render: (value) => <span>{value as number}</span>,
+      },
+      {
+        title: '近30天开锁',
+        key: 'unlock_count_30d',
+        dataIndex: 'unlock_count_30d',
+        render: (value) => <span>{value as number}</span>,
+      },
+    ],
+    []
+  );
+
+  const studentColumns = useMemo<ColumnType<StudentRankItem>[]>(
+    () => [
+      {
+        title: '#',
+        key: 'rank',
+        render: (_value, _record, index) => (
+          <span className='font-bold text-gray-400'>{index + 1}</span>
+        ),
+      },
+      {
+        title: '姓名',
+        key: 'name',
+        dataIndex: 'name',
+        render: (value) => (
+          <span className='text-gray-800 dark:text-gray-100'>{value as string}</span>
+        ),
+      },
+      {
+        title: '班级',
+        key: 'class_name',
+        dataIndex: 'class_name',
+        render: (value) => <span>{value as string}</span>,
+      },
+      {
+        title: '积分',
+        key: 'current_score',
+        dataIndex: 'current_score',
+        render: (value) => <span className='text-amber-500 font-semibold'>{value as number}</span>,
+      },
+      {
+        title: '剩余开锁',
+        key: 'remaining_unlock',
+        render: (_value, record) => (
+          <span>
+            {record.daily_unlock_limit
+              ? `${record.remaining_unlock}/${record.daily_unlock_limit}`
+              : '--'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
     <div className='min-h-screen bg-gray-50 dark:bg-slate-900'>
       <header className='bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 sticky top-0 z-10'>
@@ -133,43 +224,16 @@ function RankBoard() {
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> 刷新
               </button>
             </div>
-            {classRanking.length === 0 ? (
-              <p className='text-sm text-gray-400 py-6 text-center'>
-                暂无班级排行数据，请先完成积分录入
-              </p>
-            ) : (
-              <div className='overflow-x-auto'>
-                {' '}
-                {/* L4: 窄屏横向滚动 */}
-                <table className='w-full text-sm'>
-                  <thead>
-                    <tr className='text-gray-400 text-left'>
-                      <th className='py-2'>#</th>
-                      <th>班级</th>
-                      <th>人数</th>
-                      <th>总分</th>
-                      <th>平均分</th>
-                      <th>近30天开锁</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {classRanking.map((c, i) => (
-                      <tr
-                        key={c.class_name}
-                        className='border-t border-gray-100 dark:border-slate-700'
-                      >
-                        <td className='py-2 font-bold text-gray-400'>{i + 1}</td>
-                        <td className='text-gray-800 dark:text-gray-100'>{c.class_name}</td>
-                        <td>{c.student_count}</td>
-                        <td>{c.total_score}</td>
-                        <td>{c.avg_score}</td>
-                        <td>{c.unlock_count_30d}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable<ClassRankItem>
+              columns={classColumns}
+              dataSource={classRanking}
+              rowKey='class_name'
+              empty={{
+                icon: 'data',
+                title: '暂无班级排行数据',
+                description: '请先完成积分录入',
+              }}
+            />
           </div>
         )}
 
@@ -198,43 +262,15 @@ function RankBoard() {
               </button>
             </div>
             <p className='text-xs text-gray-400 mb-2'>共 {studentTotal} 名学生</p>
-            {studentRanking.length === 0 ? (
-              <p className='text-sm text-gray-400 py-6 text-center'>暂无学生排行数据</p>
-            ) : (
-              <div className='overflow-x-auto'>
-                {' '}
-                {/* L4: 窄屏横向滚动 */}
-                <table className='w-full text-sm'>
-                  <thead>
-                    <tr className='text-gray-400 text-left'>
-                      <th className='py-2'>#</th>
-                      <th>姓名</th>
-                      <th>班级</th>
-                      <th>积分</th>
-                      <th>剩余开锁</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {studentRanking.map((s, i) => (
-                      <tr
-                        key={s.user_id}
-                        className='border-t border-gray-100 dark:border-slate-700'
-                      >
-                        <td className='py-2 font-bold text-gray-400'>{i + 1}</td>
-                        <td className='text-gray-800 dark:text-gray-100'>{s.name}</td>
-                        <td>{s.class_name}</td>
-                        <td className='text-amber-500 font-semibold'>{s.current_score}</td>
-                        <td>
-                          {s.daily_unlock_limit
-                            ? `${s.remaining_unlock}/${s.daily_unlock_limit}`
-                            : '--'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable<StudentRankItem>
+              columns={studentColumns}
+              dataSource={studentRanking}
+              rowKey='user_id'
+              empty={{
+                icon: 'data',
+                title: '暂无学生排行数据',
+              }}
+            />
           </div>
         )}
       </main>

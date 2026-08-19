@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BookOpen, Award, Users } from 'lucide-react';
 import { Card, LoadingSpinner, SearchFilter } from '../components';
+import DataTable, { type ColumnType } from '../components/data-display/DataTable';
 import ImportExportPanel from '../components/special/ImportExportPanel';
 import { useStableToast } from '../hooks/useStableToast';
 import api from '../services/api';
@@ -68,6 +69,33 @@ const StudentList: React.FC<{
     });
   }, [students, debouncedSearchTerm, selectedClass]);
 
+  const studentColumns = useMemo<ColumnType<Student>[]>(
+    () => [
+      {
+        title: '姓名',
+        key: 'name',
+        dataIndex: 'name',
+        width: 100,
+        render: (value) => <span className='font-medium text-gray-900'>{value as string}</span>,
+      },
+      {
+        title: '学号',
+        key: 'card_id',
+        dataIndex: 'card_id',
+        width: 130,
+        render: (value) => <span className='text-sm text-gray-500'>{value as string}</span>,
+      },
+      {
+        title: '班级',
+        key: 'class_name',
+        dataIndex: 'class_name',
+        width: 90,
+        render: (value) => <span className='text-sm text-gray-500'>{value as string}</span>,
+      },
+    ],
+    []
+  );
+
   return (
     <Card className='lg:col-span-1'>
       <div className='p-4 border-b border-gray-200'>
@@ -97,22 +125,20 @@ const StudentList: React.FC<{
           maxWidth='w-full'
           className='w-full'
         />
-        <div className='max-h-[600px] overflow-y-auto space-y-2'>
-          {filteredStudents.map((student) => (
-            <button
-              key={student.id}
-              onClick={() => onStudentSelect(student.id.toString())}
-              className={`w-full text-left p-3 rounded-lg transition-colors ${
-                selectedStudent === student.id.toString()
-                  ? 'bg-primary-100 text-primary-800'
-                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-              }`}
-            >
-              <div className='font-medium'>{student.name}</div>
-              <div className='text-sm text-gray-500'>{student.card_id}</div>
-              <div className='text-sm text-gray-500'>{student.class_name}</div>
-            </button>
-          ))}
+        <div className='max-h-[600px] overflow-y-auto'>
+          <DataTable<Student>
+            columns={studentColumns}
+            dataSource={filteredStudents}
+            rowKey='id'
+            pageSize={200}
+            pageSizeOptions={[200]}
+            virtualThreshold={200}
+            onRowClick={(student) => onStudentSelect(student.id.toString())}
+            rowClassName={(student) =>
+              selectedStudent === student.id.toString() ? 'bg-primary-50' : ''
+            }
+            empty={{ icon: 'users', title: '暂无学生', description: '未找到匹配的学生' }}
+          />
         </div>
       </div>
     </Card>

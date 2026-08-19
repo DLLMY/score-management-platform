@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Plus,
   Edit2,
@@ -14,8 +14,12 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { HomeworkAssignment, HomeworkCreateInput } from '../types';
 import { ClassSelect, SubjectSelect } from '../components/form/EntitySelect';
+import { DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface HomeworkFormData {
   id: number | null;
@@ -39,6 +43,10 @@ const defaultForm: HomeworkFormData = {
 
 function HomeworkCheck() {
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const [assignments, setAssignments] = useState<HomeworkAssignment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,7 +152,13 @@ function HomeworkCheck() {
 
   const handleDelete = useCallback(
     async (id: number) => {
-      if (!window.confirm('确定要删除这个作业吗？')) return;
+      const ok = await confirmRef.current({
+        title: '删除确认',
+        message: '确定要删除这个作业吗？',
+        confirmText: '删除',
+        type: 'danger',
+      });
+      if (!ok) return;
       try {
         await api.homework.delete(id);
         showToast('success', '作业删除成功');
@@ -160,6 +174,88 @@ function HomeworkCheck() {
   const totalAssignments = assignments.length;
   const completedAssignments = assignments.filter((a) => a.is_completed).length;
   const pendingAssignments = totalAssignments - completedAssignments;
+
+  const columns = useMemo<ColumnType<HomeworkAssignment>[]>(
+    () => [
+      {
+        title: '作业标题',
+        key: 'title',
+        dataIndex: 'title',
+        render: (_, assignment) => (
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center'>
+              <FileText className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+            </div>
+            <div>
+              <p className='font-medium text-slate-800 dark:text-slate-200'>{assignment.title}</p>
+              {assignment.description && (
+                <p className='text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs'>
+                  {assignment.description}
+                </p>
+              )}
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: '班级',
+        key: 'class_name',
+        dataIndex: 'class_name',
+        render: (_, assignment) => (
+          <span className='inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium'>
+            {assignment.class_name || `班级 #${assignment.class_id}`}
+          </span>
+        ),
+      },
+      {
+        title: '截止日期',
+        key: 'due_date',
+        dataIndex: 'due_date',
+        render: (_, assignment) => (
+          <div className='flex items-center gap-2 text-sm'>
+            <Clock className='w-4 h-4 text-slate-400' />
+            <span className='text-slate-600 dark:text-slate-300'>{assignment.due_date}</span>
+          </div>
+        ),
+      },
+      {
+        title: '提交情况',
+        key: 'submitted_count',
+        dataIndex: 'submitted_count',
+        align: 'center',
+        render: (_, assignment) => (
+          <span className='inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold'>
+            {assignment.total_students
+              ? `${assignment.submitted_count || 0}/${assignment.total_students}`
+              : '--'}
+          </span>
+        ),
+      },
+      {
+        title: '状态',
+        key: 'is_completed',
+        dataIndex: 'is_completed',
+        align: 'center',
+        render: (_, assignment) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              assignment.is_completed
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                : 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                assignment.is_completed ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            />
+            {assignment.is_completed ? '已完成' : '进行中'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
@@ -252,144 +348,42 @@ function HomeworkCheck() {
             </div>
           </div>
 
-          <div className='overflow-x-auto'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-700/30'>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    作业标题
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    班级
-                  </th>
-                  <th className='px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    截止日期
-                  </th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    提交情况
-                  </th>
-                  <th className='px-5 py-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    状态
-                  </th>
-                  <th className='px-5 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider'>
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-slate-100 dark:divide-slate-700/50'>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className='px-5 py-12 text-center'>
-                      <div className='flex flex-col items-center gap-3'>
-                        <div className='w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin' />
-                        <p className='text-sm text-slate-500 dark:text-slate-400'>加载中...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredAssignments.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className='px-5 py-16 text-center'>
-                      <div className='flex flex-col items-center gap-3'>
-                        <div className='w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center'>
-                          <BookOpen className='w-8 h-8 text-slate-400' />
-                        </div>
-                        <p className='text-slate-500 dark:text-slate-400'>暂无作业数据</p>
-                        <button
-                          onClick={() => handleOpenModal(false)}
-                          className='text-blue-500 hover:text-blue-600 font-medium text-sm'
-                        >
-                          布置第一个作业
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAssignments.map((assignment) => (
-                    <tr
-                      key={assignment.id}
-                      className='group hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 dark:hover:from-slate-700/50 dark:hover:to-slate-700/30 transition-all duration-200 cursor-pointer'
-                    >
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-3'>
-                          <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center'>
-                            <FileText className='w-5 h-5 text-blue-600 dark:text-blue-400' />
-                          </div>
-                          <div>
-                            <p className='font-medium text-slate-800 dark:text-slate-200'>
-                              {assignment.title}
-                            </p>
-                            {assignment.description && (
-                              <p className='text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs'>
-                                {assignment.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <span className='inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium'>
-                          {assignment.class_name || `班级 #${assignment.class_id}`}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center gap-2 text-sm'>
-                          <Clock className='w-4 h-4 text-slate-400' />
-                          <span className='text-slate-600 dark:text-slate-300'>
-                            {assignment.due_date}
-                          </span>
-                        </div>
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        <span className='inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold'>
-                          {assignment.total_students
-                            ? `${assignment.submitted_count || 0}/${assignment.total_students}`
-                            : '--'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4 text-center'>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            assignment.is_completed
-                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              assignment.is_completed ? 'bg-emerald-500' : 'bg-amber-500'
-                            }`}
-                          />
-                          {assignment.is_completed ? '已完成' : '进行中'}
-                        </span>
-                      </td>
-                      <td className='px-5 py-4'>
-                        <div className='flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenModal(true, assignment);
-                            }}
-                            className='p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all'
-                          >
-                            <Edit2 className='w-4 h-4' />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(assignment.id);
-                            }}
-                            className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable<HomeworkAssignment>
+            columns={columns}
+            dataSource={filteredAssignments}
+            loading={isLoading}
+            rowKey='id'
+            rowClassName={() => 'group cursor-pointer'}
+            empty={{
+              icon: 'file',
+              title: '暂无作业数据',
+              actionLabel: '布置第一个作业',
+              onAction: () => handleOpenModal(false),
+            }}
+            scroll={{ x: 900 }}
+            rowActions={(assignment) => (
+              <div className='flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal(true, assignment);
+                  }}
+                  className='p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all'
+                >
+                  <Edit2 className='w-4 h-4' />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(assignment.id);
+                  }}
+                  className='p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all'
+                >
+                  <Trash2 className='w-4 h-4' />
+                </button>
+              </div>
+            )}
+          />
         </div>
       </div>
 
@@ -534,11 +528,12 @@ function HomeworkCheck() {
                 取消
               </button>
               <button
-                onClick={handleSubmit}
-                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium'
+                onClick={() => runSubmit(handleSubmit)}
+                disabled={submitting}
+                className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 <Check className='w-5 h-5' />
-                保存
+                {submitting ? '保存中...' : '保存'}
               </button>
             </div>
           </div>

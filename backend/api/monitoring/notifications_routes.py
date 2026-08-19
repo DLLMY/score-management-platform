@@ -9,6 +9,8 @@ from utils.permission import (
 )
 
 from utils.response import APIResponse
+from utils.pagination import get_pagination
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.notification_service import (
     create_user_notification,
     update_notification,
@@ -40,9 +42,9 @@ class NotificationList(Resource):
 
     @ns_notifications.doc("list_notifications")
     @requires_permission("notification.view")
+    @cached_api(ttl=30)
     def get(self):
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
+        page, per_page = get_pagination(default=50)
 
         # F9-B: 仅列出用户通知（管理员通知已合并进本表，需按 recipient_type 区分）
         query = Notification.query.filter_by(recipient_type="user")
@@ -92,6 +94,7 @@ class NotificationList(Resource):
     def post(self):
         data = ns_notifications.payload
         notification = create_user_notification(data)
+        invalidate_cache("api:/api/notifications/*")
         return APIResponse.success(
             data={"notification_id": notification.id}, message="通知创建成功", status_code=201
         )
@@ -131,6 +134,7 @@ class NotificationResource(Resource):
         notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
         data = ns_notifications.payload
         update_notification(notification, data)
+        invalidate_cache("api:/api/notifications/*")
         return APIResponse.success(message="通知更新成功")
 
     @ns_notifications.doc("delete_notification")
@@ -138,6 +142,7 @@ class NotificationResource(Resource):
     def delete(self, id):
         notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
         delete_notification(notification)
+        invalidate_cache("api:/api/notifications/*")
         return APIResponse.success(message="通知删除成功")
 
 
@@ -150,6 +155,7 @@ class NotificationMarkRead(Resource):
     def post(self, id):
         notification = Notification.query.filter_by(recipient_type="user", id=id).first_or_404()
         mark_notification_read(notification)
+        invalidate_cache("api:/api/notifications/*")
         return APIResponse.success(message="通知已标记为已读")
 
 
@@ -161,6 +167,7 @@ class NotificationSend(Resource):
     def post(self):
         data = request.get_json()
         notification = send_notification(data)
+        invalidate_cache("api:/api/notifications/*")
         return APIResponse.success(
             data={"notification_id": notification.id}, message="通知发送成功"
         )
@@ -226,6 +233,7 @@ class NotificationBatch(Resource):
                 data={"sent": 0, "errors": errors, "total": total},
                 status_code=400,
             )
+        invalidate_cache("api:/api/notifications/*")
         return APIResponse.success(
             data={"sent": sent, "errors": errors, "total": total},
             message=f"成功发送 {sent} 条，{len(errors)} 条失败",
@@ -238,9 +246,9 @@ class UserNotifications(Resource):
 
     @ns_notifications.doc("get_user_notifications")
     @requires_permission("system.logs")
+    @cached_api(ttl=30)
     def get(self, user_id):
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 50, type=int)
+        page, per_page = get_pagination(default=50)
 
         pagination = (
             Notification.query.filter_by(student_id=user_id, recipient_type="user")

@@ -443,14 +443,65 @@ const errorMessages: Record<number, string> = {
   504: '请求超时，请检查网络或稍后重试',
 };
 
-const getErrorMessage = (status: number, errorData: unknown): string => {
-  const error = errorData as { message?: string; error?: string } | null;
-  if (error?.message) {
-    return error.message;
+// M2：按 error_code 查友好文案（后端已约定统一信封的 error_code 字段）。
+// 优先级高于后端 message——业务码文案保证稳定可预期。
+const errorCodeMessages: Record<string, string> = {
+  BAD_REQUEST: '请求参数错误，请检查输入内容',
+  VALIDATION_ERROR: '数据校验失败，请检查输入内容',
+  NOT_FOUND: '请求的资源不存在',
+  UNAUTHORIZED: '未授权，请登录',
+  FORBIDDEN: '您没有权限执行此操作',
+  INSUFFICIENT_PERMISSION: '您没有权限执行此操作',
+  INTERNAL_ERROR: '服务器内部错误，请稍后重试',
+  UNCAUGHT_EXCEPTION: '服务器内部错误，请稍后重试',
+  DATABASE_ERROR: '数据操作失败，请稍后重试',
+  BUSINESS_ERROR: '操作失败，请稍后重试',
+  RATE_LIMITED: '请求过于频繁，请稍后再试',
+  METHOD_NOT_ALLOWED: '请求方法不被允许',
+  CSRF_ERROR: '安全校验失败，请刷新页面后重试',
+  TOKEN_EXPIRED: '登录状态已过期，请重新登录',
+  TOKEN_INVALID: '登录状态已失效，请重新登录',
+  FILE_TOO_LARGE: '文件过大，无法上传',
+  FILE_TYPE_UNSUPPORTED: '不支持的文件类型',
+  DUPLICATE_RECORD: '记录已存在，请勿重复提交',
+};
+
+// M2：识别"技术性/内部错误"文案——Python 异常、SQL、文件路径、调试信息等。
+// 命中即不透传给用户（技术详情仅进控制台日志），用 HTTP 状态兜底文案。
+const TECHNICAL_ERROR_PATTERNS: RegExp[] = [
+  /Traceback/i,
+  /(IntegrityError|OperationalError|SQLAlchemyError|ProgrammingError|DataError|DatabaseError)/i,
+  /(sqlite|sqlalchemy|psycopg|pymysql|mysql)/i,
+  /(no such table|no such column|unknown column|table .* does not exist|unable to open database)/i,
+  /(KeyError|TypeError|ValueError|AttributeError|NameError|IndexError|ZeroDivisionError|RuntimeError|OverflowError)/i,
+  /\.py[:\s]+line\s+\d+/i,
+  /\bFile\s+"[^"]+"\s*,\s*line\s+\d+/i,
+  /^<class\s+'[^']+'/i,
+  /^(Error|Exception|Traceback):/i,
+  /(\d{1,3}\.){3}\d{1,3}(:\d+)?/,
+];
+
+const looksLikeTechnicalError = (message: string): boolean =>
+  TECHNICAL_ERROR_PATTERNS.some((pattern) => pattern.test(message));
+
+export const getErrorMessage = (status: number, errorData: unknown): string => {
+  const error = errorData as
+    | { message?: string; error?: string; error_code?: string }
+    | null;
+  // 1) error_code 命中友好文案表 → 直接展示（最高优先级）
+  if (error?.error_code && errorCodeMessages[error.error_code]) {
+    return errorCodeMessages[error.error_code];
   }
-  if (error?.error) {
-    return error.error;
+  // 2) 后端 message 存在且不像技术报错 → 透传业务文案
+  const rawMessage = error?.message || error?.error;
+  if (rawMessage && !looksLikeTechnicalError(rawMessage)) {
+    return rawMessage;
   }
+  if (rawMessage && looksLikeTechnicalError(rawMessage)) {
+    // 技术详情只进日志，不直吐用户
+    logger.warn(`[API] 技术性错误已屏蔽: ${rawMessage}`);
+  }
+  // 3) 兜底：HTTP 状态码友好文案
   return errorMessages[status] || `请求失败 (${status})`;
 };
 

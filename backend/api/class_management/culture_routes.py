@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from services.culture_service import culture_service
 from utils.permission import requires_permission
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_culture = Namespace("culture", description="班级文化管理")
 
@@ -29,6 +30,7 @@ class CultureList(Resource):
         },
     )
     @requires_permission("culture.view")
+    @cached_api(ttl=30)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         category = request.args.get("category")
@@ -43,7 +45,9 @@ class CultureList(Resource):
     @requires_permission("culture.edit")
     def post(self):
         data = request.get_json()
-        return culture_service.create_record(data)
+        result = culture_service.create_record(data)
+        invalidate_cache("api:/api/culture/*")
+        return result
 
 
 @ns_culture.route("/records/<int:record_id>")
@@ -59,8 +63,12 @@ class CultureDetail(Resource):
     @requires_permission("culture.edit")
     def put(self, record_id):
         data = request.get_json()
-        return culture_service.update_record(record_id, data)
+        result = culture_service.update_record(record_id, data)
+        invalidate_cache("api:/api/culture/*")
+        return result
 
     @requires_permission("culture.edit")
     def delete(self, record_id):
-        return culture_service.delete_record(record_id)
+        result = culture_service.delete_record(record_id)
+        invalidate_cache("api:/api/culture/*")
+        return result

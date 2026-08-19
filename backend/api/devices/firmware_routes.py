@@ -1,3 +1,5 @@
+import logging
+
 from flask import request, send_file
 import os
 import time
@@ -7,6 +9,7 @@ from utils.permission import requires_permission
 from werkzeug.utils import secure_filename
 
 from utils.response import APIResponse
+from utils.pagination import get_pagination
 import hashlib
 from services.mqtt_service import mqtt_manager
 from services.ota_negotiation_service import (
@@ -14,6 +17,7 @@ from services.ota_negotiation_service import (
     negotiate_all_devices,
     sign_ota_command,
 )
+logger = logging.getLogger(__name__)
 from services.firmware_service import (
     create_firmware_version,
     update_firmware_version,
@@ -308,8 +312,7 @@ class UpgradeRecords(Resource):
         """
         device_id = request.args.get("device_id")
         status = request.args.get("status")
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 20, type=int)
+        page, per_page = get_pagination(default=20)
 
         query = DeviceFirmwareUpdate.query
         if device_id:
@@ -525,7 +528,8 @@ class FirmwareUpload(Resource):
         except Exception as e:
             if os.path.exists(file_path):
                 os.remove(file_path)
-            return APIResponse.error(message=f"Upload failed: {str(e)}", status_code=500)
+            logger.error("%s: %s", "Upload failed", e)
+            return APIResponse.error(message="Upload failed", status_code=500)
 
 
 @ns_firmware.route("/download/<int:id>")

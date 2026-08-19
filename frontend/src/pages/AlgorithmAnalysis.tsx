@@ -37,7 +37,8 @@ import {
 // 注：LineChart 用于参与度分析 Tab 的周趋势折线图标识
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
-import { PermissionButton } from '../components';
+import { PermissionButton, DataTable } from '../components';
+import type { ColumnType } from '../components/data-display/DataTable';
 import {
   AlgorithmStatistics,
   BatchPredictionData,
@@ -54,6 +55,7 @@ import {
   ScoreAttributionResult,
   EngagementResult,
   EngagementRankResult,
+  EngagementStudentRank,
   EngagementTrendResult,
   BatchAttributionResult,
   BatchAttributionStudent,
@@ -690,7 +692,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     loadRiskPredict,
   ]);
 
-  const getTrendIcon = (trend: string) => {
+  const getTrendIcon = useCallback((trend: string) => {
     switch (trend) {
       case 'rising':
       case 'up':
@@ -701,9 +703,9 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       default:
         return <Minus className='w-4 h-4 text-gray-400' />;
     }
-  };
+  }, []);
 
-  const getTrendColor = (trend: string) => {
+  const getTrendColor = useCallback((trend: string) => {
     switch (trend) {
       case 'rising':
       case 'up':
@@ -714,7 +716,410 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       default:
         return 'text-gray-600 bg-gray-50 dark:bg-gray-500/10';
     }
-  };
+  }, []);
+
+  // 参与度等级徽章配色（参与度排名榜列定义使用）
+  const engagementLevelBadge = useCallback((level: string) => {
+    if (level === 'high') return 'bg-green-100 dark:bg-green-500/20 text-green-600';
+    if (level === 'medium') return 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600';
+    return 'bg-gray-100 dark:bg-gray-500/20 text-gray-500';
+  }, []);
+
+  // 成绩波动主要归因摘要（归因表列定义使用）
+  const topFactors = useCallback(
+    (s: BatchAttributionStudent) =>
+      (s.factors || [])
+        .slice(0, 2)
+        .map((f) => `${f.name}${f.contribution >= 0 ? '+' : ''}${f.contribution.toFixed(1)}`)
+        .join('、') || '—',
+    []
+  );
+
+  // 积分预测详情列
+  const predictionDetailColumns = useMemo<ColumnType<PredictionResult>[]>(
+    () => [
+      {
+        title: '学生',
+        key: 'name',
+        dataIndex: 'name',
+        render: (value) => (
+          <div className='font-medium text-gray-800 dark:text-white'>
+            {String(value ?? '') || '未知学生'}
+          </div>
+        ),
+      },
+      {
+        title: '当前积分',
+        key: 'current_score',
+        dataIndex: 'current_score',
+        render: (value) => {
+          const current = typeof value === 'number' ? value : 0;
+          return (
+            <span className='font-medium text-gray-800 dark:text-white'>
+              {current.toFixed(1)}
+            </span>
+          );
+        },
+      },
+      {
+        title: '趋势',
+        key: 'trend',
+        dataIndex: 'trend',
+        render: (value) => {
+          const hasTrend = !!value;
+          const trend = String(value || 'stable');
+          return (
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(
+                trend
+              )}`}
+            >
+              {getTrendIcon(trend)}
+              {hasTrend
+                ? trend === 'up'
+                  ? '上升'
+                  : trend === 'down'
+                  ? '下降'
+                  : '稳定'
+                : '--'}
+            </span>
+          );
+        },
+      },
+      {
+        title: '预测变化',
+        key: 'predicted_change',
+        render: (_, item) => {
+          const current = typeof item.current_score === 'number' ? item.current_score : 0;
+          const predicted =
+            typeof item.predicted_score === 'number' ? item.predicted_score : current;
+          const diff = predicted - current;
+          return (
+            <span
+              className={`font-medium ${
+                diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-600'
+              }`}
+            >
+              {diff.toFixed(1)}分
+            </span>
+          );
+        },
+      },
+      {
+        title: '置信度',
+        key: 'confidence',
+        dataIndex: 'confidence',
+        render: (value) => {
+          const confidence = typeof value === 'number' ? value : 0;
+          return (
+            <div>
+              <div className='w-20 bg-gray-200 dark:bg-slate-600 rounded-full h-2'>
+                <div
+                  className='bg-blue-500 h-2 rounded-full'
+                  style={{ width: `${confidence * 100}%` }}
+                />
+              </div>
+              <div className='text-xs text-gray-400 mt-1'>{(confidence * 100).toFixed(0)}%</div>
+            </div>
+          );
+        },
+      },
+    ],
+    [getTrendColor, getTrendIcon]
+  );
+
+  // 学生成绩预测详情列
+  const scorePredictColumns = useMemo<ColumnType<ScorePredictResult>[]>(
+    () => [
+      {
+        title: '学生',
+        key: 'name',
+        dataIndex: 'name',
+        render: (value) => (
+          <div className='font-medium text-gray-800 dark:text-white'>
+            {String(value ?? '')}
+          </div>
+        ),
+      },
+      {
+        title: '科目',
+        key: 'subject',
+        dataIndex: 'subject',
+        render: (value) => (
+          <div className='font-medium text-gray-800 dark:text-white'>
+            {String(value ?? '') || '综合'}
+          </div>
+        ),
+      },
+      {
+        title: '当前分数',
+        key: 'current_score',
+        dataIndex: 'current_score',
+        render: (value) => {
+          const n = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+          return <span className='text-lg font-medium text-gray-600'>{n.toFixed(1)}</span>;
+        },
+      },
+      {
+        title: '预测分数',
+        key: 'predicted_score',
+        dataIndex: 'predicted_score',
+        render: (value) => {
+          const n = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+          return (
+            <span
+              className={`text-xl font-bold ${
+                n >= ANALYSIS_CONFIG.scoreColorThresholds.excellent
+                  ? 'text-green-600'
+                  : n >= ANALYSIS_CONFIG.scoreColorThresholds.good
+                  ? 'text-blue-600'
+                  : 'text-red-600'
+              }`}
+            >
+              {n.toFixed(1)}
+            </span>
+          );
+        },
+      },
+      {
+        title: '趋势',
+        key: 'trend',
+        dataIndex: 'trend',
+        render: (value) => {
+          const t: 'up' | 'down' | 'stable' = value === 'up' || value === 'down' ? value : 'stable';
+          return (
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(
+                t
+              )}`}
+            >
+              {getTrendIcon(t)}
+              {t === 'up' ? '上升' : t === 'down' ? '下降' : '稳定'}
+            </span>
+          );
+        },
+      },
+      {
+        title: '置信度',
+        key: 'confidence',
+        dataIndex: 'confidence',
+        render: (value) => {
+          const n = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+          return (
+            <div>
+              <div className='w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2'>
+                <div
+                  className='bg-blue-500 h-2 rounded-full'
+                  style={{ width: `${n * 100}%` }}
+                />
+              </div>
+              <div className='text-xs text-gray-400 mt-1'>{(n * 100).toFixed(0)}%</div>
+            </div>
+          );
+        },
+      },
+    ],
+    [getTrendColor, getTrendIcon]
+  );
+
+  // 全班成绩波动归因列
+  const attributionColumns = useMemo<ColumnType<BatchAttributionStudent>[]>(
+    () => [
+      {
+        title: '学生',
+        key: 'name',
+        dataIndex: 'name',
+        render: (_, s) => (
+          <div>
+            <div className='font-medium text-gray-800 dark:text-white'>{s.name}</div>
+            {s.error && <div className='text-xs text-red-500'>{s.error}</div>}
+          </div>
+        ),
+      },
+      {
+        title: '成绩变化',
+        key: 'total_change',
+        dataIndex: 'total_change',
+        render: (_, s) =>
+          s.has_data ? (
+            <span
+              className={`font-medium ${
+                (s.total_change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {(s.total_change || 0) >= 0 ? '+' : ''}
+              {(s.total_change || 0).toFixed(1)}
+            </span>
+          ) : (
+            <span className='text-gray-400'>—</span>
+          ),
+      },
+      {
+        title: '主要归因',
+        key: 'factors',
+        render: (_, s) => (
+          <span className='text-gray-600 dark:text-slate-300'>
+            {s.has_data ? topFactors(s) : '数据不足'}
+          </span>
+        ),
+      },
+      {
+        title: '置信度',
+        key: 'confidence',
+        dataIndex: 'confidence',
+        render: (_, s) =>
+          s.has_data ? (
+            <div className='w-20 bg-gray-200 dark:bg-slate-600 rounded-full h-2'>
+              <div
+                className='bg-purple-500 h-2 rounded-full'
+                style={{ width: `${Math.min(100, (s.confidence || 0) * 100)}%` }}
+              />
+            </div>
+          ) : (
+            <span className='text-gray-400'>—</span>
+          ),
+      },
+      {
+        title: '状态',
+        key: 'has_data',
+        render: (_, s) => (
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              s.has_data
+                ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
+                : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
+            }`}
+          >
+            {s.has_data ? '已归因' : '缺数据'}
+          </span>
+        ),
+      },
+    ],
+    [topFactors]
+  );
+
+  // 全班参与度排名榜列
+  const engagementColumns = useMemo<ColumnType<EngagementStudentRank>[]>(
+    () => [
+      {
+        title: '排名',
+        key: 'rank',
+        dataIndex: 'rank',
+        render: (_, s) => (
+          <span className={`font-bold ${s.rank && s.rank <= 3 ? 'text-purple-600' : 'text-gray-500'}`}>
+            {s.rank ? `#${s.rank}` : '—'}
+          </span>
+        ),
+      },
+      {
+        title: '学生',
+        key: 'name',
+        dataIndex: 'name',
+        render: (_, s) => (
+          <div>
+            <div className='font-medium text-gray-800 dark:text-white'>{s.name}</div>
+            {s.error && <div className='text-xs text-red-500'>{s.error}</div>}
+          </div>
+        ),
+      },
+      {
+        title: '参与度',
+        key: 'engagement_score',
+        dataIndex: 'engagement_score',
+        render: (_, s) =>
+          s.has_data ? (
+            <span
+              className={`font-medium ${
+                (s.engagement_score || 0) >= ANALYSIS_CONFIG.engagementScoreThresholds.high
+                  ? 'text-green-600'
+                  : (s.engagement_score || 0) >= ANALYSIS_CONFIG.engagementScoreThresholds.medium
+                  ? 'text-yellow-600'
+                  : 'text-red-600'
+              }`}
+            >
+              {(s.engagement_score || 0).toFixed(1)}
+            </span>
+          ) : (
+            <span className='text-gray-400'>—</span>
+          ),
+      },
+      {
+        title: '等级',
+        key: 'level',
+        dataIndex: 'level',
+        render: (_, s) => (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${engagementLevelBadge(s.level)}`}>
+            {s.level === 'high' ? '高' : s.level === 'medium' ? '中' : '低'}
+          </span>
+        ),
+      },
+      {
+        title: '出勤率',
+        key: 'attendance_rate',
+        render: (_, s) => (
+          <span className='text-gray-600 dark:text-slate-300'>
+            {s.components?.attendance_rate != null
+              ? `${(s.components.attendance_rate * 100).toFixed(0)}%`
+              : '—'}
+          </span>
+        ),
+      },
+      {
+        title: '作业率',
+        key: 'homework_rate',
+        render: (_, s) => (
+          <span className='text-gray-600 dark:text-slate-300'>
+            {s.components?.homework_rate != null
+              ? `${(s.components.homework_rate * 100).toFixed(0)}%`
+              : '—'}
+          </span>
+        ),
+      },
+      {
+        title: '活跃度',
+        key: 'activity_rate',
+        render: (_, s) => (
+          <span className='text-gray-600 dark:text-slate-300'>
+            {s.components?.activity_rate != null
+              ? `${(s.components.activity_rate * 100).toFixed(0)}%`
+              : '—'}
+          </span>
+        ),
+      },
+      {
+        title: '请假(天)',
+        key: 'leave_days',
+        render: (_, s) => (
+          <span className='text-gray-600 dark:text-slate-300'>
+            {s.components?.leave_days ?? 0}
+          </span>
+        ),
+      },
+      {
+        title: '周趋势',
+        key: 'trend_action',
+        width: 90,
+        render: (_, s) => (
+          <button
+            type='button'
+            disabled={!s.has_data}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEngagementTrendUserId(s.user_id);
+            }}
+            className={`text-xs px-2 py-1 rounded ${
+              s.has_data
+                ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 hover:bg-purple-200'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            查看
+          </button>
+        ),
+      },
+    ],
+    [engagementLevelBadge]
+  );
 
   const renderStatistics = () => {
     if (loadWarn) {
@@ -894,95 +1299,13 @@ export default function AlgorithmAnalysis(): React.ReactElement {
             </h3>
           </div>
           <div className='p-6'>
-            <div className='overflow-x-auto'>
-              <table className='w-full'>
-                <thead>
-                  <tr className='border-b border-gray-200 dark:border-slate-700'>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      学生
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      当前积分
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      趋势
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      预测变化
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      置信度
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPredictions.slice(0, 10).map((item) => {
-                    // 防御式兜底：归一化函数已保证字段存在并默认为 0，但相邻的算术比较仍需安全值。
-                    const current = typeof item.current_score === 'number' ? item.current_score : 0;
-                    const predicted =
-                      typeof item.predicted_score === 'number' ? item.predicted_score : current;
-                    const trend = item.trend || 'stable';
-                    const hasTrend = !!item.trend; // 趋势缺失显示 '--'，不冒充"稳定"
-                    const confidence = typeof item.confidence === 'number' ? item.confidence : 0;
-                    return (
-                      <tr
-                        key={`${item.user_id ?? item.name ?? ''}-${item.name ?? ''}`}
-                        className='border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                      >
-                        <td className='py-3 px-4'>
-                          <div className='font-medium text-gray-800 dark:text-white'>
-                            {item.name || '未知学生'}
-                          </div>
-                        </td>
-                        <td className='py-3 px-4 font-medium text-gray-800 dark:text-white'>
-                          {current.toFixed(1)}
-                        </td>
-                        <td className='py-3 px-4'>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(
-                              trend
-                            )}`}
-                          >
-                            {getTrendIcon(trend)}
-                            {hasTrend
-                              ? trend === 'up'
-                                ? '上升'
-                                : trend === 'down'
-                                ? '下降'
-                                : '稳定'
-                              : '--'}
-                          </span>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <span
-                            className={`font-medium ${
-                              predicted > current
-                                ? 'text-green-600'
-                                : predicted < current
-                                ? 'text-red-600'
-                                : 'text-gray-600'
-                            }`}
-                          >
-                            {(predicted - current).toFixed(1)}分
-                          </span>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <div className='w-20 bg-gray-200 dark:bg-slate-600 rounded-full h-2'>
-                            <div
-                              className='bg-blue-500 h-2 rounded-full'
-                              style={{ width: `${confidence * 100}%` }}
-                            />
-                          </div>
-                          <div className='text-xs text-gray-400 mt-1'>
-                            {(confidence * 100).toFixed(0)}%
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<PredictionResult>
+              columns={predictionDetailColumns}
+              dataSource={filteredPredictions.slice(0, 10)}
+              rowKey={(item) => `${item.user_id ?? item.name ?? ''}-${item.name ?? ''}`}
+              empty={{ title: '暂无预测数据', description: '当前筛选条件下暂无积分预测记录' }}
+              scroll={{ x: 700 }}
+            />
           </div>
         </div>
       </div>
@@ -1367,108 +1690,13 @@ export default function AlgorithmAnalysis(): React.ReactElement {
             </h3>
           </div>
           <div className='p-6'>
-            <div className='overflow-x-auto'>
-              <table className='w-full'>
-                <thead>
-                  <tr className='border-b border-gray-200 dark:border-slate-700'>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      学生
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      科目
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      当前分数
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      预测分数
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      趋势
-                    </th>
-                    <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                      置信度
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPredictions.slice(0, 15).map((item, idx) => {
-                    // 后端即使经 api.ts 归一化，仍可能因历史脏数据/缓存返回 undefined；兜底保证渲染不崩。
-                    const currentNum =
-                      typeof item.current_score === 'number' && Number.isFinite(item.current_score)
-                        ? item.current_score
-                        : 0;
-                    const predictedNum =
-                      typeof item.predicted_score === 'number' &&
-                      Number.isFinite(item.predicted_score)
-                        ? item.predicted_score
-                        : 0;
-                    const trendKey: 'up' | 'down' | 'stable' =
-                      item.trend === 'up' || item.trend === 'down' ? item.trend : 'stable';
-                    const confidenceNum =
-                      typeof item.confidence === 'number' && Number.isFinite(item.confidence)
-                        ? item.confidence
-                        : 0;
-                    return (
-                      <tr
-                        key={idx}
-                        className='border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                      >
-                        <td className='py-3 px-4'>
-                          <div className='font-medium text-gray-800 dark:text-white'>
-                            {item.name}
-                          </div>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <div className='font-medium text-gray-800 dark:text-white'>
-                            {item.subject || '综合'}
-                          </div>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <span className='text-lg font-medium text-gray-600'>
-                            {currentNum.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <span
-                            className={`text-xl font-bold ${
-                              predictedNum >= ANALYSIS_CONFIG.scoreColorThresholds.excellent
-                                ? 'text-green-600'
-                                : predictedNum >= ANALYSIS_CONFIG.scoreColorThresholds.good
-                                ? 'text-blue-600'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            {predictedNum.toFixed(1)}
-                          </span>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(
-                              trendKey
-                            )}`}
-                          >
-                            {getTrendIcon(trendKey)}
-                            {trendKey === 'up' ? '上升' : trendKey === 'down' ? '下降' : '稳定'}
-                          </span>
-                        </td>
-                        <td className='py-3 px-4'>
-                          <div className='w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2'>
-                            <div
-                              className='bg-blue-500 h-2 rounded-full'
-                              style={{ width: `${confidenceNum * 100}%` }}
-                            />
-                          </div>
-                          <div className='text-xs text-gray-400 mt-1'>
-                            {(confidenceNum * 100).toFixed(0)}%
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<ScorePredictResult>
+              columns={scorePredictColumns}
+              dataSource={filteredPredictions.slice(0, 15)}
+              rowKey={(_, idx) => idx}
+              empty={{ title: '暂无成绩预测数据', description: '当前筛选条件下暂无成绩预测记录' }}
+              scroll={{ x: 760 }}
+            />
           </div>
         </div>
       </div>
@@ -2461,11 +2689,6 @@ export default function AlgorithmAnalysis(): React.ReactElement {
     const data = batchAttribution;
     const students = data?.students || [];
     const failed = data?.failed_students || [];
-    const topFactors = (s: BatchAttributionStudent) =>
-      (s.factors || [])
-        .slice(0, 2)
-        .map((f) => `${f.name}${f.contribution >= 0 ? '+' : ''}${f.contribution.toFixed(1)}`)
-        .join('、') || '—';
 
     return (
       <div className='space-y-6'>
@@ -2588,92 +2811,13 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                 </h3>
               </div>
               <div className='p-6'>
-                {students.length === 0 ? (
-                  <div className='text-center py-8 text-gray-500 dark:text-slate-400'>
-                    该班级暂无归因数据
-                  </div>
-                ) : (
-                  <div className='overflow-x-auto'>
-                    <table className='w-full'>
-                      <thead>
-                        <tr className='border-b border-gray-200 dark:border-slate-700'>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            学生
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            成绩变化
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            主要归因
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            置信度
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            状态
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {students.map((s, idx) => (
-                          <tr
-                            key={s.user_id ?? idx}
-                            className='border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30'
-                          >
-                            <td className='py-3 px-4'>
-                              <div className='font-medium text-gray-800 dark:text-white'>
-                                {s.name}
-                              </div>
-                              {s.error && <div className='text-xs text-red-500'>{s.error}</div>}
-                            </td>
-                            <td className='py-3 px-4'>
-                              {s.has_data ? (
-                                <span
-                                  className={`font-medium ${
-                                    (s.total_change || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}
-                                >
-                                  {(s.total_change || 0) >= 0 ? '+' : ''}
-                                  {(s.total_change || 0).toFixed(1)}
-                                </span>
-                              ) : (
-                                <span className='text-gray-400'>—</span>
-                              )}
-                            </td>
-                            <td className='py-3 px-4 text-gray-600 dark:text-slate-300'>
-                              {s.has_data ? topFactors(s) : '数据不足'}
-                            </td>
-                            <td className='py-3 px-4'>
-                              {s.has_data ? (
-                                <div className='w-20 bg-gray-200 dark:bg-slate-600 rounded-full h-2'>
-                                  <div
-                                    className='bg-purple-500 h-2 rounded-full'
-                                    style={{
-                                      width: `${Math.min(100, (s.confidence || 0) * 100)}%`,
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <span className='text-gray-400'>—</span>
-                              )}
-                            </td>
-                            <td className='py-3 px-4'>
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  s.has_data
-                                    ? 'bg-green-100 dark:bg-green-500/20 text-green-600'
-                                    : 'bg-gray-100 dark:bg-gray-500/20 text-gray-500'
-                                }`}
-                              >
-                                {s.has_data ? '已归因' : '缺数据'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <DataTable<BatchAttributionStudent>
+                  columns={attributionColumns}
+                  dataSource={students}
+                  rowKey={(s, idx) => s.user_id ?? idx}
+                  empty={{ title: '该班级暂无归因数据' }}
+                  scroll={{ x: 760 }}
+                />
 
                 {failed.length > 0 && (
                   <div className='mt-4 p-4 bg-red-50/50 dark:bg-red-500/5 rounded-lg border border-red-200/50 dark:border-red-500/20'>
@@ -2702,13 +2846,6 @@ export default function AlgorithmAnalysis(): React.ReactElement {
         )}
       </div>
     );
-  };
-
-  // 参与度等级徽章配色
-  const engagementLevelBadge = (level: string) => {
-    if (level === 'high') return 'bg-green-100 dark:bg-green-500/20 text-green-600';
-    if (level === 'medium') return 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600';
-    return 'bg-gray-100 dark:bg-gray-500/20 text-gray-500';
   };
 
   const renderEngagement = () => {
@@ -2847,141 +2984,21 @@ export default function AlgorithmAnalysis(): React.ReactElement {
                 </h3>
               </div>
               <div className='p-6'>
-                {students.length === 0 ? (
-                  <div className='text-center py-8 text-gray-500 dark:text-slate-400'>
-                    该班级暂无参与度数据
-                  </div>
-                ) : (
-                  <div className='overflow-x-auto'>
-                    <table className='w-full'>
-                      <thead>
-                        <tr className='border-b border-gray-200 dark:border-slate-700'>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            排名
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            学生
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            参与度
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            等级
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            出勤率
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            作业率
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            活跃度
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            请假(天)
-                          </th>
-                          <th className='text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-slate-400'>
-                            周趋势
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {students.map((s, idx) => (
-                          <tr
-                            key={s.user_id ?? idx}
-                            className='border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30 cursor-pointer'
-                            onClick={() => {
-                              if (s.has_data) {
-                                setEngagementTrendUserId(s.user_id);
-                                const el = document.getElementById('engagement-trend-section');
-                                el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-                              }
-                            }}
-                          >
-                            <td className='py-3 px-4'>
-                              <span
-                                className={`font-bold ${
-                                  s.rank && s.rank <= 3 ? 'text-purple-600' : 'text-gray-500'
-                                }`}
-                              >
-                                {s.rank ? `#${s.rank}` : '—'}
-                              </span>
-                            </td>
-                            <td className='py-3 px-4'>
-                              <div className='font-medium text-gray-800 dark:text-white'>
-                                {s.name}
-                              </div>
-                              {s.error && <div className='text-xs text-red-500'>{s.error}</div>}
-                            </td>
-                            <td className='py-3 px-4'>
-                              {s.has_data ? (
-                                <span
-                                  className={`font-medium ${
-                                    (s.engagement_score || 0) >=
-                                    ANALYSIS_CONFIG.engagementScoreThresholds.high
-                                      ? 'text-green-600'
-                                      : (s.engagement_score || 0) >=
-                                        ANALYSIS_CONFIG.engagementScoreThresholds.medium
-                                      ? 'text-yellow-600'
-                                      : 'text-red-600'
-                                  }`}
-                                >
-                                  {(s.engagement_score || 0).toFixed(1)}
-                                </span>
-                              ) : (
-                                <span className='text-gray-400'>—</span>
-                              )}
-                            </td>
-                            <td className='py-3 px-4'>
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${engagementLevelBadge(
-                                  s.level
-                                )}`}
-                              >
-                                {s.level === 'high' ? '高' : s.level === 'medium' ? '中' : '低'}
-                              </span>
-                            </td>
-                            <td className='py-3 px-4 text-gray-600 dark:text-slate-300'>
-                              {s.components?.attendance_rate != null
-                                ? `${(s.components.attendance_rate * 100).toFixed(0)}%`
-                                : '—'}
-                            </td>
-                            <td className='py-3 px-4 text-gray-600 dark:text-slate-300'>
-                              {s.components?.homework_rate != null
-                                ? `${(s.components.homework_rate * 100).toFixed(0)}%`
-                                : '—'}
-                            </td>
-                            <td className='py-3 px-4 text-gray-600 dark:text-slate-300'>
-                              {s.components?.activity_rate != null
-                                ? `${(s.components.activity_rate * 100).toFixed(0)}%`
-                                : '—'}
-                            </td>
-                            <td className='py-3 px-4 text-gray-600 dark:text-slate-300'>
-                              {s.components?.leave_days ?? 0}
-                            </td>
-                            <td className='py-3 px-4'>
-                              <button
-                                type='button'
-                                disabled={!s.has_data}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEngagementTrendUserId(s.user_id);
-                                }}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  s.has_data
-                                    ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 hover:bg-purple-200'
-                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                }`}
-                              >
-                                查看
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <DataTable<EngagementStudentRank>
+                  columns={engagementColumns}
+                  dataSource={students}
+                  rowKey={(s, idx) => s.user_id ?? idx}
+                  rowClassName={() => 'cursor-pointer'}
+                  onRowClick={(s) => {
+                    if (s.has_data) {
+                      setEngagementTrendUserId(s.user_id);
+                      const el = document.getElementById('engagement-trend-section');
+                      el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+                    }
+                  }}
+                  empty={{ title: '该班级暂无参与度数据' }}
+                  scroll={{ x: 980 }}
+                />
               </div>
             </div>
           </>

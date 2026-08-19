@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from models import SubAccount
 from utils.permission import requires_permission, get_current_admin
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.security import verify_password, generate_subaccount_token
 from utils.response import APIResponse
 from api.system.security_routes import (
@@ -87,6 +88,7 @@ class SubAccountList(Resource):
     @ns_sub_accounts.doc("list_sub_accounts", description="获取子账号列表", security="Bearer")
     @ns_sub_accounts.response(200, "成功", sub_account_list_response)
     @requires_permission("user.view")
+    @cached_api(ttl=30)
     def get(self):
         """
         获取子账号列表
@@ -143,6 +145,7 @@ class SubAccountList(Resource):
 
         # 记录权限日志
         log_permission_action("create", account.id, f"创建子账号: {account.username}")
+        invalidate_cache("api:/api/sub-accounts/*")
 
         return APIResponse.success(
             data={"account_id": account.id}, message="子账号创建成功", status_code=201
@@ -203,6 +206,7 @@ class SubAccountResource(Resource):
 
         # 记录权限日志
         log_permission_action("update", account.id, f"更新子账号: {account.username}")
+        invalidate_cache("api:/api/sub-accounts/*")
 
         return APIResponse.success(message="子账号更新成功")
 
@@ -225,6 +229,7 @@ class SubAccountResource(Resource):
 
         # 记录权限日志
         log_permission_action("delete", id, f"删除子账号: {username}")
+        invalidate_cache("api:/api/sub-accounts/*")
 
         return APIResponse.success(message="子账号删除成功")
 

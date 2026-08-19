@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Table, Modal, Form, Input, Select, Switch, Tag } from 'antd';
 import {
   Plus,
@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import type { ImportConfig, FieldMapping, ValidationRule } from '../services/api';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface FieldMappingUI extends FieldMapping {
   id?: number;
@@ -161,6 +163,10 @@ const ImportConfigManagement: React.FC = () => {
   const [validationRules, setValidationRules] = useState<ValidationRuleUI[]>([]);
   const [selectedModule, setSelectedModule] = useState<string>('classes');
   const { showToast } = useStableToast();
+  const confirmFn = useConfirm();
+  const confirmRef = useRef(confirmFn);
+  confirmRef.current = confirmFn;
+  const { submitting, run: runSubmit } = useSubmitGuard();
 
   useEffect(() => {
     fetchConfigs();
@@ -207,7 +213,13 @@ const ImportConfigManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('确定要删除该导入配置吗？')) return; // 删除确认
+    const ok = await confirmRef.current({
+      message: '确定要删除该导入配置吗？',
+      confirmText: '确定',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.importConfig.delete(id);
       showToast('success', '删除成功');
@@ -445,7 +457,8 @@ const ImportConfigManagement: React.FC = () => {
       <Modal
         title={editingConfig ? '编辑导入配置' : '添加导入配置'}
         open={showModal}
-        onOk={handleSubmit}
+        onOk={() => runSubmit(handleSubmit)}
+        confirmLoading={submitting}
         onCancel={() => setShowModal(false)}
         width={800}
         destroyOnHidden

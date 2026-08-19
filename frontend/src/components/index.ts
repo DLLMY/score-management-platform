@@ -33,6 +33,10 @@ export { default as Pagination } from './ui/Pagination';
 export { default as BatchActionBar } from './ui/BatchActionBar';
 export { default as AdvancedSearch } from './ui/AdvancedSearch';
 export { default as EmptyState } from './feedback/EmptyState';
+export { default as DataTable } from './data-display/DataTable';
+export type { ColumnType, DataTableProps, DataTableEmptyProps, SortOrder } from './data-display/DataTable';
+export { ConfirmProvider, useConfirm } from './ui/ConfirmDialog';
+export type { ConfirmOptions, ConfirmType } from './ui/ConfirmDialog';
 
 // 反馈组件
 export { default as LoadingSpinner } from './feedback/LoadingSpinner';
@@ -83,7 +87,6 @@ export { default as PreloadProvider } from './PreloadProvider';
 export { PermissionGuard, PermissionButton, PermissionView } from './PermissionGuard';
 
 // 性能优化组件
-export { default as OptimizedList } from './data-display/OptimizedList';
 export {
   deepMemo,
   shallowMemo,
