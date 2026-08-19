@@ -127,7 +127,50 @@ def import_devices(file):
 
     headers = [cell.value for cell in sheet[1]]
 
-    for row in sheet.iter_rows(min_row=2, values_only=True):
+    # M7：预扫描收集查询键（strip 后去重、跳过空值），把逐行 N+1 查询改为批量预取
+    all_rows = list(sheet.iter_rows(min_row=2, values_only=True))
+
+    device_ids = set()
+    class_names = set()
+    admin_names = set()
+    for row in all_rows:
+        row_dict = dict(zip(headers, row))
+        raw_device_id = (
+            row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
+        )
+        if raw_device_id is not None and str(raw_device_id).strip():
+            device_ids.add(str(raw_device_id).strip())
+        raw_class_name = row_dict.get("班级名称") or row_dict.get("class_name")
+        if raw_class_name and str(raw_class_name).strip():
+            class_names.add(str(raw_class_name).strip())
+        raw_admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
+        if raw_admin_name and str(raw_admin_name).strip():
+            admin_names.add(str(raw_admin_name).strip())
+
+    # 批量预查询三个 map（admin 先 real_name 后 username 兜底，setdefault 保证 real_name 优先）
+    device_map = {}
+    if device_ids:
+        device_map = {
+            d.device_id: d
+            for d in Device.query.filter(Device.device_id.in_(device_ids)).all()
+        }
+
+    class_map = {}
+    if class_names:
+        class_map = {
+            c.name: c for c in ClassInfo.query.filter(ClassInfo.name.in_(class_names)).all()
+        }
+
+    admin_map = {}
+    if admin_names:
+        admins = Admin.query.filter(Admin.real_name.in_(admin_names)).all()
+        admin_map = {a.real_name: a for a in admins}
+        remaining = [n for n in admin_names if n not in admin_map]
+        if remaining:
+            for a in Admin.query.filter(Admin.username.in_(remaining)).all():
+                admin_map.setdefault(a.username, a)
+
+    for row in all_rows:
         try:
             row_dict = dict(zip(headers, row))
 
@@ -163,7 +206,7 @@ def import_devices(file):
                 if not is_valid:
                     row_errors.append({"field": "name", "message": msg})
 
-            existing_device = Device.query.filter_by(device_id=str(device_id)).first()
+            existing_device = device_map.get(str(device_id))
             if existing_device:
                 row_errors.append(
                     {"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'}
@@ -180,7 +223,7 @@ def import_devices(file):
                         {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
                     )
                 else:
-                    class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
+                    class_info = class_map.get(class_name.strip())
                     if not class_info:
                         row_errors.append(
                             {
@@ -200,9 +243,7 @@ def import_devices(file):
                         {"field": "admin_name", "message": "管理员姓名长度超过限制（最大50字符）"}
                     )
                 else:
-                    admin = Admin.query.filter(Admin.real_name == admin_name.strip()).first()
-                    if not admin:
-                        admin = Admin.query.filter(Admin.username == admin_name.strip()).first()
+                    admin = admin_map.get(admin_name.strip())
                     if not admin:
                         row_errors.append(
                             {

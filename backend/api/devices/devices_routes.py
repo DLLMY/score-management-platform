@@ -471,9 +471,13 @@ class DeviceStats(Resource):
         """
         total = Device.query.count()
         error = Device.query.filter_by(status="error").count()
-        # 在线以 last_heartbeat 时效性为准，避免陈旧 status 把无心跳设备仍计为在线
-        online = sum(1 for d in Device.query.all() if d.is_online)
-        offline = total - online - error
+        # M7: 在线判定以 last_heartbeat 时效性为准（与 is_device_online 的 60s 阈值一致），
+        # 改为带索引 count()（ix_device_last_heartbeat），替代全表内存遍历
+        from datetime import timedelta
+
+        online_cutoff = datetime.now() - timedelta(seconds=60)
+        online = Device.query.filter(Device.last_heartbeat >= online_cutoff).count()
+        offline = max(0, total - online - error)
 
         today = datetime.now().date()
         today_heartbeats = DeviceHeartbeat.query.filter(

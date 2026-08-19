@@ -671,18 +671,48 @@ function DeviceManagement() {
     [handleBindChange, openBindModal]
   );
 
+  // M7：统一的远程控制能力（行内快捷开箱与 Modal「发送指令」共用）
+  const performAction = useCallback(
+    async (action: string, device: Device) => {
+      try {
+        await api.devices.remoteControl(device.id, action);
+        showToast('success', `远程指令已发送: ${action}`);
+        return true;
+      } catch (error) {
+        showToast('error', `操作失败: ${(error as Error).message}`);
+        return false;
+      }
+    },
+    [showToast]
+  );
+
   const handleRemoteControl = useCallback(async () => {
     if (!selectedDevice || !controlAction) return;
 
-    try {
-      await api.devices.remoteControl(selectedDevice.id, controlAction);
-      showToast('success', `远程指令已发送: ${controlAction}`);
+    const ok = await performAction(controlAction, selectedDevice);
+    if (ok) {
       closeControlModal();
       setControlAction('');
-    } catch (error) {
-      showToast('error', `操作失败: ${(error as Error).message}`);
     }
-  }, [selectedDevice, controlAction, showToast, closeControlModal]);
+  }, [selectedDevice, controlAction, performAction, closeControlModal]);
+
+  // M7：行内一步到位开A箱/开B箱（保留二次确认，跳过中间弹窗）
+  const handleQuickUnlock = useCallback(
+    async (device: Device, box: 'A' | 'B') => {
+      const action = box === 'A' ? 'unlock_a' : 'unlock_b';
+      const ok = await confirmRef.current({
+        title: '远程开箱',
+        message: `确定要远程打开设备「${device.name || device.device_id}」的${box}箱门吗？`,
+        confirmText: `开${box}箱`,
+        cancelText: '取消',
+        type: box === 'A' ? 'success' : 'danger',
+      });
+      if (!ok) return;
+
+      await performAction(action, device);
+    },
+    [performAction]
+  );
 
   const handleOTAUpgrade = useCallback(async () => {
     if (!selectedDevice || !otaForm.firmware_url) return;
@@ -969,10 +999,26 @@ function DeviceManagement() {
         title: '操作',
         key: 'actions',
         dataIndex: 'actions',
-        width: 170,
+        width: 260,
         fixed: 'right',
         render: (_v, record) => (
           <div className='flex gap-2'>
+            <PermissionButton
+              permission='device.edit'
+              variant='success'
+              size='sm'
+              onClick={() => handleQuickUnlock(record, 'A')}
+            >
+              开A箱
+            </PermissionButton>
+            <PermissionButton
+              permission='device.edit'
+              variant='danger'
+              size='sm'
+              onClick={() => handleQuickUnlock(record, 'B')}
+            >
+              开B箱
+            </PermissionButton>
             <Button variant='secondary' size='sm' onClick={() => handleViewDetail(record)}>
               <Eye className='w-4 h-4' />
             </Button>
@@ -1004,7 +1050,7 @@ function DeviceManagement() {
         ),
       },
     ],
-    [handleViewDetail, handleOpenBindModal, openSettingsModal, handleDeleteDevice]
+    [handleViewDetail, handleOpenBindModal, openSettingsModal, handleDeleteDevice, handleQuickUnlock]
   );
 
   return (
