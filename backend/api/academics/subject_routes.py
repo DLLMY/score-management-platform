@@ -3,6 +3,7 @@ import logging
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from models import db, Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
+from sqlalchemy import func
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
@@ -85,9 +86,17 @@ class SubjectList(Resource):
 
         subjects = query.order_by(Subject.sort_order, Subject.name).all()
 
-        result = []  # noqa: F841
+        result = []
+        # P3: in_ 聚合替代循环内 count（单查询 group by）
+        subject_ids = [s.id for s in subjects]
+        class_counts = dict(
+            db.session.query(SubjectClass.subject_id, func.count(SubjectClass.id))
+            .filter(SubjectClass.subject_id.in_(subject_ids))
+            .group_by(SubjectClass.subject_id)
+            .all()
+        )
         for s in subjects:
-            class_count = SubjectClass.query.filter_by(subject_id=s.id).count()
+            class_count = class_counts.get(s.id, 0)
             result.append(
                 {
                     "id": s.id,

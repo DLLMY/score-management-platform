@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
-from models import ScoreCategory, ScoreRule
+from models import db, ScoreCategory, ScoreRule
+from sqlalchemy import func
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
@@ -38,9 +39,17 @@ class CategoryList(Resource):
     @cached_api(ttl=30)
     def get(self):
         categories = ScoreCategory.query.all()
-        result = []  # noqa: F841
+        result = []
+        # P3: in_ 聚合替代循环内 count（单查询 group by）
+        category_ids = [c.id for c in categories]
+        rule_counts = dict(
+            db.session.query(ScoreRule.category_id, func.count(ScoreRule.id))
+            .filter(ScoreRule.category_id.in_(category_ids), ScoreRule.is_active.is_(True))
+            .group_by(ScoreRule.category_id)
+            .all()
+        )
         for cat in categories:
-            rule_count = ScoreRule.query.filter_by(category_id=cat.id, is_active=True).count()
+            rule_count = rule_counts.get(cat.id, 0)
             result.append(
                 {
                     "id": cat.id,

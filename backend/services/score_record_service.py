@@ -133,8 +133,8 @@ def create_score_entry(data):
         return None, "学生不存在"
 
     before_score = user.current_score or 0
-    # 排名计算（与原路由一致，懒导入 rank_routes 缓存/二分查找）
-    from api.scores.rank_routes import (
+    # 排名计算（与原路由一致，懒导入 rank_service 缓存/二分查找）
+    from services.rank_service import (
         _find_rank_by_score_binary_search,
         _get_active_rank_rules_cached,
     )

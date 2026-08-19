@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -90,17 +90,24 @@ class TestDevicesRoutes:
             response = client.post("/api/devices/ota-upgrade-all", json={}, headers=auth_headers)
             assert response.status_code == 400
 
-    def test_ota_upgrade_all_no_online_devices(self, client, app, auth_headers):
+    def test_ota_upgrade_all_no_online_devices(self, client, app, auth_headers, db_session):
+        # P3: 实现改 filter(last_heartbeat>=60s) 索引查询，无法 mock 整个 Device 类
+        # （filter 表达式会在 mock 类属性上求值崩溃）——改造真实离线设备走真实查询。
         with app.app_context():
-            with patch("api.devices.devices_routes.Device") as mock_device:
-                mock_device.query.filter_by.return_value.all.return_value = []
-
-                response = client.post(
-                    "/api/devices/ota-upgrade-all",
-                    json={"firmware_url": "http://test.com/firmware.bin"},
-                    headers=auth_headers,
-                )
-                assert response.status_code == 400
+            offline_device = Device(
+                device_id="offline_dev_001",
+                name="离线设备",
+                status="offline",
+                last_heartbeat=datetime.now() - timedelta(hours=2),
+            )
+            db_session.add(offline_device)
+            db_session.commit()
+            response = client.post(
+                "/api/devices/ota-upgrade-all",
+                json={"firmware_url": "http://test.com/firmware.bin"},
+                headers=auth_headers,
+            )
+            assert response.status_code == 400
 
     def test_bulk_ota_upgrade_alias(self, client, app, auth_headers, db_session):
         with app.app_context():

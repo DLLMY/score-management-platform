@@ -25,7 +25,7 @@ from services.device_service import (
 )
 logger = logging.getLogger(__name__)
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import func
 
 from models import Alert
@@ -84,7 +84,10 @@ def send_ota_upgrade_command(firmware_url, version="", force=False, device_id=No
         else:
             return APIResponse.server_error(message="MQTT发送失败，请检查连接")
     else:
-        online_devices = [d for d in Device.query.all() if d.is_online]
+        # P3: 索引 filter 替代 all()+内存过滤（last_heartbeat 带 ix_device_last_heartbeat）
+        online_devices = Device.query.filter(
+            Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
+        ).all()
 
         if not online_devices:
             return APIResponse.bad_request(message="没有在线设备")
@@ -964,7 +967,7 @@ class DeviceAdvancedStats(Resource):
         total = Device.query.count()
         error = Device.query.filter_by(status="error").count()
         # 在线以 last_heartbeat 时效性为准，避免陈旧 status 把无心跳设备仍计为在线
-        online = sum(1 for d in Device.query.all() if d.is_online)
+        online = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
         offline = total - online - error
 
         # 无信号数据时保持 None（前端显示 '--'），0 dBm 会被误读为"极强信号"

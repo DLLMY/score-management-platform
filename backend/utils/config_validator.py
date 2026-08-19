@@ -156,7 +156,7 @@ class ConfigValidator:
 def validate_config() -> bool:
     """验证配置的便捷函数"""
     validator = ConfigValidator()
-    result = validator.validate_all()  # noqa: F841
+    validator.validate_all()
     validator.print_report()
     return validator.is_valid()
 

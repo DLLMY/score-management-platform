@@ -51,6 +51,11 @@ def create_app(lightweight=False):
 
     ResponseMiddleware(app)
 
+    # P2-1: 安全响应头（CSP/nosniff/X-Frame/Referrer），缓解 XSS 与点击劫持面
+    from middleware.security_headers import register_security_headers
+
+    register_security_headers(app)
+
     if not lightweight:
         from app.api_versioning import api_version_manager
 

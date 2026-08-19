@@ -7,7 +7,7 @@ from utils.permission import requires_permission
 from utils.response import APIResponse
 from services.export_service import export_service
 from services.heartbeat_service import is_device_online
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
@@ -188,7 +188,7 @@ class ExportData(Resource):
                 users_count = User.query.count()
                 rules_count = ScoreRule.query.count()
                 devices_count = Device.query.count()
-                online_devices = sum(1 for d in Device.query.all() if d.is_online)
+                online_devices = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
                 records_count = ScoreRecord.query.count()
                 output = export_service.export_summary_report(
                     users_count, rules_count, devices_count, online_devices, records_count
@@ -477,7 +477,7 @@ class ExportSummary(Resource):
         users_count = User.query.count()
         rules_count = ScoreRule.query.count()
         devices_count = Device.query.count()
-        online_devices = sum(1 for d in Device.query.all() if d.is_online)
+        online_devices = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
         records_count = ScoreRecord.query.count()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:

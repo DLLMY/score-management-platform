@@ -106,7 +106,7 @@ class AcademicsService:
         subject_id) 去重 upsert；整段 commit，异常由路由外层捕获后 rollback 回 500。
         """
         # 延迟导入以避免与 exam_routes 共享的辅助类形成模块级循环依赖
-        from api.academics.exam_import_routes import ScoreImportHelper, _resolve_subject_id
+        from services.score_import_helper import ScoreImportHelper, _resolve_subject_id
 
         card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
         subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
