@@ -58,7 +58,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # vitest forks pool 在 Node 20 崩溃（webidl.markAsUncloneable），本地为 Node 22
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 

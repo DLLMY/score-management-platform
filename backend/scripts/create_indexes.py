@@ -66,7 +66,7 @@ def get_all_indexes():
         (
             record_table,
             [
-                ("ix_score_record_user_created", ["user_id", "created_at"]),
+                ("ix_score_record_user_created", ["student_id", "created_at"]),
                 ("ix_score_record_created_desc", ["created_at"]),
             ],
         ),
@@ -107,15 +107,15 @@ def get_all_indexes():
             score_table,
             [
                 ("ix_score_exam_student", ["exam_id", "student_id"]),
-                ("ix_score_exam_subject", ["exam_id", "subject"]),
-                ("ix_score_student_subject", ["student_id", "subject"]),
+                ("ix_score_exam_subject", ["exam_id", "subject_id"]),
+                ("ix_score_student_subject", ["student_id", "subject_id"]),
             ],
         ),
         # Notification 表（已存在：user_id, type, status, created_at）
         (
             notification_table,
             [
-                ("ix_notification_user_status", ["user_id", "status"]),
+                ("ix_notification_user_status", ["student_id", "status"]),
             ],
         ),
         # Approval 表（已存在：user_id, type, status, approver_id, created_at）

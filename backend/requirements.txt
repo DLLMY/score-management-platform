@@ -24,6 +24,7 @@ isort>=5.12
 bandit>=1.7
 pytest>=7.0
 pytest-cov>=4.0
+pytest-timeout>=2.3
 semver>=3.0
 openpyxl>=3.0
 Werkzeug>=2.0
