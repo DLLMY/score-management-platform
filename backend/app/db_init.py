@@ -31,6 +31,26 @@ def init_database(app):
         db.create_all()
         print("数据库表创建完成")
 
+        # M11+: 启动自举核心索引（幂等，已存在跳过）。延迟 import 避免 app 初始化链
+        # 循环依赖（scripts.create_indexes 模块级 from app import app）。
+        try:
+            # site-packages 存在同名 scripts 包，故将 backend/scripts 显式加入 sys.path 后
+            # 直接 import create_indexes（其模块已解耦 app 实例依赖，engine 由上方 init_app 绑定）
+            import sys as _sys
+            import os as _os
+
+            _scripts_dir = _os.path.join(
+                _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "scripts"
+            )
+            if _scripts_dir not in _sys.path:
+                _sys.path.insert(0, _scripts_dir)
+            from create_indexes import create_indexes as _ensure_indexes
+
+            _ensure_indexes()
+            print("核心索引自举完成")
+        except Exception as e:
+            print(f"核心索引自举失败（可稍后运行 python scripts/create_indexes.py --create）: {e}")
+
         try:
             existing_admin = Admin.query.first()
             if not existing_admin:

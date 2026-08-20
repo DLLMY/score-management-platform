@@ -11,8 +11,10 @@
 双击运行 `启动器.bat`，选择 "一键部署"，系统将自动完成：
 - ✅ 环境检查
 - ✅ 依赖安装
-- ✅ 配置初始化
+- ✅ 配置初始化（基于 `backend/.env.example` 生成 `.env`）
 - ✅ 数据库创建
+- ✅ 核心索引创建与校验（`create_indexes.py --create` + `verify_indexes.py`）
+- ✅ 默认管理员初始化（密码取 `ADMIN_INIT_PASSWORD`，未设置则随机生成）
 - ✅ 服务启动
 
 **或者直接运行：**
@@ -58,7 +60,13 @@
 | **README.md** | 本文档 |
 | **QUICK_REFERENCE.md** | 快速参考文档 |
 | **DEPLOYMENT_GUIDE.md** | 完整部署指南 |
+| **CICD_GUIDE.md** | CI/CD 流水线说明（ci.yml / deploy.yml） |
 | **CHANGELOG.md** | 更新记录（位于仓库根目录） |
+
+### 🗝️ 后端环境变量模板（在 `backend/`，不在 `deploy/`）
+| 文件 | 说明 |
+|------|------|
+| **backend/.env.example** | 后端环境变量模板的"单一来源"，含全部配置键与注释（Flask/JWT/Cookie/MQTT/OTA/备份/CORS/Celery 等）。部署时复制为 `backend/.env`，一键部署脚本会自动生成 |
 
 ## 🎯 使用场景
 
@@ -88,7 +96,10 @@
 ## 🔐 登录信息
 
 - **用户名**: `admin`
-- **密码**: `admin123`
+- **密码**: 由 `ADMIN_INIT_PASSWORD` 环境变量决定
+  - 设置了该变量 → 使用你设置的密码
+  - 未设置 → **随机生成**，打印在**后端首次启动日志**中，登录后请尽快修改
+  - 不再固定为 `123456`
 
 ## 🌐 访问地址
 
@@ -103,14 +114,16 @@
 
 ### 一键部署流程
 ```
-1. 检查系统环境 (Python, Node.js, npm)
+1. 检查系统环境 (Python 3.11, Node.js, npm)
 2. 安装后端依赖 (Flask, SQLAlchemy, etc.)
 3. 安装前端依赖 (React, Tailwind, etc.)
-4. 创建配置文件 (.env)
+4. 创建配置文件 (.env，基于 backend/.env.example)
 5. 初始化数据库 (SQLite)
-6. 清理端口占用 (3000, 5000, 4040)
-7. 启动后端服务 (端口 5000)
-8. 启动前端服务 (端口 3000)
+6. 创建核心索引 (create_indexes.py --create) + 校验 (verify_indexes.py)
+7. 初始化默认管理员 (密码取 ADMIN_INIT_PASSWORD，未设置则随机生成)
+8. 清理端口占用 (3000, 5000, 4040)
+9. 启动后端服务 (端口 5000)
+10. 启动前端服务 (端口 3000)
 ```
 
 ## ⚡ 快速命令
@@ -124,7 +137,7 @@
 .\一键部署.bat
 
 # 或Python版本
-py one_click_deploy.py
+python one_click_deploy.py
 ```
 
 ### PowerShell
@@ -133,7 +146,7 @@ py one_click_deploy.py
 .\启动器.bat
 
 # 或Python版本
-py .\one_click_deploy.py
+python .\one_click_deploy.py
 ```
 
 ## 🔧 故障排除
@@ -161,7 +174,7 @@ npm install
 ### 问题3：服务无法启动
 ```bash
 # 检查环境
-py --version
+python --version   # 应为 Python 3.11.x
 node --version
 
 # 检查端口

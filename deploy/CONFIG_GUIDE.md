@@ -25,8 +25,8 @@
 }
 ```
 
-### 2. 后端环境配置 (`backend/config/.env`)
-**位置**: `backend/config/.env` (从 `.env.example` 复制)
+### 2. 后端环境配置 (`backend/.env`)
+**位置**: `backend/.env` (从 `backend/.env.example` 复制，模板为全部配置键的"单一来源")
 **用途**: Flask应用、数据库、Redis、MQTT、JWT等核心配置
 
 **必须配置项**:
@@ -41,14 +41,25 @@ JWT_SECRET_KEY=jwt_strong_secret_key_must_be_kept_secret
 CSRF_SECRET_KEY=csrf_secret_key_here_different_from_flask_secret
 ```
 
+**认证/Cookie 关键项**:
+```bash
+# Cookie Secure 标志（HttpOnly Cookie 是否仅 HTTPS 传输）。
+# 默认按 FLASK_ENV 自动（production=true）；本机 http 调试设 false，HTTPS 生产设 true
+SESSION_COOKIE_SECURE=false
+
+# 首次初始化管理员密码（后端启动时如无 admin 会自动创建，密码取此变量；
+# 未设置则随机生成并打印在启动日志，不再固定 123456。初始化完成后建议删除该行）
+ADMIN_INIT_PASSWORD=your_initial_admin_password
+```
+
 **可选配置项**:
 ```bash
 # Redis缓存 (如不使用Redis可留空)
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# MQTT消息推送 (可选)
-MQTT_BROKER=broker.hivemq.com
+# MQTT消息推送 (可选；生产建议 EMQX 云实例 SSL 8883，如 nc5233fc.ala.cn-hangzhou.emqxsl.cn)
+MQTT_BROKER=127.0.0.1
 MQTT_PORT=1883
 
 # 数据库路径 (默认使用SQLite)
@@ -142,12 +153,14 @@ maxmemory 256mb
 ### 步骤2: 配置密钥
 ```bash
 # 1. 复制后端配置模板
-copy backend\config\.env.example backend\config\.env
+copy backend\.env.example backend\.env
 
-# 2. 编辑 backend\config\.env，修改以下密钥:
+# 2. 编辑 backend\.env，修改以下密钥:
 FLASK_SECRET_KEY=<生成32位以上随机字符串>
 JWT_SECRET_KEY=<生成32位以上随机字符串>
 CSRF_SECRET_KEY=<生成32位以上随机字符串>
+# 可选: 设置首次管理员密码（未设置则随机生成并打印在启动日志）
+ADMIN_INIT_PASSWORD=<初始化密码>
 ```
 
 ### 步骤3: 配置ngrok (可选)
@@ -195,7 +208,7 @@ print(secrets.token_urlsafe(32))
 }
 ```
 
-同时修改后端配置 `backend/config/.env`:
+同时修改后端配置 `backend/.env`:
 ```bash
 FLASK_PORT=5001
 ```

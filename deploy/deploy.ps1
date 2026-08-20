@@ -70,11 +70,13 @@ function Test-Command([string]$Command) {
 function Find-Python {
     Write-Step "Detecting Python environment..."
     
+    # 优先系统 Python 3.11（含 torch 依赖）；"python"/"py" 可能解析到 3.13 缺依赖，放最后兜底
     $pythonPaths = @(
-        "python",
-        "py",
         "C:\Users\$env:USERNAME\AppData\Local\Programs\Python\Python311\python.exe",
-        "C:\Users\$env:USERNAME\AppData\Local\Programs\Python\Python313\python.exe"
+        "C:\Python311\python.exe",
+        "C:\Program Files\Python311\python.exe",
+        "python",
+        "py"
     )
     
     foreach ($path in $pythonPaths) {
@@ -285,10 +287,26 @@ function Start-Redis {
     }
 }
 
+function Initialize-Database($pythonExe) {
+    Write-Step "Initializing database & indexes..."
+    # 后端启动时 app/db_init.py 会自动 db.create_all() + 创建默认管理员（ADMIN_INIT_PASSWORD）；
+    # 此处显式创建核心索引（M11 索引闸门：新环境漏跑则索引全失且回归闸门报警）。
+    & $pythonExe -c "from app import create_app; from models import db; app = create_app(); app.app_context().push(); db.create_all(); print('DB tables ready')" 2>&1 | Out-Host
+    Write-OK "Database tables ready"
+    & $pythonExe "$backendDir\scripts\create_indexes.py" --create 2>&1 | Out-Host
+    Write-OK "Core indexes created"
+    & $pythonExe "$backendDir\scripts\verify_indexes.py" 2>&1 | Out-Host
+    if ($LASTEXITCODE -eq 0) {
+        Write-OK "Index verification passed"
+    } else {
+        Write-Warn "Index verification failed - please check output above"
+    }
+}
+
 function Start-Backend($pythonExe) {
-    Write-Step "Starting backend service..."
+    Write-Step "Starting backend service (production mode, no reloader)..."
     Push-Location $backendDir
-    Start-Process -FilePath $pythonExe -ArgumentList "run.py --env development" -WorkingDirectory $backendDir -WindowStyle Normal
+    Start-Process -FilePath $pythonExe -ArgumentList "run.py --env production" -WorkingDirectory $backendDir -WindowStyle Normal
     Pop-Location
     Start-Sleep -Seconds 5
 }
@@ -432,7 +450,7 @@ function Show-Deployment-Complete {
     Write-Host ""
     Write-Host "Login Information:"
     Write-Color "  Username: admin" $green
-    Write-Color "  Password: 123456" $green
+    Write-Host "  Password: 首次启动由后端自动生成（见后端窗口日志，或预设 ADMIN_INIT_PASSWORD 环境变量）" $yellow
     Write-Host ""
     Write-Host "Opening frontend in default browser..."
     Start-Process "http://localhost:3000"
@@ -466,6 +484,7 @@ try {
     Install-Node-Dependencies
     Create-Configuration
     Cleanup-Services
+    Initialize-Database $pythonExe
     Start-Redis
     Start-Backend $pythonExe
     Start-Frontend

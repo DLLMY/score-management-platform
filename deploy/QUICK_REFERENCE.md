@@ -18,7 +18,7 @@
 
 ### 首次部署
 
-1. 安装 Python 3.10+
+1. 安装 Python 3.11（含 torch 依赖；不要依赖 `py` 启动器，它可能解析到 3.13）
 2. 安装 Node.js 18+
 3. 运行 `download_deps.py`
 4. 运行 `start_server.bat`
@@ -75,7 +75,7 @@ start_server.bat
 ### 默认登录
 
 - **用户名**: `admin`
-- **密码**: `admin123`
+- **密码**: 由 `ADMIN_INIT_PASSWORD` 环境变量决定；未设置则**随机生成**，打印在**后端首次启动日志**中（不再固定 `123456`）
 
 ---
 

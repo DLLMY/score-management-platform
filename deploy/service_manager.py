@@ -25,6 +25,27 @@ DEFAULT_CONFIG = {
 }
 
 
+def find_python():
+    """探测项目可用 Python（优先系统 3.11 绝对路径，避免 PATH 里的 3.13 缺 torch 依赖）。"""
+    import os as _os
+    candidates = [
+        _os.path.join(_os.environ.get('LOCALAPPDATA', ''), 'Programs', 'Python', 'Python311', 'python.exe'),
+        r'C:\Python311\python.exe',
+        r'C:\Program Files\Python311\python.exe',
+        'python3',
+        'python',
+    ]
+    for c in candidates:
+        try:
+            out = subprocess.run([c, '--version'], capture_output=True, text=True, timeout=10)
+            ver = out.stdout or out.stderr or ''
+            if '3.' in ver:
+                return c
+        except Exception:
+            continue
+    return 'python'
+
+
 def load_config():
     """加载配置文件"""
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -151,7 +172,7 @@ class ServiceManager:
             os.chdir(self.backend_dir)
             logger.info("启动后端服务...")
             self.backend_process = subprocess.Popen(
-                ['python', 'run.py', '--env', 'development'],
+                [find_python(), 'run.py', '--env', 'production'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,

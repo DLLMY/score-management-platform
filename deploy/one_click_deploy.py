@@ -41,6 +41,28 @@ def run_command(cmd, cwd=None, quiet=False):
         print(f"执行命令时发生异常: {e}")
         return False, "", str(e)
 
+def find_python():
+    """探测项目可用 Python（优先系统 3.11，须带 torch 依赖；避免 py 启动器解析到 3.13）。"""
+    candidates = [
+        os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', 'Python', 'Python311', 'python.exe'),
+        r'C:\Python311\python.exe',
+        r'C:\Program Files\Python311\python.exe',
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    # 兜底：python3 / python（仅取 3.10+）
+    for cmd in ('python3', 'python'):
+        try:
+            out = subprocess.run([cmd, '--version'], capture_output=True, text=True, timeout=10)
+            ver = (out.stdout or out.stderr or '')
+            if '3.' in ver:
+                return cmd
+        except Exception:
+            continue
+    return None
+
+
 def get_user_input(prompt, default=""):
     if default:
         prompt = f"{prompt} (默认: {default})"
@@ -166,6 +188,14 @@ def main():
     
     flask_port = get_user_input("请输入后端服务端口", default="5000")
     frontend_port = get_user_input("请输入前端服务端口", default="3000")
+
+    # 探测 Python 3.11（含 torch 依赖的系统 Python；py 启动器可能解析到 3.13 缺依赖）
+    py_exe = find_python()
+    if not py_exe:
+        print_error("未找到 Python 3.10+（建议 Python 3.11，需包含 torch 等后端依赖）")
+        input("按 Enter 退出...")
+        return
+    print_info(f"使用 Python: {py_exe}")
     
     # 询问是否启动ngrok
     use_ngrok = False
@@ -185,7 +215,7 @@ def main():
     print_step(1, 7, "检查运行环境")
     
     print("检查 Python 环境...")
-    success, stdout, stderr = run_command('py --version')
+    success, stdout, stderr = run_command(f'{py_exe} --version')
     if not success:
         print_error("Python 未安装或未添加到 PATH")
         print_info("请安装 Python 3.10+ 并添加到系统 PATH")
@@ -210,7 +240,7 @@ def main():
     
     requirements_file = os.path.join(backend_dir, 'requirements.txt')
     if os.path.exists(requirements_file):
-        success, stdout, stderr = run_command('py -m pip install -r requirements.txt', cwd=backend_dir)
+        success, stdout, stderr = run_command(f'{py_exe} -m pip install -r requirements.txt', cwd=backend_dir)
         if success:
             print_success("Python 依赖安装完成")
         else:
@@ -247,62 +277,43 @@ def main():
         os.makedirs(instance_dir)
         print_success(f"创建目录: {instance_dir}")
     
-    # 创建 .env 文件（密钥随机生成，避免公开的硬编码开发密钥）
+    # 创建 .env 文件：从 backend/.env.example 复制（单一配置来源）并注入随机密钥
     flask_secret_key = secrets.token_hex(32)
     csrf_secret_key = secrets.token_hex(32)
     jwt_secret_key = secrets.token_hex(32)
     db_uri_path = db_path.replace('\\', '/')
-    env_content = f"""\
-# 后端环境变量配置
-# Flask 配置
-FLASK_APP=app
-FLASK_ENV=development
-FLASK_DEBUG=true
-FLASK_SECRET_KEY={flask_secret_key}
-FLASK_PORT={flask_port}
-FLASK_HOST=127.0.0.1
 
-# 数据库配置
-DATABASE_URI=sqlite:///{db_uri_path}
+    env_example = os.path.join(backend_dir, '.env.example')
+    if os.path.exists(env_example):
+        with open(env_example, encoding='utf-8') as f:
+            env_content = f.read()
+    else:
+        print_warning("未找到 backend/.env.example，跳过 .env 生成")
+        env_content = ""
 
-# Redis 缓存配置（可选）
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-REDIS_PASSWORD=
+    if env_content:
+        # 注入随机密钥（.env.example 的 change-me-* 占位）
+        env_content = env_content.replace('change-me-flask-secret', flask_secret_key)
+        env_content = env_content.replace('change-me-csrf-secret', csrf_secret_key)
+        env_content = env_content.replace('change-me-jwt-secret', jwt_secret_key)
+        # 用户输入的端口 / 数据库路径 / CORS
+        env_content = env_content.replace('FLASK_PORT=5000', f'FLASK_PORT={flask_port}')
+        env_content = env_content.replace(
+            'sqlite:///instance/score_management.db', f'sqlite:///{db_uri_path}'
+        )
+        env_content = env_content.replace(
+            'http://localhost:3000,http://127.0.0.1:3000',
+            f'http://localhost:{frontend_port},http://127.0.0.1:{frontend_port}',
+        )
+        # 部署模式：无 reloader 生产模式 + 本机 http 显式关闭 cookie Secure（HTTPS 部署改 true）
+        env_content = env_content.replace('FLASK_ENV=development', 'FLASK_ENV=production')
+        env_content = env_content.replace('FLASK_DEBUG=true', 'FLASK_DEBUG=false')
+        env_content = env_content.replace('# SESSION_COOKIE_SECURE=true', 'SESSION_COOKIE_SECURE=false')
+        # 管理员初始密码
+        env_content = env_content.replace(
+            'ADMIN_INIT_PASSWORD=admin123456', f'ADMIN_INIT_PASSWORD={admin_password}'
+        )
 
-# 安全配置
-CSRF_SECRET_KEY={csrf_secret_key}
-
-# 限流配置
-RATE_LIMIT_ENABLED=false
-RATE_LIMIT_PER_HOUR=1000
-RATE_LIMIT_PER_MINUTE=30
-
-# MQTT 配置
-MQTT_BROKER=broker.hivemq.com
-MQTT_PORT=1883
-MQTT_CLIENT_ID=score_backend_dev
-MQTT_USERNAME=
-MQTT_PASSWORD=
-MQTT_SSL=false
-MQTT_TIMEOUT=10
-MQTT_KEEPALIVE=60
-MQTT_TOPIC_PREFIX=score/management
-
-# JWT配置
-JWT_SECRET_KEY={jwt_secret_key}
-JWT_ACCESS_TOKEN_EXPIRES=3600
-JWT_REFRESH_TOKEN_EXPIRES=604800
-
-# 备份配置
-BACKUP_ENABLED=false
-BACKUP_INTERVAL_HOURS=24
-BACKUP_MAX_COUNT=10
-
-# CORS配置
-CORS_ORIGINS=http://localhost:{frontend_port},http://127.0.0.1:{frontend_port}
-"""
     env_file = os.path.join(backend_dir, '.env')
     create_file(env_file, env_content, overwrite=True)
     
@@ -332,7 +343,7 @@ with app.app_context():
             real_name='系统管理员',
             phone='13800138000'
         )
-        from app import db
+        from models import db
         db.session.add(admin)
         db.session.commit()
         print(f"管理员 {admin_username} 创建成功")
@@ -344,15 +355,33 @@ with app.app_context():
     print_step(5, 7, "初始化数据库")
     
     print("创建数据库表...")
-    success, stdout, stderr = run_command('py -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all(); print(\'数据库表创建完成\')"', cwd=backend_dir)
+    success, stdout, stderr = run_command(
+        f'{py_exe} -c "from app import create_app; from models import db; app = create_app(); app.app_context().push(); db.create_all(); print(\'数据库表创建完成\')"',
+        cwd=backend_dir,
+    )
     if success:
         print_success("数据库表创建完成")
     else:
         print_error("数据库表创建失败")
         print_info(f"错误信息: {stderr}")
+
+    print("创建核心索引（create_indexes.py）...")
+    success, stdout, stderr = run_command(f'{py_exe} scripts/create_indexes.py --create', cwd=backend_dir)
+    if success:
+        print_success("核心索引创建完成")
+    else:
+        print_error("核心索引创建失败")
+        print_info(f"错误信息: {stderr}")
+
+    print("校验索引完整性（verify_indexes.py）...")
+    success, stdout, stderr = run_command(f'{py_exe} scripts/verify_indexes.py', cwd=backend_dir)
+    if success:
+        print_success("索引完整性校验通过")
+    else:
+        print_warning("索引校验未通过，请检查上方输出（可稍后手动运行 verify_indexes.py）")
     
     print("\n创建管理员账户...")
-    success, stdout, stderr = run_command('py scripts/init_admin.py', cwd=backend_dir)
+    success, stdout, stderr = run_command(f'{py_exe} scripts/init_admin.py', cwd=backend_dir)
     if success:
         print_success("管理员账户创建完成")
         print_info(f"用户名: {admin_username}")
@@ -392,7 +421,7 @@ with app.app_context():
             print_warning("未检测到Redis服务，将使用内存缓存")
     
     print(f"启动后端服务 (端口 {flask_port})...")
-    backend_cmd = f'cd /d "{backend_dir}" && py run.py --env development'
+    backend_cmd = f'cd /d "{backend_dir}" && {py_exe} run.py --env production'
     subprocess.Popen(f'start "后端服务" cmd /k "{backend_cmd}"', shell=True)
     
     print("等待后端服务启动...")

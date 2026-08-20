@@ -21,7 +21,6 @@ import datetime
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import app
 from models import (
     db,
     User,
@@ -38,6 +37,20 @@ from models import (
 
 
 # ========== 核心性能索引清单（单一来源：create / verify 共用） ==========
+def _get_app_db():
+    """确保 db engine 绑定 + application context 可用，返回 (app, db)。
+    - db_init 启动自举：已有 app context（init_app 已执行）→ 直接取 current_app，不递归；
+    - 脚本直跑（--verify/--create / 闸门）：无 context → get_app() 完成初始化并 push。
+    """
+    from flask import has_app_context, current_app
+
+    if not has_app_context():
+        from app import get_app
+
+        get_app().app_context().push()
+    return current_app._get_current_object(), db
+
+
 def get_all_indexes():
     """返回 [(table_name, [(index_name, [columns...])])] 清单。"""
     user_table = User.__tablename__
@@ -150,60 +163,60 @@ def create_indexes():
     indexes_created = []
     indexes_already_exist = []
 
-    with app.app_context():
-        # 获取当前连接
-        conn = db.engine.connect()
-        inspector = db.inspect(db.engine)
+    # 直接使用全局 engine（不依赖 app 实例/上下文，供 app 启动链自举安全调用）
+    _app, _db = _get_app_db()
+    conn = _db.engine.connect()
+    inspector = _db.inspect(_db.engine)
 
-        all_indexes = get_all_indexes()
+    all_indexes = get_all_indexes()
 
-        # 创建索引
-        for table_name, indexes in all_indexes:
-            existing_indexes = inspector.get_indexes(table_name)
-            existing_index_names = {idx["name"] for idx in existing_indexes}
+    # 创建索引
+    for table_name, indexes in all_indexes:
+        existing_indexes = inspector.get_indexes(table_name)
+        existing_index_names = {idx["name"] for idx in existing_indexes}
 
-            for index_name, columns in indexes:
-                if index_name in existing_index_names:
-                    indexes_already_exist.append(f"{table_name}.{index_name}")
-                    continue
+        for index_name, columns in indexes:
+            if index_name in existing_index_names:
+                indexes_already_exist.append(f"{table_name}.{index_name}")
+                continue
 
-                try:
-                    # 构建创建索引的SQL
-                    columns_str = ", ".join(columns)
-                    sql = f"CREATE INDEX {index_name} ON {table_name} ({columns_str})"
-                    conn.execute(db.text(sql))
-                    conn.commit()
-                    indexes_created.append(f"{table_name}.{index_name}")
-                    print(
-                        "Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str)
-                    )
-                except Exception as e:
-                    print("Failed to create index {0}.{1}: {2}".format(table_name, index_name, e))
+            try:
+                # 构建创建索引的SQL
+                columns_str = ", ".join(columns)
+                sql = f"CREATE INDEX {index_name} ON {table_name} ({columns_str})"
+                conn.execute(_db.text(sql))
+                conn.commit()
+                indexes_created.append(f"{table_name}.{index_name}")
+                print(
+                    "Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str)
+                )
+            except Exception as e:
+                print("Failed to create index {0}.{1}: {2}".format(table_name, index_name, e))
 
-        conn.close()
+    conn.close()
 
-        # 输出统计信息
-        print("\n" + "=" * 60)
-        print("Index creation completed - {0}".format(datetime.datetime.now()))
-        print("=" * 60)
-        print("Created indexes: {0}".format(len(indexes_created)))
-        if indexes_created:
-            for idx in indexes_created:
-                print("  + {0}".format(idx))
+    # 输出统计信息
+    print("\n" + "=" * 60)
+    print("Index creation completed - {0}".format(datetime.datetime.now()))
+    print("=" * 60)
+    print("Created indexes: {0}".format(len(indexes_created)))
+    if indexes_created:
+        for idx in indexes_created:
+            print("  + {0}".format(idx))
 
-        print("\nExisting indexes: {0}".format(len(indexes_already_exist)))
-        if indexes_already_exist:
-            for idx in indexes_already_exist:
-                print("  - {0}".format(idx))
+    print("\nExisting indexes: {0}".format(len(indexes_already_exist)))
+    if indexes_already_exist:
+        for idx in indexes_already_exist:
+            print("  - {0}".format(idx))
 
-        print("\nIndex optimization completed!")
+    print("\nIndex optimization completed!")
 
-        return {
-            "created": indexes_created,
-            "already_exist": indexes_already_exist,
-            "total_created": len(indexes_created),
-            "total_already_exist": len(indexes_already_exist),
-        }
+    return {
+        "created": indexes_created,
+        "already_exist": indexes_already_exist,
+        "total_created": len(indexes_created),
+        "total_already_exist": len(indexes_already_exist),
+    }
 
 
 def verify_indexes():
@@ -213,28 +226,28 @@ def verify_indexes():
         list[str]: 缺失索引列表（空 = 全部存在）
     """
     missing = []
-    with app.app_context():
-        inspector = db.inspect(db.engine)
-        for table_name, indexes in get_all_indexes():
-            try:
-                existing_index_names = {
-                    idx["name"] for idx in inspector.get_indexes(table_name)
-                }
-            except Exception as e:
-                missing.append(f"{table_name} (检查失败: {e})")
-                continue
-            for index_name, _columns in indexes:
-                if index_name not in existing_index_names:
-                    missing.append(f"{table_name}.{index_name}")
+    _app, _db = _get_app_db()
+    inspector = _db.inspect(_db.engine)
+    for table_name, indexes in get_all_indexes():
+        try:
+            existing_index_names = {
+                idx["name"] for idx in inspector.get_indexes(table_name)
+            }
+        except Exception as e:
+            missing.append(f"{table_name} (检查失败: {e})")
+            continue
+        for index_name, _columns in indexes:
+            if index_name not in existing_index_names:
+                missing.append(f"{table_name}.{index_name}")
     return missing
 
 
 def check_existing_indexes():
     """检查已存在的索引"""
-    with app.app_context():
-        inspector = db.inspect(db.engine)
+    _app, _db = _get_app_db()
+    inspector = _db.inspect(_db.engine)
 
-        tables = [
+    tables = [
             User.__tablename__,
             ScoreRecord.__tablename__,
             Device.__tablename__,
@@ -247,17 +260,17 @@ def check_existing_indexes():
             OperationLog.__tablename__,
         ]
 
-        print("当前数据库索引状态:")
-        print("=" * 60)
+    print("当前数据库索引状态:")
+    print("=" * 60)
 
-        for table in tables:
-            indexes = inspector.get_indexes(table)
-            print(f"\n表: {table}")
-            print(f"  索引数量: {len(indexes)}")
-            for idx in indexes:
-                columns = ", ".join(idx["column_names"])
-                unique = " (唯一)" if idx.get("unique", False) else ""
-                print(f"    - {idx['name']}{unique}: {columns}")
+    for table in tables:
+        indexes = inspector.get_indexes(table)
+        print(f"\n表: {table}")
+        print(f"  索引数量: {len(indexes)}")
+        for idx in indexes:
+            columns = ", ".join(idx["column_names"])
+            unique = " (唯一)" if idx.get("unique", False) else ""
+            print(f"    - {idx['name']}{unique}: {columns}")
 
 
 if __name__ == "__main__":

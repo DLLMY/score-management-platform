@@ -36,7 +36,11 @@ class SecurityConfig:
     JWT_ACCESS_TOKEN_EXPIRES = 3600
     JWT_REFRESH_TOKEN_EXPIRES = 604800
     JWT_ALGORITHM = "HS256"
-    SESSION_COOKIE_SECURE = os.getenv("FLASK_ENV") == "production"
+    # Cookie Secure：显式 SESSION_COOKIE_SECURE 键优先（本机 http 部署可显式 false），
+    # 未设置时按 FLASK_ENV 自动判断（production=True）。
+    SESSION_COOKIE_SECURE = os.getenv(
+        "SESSION_COOKIE_SECURE", "true" if os.getenv("FLASK_ENV") == "production" else "false"
+    ).strip().lower() in ("true", "1", "yes")
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_ENABLED = True
