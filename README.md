@@ -260,6 +260,7 @@ bash scripts/run_regression.sh
 |------|------|
 | [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md) | 完整部署指南（含故障排查/安全加固） |
 | [deploy/ENV_CONFIG.md](deploy/ENV_CONFIG.md) | 环境变量全量说明 |
+| [docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md) | **配置手册（全量）**：全部手动配置项（后端/前端/数据库/第三方服务/部署脚本），含格式/默认值/必填/示例 |
 | [deploy/QUICK_REFERENCE.md](deploy/QUICK_REFERENCE.md) | 部署快速参考 |
 | [deploy/RELEASE_GUIDE.md](deploy/RELEASE_GUIDE.md) | 版本发布流程 |
 | [deploy/BRANCH_STRATEGY.md](deploy/BRANCH_STRATEGY.md) | 分支策略 |
