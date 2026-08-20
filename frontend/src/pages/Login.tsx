@@ -97,13 +97,7 @@ function Login() {
       localStorage.removeItem('student');
       localStorage.removeItem('student_token');
 
-      if (result.access_token) {
-        localStorage.setItem('access_token', result.access_token);
-      }
-      if (result.refresh_token) {
-        localStorage.setItem('refresh_token', result.refresh_token);
-      }
-
+      // 十评 P2-1 完全 cookie 化：token 由后端 Set-Cookie HttpOnly 写入，前端不再存储
       localStorage.removeItem('user_permissions');
 
       try {

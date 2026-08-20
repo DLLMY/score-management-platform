@@ -77,8 +77,9 @@ class CacheWarmupService {
     }
 
     // 仅登录后预热：预热列表中的接口均需鉴权，未登录时预热必然 401 且毫无意义
+    // 十评 P2-1：凭证在 HttpOnly cookie，登录态以 admin marker 判断
     const hasAuthToken =
-      typeof localStorage !== 'undefined' && !!localStorage.getItem('access_token');
+      typeof localStorage !== 'undefined' && !!localStorage.getItem('admin');
     if (!hasAuthToken) {
       logger.debug('[CacheWarmup] 未检测到登录令牌，跳过缓存预热');
       return;

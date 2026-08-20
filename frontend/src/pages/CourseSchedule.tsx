@@ -337,9 +337,9 @@ const CourseSchedulePage: React.FC = () => {
           is_active: true,
         });
         fetchData();
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('保存失败:', error);
-        const errorMessage = error.message || (editingSchedule ? '更新失败' : '添加失败');
+        const errorMessage = (error as Error).message || (editingSchedule ? '更新失败' : '添加失败');
         showToast('error', errorMessage);
       }
     },
@@ -498,9 +498,9 @@ const CourseSchedulePage: React.FC = () => {
           showToast('error', '导入失败');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('导入失败:', error);
-      showToast('error', '导入失败：' + error.message);
+      showToast('error', '导入失败：' + (error as Error).message);
     } finally {
       setIsImporting(false);
     }
@@ -559,7 +559,7 @@ const CourseSchedulePage: React.FC = () => {
     }));
   };
 
-  const handleFormChange = (field: keyof FormData, value: any) => {
+  const handleFormChange = (field: keyof FormData, value: string | number | boolean | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (conflictResult) {
       setConflictResult(null);

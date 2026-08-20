@@ -12,8 +12,6 @@ interface GlobalStateContextValue {
   setUser: (user: UserInfo | null) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  refreshToken: string | null;
-  setRefreshToken: (token: string | null) => void;
   clearAuth: () => void;
 }
 
@@ -35,9 +33,7 @@ export function GlobalStateProvider({ children }: GlobalStateProviderProps): Rea
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const [refreshToken, setRefreshTokenState] = useState<string | null>(() => {
-    return localStorage.getItem('refresh_token');
-  });
+  // 十评 P2-1：refresh_token 由后端 HttpOnly cookie 管理，前端不再持有
 
   useEffect(() => {
     if (user) {
@@ -47,25 +43,13 @@ export function GlobalStateProvider({ children }: GlobalStateProviderProps): Rea
     }
   }, [user]);
 
-  useEffect(() => {
-    if (refreshToken) {
-      localStorage.setItem('refresh_token', refreshToken);
-    } else {
-      localStorage.removeItem('refresh_token');
-    }
-  }, [refreshToken]);
-
   const setUser = useCallback((newUser: UserInfo | null) => {
     setUserState(newUser);
   }, []);
 
-  const setRefreshToken = useCallback((token: string | null) => {
-    setRefreshTokenState(token);
-  }, []);
-
   const clearAuth = useCallback(() => {
     setUserState(null);
-    setRefreshTokenState(null);
+    // 十评 P2-1：凭证在 HttpOnly cookie，登出走后端 /logout 清除
     localStorage.removeItem('token');
     localStorage.removeItem('csrf_token');
   }, []);
@@ -75,8 +59,6 @@ export function GlobalStateProvider({ children }: GlobalStateProviderProps): Rea
     setUser,
     isLoading,
     setIsLoading,
-    refreshToken,
-    setRefreshToken,
     clearAuth,
   };
 

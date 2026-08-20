@@ -90,8 +90,8 @@ function StudentPortal() {
     try {
       const res = await api.student.getMyRank();
       setMyRank(res);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setLoading(false);
     }
@@ -108,8 +108,8 @@ function StudentPortal() {
       setScore(scoreRes.current_score);
       setRecords(recRes.data);
       setPagination(recRes.pagination);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setLoading(false);
     }
@@ -123,8 +123,8 @@ function StudentPortal() {
       // M7: 数组赋值防护，非数组时置空避免渲染崩溃
       setNotifications(Array.isArray(res.data) ? res.data : []);
       setNotifTotal(res.pagination.total);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setLoading(false);
     }
@@ -136,8 +136,8 @@ function StudentPortal() {
     try {
       const res = await api.student.getLeaves();
       setLeaves(res);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setLoading(false);
     }
@@ -149,8 +149,8 @@ function StudentPortal() {
     try {
       const res = await api.student.getInsights(30, 8);
       setInsights(res);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setGrowthLoading(false);
     }
@@ -184,8 +184,8 @@ function StudentPortal() {
       setLeaveForm({ leave_type: 'personal', start_date: '', end_date: '', reason: '' });
       await loadLeaves();
       showToast('success', '请假申请已提交'); // L9: 成功反馈
-    } catch (err: any) {
-      setError(err?.message || '提交失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '提交失败');
     } finally {
       setLoading(false);
     }
@@ -198,8 +198,8 @@ function StudentPortal() {
     try {
       const res = await api.student.requestPhoneboxUnlock();
       setUnlockRes(res);
-    } catch (err: any) {
-      setError(err?.message || '申请失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '申请失败');
     } finally {
       setLoading(false);
     }

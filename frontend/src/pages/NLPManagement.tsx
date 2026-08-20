@@ -181,6 +181,44 @@ interface ManualCorrectionData {
   feedback_note: string;
 }
 
+// —— 算法分析接口数据（十评 P3 any 收敛：按页面使用点收敛最小字段）——
+interface NlpAnalysisData {
+  summary?: {
+    accuracy?: number;
+    cache_hit_rate?: number;
+    avg_processing_time?: number;
+    total_requests?: number;
+  };
+  intent_breakdown?: Record<string, number>;
+  components?: unknown[];
+  slow_requests?: Array<{ timestamp: string; processing_time: number }>;
+}
+interface NlpSuggestion {
+  priority?: 'high' | 'medium' | 'low' | string;
+  title?: string;
+  description?: string;
+  issue?: string;
+  suggestions?: string[];
+}
+interface NlpOptimizerConfig {
+  intent_classifier?: { tfidf_max_features?: number; tfidf_ngram_range?: [number, number] };
+  performance?: { cache_ttl?: number };
+}
+interface NlpBenchmarkResult {
+  avg_latency?: number;
+  p95_latency?: number;
+  avg_accuracy?: number;
+  throughput?: number;
+}
+interface NlpCorrection {
+  id?: number;
+  original_text?: string;
+  field_type?: string;
+  original_value?: string;
+  corrected_value?: string;
+  status?: string;
+}
+
 type TabType = 'parse' | 'rules' | 'training' | 'statistics' | 'analysis';
 
 const NLPScoringManagement = () => {
@@ -235,17 +273,17 @@ const NLPScoringManagement = () => {
   const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
 
   // 算法分析相关状态
-  const [intentAnalysis, setIntentAnalysis] = useState<any>(null);
-  const [performanceAnalysis, setPerformanceAnalysis] = useState<any>(null);
-  const [optimizationSuggestions, setOptimizationSuggestions] = useState<any[]>([]);
-  const [optimizerConfig, setOptimizerConfig] = useState<any>(null);
+  const [intentAnalysis, setIntentAnalysis] = useState<NlpAnalysisData | null>(null);
+  const [performanceAnalysis, setPerformanceAnalysis] = useState<NlpAnalysisData | null>(null);
+  const [optimizationSuggestions, setOptimizationSuggestions] = useState<NlpSuggestion[]>([]);
+  const [optimizerConfig, setOptimizerConfig] = useState<NlpOptimizerConfig | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
-  const [benchmarkResults, setBenchmarkResults] = useState<any>(null);
+  const [benchmarkResults, setBenchmarkResults] = useState<NlpBenchmarkResult | null>(null);
   const [isBenchmarking, setIsBenchmarking] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<string>('balanced');
 
   // 自学习反馈相关状态
-  const [corrections, setCorrections] = useState<any[]>([]);
+  const [corrections, setCorrections] = useState<NlpCorrection[]>([]);
   const [correctionsPage, setCorrectionsPage] = useState(1);
   const [correctionTotal, setCorrectionTotal] = useState(0);
   const [correctionsLoading, setCorrectionsLoading] = useState(false);
@@ -783,15 +821,15 @@ const NLPScoringManagement = () => {
     setIsLoadingAnalysis(true);
     try {
       const [intentRes, perfRes, suggestionsRes, configRes] = await Promise.all([
-        (api as any).nlp.getAnalysisIntent(),
-        (api as any).nlp.getAnalysisPerformance(),
-        (api as any).nlp.getAnalysisSuggestions(),
-        (api as any).nlp.getOptimizationConfig(),
+        api.nlp.getAnalysisIntent(),
+        api.nlp.getAnalysisPerformance(),
+        api.nlp.getAnalysisSuggestions(),
+        api.nlp.getOptimizationConfig(),
       ]);
 
       if (intentRes.code === 0) setIntentAnalysis(intentRes.data);
       if (perfRes.code === 0) setPerformanceAnalysis(perfRes.data);
-      if (suggestionsRes.code === 0) setOptimizationSuggestions(suggestionsRes.data);
+      if (suggestionsRes.code === 0) setOptimizationSuggestions((suggestionsRes.data as unknown[]) ?? []);
       if (configRes.code === 0) setOptimizerConfig(configRes.data);
       setLoadError(false);
     } catch (error) {
@@ -806,9 +844,9 @@ const NLPScoringManagement = () => {
   const runBenchmark = useCallback(async () => {
     setIsBenchmarking(true);
     try {
-      const response = await (api as any).nlp.benchmarkIntentClassifier({ iterations: 10 });
+      const response = await api.nlp.benchmarkIntentClassifier({ iterations: 10 });
       if (response) {
-        setBenchmarkResults(response);
+        setBenchmarkResults(response as NlpBenchmarkResult);
         showToast('success', '基准测试完成');
       }
     } catch (error) {
@@ -822,9 +860,9 @@ const NLPScoringManagement = () => {
   const updateOptimizationStrategy = useCallback(
     async (strategy: string) => {
       try {
-        const response = await (api as any).nlp.setOptimizationConfig({ strategy });
+        const response = await api.nlp.setOptimizationConfig({ strategy });
         if (response) {
-          setOptimizerConfig(response);
+          setOptimizerConfig(response as NlpOptimizerConfig);
           setSelectedStrategy(strategy);
           showToast('success', '优化策略已更新');
           fetchAnalysisData();
@@ -839,7 +877,7 @@ const NLPScoringManagement = () => {
   // 重置分析指标
   const resetAnalysisMetrics = useCallback(async () => {
     try {
-      const response = await (api as any).nlp.resetAnalysis();
+      const response = await api.nlp.resetAnalysis();
       if (response) {
         showToast('success', '指标已重置');
         fetchAnalysisData();
@@ -1097,7 +1135,7 @@ const NLPScoringManagement = () => {
   );
 
   // —— 组件性能表格列定义 ——
-  const performanceColumns = useMemo<ColumnType<{ name: string; stats: any }>[]>(
+  const performanceColumns = useMemo<ColumnType<{ name: string; stats: { calls?: number | null; avg_time?: number | null; error_rate?: number | null } }>[]>(
     () => [
       {
         title: '组件',
@@ -1152,7 +1190,7 @@ const NLPScoringManagement = () => {
   );
 
   // —— 纠正记录表格列定义 ——
-  const correctionColumns = useMemo<ColumnType<any>[]>(
+  const correctionColumns = useMemo<ColumnType<NlpCorrection>[]>(
     () => [
       {
         title: '原文',
@@ -2336,7 +2374,7 @@ const NLPScoringManagement = () => {
                   <div className='space-y-2'>
                     {performanceAnalysis.slow_requests
                       .slice(0, 5)
-                      .map((req: any, index: number) => (
+                      .map((req: { timestamp: string; processing_time: number }, index: number) => (
                         <div
                           key={index}
                           className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'

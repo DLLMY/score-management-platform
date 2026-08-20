@@ -61,8 +61,7 @@ const RouteError: React.FC<RouteErrorProps> = ({ error }) => (
 );
 
 const createLazyComponent = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  importFn: () => Promise<{ default: React.ComponentType<any> }>,
+  importFn: () => Promise<{ default: React.ComponentType<unknown> }>,
   preload: boolean = false
 ): React.FC & LazyComponentProps => {
   const LazyComponent = lazy(importFn);

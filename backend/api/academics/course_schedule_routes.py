@@ -210,6 +210,249 @@ def check_classroom_conflicts(
     return conflicts
 
 
+
+
+# ================= 课程表导入（M-十评：487 行 post 拆分） =================
+
+_DAY_TEXT_MAP = {
+    "周一": 0,
+    "星期一": 0,
+    "周二": 1,
+    "星期二": 1,
+    "周三": 2,
+    "星期三": 2,
+    "周四": 3,
+    "星期四": 3,
+    "周五": 4,
+    "星期五": 4,
+    "周六": 5,
+    "星期六": 5,
+    "周日": 6,
+    "星期日": 6,
+}
+
+
+def _load_course_import_config(config_id, strategy_param):
+    """加载导入配置：指定 config_id 优先，否则取默认配置；返回映射/策略/默认值。"""
+    config = None
+    if config_id:
+        config = get_by_id(ImportConfig, config_id)
+    else:
+        config = ImportConfig.query.filter(
+            ImportConfig.module_name == "course_schedule",
+            ImportConfig.is_default,
+            ImportConfig.is_active,
+        ).first()
+
+    default_mappings = [
+        {
+            "source_field": "班级名称",
+            "target_field": "class_name",
+            "field_type": "string",
+            "required": True,
+            "relation": "class_info",
+        },
+        {
+            "source_field": "科目名称",
+            "target_field": "subject_name",
+            "field_type": "string",
+            "required": True,
+            "relation": "subject",
+        },
+        {
+            "source_field": "星期",
+            "target_field": "day_of_week",
+            "field_type": "string",
+            "required": True,
+        },
+        {
+            "source_field": "节次",
+            "target_field": "period_number",
+            "field_type": "integer",
+            "required": True,
+        },
+        {"source_field": "教师", "target_field": "teacher_name", "field_type": "string"},
+        {"source_field": "教室", "target_field": "classroom", "field_type": "string"},
+        {"source_field": "备注", "target_field": "description", "field_type": "string"},
+        {"source_field": "是否启用", "target_field": "is_active", "field_type": "boolean"},
+    ]
+
+    field_mappings = config.field_mappings if config else default_mappings
+    conflict_strategy = (
+        strategy_param
+        if strategy_param and strategy_param in ["skip", "update", "error"]
+        else (config.conflict_strategy if config else "update")
+    )
+    default_values = config.default_values if config else {}
+    return field_mappings, conflict_strategy, default_values
+
+
+def _parse_course_import_input(content_type):
+    """按 Content-Type 解析导入源（Excel / JSON）为 import_list。"""
+    import_list = []
+
+    if "multipart/form-data" in content_type:
+        if "file" not in request.files:
+            return APIResponse.bad_request(message="请上传文件")
+
+        file = request.files["file"]
+        if not file.filename:
+            return APIResponse.bad_request(message="请选择文件")
+
+        filename = file.filename.lower()
+        if filename.endswith(".xlsx") or filename.endswith(".xls"):
+            from openpyxl import load_workbook
+
+            wb = load_workbook(file)
+            ws = wb.active
+
+            headers = []
+            for cell in ws[1]:
+                headers.append(cell.value)
+
+            col_map = {}
+            for idx, header in enumerate(headers):
+                if header:
+                    col_map[header] = idx
+
+            for row_idx in range(2, ws.max_row + 1):
+                row_data = {}
+                for header, col_idx in col_map.items():
+                    row_data[header] = ws.cell(row=row_idx, column=col_idx + 1).value
+
+                mapped_item = {}
+                for mapping in field_mappings:
+                    source_val = row_data.get(mapping["source_field"])
+                    target_field = mapping["target_field"]
+                    field_type = mapping.get("field_type", "string")
+
+                    if source_val is None:
+                        if mapping.get("required"):
+                            break
+                        source_val = mapping.get(
+                            "default_value", default_values.get(target_field)
+                        )
+
+                    if field_type == "boolean":
+                        if isinstance(source_val, str):
+                            mapped_item[target_field] = source_val in [
+                                "是",
+                                "true",
+                                "True",
+                                "1",
+                            ]
+                        else:
+                            mapped_item[target_field] = bool(source_val)
+                    elif field_type == "integer":
+                        mapped_item[target_field] = int(source_val) if source_val else None
+                    elif target_field == "day_of_week" and isinstance(source_val, str):
+                        mapped_item[target_field] = _DAY_TEXT_MAP.get(source_val, 0)
+                    else:
+                        mapped_item[target_field] = source_val
+
+                if mapped_item.get("class_name") and mapped_item.get("subject_name"):
+                    import_list.append(mapped_item)
+        else:
+            return APIResponse.bad_request(message="仅支持 .xlsx 或 .xls 格式")
+    elif "application/json" in content_type:
+        data = request.json
+        if not data or "data" not in data:
+            return APIResponse.bad_request(message="导入数据格式错误")
+        import_list = data["data"]
+    else:
+        return APIResponse.bad_request(message="不支持的文件格式")
+    return import_list
+
+
+def _validate_course_import_item(item, day_text_map, max_period):
+    """单行导入项校验：返回错误列表（空 = 通过）。"""
+    row_errors = []
+
+    class_name = item.get("class_name")
+    subject_name = item.get("subject_name")
+    day_of_week = item.get("day_of_week")
+    period_number = item.get("period_number")
+    teacher_name = item.get("teacher_name")
+    classroom = item.get("classroom")
+
+    if not class_name:
+        row_errors.append({"field": "class_name", "message": "班级名称不能为空"})
+    elif not isinstance(class_name, str) or len(class_name.strip()) == 0:
+        row_errors.append(
+            {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
+        )
+    elif len(class_name.strip()) > 100:
+        row_errors.append(
+            {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
+        )
+
+    if not subject_name:
+        row_errors.append({"field": "subject_name", "message": "科目名称不能为空"})
+    elif not isinstance(subject_name, str) or len(subject_name.strip()) == 0:
+        row_errors.append(
+            {"field": "subject_name", "message": "科目名称格式无效，必须为非空字符串"}
+        )
+    elif len(subject_name.strip()) > 50:
+        row_errors.append(
+            {"field": "subject_name", "message": "科目名称长度超过限制（最大50字符）"}
+        )
+
+    if day_of_week is None:
+        row_errors.append({"field": "day_of_week", "message": "星期不能为空"})
+    elif isinstance(day_of_week, str):
+        if day_of_week not in day_text_map:
+            row_errors.append(
+                {
+                    "field": "day_of_week",
+                    "message": f'星期值 "{day_of_week}" 无效，只能是"周一"到"周日"',
+                }
+            )
+    elif not isinstance(day_of_week, int) or day_of_week < 0 or day_of_week > 6:
+        row_errors.append(
+            {"field": "day_of_week", "message": "星期值无效，必须为0-6之间的整数"}
+        )
+
+    if period_number is None:
+        row_errors.append({"field": "period_number", "message": "节次不能为空"})
+    elif not isinstance(period_number, int):
+        row_errors.append({"field": "period_number", "message": "节次格式无效，必须为整数"})
+    elif period_number < 1 or (max_period > 0 and period_number > max_period):
+        row_errors.append(
+            {"field": "period_number", "message": f"节次值无效，必须在1-{max_period}之间"}
+        )
+
+    if teacher_name:
+        if not isinstance(teacher_name, str) or len(teacher_name.strip()) == 0:
+            row_errors.append(
+                {"field": "teacher_name", "message": "教师姓名格式无效，必须为非空字符串"}
+            )
+        elif len(teacher_name.strip()) > 50:
+            row_errors.append(
+                {"field": "teacher_name", "message": "教师姓名长度超过限制（最大50字符）"}
+            )
+        else:
+            admin = Admin.query.filter(Admin.real_name == teacher_name.strip()).first()
+            if not admin:
+                admin = Admin.query.filter(Admin.username == teacher_name.strip()).first()
+            if admin and admin.role not in ["admin", "teacher"]:
+                row_errors.append(
+                    {
+                        "field": "teacher_name",
+                        "message": f'用户 "{teacher_name}" 的角色不是管理员或教师，无法担任授课教师',
+                    }
+                )
+
+    if classroom:
+        if not isinstance(classroom, str) or len(classroom.strip()) == 0:
+            row_errors.append(
+                {"field": "classroom", "message": "教室名称格式无效，必须为非空字符串"}
+            )
+        elif len(classroom.strip()) > 50:
+            row_errors.append(
+                {"field": "classroom", "message": "教室名称长度超过限制（最大50字符）"}
+            )
+
+    return row_errors
 @ns_course_schedule.route("/")
 class CourseScheduleList(Resource):
 
@@ -955,146 +1198,12 @@ class CourseScheduleImport(Resource):
         config_id = request.args.get("config_id", type=int)
         strategy_param = request.args.get("conflict_strategy", type=str)
 
-        config = None
-        if config_id:
-            config = get_by_id(ImportConfig, config_id)
-        else:
-            config = ImportConfig.query.filter(
-                ImportConfig.module_name == "course_schedule",
-                ImportConfig.is_default,
-                ImportConfig.is_active,
-            ).first()
 
-        default_mappings = [
-            {
-                "source_field": "班级名称",
-                "target_field": "class_name",
-                "field_type": "string",
-                "required": True,
-                "relation": "class_info",
-            },
-            {
-                "source_field": "科目名称",
-                "target_field": "subject_name",
-                "field_type": "string",
-                "required": True,
-                "relation": "subject",
-            },
-            {
-                "source_field": "星期",
-                "target_field": "day_of_week",
-                "field_type": "string",
-                "required": True,
-            },
-            {
-                "source_field": "节次",
-                "target_field": "period_number",
-                "field_type": "integer",
-                "required": True,
-            },
-            {"source_field": "教师", "target_field": "teacher_name", "field_type": "string"},
-            {"source_field": "教室", "target_field": "classroom", "field_type": "string"},
-            {"source_field": "备注", "target_field": "description", "field_type": "string"},
-            {"source_field": "是否启用", "target_field": "is_active", "field_type": "boolean"},
-        ]
-
-        field_mappings = config.field_mappings if config else default_mappings
-        conflict_strategy = (
-            strategy_param
-            if strategy_param and strategy_param in ["skip", "update", "error"]
-            else (config.conflict_strategy if config else "update")
+        field_mappings, conflict_strategy, default_values = _load_course_import_config(
+            config_id, strategy_param
         )
-        default_values = config.default_values if config else {}
 
-        day_text_map = {
-            "周一": 0,
-            "星期一": 0,
-            "周二": 1,
-            "星期二": 1,
-            "周三": 2,
-            "星期三": 2,
-            "周四": 3,
-            "星期四": 3,
-            "周五": 4,
-            "星期五": 4,
-            "周六": 5,
-            "星期六": 5,
-            "周日": 6,
-            "星期日": 6,
-        }
-
-        import_list = []
-
-        if "multipart/form-data" in content_type:
-            if "file" not in request.files:
-                return APIResponse.bad_request(message="请上传文件")
-
-            file = request.files["file"]
-            if not file.filename:
-                return APIResponse.bad_request(message="请选择文件")
-
-            filename = file.filename.lower()
-            if filename.endswith(".xlsx") or filename.endswith(".xls"):
-                from openpyxl import load_workbook
-
-                wb = load_workbook(file)
-                ws = wb.active
-
-                headers = []
-                for cell in ws[1]:
-                    headers.append(cell.value)
-
-                col_map = {}
-                for idx, header in enumerate(headers):
-                    if header:
-                        col_map[header] = idx
-
-                for row_idx in range(2, ws.max_row + 1):
-                    row_data = {}
-                    for header, col_idx in col_map.items():
-                        row_data[header] = ws.cell(row=row_idx, column=col_idx + 1).value
-
-                    mapped_item = {}
-                    for mapping in field_mappings:
-                        source_val = row_data.get(mapping["source_field"])
-                        target_field = mapping["target_field"]
-                        field_type = mapping.get("field_type", "string")
-
-                        if source_val is None:
-                            if mapping.get("required"):
-                                break
-                            source_val = mapping.get(
-                                "default_value", default_values.get(target_field)
-                            )
-
-                        if field_type == "boolean":
-                            if isinstance(source_val, str):
-                                mapped_item[target_field] = source_val in [
-                                    "是",
-                                    "true",
-                                    "True",
-                                    "1",
-                                ]
-                            else:
-                                mapped_item[target_field] = bool(source_val)
-                        elif field_type == "integer":
-                            mapped_item[target_field] = int(source_val) if source_val else None
-                        elif target_field == "day_of_week" and isinstance(source_val, str):
-                            mapped_item[target_field] = day_text_map.get(source_val, 0)
-                        else:
-                            mapped_item[target_field] = source_val
-
-                    if mapped_item.get("class_name") and mapped_item.get("subject_name"):
-                        import_list.append(mapped_item)
-            else:
-                return APIResponse.bad_request(message="仅支持 .xlsx 或 .xls 格式")
-        elif "application/json" in content_type:
-            data = request.json
-            if not data or "data" not in data:
-                return APIResponse.bad_request(message="导入数据格式错误")
-            import_list = data["data"]
-        else:
-            return APIResponse.bad_request(message="不支持的文件格式")
+        import_list = _parse_course_import_input(content_type)
 
         success_count = 0
         failed_count = 0
@@ -1103,117 +1212,13 @@ class CourseScheduleImport(Resource):
         creates = []
         updates = []
 
-        day_text_map = {
-            "周一": 0,
-            "星期一": 0,
-            "周二": 1,
-            "星期二": 1,
-            "周三": 2,
-            "星期三": 2,
-            "周四": 3,
-            "星期四": 3,
-            "周五": 4,
-            "星期五": 4,
-            "周六": 5,
-            "星期六": 5,
-            "周日": 6,
-            "星期日": 6,
-        }
+        day_text_map = _DAY_TEXT_MAP
 
         max_period = ClassPeriod.query.filter_by(is_active=True).count()
 
-        def validate_item(item, row_idx=None):
-            row_errors = []
-
-            class_name = item.get("class_name")
-            subject_name = item.get("subject_name")
-            day_of_week = item.get("day_of_week")
-            period_number = item.get("period_number")
-            teacher_name = item.get("teacher_name")
-            classroom = item.get("classroom")
-
-            if not class_name:
-                row_errors.append({"field": "class_name", "message": "班级名称不能为空"})
-            elif not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                row_errors.append(
-                    {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
-                )
-            elif len(class_name.strip()) > 100:
-                row_errors.append(
-                    {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
-                )
-
-            if not subject_name:
-                row_errors.append({"field": "subject_name", "message": "科目名称不能为空"})
-            elif not isinstance(subject_name, str) or len(subject_name.strip()) == 0:
-                row_errors.append(
-                    {"field": "subject_name", "message": "科目名称格式无效，必须为非空字符串"}
-                )
-            elif len(subject_name.strip()) > 50:
-                row_errors.append(
-                    {"field": "subject_name", "message": "科目名称长度超过限制（最大50字符）"}
-                )
-
-            if day_of_week is None:
-                row_errors.append({"field": "day_of_week", "message": "星期不能为空"})
-            elif isinstance(day_of_week, str):
-                if day_of_week not in day_text_map:
-                    row_errors.append(
-                        {
-                            "field": "day_of_week",
-                            "message": f'星期值 "{day_of_week}" 无效，只能是"周一"到"周日"',
-                        }
-                    )
-            elif not isinstance(day_of_week, int) or day_of_week < 0 or day_of_week > 6:
-                row_errors.append(
-                    {"field": "day_of_week", "message": "星期值无效，必须为0-6之间的整数"}
-                )
-
-            if period_number is None:
-                row_errors.append({"field": "period_number", "message": "节次不能为空"})
-            elif not isinstance(period_number, int):
-                row_errors.append({"field": "period_number", "message": "节次格式无效，必须为整数"})
-            elif period_number < 1 or (max_period > 0 and period_number > max_period):
-                row_errors.append(
-                    {"field": "period_number", "message": f"节次值无效，必须在1-{max_period}之间"}
-                )
-
-            if teacher_name:
-                if not isinstance(teacher_name, str) or len(teacher_name.strip()) == 0:
-                    row_errors.append(
-                        {"field": "teacher_name", "message": "教师姓名格式无效，必须为非空字符串"}
-                    )
-                elif len(teacher_name.strip()) > 50:
-                    row_errors.append(
-                        {"field": "teacher_name", "message": "教师姓名长度超过限制（最大50字符）"}
-                    )
-                else:
-                    admin = Admin.query.filter(Admin.real_name == teacher_name.strip()).first()
-                    if not admin:
-                        admin = Admin.query.filter(Admin.username == teacher_name.strip()).first()
-                    if admin and admin.role not in ["admin", "teacher"]:
-                        row_errors.append(
-                            {
-                                "field": "teacher_name",
-                                "message": f'用户 "{teacher_name}" 的角色不是管理员或教师，无法担任授课教师',
-                            }
-                        )
-
-            if classroom:
-                if not isinstance(classroom, str) or len(classroom.strip()) == 0:
-                    row_errors.append(
-                        {"field": "classroom", "message": "教室名称格式无效，必须为非空字符串"}
-                    )
-                elif len(classroom.strip()) > 50:
-                    row_errors.append(
-                        {"field": "classroom", "message": "教室名称长度超过限制（最大50字符）"}
-                    )
-
-            return row_errors
-
         for row_idx, item in enumerate(import_list, start=2):
             try:
-                row_errors = validate_item(item, row_idx)
+                row_errors = _validate_course_import_item(item, day_text_map, max_period)
 
                 class_name = item.get("class_name")
                 subject_name = item.get("subject_name")

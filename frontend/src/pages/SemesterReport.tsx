@@ -59,8 +59,8 @@ const SemesterReport: React.FC = () => {
     try {
       await api.reports.exportClassSemester(classId, format);
       message.success(`已开始下载 ${format === 'csv' ? 'CSV' : 'Excel'} 报表`);
-    } catch (e: any) {
-      const msg = e?.message || '导出失败，请重试';
+    } catch (e: unknown) {
+      const msg = (e as Error)?.message || '导出失败，请重试';
       setError(msg);
       message.error(msg);
     } finally {

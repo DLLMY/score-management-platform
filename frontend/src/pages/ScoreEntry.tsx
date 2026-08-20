@@ -934,9 +934,7 @@ const ScoreEntry: React.FC = () => {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        credentials: 'include',  // 十评 P2-1：token 走 HttpOnly cookie
       });
 
       if (!response.ok) {

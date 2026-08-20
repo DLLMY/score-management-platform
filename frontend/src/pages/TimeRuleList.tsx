@@ -197,8 +197,8 @@ const TimeRuleList: React.FC = () => {
       await api.timeRules.delete(id);
       setRules((prev) => prev.filter((r) => r.id !== id));
       showToast('success', '删除成功');
-    } catch (error: any) {
-      showToast('error', '删除失败: ' + error.message);
+    } catch (error: unknown) {
+      showToast('error', '删除失败: ' + (error as Error).message);
     }
   };
 
@@ -235,8 +235,8 @@ const TimeRuleList: React.FC = () => {
         showToast('success', '添加成功');
       }
       closeModal();
-    } catch (error: any) {
-      showToast('error', '保存失败: ' + error.message);
+    } catch (error: unknown) {
+      showToast('error', '保存失败: ' + (error as Error).message);
     }
   };
 

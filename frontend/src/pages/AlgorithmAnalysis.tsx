@@ -1457,7 +1457,7 @@ export default function AlgorithmAnalysis(): React.ReactElement {
       avg_confidence: 0,
       estimated_total_impact: 0,
     };
-    const safeRecommendations: any[] = Array.isArray(recommendations) ? recommendations : [];
+    const safeRecommendations: NonNullable<RuleRecommendData["recommendations"]> = Array.isArray(recommendations) ? recommendations : [];
     const filteredRecommendations = searchKeyword
       ? safeRecommendations.filter((r) =>
           String(r?.rule_name ?? '')

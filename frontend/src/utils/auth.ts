@@ -74,5 +74,6 @@ export const isAdminLoggedIn = (): boolean => {
 };
 
 export const isLoggedIn = (): boolean => {
-  return !!localStorage.getItem('access_token');
+  // 十评 P2-1：凭证在 HttpOnly cookie（JS 不可读），登录态以非凭证 marker 判断
+  return !!localStorage.getItem('admin') || !!localStorage.getItem('student');
 };

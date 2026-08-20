@@ -82,6 +82,10 @@ def requires_admin(f):
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
         admin_id_header = request.headers.get("X-Admin-Id")
+        # Cookie 认证轨（十评 P2-1）：HttpOnly access_token cookie 无法被 JS 读取，
+        # 无 Authorization 头时回退到 cookie（双轨共存，前端切 cookie 后兼容旧客户端）
+        if (not auth_header or not auth_header.startswith("Bearer ")) and request.cookies.get("access_token"):
+            auth_header = f"Bearer {request.cookies.get('access_token')}"
 
         if not auth_header or not auth_header.startswith("Bearer "):
             log_access_denied(request.path, reason="未提供有效的认证令牌")
@@ -119,6 +123,10 @@ def requires_permission(permission):
         def decorated_function(*args, **kwargs):
             auth_header = request.headers.get("Authorization")
             admin_id_header = request.headers.get("X-Admin-Id")
+            # Cookie 认证轨（十评 P2-1）：HttpOnly access_token cookie 无法被 JS 读取，
+            # 无 Authorization 头时回退到 cookie（双轨共存，前端切 cookie 后兼容旧客户端）
+            if (not auth_header or not auth_header.startswith("Bearer ")) and request.cookies.get("access_token"):
+                auth_header = f"Bearer {request.cookies.get('access_token')}"
 
             if not auth_header or not auth_header.startswith("Bearer "):
                 log_access_denied(request.path, reason="未提供有效的认证令牌")
@@ -167,6 +175,10 @@ def requires_role(allowed_roles):
         def decorated_function(*args, **kwargs):
             auth_header = request.headers.get("Authorization")
             admin_id_header = request.headers.get("X-Admin-Id")
+            # Cookie 认证轨（十评 P2-1）：HttpOnly access_token cookie 无法被 JS 读取，
+            # 无 Authorization 头时回退到 cookie（双轨共存，前端切 cookie 后兼容旧客户端）
+            if (not auth_header or not auth_header.startswith("Bearer ")) and request.cookies.get("access_token"):
+                auth_header = f"Bearer {request.cookies.get('access_token')}"
 
             if not auth_header or not auth_header.startswith("Bearer "):
                 log_access_denied(request.path, reason="未提供有效的认证令牌")
@@ -302,6 +314,9 @@ def get_access_token():
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         return auth_header.replace("Bearer ", "")
+    cookie_token = request.cookies.get("access_token")
+    if cookie_token:
+        return cookie_token
     return request.headers.get("X-Admin-Id")
 
 
@@ -317,6 +332,8 @@ def get_current_admin():
     # 原实现允许 X-Admin-Id 头作 token 回退，且 token 校验失败后直接按 id 查库返回 Admin——
     # 知道 admin id 即可伪造身份（CRITICAL）。现彻底移除该通道，校验失败一律返回 None。
     auth_header = request.headers.get("Authorization")
+    if (not auth_header or not auth_header.startswith("Bearer ")) and request.cookies.get("access_token"):
+        auth_header = f"Bearer {request.cookies.get('access_token')}"
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
 
@@ -397,6 +414,9 @@ def requires_student(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
+        # Cookie 认证轨（十评 P2-1）：学生自助端登录后 token 走 HttpOnly student_token cookie
+        if (not auth_header or not auth_header.startswith("Bearer ")) and request.cookies.get("student_token"):
+            auth_header = f"Bearer {request.cookies.get('student_token')}"
         if not auth_header or not auth_header.startswith("Bearer "):
             log_access_denied(request.path, reason="未提供有效的学生认证令牌")
             return {"success": False, "message": "未提供有效的认证令牌"}, 401

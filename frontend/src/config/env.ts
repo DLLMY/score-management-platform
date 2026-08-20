@@ -8,15 +8,18 @@
  * 任何读取环境变量的代码都应从这里导入，避免浏览器环境下直接访问 process.env 报错。
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type AnyRecord = Record<string, any>;
+// 十评 P3 any 收敛：环境对象类型化（env 值均为字符串）。
+type EnvRecord = Record<string, string>;
 
-// Vite 的 import.meta.env 在 CRA 构建时不存在，使用 any 兜底，并用 typeof 守卫。
-const metaEnv: AnyRecord | undefined =
-  typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+// Vite 的 import.meta.env 在 CRA 构建时不存在，用 typeof 守卫 + 类型化转换。
+const metaEnv: EnvRecord | undefined =
+  typeof import.meta !== 'undefined'
+    ? (import.meta as unknown as { env: EnvRecord }).env
+    : undefined;
 
 // 浏览器环境中 process 不一定存在，typeof 守卫确保安全。
-const procEnv: AnyRecord = typeof process !== 'undefined' ? (process as any).env : {};
+const procEnv: EnvRecord =
+  typeof process !== 'undefined' ? (process as unknown as { env: EnvRecord }).env : {};
 
 export const isDevelopment: boolean = metaEnv
   ? Boolean(metaEnv.DEV) || metaEnv.MODE === 'development'
@@ -27,7 +30,7 @@ export const isProduction: boolean = metaEnv
   : procEnv.NODE_ENV === 'production';
 
 // 合并两条来源；Vite 的 import.meta.env 优先级更高（同源变量以后者为准）。
-const mergedEnv: AnyRecord = { ...procEnv, ...metaEnv };
+const mergedEnv: EnvRecord = { ...procEnv, ...metaEnv };
 
 export const getEnv = (key: string, defaultValue?: string): string =>
   (mergedEnv[key] as string | undefined) || defaultValue || '';
@@ -42,4 +45,3 @@ export const getEnvBoolean = (key: string, defaultValue: boolean): boolean => {
   if (value === undefined || value === null) return defaultValue;
   return String(value).toLowerCase() === 'true';
 };
-/* eslint-enable @typescript-eslint/no-explicit-any */

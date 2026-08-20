@@ -42,11 +42,11 @@ function StudentLogin() {
       localStorage.removeItem('subaccount');
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      localStorage.setItem('student_token', result.access_token);
+      // 十评 P2-1 完全 cookie 化：student_token 由后端 HttpOnly cookie 写入
       localStorage.setItem('student', JSON.stringify(result.student));
       navigate('/student', { replace: true });
-    } catch (err: any) {
-      setError(err?.message || '登录失败，请检查学号和姓名');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '登录失败，请检查学号和姓名');
     } finally {
       setLoading(false);
     }

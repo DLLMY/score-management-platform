@@ -33,8 +33,8 @@ function RankBoard() {
       const res = await api.rank.getClassRanking({ limit: 50 });
       setClassRanking(res.ranking);
       setTotalClasses(res.total_classes);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setLoading(false);
     }
@@ -58,8 +58,8 @@ function RankBoard() {
       const res = await api.rank.getStudentRanking({ class_name: className, limit: 50 });
       setStudentRanking(res.ranking);
       setStudentTotal(res.total_students);
-    } catch (err: any) {
-      setError(err?.message || '加载失败');
+    } catch (err: unknown) {
+      setError((err as Error)?.message || '加载失败');
     } finally {
       setLoading(false);
     }

@@ -155,18 +155,10 @@ class PerformanceReportingService {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
+    // 十评 P2-1：token 走 HttpOnly cookie，上报请求凭 credentials 携带
+    return {
       'Content-Type': 'application/json',
     };
-    try {
-      const accessToken = localStorage.getItem('access_token');
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-    } catch {
-      // 静默失败（localStorage 不可用时不抛错）
-    }
-    return headers;
   }
 
   async flush(): Promise<void> {

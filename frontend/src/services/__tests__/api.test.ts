@@ -46,9 +46,10 @@ describe('API Service', () => {
     expect(typeof api.rules.delete).toBe('function');
   });
 
-  it('should set admin header when admin is logged in', async () => {
-    // 当前实现从 localStorage['access_token'] 取 Bearer token（非旧 X-Admin-Id）
-    localStorage.setItem('access_token', 'test-token');
+  it('should send credentials include (cookie 认证轨) without Authorization header', async () => {
+    // 十评 P2-1 完全 cookie 化：token 走 HttpOnly cookie，请求凭 credentials: include 携带，
+    // 不再从 localStorage 读取 token 注入 Authorization 头
+    localStorage.setItem('access_token', 'legacy-token');  // 旧残留也不应被读取
 
     // api.ts 会读 response.headers.get('ETag')，mock 需提供 headers
     mockFetch.mockResolvedValue({
@@ -62,7 +63,8 @@ describe('API Service', () => {
 
     expect(mockFetch).toHaveBeenCalled();
     const options = mockFetch.mock.calls[0][1];
-    expect(options.headers['Authorization']).toBe('Bearer test-token');
+    expect(options.credentials).toBe('include');
+    expect(options.headers['Authorization']).toBeUndefined();
   });
 
   it('should handle network errors', async () => {

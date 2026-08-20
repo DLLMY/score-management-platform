@@ -311,12 +311,13 @@ function StudyGuidePage() {
       try {
         await api.studyGuide.deleteGuide(guideId);
         showToast('success', '指导文章删除成功');
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 404 说明数据已不存在（过期缓存），刷新列表即可
+        const errObj = error as { status?: number; response?: { status?: number } } | null;
         const is404 =
-          error?.status === 404 ||
-          error?.response?.status === 404 ||
-          String(error?.message || '').includes('不存在');
+          errObj?.status === 404 ||
+          errObj?.response?.status === 404 ||
+          String((error as Error)?.message || '').includes('不存在');
         if (is404) {
           showToast('info', '该文章已被删除');
         } else {
@@ -342,11 +343,12 @@ function StudyGuidePage() {
       try {
         await api.studyGuide.deletePlan(planId);
         showToast('success', '改进计划删除成功');
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errObj = error as { status?: number; response?: { status?: number } } | null;
         const is404 =
-          error?.status === 404 ||
-          error?.response?.status === 404 ||
-          String(error?.message || '').includes('不存在');
+          errObj?.status === 404 ||
+          errObj?.response?.status === 404 ||
+          String((error as Error)?.message || '').includes('不存在');
         if (is404) {
           showToast('info', '该计划已被删除');
         } else {

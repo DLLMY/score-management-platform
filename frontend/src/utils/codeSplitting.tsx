@@ -15,10 +15,12 @@ export const createRouteComponent = <P extends {} = {}>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   fallback?: ReactNode
 ): ComponentType<P> => {
-  const LazyComponent = lazy(importFn) as React.ComponentType<any>;
+  const LazyComponent = lazy(importFn);
 
   const WrappedComponent: React.FC<P> = (props) => (
     <Suspense fallback={fallback || defaultFallback}>
+      {/* 泛型 lazy 透传：TS 对 P 默认 {} 无法推导 PropsWithRef<P>（已知限制），类型边界转换 */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- 泛型组件 props 透传 */}
       <LazyComponent {...(props as any)} />
     </Suspense>
   );
@@ -36,14 +38,15 @@ export const createRouteComponent = <P extends {} = {}>(
 export const createLazyComponent = <P extends {} = {}>(
   importFn: () => Promise<{ default: ComponentType<P> }>
 ): ComponentType<P & { fallback?: ReactNode }> => {
-  const LazyComponent = lazy(importFn) as React.ComponentType<any>;
+  const LazyComponent = lazy(importFn);
 
   const WrappedComponent: React.FC<P & { fallback?: ReactNode }> = (props) => {
-    const { fallback, ...restProps } = props as any;
+    const { fallback, ...restProps } = props;
 
     return (
       <Suspense fallback={fallback || defaultFallback}>
-        <LazyComponent {...restProps} />
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- 泛型组件 props 透传 */}
+        <LazyComponent {...(restProps as any)} />
       </Suspense>
     );
   };
@@ -70,11 +73,13 @@ const defaultFallback: ReactNode = (
  * @param importFn 动态导入函数
  */
 export const preloadComponent = (
-  importFn: () => Promise<{ default: ComponentType<any> }>
+  importFn: () => Promise<{ default: ComponentType<unknown> }>
 ): void => {
   if (typeof window !== 'undefined') {
     // 使用 requestIdleCallback 在浏览器空闲时预加载
-    const idleCallback = (window as any).requestIdleCallback || setTimeout;
+    const idleCallback =
+      (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback ||
+      setTimeout;
     idleCallback(() => {
       importFn();
     });
@@ -86,7 +91,7 @@ export const preloadComponent = (
  * @param importFns 动态导入函数数组
  */
 export const preloadComponents = (
-  importFns: Array<() => Promise<{ default: ComponentType<any> }>>
+  importFns: Array<() => Promise<{ default: ComponentType<unknown> }>>
 ): void => {
   importFns.forEach((fn, index) => {
     // 错开预加载时间，避免同时加载过多
@@ -102,7 +107,7 @@ export const preloadComponents = (
  */
 export interface RouteConfig {
   path: string;
-  component: () => Promise<{ default: ComponentType<any> }>;
+  component: () => Promise<{ default: ComponentType<unknown> }>;
 }
 
 export const preloadOnNavigation = (path: string, routes: RouteConfig[]): void => {
@@ -150,7 +155,7 @@ export const createOptimizedLazyComponent = <P extends {} = {}>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   strategy: PreloadStrategy = PreloadStrategy.ON_IDLE
 ): ComponentType<P> => {
-  const LazyComponent = lazy(importFn) as React.ComponentType<any>;
+  const LazyComponent = lazy(importFn) as React.ComponentType<P>;
 
   // 根据策略决定是否立即预加载
   if (strategy === PreloadStrategy.INSTANT) {

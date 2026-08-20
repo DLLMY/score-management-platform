@@ -281,10 +281,8 @@ const getCsrfToken = (): string | null => {
 
 export const getAuthHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
   const headers: Record<string, string> = { ...extra };
-  const accessToken = getBearerToken();
-  if (accessToken && !headers['Authorization']) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
+  // 十评 P2-1 完全 cookie 化：token 走 HttpOnly cookie（credentials: include 自动携带），
+  // 不再注入 Authorization 头（localStorage 不再存凭证，防 XSS 窃取）
   const csrfToken = getCsrfToken();
   if (csrfToken && !headers['X-CSRFToken']) {
     headers['X-CSRFToken'] = csrfToken;
@@ -312,11 +310,6 @@ const fetchCsrfToken = async (): Promise<string | null> => {
     logger.warn('获取CSRF token失败:', error);
   }
   return null;
-};
-
-const getBearerToken = (): string | null => {
-  // 优先管理员令牌，否则回退到学生自助端令牌，实现两类登录态互不污染
-  return localStorage.getItem('access_token') || localStorage.getItem('student_token');
 };
 
 const clearStudentAuth = (): void => {
@@ -536,8 +529,8 @@ const refreshToken = async (): Promise<void> => {
   }
 
   const adminStr = localStorage.getItem('admin');
-  const storedRefreshToken = localStorage.getItem('refresh_token');
-  if (!adminStr && !storedRefreshToken) {
+  // 十评 P2-1：凭 HttpOnly refresh_token cookie 刷新（admin 信息仅作登录态 marker，非凭证）
+  if (!adminStr) {
     lastRefreshFailTime = Date.now();
     clearAuthData();
     throw new Error('登录状态已失效，请重新登录');
@@ -548,7 +541,6 @@ const refreshToken = async (): Promise<void> => {
   refreshPromise = new Promise(async (resolve, reject) => {
     try {
       const csrfToken = getCsrfToken();
-      const storedRefreshToken = localStorage.getItem('refresh_token');
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -556,18 +548,12 @@ const refreshToken = async (): Promise<void> => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const hasLocalToken = !!(storedRefreshToken && storedRefreshToken.trim());
+      // refresh_token 由后端从 HttpOnly cookie 读取（admins_routes 已 cookie 优先）
       const fetchOptions: RequestInit = {
         method: 'POST',
         headers,
         credentials: 'include',
       };
-
-      if (hasLocalToken) {
-        fetchOptions.body = JSON.stringify({
-          refresh_token: storedRefreshToken!,
-        });
-      }
 
       const response = await fetch(`${API_BASE_URL}/api/admins/refresh-token`, fetchOptions);
 
@@ -577,14 +563,7 @@ const refreshToken = async (): Promise<void> => {
         throw new Error((errorData as { message?: string }).message || '刷新令牌失败');
       }
 
-      const result = await response.json();
-      const tokenData = result.data || result;
-      if (tokenData.access_token) {
-        localStorage.setItem('access_token', tokenData.access_token);
-      }
-      if (tokenData.refresh_token) {
-        localStorage.setItem('refresh_token', tokenData.refresh_token);
-      }
+      // 新 token 由后端 Set-Cookie 自动写入 HttpOnly cookie，前端无需存储
       resolve('');
     } catch (error) {
       lastRefreshFailTime = Date.now();
@@ -692,10 +671,7 @@ const executeRequest = async (
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const accessToken = getBearerToken();
-      if (accessToken && !headers['Authorization']) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
+      // token 走 HttpOnly cookie（credentials: include），此处不再注入 Authorization
     }
 
     if (method === 'GET' && !options.skipCache) {
@@ -739,8 +715,8 @@ const executeRequest = async (
     if (!response.ok) {
       if (response.status === 401 && retryCount < 1 && !isAuthEndpoint(url) && !options.skipAuth) {
         const adminStr = localStorage.getItem('admin');
-        const storedRefreshToken = localStorage.getItem('refresh_token');
-        if (!adminStr && !storedRefreshToken) {
+        // 十评 P2-1：凭证在 HttpOnly cookie，admin 仅作登录态 marker
+        if (!adminStr) {
           const studentStr = localStorage.getItem('student');
           if (studentStr) {
             clearStudentAuth();
@@ -763,16 +739,12 @@ const executeRequest = async (
         }
         try {
           await refreshToken();
-          const newAccessToken = localStorage.getItem('access_token');
-          const retryHeaders = { ...headers };
-          if (newAccessToken) {
-            retryHeaders['Authorization'] = `Bearer ${newAccessToken}`;
-          }
+          // 刷新后新 token 已在 HttpOnly cookie，重试请求凭 credentials: include 携带
           const retryResponse = await fetchWithTimeout(
             fullUrl,
             {
               ...options,
-              headers: retryHeaders,
+              headers,
               credentials: 'include',
             },
             config.api.timeout,
@@ -2909,14 +2881,14 @@ interface NLP {
   deleteCorrection: (id: number) => Promise<unknown>;
   // 算法分析相关
   getAnalysisComprehensive: () => Promise<unknown>;
-  getAnalysisIntent: () => Promise<unknown>;
-  getAnalysisPerformance: () => Promise<unknown>;
-  getAnalysisSuggestions: () => Promise<unknown>;
-  resetAnalysis: () => Promise<unknown>;
+  getAnalysisIntent: () => Promise<{ code: number; data: unknown }>;
+  getAnalysisPerformance: () => Promise<{ code: number; data: unknown }>;
+  getAnalysisSuggestions: () => Promise<{ code: number; data: unknown }>;
+  resetAnalysis: () => Promise<{ code: number; data: unknown }>;
   benchmarkIntentClassifier: (params?: {
     iterations?: number;
   }) => Promise<unknown>;
-  getOptimizationConfig: () => Promise<unknown>;
+  getOptimizationConfig: () => Promise<{ code: number; data: unknown }>;
   setOptimizationConfig: (data: { strategy?: string }) => Promise<unknown>;
   autoTuneOptimization: (data?: { target_metric?: string }) => Promise<unknown>;
 }
@@ -3879,12 +3851,7 @@ const api: Api = {
         data?: { admin?: Admin; user?: Admin };
       };
       const user = result.user || result.data?.admin || result.data?.user;
-      if (result.access_token) {
-        localStorage.setItem('access_token', result.access_token);
-      }
-      if (result.refresh_token) {
-        localStorage.setItem('refresh_token', result.refresh_token);
-      }
+      // 十评 P2-1：token 由后端 Set-Cookie HttpOnly 写入，前端不再存储
       if (user) {
         const adminWithRoleType = {
           ...user,
@@ -4345,9 +4312,9 @@ const api: Api = {
       params.append('tab', tab);
       if (className) params.append('class_name', className);
       params.append('days', String(days));
-      const token = getBearerToken();
+      // 十评 P2-1：token 走 cookie，fetch 显式携带 credentials
       return fetch(`${API_BASE_URL}/api/algorithm/export?${params.toString()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       })
         .then((res) => {
           if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
@@ -4616,10 +4583,9 @@ const api: Api = {
       if (format) queryParams.append('format', format);
       const query = queryParams.toString();
       const url = `/api/classes/export${query ? '?' + query : ''}`;
-      const token = getBearerToken();
-      // fetch blob + 下载（带鉴权、可校验），替代 window.open（无 token、无法感知失败）
+      // fetch blob + 下载（cookie 鉴权、可校验），替代 window.open
       return fetch(`${API_BASE_URL}${url}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       })
         .then((res) => {
           if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
@@ -4716,9 +4682,8 @@ const api: Api = {
       const params = new URLSearchParams();
       params.append('class_id', classId.toString());
       params.append('format', format);
-      const token = getBearerToken();
       return fetch(`${API_BASE_URL}/api/reports/class-semester?${params.toString()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       })
         .then((res) => {
           if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
@@ -4761,7 +4726,7 @@ const api: Api = {
       request('/api/remote_notify/test', {
         method: 'POST',
         body: JSON.stringify(data || {}),
-      }) as Promise<unknown>,
+      }) as Promise<{ code: number; data: unknown }>,
     scoreChange: (data) =>
       request('/api/remote_notify/score_change', {
         method: 'POST',
@@ -5382,10 +5347,9 @@ const api: Api = {
       if (format) queryParams.append('format', format);
       const query = queryParams.toString();
       const url = `/api/course-schedules/export${query ? '?' + query : ''}`;
-      const token = getBearerToken();
-      // 走 fetch blob + 下载（带鉴权头、可校验结果），替代 window.open（无 token、无法感知失败）
+      // 走 fetch blob + 下载（cookie 鉴权、可校验结果），替代 window.open
       return fetch(`${API_BASE_URL}${url}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       })
         .then((res) => {
           if (!res.ok) throw new Error(`导出失败：HTTP ${res.status}`);
@@ -5557,21 +5521,20 @@ const api: Api = {
     getAnalysisComprehensive: () =>
       request('/api/nlp/analysis/comprehensive') as Promise<unknown>,
     getAnalysisIntent: () =>
-      request('/api/nlp/analysis/intent') as Promise<unknown>,
+      request('/api/nlp/analysis/intent') as Promise<{ code: number; data: unknown }>,
     getAnalysisPerformance: () =>
-      request('/api/nlp/analysis/performance') as Promise<unknown>,
+      request('/api/nlp/analysis/performance') as Promise<{ code: number; data: unknown }>,
     getAnalysisSuggestions: () =>
-      request('/api/nlp/analysis/suggestions') as Promise<unknown>,
+      request('/api/nlp/analysis/suggestions') as Promise<{ code: number; data: unknown }>,
     resetAnalysis: () =>
-      request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<
-        unknown>,
+      request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<{ code: number; data: unknown }>,
     benchmarkIntentClassifier: (params) =>
       request('/api/nlp/benchmark/intent-classifier', {
         method: 'POST',
         body: JSON.stringify(params || {}),
       }) as Promise<unknown>,
     getOptimizationConfig: () =>
-      request('/api/nlp/optimization/config') as Promise<unknown>,
+      request('/api/nlp/optimization/config') as Promise<{ code: number; data: unknown }>,
     setOptimizationConfig: (data) =>
       request('/api/nlp/optimization/config', {
         method: 'POST',

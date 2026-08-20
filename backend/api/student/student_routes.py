@@ -8,7 +8,7 @@
 """
 
 from flask_restx import Namespace, Resource, fields
-from flask import request, g
+from flask import request, g, make_response
 from datetime import datetime
 from models import User, ScoreRecord, Notification, Approval
 from utils.security import generate_student_token, validate_card_id
@@ -95,7 +95,9 @@ class StudentLogin(Resource):
         token_data = generate_student_token(user.id, user.name, user.card_id)
         log_login_attempt(card_id, success=True)
 
-        return APIResponse.success(
+        # 十评 P2-1 完全 cookie 化：学生 token 同时写 HttpOnly student_token cookie
+        # （JS 不可读，防 XSS 窃取；响应体 token 保留供旧客户端/契约兼容）
+        body, status_code = APIResponse.success(
             data={
                 "access_token": token_data["token"],
                 "expires_in": token_data["expires_in"],
@@ -103,6 +105,17 @@ class StudentLogin(Resource):
             },
             message="登录成功",
         )
+        response = make_response(body, status_code)
+        response.set_cookie(
+            "student_token",
+            value=token_data["token"],
+            httponly=True,
+            secure=False,  # 生产经 SESSION_COOKIE_SECURE 配置；开发 http 需 False
+            samesite="Lax",
+            max_age=int(token_data.get("expires_in", 86400)),
+            path="/",
+        )
+        return response
 
 
 @ns_student.route("/me")
