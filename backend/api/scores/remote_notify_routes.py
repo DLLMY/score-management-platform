@@ -145,27 +145,26 @@ class RemoteNotifyPreview(Resource):
         now = _dt.datetime.now()
         cutoff = now - _dt.timedelta(minutes=5)
 
-        devices = Device.query.all()
-        total = len(devices)
-        online = [
-            d
-            for d in devices
-            if d.is_active and d.last_heartbeat is not None and d.last_heartbeat >= cutoff
-        ]
+        # 十一评：count()/索引 filter 替代全表遍历（ix_device_last_heartbeat / ix_device_is_active）
+        total = Device.query.count()
+        online_query = Device.query.filter(
+            Device.is_active.is_(True),
+            Device.last_heartbeat.isnot(None),
+            Device.last_heartbeat >= cutoff,
+        )
+        online_count = online_query.count()
         online_sample = [
             {
                 "device_id": d.device_id,
                 "class_name": d.class_info.name if d.class_info else None,
                 "last_seen": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
             }
-            for d in sorted(
-                online, key=lambda x: x.last_heartbeat or _dt.datetime.min, reverse=True
-            )[:20]
+            for d in online_query.order_by(Device.last_heartbeat.desc()).limit(20).all()
         ]
         return APIResponse.success(
             data={
                 "total_devices": total,
-                "online_count": len(online),
+                "online_count": online_count,
                 "online_sample": online_sample,
                 "cutoff_minutes": 5,
             },
