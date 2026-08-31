@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "volume": 0,
+  "tts_enabled": true,
+  "tts_rate": 50,
+  "tts_volume": 0.0,
+  "sounds": {
+    "notification": {
+      "file": "sounds/notification.wav",
+      "enabled": true,
+      "name": "通知音"
+    },
+    "urgent": {
+      "file": "sounds/urgent.wav",
+      "enabled": true,
+      "name": "紧急音"
+    },
+    "success": {
+      "file": "sounds/success.wav",
+      "enabled": true,
+      "name": "成功音"
+    },
+    "warning": {
+      "file": "sounds/warning.wav",
+      "enabled": true,
+      "name": "警告音"
+    },
+    "reminder": {
+      "file": "sounds/reminder.wav",
+      "enabled": true,
+      "name": "提醒音"
+    },
+    "score_increase": {
+      "file": "sounds/score_up.wav",
+      "enabled": true,
+      "name": "积分增加音"
+    },
+    "score_decrease": {
+      "file": "sounds/score_down.wav",
+      "enabled": true,
+      "name": "积分减少音"
+    }
+  },
+  "custom_sounds": [],
+  "play_system_sound_fallback": true
+}

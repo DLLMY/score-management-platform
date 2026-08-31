@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.vite/
+
+# Test outputs / debug artifacts
+coverage/
+playwright-report/
+test-results/
+probe/
+
+# Logs
+*.log
+frontend_run.log
+logs/
+
+# Env (keep .env / .env.example / .env.development / .env.production tracked)
+.env.local
+.env.*.local
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Windows reserved names / legacy cleanup leftovers
+nul
+_cleanup_backup_*/
+_legacy_*/
+.pre_bak_*/

@@ -1,0 +1,58 @@
+Flask>=2.0
+Flask-SQLAlchemy>=3.0
+Flask-CORS>=4.0
+Flask-Compress>=1.10
+Flask-Limiter>=3.0
+Flask-WTF>=1.0
+flask-restx>=1.0
+flasgger>=0.9.7
+gevent>=21.0
+greenlet>=1.0
+paho-mqtt>=1.6
+requests>=2.28
+APScheduler>=3.10
+redis>=4.0
+waitress>=2.0
+werkzeug>=2.0
+python-dotenv>=1.0
+bcrypt>=4.0
+PyJWT>=2.0
+psutil>=5.9
+flake8>=6.0
+black>=23.0
+isort>=5.12
+bandit>=1.7
+pytest>=7.0
+pytest-cov>=4.0
+pytest-timeout>=2.3
+semver>=3.0
+openpyxl>=3.0
+Werkzeug>=2.0
+SQLAlchemy>=1.4
+click>=8.0
+itsdangerous>=2.0
+Jinja2>=3.0
+MarkupSafe>=2.0
+
+# ================ 运行期实际依赖（此前缺失，导致 pip install 后无法启动） ================
+flask-socketio>=5.3
+celery>=5.3
+dependency-injector>=4.41
+prometheus-client>=0.19
+concurrent-log-handler>=0.9.25
+
+# 数据处理 / 报表导出
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+openpyxl>=3.0
+xlsxwriter>=3.0
+reportlab>=4.0
+
+# 中文 NLP / 机器学习（重依赖已拆分到 requirements-ml.txt）
+# 注：catboost/gensim 已移除（代码内 try/except 可选导入，缺失自动降级；如需启用可自行补装）
+# 注：torch/transformers/xgboost/lightgbm/shap 体积较大，已移至 requirements-ml.txt（按需安装）
+#     基础安装仅含下方轻量依赖；启用 NLP/ML 能力请 `pip install -r requirements-ml.txt`
+jieba>=0.42
+pypinyin>=0.49
+scikit-learn>=1.3

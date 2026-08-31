@@ -1,0 +1,80 @@
+name: CI 回归基线
+
+# 第九次评估建议落地：把 scripts/run_regression.sh 五步闸门固化进 CI。
+# 设计要点：
+#   - 后端不安装 torch（requirements 中 torch 为可选注释）；M10 懒加载后契约/路由测试无需 torch。
+#   - 后端 job 不启动服务进程：G5 OpenAPI 走脚本"跳过不阻塞"分支，契约由 pytest test_api_envelope 兜底。
+#   - 索引闸门前置：create_app 建表 + create_indexes --create（幂等）→ verify_indexes 全绿。
+#   - PYTHON_BIN 环境变量让 run_regression.sh 在 CI（python）与本机（系统 3.11）通用。
+
+on:
+  push:
+    branches: ['main', 'master', 'refactor/**']
+  pull_request:
+
+jobs:
+  backend:
+    name: 后端回归（RBAC/契约/关键路由/索引）
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: 安装后端依赖
+        run: pip install -r backend/requirements.txt
+
+      - name: 初始化数据库与索引（闸门前置）
+        working-directory: backend
+        run: |
+          python -c "from app import app; print('[CI] DB init ok')"
+          python scripts/create_indexes.py --create > /dev/null
+          echo "[CI] 索引就绪"
+
+      - name: 运行回归基线（G2 RBAC / G5 OpenAPI / 契约 / 关键路由 / 索引闸门）
+        env:
+          PYTHON_BIN: python
+        run: bash scripts/run_regression.sh
+
+  frontend:
+    name: 前端（vitest / build / lint）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # vitest forks pool 在 Node 20 崩溃（webidl.markAsUncloneable），本地为 Node 22
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm ci
+
+      - name: 单测（vitest）
+        working-directory: frontend
+        run: npm test
+
+      - name: 生产构建
+        working-directory: frontend
+        run: npm run build
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint

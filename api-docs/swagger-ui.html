@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成绩管理系统 API文档 - Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        #swagger-ui { max-width: 1400px; margin: 0 auto; }
+        .swagger-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            text-align: center;
+        }
+        .swagger-header h1 { margin: 0; font-size: 24px; }
+        .swagger-header p { margin: 5px 0 0 0; opacity: 0.9; }
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="swagger-header">
+        <h1>📚 成绩管理系统 API文档 <span class="version-badge">v2.0</span></h1>
+        <p>基于OpenAPI 3.0规范 · 自动生成 · 最后更新时间: 2026-07-29 17:37:38</p>
+    </div>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+        const ui = SwaggerUIBundle({
+            url: "openapi.json",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.SwaggerUIStandalonePreset
+            ],
+            plugins: [
+                SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "BaseLayout",
+            docExpansion: "list",
+            filter: true,
+            persistAuthorization: true,
+            displayRequestDuration: true,
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 1,
+            displayExtension: true,
+            tryItOutEnabled: true,
+            supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+            queryConfigEnabled: true,
+        });
+    </script>
+</body>
+</html>

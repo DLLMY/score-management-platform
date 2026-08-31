@@ -1,0 +1,7 @@
+# 远程通知接收端依赖
+paho-mqtt==1.6.1
+pyttsx3==2.90
+
+# Windows 音量控制
+pycaw==20230408
+comtypes==1.2.0

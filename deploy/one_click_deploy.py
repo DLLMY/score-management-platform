@@ -1,0 +1,477 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+import sys
+import subprocess
+import time
+import getpass
+import secrets
+
+def print_title(text):
+    print(f"\n{'='*60}")
+    print(f"  {text}")
+    print(f"{'='*60}")
+
+def print_step(step, total, title):
+    print(f"\n[{step}/{total}] {title}")
+    print(f"{'—'*40}")
+
+def print_success(message):
+    print(f"✅ {message}")
+
+def print_error(message):
+    print(f"❌ {message}")
+
+def print_info(message):
+    print(f"ℹ️ {message}")
+
+def print_warning(message):
+    print(f"⚠️ {message}")
+
+def run_command(cmd, cwd=None, quiet=False):
+    try:
+        result = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, encoding='utf-8')
+        if result.returncode != 0 and not quiet:
+            print(f"命令执行失败: {cmd}")
+            if result.stderr:
+                print(f"错误信息: {result.stderr.strip()}")
+        return result.returncode == 0, result.stdout, result.stderr
+    except Exception as e:
+        print(f"执行命令时发生异常: {e}")
+        return False, "", str(e)
+
+def find_python():
+    """探测项目可用 Python（优先系统 3.11，须带 torch 依赖；避免 py 启动器解析到 3.13）。"""
+    candidates = [
+        os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', 'Python', 'Python311', 'python.exe'),
+        r'C:\Python311\python.exe',
+        r'C:\Program Files\Python311\python.exe',
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    # 兜底：python3 / python（仅取 3.10+）
+    for cmd in ('python3', 'python'):
+        try:
+            out = subprocess.run([cmd, '--version'], capture_output=True, text=True, timeout=10)
+            ver = (out.stdout or out.stderr or '')
+            if '3.' in ver:
+                return cmd
+        except Exception:
+            continue
+    return None
+
+
+def get_user_input(prompt, default=""):
+    if default:
+        prompt = f"{prompt} (默认: {default})"
+    try:
+        return input(f"\n{prompt}: ").strip() or default
+    except KeyboardInterrupt:
+        print("\n\n用户取消操作")
+        sys.exit(0)
+
+def create_file(file_path, content, overwrite=False):
+    if os.path.exists(file_path) and not overwrite:
+        print_warning(f"文件已存在，跳过创建: {file_path}")
+        return False
+    
+    try:
+        # 确保目录存在
+        dir_path = os.path.dirname(file_path)
+        if dir_path and not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+            print_info(f"创建目录: {dir_path}")
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print_success(f"创建文件: {file_path}")
+        return True
+    except Exception as e:
+        print_error(f"创建文件失败: {file_path}")
+        print(f"错误: {e}")
+        return False
+
+def check_redis_status():
+    """检查Redis服务状态"""
+    try:
+        result = subprocess.run(
+            'sc query redis',
+            shell=True,
+            capture_output=True,
+            text=True,
+            encoding='utf-8'
+        )
+        if 'RUNNING' in result.stdout:
+            return True, "Redis服务正在运行"
+        elif 'STOPPED' in result.stdout:
+            return False, "Redis服务已停止"
+        else:
+            return False, "Redis服务未安装或未找到"
+    except Exception as e:
+        return False, f"检查Redis状态失败: {e}"
+
+def check_ngrok_status():
+    """检查ngrok是否可用"""
+    try:
+        result = subprocess.run(
+            'where ngrok',
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+        return result.returncode == 0, result.stdout.strip() if result.returncode == 0 else None
+    except:
+        return False, None
+
+def start_ngrok(port, region="cn"):
+    """启动ngrok隧道"""
+    try:
+        ngrok_cmd = f'ngrok http {port} --region={region}'
+        subprocess.Popen(f'start "Ngrok隧道 - 端口{port}" cmd /k "{ngrok_cmd}"', shell=True)
+        time.sleep(3)
+        return True
+    except Exception as e:
+        print_error(f"启动ngrok失败: {e}")
+        return False
+
+def main():
+    print_title("学生积分管理平台 - 智能一键部署系统")
+    
+    # 获取路径
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(script_dir)
+    backend_dir = os.path.join(project_dir, 'backend')
+    frontend_dir = os.path.join(project_dir, 'frontend')
+    
+    print_info(f"项目目录: {project_dir}")
+    print_info(f"后端目录: {backend_dir}")
+    print_info(f"前端目录: {frontend_dir}")
+    
+    # 检查Redis状态
+    print("\n检查Redis服务状态...")
+    redis_running, redis_msg = check_redis_status()
+    if redis_running:
+        print_success(redis_msg)
+    else:
+        print_warning(redis_msg)
+        print_info("将尝试启动Redis服务...")
+        try:
+            subprocess.run('net start redis', shell=True, capture_output=True)
+            time.sleep(2)
+            redis_running, redis_msg = check_redis_status()
+            if redis_running:
+                print_success("Redis服务启动成功")
+            else:
+                print_warning("Redis服务启动失败，将使用内存缓存")
+        except Exception as e:
+            print_warning(f"启动Redis服务失败: {e}")
+    
+    # 检查ngrok
+    print("\n检查ngrok...")
+    ngrok_available, ngrok_path = check_ngrok_status()
+    if ngrok_available:
+        print_success(f"ngrok已安装: {ngrok_path}")
+    else:
+        print_warning("ngrok未安装，外网穿透功能不可用")
+        print_info("下载地址: https://ngrok.com/download")
+    
+    # 用户配置输入
+    print_title("配置信息输入")
+    # 使用相对路径，确保跨电脑部署兼容性
+    default_db_path = os.path.join(backend_dir, 'instance', 'score_management.db')
+    db_path = get_user_input(
+        "请输入SQLite数据库文件路径",
+        default=default_db_path
+    )
+    
+    flask_port = get_user_input("请输入后端服务端口", default="5000")
+    frontend_port = get_user_input("请输入前端服务端口", default="3000")
+
+    # 探测 Python 3.11（含 torch 依赖的系统 Python；py 启动器可能解析到 3.13 缺依赖）
+    py_exe = find_python()
+    if not py_exe:
+        print_error("未找到 Python 3.10+（建议 Python 3.11，需包含 torch 等后端依赖）")
+        input("按 Enter 退出...")
+        return
+    print_info(f"使用 Python: {py_exe}")
+    
+    # 询问是否启动ngrok
+    use_ngrok = False
+    if ngrok_available:
+        ngrok_choice = get_user_input("是否启动ngrok外网穿透? (y/n)", default="n").lower()
+        use_ngrok = ngrok_choice == 'y' or ngrok_choice == 'yes'
+        if use_ngrok:
+            ngrok_region = get_user_input("请输入ngrok区域 (cn/us/eu/au/ap)", default="cn")
+    
+    admin_username = get_user_input("请输入管理员用户名", default="admin")
+    admin_password = getpass.getpass("请输入管理员密码 (不显示): ")
+    if not admin_password:
+        admin_password = "admin123"
+        print("已使用默认密码 admin123（首次登录后请尽快修改）")
+    
+    # 步骤1: 检查环境
+    print_step(1, 7, "检查运行环境")
+    
+    print("检查 Python 环境...")
+    success, stdout, stderr = run_command(f'{py_exe} --version')
+    if not success:
+        print_error("Python 未安装或未添加到 PATH")
+        print_info("请安装 Python 3.10+ 并添加到系统 PATH")
+        print_info("下载地址: https://www.python.org/downloads/")
+        input("\n按 Enter 退出...")
+        sys.exit(1)
+    print_success(f"Python 版本: {stdout.strip()}")
+    
+    print("\n检查 Node.js 环境...")
+    success, stdout, stderr = run_command('node --version')
+    if not success:
+        print_error("Node.js 未安装或未添加到 PATH")
+        print_info("请安装 Node.js 16+ 并添加到系统 PATH")
+        print_info("下载地址: https://nodejs.org/")
+        input("\n按 Enter 退出...")
+        sys.exit(1)
+    print_success(f"Node.js 版本: {stdout.strip()}")
+    
+    # 步骤2: 安装后端依赖
+    print_step(2, 7, "安装后端 Python 依赖")
+    print_info("正在安装依赖，这可能需要几分钟...")
+    
+    requirements_file = os.path.join(backend_dir, 'requirements.txt')
+    if os.path.exists(requirements_file):
+        success, stdout, stderr = run_command(f'{py_exe} -m pip install -r requirements.txt', cwd=backend_dir)
+        if success:
+            print_success("Python 依赖安装完成")
+        else:
+            print_warning("部分依赖安装可能失败，请检查网络连接")
+    else:
+        print_error(f"依赖文件不存在: {requirements_file}")
+    
+    # 步骤3: 安装前端依赖
+    print_step(3, 7, "安装前端 Node.js 依赖")
+    print_info("正在安装依赖，这可能需要几分钟...")
+    
+    package_file = os.path.join(frontend_dir, 'package.json')
+    if os.path.exists(package_file):
+        success, stdout, stderr = run_command('npm install --legacy-peer-deps', cwd=frontend_dir)
+        if success:
+            print_success("Node.js 依赖安装完成")
+        else:
+            print_error("Node.js 依赖安装失败")
+            print_info("请检查网络连接或手动运行: npm install --legacy-peer-deps")
+            input("\n按 Enter 继续...")
+    
+    # 安装 typescript（修复已知问题）
+    print("\n安装 TypeScript 依赖...")
+    success, stdout, stderr = run_command('npm install typescript --save-dev', cwd=frontend_dir)
+    if success:
+        print_success("TypeScript 安装完成")
+    
+    # 步骤4: 创建配置文件
+    print_step(4, 7, "创建配置文件")
+    
+    # 创建 instance 目录
+    instance_dir = os.path.dirname(db_path)
+    if not os.path.exists(instance_dir):
+        os.makedirs(instance_dir)
+        print_success(f"创建目录: {instance_dir}")
+    
+    # 创建 .env 文件：从 backend/.env.example 复制（单一配置来源）并注入随机密钥
+    flask_secret_key = secrets.token_hex(32)
+    csrf_secret_key = secrets.token_hex(32)
+    jwt_secret_key = secrets.token_hex(32)
+    db_uri_path = db_path.replace('\\', '/')
+
+    env_example = os.path.join(backend_dir, '.env.example')
+    if os.path.exists(env_example):
+        with open(env_example, encoding='utf-8') as f:
+            env_content = f.read()
+    else:
+        print_warning("未找到 backend/.env.example，跳过 .env 生成")
+        env_content = ""
+
+    if env_content:
+        # 注入随机密钥（.env.example 的 change-me-* 占位）
+        env_content = env_content.replace('change-me-flask-secret', flask_secret_key)
+        env_content = env_content.replace('change-me-csrf-secret', csrf_secret_key)
+        env_content = env_content.replace('change-me-jwt-secret', jwt_secret_key)
+        # 用户输入的端口 / 数据库路径 / CORS
+        env_content = env_content.replace('FLASK_PORT=5000', f'FLASK_PORT={flask_port}')
+        env_content = env_content.replace(
+            'sqlite:///instance/score_management.db', f'sqlite:///{db_uri_path}'
+        )
+        env_content = env_content.replace(
+            'http://localhost:3000,http://127.0.0.1:3000',
+            f'http://localhost:{frontend_port},http://127.0.0.1:{frontend_port}',
+        )
+        # 部署模式：无 reloader 生产模式 + 本机 http 显式关闭 cookie Secure（HTTPS 部署改 true）
+        env_content = env_content.replace('FLASK_ENV=development', 'FLASK_ENV=production')
+        env_content = env_content.replace('FLASK_DEBUG=true', 'FLASK_DEBUG=false')
+        env_content = env_content.replace('# SESSION_COOKIE_SECURE=true', 'SESSION_COOKIE_SECURE=false')
+        # 管理员初始密码
+        env_content = env_content.replace(
+            'ADMIN_INIT_PASSWORD=admin123456', f'ADMIN_INIT_PASSWORD={admin_password}'
+        )
+
+    env_file = os.path.join(backend_dir, '.env')
+    create_file(env_file, env_content, overwrite=True)
+    
+    # 创建管理员初始化脚本
+    init_script_content = f"""\
+#!/usr/bin/env python3
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app import create_app
+from models import Admin
+
+app = create_app()
+
+with app.app_context():
+    # 检查是否已存在管理员
+    existing_admin = Admin.query.filter_by(username='{admin_username}').first()
+    if existing_admin:
+        print(f"管理员 {admin_username} 已存在")
+    else:
+        from utils.security import hash_password
+        admin = Admin(
+            username='{admin_username}',
+            password=hash_password('{admin_password}'),
+            real_name='系统管理员',
+            phone='13800138000'
+        )
+        from models import db
+        db.session.add(admin)
+        db.session.commit()
+        print(f"管理员 {admin_username} 创建成功")
+"""
+    init_script = os.path.join(backend_dir, 'scripts', 'init_admin.py')
+    create_file(init_script, init_script_content, overwrite=True)
+    
+    # 步骤5: 初始化数据库和管理员
+    print_step(5, 7, "初始化数据库")
+    
+    print("创建数据库表...")
+    success, stdout, stderr = run_command(
+        f'{py_exe} -c "from app import create_app; from models import db; app = create_app(); app.app_context().push(); db.create_all(); print(\'数据库表创建完成\')"',
+        cwd=backend_dir,
+    )
+    if success:
+        print_success("数据库表创建完成")
+    else:
+        print_error("数据库表创建失败")
+        print_info(f"错误信息: {stderr}")
+
+    print("创建核心索引（create_indexes.py）...")
+    success, stdout, stderr = run_command(f'{py_exe} scripts/create_indexes.py --create', cwd=backend_dir)
+    if success:
+        print_success("核心索引创建完成")
+    else:
+        print_error("核心索引创建失败")
+        print_info(f"错误信息: {stderr}")
+
+    print("校验索引完整性（verify_indexes.py）...")
+    success, stdout, stderr = run_command(f'{py_exe} scripts/verify_indexes.py', cwd=backend_dir)
+    if success:
+        print_success("索引完整性校验通过")
+    else:
+        print_warning("索引校验未通过，请检查上方输出（可稍后手动运行 verify_indexes.py）")
+    
+    print("\n创建管理员账户...")
+    success, stdout, stderr = run_command(f'{py_exe} scripts/init_admin.py', cwd=backend_dir)
+    if success:
+        print_success("管理员账户创建完成")
+        print_info(f"用户名: {admin_username}")
+        print_info(f"密码: {admin_password}")
+    else:
+        print_error("管理员账户创建失败")
+    
+    # 步骤6: 清理端口
+    print_step(6, 7, "清理端口占用")
+    
+    print(f"检查并释放端口 {flask_port}...")
+    run_command(f'for /f "tokens=5" %a in (\'netstat -ano ^| findstr :{flask_port} ^| findstr LISTENING\') do taskkill /F /PID %a', quiet=True)
+    
+    print(f"检查并释放端口 {frontend_port}...")
+    run_command(f'for /f "tokens=5" %a in (\'netstat -ano ^| findstr :{frontend_port} ^| findstr LISTENING\') do taskkill /F /PID %a', quiet=True)
+    
+    print_success("端口清理完成")
+    
+    # 步骤7: 启动服务
+    print_step(7, 8, "启动服务")
+    
+    # 检查并启动本地Redis
+    redis_dir = os.path.join(project_dir, 'redis')
+    redis_exe = os.path.join(redis_dir, 'redis-server.exe')
+    if os.path.exists(redis_exe):
+        print("检测到本地Redis，启动Redis服务...")
+        redis_cmd = f'cd /d "{redis_dir}" && redis-server.exe redis.windows.conf'
+        subprocess.Popen(f'start "Redis服务" cmd /k "{redis_cmd}"', shell=True)
+        time.sleep(2)
+        print_success("Redis服务已启动")
+    else:
+        # 再次检查系统Redis服务
+        redis_running, _ = check_redis_status()
+        if redis_running:
+            print_success("系统Redis服务正在运行")
+        else:
+            print_warning("未检测到Redis服务，将使用内存缓存")
+    
+    print(f"启动后端服务 (端口 {flask_port})...")
+    backend_cmd = f'cd /d "{backend_dir}" && {py_exe} run.py --env production'
+    subprocess.Popen(f'start "后端服务" cmd /k "{backend_cmd}"', shell=True)
+    
+    print("等待后端服务启动...")
+    time.sleep(5)
+    
+    print(f"启动前端服务 (端口 {frontend_port})...")
+    frontend_cmd = f'cd /d "{frontend_dir}" && npm start'
+    subprocess.Popen(f'start "前端服务" cmd /k "{frontend_cmd}"', shell=True)
+    
+    print("等待前端服务启动...")
+    time.sleep(3)
+    
+    # 启动ngrok（如果用户选择）
+    ngrok_backend_url = None
+    ngrok_frontend_url = None
+    if use_ngrok:
+        print("\n启动ngrok外网穿透...")
+        print(f"启动后端ngrok隧道 (端口 {flask_port})...")
+        if start_ngrok(flask_port, ngrok_region):
+            print_success("后端ngrok隧道已启动")
+            print_info("请访问 http://127.0.0.1:4040 查看ngrok管理界面获取外网地址")
+        
+        print(f"启动前端ngrok隧道 (端口 {frontend_port})...")
+        if start_ngrok(frontend_port, ngrok_region):
+            print_success("前端ngrok隧道已启动")
+            print_info("请访问 http://127.0.0.1:4041 查看ngrok管理界面获取外网地址")
+        
+        print_warning("注意: ngrok免费版每次启动会生成随机外网地址")
+        print_info("ngrok管理界面: http://127.0.0.1:4040 (后端) / http://127.0.0.1:4041 (前端)")
+    
+    # 部署完成
+    print_title("🎉 部署完成！")
+    print("\n" + "="*60)
+    print("服务访问信息:")
+    print(f"  📱 前端应用:  http://localhost:{frontend_port}")
+    print(f"  🔗 后端API:   http://localhost:{flask_port}")
+    print(f"  📚 API文档:   http://localhost:{flask_port}/apidocs")
+    if use_ngrok:
+        print("\n外网访问 (ngrok):")
+        print("  📱 前端外网:  请查看 http://127.0.0.1:4041")
+        print("  🔗 后端外网:  请查看 http://127.0.0.1:4040")
+    print("\n登录信息:")
+    print(f"  👤 用户名: {admin_username}")
+    print(f"  🔑 密码:   {admin_password}")
+    print("\n创建的文件:")
+    print(f"  • 配置文件: {env_file}")
+    print(f"  • 数据库文件: {db_path}")
+    print(f"  • 初始化脚本: {init_script}")
+    print("\n服务窗口已打开，按 Enter 退出此窗口...")
+    input()
+
+if __name__ == '__main__':
+    main()

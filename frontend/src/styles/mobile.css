@@ -1,0 +1,1081 @@
+/*
+ * 移动端响应式样式
+ * 针对不同设备尺寸进行优化
+ */
+
+/* ==================== 断点定义 ==================== */
+
+/* 超小屏幕（手机，< 576px） */
+@media (max-width: 575.98px) {
+  :root {
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --font-size-xs: 0.625rem;
+    --font-size-sm: 0.75rem;
+    --font-size-base: 0.875rem;
+    --font-size-lg: 1rem;
+    --font-size-xl: 1.25rem;
+  }
+}
+
+/* 小屏幕（平板，≥ 576px） */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  :root {
+    --spacing-xs: 0.375rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.25rem;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.375rem;
+  }
+}
+
+/* 中等屏幕（桌面，≥ 768px） */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  :root {
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+  }
+}
+
+/* ==================== 全局样式 ==================== */
+
+/* 移动端基础样式 */
+@media (max-width: 767.98px) {
+  html {
+    font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  body {
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+}
+
+/* ==================== 布局适配 ==================== */
+
+/* 移动端布局容器 */
+@media (max-width: 767.98px) {
+  .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    max-width: 100%;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0.5rem;
+  }
+}
+
+/* 网格布局适配 */
+@media (max-width: 767.98px) {
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-6,
+  .grid-8 {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+  
+  .grid-2-mobile {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+/* ==================== 侧边栏适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar.open {
+    transform: translateX(280px);
+  }
+  
+  .sidebar.collapsed {
+    width: 60px;
+    left: -60px;
+  }
+  
+  .sidebar.collapsed.open {
+    transform: translateX(60px);
+  }
+  
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+  }
+  
+  .sidebar-overlay.active {
+    display: block;
+  }
+}
+
+/* ==================== 头部适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .header {
+    padding: 0.5rem;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .header-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .menu-toggle {
+    display: flex !important;
+    padding: 0.5rem;
+  }
+  
+  .search-box {
+    width: 100%;
+    max-width: 200px;
+    margin-top: 0.5rem;
+  }
+  
+  .user-menu {
+    padding: 0.375rem;
+  }
+  
+  .notification-badge {
+    min-width: 18px;
+    height: 18px;
+    font-size: 10px;
+    padding: 0 4px;
+  }
+}
+
+/* ==================== 卡片组件适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .card {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+  }
+  
+  .card-header {
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+  }
+  
+  .card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .card-body {
+    padding: 0;
+  }
+}
+
+/* 统计卡片适配 */
+@media (max-width: 767.98px) {
+  .stat-card {
+    padding: 0.75rem;
+    min-height: auto;
+  }
+  
+  .stat-card .icon-wrapper {
+    width: 32px;
+    height: 32px;
+    padding: 0.375rem;
+    flex-shrink: 0;
+  }
+  
+  .stat-card .icon-wrapper svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .stat-card .stat-content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 0.625rem;
+    margin-bottom: 0.125rem;
+  }
+  
+  .stat-card .stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  
+  .stat-card .stat-trend {
+    font-size: 0.625rem;
+    margin-top: 0.125rem;
+  }
+  
+  .stat-card .stat-sub-value {
+    font-size: 0.625rem;
+  }
+}
+
+/* 用户卡片适配 */
+@media (max-width: 767.98px) {
+  .user-card {
+    padding: 0.5rem;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  
+  .user-card .rank-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 0.625rem;
+    flex-shrink: 0;
+  }
+  
+  .user-card .user-avatar {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  
+  .user-card .user-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .user-card .user-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .user-card .user-class {
+    font-size: 0.625rem;
+  }
+  
+  .user-card .user-score {
+    font-size: 0.875rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  
+  .user-card .score-tag {
+    font-size: 0.5rem;
+    padding: 0.125rem 0.375rem;
+    margin-top: 0.125rem;
+  }
+}
+
+/* 设备卡片适配 */
+@media (max-width: 767.98px) {
+  .device-card {
+    padding: 0.75rem;
+  }
+  
+  .device-card .device-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .device-card .device-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0.375rem;
+  }
+  
+  .device-card .device-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .device-card .device-info {
+    flex: 1;
+  }
+  
+  .device-card .device-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .device-card .device-id {
+    font-size: 0.5625rem;
+    margin-top: 0.125rem;
+  }
+  
+  .device-card .device-status {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.5625rem;
+  }
+  
+  .device-card .device-location {
+    font-size: 0.625rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .device-card .device-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .device-card .device-actions button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.625rem;
+  }
+}
+
+/* 记录卡片适配 */
+@media (max-width: 767.98px) {
+  .record-item {
+    padding: 0.5rem;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  
+  .record-item .record-time {
+    font-size: 0.5625rem;
+  }
+  
+  .record-item .record-info {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .record-item .record-user {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .record-item .record-card {
+    font-size: 0.625rem;
+  }
+  
+  .record-item .record-score {
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+  
+  .record-item .record-reason {
+    font-size: 0.625rem;
+    margin-top: 0.125rem;
+  }
+}
+
+/* ==================== 表单适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .form-control {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .form-select {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .form-textarea {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    min-height: 80px;
+  }
+  
+  .form-check {
+    padding: 0.375rem 0;
+  }
+  
+  .form-check-label {
+    font-size: 0.75rem;
+  }
+  
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+  }
+  
+  .btn-lg {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+  
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.625rem;
+  }
+}
+
+/* ==================== 表格适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table {
+    min-width: 600px;
+    font-size: 0.625rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.375rem 0.5rem;
+  }
+  
+  .table th {
+    font-size: 0.5625rem;
+    font-weight: 600;
+  }
+  
+  .table-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .table-actions button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.5625rem;
+  }
+}
+
+/* ==================== 弹窗/模态框适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+  
+  .modal {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 0.5rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    padding: 0.75rem;
+  }
+  
+  .modal-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .modal-body {
+    padding: 0.75rem;
+  }
+  
+  .modal-footer {
+    padding: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .modal-footer button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.625rem;
+  }
+}
+
+/* ==================== 图表适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .chart-container {
+    padding: 0.5rem;
+  }
+  
+  .chart-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .chart-wrapper {
+    height: 200px !important;
+  }
+  
+  .chart-legend {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  
+  .chart-legend-item {
+    font-size: 0.5625rem;
+  }
+}
+
+/* ==================== 排行榜适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .ranking-container {
+    padding: 0.5rem;
+  }
+  
+  .ranking-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .ranking-list {
+    gap: 0.375rem;
+  }
+}
+
+/* ==================== 通知适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .notification-card {
+    padding: 0.5rem;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  
+  .notification-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0.375rem;
+  }
+  
+  .notification-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .notification-content {
+    flex: 1;
+  }
+  
+  .notification-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .notification-message {
+    font-size: 0.625rem;
+    margin-top: 0.125rem;
+  }
+  
+  .notification-time {
+    font-size: 0.5625rem;
+  }
+}
+
+/* ==================== 按钮组适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .btn-group {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+    min-width: calc(50% - 0.125rem);
+  }
+}
+
+/* ==================== 分页适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.125rem;
+  }
+  
+  .pagination button {
+    width: 28px;
+    height: 28px;
+    font-size: 0.625rem;
+    padding: 0;
+  }
+  
+  .pagination-info {
+    font-size: 0.625rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ==================== 标签适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .tag {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.5625rem;
+    border-radius: 0.25rem;
+  }
+  
+  .tag-lg {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.625rem;
+  }
+  
+  .tag-sm {
+    padding: 0.0625rem 0.25rem;
+    font-size: 0.5rem;
+  }
+}
+
+/* ==================== 导航适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .breadcrumb {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    font-size: 0.625rem;
+  }
+  
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+  }
+  
+  .breadcrumb-item:not(:last-child)::after {
+    margin: 0 0.25rem;
+  }
+  
+  .nav-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+  
+  .nav-tabs button {
+    white-space: nowrap;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.625rem;
+  }
+}
+
+/* ==================== 滚动条适配 ==================== */
+
+@media (max-width: 767.98px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+}
+
+/* ==================== 触摸优化 ==================== */
+
+@media (max-width: 767.98px) {
+  /* 增加可点击区域 */
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* 移除点击高亮 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* 优化触摸滚动 */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ==================== 字体适配 ==================== */
+
+@media (max-width: 575.98px) {
+  h1 {
+    font-size: 1.25rem;
+  }
+  
+  h2 {
+    font-size: 1.125rem;
+  }
+  
+  h3 {
+    font-size: 1rem;
+  }
+  
+  h4 {
+    font-size: 0.875rem;
+  }
+  
+  h5 {
+    font-size: 0.75rem;
+  }
+  
+  h6 {
+    font-size: 0.625rem;
+  }
+  
+  p {
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+}
+
+/* ==================== 动画适配 ==================== */
+
+@media (max-width: 767.98px) {
+  /* 简化动画以提高性能 */
+  .fade-in,
+  .slide-in,
+  .scale-in {
+    animation-duration: 0.2s;
+  }
+  
+  .pulse-animation {
+    animation-duration: 2s;
+  }
+}
+
+/* ==================== 加载状态适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .loading-text {
+    font-size: 0.625rem;
+  }
+}
+
+/* ==================== 空状态适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+  
+  .empty-state-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.75rem;
+  }
+  
+  .empty-state-title {
+    font-size: 0.875rem;
+    margin-bottom: 0.375rem;
+  }
+  
+  .empty-state-description {
+    font-size: 0.625rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* ==================== 成功/错误提示适配 ==================== */
+
+@media (max-width: 767.98px) {
+  .toast {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.625rem;
+    border-radius: 0.375rem;
+  }
+  
+  .alert {
+    padding: 0.5rem;
+    font-size: 0.625rem;
+    border-radius: 0.375rem;
+  }
+  
+  .alert-title {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* ==================== 移动端专用样式 ==================== */
+
+/* 只在移动端显示 */
+@media (max-width: 767.98px) {
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* 只在桌面端显示 */
+@media (max-width: 767.98px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-only {
+    display: block !important;
+  }
+}
+
+/* 横向模式优化 */
+@media (max-width: 767.98px) and (orientation: landscape) {
+  .stat-card {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .stat-card .stat-content {
+    flex: 1;
+    margin-left: 0.5rem;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) and (max-width: 767.98px) {
+  .card {
+    border-width: 2px;
+  }
+  
+  .btn {
+    border-width: 2px;
+  }
+}
+
+/* ==================== iOS安全区域适配 ==================== */
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobile-header {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .mobile-content {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 60px);
+  }
+}
+
+/* ==================== 移动端性能优化 ==================== */
+
+@media (max-width: 767.98px) {
+  /* 减少重绘 */
+  .card,
+  .stat-card,
+  .device-card {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  /* 优化图片加载 - 使用CSS提示浏览器延迟加载 */
+  img[loading="lazy"] {
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  img[loading="lazy"].loaded {
+    opacity: 1;
+  }
+  
+  /* 禁用不必要的动画 */
+  .no-animation * {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  /* 优化列表渲染 */
+  .virtual-list {
+    contain: strict;
+  }
+}
+
+/* ==================== 移动端手势优化 ==================== */
+
+@media (max-width: 767.98px) {
+  /* 滑动删除 */
+  .swipe-delete {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .swipe-delete::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    background: linear-gradient(to left, rgba(255, 0, 0, 0.8), transparent);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 1rem;
+    color: white;
+  }
+  
+  /* 长按效果 */
+  .long-press:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  
+  /* 拖拽排序 */
+  .drag-handle {
+    cursor: grab;
+  }
+  
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+}
+
+/* ==================== 移动端无障碍优化 ==================== */
+
+@media (max-width: 767.98px) {
+  /* 增加焦点区域 */
+  button:focus,
+  a:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+  
+  /* 高对比度模式 */
+  @media (prefers-contrast: high) {
+    .card {
+      border: 2px solid currentColor;
+    }
+    
+    button {
+      border: 2px solid currentColor;
+    }
+  }
+  
+  /* 减少动画模式 */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ==================== 移动端打印样式 ==================== */
+
+@media print and (max-width: 767.98px) {
+  .mobile-header,
+  .mobile-bottom-nav,
+  .mobile-quick-actions {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* ==================== 深色模式移动端优化 ==================== */
+
+@media (max-width: 767.98px) {
+  .dark {
+    /* 优化深色模式下的颜色 */
+    --bg-primary: #1e293b;
+    --bg-secondary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #475569;
+  }
+  
+  /* 深色模式下的阴影优化 */
+  .dark .card,
+  .dark .stat-card,
+  .dark .device-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* 深色模式下的表单优化 */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    background-color: #334155;
+    border-color: #475569;
+  }
+  
+  .dark input:focus,
+  .dark select:focus,
+  .dark textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+}
+
+/* ==================== 移动端夜间模式特殊处理 ==================== */
+
+@media (max-width: 767.98px) and (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+  }
+}

@@ -1,0 +1,13 @@
+# 机器学习重依赖（可选，按需安装）
+# 代码内对以下库均已做 try/except 可选导入并自动降级，缺失时对应 NLP/ML 功能不可用但应用可正常启动。
+#
+# 生产部署建议用 CPU 版以缩减体积与安装时长：
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#
+# 安装方式：
+#   pip install -r requirements-ml.txt
+xgboost>=2.0
+lightgbm>=4.0
+shap>=0.43
+torch>=2.0
+transformers>=4.30

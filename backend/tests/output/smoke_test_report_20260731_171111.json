@@ -1,0 +1,425 @@
+{
+  "test_time": "2026-07-31T17:11:11.518217",
+  "base_url": "http://localhost:5000",
+  "results": [
+    {
+      "name": "仪表盘数据",
+      "method": "GET",
+      "url": "/api/dashboard/data",
+      "status_code": 200,
+      "elapsed_ms": 2078.59,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "管理员列表",
+      "method": "GET",
+      "url": "/api/admins",
+      "status_code": 200,
+      "elapsed_ms": 2081.83,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "角色列表",
+      "method": "GET",
+      "url": "/api/roles",
+      "status_code": 200,
+      "elapsed_ms": 2068.29,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "操作日志",
+      "method": "GET",
+      "url": "/api/operation-logs",
+      "status_code": 200,
+      "elapsed_ms": 2084.87,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "权限日志",
+      "method": "GET",
+      "url": "/api/permission-logs",
+      "status_code": 200,
+      "elapsed_ms": 2068.35,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "用户列表",
+      "method": "GET",
+      "url": "/api/users",
+      "status_code": 200,
+      "elapsed_ms": 2067.83,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "用户分页列表",
+      "method": "GET",
+      "url": "/api/users?page=1&per_page=10",
+      "status_code": 200,
+      "elapsed_ms": 2082.06,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "班级列表",
+      "method": "GET",
+      "url": "/api/classes",
+      "status_code": 200,
+      "elapsed_ms": 2071.58,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "课时列表",
+      "method": "GET",
+      "url": "/api/class-periods",
+      "status_code": 404,
+      "elapsed_ms": 2067.0,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "活跃课时",
+      "method": "GET",
+      "url": "/api/class-periods/active",
+      "status_code": 404,
+      "elapsed_ms": 2068.48,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "科目列表",
+      "method": "GET",
+      "url": "/api/subjects",
+      "status_code": 200,
+      "elapsed_ms": 2077.39,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "成绩分类",
+      "method": "GET",
+      "url": "/api/score-categories",
+      "status_code": 404,
+      "elapsed_ms": 2068.4,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "成绩列表",
+      "method": "GET",
+      "url": "/api/scores",
+      "status_code": 200,
+      "elapsed_ms": 2096.86,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "记录列表",
+      "method": "GET",
+      "url": "/api/records",
+      "status_code": 200,
+      "elapsed_ms": 2063.24,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "记录统计",
+      "method": "GET",
+      "url": "/api/records/statistics",
+      "status_code": 200,
+      "elapsed_ms": 2087.4,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "成绩分析",
+      "method": "GET",
+      "url": "/api/score-analysis",
+      "status_code": 404,
+      "elapsed_ms": 2071.2,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "规则列表",
+      "method": "GET",
+      "url": "/api/rules",
+      "status_code": 200,
+      "elapsed_ms": 2073.1,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "排名规则",
+      "method": "GET",
+      "url": "/api/rank-rules",
+      "status_code": 200,
+      "elapsed_ms": 2074.5,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "时间规则",
+      "method": "GET",
+      "url": "/api/time-rules",
+      "status_code": 200,
+      "elapsed_ms": 2097.97,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "通知列表",
+      "method": "GET",
+      "url": "/api/notifications",
+      "status_code": 200,
+      "elapsed_ms": 2117.67,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "通知模板",
+      "method": "GET",
+      "url": "/api/notify_templates",
+      "status_code": 404,
+      "elapsed_ms": 2072.04,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "通知历史",
+      "method": "GET",
+      "url": "/api/notify_history",
+      "status_code": 404,
+      "elapsed_ms": 2093.77,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "通知配置",
+      "method": "GET",
+      "url": "/api/notification-config",
+      "status_code": 200,
+      "elapsed_ms": 2542.94,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "设备列表",
+      "method": "GET",
+      "url": "/api/devices",
+      "status_code": 200,
+      "elapsed_ms": 2086.79,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "设备组列表",
+      "method": "GET",
+      "url": "/api/device-group",
+      "status_code": 404,
+      "elapsed_ms": 2073.66,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "固件列表",
+      "method": "GET",
+      "url": "/api/firmware",
+      "status_code": 404,
+      "elapsed_ms": 2068.28,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "算法统计",
+      "method": "GET",
+      "url": "/api/algorithm/statistics",
+      "status_code": 404,
+      "elapsed_ms": 2094.34,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "算法全部",
+      "method": "GET",
+      "url": "/api/algorithm/all",
+      "status_code": 404,
+      "elapsed_ms": 2085.06,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "系统配置",
+      "method": "GET",
+      "url": "/api/system/config",
+      "status_code": 200,
+      "elapsed_ms": 2079.32,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "备份列表",
+      "method": "GET",
+      "url": "/api/system/backups",
+      "status_code": 200,
+      "elapsed_ms": 2148.24,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "导入配置",
+      "method": "GET",
+      "url": "/api/import/configs",
+      "status_code": 404,
+      "elapsed_ms": 2097.26,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "课程表",
+      "method": "GET",
+      "url": "/api/course-schedules",
+      "status_code": 404,
+      "elapsed_ms": 2078.6,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "考试列表",
+      "method": "GET",
+      "url": "/api/exams",
+      "status_code": 200,
+      "elapsed_ms": 2082.69,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "活动列表",
+      "method": "GET",
+      "url": "/api/activity",
+      "status_code": 404,
+      "elapsed_ms": 2068.49,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "委员会列表",
+      "method": "GET",
+      "url": "/api/committee",
+      "status_code": 404,
+      "elapsed_ms": 2078.88,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "文化记录",
+      "method": "GET",
+      "url": "/api/culture",
+      "status_code": 404,
+      "elapsed_ms": 2081.09,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "值日列表",
+      "method": "GET",
+      "url": "/api/duty",
+      "status_code": 404,
+      "elapsed_ms": 2064.43,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "作业列表",
+      "method": "GET",
+      "url": "/api/homework",
+      "status_code": 404,
+      "elapsed_ms": 2056.04,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "心理健康",
+      "method": "GET",
+      "url": "/api/mental-health",
+      "status_code": 404,
+      "elapsed_ms": 2078.56,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "家长联系",
+      "method": "GET",
+      "url": "/api/parent",
+      "status_code": 404,
+      "elapsed_ms": 2072.49,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "座位表",
+      "method": "GET",
+      "url": "/api/seating",
+      "status_code": 404,
+      "elapsed_ms": 2087.65,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "学习小组",
+      "method": "GET",
+      "url": "/api/study-group",
+      "status_code": 404,
+      "elapsed_ms": 2047.88,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "学习指导",
+      "method": "GET",
+      "url": "/api/study-guide",
+      "status_code": 404,
+      "elapsed_ms": 2059.46,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "WOL设备",
+      "method": "GET",
+      "url": "/api/wol",
+      "status_code": 404,
+      "elapsed_ms": 2060.44,
+      "success": false,
+      "error": "资源不存在"
+    },
+    {
+      "name": "审批列表",
+      "method": "GET",
+      "url": "/api/approvals",
+      "status_code": 200,
+      "elapsed_ms": 2080.97,
+      "success": true,
+      "error": null
+    },
+    {
+      "name": "考勤列表",
+      "method": "GET",
+      "url": "/api/attendance",
+      "status_code": 404,
+      "elapsed_ms": 2088.22,
+      "success": false,
+      "error": "资源不存在"
+    }
+  ],
+  "summary": {
+    "total": 46,
+    "passed": 22,
+    "failed": 24
+  }
+}

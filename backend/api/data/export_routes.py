@@ -1,0 +1,540 @@
+import io
+import logging
+from flask import request, send_file
+from flask_restx import Namespace, Resource, fields
+from models import User, ScoreRule, Device, ScoreRecord, ScoreCategory
+from utils.permission import requires_permission
+from utils.response import APIResponse
+from utils.excel_utils import build_attachment_response
+from services.export_service import export_service
+from services.heartbeat_service import is_device_online
+from datetime import datetime, timedelta
+from sqlalchemy.orm import joinedload
+
+logger = logging.getLogger(__name__)
+
+# 积分记录导出字段子集（B3 扩展 2026-08-23，对应原 export 内联 12 字段，顺序逐字一致）
+RECORD_EXPORT_FIELDS = [
+    "id",
+    "user_id",
+    "student_id",
+    "user_name",
+    "card_id",
+    "score_change",
+    "rule_id",
+    "rule_name",
+    "category_name",
+    "description",
+    "created_at",
+    "operator",
+]
+
+# B3 User.to_dict 字段子集（2026-08-23，对应原 users 导出内联 8 字段）
+EXPORT_USER_FIELDS = [
+    "id", "name", "gender", "class_name", "phone", "card_id",
+    "current_score", "created_at",
+]
+
+"""
+数据导出API路由
+支持Excel和PDF格式的数据导出
+"""
+ns_export = Namespace("export", description="数据导出相关操作")
+export_format_model = ns_export.model(
+    "ExportFormat",
+    {
+        "format": fields.String(required=True, description="导出格式：excel 或 pdf"),
+        "type": fields.String(
+            required=True, description="导出类型：users/rules/devices/records/summary"
+        ),
+    },
+)
+
+
+def _admin_scope():
+    """S3 修复: 导出班级隔离。返回 (allowed_class_names, allowed_class_ids)；超管/admin 为 (None, None) 表示全量。"""
+    from utils.permission import get_current_admin, get_allowed_classes, get_admin_class_ids
+
+    admin = get_current_admin()
+    if not admin or admin.role in ("admin", "super_admin"):
+        return None, None
+    return get_allowed_classes(admin.id), get_admin_class_ids(admin.id)
+
+
+@ns_export.route("/")
+class ExportData(Resource):
+    @ns_export.doc("export_data", description="导出数据", security="Bearer")
+    @ns_export.expect(export_format_model)
+    @ns_export.response(200, "导出成功")
+    @ns_export.response(400, "参数错误")
+    @requires_permission("report.export")
+    def post(self):
+        """
+        导出数据
+        支持导出学生、规则、设备、积分记录等数据，支持Excel和PDF格式。
+        请求体：
+        - format: 导出格式（excel 或 pdf）
+        - type: 导出类型（users/rules/devices/records/summary）
+        返回对应的文件下载。
+        """
+        data = request.get_json()
+        export_format = data.get("format", "excel").lower()
+        export_type = data.get("type", "users").lower()
+        if export_format not in ["excel", "pdf"]:
+            return APIResponse.bad_request(message="不支持的导出格式，支持 excel 和 pdf")
+        if export_type not in ["users", "rules", "devices", "records", "summary"]:
+            return APIResponse.bad_request(message="不支持的导出类型")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            if export_type == "users":
+                # S3 修复: 班主任仅可导出自己班级（原全校含电话/卡号 → 越权）
+                _cn, _ci = _admin_scope()
+                users_q = User.query
+                if _cn is not None:
+                    users_q = users_q.filter(User.class_name.in_(_cn))
+                users = users_q.all()
+                user_data = [
+                    u.to_dict(EXPORT_USER_FIELDS) for u in users
+                ]
+                if export_format == "excel":
+                    output = export_service.export_users_to_excel(user_data)
+                    filename = f"users_{timestamp}.xlsx"
+                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                else:
+                    output = export_service.export_users_to_pdf(user_data, "学生列表报告")
+                    filename = f"users_{timestamp}.pdf"
+                    mimetype = "application/pdf"
+            elif export_type == "rules":
+                rules = ScoreRule.query.all()
+                rule_data = [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "description": r.description,
+                        "category_id": r.category_id,
+                        "category_name": r.category.name if r.category else None,
+                        "score": r.score,
+                        "is_active": r.is_active,
+                        "daily_limit": r.daily_limit,
+                        "min_interval": r.min_interval,
+                        "created_at": r.created_at.isoformat() if r.created_at else None,
+                    }
+                    for r in rules
+                ]
+                if export_format == "excel":
+                    output = export_service.export_rules_to_excel(rule_data)
+                    filename = f"rules_{timestamp}.xlsx"
+                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                else:
+                    output = export_service.export_rules_to_pdf(rule_data, "积分规则报告")
+                    filename = f"rules_{timestamp}.pdf"
+                    mimetype = "application/pdf"
+            elif export_type == "devices":
+                # S3 修复: 班主任仅可导出本班设备
+                _cn, _ci = _admin_scope()
+                devices_q = Device.query
+                if _ci is not None:
+                    devices_q = devices_q.filter(Device.class_info_id.in_(_ci))
+                devices = devices_q.all()
+                device_data = [
+                    {
+                        "id": d.id,
+                        "device_id": d.device_id,
+                        "name": d.name,
+                        "status": d.status,
+                        "is_online": is_device_online(d),
+                        "wifi_signal": d.wifi_signal,
+                        "class_name": d.class_info.name if d.class_info else None,
+                        "admin_name": d.admin.real_name if d.admin else None,
+                        "created_at": d.created_at.isoformat() if d.created_at else None,
+                    }
+                    for d in devices
+                ]
+                if export_format == "excel":
+                    output = export_service.export_devices_to_excel(device_data)
+                    filename = f"devices_{timestamp}.xlsx"
+                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                else:
+                    output = export_service.export_devices_to_pdf(device_data, "设备列表报告")
+                    filename = f"devices_{timestamp}.pdf"
+                    mimetype = "application/pdf"
+            elif export_type == "records":
+                # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
+                # S3 修复: 班主任仅可导出自己班级的积分记录
+                _cn, _ci = _admin_scope()
+                records_q = ScoreRecord.query.options(
+                    joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule)
+                )
+                if _cn is not None:
+                    records_q = records_q.join(User, ScoreRecord.student_id == User.id).filter(
+                        User.class_name.in_(_cn)
+                    )
+                records = records_q.order_by(ScoreRecord.created_at.desc()).all()
+                record_data = [r.to_dict(RECORD_EXPORT_FIELDS) for r in records]
+                if export_format == "excel":
+                    output = export_service.export_records_to_excel(record_data)
+                    filename = f"records_{timestamp}.xlsx"
+                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                else:
+                    output = export_service.export_records_to_pdf(record_data, "积分记录报告")
+                    filename = f"records_{timestamp}.pdf"
+                    mimetype = "application/pdf"
+            elif export_type == "summary":
+                users_count = User.query.count()
+                rules_count = ScoreRule.query.count()
+                devices_count = Device.query.count()
+                online_devices = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
+                records_count = ScoreRecord.query.count()
+                output = export_service.export_summary_report(
+                    users_count, rules_count, devices_count, online_devices, records_count
+                )
+                filename = f"summary_{timestamp}.pdf"
+                mimetype = "application/pdf"
+            return build_attachment_response(output, filename, mimetype)
+        except Exception as e:
+            # S8 修复: 不直返异常细节（泄露路径/实现）
+            logger.warning(f"[Export] 导出失败: {e}")
+            return APIResponse.server_error(message="导出失败，请稍后重试或联系管理员")
+
+
+@ns_export.route("/users")
+class ExportUsers(Resource):
+    @ns_export.doc(
+        "export_users",
+        description="导出学生数据",
+        security="Bearer",
+        params={"format": "导出格式：excel（默认）或 pdf"},
+    )
+    @ns_export.response(200, "导出成功")
+    @requires_permission("report.export")
+    def get(self):
+        """
+        导出学生数据
+        查询参数：
+        - format: 导出格式（excel 或 pdf，默认excel）
+        返回学生数据文件下载。
+        """
+        export_format = request.args.get("format", "excel").lower()
+        if export_format not in ["excel", "pdf"]:
+            return APIResponse.bad_request(message="不支持的导出格式")
+        # S3 修复: GET 导出同样按班级隔离
+        _cn, _ci = _admin_scope()
+        users_q = User.query
+        if _cn is not None:
+            users_q = users_q.filter(User.class_name.in_(_cn))
+        users = users_q.all()
+        user_data = [
+            u.to_dict(EXPORT_USER_FIELDS) for u in users
+        ]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            if export_format == "excel":
+                output = export_service.export_users_to_excel(user_data)
+                filename = f"users_{timestamp}.xlsx"
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else:
+                output = export_service.export_users_to_pdf(user_data, "学生列表报告")
+                filename = f"users_{timestamp}.pdf"
+                mimetype = "application/pdf"
+            return build_attachment_response(output, filename, mimetype)
+        except Exception as e:
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
+
+
+@ns_export.route("/rules")
+class ExportRules(Resource):
+    @ns_export.doc(
+        "export_rules",
+        description="导出积分规则",
+        security="Bearer",
+        params={"format": "导出格式：excel（默认）或 pdf"},
+    )
+    @ns_export.response(200, "导出成功")
+    @requires_permission("report.export")
+    def get(self):
+        """
+        导出积分规则
+        查询参数：
+        - format: 导出格式（excel 或 pdf，默认excel）
+        返回积分规则文件下载。
+        """
+        export_format = request.args.get("format", "excel").lower()
+        if export_format not in ["excel", "pdf"]:
+            return APIResponse.bad_request(message="不支持的导出格式")
+        rules = ScoreRule.query.all()
+        rule_data = [
+            {
+                "id": r.id,
+                "name": r.name,
+                "description": r.description,
+                "category_id": r.category_id,
+                "category_name": r.category.name if r.category else None,
+                "score": r.score,
+                "is_active": r.is_active,
+                "daily_limit": r.daily_limit,
+                "min_interval": r.min_interval,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rules
+        ]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            if export_format == "excel":
+                output = export_service.export_rules_to_excel(rule_data)
+                filename = f"rules_{timestamp}.xlsx"
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else:
+                output = export_service.export_rules_to_pdf(rule_data, "积分规则报告")
+                filename = f"rules_{timestamp}.pdf"
+                mimetype = "application/pdf"
+            return build_attachment_response(output, filename, mimetype)
+        except Exception as e:
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
+
+
+@ns_export.route("/devices")
+class ExportDevices(Resource):
+    @ns_export.doc(
+        "export_devices",
+        description="导出设备数据",
+        security="Bearer",
+        params={"format": "导出格式：excel（默认）或 pdf"},
+    )
+    @ns_export.response(200, "导出成功")
+    @requires_permission("report.export")
+    def get(self):
+        """
+        导出设备数据
+        查询参数：
+        - format: 导出格式（excel 或 pdf，默认excel）
+        返回设备数据文件下载。
+        """
+        export_format = request.args.get("format", "excel").lower()
+        if export_format not in ["excel", "pdf"]:
+            return APIResponse.bad_request(message="不支持的导出格式")
+        devices = Device.query.all()
+        device_data = [
+            {
+                "id": d.id,
+                "device_id": d.device_id,
+                "name": d.name,
+                "status": d.status,
+                "is_online": is_device_online(d),
+                "wifi_signal": d.wifi_signal,
+                "class_name": d.class_info.name if d.class_info else None,
+                "admin_name": d.admin.real_name if d.admin else None,
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+            }
+            for d in devices
+        ]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            if export_format == "excel":
+                output = export_service.export_devices_to_excel(device_data)
+                filename = f"devices_{timestamp}.xlsx"
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else:
+                output = export_service.export_devices_to_pdf(device_data, "设备列表报告")
+                filename = f"devices_{timestamp}.pdf"
+                mimetype = "application/pdf"
+            return build_attachment_response(output, filename, mimetype)
+        except Exception as e:
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
+
+
+@ns_export.route("/records")
+class ExportRecords(Resource):
+    @ns_export.doc(
+        "export_records",
+        description="导出积分记录",
+        security="Bearer",
+        params={"format": "导出格式：excel（默认）或 pd", "limit": "限制导出记录数量（默认10000）"},
+    )
+    @ns_export.response(200, "导出成功")
+    @requires_permission("report.export")
+    def get(self):
+        """
+        导出积分记录
+        查询参数：
+        - format: 导出格式（excel 或 pdf，默认excel）
+        - limit: 限制导出记录数量（默认10000）
+        返回积分记录文件下载。
+        """
+        export_format = request.args.get("format", "excel").lower()
+        limit = request.args.get("limit", 10000, type=int)
+        if export_format not in ["excel", "pdf"]:
+            return APIResponse.bad_request(message="不支持的导出格式")
+        records = ScoreRecord.query.order_by(ScoreRecord.created_at.desc()).limit(limit).all()
+        record_data = [r.to_dict(RECORD_EXPORT_FIELDS) for r in records]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            if export_format == "excel":
+                output = export_service.export_records_to_excel(record_data)
+                filename = f"records_{timestamp}.xlsx"
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else:
+                output = export_service.export_records_to_pdf(record_data, "积分记录报告")
+                filename = f"records_{timestamp}.pdf"
+                mimetype = "application/pdf"
+            return build_attachment_response(output, filename, mimetype)
+        except Exception as e:
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
+
+
+@ns_export.route("/categories")
+class ExportCategories(Resource):
+    @ns_export.doc(
+        "export_categories",
+        description="导出分类数据",
+        security="Bearer",
+        params={"format": "导出格式：excel（默认）或 pdf"},
+    )
+    @ns_export.response(200, "导出成功")
+    @requires_permission("report.export")
+    def get(self):
+        """
+        导出分类数据
+        查询参数：
+        - format: 导出格式（excel 或 pdf，默认excel）
+        返回分类数据文件下载。
+        """
+        export_format = request.args.get("format", "excel").lower()
+        if export_format not in ["excel", "pdf"]:
+            return APIResponse.bad_request(message="不支持的导出格式")
+        categories = ScoreCategory.query.all()
+        category_data = [
+            {
+                "id": c.id,
+                "name": c.name,
+                "description": c.description,
+                "color": c.color,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+            }
+            for c in categories
+        ]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        headers = ["ID", "名称", "描述", "颜色", "创建时间"]
+        try:
+            if export_format == "excel":
+                output = export_service.export_to_excel(category_data, headers)
+                filename = f"categories_{timestamp}.xlsx"
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else:
+                output = export_service.export_to_pdf("积分分类报告", category_data, headers)
+                filename = f"categories_{timestamp}.pdf"
+                mimetype = "application/pdf"
+            return build_attachment_response(output, filename, mimetype)
+        except Exception as e:
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
+
+
+@ns_export.route("/summary")
+class ExportSummary(Resource):
+    @ns_export.doc("export_summary", description="导出系统数据汇总报告", security="Bearer")
+    @ns_export.response(200, "导出成功")
+    @requires_permission("report.export")
+    def get(self):
+        """
+        导出系统数据汇总报告（PDF格式）
+        返回包含学生总数、规则数、设备数、在线设备数、积分记录数等统计数据的汇总报告。
+        """
+        users_count = User.query.count()
+        rules_count = ScoreRule.query.count()
+        devices_count = Device.query.count()
+        online_devices = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
+        records_count = ScoreRecord.query.count()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            output = export_service.export_summary_report(
+                users_count, rules_count, devices_count, online_devices, records_count
+            )
+            filename = f"summary_{timestamp}.pdf"
+            return send_file(
+                output, mimetype="application/pdf", as_attachment=True, download_name=filename
+            )
+        except Exception as e:
+            logger.error("%s: %s", "导出失败", e)
+            return APIResponse.server_error(message="导出失败")
+
+
+@ns_export.route("/errors")
+class ExportErrors(Resource):
+    @ns_export.doc("export_errors", description="导出导入错误数据", security="Bearer")
+    @ns_export.response(200, "导出成功")
+    @ns_export.response(400, "参数错误")
+    @requires_permission("report.export")
+    def post(self):
+        """
+        导出导入错误数据
+        接收导入失败的错误数据列表，将其导出为Excel文件，方便用户修正后重新导入。
+        请求体：
+        - errors: 错误数据列表（从导入API返回的messages中筛选失败记录）
+        - module: 模块名称（users/devices/classes/exams/subjects）
+        返回错误数据Excel文件下载。
+        """
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+
+        data = request.get_json()
+        errors = data.get("errors", [])
+        module = data.get("module", "")
+        if not errors:
+            return APIResponse.bad_request(message="没有错误数据可导出")
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "导入错误数据"
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        all_keys = set()
+        for error in errors:
+            if isinstance(error.get("row_data"), dict):
+                all_keys.update(error["row_data"].keys())
+        base_columns = ["行号", "错误字段", "错误信息"]
+        data_columns = sorted(list(all_keys))
+        headers = base_columns + data_columns
+        for col_idx, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        for row_idx, error in enumerate(errors, 2):
+            row_num = error.get("row", "")
+            error_fields = ", ".join(error.get("error_fields", []))
+            message = error.get("message", "")
+            ws.cell(row=row_idx, column=1, value=row_num)
+            ws.cell(row=row_idx, column=2, value=error_fields)
+            ws.cell(row=row_idx, column=3, value=message)
+            row_data = error.get("row_data", {})
+            if isinstance(row_data, dict):
+                for col_idx, key in enumerate(data_columns, 4):
+                    ws.cell(row=row_idx, column=col_idx, value=row_data.get(key, ""))
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except Exception:
+                    # 与 utils/excel_utils.py 同理：逐单元格列宽热循环，失败仅跳过该列估算，
+                    # 属可预期降级。改为 logger 会刷屏，保留静默并显式说明（T9 评估结论）。
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column].width = adjusted_width
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"import_errors_{module}_{timestamp}.xlsx"
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename,
+        )
