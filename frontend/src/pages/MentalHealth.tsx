@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -45,6 +47,7 @@ const defaultRecordForm: RecordFormData = {
 
 function MentalHealth() {
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const [alerts, setAlerts] = useState<MentalHealthAlert[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -76,7 +79,7 @@ function MentalHealth() {
     } catch (error) {
       logger.error('获取预警列表失败:', error);
       setAlerts(null); // 加载失败：不伪装成"已处理"或"无预警"
-      showToast('error', '获取预警列表失败，请稍后重试');
+      showToast('error', getErrMsg(error, '获取预警列表失败，请稍后重试'));
     }
   }, [showToast, filterClassId]);
 
@@ -140,7 +143,7 @@ function MentalHealth() {
       fetchAlerts();
     } catch (error) {
       logger.error('创建记录失败:', error);
-      showToast('error', '创建记录失败');
+      showToast('error', getErrMsg(error, '创建记录失败'));
     } finally {
       setSubmitting(false);
     }
@@ -154,7 +157,7 @@ function MentalHealth() {
         fetchAlerts();
       } catch (error) {
         logger.error('解决预警失败:', error);
-        showToast('error', '解决预警失败');
+        showToast('error', getErrMsg(error, '解决预警失败'));
       }
     },
     [showToast, fetchAlerts]
@@ -395,7 +398,7 @@ function MentalHealth() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder='搜索学生或备注...'
                   aria-label='搜索心理健康记录'
-                  className='w-64 pl-12 pr-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm'
+                  className='w-64 max-w-full pl-12 pr-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm'
                 />
               </div>
             </div>
@@ -694,7 +697,7 @@ function MentalHealth() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleSubmit();
+                runSubmit(handleSubmit);
               }}
               className='px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex items-center justify-end gap-3'
             >

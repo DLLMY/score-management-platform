@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -45,6 +47,7 @@ const defaultGroupForm: GroupFormData = {
 
 function StudyGroups() {
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -72,7 +75,7 @@ function StudyGroups() {
       setFormData((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: 0 }));
     } catch (error) {
       logger.error('获取学习小组列表失败:', error);
-      showToast('error', '获取学习小组列表失败');
+      showToast('error', getErrMsg(error, '获取学习小组列表失败'));
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +154,7 @@ function StudyGroups() {
       fetchGroups();
     } catch (error) {
       logger.error('操作失败:', error);
-      showToast('error', formData.id ? '更新小组失败' : '创建小组失败');
+      showToast('error', getErrMsg(error, formData.id ? '更新小组失败' : '创建小组失败'));
     } finally {
       setSubmitting(false);
     }
@@ -173,7 +176,7 @@ function StudyGroups() {
         if (selectedGroup?.id === id) setSelectedGroup(null);
       } catch (error) {
         logger.error('删除失败:', error);
-        showToast('error', '删除小组失败');
+        showToast('error', getErrMsg(error, '删除小组失败'));
       }
     },
     [showToast, fetchGroups, selectedGroup]
@@ -193,7 +196,7 @@ function StudyGroups() {
         }
       } catch (error) {
         logger.error('添加成员失败:', error);
-        showToast('error', '添加成员失败');
+        showToast('error', getErrMsg(error, '添加成员失败'));
       }
     },
     [showToast, fetchGroups, selectedGroup]
@@ -218,7 +221,7 @@ function StudyGroups() {
         }
       } catch (error) {
         logger.error('移除成员失败:', error);
-        showToast('error', '移除成员失败');
+        showToast('error', getErrMsg(error, '移除成员失败'));
       }
     },
     [showToast, fetchGroups, selectedGroup]
@@ -248,7 +251,7 @@ function StudyGroups() {
         }
       } catch (error) {
         logger.error('积分调整失败:', error);
-        showToast('error', '积分调整失败');
+        showToast('error', getErrMsg(error, '积分调整失败'));
       }
     },
     [scoreAdjustValue, scoreReason, showToast, fetchGroups, selectedGroup]
@@ -655,7 +658,7 @@ function StudyGroups() {
                 取消
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={() => runSubmit(handleSubmit)}
                 disabled={submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >

@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useCallback, useRef } from 'react';
 import {
@@ -189,7 +190,7 @@ function CultureBoard() {
       fetchRecords();
     } catch (error) {
       logger.error('保存记录失败:', error);
-      showToast('error', formData.id ? '更新记录失败' : '创建记录失败');
+      showToast('error', getErrMsg(error, formData.id ? '更新记录失败' : '创建记录失败'));
     }
   }, [formData, validateForm, showToast, handleCloseModal, fetchRecords, selectedClassId]);
 
@@ -208,7 +209,7 @@ function CultureBoard() {
         fetchRecords();
       } catch (error) {
         logger.error('删除记录失败:', error);
-        showToast('error', '删除记录失败');
+        showToast('error', getErrMsg(error, '删除记录失败'));
       }
     },
     [showToast, fetchRecords]
@@ -235,7 +236,7 @@ function CultureBoard() {
         fetchRecords();
       } catch (error) {
         logger.error('更新排序失败:', error);
-        showToast('error', '更新排序失败');
+        showToast('error', getErrMsg(error, '更新排序失败'));
       }
     },
     [records, showToast, fetchRecords]

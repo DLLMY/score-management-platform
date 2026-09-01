@@ -1,5 +1,6 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   LayoutGrid,
   Plus,
@@ -17,6 +18,7 @@ import {
 import api from '../services/api';
 import { SeatingChart, SeatingChartCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import { ClassSelect } from '../components/form/EntitySelect';
@@ -65,7 +67,17 @@ function SeatingChartPage() {
   const [isArranging, setIsArranging] = useState(false);
   // 拖拽互换落库中的瞬时态：用于乐观更新期间的视觉反馈与防重入
   const [isSwapping, setIsSwapping] = useState(false);
+  // 统一指针拖拽（桌面 + 触屏）状态：isDragging 控制 ghost 显隐，pointerPos 跟随手指
+  const [isDragging, setIsDragging] = useState(false);
+  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(null);
+  const dragStateRef = useRef<{
+    candidate: SeatPosition | null;
+    startX: number;
+    startY: number;
+    active: boolean;
+  }>({ candidate: null, startX: 0, startY: 0, active: false });
   const { showToast } = useStableToast();
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -83,7 +95,7 @@ function SeatingChartPage() {
       });
     } catch (error) {
       logger.error('获取座次表列表失败:', error);
-      showToast('error', '获取座次表列表失败');
+      showToast('error', getErrMsg(error, '获取座次表列表失败'));
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +112,7 @@ function SeatingChartPage() {
         setSelectedChart(data);
       } catch (error) {
         logger.error('获取座次表详情失败:', error);
-        showToast('error', '获取座次表详情失败');
+        showToast('error', getErrMsg(error, '获取座次表详情失败'));
       }
     },
     [showToast]
@@ -131,7 +143,7 @@ function SeatingChartPage() {
       fetchCharts();
     } catch (error) {
       logger.error('创建座次表失败:', error);
-      showToast('error', '创建座次表失败');
+      showToast('error', getErrMsg(error, '创建座次表失败'));
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +168,7 @@ function SeatingChartPage() {
         fetchCharts();
       } catch (error) {
         logger.error('删除座次表失败:', error);
-        showToast('error', '删除座次表失败');
+        showToast('error', getErrMsg(error, '删除座次表失败'));
       } finally {
         setIsLoading(false);
       }
@@ -185,31 +197,27 @@ function SeatingChartPage() {
       setSelectedChart(result);
     } catch (error) {
       logger.error('自动排列失败:', error);
-      showToast('error', '自动排列失败');
+      showToast('error', getErrMsg(error, '自动排列失败'));
     } finally {
       setIsArranging(false);
     }
   }, [selectedChart, formData.strategy, showToast]);
 
-  const handleSeatDragStart = useCallback((seat: SeatPosition) => {
-    setDraggedSeat(seat);
-  }, []);
-
+  // 双人互换落库：sourceSeat 与 targetSeat 互换 student_id，乐观更新 + 失败回退
   const handleSeatDrop = useCallback(
-    async (targetSeat: SeatPosition) => {
-      if (!draggedSeat || !selectedChart) return;
-      if (draggedSeat.row === targetSeat.row && draggedSeat.col === targetSeat.col) {
-        setDraggedSeat(null);
+    async (sourceSeat: SeatPosition, targetSeat: SeatPosition) => {
+      if (!selectedChart) return;
+      if (sourceSeat.row === targetSeat.row && sourceSeat.col === targetSeat.col) {
         return;
       }
       const prevSeats = selectedChart.seats || [];
       // 乐观更新：本地先完成双人互换，落库失败再回退，保证 UI 始终与服务端一致
       const swappedSeats = prevSeats.map((s) => {
-        if (s.row === draggedSeat.row && s.col === draggedSeat.col) {
+        if (s.row === sourceSeat.row && s.col === sourceSeat.col) {
           return { ...s, student_id: targetSeat.student_id };
         }
         if (s.row === targetSeat.row && s.col === targetSeat.col) {
-          return { ...s, student_id: draggedSeat.student_id };
+          return { ...s, student_id: sourceSeat.student_id };
         }
         return s;
       });
@@ -218,15 +226,15 @@ function SeatingChartPage() {
       try {
         await api.seating.updateSeat(
           selectedChart.id,
-          draggedSeat.row,
-          draggedSeat.col,
+          sourceSeat.row,
+          sourceSeat.col,
           targetSeat.student_id
         );
         await api.seating.updateSeat(
           selectedChart.id,
           targetSeat.row,
           targetSeat.col,
-          draggedSeat.student_id
+          sourceSeat.student_id
         );
         showToast('success', '座位调整成功');
         // 与服务端权威态对齐（idempotent，避免乐观值与后端产生静默漂移）
@@ -235,13 +243,65 @@ function SeatingChartPage() {
         // 回退本地 state，避免 UI 停留在错误的互换结果
         setSelectedChart((prev) => (prev ? { ...prev, seats: prevSeats } : prev));
         logger.error('调整座位失败:', error);
-        showToast('error', '调整座位失败，已还原');
+        showToast('error', getErrMsg(error, '调整座位失败，已还原'));
       } finally {
-        setDraggedSeat(null);
         setIsSwapping(false);
       }
     },
-    [draggedSeat, selectedChart, showToast, fetchChartDetail]
+    [selectedChart, showToast, fetchChartDetail]
+  );
+
+  // 统一指针拖拽（桌面 + 触屏）：按下记录候选座位并捕获指针，超过 8px 阈值进入拖拽，
+  // 松手时用 elementFromPoint 命中目标座位完成互换。不引入第三方 DnD 库。
+  const handleSeatPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>, seat: SeatPosition) => {
+      if (seat.student_id === null || seat.is_aisle) return;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dragStateRef.current = {
+        candidate: seat,
+        startX: e.clientX,
+        startY: e.clientY,
+        active: false,
+      };
+    },
+    []
+  );
+
+  const handleSeatPointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>, seat: SeatPosition) => {
+      const st = dragStateRef.current;
+      if (!st.candidate) return;
+      if (!st.active) {
+        if (Math.hypot(e.clientX - st.startX, e.clientY - st.startY) < 8) return;
+        st.active = true;
+        setDraggedSeat(st.candidate);
+        setIsDragging(true);
+      }
+      setPointerPos({ x: e.clientX, y: e.clientY });
+    },
+    []
+  );
+
+  const handleSeatPointerUp = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>, seat: SeatPosition) => {
+      const st = dragStateRef.current;
+      if (!st.candidate) return;
+      if (st.active) {
+        const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+        const targetEl = el?.closest('[data-seat]') as HTMLElement | null;
+        const raw = targetEl?.dataset.seat;
+        if (raw) {
+          const [r, c] = raw.split('-').map(Number);
+          const target: SeatPosition = { row: r, col: c, student_id: null, is_aisle: false };
+          handleSeatDrop(st.candidate, target);
+        }
+      }
+      dragStateRef.current = { candidate: null, startX: 0, startY: 0, active: false };
+      setIsDragging(false);
+      setDraggedSeat(null);
+      setPointerPos(null);
+    },
+    [handleSeatDrop]
   );
 
   const getStudentName = useCallback((studentId: number | null) => {
@@ -283,13 +343,14 @@ function SeatingChartPage() {
                   return (
                     <div
                       key={`${seat.row}-${seat.col}`}
-                      draggable={isDraggable}
-                      onDragStart={() => isDraggable && handleSeatDragStart(seat)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => isDropTarget && handleSeatDrop(seat)}
+                      data-seat={`${seat.row}-${seat.col}`}
+                      onPointerDown={(e) => handleSeatPointerDown(e, seat)}
+                      onPointerMove={(e) => handleSeatPointerMove(e, seat)}
+                      onPointerUp={(e) => handleSeatPointerUp(e, seat)}
                       className={`
                         w-16 h-16 rounded-xl border-2 flex flex-col items-center justify-center
                         transition-all duration-200 text-xs font-medium
+                        ${isDraggable ? 'touch-none' : ''}
                         ${
                           seat.is_aisle
                             ? 'border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 cursor-default'
@@ -328,7 +389,7 @@ function SeatingChartPage() {
         </div>
       </div>
     );
-  }, [selectedChart, draggedSeat, handleSeatDragStart, handleSeatDrop, getStudentName, isSwapping]);
+  }, [selectedChart, draggedSeat, handleSeatPointerDown, handleSeatPointerMove, handleSeatPointerUp, getStudentName, isSwapping]);
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
@@ -508,9 +569,18 @@ function SeatingChartPage() {
                   </div>
                   <div className='p-4'>
                     {renderGrid()}
+                    {isDragging && pointerPos && draggedSeat && (
+                      <div
+                        className='fixed z-50 w-16 h-16 rounded-xl border-2 border-blue-400 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex flex-col items-center justify-center text-xs font-medium shadow-xl pointer-events-none'
+                        style={{ left: pointerPos.x, top: pointerPos.y, transform: 'translate(-50%, -50%)' }}
+                      >
+                        <User className='w-5 h-5 mb-0.5' />
+                        <span className='truncate max-w-[3rem]'>{getStudentName(draggedSeat.student_id)}</span>
+                      </div>
+                    )}
                     <div className='mt-4 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400'>
                       <Move className='w-4 h-4' />
-                      提示：拖拽学生座位可直接调整位置，支持双人互换
+                      提示：按住学生座位拖动（桌面 / 触屏均可）即可调整位置，支持双人互换
                     </div>
                   </div>
                 </div>
@@ -634,8 +704,8 @@ function SeatingChartPage() {
                 取消
               </button>
               <button
-                onClick={handleCreate}
-                disabled={isLoading}
+                onClick={() => runSubmit(handleCreate)}
+                disabled={isLoading || submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium disabled:opacity-50'
               >
                 <Check className='w-5 h-5' />

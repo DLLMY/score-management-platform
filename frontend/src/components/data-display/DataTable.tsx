@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import { TableSkeleton } from '../ui/Skeleton';
 import EmptyState, { ErrorState } from '../feedback/EmptyState';
@@ -146,6 +146,17 @@ function DataTable<T>(props: DataTableProps<T>) {
     [selectable, selectedRowKeys, innerSelected]
   );
 
+  // F3: 非受控分页收敛。dataSource 缩小（删除/筛选）后 innerPage 可能越界，
+  // 停留旧页切片越界会显示"暂无数据"。按当前数据量计算最大页并钳制有效页，
+  // 同时用 effect 把 innerPage 拉回合法区间，避免分页控件与数据错位。
+  useEffect(() => {
+    if (isControlled) return;
+    const maxPage = Math.max(1, Math.ceil(dataSource.length / size));
+    if (innerPage > maxPage) {
+      setInnerPage(maxPage);
+    }
+  }, [dataSource, size, innerPage, isControlled]);
+
   const getKey = useCallback(
     (record: T, index: number): string | number =>
       typeof rowKey === 'function'
@@ -177,15 +188,18 @@ function DataTable<T>(props: DataTableProps<T>) {
 
   const useVirtual = virtualThreshold > 0 && !isControlled && dataSource.length >= virtualThreshold;
 
+  const maxLocalPage = Math.max(1, Math.ceil(dataSource.length / size));
+  const effectivePage = isControlled ? (page ?? 1) : Math.min(innerPage, maxLocalPage);
+
   const pagedData = useMemo(() => {
     if (isControlled || useVirtual) return sortedSource;
-    const start = (innerPage - 1) * size;
+    const start = (effectivePage - 1) * size;
     return sortedSource.slice(start, start + size);
-  }, [sortedSource, isControlled, useVirtual, innerPage, size]);
+  }, [sortedSource, isControlled, useVirtual, effectivePage, size]);
 
-  const currentPage = isControlled ? page ?? 1 : innerPage;
+  const currentPage = isControlled ? page ?? 1 : effectivePage;
   const totalCount = total ?? dataSource.length;
-  const pageRows = useVirtual ? dataSource : pagedData;
+  const pageRows = useVirtual ? sortedSource : pagedData;
 
   const emitSelection = useCallback(
     (keys: Array<string | number>) => {
@@ -420,7 +434,7 @@ function DataTable<T>(props: DataTableProps<T>) {
               )}
             </div>
             <VirtualList
-              items={dataSource}
+              items={sortedSource}
               itemHeight={rowHeight}
               overscan={6}
               renderItem={(record, index) => (

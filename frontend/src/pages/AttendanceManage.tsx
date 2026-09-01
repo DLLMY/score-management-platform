@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
@@ -74,6 +76,7 @@ interface AttendanceDraft {
 
 function AttendanceManage() {
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
   const [leavesError, setLeavesError] = useState(false);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
@@ -160,7 +163,7 @@ function AttendanceManage() {
     } catch (error) {
       logger.error('获取考勤统计失败:', error);
       setStats(null);
-      showToast('error', '获取考勤统计失败，请稍后重试');
+      showToast('error', getErrMsg(error, '获取考勤统计失败，请稍后重试'));
     }
   }, [showToast, filterClassId]);
 
@@ -237,7 +240,7 @@ function AttendanceManage() {
       fetchStats();
     } catch (error) {
       logger.error('记录失败:', error);
-      showToast('error', '考勤记录失败');
+      showToast('error', getErrMsg(error, '考勤记录失败'));
     } finally {
       setSubmitting(false);
     }
@@ -296,7 +299,7 @@ function AttendanceManage() {
         fetchStats();
       } catch (error) {
         logger.error('批量记录失败:', error);
-        showToast('error', '批量记录失败');
+        showToast('error', getErrMsg(error, '批量记录失败'));
       } finally {
         setSubmitting(false);
       }
@@ -345,7 +348,7 @@ function AttendanceManage() {
       fetchLeaves();
     } catch (error) {
       logger.error('提交失败:', error);
-      showToast('error', '提交请假申请失败');
+      showToast('error', getErrMsg(error, '提交请假申请失败'));
     } finally {
       setSubmitting(false);
     }
@@ -359,7 +362,7 @@ function AttendanceManage() {
         fetchLeaves();
       } catch (error) {
         logger.error('审批失败:', error);
-        showToast('error', '审批操作失败');
+        showToast('error', getErrMsg(error, '审批操作失败'));
       }
     },
     [showToast, fetchLeaves]
@@ -633,13 +636,15 @@ function AttendanceManage() {
                     </div>
                     <div className='flex items-center gap-2'>
                       <button
-                        onClick={() => handleApproveLeave(leave.id, false)}
+                        onClick={() => runSubmit(() => handleApproveLeave(leave.id, false))}
+                        disabled={submitting}
                         className='px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors font-medium'
                       >
                         驳回
                       </button>
                       <button
-                        onClick={() => handleApproveLeave(leave.id, true)}
+                        onClick={() => runSubmit(() => handleApproveLeave(leave.id, true))}
+                        disabled={submitting}
                         className='px-3 py-1.5 text-sm text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors font-medium'
                       >
                         批准
@@ -846,13 +851,15 @@ function AttendanceManage() {
                 </label>
                 <div className='flex gap-2'>
                   <button
-                    onClick={() => handleBatchRecord('present')}
+                    onClick={() => runSubmit(() => handleBatchRecord('present'))}
+                    disabled={submitting}
                     className='flex-1 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all text-sm font-medium'
                   >
                     批量出勤
                   </button>
                   <button
-                    onClick={() => handleBatchRecord('absent')}
+                    onClick={() => runSubmit(() => handleBatchRecord('absent'))}
+                    disabled={submitting}
                     className='flex-1 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-all text-sm font-medium'
                   >
                     批量缺勤
@@ -869,7 +876,7 @@ function AttendanceManage() {
                 取消
               </button>
               <button
-                onClick={handleRecordSubmit}
+                onClick={() => runSubmit(handleRecordSubmit)}
                 disabled={submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >
@@ -983,7 +990,7 @@ function AttendanceManage() {
                 取消
               </button>
               <button
-                onClick={handleLeaveSubmit}
+                onClick={() => runSubmit(handleLeaveSubmit)}
                 disabled={submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >

@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { formatDateTime } from '../utils/format';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -21,6 +22,7 @@ import {
 import api from '../services/api';
 import type { ParentContact, ParentContactCreateInput, ContactLog } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -81,6 +83,7 @@ function ParentContactPage() {
   // 家长联系含电话号码等隐私字段，筛选范围由后端 class_id 隔离（见 parent_service.list_contacts）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
   const { showToast } = useStableToast();
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -93,7 +96,7 @@ function ParentContactPage() {
       setContacts(data || []);
     } catch (error) {
       logger.error('获取家长联系人列表失败:', error);
-      showToast('error', '获取家长联系人列表失败');
+      showToast('error', getErrMsg(error, '获取家长联系人列表失败'));
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +112,7 @@ function ParentContactPage() {
         });
       } catch (error) {
         logger.error('获取联系日志失败:', error);
-        showToast('error', '获取联系日志失败');
+        showToast('error', getErrMsg(error, '获取联系日志失败'));
       }
     },
     [showToast]
@@ -188,7 +191,7 @@ function ParentContactPage() {
       fetchContacts();
     } catch (error) {
       logger.error('操作失败:', error);
-      showToast('error', editingContactId ? '更新联系方式失败' : '添加联系方式失败');
+      showToast('error', getErrMsg(error, editingContactId ? '更新联系方式失败' : '添加联系方式失败'));
     } finally {
       setIsLoading(false);
     }
@@ -212,7 +215,7 @@ function ParentContactPage() {
         fetchContacts();
       } catch (error) {
         logger.error('删除失败:', error);
-        showToast('error', '删除联系方式失败');
+        showToast('error', getErrMsg(error, '删除联系方式失败'));
       } finally {
         setIsLoading(false);
       }
@@ -243,7 +246,7 @@ function ParentContactPage() {
       setLogForm(defaultLogForm);
     } catch (error) {
       logger.error('添加联系日志失败:', error);
-      showToast('error', '添加联系日志失败');
+      showToast('error', getErrMsg(error, '添加联系日志失败'));
     } finally {
       setIsLoading(false);
     }
@@ -661,8 +664,8 @@ function ParentContactPage() {
                 取消
               </button>
               <button
-                onClick={handleContactSubmit}
-                disabled={isLoading}
+                onClick={() => runSubmit(handleContactSubmit)}
+                disabled={isLoading || submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-200 font-medium disabled:opacity-50'
               >
                 <Check className='w-5 h-5' />
@@ -744,8 +747,8 @@ function ParentContactPage() {
                 取消
               </button>
               <button
-                onClick={handleAddLog}
-                disabled={isLoading}
+                onClick={() => runSubmit(handleAddLog)}
+                disabled={isLoading || submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-200 font-medium disabled:opacity-50'
               >
                 <Check className='w-5 h-5' />

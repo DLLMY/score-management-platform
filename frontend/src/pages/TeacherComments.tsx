@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
@@ -13,6 +14,7 @@ import {
 import api from '../services/api';
 import type { TeacherComment, TeacherCommentCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -47,6 +49,7 @@ const COMMENT_TYPES = [
 
 function TeacherComments() {
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -134,7 +137,7 @@ function TeacherComments() {
       fetchComments();
     } catch (error) {
       logger.error('保存评语失败:', error);
-      showToast('error', editingId ? '更新评语失败' : '添加评语失败');
+      showToast('error', getErrMsg(error, editingId ? '更新评语失败' : '添加评语失败'));
     } finally {
       setIsSubmitting(false);
     }
@@ -155,7 +158,7 @@ function TeacherComments() {
         fetchComments();
       } catch (error) {
         logger.error('删除评语失败:', error);
-        showToast('error', '删除评语失败');
+        showToast('error', getErrMsg(error, '删除评语失败'));
       }
     },
     [showToast, fetchComments]
@@ -484,7 +487,7 @@ function TeacherComments() {
                 取消
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={() => runSubmit(handleSubmit)}
                 disabled={isLoading || isSubmitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 font-medium disabled:opacity-50'
               >

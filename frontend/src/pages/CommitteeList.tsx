@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
@@ -17,6 +18,7 @@ import {
 import api from '../services/api';
 import type { ClassCommittee, CommitteeCreateInput, CommitteeTerm } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -75,6 +77,7 @@ function CommitteeListPage() {
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -108,7 +111,7 @@ function CommitteeListPage() {
       setTerms(data || []);
     } catch (error) {
       logger.error('获取班委任期失败:', error);
-      showToast('error', '获取班委任期失败');
+      showToast('error', getErrMsg(error, '获取班委任期失败'));
     } finally {
       setTermsLoading(false);
     }
@@ -143,7 +146,7 @@ function CommitteeListPage() {
       fetchTerms();
     } catch (error) {
       logger.error('创建任期失败:', error);
-      showToast('error', '创建任期失败');
+      showToast('error', getErrMsg(error, '创建任期失败'));
     } finally {
       setTermsLoading(false);
     }
@@ -199,7 +202,7 @@ function CommitteeListPage() {
       fetchCommittee();
     } catch (error) {
       logger.error('操作失败:', error);
-      showToast('error', editingId ? '更新班委失败' : '添加班委失败');
+      showToast('error', getErrMsg(error, editingId ? '更新班委失败' : '添加班委失败'));
     } finally {
       setIsSubmitting(false);
     }
@@ -221,7 +224,7 @@ function CommitteeListPage() {
         fetchCommittee();
       } catch (error) {
         logger.error('删除失败:', error);
-        showToast('error', '删除班委记录失败');
+        showToast('error', getErrMsg(error, '删除班委记录失败'));
       } finally {
         setIsSubmitting(false);
       }
@@ -574,7 +577,7 @@ function CommitteeListPage() {
                 取消
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={() => runSubmit(handleSubmit)}
                 disabled={isLoading || isSubmitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-amber-500/25 transition-all duration-200 font-medium disabled:opacity-50'
               >

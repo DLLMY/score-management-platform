@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -64,6 +66,7 @@ function ActivityManage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
@@ -75,7 +78,7 @@ function ActivityManage() {
       setActivities(Array.isArray(data) ? data : []);
     } catch (error) {
       logger.error('获取活动列表失败:', error);
-      showToast('error', '获取活动列表失败');
+      showToast('error', getErrMsg(error, '获取活动列表失败'));
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +163,7 @@ function ActivityManage() {
       fetchActivities();
     } catch (error) {
       logger.error('保存活动失败:', error);
-      showToast('error', formData.id ? '更新活动失败' : '创建活动失败');
+      showToast('error', getErrMsg(error, formData.id ? '更新活动失败' : '创建活动失败'));
     } finally {
       setSubmitting(false);
     }
@@ -189,7 +192,7 @@ function ActivityManage() {
         fetchActivities();
       } catch (error) {
         logger.error('删除活动失败:', error);
-        showToast('error', '删除活动失败');
+        showToast('error', getErrMsg(error, '删除活动失败'));
       }
     },
     [showToast, fetchActivities]
@@ -208,7 +211,7 @@ function ActivityManage() {
         fetchActivities();
       } catch (error) {
         logger.error('报名失败:', error);
-        showToast('error', '报名失败');
+        showToast('error', getErrMsg(error, '报名失败'));
       }
     },
     [showToast, fetchActivities]
@@ -234,7 +237,7 @@ function ActivityManage() {
         fetchActivities();
       } catch (error) {
         logger.error('取消报名失败:', error);
-        showToast('error', '取消报名失败');
+        showToast('error', getErrMsg(error, '取消报名失败'));
       }
     },
     [showToast, fetchActivities]
@@ -289,7 +292,7 @@ function ActivityManage() {
         </div>
       </div>
 
-      <div className='px-6 py-4 flex items-center gap-4'>
+      <div className='px-6 py-4 flex items-center flex-wrap gap-4'>
         <div className='relative flex-1 max-w-md'>
           <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
           <input
@@ -586,7 +589,7 @@ function ActivityManage() {
                 取消
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={() => runSubmit(handleSubmit)}
                 disabled={submitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed'
               >

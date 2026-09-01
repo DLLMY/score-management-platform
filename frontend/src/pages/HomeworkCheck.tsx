@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useClientFilter } from '../hooks';
@@ -68,7 +69,7 @@ function HomeworkCheck() {
       setAssignments(data || []);
     } catch (error) {
       logger.error('获取作业列表失败:', error);
-      showToast('error', '获取作业列表失败');
+      showToast('error', getErrMsg(error, '获取作业列表失败'));
     } finally {
       setIsLoading(false);
     }
@@ -161,7 +162,7 @@ function HomeworkCheck() {
       fetchAssignments();
     } catch (error) {
       logger.error('操作失败:', error);
-      showToast('error', formData.id ? '更新作业失败' : '创建作业失败');
+      showToast('error', getErrMsg(error, formData.id ? '更新作业失败' : '创建作业失败'));
     }
   }, [formData, showToast, handleCloseModal, fetchAssignments, validateForm]);
 
@@ -180,7 +181,7 @@ function HomeworkCheck() {
         fetchAssignments();
       } catch (error) {
         logger.error('删除失败:', error);
-        showToast('error', '删除作业失败');
+        showToast('error', getErrMsg(error, '删除作业失败'));
       }
     },
     [showToast, fetchAssignments]

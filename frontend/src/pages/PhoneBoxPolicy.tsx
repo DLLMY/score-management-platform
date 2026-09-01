@@ -1,9 +1,11 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Clock, Save, Zap, XCircle, Smartphone, AlertCircle } from 'lucide-react';
 import api, { PhoneBoxPolicy as PhoneBoxPolicyType, UnlockWindow } from '../services/api';
 import { Button, Card, Input, Select, Switch, Badge } from '../components';
 import { PermissionGuard } from '../components/PermissionGuard';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { usePermissions } from '../hooks/usePermissions';
 import { formatHourMinute } from '../utils/format';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -29,6 +31,7 @@ const emptyWindow = (): UnlockWindow => ({
 
 const PhoneBoxPolicyInner: React.FC = () => {
   const { showToast } = useStableToast();
+  const { submitting, run: runSubmit } = useSubmitGuard();
   const { roles } = usePermissions();
   const isAdmin = roles.some((r) => ['admin', 'super_admin'].includes(r));
 
@@ -104,7 +107,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
       setPolicy(data);
       showToast('success', '策略已保存');
     } catch (err) {
-      showToast('error', err?.message || '保存失败');
+      showToast('error', getErrMsg(err, '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -126,7 +129,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
       setPolicy(data);
       showToast('success', `已允许本班开箱 ${minutes} 分钟`);
     } catch (err) {
-      showToast('error', err?.message || '一键放行失败');
+      showToast('error', getErrMsg(err, '一键放行失败'));
     } finally {
       setOverriding(false);
     }
@@ -138,7 +141,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
       setPolicy(data);
       showToast('success', '已取消临时放行');
     } catch (err) {
-      showToast('error', err?.message || '取消失败');
+      showToast('error', getErrMsg(err, '取消失败'));
     }
   };
 
@@ -229,11 +232,11 @@ const PhoneBoxPolicyInner: React.FC = () => {
                   className='w-32'
                 />
               </div>
-              <Button variant='primary' onClick={handleOverride} disabled={overriding}>
+              <Button variant='primary' onClick={() => runSubmit(handleOverride)} disabled={overriding || submitting}>
                 <Zap className='w-4 h-4 mr-1' /> 立即允许本班开箱
               </Button>
               {policy?.override_active && (
-                <Button variant='outline' onClick={handleCancelOverride}>
+                <Button variant='outline' onClick={() => runSubmit(handleCancelOverride)} disabled={submitting}>
                   <XCircle className='w-4 h-4 mr-1' /> 取消放行
                 </Button>
               )}
@@ -328,7 +331,7 @@ const PhoneBoxPolicyInner: React.FC = () => {
             )}
 
             <div className='mt-4'>
-              <Button variant='primary' onClick={handleSaveBase} disabled={saving}>
+              <Button variant='primary' onClick={() => runSubmit(handleSaveBase)} disabled={saving || submitting}>
                 <Save className='w-4 h-4 mr-1' /> 保存总开关与时段
               </Button>
             </div>

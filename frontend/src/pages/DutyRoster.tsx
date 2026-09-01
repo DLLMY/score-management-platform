@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -16,6 +17,7 @@ import {
 import api from '../services/api';
 import { DutyGroup, DutyAssignment, DutyGroupCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
+import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
@@ -81,6 +83,7 @@ function DutyRosterPage() {
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
   const { showToast } = useStableToast();
+  const { run: runSubmit } = useSubmitGuard();
   const {
     data: groups,
     loading: isLoading,
@@ -105,7 +108,7 @@ function DutyRosterPage() {
       setAssignments(Array.isArray(data) ? data : []);
     } catch (error) {
       logger.error('获取值日任务失败:', error);
-      showToast('error', '获取值日任务失败');
+      showToast('error', getErrMsg(error, '获取值日任务失败'));
     }
   }, [showToast]);
 
@@ -143,7 +146,7 @@ function DutyRosterPage() {
       fetchGroups();
     } catch (error) {
       logger.error('创建值日组失败:', error);
-      showToast('error', '创建值日组失败');
+      showToast('error', getErrMsg(error, '创建值日组失败'));
     } finally {
       setIsSubmitting(false);
     }
@@ -166,7 +169,7 @@ function DutyRosterPage() {
         fetchAssignments(); // S3: 删组后同步清理该组任务与统计
       } catch (error) {
         logger.error('删除值日组失败:', error);
-        showToast('error', '删除值日组失败');
+        showToast('error', getErrMsg(error, '删除值日组失败'));
       } finally {
         setIsSubmitting(false);
       }
@@ -196,7 +199,7 @@ function DutyRosterPage() {
       setAssignmentForm(defaultAssignmentForm);
     } catch (error) {
       logger.error('分配值日任务失败:', error);
-      showToast('error', '分配值日任务失败');
+      showToast('error', getErrMsg(error, '分配值日任务失败'));
     } finally {
       setIsSubmitting(false);
     }
@@ -210,7 +213,7 @@ function DutyRosterPage() {
         fetchAssignments(); // S3: 以服务端完成时间为准刷新
       } catch (error) {
         logger.error('标记完成失败:', error);
-        showToast('error', '标记完成失败');
+        showToast('error', getErrMsg(error, '标记完成失败'));
       }
     },
     [showToast, fetchAssignments]
@@ -237,7 +240,7 @@ function DutyRosterPage() {
       fetchAssignments();
     } catch (error) {
       logger.error('值日轮转失败:', error);
-      showToast('error', '值日轮转失败');
+      showToast('error', getErrMsg(error, '值日轮转失败'));
     } finally {
       setRotating(false);
     }
@@ -547,7 +550,7 @@ function DutyRosterPage() {
                 取消
               </button>
               <button
-                onClick={handleCreateGroup}
+                onClick={() => runSubmit(handleCreateGroup)}
                 disabled={isLoading || isSubmitting}
                 className='flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-200 font-medium disabled:opacity-50'
               >

@@ -1,3 +1,4 @@
+import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useCallback, useRef } from 'react';
 // 删除操作修复：404自动刷新列表 v2
@@ -217,7 +218,7 @@ function StudyGuidePage() {
       fetchGuides();
     } catch (error) {
       logger.error('保存指导文章失败:', error);
-      showToast('error', guideForm.id ? '更新指导文章失败' : '创建指导文章失败');
+      showToast('error', getErrMsg(error, guideForm.id ? '更新指导文章失败' : '创建指导文章失败'));
     }
   }, [
     guideForm,
@@ -295,7 +296,7 @@ function StudyGuidePage() {
       fetchPlans();
     } catch (error) {
       logger.error('保存改进计划失败:', error);
-      showToast('error', editingPlanId ? '更新改进计划失败' : '创建改进计划失败');
+      showToast('error', getErrMsg(error, editingPlanId ? '更新改进计划失败' : '创建改进计划失败'));
     }
   }, [planForm, editingPlanId, validatePlanForm, showToast, handleClosePlanModal, fetchPlans]);
 
@@ -307,7 +308,7 @@ function StudyGuidePage() {
         fetchPlans();
       } catch (error) {
         logger.error('更新进度失败:', error);
-        showToast('error', '更新进度失败');
+        showToast('error', getErrMsg(error, '更新进度失败'));
       }
     },
     [showToast, fetchPlans]
@@ -336,7 +337,7 @@ function StudyGuidePage() {
           showToast('info', '该文章已被删除');
         } else {
           logger.error('删除指导文章失败:', error);
-          showToast('error', '删除指导文章失败');
+          showToast('error', getErrMsg(error, '删除指导文章失败'));
         }
       } finally {
         fetchGuides();
@@ -367,7 +368,7 @@ function StudyGuidePage() {
           showToast('info', '该计划已被删除');
         } else {
           logger.error('删除改进计划失败:', error);
-          showToast('error', '删除改进计划失败');
+          showToast('error', getErrMsg(error, '删除改进计划失败'));
         }
       } finally {
         fetchPlans();
@@ -444,7 +445,7 @@ function StudyGuidePage() {
         </div>
       </div>
 
-      <div className='px-6 py-4 flex items-center gap-4'>
+      <div className='px-6 py-4 flex items-center flex-wrap gap-4'>
         <div className='relative flex-1 max-w-md'>
           <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
           <input

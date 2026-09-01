@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
-import { Card, Select, Button, Space, message, Typography, Spin, Alert } from 'antd';
+import { Card, Select, Button, Space, Typography, Spin, Alert } from 'antd';
 import { DownloadOutlined, FileExcelOutlined, FileTextOutlined } from '@ant-design/icons';
+import { useStableToast } from '../hooks/useStableToast';
+import { getErrMsg } from '../utils/getErrMsg';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -17,6 +19,7 @@ const SemesterReport: React.FC = () => {
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [exporting, setExporting] = useState<'' | 'excel' | 'csv'>('');
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useStableToast();
 
   useEffect(() => {
     setLoadingClasses(true);
@@ -46,23 +49,23 @@ const SemesterReport: React.FC = () => {
 
   const handleExport = async (format: 'excel' | 'csv') => {
     if (!classId) {
-      message.warning('请先选择班级');
+      showToast('warning', '请先选择班级');
       return;
     }
     // 已知班级无学生（studentCount === 0）：拦截空报表导出（此前仍提示"已开始下载"）
     if (studentCount === 0) {
-      message.warning('该班级暂无学生，无可导出数据');
+      showToast('warning', '该班级暂无学生，无可导出数据');
       return;
     }
     setExporting(format);
     setError(null);
     try {
       await api.reports.exportClassSemester(classId, format);
-      message.success(`已开始下载 ${format === 'csv' ? 'CSV' : 'Excel'} 报表`);
+      showToast('success', `已开始下载 ${format === 'csv' ? 'CSV' : 'Excel'} 报表`);
     } catch (e: unknown) {
-      const msg = (e as Error)?.message || '导出失败，请重试';
+      const msg = getErrMsg(e, '导出失败，请重试');
       setError(msg);
-      message.error(msg);
+      showToast('error', msg);
     } finally {
       setExporting('');
     }

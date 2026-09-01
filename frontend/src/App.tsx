@@ -237,7 +237,15 @@ interface AdminInfo {
 function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRouteProps) {
   const location = useLocation();
   const adminStr = localStorage.getItem('admin');
-  const admin: AdminInfo | null = adminStr ? JSON.parse(adminStr) : null;
+  // F1: localStorage 可能损坏（非法 JSON），未捕获会整站白屏。解析失败一律按未登录处理。
+  let admin: AdminInfo | null = null;
+  if (adminStr) {
+    try {
+      admin = JSON.parse(adminStr);
+    } catch {
+      admin = null;
+    }
+  }
 
   if (!admin) {
     return <Navigate to='/login' state={{ from: location }} replace />;

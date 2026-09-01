@@ -68,18 +68,28 @@ export function useOptimizedFetch<T = unknown>(
 
     try {
       const result = await fetcherRef.current();
-      setData(result);
-      onSuccessRef.current?.(result);
+      // F2: 仅当本控制器仍是当前在途请求时才写回数据，丢弃过期响应，避免竞态覆盖。
+      if (abortControllerRef.current === controller) {
+        setData(result);
+        onSuccessRef.current?.(result);
+      }
     } catch (err) {
       if ((err as { name?: string }).name !== 'AbortError') {
-        const errorObj = err as Error;
-        setError(errorObj);
-        onErrorRef.current?.(errorObj);
-        logger.error('Fetch failed:', errorObj);
+        // F2: 仅当本控制器仍是当前在途请求时才处理错误，避免过期请求污染状态。
+        if (abortControllerRef.current === controller) {
+          const errorObj = err as Error;
+          setError(errorObj);
+          onErrorRef.current?.(errorObj);
+          logger.error('Fetch failed:', errorObj);
+        }
       }
     } finally {
-      setLoading(false);
-      abortControllerRef.current = null;
+      // F2: 仅当本控制器仍是当前在途请求时才清理并结束 loading；
+      // 否则第二次并发请求已接管 ref，提前置 null 会丢失其 AbortController 并错误结束 loading。
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        abortControllerRef.current = null;
+      }
     }
   }, []);
 
