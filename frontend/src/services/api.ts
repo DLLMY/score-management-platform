@@ -180,6 +180,12 @@ export const createAbortController = (): AbortController => {
  * 注册请求的 AbortController，用于路由切换时取消
  */
 export const registerAbortController = (key: string, controller: AbortController): void => {
+  // M5: 同 key 二次注册时，若旧 controller 仍存活须先 abort，否则旧请求泄漏
+  // （既不被 abort 也失去引用，无法被 abortAllRequests 取消，持连接直到超时）。
+  const existing = abortControllers.get(key);
+  if (existing && !existing.signal.aborted) {
+    existing.abort();
+  }
   abortControllers.set(key, controller);
 };
 

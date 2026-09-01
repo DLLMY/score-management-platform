@@ -4,7 +4,7 @@ interface VirtualListProps<T> {
   items: T[];
   itemHeight: number;
   renderItem: (item: T, index: number) => ReactNode;
-  keyExtractor?: (item: T) => string | number;
+  keyExtractor?: (item: T, index?: number) => string | number;
   containerHeight?: number;
   overscan?: number;
   className?: string;
@@ -15,9 +15,14 @@ function VirtualList<T>({
   items,
   itemHeight,
   renderItem,
-  keyExtractor = (item: T) => {
+  // 回退 key 必须稳定：用绝对索引（items 内稳定位置），禁止 Math.random()——
+  // 随机 key 会让 React 每次渲染重建节点，破坏虚拟列表的复用与滚动位置。
+  keyExtractor = (item: T, index?: number) => {
     const itemWithId = item as unknown as { id: string | number };
-    return itemWithId.id !== undefined ? itemWithId.id : Math.random().toString(36).slice(2);
+    if (itemWithId.id !== undefined) {
+      return itemWithId.id;
+    }
+    return `vl-idx-${index ?? 0}`;
   },
   containerHeight = 600,
   overscan = 2,
@@ -96,7 +101,7 @@ function VirtualList<T>({
         className={`scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${className}`}
       >
         {items.map((item, index) => (
-          <div key={keyExtractor(item)}>{renderItem(item, index)}</div>
+          <div key={keyExtractor(item, index)}>{renderItem(item, index)}</div>
         ))}
       </div>
     );
@@ -122,7 +127,7 @@ function VirtualList<T>({
       >
         {visibleItems.map((item, localIndex) => (
           <div
-            key={keyExtractor(item)}
+            key={keyExtractor(item, startIndex + localIndex)}
             style={{
               position: 'absolute',
               top: paddingTop + localIndex * itemHeight,
