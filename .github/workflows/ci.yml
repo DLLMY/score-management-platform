@@ -53,6 +53,13 @@ jobs:
   frontend:
     name: 前端（vitest / build / lint）
     runs-on: ubuntu-latest
+    # vitest forks 池各 worker 为独立 Node 进程，受 V8 默认旧生代堆上限（runner 上≈2GB）约束；
+    # 全量用例并发加载 antd/recharts 等重依赖时单 worker 易撞堆上限（FATAL ERROR: heap out of memory）。
+    # 双保险：① 提高 max-old-space-size 让单 worker 有更大堆上限；② 限制并发 worker 数，避免多核 runner 上
+    # 堆峰值叠加把容器打爆（VITEST_MAX_WORKERS 为 vitest 原生支持的环境变量）。均不影响测试逻辑/结果。
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      VITEST_MAX_WORKERS: 2
     steps:
       - uses: actions/checkout@v4
 
