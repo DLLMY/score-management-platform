@@ -73,7 +73,16 @@ def delete_record(record):
     user = get_by_id(User, record.student_id)
     before_score = user.current_score or 0 if user else 0
     if user:
-        ok, final_score = atomic_score_update(user.id, -record.score_change)
+        # F5: 删除回滚须与录入一致的 min/max 钳制（atomic_score_update 默认不钳），
+        # 否则边界学生回滚越界（越 min / 超额），与录入端钳制不一致。
+        from models import SystemConfig as _SysCfg
+
+        _cfg = _SysCfg.query.first()
+        _min_s = _cfg.min_score if _cfg else 0
+        _max_s = _cfg.max_score if _cfg else 100
+        ok, final_score = atomic_score_update(
+            user.id, -record.score_change, min_score=_min_s, max_score=_max_s
+        )
         if ok:
             user.current_score = final_score
         user_name = user.name
@@ -150,7 +159,18 @@ def create_score_entry(data):
     before_rank = _find_rank_by_score_binary_search(before_rules, before_score)
     before_rank_name = before_rank.get("name") if before_rank else "无等级"
 
-    user.current_score = before_score + score_change
+    # F4: R5 原子累加 + R8 钳制 min/max（消除读改写竞态，与 create_record 一致）。
+    # 原 `user.current_score = before + change` 在并发/MQTT 下会丢更新且越界。
+    from models import SystemConfig as _SysCfg
+
+    _cfg = _SysCfg.query.first()
+    _min_s = _cfg.min_score if _cfg else 0
+    _max_s = _cfg.max_score if _cfg else 100
+    ok, final_score = atomic_score_update(
+        user_id, score_change, min_score=_min_s, max_score=_max_s
+    )
+    if ok:
+        user.current_score = final_score
     user_name = user.name
 
     after_rank = _find_rank_by_score_binary_search(before_rules, user.current_score)
@@ -255,7 +275,8 @@ def get_score_statistics(
 ):
     """积分统计聚合（读路径下沉）。返回 {total_records, total_add, total_subtract, net_change, today_count}。
 
-    语义与原路由 RecordStatistics.get 完全一致（含 today_count 仅按 user_id 过滤、不套隔离）。
+    语义与原路由 RecordStatistics.get 一致；today_count 与其余指标同样套用班级隔离过滤
+    （user_id / class_name / allowed_classes），口径统一，不再泄露跨班数据量。
     """
     from sqlalchemy import func, case
 
@@ -294,11 +315,15 @@ def get_score_statistics(
     total_subtract = float(stats.total_subtract) if stats else 0
 
     today = datetime.now().date()
-    today_records = ScoreRecord.query.filter(
-        ScoreRecord.created_at >= datetime.combine(today, datetime.min.time())
-    )
+    today_records = ScoreRecord.query
     if user_id:
         today_records = today_records.filter(ScoreRecord.student_id == user_id)
+    elif class_name:
+        today_records = today_records.join(User).filter(User.class_name == class_name)
+    today_records = today_records.filter(
+        ScoreRecord.created_at >= datetime.combine(today, datetime.min.time())
+    )
+    today_records = _apply_isolation_filter(today_records, allowed_classes)
     today_count = today_records.count()
 
     return {

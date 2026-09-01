@@ -1,3 +1,4 @@
+import os
 import time
 from functools import wraps
 from flask import request, g
@@ -282,9 +283,13 @@ def _get_inherited_permissions(role_code, visited=None):
     return permissions
 
 
-# F9 修复: 权限码 TTL 缓存（30s）——原每次请求重查 AdminRole/mappings/继承，全接口必经 has_permission
+# F9 修复: 权限码 TTL 缓存——原每次请求重查 AdminRole/mappings/继承，全接口必经 has_permission
+# TTL 通过环境变量 PERMISSION_CACHE_TTL 可调，默认 30s（行为零变化，仅获得按环境可调能力）
 _PERM_CACHE: dict = {}
-_PERM_CACHE_TTL = 30
+try:
+    _PERM_CACHE_TTL = int(os.getenv("PERMISSION_CACHE_TTL", "30"))
+except (TypeError, ValueError):
+    _PERM_CACHE_TTL = 30
 
 
 def _get_admin_permission_codes(admin):

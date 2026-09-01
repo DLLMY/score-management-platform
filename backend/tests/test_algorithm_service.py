@@ -170,26 +170,16 @@ class TestAlgorithmService:
             mock_user2.current_score = 60
             mock_user2.is_active = True
 
-            mock_score1 = MagicMock()
-            mock_score1.score = 90
-
-            mock_score2 = MagicMock()
-            mock_score2.score = 70
-
             with patch("services.algorithm_service.User.query") as mock_user_query:
                 mock_user_query.filter.return_value.all.return_value = [mock_user1, mock_user2]
 
-                with patch("services.algorithm_service.Score.query") as mock_score_query:
-
-                    def mock_filter_by(**kwargs):
-                        mock = MagicMock()
-                        if kwargs["student_id"] == 1:
-                            mock.all.return_value = [mock_score1]
-                        else:
-                            mock.all.return_value = [mock_score2]
-                        return mock
-
-                    mock_score_query.filter_by.side_effect = mock_filter_by
+                # M4: 改为一次性聚合查询 db.session.query(Score.student_id, func.avg(...))
+                # .group_by(Score.student_id)，返回 [(student_id, avg_score), ...]
+                with patch("services.algorithm_service.db.session") as mock_session:
+                    mock_session.query.return_value.filter.return_value.group_by.return_value.all.return_value = [
+                        (1, 90.0),
+                        (2, 70.0),
+                    ]
 
                     df = AlgorithmService.get_student_data_for_analysis()
 

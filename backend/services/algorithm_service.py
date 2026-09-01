@@ -2,9 +2,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from scipy.stats import pearsonr
 from functools import wraps
-from models import User, Score
+from models import db, User, Score
 from services.redis_cache_service import get_cache_service
 from config.config_loader import config_loader
+from sqlalchemy import func
 import numpy as np
 
 import pandas as pd
@@ -223,25 +224,33 @@ class AlgorithmService:
         if class_name:
             query = query.filter(User.class_name == class_name)
         users = query.all()
+        # M4: 一次性聚合预取每个学生平均分，消除 N+1（原循环内逐用户 Score.query）。
+        # 等价性：SQL AVG 天然跳过 NULL，与 `[s.score for s in scores if s.score is not None]` 一致；
+        # 无成绩学生两路径均得 None，全 NULL 学生 AVG 为 NULL → 不入 map → 末行 dropna 同样剔除。
         data = []
-        for user in users:
-            # 获取行为积分
-            behavior_score = user.current_score
-            # 获取平均成绩
-            scores = Score.query.filter_by(student_id=user.id).all()
-            if scores:
-                avg_score = np.mean([s.score for s in scores if s.score is not None])
-            else:
-                avg_score = None
-            data.append(
-                {
-                    "user_id": user.id,
-                    "name": user.name,
-                    "class_name": user.class_name,
-                    "behavior_score": behavior_score,
-                    "academic_score": avg_score,
-                }
+        if users:
+            user_ids = [u.id for u in users]
+            avg_rows = (
+                db.session.query(Score.student_id, func.avg(Score.score))
+                .filter(Score.student_id.in_(user_ids))
+                .group_by(Score.student_id)
+                .all()
             )
+            avg_map = {sid: float(avg) for sid, avg in avg_rows if avg is not None}
+            for user in users:
+                # 获取行为积分
+                behavior_score = user.current_score
+                # 获取平均成绩（聚合预取，O(1) 查表，不再 per-user 查询）
+                avg_score = avg_map.get(user.id)
+                data.append(
+                    {
+                        "user_id": user.id,
+                        "name": user.name,
+                        "class_name": user.class_name,
+                        "behavior_score": behavior_score,
+                        "academic_score": avg_score,
+                    }
+                )
         df = pd.DataFrame(data)
         if df.empty:
             return df

@@ -9,8 +9,17 @@ from utils.db_session import db_session_scope
 from .algorithm_service import AlgorithmService
 from sqlalchemy import func
 import numpy as np
+import threading
+import uuid
 
-_computation_progress = {
+# F6: 综合评分重算进度改为「按任务隔离」。原模块级全局 _computation_progress 被所有请求共享，
+# 并发重算会互相覆盖 status/progress/最终状态。改为 task_id -> progress 字典，加锁保证读写原子。
+# 对外接口 get_computation_progress()（无参）仍返回「当前任务」进度，契约不变。
+_progress_lock = threading.Lock()
+_current_task_id = None
+_computation_progresses = {}
+
+_DEFAULT_PROGRESS = {
     "status": "idle",
     "progress": 0,
     "message": "",
@@ -34,8 +43,9 @@ class CompositeScoreService:
         Returns:
             dict: 综合评分结果
         """
-        global _computation_progress
-        _computation_progress = {
+        global _current_task_id
+        task_id = str(uuid.uuid4())
+        progress = {
             "status": "running",
             "progress": 0,
             "message": "开始计算综合评分...",
@@ -44,6 +54,9 @@ class CompositeScoreService:
             "start_time": datetime.now().isoformat(),
             "end_time": None,
         }
+        with _progress_lock:
+            _computation_progresses[task_id] = progress
+            _current_task_id = task_id
 
         from sqlalchemy import func
 
@@ -51,13 +64,13 @@ class CompositeScoreService:
         if class_name:
             query = query.filter(User.class_name == class_name)
         users = query.all()
-        _computation_progress["total_students"] = len(users)
+        progress["total_students"] = len(users)
 
         if not users:
-            _computation_progress["status"] = "completed"
-            _computation_progress["progress"] = 100
-            _computation_progress["message"] = "没有找到学生数据"
-            _computation_progress["end_time"] = datetime.now().isoformat()
+            progress["status"] = "completed"
+            progress["progress"] = 100
+            progress["message"] = "没有找到学生数据"
+            progress["end_time"] = datetime.now().isoformat()
             return {
                 "method": "entropy_weight",
                 "weights": {},
@@ -66,8 +79,8 @@ class CompositeScoreService:
             }
 
         user_ids = [user.id for user in users]
-        _computation_progress["progress"] = 15
-        _computation_progress["message"] = "正在获取学业成绩数据..."
+        progress["progress"] = 15
+        progress["message"] = "正在获取学业成绩数据..."
 
         academic_map = {}
         score_stats = (
@@ -85,8 +98,8 @@ class CompositeScoreService:
         for stat in score_stats:
             academic_map[stat.student_id] = float(stat.avg_score) if stat.avg_score else 0
 
-        _computation_progress["progress"] = 30
-        _computation_progress["message"] = "正在获取开锁记录数据..."
+        progress["progress"] = 30
+        progress["message"] = "正在获取开锁记录数据..."
 
         unlock_map = {}
         unlock_counts = (
@@ -127,29 +140,29 @@ class CompositeScoreService:
                 "message": "没有足够的数据进行评分",
             }
 
-        _computation_progress["progress"] = 50
-        _computation_progress["message"] = "正在进行数据预处理..."
+        progress["progress"] = 50
+        progress["message"] = "正在进行数据预处理..."
         processed_data = CompositeScoreService._preprocess_data(data)
 
-        _computation_progress["progress"] = 65
-        _computation_progress["message"] = "正在计算熵权..."
+        progress["progress"] = 65
+        progress["message"] = "正在计算熵权..."
         features = np.array(
             [[d["behavior_norm"], d["academic_norm"], d["compliance_norm"]] for d in processed_data]
         )
         weights = AlgorithmService.entropy_weight(features)
 
-        _computation_progress["progress"] = 80
-        _computation_progress["message"] = "正在计算综合得分..."
+        progress["progress"] = 80
+        progress["message"] = "正在计算综合得分..."
         results = CompositeScoreService._calculate_scores(processed_data, weights)
 
-        _computation_progress["progress"] = 90
-        _computation_progress["message"] = "正在保存结果到数据库..."
+        progress["progress"] = 90
+        progress["message"] = "正在保存结果到数据库..."
         CompositeScoreService._save_results(results, weights)
 
-        _computation_progress["status"] = "completed"
-        _computation_progress["progress"] = 100
-        _computation_progress["message"] = "计算完成"
-        _computation_progress["end_time"] = datetime.now().isoformat()
+        progress["status"] = "completed"
+        progress["progress"] = 100
+        progress["message"] = "计算完成"
+        progress["end_time"] = datetime.now().isoformat()
 
         return {
             "method": "entropy_weight",
@@ -509,7 +522,11 @@ class CompositeScoreService:
             # ORM 对象（如 record.id）抛 DetachedInstanceError → 500（线上实测复现）。
             # composite 本就绑定当前请求 session，直接改属性 + commit 即可持久化。
             db.session.merge(composite)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                raise
             print(
                 f"[CompositeScore] 增量更新成功: user_id={user_id}, "
                 f"old_score={old_score}, new_score={composite_score}"
@@ -527,9 +544,13 @@ class CompositeScoreService:
         """获取综合评分计算进度
 
         Returns:
-            dict: 计算进度信息，包含状态、进度百分比、消息等
+            dict: 计算进度信息，包含状态、进度百分比、消息等。
+            返回「当前任务」(最后一次触发的重算) 的隔离进度，避免并发重算互相污染。
         """
-        return _computation_progress.copy()
+        with _progress_lock:
+            if _current_task_id and _current_task_id in _computation_progresses:
+                return dict(_computation_progresses[_current_task_id])
+            return dict(_DEFAULT_PROGRESS)
 
     @staticmethod
     def recalculate_all():

@@ -29,7 +29,11 @@ def create_approval(data):
         score_change=data.get("score_change"),
     )
     db.session.add(approval)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return approval.id, None
 
 
@@ -38,14 +42,22 @@ def update_approval(approval, data):
     approval.title = data.get("title", approval.title)
     approval.description = data.get("description", approval.description)
     approval.score_change = data.get("score_change", approval.score_change)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return None
 
 
 def delete_approval(approval):
     """删除审批记录并提交。"""
     db.session.delete(approval)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return None
 
 
@@ -92,7 +104,11 @@ def approve_approval(approval, data):
         )
         db.session.add(record)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return {
         "approval_id": approval.id,
         "user": user,
@@ -120,7 +136,11 @@ def reject_approval(approval, data):
 
     user = get_by_id(User, approval.student_id)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return {
         "approval_id": approval.id,
         "user": user,
