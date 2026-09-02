@@ -10,6 +10,8 @@ import {
   Admin,
   Device,
   DevicePaginatedResponse,
+  WOLDevice,
+  WOLDevicePaginatedResponse,
   User,
   UserCreateInput,
   UserUpdateInput,
@@ -1591,17 +1593,7 @@ export interface OperationLogListResponse {
   total: number;
 }
 
-export interface WOLDevice {
-  id: number;
-  name: string;
-  mac_address: string;
-  broadcast_ip?: string;
-  port?: number;
-  description?: string;
-  is_active?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
+export type { WOLDevice } from '../types';
 
 export interface NotifyTemplate {
   id: number;
@@ -2375,7 +2367,7 @@ export interface Api {
     validateMac: (
       mac: string
     ) => Promise<{ mac_address: string; valid: boolean; normalized: string | null }>;
-    getDevices: () => Promise<WOLDevice[]>;
+    getDevices: (params?: { page?: number; per_page?: number }) => Promise<WOLDevicePaginatedResponse>;
     addDevice: (data: {
       name: string;
       mac_address: string;
@@ -5132,7 +5124,14 @@ const api: Api = {
         valid: boolean;
         normalized: string | null;
       }>,
-    getDevices: () => request('/api/wol/devices') as Promise<WOLDevice[]>,
+    getDevices: (params: { page?: number; per_page?: number } = {}) => {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      // 远程开机设备量通常较小，显式拉满 M9 上限（200）避免列表被截断；大批量自动分页。
+      queryParams.append('per_page', params.per_page ? params.per_page.toString() : '200');
+      const qs = queryParams.toString();
+      return request(`/api/wol/devices${qs ? '?' + qs : ''}`) as Promise<WOLDevicePaginatedResponse>;
+    },
     addDevice: (data: {
       name: string;
       mac_address: string;

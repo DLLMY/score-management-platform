@@ -513,22 +513,27 @@ class DeviceStats(Resource):
 @ns_devices.route("/online")
 class OnlineDevices(Resource):
 
-    @ns_devices.doc("get_online_devices", description="获取在线设备列表")
+    @ns_devices.doc("get_online_devices", description="获取在线设备列表（分页，M9 P0）")
     @ns_devices.response(200, "成功")
     @requires_permission("device.view")
     @cached_api(ttl=30)
     def get(self):
         """
-        获取在线设备列表
+        获取在线设备列表（分页，M9 P0）。
 
-        获取所有当前在线的设备列表。
+        返回信封 {devices, total, pagination}，消除全表 dump；
+        is_online 为运行时判定，故先按内存过滤再按页切片（默认 50，上限 200）。
         响应由 cached_api 统一缓存（Redis，TTL 30s）。
         """
+        page, per_page = get_pagination(default=50)
         devices = Device.query.options(
             joinedload(Device.class_info), joinedload(Device.admin)
         ).all()
         online_devices = [d for d in devices if d.is_online]
-        return [
+        total = len(online_devices)
+        start = (page - 1) * per_page
+        page_items = online_devices[start : start + per_page]
+        items = [
             {
                 "id": d.id,
                 "device_id": d.device_id,
@@ -542,8 +547,18 @@ class OnlineDevices(Resource):
                 "admin_id": d.admin_id,
                 "admin_name": d.admin.real_name if d.admin else None,
             }
-            for d in online_devices
+            for d in page_items
         ]
+        pages = (total + per_page - 1) // per_page if per_page > 0 else 0
+        return APIResponse.success(
+            data={
+                "devices": items,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "pages": pages,
+            }
+        )
 
 
 bind_class_model = ns_devices.model(

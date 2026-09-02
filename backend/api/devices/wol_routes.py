@@ -1,8 +1,9 @@
-from flask_restx import Resource, fields, Namespace
+from flask_restx import Resource, fields, Namespace, marshal
 from datetime import datetime
 from utils.permission import requires_permission, has_permission
 from utils.response import APIResponse
 from flask import request, g
+from utils.pagination import get_pagination
 
 from services.wol_service import wake_on_lan, is_valid_mac
 from services.device_service import create_wol_device, update_wol_device, delete_wol_device
@@ -342,14 +343,30 @@ class DeviceStatus(Resource):
 @ns_wol.route("/devices")
 class WOLDeviceList(Resource):
 
-    @ns_wol.marshal_list_with(wol_device_model)
     @requires_permission("view_devices")
     def get(self):
         """
-        Get all WOL devices from database
+        Get WOL devices from database (paginated, M9 P0).
+
+        返回信封 {devices, total, pagination}，消除全表 dump；
+        page/per_page 由 get_pagination 解析并做上限保护（默认 50，上限 200）。
         """
-        devices = Device.query.filter_by(device_type="wol", is_active=True).all()
-        return devices
+        page, per_page = get_pagination(default=50)
+        pagination = (
+            Device.query.filter_by(device_type="wol", is_active=True)
+            .order_by(Device.id)
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+        items = marshal(pagination.items, wol_device_model)
+        return APIResponse.success(
+            data={
+                "devices": items,
+                "total": pagination.total,
+                "page": page,
+                "per_page": per_page,
+                "pages": pagination.pages,
+            }
+        )
 
     @ns_wol.expect(wol_device_model)
     @ns_wol.marshal_with(wol_device_model)

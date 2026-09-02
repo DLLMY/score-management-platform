@@ -14,7 +14,7 @@ describe('useOptimisticUpdate (M10 回滚边界)', () => {
     act(() => result.current.setData(initial));
 
     await act(async () => {
-      await result.current.batchUpdate<State>([
+      await result.current.batchUpdate([
         {
           id: 'A',
           updateFn: (d) => ({ ...d, a: d.a + 1 }),
@@ -65,7 +65,7 @@ describe('useOptimisticUpdate (M10 回滚边界)', () => {
     act(() => result.current.setData(initial));
 
     await act(async () => {
-      await result.current.batchUpdate<State>([
+      await result.current.batchUpdate([
         {
           id: 'A',
           updateFn: (d) => ({ ...d, a: d.a + 1 }),

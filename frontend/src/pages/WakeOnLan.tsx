@@ -1,6 +1,7 @@
 import logger from '../utils/logger';
 import { useState, useEffect, useRef } from 'react';
 import { Power, Plus, Trash2, Zap, Check, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Pagination } from 'antd';
 import api from '../services/api';
 import type { WOLDevice } from '../services/api';
 import { useClassNowStatus } from '../hooks';
@@ -17,6 +18,10 @@ export default function WakeOnLan() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   // 设备列表加载失败标记（诚实显示，不再 fallback 假设备）
   const [loadError, setLoadError] = useState(false);
+  // P0(M9): 服务端分页状态
+  const [wolPage, setWolPage] = useState(1);
+  const [wolPageSize] = useState(200);
+  const [wolTotal, setWolTotal] = useState(0);
   const [wakeResult, setWakeResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDevice, setNewDevice] = useState({ name: '', mac_address: '' });
@@ -25,13 +30,14 @@ export default function WakeOnLan() {
   // 远程开机属于全局下发，按全局上课时段拦截
   const wolClassNow = useClassNowStatus(undefined, { scope: 'global' });
 
-  // Load devices from database on mount
-  const loadDevices = async () => {
+  // Load devices from database on mount（P0(M9)：服务端分页，默认拉满上限覆盖常规设备量）
+  const loadDevices = async (page: number = wolPage) => {
     setIsRefreshing(true);
     setLoadError(false);
     try {
-      const result = await api.wakeOnLan.getDevices();
-      setDevices(result || []);
+      const result = await api.wakeOnLan.getDevices({ page, per_page: wolPageSize });
+      setDevices(result?.devices || []);
+      setWolTotal(result?.total || 0);
     } catch (error) {
       logger.error('Failed to load devices:', error);
       // 诚实显示：加载失败不伪造默认设备
@@ -42,8 +48,13 @@ export default function WakeOnLan() {
     }
   };
 
+  const handleWolPageChange = (page: number) => {
+    setWolPage(page);
+    loadDevices(page);
+  };
+
   useEffect(() => {
-    loadDevices();
+    loadDevices(1);
   }, []);
 
   // Wake up selected device
@@ -147,6 +158,7 @@ export default function WakeOnLan() {
       });
 
       setDevices([...devices, result]);
+      setWolTotal((t) => t + 1);
       setNewDevice({ name: '', mac_address: '' });
       setShowAddForm(false);
       setWakeResult({
@@ -179,6 +191,7 @@ export default function WakeOnLan() {
     try {
       await api.wakeOnLan.deleteDevice(id);
       setDevices(devices.filter((d) => d.id !== id));
+      setWolTotal((t) => Math.max(0, t - 1));
       if (selectedDevice === id) {
         setSelectedDevice(null);
       }
@@ -229,7 +242,7 @@ export default function WakeOnLan() {
           </PermissionButton>
           <PermissionButton
             permission='device.view'
-            onClick={loadDevices}
+            onClick={() => loadDevices()}
             disabled={isRefreshing}
             className='flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors'
           >
@@ -378,6 +391,17 @@ export default function WakeOnLan() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {!loadError && devices.length > 0 && wolTotal > wolPageSize && (
+        <div className='mt-4 flex justify-center'>
+          <Pagination
+            current={wolPage}
+            pageSize={wolPageSize}
+            total={wolTotal}
+            onChange={handleWolPageChange}
+            showSizeChanger={false}
+          />
         </div>
       )}
 

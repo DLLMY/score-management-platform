@@ -403,6 +403,26 @@ export interface UserPaginatedResponse {
   pages: number;
 }
 
+export interface WOLDevice {
+  id: number;
+  name: string;
+  mac_address: string;
+  broadcast_ip?: string;
+  port?: number;
+  description?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WOLDevicePaginatedResponse {
+  devices: WOLDevice[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
 // ============================================
 // WebSocket事件类型
 // ============================================
