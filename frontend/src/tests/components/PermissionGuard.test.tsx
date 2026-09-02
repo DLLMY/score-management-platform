@@ -4,10 +4,12 @@
  * 已登录但空权限恢复 UI、未登录跳转、单/多权限 allow-deny、fallback。
  */
 /// <reference types="jest" />
-import { screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { screen, fireEvent, act, cleanup, render } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 import React from 'react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import PermissionGuard from '../../components/PermissionGuard';
+import { ToastProvider } from '../../context/ToastContext';
 import { renderWithProviders, mockLocalStorage } from '../utils/test-utils';
 
 const h = vi.hoisted(() => ({ perms: {} as Record<string, unknown> }));
@@ -104,14 +106,32 @@ describe('PermissionGuard', () => {
     expect(reload).toHaveBeenCalled();
   });
 
+  // 必须提供 /login 路由：<Navigate> 跳转后 guard 需被卸载。
+  // 若只套 BrowserRouter 而无 <Routes>，guard 常驻 → 反复 Navigate 形成无限跳转，
+  // 且每轮 state={{ from: location }} 嵌套上一个 location，history 结构化克隆的对象链
+  // 持续加深 → 堆内存级数增长直至 worker OOM（曾致 CI/本地全量单测崩溃）。
   test('empty permissions + not logged in redirects (no children, no recovery)', () => {
     localStorage.removeItem('admin');
     setPerms({ permissions: [], isLoading: false });
-    renderWithProviders(
-      <PermissionGuard>
-        <div>机密内容</div>
-      </PermissionGuard>
+    render(
+      <MemoryRouter initialEntries={['/secret']}>
+        <ToastProvider>
+          <Routes>
+            <Route
+              path='/secret'
+              element={
+                <PermissionGuard>
+                  <div>机密内容</div>
+                </PermissionGuard>
+              }
+            />
+            <Route path='/login' element={<div>登录页</div>} />
+          </Routes>
+        </ToastProvider>
+      </MemoryRouter>
     );
+    // 确实跳到了 /login（原实现无 Routes 时无法验证跳转目标）
+    expect(screen.getByText('登录页')).toBeInTheDocument();
     expect(screen.queryByText('机密内容')).not.toBeInTheDocument();
     expect(screen.queryByText('权限加载未完成')).not.toBeInTheDocument();
     expect(screen.queryByText('加载权限...')).not.toBeInTheDocument();
