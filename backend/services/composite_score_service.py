@@ -4,13 +4,16 @@
 """
 
 from datetime import datetime
+import logging
+import threading
+import uuid
+import numpy as np
 from models import db, User, Score, ScoreRecord, CompositeScore, get_by_id
 from utils.db_session import db_session_scope
 from .algorithm_service import AlgorithmService
 from sqlalchemy import func
-import numpy as np
-import threading
-import uuid
+
+logger = logging.getLogger(__name__)
 
 # F6: 综合评分重算进度改为「按任务隔离」。原模块级全局 _computation_progress 被所有请求共享，
 # 并发重算会互相覆盖 status/progress/最终状态。改为 task_id -> progress 字典，加锁保证读写原子。
@@ -527,13 +530,13 @@ class CompositeScoreService:
             except Exception:
                 db.session.rollback()
                 raise
-            print(
+            logger.info(
                 f"[CompositeScore] 增量更新成功: user_id={user_id}, "
                 f"old_score={old_score}, new_score={composite_score}"
             )
             return CompositeScoreService.get_student_composite_score(user_id)
         else:
-            print(f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}")
+            logger.info(f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}")
             return None
 
     # P2-6 修复: 移除 _update_rankings 空操作（无 rank 列 + 空提交 + 虚假"排名已更新"日志；
