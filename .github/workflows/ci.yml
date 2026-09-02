@@ -50,13 +50,17 @@ jobs:
           PYTHON_BIN: python
         run: bash scripts/run_regression.sh
 
-  frontend:
-    name: 前端（vitest / build / lint）
+  frontend-test:
+    name: 前端单测（分片 ${{ matrix.shard }}/3）
     runs-on: ubuntu-latest
-    # vitest forks 池各 worker 为独立 Node 进程，受 V8 默认旧生代堆上限（runner 上≈2GB）约束；
-    # 全量用例并发加载 antd/recharts 等重依赖时单 worker 易撞堆上限（FATAL ERROR: heap out of memory）。
-    # 双保险：① 提高 max-old-space-size 让单 worker 有更大堆上限；② 限制并发 worker 数，避免多核 runner 上
-    # 堆峰值叠加把容器打爆（VITEST_MAX_WORKERS 为 vitest 原生支持的环境变量）。均不影响测试逻辑/结果。
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    # 分片策略（根治 OOM，替代继续堆内存）：
+    # 上次 OOM 时单 fork worker 堆已涨到 ~4GB（=上限 4096），说明存在单测试级内存峰值；
+    # 仅提高 heap 已到 runner 7GB 整机边界，不可再堆。改为把全量用例按文件均分 3 片，
+    # 单 worker 处理的文件量降为 1/3，从根因压低内存峰值。heap 4096 仅作安全网。
     env:
       NODE_OPTIONS: --max-old-space-size=4096
       VITEST_MAX_WORKERS: 2
@@ -74,9 +78,27 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: 单测（vitest）
+      - name: Vitest 分片 ${{ matrix.shard }}/3
         working-directory: frontend
-        run: npm test
+        run: npx vitest run --shard=${{ matrix.shard }}/3 --reporter=dot
+
+  frontend-build:
+    name: 前端构建与 lint
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm ci
 
       - name: 生产构建
         working-directory: frontend
