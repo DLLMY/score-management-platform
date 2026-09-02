@@ -16,6 +16,13 @@
 - ⚠️ 新建后端工具前先 Glob 确认不存在（excel_utils/query_optimizer 曾误覆盖）。
 - 禁一次性全改、禁 git commit。
 
+## 分页 / top-N 数量参数规范（backend/utils/pagination.py）
+- **翻页型列表**用 `get_pagination(default=20, max_per_page=200)` → `(page, per_page)`，page 下限 1、per_page 上限 200、非法输入回退 default。M9 已收口 class_management 13 端点等。
+- **top-N 型**（排行榜 / 导出 / 最近列表，语义是"取前 N 条"不适合翻页）用 `get_limit(default=50, max_limit=200)` → 恒满足 `1 <= limit <= max_limit`，**不引入 page 语义**（2026-09-02 新增）。
+- ⚠️ **排行榜 `/rank/student`、`/rank/class` 保持 limit 语义不变**，不要套分页信封——榜单语义就是取前 N 名，翻页无业务意义；其 `min(limit,200)` 钳制本已存在。
+- ⚠️ 任何从 request 取值喂给 ORM `.limit()` 的参数**必须钳制**，否则 `?limit=999999999` 即全表加载（2026-09-02 修 export_routes 与 admin_notifications_routes 两处无界入口）。排查手法：`grep -rnE "\.limit\(" app api services utils`（排除 backups/refactor_F17），逐个追变量来源。
+- 导出端点 `export_routes` 上限取 **10000**（= 默认值，与接口文档"默认10000"一致，零契约漂移）；业务若需导出超 1 万条须走用户审核调整。上限值属业务决策，改动前须确认。
+
 ## RBAC/双JWT/db_session
 - 改 RBAC 必跑 `verify_rbac_consistency.py --check-only`(G2 68/DB70/seed66/teacher30)；teacher 含 notification.send 无 score.manage；`/api/roles` 已下线。Admin=access+requires_permission；学生=student+requires_student。
 - `db_session_scope(detach=True)` finally `session.remove()`：**请求链 service 写路径必须 detach=False**（Flask teardown 清），否则 DetachedInstanceError 500。
