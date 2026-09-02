@@ -2,13 +2,15 @@
 
 ## 运行/测试
 - 后端：系统 Py3.11 `C:/Users/53527/AppData/Local/Programs/Python/Python311/python.exe`，`cd backend && python run.py --env development --host 127.0.0.1 --port 5000`；改后端须强杀全部 python 重启（Flask-SocketIO 不 reload）。MQTT 改 `app/service_init.py::init_mqtt`。
-- 前端：Vite dev proxy /api、/ws→5000；build `node node_modules/vite/bin/vite.js build --logLevel warn`；`tsc --noEmit`；lint `node node_modules/eslint/bin/eslint.js src --ext .ts,.tsx`；单测 `node node_modules/vitest/vitest.mjs run --pool=forks <files>`。⚠️ 勿用 `node node_modules/.bin/eslint`/`.bin/vitest`（bash 脚本被当 JS）。
+- 前端：Vite dev proxy /api、/ws→5000；build `node node_modules/vite/bin/vite.js build --logLevel warn`；`tsc --noEmit`；lint `node node_modules/eslint/bin/eslint.js src --ext .ts,.tsx`；单测 `node node_modules/vitest/vitest.mjs run [files]`。⚠️ 勿用 `node node_modules/.bin/eslint`/`.bin/vitest`（bash 脚本被当 JS）。
+- ⚠️ **全量 vitest 勿加 `--pool=forks`**：`vitest.config.ts` 已按 `process.env.CI ? 'forks' : 'threads'` 自动选池；强制 forks 在 Windows+中文路径下 worker 启动慢（全量 >11min vs threads ~7m51s）且放大内存问题。定向跑少量文件加 `--pool=forks` 无碍。
+- ⚠️ **单测闸门判定三要素（缺一不可）**：① 日志中**退出码行存在且为 0**；② `Errors 0 error`；③ **报告文件数 == 磁盘文件数**（`sed 's/\x1b\[[0-9;]*m//g'` 剥 ANSI 后 grep `(✓|↓|×|❯) src/...test.*` 得已报告集，与 `find src -name '*.test.*'` 做 `comm -13` 差集为空）。仅看 `passed` 数或 `grep FAIL` 会漏判——崩溃 worker 所跑文件会**静默从统计消失**，造成"全绿"假象（2026-09-02 因此误报过一次）。差集非空时，缺失文件即崩溃 worker 正在跑的文件，是定位真凶的最快手法。
 - pytest：系统3.11，`-p no:locust --timeout=600`；全量 `python -m pytest -p no:locust --timeout=600 -q`（pytest.ini testpaths=backend/tests，~19min，collected 2061）。**基线 2052 passed / 1 failed(沙箱假阳性 test_clear_cache safe-delete 拦 rmtree) / 8 skipped**，真实失败 0。
 
 ## 架构/重构铁律
 - 路由唯一源 `app/api_versioning.py::register_v1_routes`；信封 `{success,code,data}`；create 双元组 `[env,201]` 勿改。
 - **F17 防腐层（✅全收口，#629 剩余写路径 2026-08-30 真终态闭合）**：写入/事务路径内联 db.session → `services/*_service.py` 薄封装，路由保留 get_or_404/校验/缓存失效/副作用/响应构造、逐字节复刻；#629 收口含 rollback 守卫下沉 service（不得仅删）。回归闸门脚本在**仓库根 `scripts/run_regression.sh`**（非 backend/scripts），默认系统 Py3.11，5 步全绿。终态见 `docs/F17_路由服务化重构_终态汇总与收尾记忆.md`。
-- **提取/重构必跑回归**：后端 `bash scripts/run_regression.sh` + 被改模块补 pytest；前端 `tsc --noEmit`+`eslint`+`vitest run --pool=forks`。**未跑回归=重构未完成**。
+- **提取/重构必跑回归**：后端 `bash scripts/run_regression.sh` + 被改模块补 pytest；前端 `tsc --noEmit`+`eslint`+`vitest run`（全量不加 `--pool`，并按上文"三要素"判定）。**未跑回归=重构未完成**。
 - ⚠️ pytest 路径坑：records/scores 域正确文件 `test_scores_routes.py`/`test_records_routes.py`（`test_score_record_service.py` 不存在，误跑静默 exit=4）。
 - ⚠️ 新建后端工具前先 Glob 确认不存在（excel_utils/query_optimizer 曾误覆盖）。
 - 禁一次性全改、禁 git commit。
