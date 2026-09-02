@@ -353,8 +353,10 @@ function DataTable<T>(props: DataTableProps<T>) {
         return (
           <th
             key={col.key}
+            scope='col'
             style={colWidthStyle(col)}
             className={headerCellCls(sortable)}
+            aria-sort={sortable ? (active ? (sortOrderEff === 'ascend' ? 'ascending' : 'descending') : 'none') : undefined}
             onClick={sortable ? () => handleSort(col) : undefined}
           >
             <span className='inline-flex items-center gap-1'>
@@ -371,7 +373,7 @@ function DataTable<T>(props: DataTableProps<T>) {
   const bodyRows = pageRows.map((record, i) => (
     <tr
       key={String(getKey(record, i))}
-      className={`border-b border-gray-100 transition-colors hover:bg-slate-50 ${
+      className={`border-b border-gray-100 transition-colors odd:bg-slate-50/40 hover:bg-slate-100 ${
         rowClassName ? rowClassName(record, i) : ''
       }`}
       onClick={onRowClick ? () => onRowClick(record, i) : undefined}
@@ -408,8 +410,10 @@ function DataTable<T>(props: DataTableProps<T>) {
               {columns.map((col) => (
                 <div
                   key={col.key}
+                  role='columnheader'
                   style={{ width: pxWidth(col), flexShrink: 0 }}
                   className={headerCellCls(!!col.sorter)}
+                  aria-sort={col.sorter ? (sortFieldEff === col.key ? (sortOrderEff === 'ascend' ? 'ascending' : 'descending') : 'none') : undefined}
                   onClick={col.sorter ? () => handleSort(col) : undefined}
                 >
                   <span className='inline-flex items-center gap-1'>
@@ -439,7 +443,7 @@ function DataTable<T>(props: DataTableProps<T>) {
               overscan={6}
               renderItem={(record, index) => (
                 <div
-                  className={`flex border-b border-gray-100 transition-colors hover:bg-slate-50 ${
+                  className={`flex border-b border-gray-100 transition-colors ${index % 2 === 1 ? 'bg-slate-50/40 ' : ''}hover:bg-slate-100 ${
                     rowClassName ? rowClassName(record, index) : ''
                   }`}
                   style={{ height: rowHeight }}
