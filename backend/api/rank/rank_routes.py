@@ -36,7 +36,7 @@ class StudentRankBoard(Resource):
         class_name = request.args.get("class_name")
         sort_by = request.args.get("sort_by", "score")
         order = request.args.get("order", "desc")
-        limit = get_int_arg("limit", default=50)
+        limit = min(get_int_arg("limit", default=50), 200)
         data = analysis_service.get_student_ranking(class_name, sort_by, order, limit)
         return APIResponse.success(data=data)
 
@@ -52,6 +52,6 @@ class ClassRankBoard(Resource):
     def get(self):
         sort_by = request.args.get("sort_by", "total_score")
         order = request.args.get("order", "desc")
-        limit = get_int_arg("limit", default=20)
+        limit = min(get_int_arg("limit", default=20), 200)
         data = analysis_service.get_class_ranking(sort_by, order, limit)
         return APIResponse.success(data=data)

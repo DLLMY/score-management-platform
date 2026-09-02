@@ -3,6 +3,7 @@ from flask import request
 from services.duty_service import duty_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_duty = Namespace("duty", description="值日生表管理")
 
@@ -21,7 +22,10 @@ class DutyGroupList(Resource):
     def get(self):
         class_id = request.args.get("class_id", type=int)
         keyword = request.args.get("keyword", "")
-        return duty_service.list_groups(class_id=class_id, keyword=keyword)
+        page, per_page = get_pagination(default=50)
+        return duty_service.list_groups(
+            class_id=class_id, keyword=keyword, page=page, per_page=per_page
+        )
 
     @ns_duty.expect(
         ns_duty.model(
@@ -66,7 +70,10 @@ class DutyAssignmentList(Resource):
         group_id = request.args.get("group_id", type=int)
         student_id = request.args.get("student_id", type=int)
         date = request.args.get("date")
-        return duty_service.list_assignments(group_id=group_id, student_id=student_id, date=date)
+        page, per_page = get_pagination(default=50)
+        return duty_service.list_assignments(
+            group_id=group_id, student_id=student_id, date=date, page=page, per_page=per_page
+        )
 
     @requires_permission("class.edit")
     def post(self):

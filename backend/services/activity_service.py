@@ -20,7 +20,7 @@ class ActivityService:
                 return None
         return None
 
-    def list_activities(self, class_id=None, is_published=None):
+    def list_activities(self, class_id=None, is_published=None, page=None, per_page=None):
         query = Activity.query
         if class_id:
             query = query.filter_by(class_id=class_id)
@@ -31,7 +31,20 @@ class ActivityService:
                 query = query.filter(Activity.class_id.in_(allowed))
         if is_published is not None:
             query = query.filter_by(is_published=is_published)
-        activities = query.order_by(Activity.start_date.desc()).all()
+        query = query.order_by(Activity.start_date.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "activities": [self._build_activity_response(a) for a in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        activities = query.all()
         return {"success": True, "data": [self._build_activity_response(a) for a in activities]}
 
     def create_activity(self, data):

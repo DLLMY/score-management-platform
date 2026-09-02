@@ -1,6 +1,6 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 // 删除操作修复：404自动刷新列表 v2
 import {
   Plus,
@@ -33,6 +33,7 @@ import {
   ImprovementPlan,
   ImprovementPlanCreateInput,
 } from '../types';
+import { Pagination } from 'antd';
 
 interface GuideFormData {
   id: number | null;
@@ -98,6 +99,14 @@ function StudyGuidePage() {
   const [expandedGuide, setExpandedGuide] = useState<number | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
 
+  // M9 P1 服务端分页状态
+  const [guidePage, setGuidePage] = useState(1);
+  const [guideTotal, setGuideTotal] = useState(0);
+  const [guidePages, setGuidePages] = useState(1);
+  const [planPage, setPlanPage] = useState(1);
+  const [planTotal, setPlanTotal] = useState(0);
+  const [planPages, setPlanPages] = useState(1);
+
   const { showToast } = useStableToast();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
@@ -109,10 +118,16 @@ function StudyGuidePage() {
     refetch: fetchGuides,
   } = useListData<StudyGuide>({
     fetcher: async () => {
-      const data = await api.studyGuide.getGuides();
-      return Array.isArray(data) ? data : [];
+      const resp = await api.studyGuide.getGuides(undefined, undefined, {
+        page: guidePage,
+        per_page: 50,
+      });
+      setGuideTotal(resp.total);
+      setGuidePages(resp.pages);
+      return resp.guides || [];
     },
     debounceDelay: 0,
+    deps: [guidePage],
     onError: (e) => {
       logger.error('获取指导文章失败:', e);
       showToast('error', '获取指导文章失败');
@@ -124,10 +139,16 @@ function StudyGuidePage() {
     refetch: fetchPlans,
   } = useListData<ImprovementPlan>({
     fetcher: async () => {
-      const data = await api.studyGuide.getPlans();
-      return Array.isArray(data) ? data : [];
+      const resp = await api.studyGuide.getPlans(undefined, {
+        page: planPage,
+        per_page: 50,
+      });
+      setPlanTotal(resp.total);
+      setPlanPages(resp.pages);
+      return resp.plans || [];
     },
     debounceDelay: 0,
+    deps: [planPage],
     onError: (e) => {
       logger.error('获取改进计划失败:', e);
       showToast('error', '获取改进计划失败');
@@ -135,6 +156,12 @@ function StudyGuidePage() {
   });
   // 合并 loading：原实现 Promise.all 双拉取，两个 hook 任一加载中即显示占位
   const isLoading = guidesLoading || plansLoading;
+
+  // M9 P1：切换班级筛选时重置两个分页游标
+  useEffect(() => {
+    setGuidePage(1);
+    setPlanPage(1);
+  }, [filterClassId]);
 
   const filteredGuides = guides.filter((g) => {
     const matchClass = filterClassId === 0 || g.class_id === filterClassId;
@@ -510,7 +537,8 @@ function StudyGuidePage() {
               onAction={handleOpenGuideCreate}
             />
           ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               {filteredGuides.map((guide, index) => (
                 <div
                   key={guide.id}
@@ -585,6 +613,18 @@ function StudyGuidePage() {
                 </div>
               ))}
             </div>
+            {guideTotal > 50 && (
+              <div className='mt-5 flex justify-center'>
+                <Pagination
+                  current={guidePage}
+                  total={guideTotal}
+                  pageSize={50}
+                  onChange={(p) => setGuidePage(p)}
+                  showSizeChanger={false}
+                />
+              </div>
+            )}
+            </>
           )
         ) : filteredPlans.length === 0 ? (
           <EmptyState
@@ -595,7 +635,8 @@ function StudyGuidePage() {
             onAction={handleOpenPlanCreate}
           />
         ) : (
-          <div className='space-y-4'>
+          <>
+            <div className='space-y-4'>
             {filteredPlans.map((plan, index) => (
               <div
                 key={plan.id}
@@ -710,6 +751,18 @@ function StudyGuidePage() {
               </div>
             ))}
           </div>
+          {planTotal > 50 && (
+            <div className='mt-5 flex justify-center'>
+              <Pagination
+                current={planPage}
+                total={planTotal}
+                pageSize={50}
+                onChange={(p) => setPlanPage(p)}
+                showSizeChanger={false}
+              />
+            </div>
+          )}
+          </>
         )}
       </div>
 

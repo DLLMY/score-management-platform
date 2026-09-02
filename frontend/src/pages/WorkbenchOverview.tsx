@@ -235,11 +235,11 @@ function WorkbenchOverview() {
         ]);
         setMetrics({
           attendance: attendance.status === 'fulfilled' ? attendance.value : null,
-          homework: homework.status === 'fulfilled' ? homework.value : null,
-          alerts: alerts.status === 'fulfilled' ? alerts.value : null,
+          homework: homework.status === 'fulfilled' ? homework.value.assignments : null,
+          alerts: alerts.status === 'fulfilled' ? alerts.value.alerts : null,
           groups: groups.status === 'fulfilled' ? groups.value : null,
-          activityCount: activity.status === 'fulfilled' ? activity.value.length : null,
-          dutyCount: duty.status === 'fulfilled' ? duty.value.length : null,
+          activityCount: activity.status === 'fulfilled' ? activity.value.activities.length : null,
+          dutyCount: duty.status === 'fulfilled' ? duty.value.groups.length : null,
         });
       } finally {
         setLoading(false);

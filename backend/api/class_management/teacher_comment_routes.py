@@ -3,6 +3,7 @@ from flask import request
 from services.teacher_comment_service import teacher_comment_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_teacher_comment = Namespace("teacher_comment", description="班主任评语管理", path="/teacher-comments")
 
@@ -34,8 +35,9 @@ class TeacherCommentList(Resource):
         class_id = request.args.get("class_id", type=int)
         student_id = request.args.get("student_id", type=int)
         term = request.args.get("term")
+        page, per_page = get_pagination(default=50)
         return teacher_comment_service.list_comments(
-            class_id=class_id, student_id=student_id, term=term
+            class_id=class_id, student_id=student_id, term=term, page=page, per_page=per_page
         )
 
     @ns_teacher_comment.expect(comment_model)

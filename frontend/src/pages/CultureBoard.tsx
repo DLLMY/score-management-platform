@@ -1,6 +1,6 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus,
   Edit2,
@@ -24,6 +24,7 @@ import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
 import { useListData, useClientFilter } from '../hooks';
+import { Pagination } from 'antd';
 import { CultureRecord, CultureCreateInput } from '../types';
 import { ClassSelect } from '../components/form/EntitySelect';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
@@ -80,6 +81,10 @@ function CultureBoard() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [formData, setFormData] = useState<CultureFormData>(defaultForm);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  // M9 P1: 文化记录列表服务端分页状态
+  const [culturePage, setCulturePage] = useState(1);
+  const [cultureTotal, setCultureTotal] = useState(0);
+  const [culturePages, setCulturePages] = useState(1);
 
   const { showToast } = useStableToast();
   const confirmFn = useConfirm();
@@ -92,15 +97,27 @@ function CultureBoard() {
     refetch: fetchRecords,
   } = useListData<CultureRecord>({
     fetcher: async () => {
-      const data = await api.culture.getAll();
-      return Array.isArray(data) ? data : [];
+      // M9 P1: 服务端分页信封（records 资源 key）
+      const resp = await api.culture.getAll(undefined, undefined, {
+        page: culturePage,
+        per_page: 50,
+      });
+      setCultureTotal(resp.total);
+      setCulturePages(resp.pages);
+      return resp.records || [];
     },
+    deps: [culturePage],
     debounceDelay: 0,
     onError: (e) => {
       logger.error('获取班级文化记录失败:', e);
       showToast('error', '获取班级文化记录失败');
     },
   });
+
+  // M9 P1: 切换班级筛选时重置文化记录分页到首页
+  useEffect(() => {
+    setCulturePage(1);
+  }, [filterClassId]);
 
   const categories = ['全部', '标语', '规则', '荣誉', '其他'];
 
@@ -443,6 +460,18 @@ function CultureBoard() {
           </div>
         )}
       </div>
+
+      {cultureTotal > 50 && (
+        <div className='mt-5 flex justify-center'>
+          <Pagination
+            current={culturePage}
+            total={cultureTotal}
+            pageSize={50}
+            onChange={(p) => setCulturePage(p)}
+            showSizeChanger={false}
+          />
+        </div>
+      )}
 
       {showModal && (
         <div

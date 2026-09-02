@@ -3,6 +3,7 @@ from flask import request
 from services.homework_service import homework_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_homework = Namespace("homework", description="作业检查管理")
 
@@ -49,10 +50,13 @@ class HomeworkList(Resource):
         class_id = request.args.get("class_id", type=int)
         subject_id = request.args.get("subject_id", type=int)
         is_completed = request.args.get("is_completed")
+        page, per_page = get_pagination(default=50)
         return homework_service.list_assignments(
             class_id=class_id,
             subject_id=subject_id,
             is_completed=is_completed,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_homework.expect(homework_model)

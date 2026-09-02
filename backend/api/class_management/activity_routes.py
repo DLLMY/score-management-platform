@@ -3,6 +3,7 @@ from flask import request
 from services.activity_service import activity_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_activity = Namespace("activity", description="文体活动管理")
 
@@ -42,9 +43,12 @@ class ActivityList(Resource):
     def get(self):
         class_id = request.args.get("class_id", type=int)
         is_published = request.args.get("is_published")
+        page, per_page = get_pagination(default=50)
         return activity_service.list_activities(
             class_id=class_id,
             is_published=is_published,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_activity.expect(activity_model)

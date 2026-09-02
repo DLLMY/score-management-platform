@@ -26,6 +26,7 @@ import { ToggleSwitch } from '../components/form/ToggleSwitch';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { DateRangeField, EmptyState, LoadingSpinner } from '../components';
 import { useClientFilter } from '../hooks';
+import { Pagination } from 'antd';
 
 interface ActivityFormData {
   id: number | null;
@@ -53,6 +54,10 @@ const defaultForm: ActivityFormData = {
 
 function ActivityManage() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  // M9 P1: 活动列表服务端分页状态
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activityPages, setActivityPages] = useState(1);
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
   // 弹窗表单绑定班级：页面本地，与视图筛选严格分离
@@ -74,15 +79,20 @@ function ActivityManage() {
   const fetchActivities = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.activity.getAll();
-      setActivities(Array.isArray(data) ? data : []);
+      const resp = await api.activity.getAll(undefined, undefined, {
+        page: activityPage,
+        per_page: 50,
+      });
+      setActivities(resp.activities || []);
+      setActivityTotal(resp.total);
+      setActivityPages(resp.pages);
     } catch (error) {
       logger.error('获取活动列表失败:', error);
       showToast('error', getErrMsg(error, '获取活动列表失败'));
     } finally {
       setIsLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, activityPage]);
 
   useEffect(() => {
     fetchActivities();
@@ -435,6 +445,17 @@ function ActivityManage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {activityTotal > 50 && (
+          <div className='mt-5 flex justify-center'>
+            <Pagination
+              current={activityPage}
+              total={activityTotal}
+              pageSize={50}
+              onChange={(p) => setActivityPage(p)}
+              showSizeChanger={false}
+            />
           </div>
         )}
       </div>

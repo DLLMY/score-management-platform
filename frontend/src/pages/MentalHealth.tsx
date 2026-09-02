@@ -1,6 +1,7 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Pagination } from 'antd';
 import {
   Brain,
   Plus,
@@ -55,6 +56,13 @@ function MentalHealth() {
   const [errors, setErrors] = useState<Partial<Record<keyof RecordFormData, string>>>({});
   const [activeTab, setActiveTab] = useState<'records' | 'alerts'>('records');
   const [submitting, setSubmitting] = useState<boolean>(false);
+  // M9 P1: 服务端分页状态（记录列表 + 预警列表）
+  const [recordPage, setRecordPage] = useState(1);
+  const [recordTotal, setRecordTotal] = useState(0);
+  const [recordPages, setRecordPages] = useState(1);
+  const [alertPage, setAlertPage] = useState(1);
+  const [alertTotal, setAlertTotal] = useState(0);
+  const [alertPages, setAlertPages] = useState(1);
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   // 心理健康属隐私数据，筛选范围由后端 class_id 隔离（见 mental_health_service.list_records）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
@@ -63,8 +71,17 @@ function MentalHealth() {
     loading: isLoading,
     refetch: fetchRecords,
   } = useListData<MentalHealthRecord>({
-    fetcher: () => api.mentalHealth.getRecords(undefined, filterClassId || undefined),
-    deps: [filterClassId],
+    fetcher: async () => {
+      // M9 P1: 服务端分页信封（records 资源 key）
+      const resp = await api.mentalHealth.getRecords(undefined, filterClassId || undefined, {
+        page: recordPage,
+        per_page: 50,
+      });
+      setRecordTotal(resp.total);
+      setRecordPages(resp.pages);
+      return resp.records || [];
+    },
+    deps: [filterClassId, recordPage],
     debounceDelay: 0,
     onError: (e) => {
       logger.error('获取心理健康记录失败:', e);
@@ -74,18 +91,32 @@ function MentalHealth() {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const data = await api.mentalHealth.getAlerts(undefined, undefined, filterClassId || undefined);
-      setAlerts(data || []);
+      // M9 P1: 服务端分页信封（alerts 资源 key）
+      const resp = await api.mentalHealth.getAlerts(
+        undefined,
+        undefined,
+        filterClassId || undefined,
+        { page: alertPage, per_page: 50 }
+      );
+      setAlerts(resp.alerts || []);
+      setAlertTotal(resp.total);
+      setAlertPages(resp.pages);
     } catch (error) {
       logger.error('获取预警列表失败:', error);
       setAlerts(null); // 加载失败：不伪装成"已处理"或"无预警"
       showToast('error', getErrMsg(error, '获取预警列表失败，请稍后重试'));
     }
-  }, [showToast, filterClassId]);
+  }, [showToast, filterClassId, alertPage]);
 
   useEffect(() => {
     fetchAlerts();
   }, [fetchAlerts]);
+
+  // M9 P1: 切换班级筛选时重置记录/预警分页到首页
+  useEffect(() => {
+    setRecordPage(1);
+    setAlertPage(1);
+  }, [filterClassId]);
 
   const filteredRecords = useClientFilter(
     records,
@@ -440,6 +471,17 @@ function MentalHealth() {
                   onAction: handleOpenForm,
                 }}
               />
+              {recordTotal > 50 && (
+                <div className='mt-4 flex justify-center'>
+                  <Pagination
+                    current={recordPage}
+                    total={recordTotal}
+                    pageSize={50}
+                    onChange={(p) => setRecordPage(p)}
+                    showSizeChanger={false}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div>
@@ -532,6 +574,17 @@ function MentalHealth() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+                {alertTotal > 50 && (
+                  <div className='mt-4 flex justify-center'>
+                    <Pagination
+                      current={alertPage}
+                      total={alertTotal}
+                      pageSize={50}
+                      onChange={(p) => setAlertPage(p)}
+                      showSizeChanger={false}
+                    />
                   </div>
                 )}
               </div>

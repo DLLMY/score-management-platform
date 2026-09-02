@@ -12,6 +12,7 @@ import {
   DevicePaginatedResponse,
   WOLDevice,
   WOLDevicePaginatedResponse,
+  ResourceList,
   User,
   UserCreateInput,
   UserUpdateInput,
@@ -2658,10 +2659,10 @@ export interface Api {
   };
   // 值日生表
   duty: {
-    getAll: (class_id?: number) => Promise<DutyGroup[]>;
+    getAll: (class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'groups', DutyGroup>>;
     createGroup: (data: DutyGroupCreateInput) => Promise<DutyGroup>;
     deleteGroup: (id: number) => Promise<void>;
-    getAssignments: (group_id?: number) => Promise<DutyAssignment[]>;
+    getAssignments: (group_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'assignments', DutyAssignment>>;
     assignDuty: (data: DutyAssignment) => Promise<DutyAssignment>;
     markComplete: (assignmentId: number) => Promise<void>;
     rotate: (class_id: number, period?: string) => Promise<{ rotated_count: number }>;
@@ -2677,11 +2678,11 @@ export interface Api {
   };
   // 家长联系
   parent: {
-    getAll: (student_id?: number, class_id?: number) => Promise<ParentContact[]>;
+    getAll: (student_id?: number, class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'contacts', ParentContact>>;
     create: (data: ParentContactCreateInput) => Promise<ParentContact>;
     update: (id: number, data: Partial<ParentContactCreateInput>) => Promise<ParentContact>;
     delete: (id: number) => Promise<void>;
-    getContactLogs: (parentId: number) => Promise<ContactLog[]>;
+    getContactLogs: (parentId: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'logs', ContactLog>>;
     addContactLog: (
       parentId: number,
       data: { contact_type: string; content?: string }
@@ -2690,7 +2691,7 @@ export interface Api {
   };
   // 作业检查
   homework: {
-    getAll: (class_id?: number, subjectId?: number) => Promise<HomeworkAssignment[]>;
+    getAll: (class_id?: number, subjectId?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'assignments', HomeworkAssignment>>;
     getById: (id: number) => Promise<HomeworkAssignment>;
     create: (data: HomeworkCreateInput) => Promise<HomeworkAssignment>;
     update: (id: number, data: HomeworkCreateInput) => Promise<HomeworkAssignment>;
@@ -2700,11 +2701,11 @@ export interface Api {
   };
   // 考勤管理
   attendance: {
-    getAll: (class_id?: number, student_id?: number, date?: string) => Promise<Attendance[]>;
+    getAll: (class_id?: number, student_id?: number, date?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'records', Attendance>>;
     record: (data: AttendanceRecordInput) => Promise<Attendance>;
     batchRecord: (records: AttendanceRecordInput[]) => Promise<{ count: number }>;
     getStats: (class_id: number, startDate?: string, endDate?: string) => Promise<AttendanceStats>;
-    getLeaves: (student_id?: number, status?: string) => Promise<LeaveApplication[]>;
+    getLeaves: (student_id?: number, status?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'leaves', LeaveApplication>>;
     applyLeave: (data: LeaveApplyInput) => Promise<LeaveApplication>;
     approveLeave: (leaveId: number, approve?: boolean) => Promise<void>;
   };
@@ -2721,21 +2722,21 @@ export interface Api {
   };
   // 心理健康
   mentalHealth: {
-    getRecords: (student_id?: number, class_id?: number) => Promise<MentalHealthRecord[]>;
+    getRecords: (student_id?: number, class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'records', MentalHealthRecord>>;
     createRecord: (data: MentalHealthRecordCreateInput) => Promise<MentalHealthRecord>;
-    getAlerts: (student_id?: number, isResolved?: boolean, class_id?: number) => Promise<MentalHealthAlert[]>;
+    getAlerts: (student_id?: number, isResolved?: boolean, class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'alerts', MentalHealthAlert>>;
     resolveAlert: (alertId: number) => Promise<void>;
   };
   // 班主任评语
   teacherComment: {
-    getAll: (class_id?: number, student_id?: number, term?: string) => Promise<TeacherComment[]>;
+    getAll: (class_id?: number, student_id?: number, term?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'comments', TeacherComment>>;
     create: (data: TeacherCommentCreateInput) => Promise<TeacherComment>;
     update: (id: number, data: Partial<TeacherCommentCreateInput>) => Promise<TeacherComment>;
     delete: (id: number) => Promise<void>;
   };
   // 文体活动
   activity: {
-    getAll: (class_id?: number, isPublished?: boolean) => Promise<Activity[]>;
+    getAll: (class_id?: number, isPublished?: boolean, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'activities', Activity>>;
     getById: (id: number) => Promise<Activity>;
     create: (data: ActivityCreateInput) => Promise<Activity>;
     update: (id: number, data: Partial<ActivityCreateInput>) => Promise<Activity>;
@@ -2745,18 +2746,18 @@ export interface Api {
   };
   // 班级文化
   culture: {
-    getAll: (class_id?: number, category?: string) => Promise<CultureRecord[]>;
+    getAll: (class_id?: number, category?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'records', CultureRecord>>;
     create: (data: CultureCreateInput) => Promise<CultureRecord>;
     update: (id: number, data: Partial<CultureCreateInput>) => Promise<CultureRecord>;
     delete: (id: number) => Promise<void>;
   };
   // 学法指导
   studyGuide: {
-    getGuides: (class_id?: number, guideType?: string) => Promise<StudyGuide[]>;
+    getGuides: (class_id?: number, guideType?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'guides', StudyGuide>>;
     createGuide: (data: StudyGuideCreateInput) => Promise<StudyGuide>;
     updateGuide: (id: number, data: StudyGuideCreateInput) => Promise<StudyGuide>;
     deleteGuide: (id: number) => Promise<void>;
-    getPlans: (student_id?: number) => Promise<ImprovementPlan[]>;
+    getPlans: (student_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'plans', ImprovementPlan>>;
     createPlan: (data: ImprovementPlanCreateInput) => Promise<ImprovementPlan>;
     updatePlan: (id: number, data: ImprovementPlanCreateInput) => Promise<ImprovementPlan>;
     deletePlan: (id: number) => Promise<void>;
@@ -5895,10 +5896,12 @@ const api: Api = {
       }) as Promise<void>,
   },
   duty: {
-    getAll: (class_id?: number) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      return request(`/api/duty/groups?${params.toString()}`) as Promise<DutyGroup[]>;
+    getAll: (class_id?: number, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/duty/groups?${sp.toString()}`) as Promise<ResourceList<'groups', DutyGroup>>;
     },
     createGroup: (data) =>
       request('/api/duty/groups', {
@@ -5907,10 +5910,14 @@ const api: Api = {
       }) as Promise<DutyGroup>,
     deleteGroup: (id) => request(`/api/duty/groups/${id}`, { method: 'DELETE' }) as Promise<void>,
     // S3: 拉取值日任务（支持按组过滤），DutyRoster 首屏数据源
-    getAssignments: (group_id?: number) => {
-      const params = new URLSearchParams();
-      if (group_id) params.append('group_id', String(group_id));
-      return request(`/api/duty/assignments?${params.toString()}`) as Promise<DutyAssignment[]>;
+    getAssignments: (group_id?: number, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (group_id) sp.append('group_id', String(group_id));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/duty/assignments?${sp.toString()}`) as Promise<
+        ResourceList<'assignments', DutyAssignment>
+      >;
     },
     assignDuty: (data) =>
       request('/api/duty/assignments', {
@@ -5958,11 +5965,13 @@ const api: Api = {
     delete: (id) => request(`/api/committee/members/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   parent: {
-    getAll: (student_id?: number, class_id?: number) => {
-      const params = new URLSearchParams();
-      if (student_id) params.append('student_id', String(student_id));
-      if (class_id) params.append('class_id', String(class_id));
-      return request(`/api/parent/contacts?${params.toString()}`) as Promise<ParentContact[]>;
+    getAll: (student_id?: number, class_id?: number, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (student_id) sp.append('student_id', String(student_id));
+      if (class_id) sp.append('class_id', String(class_id));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/parent/contacts?${sp.toString()}`) as Promise<ResourceList<'contacts', ParentContact>>;
     },
     create: (data) =>
       request('/api/parent/contacts', {
@@ -5975,8 +5984,12 @@ const api: Api = {
         body: JSON.stringify(data),
       }) as Promise<ParentContact>,
     delete: (id) => request(`/api/parent/contacts/${id}`, { method: 'DELETE' }) as Promise<void>,
-    getContactLogs: (parentId) =>
-      request(`/api/parent/logs?parent_id=${parentId}`) as Promise<ContactLog[]>,
+    getContactLogs: (parentId, params?: { page?: number; per_page?: number }) =>
+      request(
+        `/api/parent/logs?parent_id=${parentId}${
+          params?.page ? `&page=${params.page}&per_page=${params.per_page ?? 50}` : ''
+        }`
+      ) as Promise<ResourceList<'logs', ContactLog>>,
     addContactLog: (parentId, data) =>
       request('/api/parent/logs', {
         method: 'POST',
@@ -5988,12 +6001,14 @@ const api: Api = {
       }) as Promise<void>,
   },
   homework: {
-    getAll: (class_id?: number, subjectId?: number) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      if (subjectId) params.append('subject_id', String(subjectId));
-      return request(`/api/homework/assignments?${params.toString()}`) as Promise<
-        HomeworkAssignment[]
+    getAll: (class_id?: number, subjectId?: number, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (subjectId) sp.append('subject_id', String(subjectId));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/homework/assignments?${sp.toString()}`) as Promise<
+        ResourceList<'assignments', HomeworkAssignment>
       >;
     },
     getById: (id) => request(`/api/homework/assignments/${id}`) as Promise<HomeworkAssignment>,
@@ -6021,12 +6036,14 @@ const api: Api = {
       }) as Promise<void>,
   },
   attendance: {
-    getAll: (class_id?, student_id?, date?) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      if (student_id) params.append('student_id', String(student_id));
-      if (date) params.append('date', date);
-      return request(`/api/attendance/records?${params.toString()}`) as Promise<Attendance[]>;
+    getAll: (class_id?, student_id?, date?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (student_id) sp.append('student_id', String(student_id));
+      if (date) sp.append('date', date);
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/attendance/records?${sp.toString()}`) as Promise<ResourceList<'records', Attendance>>;
     },
     record: (data) =>
       request('/api/attendance/records', {
@@ -6045,11 +6062,13 @@ const api: Api = {
       if (endDate) params.append('end_date', endDate);
       return request(`/api/attendance/stats?${params.toString()}`) as Promise<AttendanceStats>;
     },
-    getLeaves: (student_id?, status?) => {
-      const params = new URLSearchParams();
-      if (student_id) params.append('student_id', String(student_id));
-      if (status) params.append('status', status);
-      return request(`/api/attendance/leaves?${params.toString()}`) as Promise<LeaveApplication[]>;
+    getLeaves: (student_id?, status?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (student_id) sp.append('student_id', String(student_id));
+      if (status) sp.append('status', status);
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/attendance/leaves?${sp.toString()}`) as Promise<ResourceList<'leaves', LeaveApplication>>;
     },
     applyLeave: (data) =>
       request('/api/attendance/leaves', {
@@ -6097,12 +6116,14 @@ const api: Api = {
       }) as Promise<void>,
   },
   mentalHealth: {
-    getRecords: (student_id?, class_id?) => {
-      const params = new URLSearchParams();
-      if (student_id) params.append('student_id', String(student_id));
-      if (class_id) params.append('class_id', String(class_id));
-      return request(`/api/mental-health/records?${params.toString()}`) as Promise<
-        MentalHealthRecord[]
+    getRecords: (student_id?, class_id?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (student_id) sp.append('student_id', String(student_id));
+      if (class_id) sp.append('class_id', String(class_id));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/mental-health/records?${sp.toString()}`) as Promise<
+        ResourceList<'records', MentalHealthRecord>
       >;
     },
     createRecord: (data) =>
@@ -6110,13 +6131,15 @@ const api: Api = {
         method: 'POST',
         body: JSON.stringify(data),
       }) as Promise<MentalHealthRecord>,
-    getAlerts: (student_id?, isResolved?, class_id?) => {
-      const params = new URLSearchParams();
-      if (student_id) params.append('student_id', String(student_id));
-      if (isResolved !== undefined) params.append('is_resolved', String(isResolved));
-      if (class_id) params.append('class_id', String(class_id));
-      return request(`/api/mental-health/alerts?${params.toString()}`) as Promise<
-        MentalHealthAlert[]
+    getAlerts: (student_id?, isResolved?, class_id?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (student_id) sp.append('student_id', String(student_id));
+      if (isResolved !== undefined) sp.append('is_resolved', String(isResolved));
+      if (class_id) sp.append('class_id', String(class_id));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/mental-health/alerts?${sp.toString()}`) as Promise<
+        ResourceList<'alerts', MentalHealthAlert>
       >;
     },
     resolveAlert: (alertId) =>
@@ -6125,12 +6148,14 @@ const api: Api = {
       }) as Promise<void>,
   },
   teacherComment: {
-    getAll: (class_id?, student_id?, term?) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      if (student_id) params.append('student_id', String(student_id));
-      if (term) params.append('term', term);
-      return request(`/api/teacher-comments?${params.toString()}`) as Promise<TeacherComment[]>;
+    getAll: (class_id?, student_id?, term?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (student_id) sp.append('student_id', String(student_id));
+      if (term) sp.append('term', term);
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/teacher-comments?${sp.toString()}`) as Promise<ResourceList<'comments', TeacherComment>>;
     },
     create: (data) =>
       request('/api/teacher-comments', {
@@ -6146,11 +6171,13 @@ const api: Api = {
       request(`/api/teacher-comments/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   activity: {
-    getAll: (class_id?, isPublished?) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      if (isPublished !== undefined) params.append('is_published', String(isPublished));
-      return request(`/api/activity?${params.toString()}`) as Promise<Activity[]>;
+    getAll: (class_id?, isPublished?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (isPublished !== undefined) sp.append('is_published', String(isPublished));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/activity?${sp.toString()}`) as Promise<ResourceList<'activities', Activity>>;
     },
     getById: (id) => request(`/api/activity/${id}`) as Promise<Activity>,
     create: (data) =>
@@ -6176,11 +6203,13 @@ const api: Api = {
       }) as Promise<void>,
   },
   culture: {
-    getAll: (class_id?, category?) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      if (category) params.append('category', category);
-      return request(`/api/culture/records?${params.toString()}`) as Promise<CultureRecord[]>;
+    getAll: (class_id?, category?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (category) sp.append('category', category);
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/culture/records?${sp.toString()}`) as Promise<ResourceList<'records', CultureRecord>>;
     },
     create: (data) =>
       request('/api/culture/records', {
@@ -6195,11 +6224,13 @@ const api: Api = {
     delete: (id) => request(`/api/culture/records/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   studyGuide: {
-    getGuides: (class_id?, guideType?) => {
-      const params = new URLSearchParams();
-      if (class_id) params.append('class_id', String(class_id));
-      if (guideType) params.append('guide_type', guideType);
-      return request(`/api/study-guide/guides?${params.toString()}`) as Promise<StudyGuide[]>;
+    getGuides: (class_id?, guideType?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (class_id) sp.append('class_id', String(class_id));
+      if (guideType) sp.append('guide_type', guideType);
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/study-guide/guides?${sp.toString()}`) as Promise<ResourceList<'guides', StudyGuide>>;
     },
     createGuide: (data) =>
       request('/api/study-guide/guides', {
@@ -6213,10 +6244,12 @@ const api: Api = {
       }) as Promise<StudyGuide>,
     deleteGuide: (id) =>
       request(`/api/study-guide/guides/${id}`, { method: 'DELETE' }) as Promise<void>,
-    getPlans: (student_id?) => {
-      const params = new URLSearchParams();
-      if (student_id) params.append('student_id', String(student_id));
-      return request(`/api/study-guide/plans?${params.toString()}`) as Promise<ImprovementPlan[]>;
+    getPlans: (student_id?, params?: { page?: number; per_page?: number }) => {
+      const sp = new URLSearchParams();
+      if (student_id) sp.append('student_id', String(student_id));
+      if (params?.page) sp.append('page', String(params.page));
+      if (params?.per_page) sp.append('per_page', String(params.per_page));
+      return request(`/api/study-guide/plans?${sp.toString()}`) as Promise<ResourceList<'plans', ImprovementPlan>>;
     },
     createPlan: (data) =>
       request('/api/study-guide/plans', {

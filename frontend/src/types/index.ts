@@ -424,6 +424,23 @@ export interface WOLDevicePaginatedResponse {
 }
 
 // ============================================
+// M9 P1 资源语义 key 分页信封
+// 后端 service 在收到 page+per_page 时返回 data={<资源key>: T[], total, page, per_page, pages}，
+// 前端经 unwrapEnvelope 取到的即为此内层对象。资源 key 与 P0 的 devices/users 一致（records/groups/...）。
+// ============================================
+
+/** 分页元数据（与后端信封一致：pages 非 total_pages） */
+export interface PaginatedMeta {
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+/** 资源语义 key 分页信封：{ <K>: T[] } 交 PaginatedMeta。例：ResourceList<'groups', DutyGroup> → { groups: DutyGroup[]; total; page; per_page; pages } */
+export type ResourceList<K extends string, T> = { [P in K]: T[] } & PaginatedMeta;
+
+// ============================================
 // WebSocket事件类型
 // ============================================
 

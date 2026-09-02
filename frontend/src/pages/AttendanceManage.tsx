@@ -1,6 +1,7 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Pagination } from 'antd';
 import {
   Calendar,
   UserCheck,
@@ -79,9 +80,16 @@ function AttendanceManage() {
   const { run: runSubmit } = useSubmitGuard();
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
   const [leavesError, setLeavesError] = useState(false);
+  const [leavesTotal, setLeavesTotal] = useState(0);
+  const [leavesPage, setLeavesPage] = useState(1);
+  const [leavesPages, setLeavesPages] = useState(1);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
+  // M9 P1: 服务端分页状态（考勤记录列表）
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [attendanceTotal, setAttendanceTotal] = useState(0);
+  const [attendancePages, setAttendancePages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showRecordModal, setShowRecordModal] = useState<boolean>(false);
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
@@ -97,12 +105,19 @@ function AttendanceManage() {
     refetch: fetchAttendances,
   } = useListData<Attendance>({
     fetcher: async () => {
-      // 后端 /api/attendance 支持 class_id 过滤，直接服务端筛选
-      const data = await api.attendance.getAll(filterClassId || undefined);
+      // 后端 /api/attendance 支持 class_id 过滤，直接服务端筛选（M9 P1 服务端分页信封）
+      const resp = await api.attendance.getAll(
+        filterClassId || undefined,
+        undefined,
+        undefined,
+        { page: attendancePage, per_page: 50 }
+      );
+      setAttendanceTotal(resp.total);
+      setAttendancePages(resp.pages);
       setRecordForm((prev) => (prev.class_id > 0 ? prev : { ...prev, class_id: 0 }));
-      return data || [];
+      return resp.records || [];
     },
-    deps: [filterClassId],
+    deps: [filterClassId, attendancePage],
     debounceDelay: 0,
     onError: (e) => {
       logger.error('获取考勤列表失败:', e);
@@ -169,19 +184,30 @@ function AttendanceManage() {
 
   const fetchLeaves = useCallback(async () => {
     try {
-      const data = await api.attendance.getLeaves();
-      setLeaves(data || []);
+      // M9 P1: 服务端分页信封（leaves 资源 key）
+      const resp = await api.attendance.getLeaves(undefined, undefined, {
+        page: leavesPage,
+        per_page: 50,
+      });
+      setLeaves(resp.leaves || []);
+      setLeavesTotal(resp.total);
+      setLeavesPages(resp.pages);
       setLeavesError(false);
     } catch (error) {
       logger.error('获取请假列表失败:', error);
       setLeavesError(true);
     }
-  }, []);
+  }, [leavesPage]);
 
   useEffect(() => {
     fetchStats();
     fetchLeaves();
   }, [fetchStats, fetchLeaves]);
+
+  // M9 P1: 切换班级筛选时重置考勤分页到首页，避免空页
+  useEffect(() => {
+    setAttendancePage(1);
+  }, [filterClassId]);
 
   const filteredAttendances = useClientFilter(
     attendances,
@@ -654,6 +680,17 @@ function AttendanceManage() {
                 ))
               )}
             </div>
+            {leavesTotal > 50 && (
+              <div className='px-5 py-4 flex justify-center border-t border-amber-100 dark:border-amber-900/50'>
+                <Pagination
+                  current={leavesPage}
+                  total={leavesTotal}
+                  pageSize={50}
+                  onChange={(p) => setLeavesPage(p)}
+                  showSizeChanger={false}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -700,6 +737,17 @@ function AttendanceManage() {
               title: '暂无考勤数据',
             }}
           />
+          {attendanceTotal > 50 && (
+            <div className='px-5 py-4 flex justify-center border-t border-slate-200/50 dark:border-slate-700/50'>
+              <Pagination
+                current={attendancePage}
+                total={attendanceTotal}
+                pageSize={50}
+                onChange={(p) => setAttendancePage(p)}
+                showSizeChanger={false}
+              />
+            </div>
+          )}
         </div>
       </div>
 

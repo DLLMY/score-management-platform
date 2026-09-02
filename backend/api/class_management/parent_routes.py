@@ -3,6 +3,7 @@ from flask import request
 from services.parent_service import parent_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_parent = Namespace("parent", description="家长联系管理")
 
@@ -14,7 +15,10 @@ class ParentContactList(Resource):
     def get(self):
         keyword = request.args.get("keyword", "")
         class_id = request.args.get("class_id", type=int)
-        return parent_service.list_contacts(class_id=class_id, keyword=keyword)
+        page, per_page = get_pagination(default=50)
+        return parent_service.list_contacts(
+            class_id=class_id, keyword=keyword, page=page, per_page=per_page
+        )
 
     @requires_permission("class.edit")
     def post(self):
@@ -58,7 +62,10 @@ class ContactLogList(Resource):
     def get(self):
         parent_id = request.args.get("parent_id", type=int)
         is_resolved = request.args.get("is_resolved")
-        return parent_service.list_contact_logs(parent_id=parent_id, is_resolved=is_resolved)
+        page, per_page = get_pagination(default=50)
+        return parent_service.list_contact_logs(
+            parent_id=parent_id, is_resolved=is_resolved, page=page, per_page=per_page
+        )
 
     @requires_permission("class.edit")
     def post(self):

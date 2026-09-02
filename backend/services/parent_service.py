@@ -5,7 +5,7 @@ from services.entity_names import names
 
 
 class ParentService:
-    def list_contacts(self, class_id=None, keyword=""):
+    def list_contacts(self, class_id=None, keyword="", page=None, per_page=None):
         query = ParentContact.query
         # 隐私隔离：非超管（班主任）只能看自己关联班级的学生家长，口径与 attendance 一致。
         # 注意：隔离过滤与显式 class_id 过滤都需 join User（ParentContact 无 class_id 字段），
@@ -31,6 +31,19 @@ class ParentService:
                     ParentContact.mother_phone.ilike(f"%{keyword}%"),
                 )
             )
+        query = query.order_by(ParentContact.id)
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "contacts": [self._build_contact_response(c) for c in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
         contacts = query.all()
         return {"success": True, "data": [self._build_contact_response(c) for c in contacts]}
 
@@ -73,7 +86,7 @@ class ParentService:
         db.session.commit()
         return {"success": True, "message": "删除成功"}
 
-    def list_contact_logs(self, parent_id=None, is_resolved=None):
+    def list_contact_logs(self, parent_id=None, is_resolved=None, page=None, per_page=None):
         query = ContactLog.query
         # 隐私隔离：日志经由其家长所属学生归属班级过滤，口径与 list_contacts 一致
         admin = get_current_admin()
@@ -91,7 +104,20 @@ class ParentService:
             query = query.filter_by(parent_id=parent_id)
         if is_resolved is not None:
             query = query.filter_by(is_resolved=is_resolved)
-        logs = query.order_by(ContactLog.contact_time.desc()).all()
+        query = query.order_by(ContactLog.contact_time.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "logs": [self._build_log_response(log) for log in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        logs = query.all()
         return {"success": True, "data": [self._build_log_response(log) for log in logs]}
 
     def create_contact_log(self, data):

@@ -3,6 +3,7 @@ from flask import request
 from services.mental_health_service import mental_health_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 # path 显式下沉到 Namespace：与 api_versioning 的 add_namespace(path="/mental-health") 一致，
 # 保证 tests/conftest.py 动态注册（add_namespace 不带 path）时 URL 仍为连字符 /mental-health。
@@ -34,7 +35,10 @@ class MentalHealthList(Resource):
     def get(self):
         student_id = request.args.get("student_id", type=int)
         class_id = request.args.get("class_id", type=int)
-        return mental_health_service.list_records(student_id=student_id, class_id=class_id)
+        page, per_page = get_pagination(default=50)
+        return mental_health_service.list_records(
+            student_id=student_id, class_id=class_id, page=page, per_page=per_page
+        )
 
     @ns_mental_health.expect(record_model)
     @requires_permission("mental_health.edit")
@@ -61,10 +65,13 @@ class MentalHealthAlerts(Resource):
         student_id = request.args.get("student_id", type=int)
         is_resolved = request.args.get("is_resolved")
         class_id = request.args.get("class_id", type=int)
+        page, per_page = get_pagination(default=50)
         return mental_health_service.list_alerts(
             student_id=student_id,
             is_resolved=is_resolved,
             class_id=class_id,
+            page=page,
+            per_page=per_page,
         )
 
 

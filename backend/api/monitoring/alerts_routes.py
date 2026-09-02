@@ -67,8 +67,9 @@ class AlertList(Resource):
         is_read = None
         if args["is_read"] is not None:
             is_read = args["is_read"].lower() == "true"
+        list_limit = min(int(args["limit"]), 200)
         alerts = alert_service.get_alerts(
-            limit=args["limit"],
+            limit=list_limit,
             offset=args["offset"],
             severity=args["severity"],
             is_read=is_read,

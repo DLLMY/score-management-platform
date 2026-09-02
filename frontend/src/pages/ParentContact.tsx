@@ -20,6 +20,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import api from '../services/api';
+import { Pagination } from 'antd';
 import type { ParentContact, ParentContactCreateInput, ContactLog } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
 import { useSubmitGuard } from '../hooks/useSubmitGuard';
@@ -70,6 +71,10 @@ const defaultLogForm: LogFormData = {
 
 function ParentContactPage() {
   const [contacts, setContacts] = useState<ParentContact[]>([]);
+  // M9 P1: 家长联系人列表服务端分页状态
+  const [contactPage, setContactPage] = useState(1);
+  const [contactTotal, setContactTotal] = useState(0);
+  const [contactPages, setContactPages] = useState(1);
   const [logs, setLogs] = useState<ContactLog[]>([]);
   const [selectedContact, setSelectedContact] = useState<ParentContact | null>(null);
   const [expandedContactId, setExpandedContactId] = useState<number | null>(null);
@@ -92,23 +97,28 @@ function ParentContactPage() {
     setIsLoading(true);
     try {
       // 后端 /api/parent/contacts 支持 class_id 过滤 + 教师班级隔离
-      const data = await api.parent.getAll(undefined, filterClassId || undefined);
-      setContacts(data || []);
+      const resp = await api.parent.getAll(undefined, filterClassId || undefined, {
+        page: contactPage,
+        per_page: 50,
+      });
+      setContacts(resp.contacts || []);
+      setContactTotal(resp.total);
+      setContactPages(resp.pages);
     } catch (error) {
       logger.error('获取家长联系人列表失败:', error);
       showToast('error', getErrMsg(error, '获取家长联系人列表失败'));
     } finally {
       setIsLoading(false);
     }
-  }, [showToast, filterClassId]);
+  }, [showToast, filterClassId, contactPage]);
 
   const fetchContactLogs = useCallback(
     async (parentId: number) => {
       try {
-        const data = await api.parent.getContactLogs(parentId);
+        const resp = await api.parent.getContactLogs(parentId);
         setLogs((prev) => {
           const filtered = prev.filter((l) => l.parent_id !== parentId);
-          return [...filtered, ...(data || [])];
+          return [...filtered, ...(resp.logs || [])];
         });
       } catch (error) {
         logger.error('获取联系日志失败:', error);
@@ -121,6 +131,11 @@ function ParentContactPage() {
   useEffect(() => {
     fetchContacts();
   }, [fetchContacts]);
+
+  // M9 P1: 切换班级筛选时重置家长联系人分页到首页
+  useEffect(() => {
+    setContactPage(1);
+  }, [filterClassId]);
 
   const toggleExpand = useCallback(
     async (contact: ParentContact) => {
@@ -524,6 +539,17 @@ function ParentContactPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {contactTotal > 50 && (
+          <div className='mt-5 flex justify-center'>
+            <Pagination
+              current={contactPage}
+              total={contactTotal}
+              pageSize={50}
+              onChange={(p) => setContactPage(p)}
+              showSizeChanger={false}
+            />
           </div>
         )}
       </div>

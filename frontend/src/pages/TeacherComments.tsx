@@ -1,6 +1,6 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   MessageSquareQuote,
   Plus,
@@ -12,6 +12,7 @@ import {
   Search,
 } from 'lucide-react';
 import api from '../services/api';
+import { Pagination } from 'antd';
 import type { TeacherComment, TeacherCommentCreateInput } from '../types';
 import { useStableToast } from '../hooks/useStableToast';
 import { useSubmitGuard } from '../hooks/useSubmitGuard';
@@ -55,13 +56,31 @@ function TeacherComments() {
   confirmRef.current = confirmFn;
   // 视图筛选班级：工作台级共享（0 = 全部班级）；评语属隐私数据，后端按班级隔离
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
+  // M9 P1: 评语列表服务端分页状态
+  const [commentPage, setCommentPage] = useState(1);
+  const [commentTotal, setCommentTotal] = useState(0);
+  const [commentPages, setCommentPages] = useState(1);
   const {
     data: comments,
     loading: isLoading,
     refetch: fetchComments,
   } = useListData<TeacherComment>({
-    fetcher: () => api.teacherComment.getAll(filterClassId || undefined),
-    deps: [filterClassId],
+    fetcher: async () => {
+      // M9 P1: 服务端分页信封（comments 资源 key）
+      const resp = await api.teacherComment.getAll(
+        filterClassId || undefined,
+        undefined,
+        undefined,
+        {
+          page: commentPage,
+          per_page: 50,
+        }
+      );
+      setCommentTotal(resp.total);
+      setCommentPages(resp.pages);
+      return resp.comments || [];
+    },
+    deps: [filterClassId, commentPage],
     debounceDelay: 0,
     onError: (e) => {
       logger.error('获取评语列表失败:', e);
@@ -74,6 +93,11 @@ function TeacherComments() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CommentFormData>(defaultForm);
   const [errors, setErrors] = useState<Partial<Record<keyof CommentFormData, string>>>({});
+
+  // M9 P1: 切换班级筛选时重置评语分页到首页
+  useEffect(() => {
+    setCommentPage(1);
+  }, [filterClassId]);
 
   const filteredComments = useClientFilter(
     comments,
@@ -348,6 +372,17 @@ function TeacherComments() {
             )}
           />
         </div>
+        {commentTotal > 50 && (
+          <div className='mt-5 flex justify-center'>
+            <Pagination
+              current={commentPage}
+              total={commentTotal}
+              pageSize={50}
+              onChange={(p) => setCommentPage(p)}
+              showSizeChanger={false}
+            />
+          </div>
+        )}
       </div>
 
       {showModal && (

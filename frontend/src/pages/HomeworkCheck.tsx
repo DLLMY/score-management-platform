@@ -23,6 +23,7 @@ import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
 import { HomeworkAssignment, HomeworkCreateInput } from '../types';
 import { ClassSelect, SubjectSelect } from '../components/form/EntitySelect';
 import { DataTable, StatCard } from '../components';
+import { Pagination } from 'antd';
 import type { ColumnType } from '../components/data-display/DataTable';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 
@@ -53,6 +54,10 @@ function HomeworkCheck() {
   confirmRef.current = confirmFn;
   const { submitting, run: runSubmit } = useSubmitGuard();
   const [assignments, setAssignments] = useState<HomeworkAssignment[]>([]);
+  // M9 P1: 作业列表服务端分页状态
+  const [hwPage, setHwPage] = useState(1);
+  const [hwTotal, setHwTotal] = useState(0);
+  const [hwPages, setHwPages] = useState(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -65,19 +70,29 @@ function HomeworkCheck() {
     setIsLoading(true);
     try {
       // 后端 /api/homework 支持 class_id 过滤，直接服务端筛选
-      const data = await api.homework.getAll(filterClassId || undefined);
-      setAssignments(data || []);
+      const resp = await api.homework.getAll(filterClassId || undefined, undefined, {
+        page: hwPage,
+        per_page: 50,
+      });
+      setAssignments(resp.assignments || []);
+      setHwTotal(resp.total);
+      setHwPages(resp.pages);
     } catch (error) {
       logger.error('获取作业列表失败:', error);
       showToast('error', getErrMsg(error, '获取作业列表失败'));
     } finally {
       setIsLoading(false);
     }
-  }, [showToast, filterClassId]);
+  }, [showToast, filterClassId, hwPage]);
 
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
+
+  // M9 P1: 切换班级筛选时重置作业分页到首页
+  useEffect(() => {
+    setHwPage(1);
+  }, [filterClassId]);
 
   const filteredAssignments = useClientFilter(
     assignments,
@@ -401,6 +416,17 @@ function HomeworkCheck() {
             )}
           />
         </div>
+        {hwTotal > 50 && (
+          <div className='mt-5 flex justify-center'>
+            <Pagination
+              current={hwPage}
+              total={hwTotal}
+              pageSize={50}
+              onChange={(p) => setHwPage(p)}
+              showSizeChanger={false}
+            />
+          </div>
+        )}
       </div>
 
       {showModal && (

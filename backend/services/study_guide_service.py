@@ -11,7 +11,7 @@ from services.entity_names import names
 
 
 class StudyGuideService:
-    def list_guides(self, class_id=None, guide_type=None, is_published=True):
+    def list_guides(self, class_id=None, guide_type=None, is_published=True, page=None, per_page=None):
         query = StudyGuide.query
         if class_id:
             query = query.filter_by(class_id=class_id)
@@ -19,7 +19,20 @@ class StudyGuideService:
             query = query.filter_by(guide_type=guide_type)
         if is_published is not None:
             query = query.filter_by(is_published=is_published)
-        guides = query.order_by(StudyGuide.created_at.desc()).all()
+        query = query.order_by(StudyGuide.created_at.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "guides": [self._build_guide_response(g) for g in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        guides = query.all()
         return {"success": True, "data": [self._build_guide_response(g) for g in guides]}
 
     def create_guide(self, data):
@@ -56,7 +69,7 @@ class StudyGuideService:
         db.session.commit()
         return {"success": True, "message": "删除成功"}
 
-    def list_plans(self, student_id=None, plan_type=None, is_completed=None):
+    def list_plans(self, student_id=None, plan_type=None, is_completed=None, page=None, per_page=None):
         query = ImprovementPlan.query
         if student_id:
             query = query.filter_by(student_id=student_id)
@@ -64,7 +77,20 @@ class StudyGuideService:
             query = query.filter_by(plan_type=plan_type)
         if is_completed is not None:
             query = query.filter_by(is_completed=is_completed)
-        plans = query.order_by(ImprovementPlan.start_date.desc()).all()
+        query = query.order_by(ImprovementPlan.start_date.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "plans": [self._build_plan_response(p) for p in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        plans = query.all()
         return {"success": True, "data": [self._build_plan_response(p) for p in plans]}
 
     def create_plan(self, data):

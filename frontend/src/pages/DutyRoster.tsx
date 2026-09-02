@@ -1,6 +1,7 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Pagination } from 'antd';
 import {
   ClipboardList,
   Plus,
@@ -82,6 +83,10 @@ function DutyRosterPage() {
   const [assignmentForm, setAssignmentForm] = useState<AssignmentFormData>(defaultAssignmentForm);
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
+  // M9 P1: 值日组列表服务端分页状态
+  const [groupPage, setGroupPage] = useState(1);
+  const [groupTotal, setGroupTotal] = useState(0);
+  const [groupPages, setGroupPages] = useState(1);
   const { showToast } = useStableToast();
   const { run: runSubmit } = useSubmitGuard();
   const {
@@ -89,8 +94,17 @@ function DutyRosterPage() {
     loading: isLoading,
     refetch: fetchGroups,
   } = useListData<DutyGroup>({
-    fetcher: () => api.duty.getAll(filterClassId || undefined),
-    deps: [filterClassId],
+    fetcher: async () => {
+      // M9 P1: 服务端分页信封（groups 资源 key）
+      const resp = await api.duty.getAll(filterClassId || undefined, {
+        page: groupPage,
+        per_page: 50,
+      });
+      setGroupTotal(resp.total);
+      setGroupPages(resp.pages);
+      return resp.groups || [];
+    },
+    deps: [filterClassId, groupPage],
     debounceDelay: 0,
     onError: (e) => {
       logger.error('获取值日组列表失败:', e);
@@ -101,11 +115,11 @@ function DutyRosterPage() {
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
 
-  // S3: 值日任务数据源——首屏拉取，否则历史任务不可见、统计恒 0
+  // S3: 值日任务数据源——首屏拉取，否则历史任务不可见、统计恒 0（M9 P1 信封解包）
   const fetchAssignments = useCallback(async () => {
     try {
-      const data = await api.duty.getAssignments();
-      setAssignments(Array.isArray(data) ? data : []);
+      const resp = await api.duty.getAssignments();
+      setAssignments(Array.isArray(resp.assignments) ? resp.assignments : []);
     } catch (error) {
       logger.error('获取值日任务失败:', error);
       showToast('error', getErrMsg(error, '获取值日任务失败'));
@@ -115,6 +129,11 @@ function DutyRosterPage() {
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
+
+  // M9 P1: 切换班级筛选时重置值日组分页到首页
+  useEffect(() => {
+    setGroupPage(1);
+  }, [filterClassId]);
 
   // 新建默认带入当前筛选班级；未筛选（全部班级）时由 ClassSelect 自动默认第一项
   const handleOpenCreateGroup = useCallback(() => {
@@ -451,6 +470,17 @@ function DutyRosterPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {groupTotal > 50 && (
+          <div className='mt-5 flex justify-center'>
+            <Pagination
+              current={groupPage}
+              total={groupTotal}
+              pageSize={50}
+              onChange={(p) => setGroupPage(p)}
+              showSizeChanger={false}
+            />
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@ from flask import request
 from services.culture_service import culture_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_culture = Namespace("culture", description="班级文化管理")
 
@@ -35,10 +36,13 @@ class CultureList(Resource):
         class_id = request.args.get("class_id", type=int)
         category = request.args.get("category")
         is_active = request.args.get("is_active")
+        page, per_page = get_pagination(default=50)
         return culture_service.list_records(
             class_id=class_id,
             category=category,
             is_active=is_active,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_culture.expect(culture_model)

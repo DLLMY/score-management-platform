@@ -6,7 +6,7 @@ from services.entity_names import names
 
 
 class HomeworkService:
-    def list_assignments(self, class_id=None, subject_id=None, is_completed=None):
+    def list_assignments(self, class_id=None, subject_id=None, is_completed=None, page=None, per_page=None):
         query = HomeworkAssignment.query
         if class_id:
             query = query.filter_by(class_id=class_id)
@@ -19,7 +19,20 @@ class HomeworkService:
             query = query.filter_by(subject_id=subject_id)
         if is_completed is not None:
             query = query.filter_by(is_completed=is_completed)
-        assignments = query.order_by(HomeworkAssignment.due_date.desc()).all()
+        query = query.order_by(HomeworkAssignment.due_date.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "assignments": [self._build_assignment_response(a) for a in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        assignments = query.all()
         return {"success": True, "data": [self._build_assignment_response(a) for a in assignments]}
 
     def _parse_date(self, value):

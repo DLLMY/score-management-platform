@@ -3,6 +3,7 @@ from flask import request
 from services.attendance_service import attendance_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 ns_attendance = Namespace("attendance", description="考勤管理")
 
@@ -57,11 +58,14 @@ class AttendanceList(Resource):
         student_id = request.args.get("student_id", type=int)
         date = request.args.get("date")
         status = request.args.get("status")
+        page, per_page = get_pagination(default=50)
         return attendance_service.list_attendance(
             class_id=class_id,
             student_id=student_id,
             date=date,
             status=status,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_attendance.expect(attendance_model)
@@ -98,9 +102,12 @@ class LeaveList(Resource):
     def get(self):
         student_id = request.args.get("student_id", type=int)
         status = request.args.get("status")
+        page, per_page = get_pagination(default=50)
         return attendance_service.list_leaves(
             student_id=student_id,
             status=status,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_attendance.expect(leave_model)

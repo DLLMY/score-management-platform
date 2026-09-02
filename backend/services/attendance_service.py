@@ -8,7 +8,7 @@ from services.entity_names import names
 
 
 class AttendanceService:
-    def list_attendance(self, class_id=None, student_id=None, date=None, status=None):
+    def list_attendance(self, class_id=None, student_id=None, date=None, status=None, page=None, per_page=None):
         query = Attendance.query
         # R6 修复: 非超管按关联班级隔离（原无过滤 → 班主任可跨班读考勤）
         admin = get_current_admin()
@@ -26,7 +26,20 @@ class AttendanceService:
             query = query.filter_by(date=date)
         if status:
             query = query.filter_by(status=status)
-        records = query.order_by(Attendance.date.desc()).all()
+        query = query.order_by(Attendance.date.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "records": [self._build_attendance_response(r) for r in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        records = query.all()
         return {"success": True, "data": [self._build_attendance_response(r) for r in records]}
 
     def record_attendance(self, data):
@@ -85,7 +98,7 @@ class AttendanceService:
         db.session.commit()
         return {"success": True, "data": {"count": len(created)}}
 
-    def list_leaves(self, student_id=None, status=None):
+    def list_leaves(self, student_id=None, status=None, page=None, per_page=None):
         query = Approval.query.filter_by(type="leave")
         # R6 修复: 请假列表同样按班级隔离（join User 取 class_name）
         admin = get_current_admin()
@@ -101,7 +114,20 @@ class AttendanceService:
             query = query.filter_by(student_id=student_id)
         if status:
             query = query.filter_by(status=status)
-        leaves = query.order_by(Approval.start_date.desc()).all()
+        query = query.order_by(Approval.start_date.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "leaves": [self._build_leave_response(leave) for leave in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        leaves = query.all()
         return {"success": True, "data": [self._build_leave_response(leave) for leave in leaves]}
 
     def apply_leave(self, data):

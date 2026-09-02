@@ -6,7 +6,7 @@ from services.entity_names import names
 
 
 class MentalHealthService:
-    def list_records(self, student_id=None, class_id=None):
+    def list_records(self, student_id=None, class_id=None, page=None, per_page=None):
         query = MentalHealthRecord.query
         # 隐私隔离：非超管（班主任）只能看自己关联班级学生的心理记录，口径与 attendance 一致。
         # 隔离与显式 class_id 过滤合并为单次 join（MentalHealthRecord 无 class_id 字段），
@@ -25,7 +25,20 @@ class MentalHealthService:
                 query = query.filter(User.class_info_id == class_id)
         if student_id:
             query = query.filter_by(student_id=student_id)
-        records = query.order_by(MentalHealthRecord.created_at.desc()).all()
+        query = query.order_by(MentalHealthRecord.created_at.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "records": [self._build_record_response(r) for r in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        records = query.all()
         return {"success": True, "data": [self._build_record_response(r) for r in records]}
 
     def create_record(self, data):
@@ -43,7 +56,7 @@ class MentalHealthService:
         self._check_and_create_alerts(record)
         return {"success": True, "data": self._build_record_response(record)}, 201
 
-    def list_alerts(self, student_id=None, is_resolved=None, class_id=None):
+    def list_alerts(self, student_id=None, is_resolved=None, class_id=None, page=None, per_page=None):
         query = Alert.query.filter_by(source="mental")
         # 隐私隔离：非超管只能看自己关联班级学生的心理预警；隔离与 class_id 合并单次 join
         admin = get_current_admin()
@@ -62,7 +75,20 @@ class MentalHealthService:
             query = query.filter_by(student_id=student_id)
         if is_resolved is not None:
             query = query.filter_by(is_resolved=is_resolved)
-        alerts = query.order_by(Alert.created_at.desc()).all()
+        query = query.order_by(Alert.created_at.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "alerts": [self._build_alert_response(a) for a in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        alerts = query.all()
         return {"success": True, "data": [self._build_alert_response(a) for a in alerts]}
 
     def resolve_alert(self, alert_id):

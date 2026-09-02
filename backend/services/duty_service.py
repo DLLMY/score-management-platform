@@ -7,7 +7,7 @@ from services.entity_names import names
 
 
 class DutyService:
-    def list_groups(self, class_id=None, keyword=""):
+    def list_groups(self, class_id=None, keyword="", page=None, per_page=None):
         query = DutyGroup.query
         if class_id:
             query = query.filter_by(class_id=class_id)
@@ -18,7 +18,20 @@ class DutyService:
                 query = query.filter(DutyGroup.class_id.in_(allowed))
         if keyword:
             query = query.filter(DutyGroup.name.ilike(f"%{keyword}%"))
-        groups = query.order_by(DutyGroup.day_of_week, DutyGroup.name).all()
+        query = query.order_by(DutyGroup.day_of_week, DutyGroup.name)
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "groups": [self._build_group_response(g) for g in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        groups = query.all()
         return {"success": True, "data": [self._build_group_response(g) for g in groups]}
 
     def create_group(self, data):
@@ -57,7 +70,7 @@ class DutyService:
         db.session.commit()
         return {"success": True, "message": "删除成功"}
 
-    def list_assignments(self, group_id=None, student_id=None, date=None, is_completed=None):
+    def list_assignments(self, group_id=None, student_id=None, date=None, is_completed=None, page=None, per_page=None):
         query = DutyAssignment.query
         if group_id:
             query = query.filter_by(group_id=group_id)
@@ -67,7 +80,20 @@ class DutyService:
             query = query.filter_by(date=date)
         if is_completed is not None:
             query = query.filter_by(is_completed=is_completed)
-        assignments = query.order_by(DutyAssignment.date.desc()).all()
+        query = query.order_by(DutyAssignment.date.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "assignments": [self._build_assignment_response(a) for a in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        assignments = query.all()
         return {"success": True, "data": [self._build_assignment_response(a) for a in assignments]}
 
     def create_assignment(self, data):

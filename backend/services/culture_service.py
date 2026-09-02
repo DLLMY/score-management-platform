@@ -6,7 +6,7 @@ from services.entity_names import names
 
 
 class CultureService:
-    def list_records(self, class_id=None, category=None, is_active=True):
+    def list_records(self, class_id=None, category=None, is_active=True, page=None, per_page=None):
         query = CultureRecord.query
         if class_id:
             query = query.filter_by(class_id=class_id)
@@ -19,7 +19,20 @@ class CultureService:
             query = query.filter_by(category=category)
         if is_active is not None:
             query = query.filter_by(is_active=is_active)
-        records = query.order_by(CultureRecord.display_order, CultureRecord.created_at.desc()).all()
+        query = query.order_by(CultureRecord.display_order, CultureRecord.created_at.desc())
+        if page is not None and per_page is not None:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            return {
+                "success": True,
+                "data": {
+                    "records": [self._build_record_response(r) for r in pagination.items],
+                    "total": pagination.total,
+                    "page": page,
+                    "per_page": per_page,
+                    "pages": pagination.pages,
+                },
+            }
+        records = query.all()
         return {"success": True, "data": [self._build_record_response(r) for r in records]}
 
     def create_record(self, data):

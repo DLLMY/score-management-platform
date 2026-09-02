@@ -3,6 +3,7 @@ from flask import request
 from services.study_guide_service import study_guide_service
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
 
 # path 显式下沉到 Namespace：与 api_versioning 的 add_namespace(path="/study-guide") 一致，
 # 保证 tests/conftest.py 动态注册时 URL 仍为连字符 /study-guide。
@@ -57,10 +58,13 @@ class StudyGuideList(Resource):
         class_id = request.args.get("class_id", type=int)
         guide_type = request.args.get("guide_type")
         is_published = request.args.get("is_published")
+        page, per_page = get_pagination(default=50)
         return study_guide_service.list_guides(
             class_id=class_id,
             guide_type=guide_type,
             is_published=is_published,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_study_guide.expect(guide_model)
@@ -105,10 +109,13 @@ class ImprovementPlanList(Resource):
         student_id = request.args.get("student_id", type=int)
         plan_type = request.args.get("plan_type")
         is_completed = request.args.get("is_completed")
+        page, per_page = get_pagination(default=50)
         return study_guide_service.list_plans(
             student_id=student_id,
             plan_type=plan_type,
             is_completed=is_completed,
+            page=page,
+            per_page=per_page,
         )
 
     @ns_study_guide.expect(plan_model)
