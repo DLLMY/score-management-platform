@@ -11,10 +11,15 @@ const useOptimisticUpdate = <T>() => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const pendingUpdates = useRef<OptimisticUpdate<T>[]>([]);
+  // M10 修复：事务级基准快照（本事务开始前的已提交 data）+ 本事务内已应用的更新序列。
+  // 用于局部回滚——失败时仅剔除失败项、从基准重放其余项，保留已成功的兄弟项。
+  const baseDataRef = useRef<T | null>(null);
+  const appliedRef = useRef<OptimisticUpdate<T>[]>([]);
 
   const applyOptimisticUpdate = useCallback(
     (update: OptimisticUpdate<T>) => {
       pendingUpdates.current.push(update);
+      appliedRef.current.push(update);
 
       if (data) {
         setData((prev) => {
@@ -34,16 +39,27 @@ const useOptimisticUpdate = <T>() => {
 
   const rollbackUpdate = useCallback(
     (id: string) => {
-      const update = pendingUpdates.current.find((u) => u.id === id);
+      pendingUpdates.current = pendingUpdates.current.filter((u) => u.id !== id);
+      appliedRef.current = appliedRef.current.filter((u) => u.id !== id);
 
-      if (update && data) {
-        setData(update.originalData);
+      // M10 修复：局部回滚——从基准快照重放"除失败项外"的所有已应用更新。
+      // 单条更新/整批失败 → 重放后为空 → 回退到 baseData（与原语义一致）；
+      // 批次部分失败 → 仅剔除失败项，已成功的兄弟项被保留。
+      if (baseDataRef.current) {
+        if (appliedRef.current.length === 0) {
+          setData(baseDataRef.current);
+        } else {
+          let result = baseDataRef.current;
+          for (const u of appliedRef.current) {
+            result = u.updateFn(result);
+          }
+          setData(result);
+        }
       }
 
-      pendingUpdates.current = pendingUpdates.current.filter((u) => u.id !== id);
       setIsUpdating(false);
     },
-    [data]
+    []
   );
 
   const performUpdate = useCallback(
@@ -60,6 +76,10 @@ const useOptimisticUpdate = <T>() => {
       }
 
       const originalData = { ...data };
+
+      // M10：以当前已提交 data 为基准快照，重置本事务的应用序列
+      baseDataRef.current = data;
+      appliedRef.current = [];
 
       applyOptimisticUpdate({
         id,
@@ -109,6 +129,10 @@ const useOptimisticUpdate = <T>() => {
       }
 
       const originalData = { ...data };
+
+      // M10：以当前已提交 data 为基准快照，重置本事务的应用序列
+      baseDataRef.current = data;
+      appliedRef.current = [];
 
       updates.forEach((update) => {
         applyOptimisticUpdate({
