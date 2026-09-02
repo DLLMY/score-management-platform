@@ -36,3 +36,23 @@ def get_pagination(default=20, max_per_page=200):
         per_page = default
     per_page = min(max_per_page, max(1, per_page))
     return page, per_page
+
+
+def get_limit(default=50, max_limit=200):
+    """
+    解析 top-N 型数量参数（排行榜 / 导出 / 最近列表等语义是"取前 N 条"、
+    不适合翻页的端点）。与 get_pagination 的区别：只读 limit、不引入 page 语义。
+
+    防 ?limit=999999999 之类的无界查询（直接进 ORM .limit() 会全表加载）。
+
+    Args:
+        default: limit 缺省值（各端点保留原默认，如 10/20/50/10000）
+        max_limit: 硬上限（默认 200，与 get_pagination 的 max_per_page 对齐）
+    Returns:
+        int，恒满足 1 <= limit <= max_limit
+    """
+    try:
+        limit = int(request.args.get("limit", default))
+    except (TypeError, ValueError):
+        limit = default
+    return min(max_limit, max(1, limit))

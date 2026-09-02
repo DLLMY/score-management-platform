@@ -12,7 +12,7 @@ from models import Notification
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.pagination import get_pagination
+from utils.pagination import get_pagination, get_limit
 from services.admin_notifications_service import (
     create_notification,
     delete_notification,
@@ -208,7 +208,8 @@ class AdminNotificationRecent(Resource):
     @cached_api(ttl=30)
     def get(self):
         admin_id = request.args.get("admin_id", type=int)
-        limit = request.args.get("limit", 10, type=int)
+        # 安全：钳制上限，防 ?limit=999999999 全表加载（默认 10，上限 200 与 max_per_page 对齐）
+        limit = get_limit(default=10)
 
         query = Notification.query.filter_by(recipient_type="admin")
         if admin_id:
