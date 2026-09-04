@@ -33,7 +33,7 @@
 - run.py 只 `load_dotenv(.env)`，`--env development` 不切 .env.development；外部签 JWT 用 `.env` 的 `JWT_SECRET_KEY`。
 - conftest 动态注册 Namespace 须自带 `path="/mental-health"`（连字符）否则 404。
 - sandbox torch 段错误：验证主线程先 `import services.nlp_ml_service` 预热再 import app；pytest 输出被日志淹没须 grep 结果行。
-- 不主动 git commit；push 走 `origin-ssh`(`ssh://git@ssh.github.com:443/...`)。
+- 不主动 git commit；push 走 `origin`（2026-09-04 实测当前仅此一个 remote，URL=`ssh://git@ssh.github.com:443/DLLMY/score-management-platform.git`；历史记忆中的 `origin-ssh` 名已不存在）。核实推送一律 `git ls-remote origin refs/heads/main` 取远端真值，勿信本地 `git status` ahead。
 
 ## NLP 模块（✅P0–P1全修 2026-08-29）
 - P0-1 /model/evaluate 去伪造0.85；P0-2 ml_based 死分支已禁；P0-3 优化器误引 NLPMLService→NLPMLTrainingService 已修。P1-1 路由52法加 `@safe_handle()`；P1-2 评分并发防重 ProcessedMessage；P1-3 前端信封统一 unwrapEnvelope/parseEnvelopeSafe；P1-4 测试挖出 create_rule 未设 is_active / `_usage_to_dict` 读错列 两缺陷并修。

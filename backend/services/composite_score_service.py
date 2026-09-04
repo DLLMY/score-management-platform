@@ -33,6 +33,7 @@ _DEFAULT_PROGRESS = {
 }
 
 
+from utils.logger import log_info, log_warning, log_debug
 class CompositeScoreService:
     """综合评分服务类"""
 
@@ -423,7 +424,7 @@ class CompositeScoreService:
         """
         first_composite = CompositeScore.query.first()
         if not first_composite:
-            print("[CompositeScore] 没有找到综合评分记录，需要先进行全量计算")
+            log_info("[CompositeScore] 没有找到综合评分记录，需要先进行全量计算")
             return None
 
         fw = first_composite.weights or {}
@@ -437,18 +438,18 @@ class CompositeScoreService:
 
         user = get_by_id(User, user_id)
         if not user or not user.is_active:
-            print(f"[CompositeScore] 学生不存在或已停用: user_id={user_id}")
+            log_warning(f"[CompositeScore] 学生不存在或已停用: user_id={user_id}")
             return None
 
         # R1-R9 复核补漏（原 P2-8）: 基数统一为全量活跃学生（与全量计算一致，原取 composite 表用户 → 结果不可比）
         active_user_ids = [u.id for u in User.query.filter(User.is_active).all()]
         if not active_user_ids:
-            print("[CompositeScore] 没有活跃学生的综合评分记录")
+            log_info("[CompositeScore] 没有活跃学生的综合评分记录")
             return None
         # 学生无综合评分记录（首次积分变动即触发 recalc）→ 返回 None，由全量计算生成；
         # 原实现直接 index() 抛 ValueError → 崩
         if user_id not in active_user_ids:
-            print(f"[CompositeScore] 学生 {user_id} 无综合评分记录，跳过增量重算（首次需全量计算）")
+            log_debug(f"[CompositeScore] 学生 {user_id} 无综合评分记录，跳过增量重算（首次需全量计算）")
             return None
 
         behavior_map = {

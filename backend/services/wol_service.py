@@ -1,6 +1,7 @@
 import socket
 
 
+from utils.logger import log_info, log_warning, log_debug
 def wake_on_lan(mac_address: str, broadcast_ip: str = "255.255.255.255", port: int = 9) -> bool:
     """
     发送Wake-on-LAN魔术包来远程开机
@@ -33,11 +34,11 @@ def wake_on_lan(mac_address: str, broadcast_ip: str = "255.255.255.255", port: i
         sock.sendto(magic_packet, (broadcast_ip, port))
         sock.close()
 
-        print(f"[WOL] Magic packet sent to {mac_address}")
+        log_info(f"[WOL] Magic packet sent to {mac_address}")
         return True
 
     except Exception as e:
-        print(f"[WOL] Error sending magic packet: {e}")
+        log_warning(f"[WOL] Error sending magic packet: {e}", exception=e)
         return False
 
 

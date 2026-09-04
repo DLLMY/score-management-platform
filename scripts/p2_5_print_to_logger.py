@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""P2-5: 将 services 下 NLP/ML 文件的调试 print 收口为 utils.logger。
+"""P2-6: 将 services 下剩余文件的调试 print 收口为 utils.logger。
 规则：
   - 处于 except 块 -> log_warning(exception=<e 或忽略>)
   - 处于 `if __name__ == "__main__"` 块 -> log_debug
   - 显式 override 映射（非 except 的告警 / 缓存调试行）
   - 其余 -> log_info
-保留原字符串与缩进（含多行 print）。
+保留原字符串与缩进（含多行 print）。已转换文件再跑会幂等跳过。
 """
 import ast
 import os
@@ -15,20 +15,24 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SERVICES = os.path.join(ROOT, "backend", "services")
 
 TARGETS = [
-    "nlp_service.py",
-    "textcnn_service.py",
-    "bert_service.py",
-    "nlp_optimizer.py",
-    "nlp_ml_service.py",
-    "nlp_fast_parser.py",
-    "nlp_enhanced_service.py",
+    "class_time_checker.py",
+    "composite_score_service.py",
+    "mqtt_message_service.py",
+    "mqtt_service.py",
+    "notification_config_store.py",
+    "websocket_service.py",
+    "wol_service.py",
 ]
 
 # (文件, 行号) -> ("warning"|"debug", exc_name_or_None)
 OVERRIDE = {
-    ("nlp_ml_service.py", 568): ("warning", None),        # 初始化未完成（else 分支，非 except）
-    ("nlp_enhanced_service.py", 2927): ("debug", None),     # 缓存命中
-    ("nlp_enhanced_service.py", 2930): ("debug", None),     # 缓存未命中
+    # websocket 逐连接/订阅事件，高频 -> debug；"处理器已注册"一次性 -> info（默认）
+    ("websocket_service.py", 42): ("debug", None),   # Client connected
+    ("websocket_service.py", 53): ("debug", None),   # Client disconnected
+    ("websocket_service.py", 65): ("debug", None),   # Client subscribed to room
+    # composite_score recalc 分支：异常态->warning；常态噪音->debug；结构态 426/446 -> info（默认）
+    ("composite_score_service.py", 440): ("warning", None),  # 学生不存在或已停用
+    ("composite_score_service.py", 451): ("debug", None),    # 无记录跳过增量（首次需全量）
 }
 
 IMPORT_LINE = "from utils.logger import log_info, log_warning, log_debug"

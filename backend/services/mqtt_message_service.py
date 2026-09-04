@@ -16,6 +16,7 @@ from models import ScoreRecord, db, Approval, get_by_id, User, ScoreRule
 logger = logging.getLogger(__name__)
 
 
+from utils.logger import log_info, log_warning, log_debug
 class MQTTMessageService:
 
     def __init__(self):
@@ -198,7 +199,7 @@ class MQTTMessageService:
                     return
         except Exception as e:
             # 策略判定异常不影响主流程，回退到原有全局门禁逻辑
-            print(f"[Unlock] 班主任策略判定异常，回退全局逻辑: {e}")
+            log_warning(f"[Unlock] 班主任策略判定异常，回退全局逻辑: {e}", exception=e)
 
         # 全局 TimeRule 时段门禁（保留原有逻辑：allow_unlock 窗口外一律拒绝）
         if not self.check_time_valid(box_id, hour, minute):
@@ -238,7 +239,7 @@ class MQTTMessageService:
                     return
         except Exception as e:
             # 课表反查异常不影响主流程（全局门禁已校验），默认放行
-            print(f"[Unlock] 课表反查异常，放行: {e}")
+            log_warning(f"[Unlock] 课表反查异常，放行: {e}", exception=e)
 
         # 积分门槛与扣减统一由 _deduct_and_unlock 处理（内部已含 <60 → score_low），
         # 与班主任策略放行路径共用同一出口，避免两处判断漂移。

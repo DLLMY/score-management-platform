@@ -4,6 +4,7 @@ from typing import Optional, Dict, Tuple
 import json
 
 
+from utils.logger import log_info, log_warning, log_debug
 class ClassTimeChecker:
     """
     上课时间检查器
@@ -240,7 +241,7 @@ class ClassTimeChecker:
             db.session.commit()
         except Exception as e:
             db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
-            print(f"[NotifyAudit] 写入失败: {e}")
+            log_warning(f"[NotifyAudit] 写入失败: {e}", exception=e)
 
     @staticmethod
     def get_today_class_schedule() -> Dict:

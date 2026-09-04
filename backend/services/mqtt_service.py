@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 # 动态属性访问
+from utils.logger import log_info, log_warning, log_debug
 def __getattr__(name):
     if name == "mqtt_connected":
         return mqtt_manager.is_connected
@@ -164,7 +165,7 @@ def publish_ota_command(device_id, payload):
     ota_payload = {"action": "update", "timestamp": int(time.time())}
     ota_payload.update(payload)
 
-    print(f"[OTA] 发送OTA指令到 {topic}: {json.dumps(ota_payload)}")
+    log_info(f"[OTA] 发送OTA指令到 {topic}: {json.dumps(ota_payload)}")
     return publish_mqtt(topic, json.dumps(ota_payload), qos=1)
 
 
@@ -206,5 +207,5 @@ def get_ota_status(device_id=None):
                 ]
             }
     except Exception as e:
-        print(f"[OTA] 获取OTA状态失败: {e}")
+        log_warning(f"[OTA] 获取OTA状态失败: {e}", exception=e)
         return {"records": []}

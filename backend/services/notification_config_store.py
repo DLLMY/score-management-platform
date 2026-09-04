@@ -16,6 +16,7 @@ from models import db
 from models.notification_config import NotificationConfig
 
 
+from utils.logger import log_info, log_warning, log_debug
 def _apply_row_to_config(row):
     """将 DB 行的配置键值合并进 current_app.config（非 None 字段才覆盖）。"""
     cfg = row.to_config_dict()
@@ -37,12 +38,12 @@ def load_notification_config_to_app(app):
         with app.app_context():
             row = NotificationConfig.query.get(1)
             if row is None:
-                print("通知配置：无持久化记录，沿用环境默认")
+                log_info("通知配置：无持久化记录，沿用环境默认")
                 return
             _apply_row_to_config(row)
-            print("通知配置：已从数据库加载")
+            log_info("通知配置：已从数据库加载")
     except Exception as e:  # noqa: BLE001
-        print(f"通知配置加载失败(沿用环境默认): {e}")
+        log_warning(f"通知配置加载失败(沿用环境默认): {e}", exception=e)
 
 
 def save_notification_config(updates):
@@ -63,5 +64,5 @@ def save_notification_config(updates):
         return True, None
     except Exception as e:  # noqa: BLE001
         db.session.rollback()
-        print(f"通知配置落库失败: {e}")
+        log_warning(f"通知配置落库失败: {e}", exception=e)
         return False, str(e)

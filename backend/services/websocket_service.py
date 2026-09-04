@@ -17,6 +17,7 @@ ALERT_EVENT = "alert"
 SYSTEM_EVENT = "system"
 
 
+from utils.logger import log_info, log_warning, log_debug
 class WebSocketService:
     """WebSocket 服务类（面向对象封装，便于测试与复用）。
 
@@ -39,7 +40,7 @@ class WebSocketService:
         @sio.on("connect")
         def handle_connect():
             client_id = request.sid
-            print(f"Client connected: {client_id}")
+            log_debug(f"Client connected: {client_id}")
             emit("connected", {"sid": client_id, "message": "Connected to WebSocket server"})
 
         @sio.on("disconnect")
@@ -50,7 +51,7 @@ class WebSocketService:
                     for room in self.client_rooms[client_id]:
                         leave_room(room)
                     del self.client_rooms[client_id]
-            print(f"Client disconnected: {client_id}")
+            log_debug(f"Client disconnected: {client_id}")
 
         @sio.on("subscribe")
         def handle_subscribe(data):
@@ -62,7 +63,7 @@ class WebSocketService:
                         self.client_rooms[request.sid] = set()
                     self.client_rooms[request.sid].add(room)
                 emit("subscribed", {"room": room})
-                print(f"Client {request.sid} subscribed to {room}")
+                log_debug(f"Client {request.sid} subscribed to {room}")
 
         @sio.on("unsubscribe")
         def handle_unsubscribe(data):
@@ -78,7 +79,7 @@ class WebSocketService:
         def handle_ping():
             emit("pong", {"timestamp": json.dumps({"server_time": None})})
 
-        print("WebSocket事件处理器已注册")
+        log_info("WebSocket事件处理器已注册")
 
     def send_notification(self, notification_type, message, data=None):
         if self.socketio:
