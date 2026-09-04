@@ -196,6 +196,7 @@ def transform(path):
             getattr(tree.body[0], "value", None), ast.Constant
         ) and isinstance(tree.body[0].value.value, str):
             doc_end = tree.body[0].end_lineno
+        nl = "\r\n" if "\r\n" in source else "\n"  # 按源主行尾注入，避免 CRLF 文件混入 LF → 整文件翻转
         i = doc_end
         head_end = doc_end - 1  # 0-based 最后一行前导 import 段
         while i < len(new_lines):
@@ -218,7 +219,7 @@ def transform(path):
                 continue
             break  # 首个非 import 顶层语句，前导段到此为止
         insert_at = head_end + 1
-        new_lines.insert(insert_at, IMPORT_LINE + "\n")
+        new_lines.insert(insert_at, IMPORT_LINE + nl)
         new_source = "".join(new_lines)
 
     # 4) 安全闸：转换后必须能重新解析，否则不写盘
