@@ -5,18 +5,18 @@
 import os
 from typing import Dict
 
+from utils.logger import log_warning
+
 
 class SecurityConfig:
     """安全配置类"""
 
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
     if "*" in CORS_ORIGINS:
-        import sys
-
-        print("\n" + "=" * 60)
-        print("⚠️  安全警告: CORS配置允许所有来源('*')!")
-        print("⚠️  生产环境建议通过 CORS_ORIGINS 环境变量设置具体域名")
-        print("=" * 60 + "\n", file=sys.stderr)
+        log_warning(
+            "安全警告: CORS配置允许所有来源('*')！"
+            "生产环境建议通过 CORS_ORIGINS 环境变量设置具体域名"
+        )
     CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     CORS_HEADERS = [
         "Content-Type",

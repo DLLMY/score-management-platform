@@ -1,6 +1,8 @@
 from flask import Flask
 from typing import Dict, List, Tuple
 
+from utils.logger import log_error, log_info, log_warning
+
 
 class RouteRegistry:
 
@@ -32,36 +34,38 @@ class RouteRegistry:
         return duplicate_endpoints, duplicate_rules
 
     def print_report(self):
+        """输出路由注册检查报告。
+
+        经 logger 输出（原为 print 直出）：报告整体聚合成单条日志，
+        发现重复路由→error，无重复→info。方法名与返回值保持不变以免破坏调用方。
+        """
         duplicate_endpoints, duplicate_rules = self.check_duplicates()
 
         if duplicate_endpoints or duplicate_rules:
-            print("\n" + "=" * 70)
-            print("🚨 路由注册检查报告 - 发现重复路由")
-            print("=" * 70)
+            lines = ["=" * 70, "路由注册检查报告 - 发现重复路由", "=" * 70]
 
             if duplicate_endpoints:
-                print("\n重复的Endpoint:")
-                print("-" * 50)
+                lines.append("重复的Endpoint:")
+                lines.append("-" * 50)
                 for dup in duplicate_endpoints:
-                    print(f"\n  Endpoint: {dup['endpoint']}")
+                    lines.append(f"  Endpoint: {dup['endpoint']}")
                     for i, (rule, view_func) in enumerate(dup["entries"], 1):
-                        print(f"    {i}. 规则: {rule} -> 视图函数: {view_func}")
+                        lines.append(f"    {i}. 规则: {rule} -> 视图函数: {view_func}")
 
             if duplicate_rules:
-                print("\n重复的路由规则:")
-                print("-" * 50)
+                lines.append("重复的路由规则:")
+                lines.append("-" * 50)
                 for dup in duplicate_rules:
-                    print(f"\n  规则: {dup['rule']}")
+                    lines.append(f"  规则: {dup['rule']}")
                     for i, (endpoint, view_func) in enumerate(dup["entries"], 1):
-                        print(f"    {i}. Endpoint: {endpoint} -> 视图函数: {view_func}")
+                        lines.append(f"    {i}. Endpoint: {endpoint} -> 视图函数: {view_func}")
 
-            print("\n" + "=" * 70)
+            lines.append("=" * 70)
+            log_error(f"路由注册存在重复:\n" + "\n".join(lines))
             return False
-        else:
-            print("\n" + "=" * 70)
-            print("✅ 路由注册检查报告 - 未发现重复路由")
-            print("=" * 70)
-            return True
+
+        log_info("路由注册检查报告 - 未发现重复路由")
+        return True
 
 
 route_registry = RouteRegistry()
@@ -90,7 +94,9 @@ def register_route_safe(app: Flask, rule: str, endpoint: str, view_func, **optio
                 existing_rule = r.rule
                 break
 
-        print(f"⚠️  警告: Endpoint '{endpoint}' 已存在，规则: {existing_rule}")
-        print(f"         新规则: {rule} 将覆盖现有规则")
+        log_warning(
+            f"Endpoint '{endpoint}' 已存在，规则: {existing_rule}；"
+            f"新规则: {rule} 将覆盖现有规则"
+        )
 
     app.add_url_rule(rule, endpoint, view_func, **options)

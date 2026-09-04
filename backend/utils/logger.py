@@ -48,67 +48,68 @@ logger.addHandler(file_handler)
 logger.addHandler(error_handler)
 
 
-def log_debug(message, **kwargs):
+def _dump_extra(kwargs) -> str:
+    """序列化额外字段。
+
+    不可序列化对象退化为 str（default=str），而非抛 TypeError——
+    日志本身崩溃会掩盖真正的业务错误，代价远高于字段退化。
+    """
+    if not kwargs:
+        return ""
+    try:
+        return json.dumps(kwargs, ensure_ascii=False, default=str)
+    except Exception:
+        return str(kwargs)
+
+
+def _emit(emit_fn, message, exception, kwargs) -> None:
+    """统一输出：extra 字段 + 异常文本 + 堆栈。
+
+    所有级别共用，保证 log_debug/info/warning 与 log_error/critical
+    行为一致（此前只有后两者支持 exception，误传会给前者触发 TypeError）。
+    """
+    extra_info = _dump_extra(kwargs)
+
+    if exception is None:
+        emit_fn(f"{message} | {extra_info}" if extra_info else message)
+        return
+
+    import traceback
+
+    try:
+        stack_trace = traceback.format_exc()
+    except Exception:
+        stack_trace = ""
+
+    head = f"{message} | Exception: {exception}"
+    if extra_info:
+        head = f"{head} | {extra_info}"
+    emit_fn(f"{head}\n{stack_trace}" if stack_trace else head)
+
+
+def log_debug(message, exception=None, **kwargs):
     """记录DEBUG级别日志"""
-    extra_info = json.dumps(kwargs, ensure_ascii=False) if kwargs else ""
-    if extra_info:
-        logger.debug(f"{message} | {extra_info}")
-    else:
-        logger.debug(message)
+    _emit(logger.debug, message, exception, kwargs)
 
 
-def log_info(message, **kwargs):
+def log_info(message, exception=None, **kwargs):
     """记录INFO级别日志"""
-    extra_info = json.dumps(kwargs, ensure_ascii=False) if kwargs else ""
-    if extra_info:
-        logger.info(f"{message} | {extra_info}")
-    else:
-        logger.info(message)
+    _emit(logger.info, message, exception, kwargs)
 
 
-def log_warning(message, **kwargs):
+def log_warning(message, exception=None, **kwargs):
     """记录WARNING级别日志"""
-    extra_info = json.dumps(kwargs, ensure_ascii=False) if kwargs else ""
-    if extra_info:
-        logger.warning(f"{message} | {extra_info}")
-    else:
-        logger.warning(message)
+    _emit(logger.warning, message, exception, kwargs)
 
 
 def log_error(message, exception=None, **kwargs):
     """记录ERROR级别日志"""
-    extra_info = json.dumps(kwargs, ensure_ascii=False) if kwargs else ""
-    if exception:
-        import traceback
-
-        stack_trace = traceback.format_exc()
-        if extra_info:
-            logger.error(f"{message} | Exception: {exception} | {extra_info}\n{stack_trace}")
-        else:
-            logger.error(f"{message} | Exception: {exception}\n{stack_trace}")
-    else:
-        if extra_info:
-            logger.error(f"{message} | {extra_info}")
-        else:
-            logger.error(message)
+    _emit(logger.error, message, exception, kwargs)
 
 
 def log_critical(message, exception=None, **kwargs):
     """记录CRITICAL级别日志"""
-    extra_info = json.dumps(kwargs, ensure_ascii=False) if kwargs else ""
-    if exception:
-        import traceback
-
-        stack_trace = traceback.format_exc()
-        if extra_info:
-            logger.critical(f"{message} | Exception: {exception} | {extra_info}\n{stack_trace}")
-        else:
-            logger.critical(f"{message} | Exception: {exception}\n{stack_trace}")
-    else:
-        if extra_info:
-            logger.critical(f"{message} | {extra_info}")
-        else:
-            logger.critical(message)
+    _emit(logger.critical, message, exception, kwargs)
 
 
 def log_operation(

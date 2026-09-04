@@ -6,6 +6,7 @@ from models import User, ScoreRule, Device, ScoreRecord, ScoreCategory
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.excel_utils import build_attachment_response
+from utils.pagination import get_limit
 from services.export_service import export_service
 from services.heartbeat_service import is_device_online
 from datetime import datetime, timedelta
@@ -364,7 +365,9 @@ class ExportRecords(Resource):
         返回积分记录文件下载。
         """
         export_format = request.args.get("format", "excel").lower()
-        limit = request.args.get("limit", 10000, type=int)
+        # 安全：钳制上限，防 ?limit=999999999 全表加载 + Excel 序列化打爆内存。
+        # 上限取 10000（= 默认值，与接口文档"默认10000"一致，不产生契约漂移）。
+        limit = get_limit(default=10000, max_limit=10000)
         if export_format not in ["excel", "pdf"]:
             return APIResponse.bad_request(message="不支持的导出格式")
         records = ScoreRecord.query.order_by(ScoreRecord.created_at.desc()).limit(limit).all()

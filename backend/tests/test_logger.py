@@ -170,3 +170,51 @@ class TestLogger:
 
             log_data_access("read", "user", record_count=10, admin_id=1)
             log_data_access("export", "score", record_count=100)
+
+    def test_log_warning_with_exception(self, app):
+        """回归守卫：log_warning 曾无 exception 参数，误传会被 json.dumps 致 TypeError 崩溃。
+
+        加固后所有级别（含 debug/info/warning）均接受 exception 且不崩。
+        """
+        with app.app_context():
+            from utils.logger import log_warning
+
+            try:
+                raise ValueError("boom")
+            except ValueError as e:
+                log_warning("warning with exception", exception=e)
+
+    def test_log_info_with_exception(self, app):
+        with app.app_context():
+            from utils.logger import log_info
+
+            try:
+                raise KeyError("missing")
+            except KeyError as e:
+                log_info("info with exception", exception=e)
+
+    def test_log_debug_with_exception(self, app):
+        with app.app_context():
+            from utils.logger import log_debug
+
+            try:
+                raise RuntimeError("dbg")
+            except RuntimeError as e:
+                log_debug("debug with exception", exception=e)
+
+    def test_log_non_serializable_extra(self, app):
+        """回归守卫：extra 含不可序列化对象（如函数）不得让日志崩溃。
+
+        依赖 _dump_extra 的 json default=str 兜底。
+        """
+        with app.app_context():
+            from utils.logger import log_warning
+
+            def unserializable():
+                return 1
+
+            log_warning(
+                "extra has function",
+                cb=unserializable,
+                nested={"fn": unserializable},
+            )
