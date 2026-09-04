@@ -56,8 +56,9 @@ class TestAnomalyDetectorFull:
         assert isinstance(results, list)
 
     def test_anomaly_types_thresholds(self):
+        # group_anomaly 与描述"偏离班级均值超过3个标准差"一致为 3（曾误写 5，2026-09-04 修正）
         assert ANOMALY_TYPES["sudden_change"]["threshold"] == 3
-        assert ANOMALY_TYPES["group_anomaly"]["threshold"] == 5
+        assert ANOMALY_TYPES["group_anomaly"]["threshold"] == 3
 
 
 class TestAnomalyServiceBasic:

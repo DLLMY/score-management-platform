@@ -419,13 +419,20 @@ class SystemClearCache(Resource):
         basedir = os.path.abspath(os.path.dirname(__file__))
         cache_dir = os.path.join(basedir, "..", "__pycache__")
 
+        def _clear_pycache(path):
+            """逐目录尽力清理 __pycache__：占用/受限目录跳过并告警，不使整请求 500。"""
+            try:
+                shutil.rmtree(path)
+            except OSError as exc:
+                log_warning(f"[clear-cache] 清理 {path} 失败（目录占用/受限），已跳过: {exc}", exception=exc)
+
         if os.path.exists(cache_dir):
-            shutil.rmtree(cache_dir)
+            _clear_pycache(cache_dir)
 
         for root, dirs, files in os.walk(os.path.join(basedir, "..")):
             for dir in dirs:
                 if dir == "__pycache__":
-                    shutil.rmtree(os.path.join(root, dir))
+                    _clear_pycache(os.path.join(root, dir))
 
         return APIResponse.success(message="缓存清理成功")
 

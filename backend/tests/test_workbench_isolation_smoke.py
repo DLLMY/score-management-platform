@@ -10,10 +10,23 @@
 3. get_contact 单查越权 → 403。
 
 口径与 attendance_service.list_attendance 一致（get_admin_class_ids 隔离）。
+
+注（2026-09-04）：M9/T3 起列表端点强制分页，data 为分页信封
+{contacts|records|alerts|comments, total, page, per_page, pages}；
+本文件统一经 _items() 解包为裸列表再断言，兼容旧裸数组契约。
 """
 import uuid
 
 import pytest
+
+
+def _items(data, key):
+    """兼容列表端点分页信封（data={key:[...], total, page, ...}）与旧裸数组契约。"""
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        return data.get(key, [])
+    return []
 
 
 @pytest.fixture
@@ -139,22 +152,32 @@ def _teacher_headers(teacher_id):
     }
 
 
+def _admin_headers():
+    from utils.security import generate_tokens
+
+    tokens = generate_tokens(admin_id=1, username="test_admin", role="admin")
+    return {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + tokens["access_token"],
+    }
+
+
 class TestParentContactIsolation:
     def test_admin_lists_all_and_filters_by_class(self, client, app, workbench_data):
         """admin 全量可见；class_id 过滤按学生所属班级生效。"""
-        resp = client.get("/api/parent/contacts", headers=self._admin_headers())
+        resp = client.get("/api/parent/contacts", headers=_admin_headers())
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["success"] is True
-        all_ids = {c["id"] for c in data["data"]}
+        all_ids = {c["id"] for c in _items(data["data"], "contacts")}
         assert len(all_ids) == len(workbench_data["contacts"])
 
         resp = client.get(
             "/api/parent/contacts?class_id=%d" % workbench_data["cls_a_id"],
-            headers=self._admin_headers(),
+            headers=_admin_headers(),
         )
         data = resp.get_json()
-        got = data["data"]
+        got = _items(data["data"], "contacts")
         assert len(got) == 2
         assert all(c["student_id"] in {s.id for s in workbench_data["students"][:2]} for c in got)
 
@@ -164,7 +187,7 @@ class TestParentContactIsolation:
 
         resp = client.get("/api/parent/contacts", headers=headers)
         assert resp.status_code == 200
-        data = resp.get_json()["data"]
+        data = _items(resp.get_json()["data"], "contacts")
         own_students = {s.id for s in workbench_data["students"][:2]}
         assert len(data) == 2
         assert all(c["student_id"] in own_students for c in data)
@@ -173,7 +196,7 @@ class TestParentContactIsolation:
             "/api/parent/contacts?class_id=%d" % workbench_data["cls_b_id"], headers=headers
         )
         assert resp.status_code == 200
-        assert resp.get_json()["data"] == []
+        assert _items(resp.get_json()["data"], "contacts") == []
 
     def test_teacher_single_get_forbidden(self, client, app, workbench_data):
         """班主任单查班级 B 学生的家长信息 → 403。"""
@@ -182,28 +205,18 @@ class TestParentContactIsolation:
         resp = client.get(f"/api/parent/contacts/{other_contact.id}", headers=headers)
         assert resp.status_code == 403
 
-    @staticmethod
-    def _admin_headers():
-        from utils.security import generate_tokens
-
-        tokens = generate_tokens(admin_id=1, username="test_admin", role="admin")
-        return {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + tokens["access_token"],
-        }
-
 
 class TestMentalHealthIsolation:
     def test_admin_lists_all_and_filters_by_class(self, client, app, workbench_data):
         resp = client.get("/api/mental-health/records", headers=_admin_headers())
         assert resp.status_code == 200
-        assert len(resp.get_json()["data"]) == 4
+        assert len(_items(resp.get_json()["data"], "records")) == 4
 
         resp = client.get(
             "/api/mental-health/records?class_id=%d" % workbench_data["cls_a_id"],
             headers=_admin_headers(),
         )
-        data = resp.get_json()["data"]
+        data = _items(resp.get_json()["data"], "records")
         assert len(data) == 2
         assert all(r["student_id"] in {s.id for s in workbench_data["students"][:2]} for r in data)
 
@@ -211,7 +224,7 @@ class TestMentalHealthIsolation:
         headers = _teacher_headers(workbench_data["teacher_id"])
         resp = client.get("/api/mental-health/records", headers=headers)
         assert resp.status_code == 200
-        data = resp.get_json()["data"]
+        data = _items(resp.get_json()["data"], "records")
         own_students = {s.id for s in workbench_data["students"][:2]}
         assert len(data) == 2
         assert all(r["student_id"] in own_students for r in data)
@@ -236,20 +249,10 @@ class TestMentalHealthIsolation:
         headers = _teacher_headers(workbench_data["teacher_id"])
         resp = client.get("/api/mental-health/alerts", headers=headers)
         assert resp.status_code == 200
-        data = resp.get_json()["data"]
+        data = _items(resp.get_json()["data"], "alerts")
         own_students = {s.id for s in workbench_data["students"][:2]}
         assert len(data) == 2
         assert all(a["student_id"] in own_students for a in data)
-
-
-def _admin_headers():
-    from utils.security import generate_tokens
-
-    tokens = generate_tokens(admin_id=1, username="test_admin", role="admin")
-    return {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + tokens["access_token"],
-    }
 
 
 class TestTeacherCommentIsolation:
@@ -258,13 +261,13 @@ class TestTeacherCommentIsolation:
     def test_admin_lists_all_and_filters_by_class(self, client, app, workbench_data):
         resp = client.get("/api/teacher-comments", headers=_admin_headers())
         assert resp.status_code == 200
-        assert len(resp.get_json()["data"]) == 4
+        assert len(_items(resp.get_json()["data"], "comments")) == 4
 
         resp = client.get(
             "/api/teacher-comments?class_id=%d" % workbench_data["cls_a_id"],
             headers=_admin_headers(),
         )
-        data = resp.get_json()["data"]
+        data = _items(resp.get_json()["data"], "comments")
         assert len(data) == 2
         assert all(c["student_id"] in {s.id for s in workbench_data["students"][:2]} for c in data)
 
@@ -272,7 +275,7 @@ class TestTeacherCommentIsolation:
         headers = _teacher_headers(workbench_data["teacher_id"])
         resp = client.get("/api/teacher-comments", headers=headers)
         assert resp.status_code == 200
-        data = resp.get_json()["data"]
+        data = _items(resp.get_json()["data"], "comments")
         own_students = {s.id for s in workbench_data["students"][:2]}
         assert len(data) == 2
         assert all(c["student_id"] in own_students for c in data)
