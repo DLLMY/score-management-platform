@@ -7,13 +7,14 @@
  * 设计约定（与历史四页保持一致，零行为漂移）：
  *  - 统一走 services/api 的 getAuthHeaders（携带认证头）与 parseEnvelopeSafe（信封单一真相源）。
  *  - 非 2xx 与网络/解析异常均返回 null；调用方以 `if (!data)` 判定失败并置 error state。
- *  - 失败不再静默吞掉：非 2xx 与 catch 内的异常均 console.error 记录 URL 与错误详情
+ *  - 失败不再静默吞掉：非 2xx 与 catch 内的异常均 logger.error 记录 URL 与错误详情
  *    （T11 #959 静默失败改造，对齐后端 T9 日志化约定），便于运维排查，不改变返回契约。
  *  - 历史四页已各自渲染 role=alert 错误态（FrontendTelemetry 经 DataTable 带 onRetry），
  *    本模块只负责去重与统一实现，不改动任何页面的错误 UI 文案。
  */
 import { useState, useCallback, useEffect } from 'react';
 import { getAuthHeaders, parseEnvelopeSafe } from '../services/api';
+import logger from '../utils/logger';
 
 export interface ApiResult<T> {
   ok: boolean;
@@ -27,7 +28,7 @@ export async function fetchJson<T>(url: string): Promise<T | null> {
     const res = await fetch(url, { credentials: 'include', headers: getAuthHeaders() });
     if (!res.ok) {
       // T11 #959：非 2xx 不再静默吞掉，记录状态码与 URL 便于运维排查
-      console.error(`[fetchJson] 请求返回非 2xx 状态: ${res.status} ${res.statusText} <- ${url}`);
+      logger.error(`[fetchJson] 请求返回非 2xx 状态: ${res.status} ${res.statusText} <- ${url}`);
       return null;
     }
     const env = await res.json();
@@ -35,7 +36,7 @@ export async function fetchJson<T>(url: string): Promise<T | null> {
     return parseEnvelopeSafe<T>(env);
   } catch (err) {
     // T11 #959：网络/解析异常不再静默吞掉，记录错误详情与 URL（对齐后端 T9 日志化约定）
-    console.error(`[fetchJson] 请求失败（网络/解析异常）: ${url}`, err);
+    logger.error(`[fetchJson] 请求失败（网络/解析异常）: ${url}`, err);
     return null;
   }
 }
