@@ -263,7 +263,8 @@ class BertNLPService:
             if norm_a == 0 or norm_b == 0:
                 return 0.0
             return np.dot(a, b) / (norm_a * norm_b)
-        except Exception:
+        except Exception as e:
+            log_warning(f"[BERT] 余弦相似度计算异常，回退 0.0: {e}", exception=e)
             return 0.0
 
     def analyze_sentiment(self, text: str) -> Dict:

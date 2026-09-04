@@ -215,25 +215,34 @@ def archive_operation_logs(days_to_keep: int = 90):
         if not old_logs:
             log_info("[Scheduled Task] 没有需要归档的日志")
             return {"success": True, "archived_count": 0, "deleted_count": 0}
-        # 批量插入归档表
+        # 批量插入归档表（2026-09-04 修复：OperationLogArchive 表结构为
+        # original_id/admin_id/action/details/archived_at，原代码按 OperationLog 字段
+        # 构造 → TypeError 恒败，日志从未归档）
         archives = []
         for log in old_logs:
             archives.append(
                 OperationLogArchive(
-                    operation_type=log.operation_type,
-                    target_type=log.target_type,
-                    target_id=log.target_id,
-                    operator=log.operator,
-                    description=log.description,
-                    before_data=log.before_data,
-                    after_data=log.after_data,
-                    ip_address=log.ip_address,
-                    created_at=log.created_at,
+                    original_id=log.id,
+                    admin_id=log.user_id,
+                    action=log.operation_type,
+                    details={
+                        "target_type": log.target_type,
+                        "target_id": log.target_id,
+                        "operator": log.operator,
+                        "description": log.description,
+                        "before_data": log.before_data,
+                        "after_data": log.after_data,
+                        "ip_address": log.ip_address,
+                        "created_at": log.created_at.isoformat() if log.created_at else None,
+                    },
                 )
             )
         db.session.add_all(archives)
-        # 删除原表中的旧记录
-        OperationLog.query.filter(OperationLog.created_at < cutoff_date).delete()
+        # 仅删除已成功归档的旧记录（按 id 精确匹配，避免与批量 insert 同批 evaluate 冲突）
+        log_ids = [log.id for log in old_logs]
+        OperationLog.query.filter(OperationLog.id.in_(log_ids)).delete(
+            synchronize_session=False
+        )
         db.session.commit()
         log_info(f"[Scheduled Task] 归档完成: 迁移 {len(archives)} 条日志")
         return {"success": True, "archived_count": len(archives), "deleted_count": len(archives)}

@@ -2,6 +2,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional, List
 import smtplib
+from utils.logger import log_warning
 
 # (空行)
 # 邮件服务工具模块
@@ -54,7 +55,8 @@ class EmailService:
                     recipients.extend(cc)
                 server.sendmail(msg["From"], recipients, msg.as_string())
             return True
-        except Exception:
+        except Exception as e:
+            log_warning(f"[Email] 邮件发送失败 to={to_email} subject={subject}: {e}", exception=e)
             return False
 
     def send_text_email(self, to_email: str, subject: str, body: str) -> bool:
@@ -71,7 +73,8 @@ class EmailService:
                 server.login(self.smtp_username, self.smtp_password)
                 server.sendmail(msg["From"], [to_email], msg.as_string())
             return True
-        except Exception:
+        except Exception as e:
+            log_warning(f"[Email] 纯文本邮件发送失败 to={to_email} subject={subject}: {e}", exception=e)
             return False
 
 
