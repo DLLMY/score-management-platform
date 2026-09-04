@@ -43,3 +43,4 @@
 
 ## 班主任工作台（✅2026-08-21）
 - `useWorkbenchClass`（store+useSyncExternalStore，12子页共享当前班级 sessionStorage 持久）；后端班级隔离 join User.class_info_id；评语模型 TeacherComment 路由 /api/teacher-comments 权限 comment.view/edit。
+- ⚠️ **CRLF 文件禁用 Edit 直改**：backend 大量 .py 为 CRLF，Edit 工具会把整文件规范成 LF → 全文件噪音 diff（已发生 2 次：system_routes/scheduled_tasks）。改 CRLF 文件须先用 python 二进制读改写（继承 \r\n），或用脚本注入时按源主行尾换行。改完 `git diff --stat` 若出现"行数≈全删全加"即翻 EOL，立即恢复。
