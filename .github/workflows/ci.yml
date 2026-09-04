@@ -3,7 +3,9 @@ name: CI 回归基线
 # 第九次评估建议落地：把 scripts/run_regression.sh 五步闸门固化进 CI。
 # 设计要点：
 #   - 后端不安装 torch（requirements 中 torch 为可选注释）；M10 懒加载后契约/路由测试无需 torch。
-#   - 后端 job 不启动服务进程：G5 OpenAPI 走脚本"跳过不阻塞"分支，契约由 pytest test_api_envelope 兜底。
+#   - G5 OpenAPI 真验（2026-09-04）：回归前以 nohup 启动后端（MQTT 连不上不阻塞）→
+#     run_regression.sh step2 以 --strict 真验实时 swagger vs 根 api-docs 快照，漂移即失败；
+#     后端 90s 未就绪时降级为非阻塞跳过（维持失败软性）。
 #   - 索引闸门前置：create_app 建表 + create_indexes --create（幂等）→ verify_indexes 全绿。
 #   - PYTHON_BIN 环境变量让 run_regression.sh 在 CI（python）与本机（系统 3.11）通用。
 
@@ -44,6 +46,20 @@ jobs:
           python -c "from app import app; print('[CI] DB init ok')"
           python scripts/create_indexes.py --create > /dev/null
           echo "[CI] 索引就绪"
+
+      - name: 启动后端（G5 OpenAPI 真验前置；MQTT 连不上不阻塞，90s 超时降级跳过）
+        working-directory: backend
+        run: |
+          nohup python run.py --env development --host 127.0.0.1 --port 5000 > /tmp/backend-ci.log 2>&1 &
+          for i in $(seq 1 45); do
+            if python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/swagger.json', timeout=3)" 2>/dev/null; then
+              echo "[CI] 后端已就绪，G5 将真验 OpenAPI"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::warning title=G5 降级跳过::后端 90s 未就绪，OpenAPI 校验将走非阻塞跳过分支"
+          exit 0
 
       - name: 运行回归基线（G2 RBAC / G5 OpenAPI / 契约 / 关键路由 / 索引闸门）
         env:

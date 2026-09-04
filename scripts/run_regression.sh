@@ -4,7 +4,8 @@
 # ------------------------------------------------------------
 # 串起四套契约保障 + 关键路由测试 + 索引闸门：
 #   1. RBAC 一致性校验（check-only，漂移即失败）
-#   2. OpenAPI 契约漂移校验（需后端 5000 已启动，否则跳过）
+#   2. OpenAPI 契约漂移校验（--strict：需后端 5000 已启动 + 根 api-docs/openapi.json；
+#      后端未起或快照缺失才跳过；漂移即失败——2026-09-04 修复快照路径 bug 后 G5 真验）
 #   3. 后端契约测试 test_api_envelope（0 5xx + shape 快照）
 #   4. 关键业务路由 pytest（rules / export / notify / classes）
 #   5. 核心索引完整性校验（M11，防新环境漏跑 create_indexes）
@@ -49,11 +50,15 @@ else
   echo "[失败] RBAC 漂移（可用 --apply 幂等补齐）"; FAILED=1
 fi
 
-step "2/4 OpenAPI 契约漂移校验"
-if "$PY" backend/scripts/verify_openapi_contract.py; then
+step "2/4 OpenAPI 契约漂移校验（--strict：漂移即失败；后端未起/快照缺失才跳过）"
+rc=0
+"$PY" backend/scripts/verify_openapi_contract.py --strict --snapshot "$ROOT/api-docs/openapi.json" || rc=$?
+if [ "$rc" = "0" ]; then
   echo "[OK] OpenAPI 一致"
+elif [ "$rc" = "2" ]; then
+  echo "[提示] 后端未启动或快照缺失，OpenAPI 校验跳过（非阻塞）"
 else
-  echo "[提示] OpenAPI 漂移或后端未启动（跳过不阻塞）"
+  echo "[失败] OpenAPI 契约漂移"; FAILED=1
 fi
 
 cd "$ROOT/backend"
