@@ -1,6 +1,8 @@
 from typing import List, Dict
 import os
 
+from utils.logger import log_error, log_info, log_warning
+
 
 class ConfigValidator:
     """配置验证工具"""
@@ -123,31 +125,48 @@ class ConfigValidator:
         return {"errors": self.errors, "warnings": self.warnings}
 
     def print_report(self) -> None:
-        print("\n" + "=" * 70)
-        print("🔧 配置验证报告")
-        print("=" * 70)
-        print(f"环境: {self.flask_env}")
-        print("=" * 70)
+        """输出配置验证报告。
+
+        经 logger 输出（原为 print 直出）：报告整体聚合成单条日志，
+        按严重程度选级别（有错误→error / 仅警告→warning / 全通过→info），
+        便于统一收集与按级别过滤。方法名保持不变以免破坏调用方。
+        """
+        lines = [
+            "=" * 70,
+            "配置验证报告",
+            "=" * 70,
+            f"环境: {self.flask_env}",
+            "=" * 70,
+        ]
 
         if self.errors:
-            print(f"\n❌ 错误 ({len(self.errors)}):")
-            for i, error in enumerate(self.errors, 1):
-                print(f"   {i}. [{error['category']}] {error['message']}")
+            lines.append(f"错误 ({len(self.errors)}):")
+            lines.extend(
+                f"  {i}. [{e['category']}] {e['message']}" for i, e in enumerate(self.errors, 1)
+            )
         else:
-            print("\n✅ 无错误")
+            lines.append("无错误")
 
         if self.warnings:
-            print(f"\n⚠️  警告 ({len(self.warnings)}):")
-            for i, warning in enumerate(self.warnings, 1):
-                print(f"   {i}. [{warning['category']}] {warning['message']}")
+            lines.append(f"警告 ({len(self.warnings)}):")
+            lines.extend(
+                f"  {i}. [{w['category']}] {w['message']}" for i, w in enumerate(self.warnings, 1)
+            )
         else:
-            print("\n✅ 无警告")
+            lines.append("无警告")
 
-        print("\n" + "=" * 70)
-
+        lines.append("=" * 70)
         if self.errors and self.flask_env == "production":
-            print("🚨 生产环境存在配置错误，建议修复后再部署！")
-            print("=" * 70)
+            lines.append("生产环境存在配置错误，建议修复后再部署！")
+            lines.append("=" * 70)
+
+        report = "\n".join(lines)
+        if self.errors:
+            log_error(f"配置验证未通过:\n{report}")
+        elif self.warnings:
+            log_warning(f"配置验证通过（含 {len(self.warnings)} 条警告）:\n{report}")
+        else:
+            log_info(f"配置验证通过:\n{report}")
 
     def is_valid(self) -> bool:
         return len(self.errors) == 0

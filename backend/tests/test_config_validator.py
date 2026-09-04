@@ -215,15 +215,45 @@ class TestConfigValidator:
         validator._add_error("test", "error")
         assert validator.is_valid() is False
 
-    def test_print_report(self, capsys):
-        """测试打印报告方法"""
+    def test_print_report_routes_to_logger_by_severity(self):
+        """测试报告经 logger 输出，且按严重程度选级别。
 
-        validator = ConfigValidator()
-        validator.validate_all()
+        原实现为 print 直出，2026-09-02 收口为 logger（P2 代码卫生）。
+        方法名 print_report 保留以免破坏调用方，但输出通道已变更。
+        """
+        from utils.config_validator import ConfigValidator as _CV
 
+        # 有错误 → log_error，且错误内容进入日志
+        validator = _CV()
+        validator._add_error("security", "JWT_SECRET_KEY 未设置")
+        with patch("utils.config_validator.log_error") as mock_error:
+            validator.print_report()
+            assert mock_error.call_count == 1
+            assert "JWT_SECRET_KEY 未设置" in mock_error.call_args[0][0]
+
+        # 仅警告 → log_warning
+        validator = _CV()
+        validator._add_warning("database", "生产环境建议使用PostgreSQL")
+        with patch("utils.config_validator.log_warning") as mock_warning:
+            validator.print_report()
+            assert mock_warning.call_count == 1
+            assert "PostgreSQL" in mock_warning.call_args[0][0]
+
+        # 无错误无警告 → log_info
+        validator = _CV()
+        with patch("utils.config_validator.log_info") as mock_info:
+            validator.print_report()
+            assert mock_info.call_count == 1
+
+    def test_print_report_does_not_use_print(self):
+        """防回归：报告不得再走 print 直出（统一由 logger 输出）。"""
+        from utils.config_validator import ConfigValidator as _CV
+
+        validator = _CV()
+        validator._add_error("security", "测试用错误")
         with patch("builtins.print") as mock_print:
             validator.print_report()
-            assert mock_print.call_count > 0
+            assert mock_print.call_count == 0
 
     def test_validate_config_function(self):
         """测试validate_config便捷函数"""
