@@ -1,5 +1,4 @@
 import json
-import traceback
 import logging
 from flask_restx import Namespace, Resource, fields
 from services.mqtt_service import publish_mqtt, mqtt_logs, connect_mqtt, mqtt_manager
@@ -303,8 +302,7 @@ class MQTTConnect(Resource):
         except Exception as e:
             logger.warning(f"MQTT connection failed: {type(e).__name__}: {e}")
 
-            traceback.print_exc()
-            logger.error("%s: %s", "MQTT connection failed", e)
+            logger.error("%s: %s", "MQTT connection failed", e, exc_info=True)
             return APIResponse.error(message="MQTT connection failed", status_code=500)
 
 

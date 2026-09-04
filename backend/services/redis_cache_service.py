@@ -712,7 +712,4 @@ def warmup_cache(app):
             logger.info("缓存预热完成")
 
         except Exception as e:
-            logger.error(f"缓存预热失败: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.error(f"缓存预热失败: {e}", exc_info=True)

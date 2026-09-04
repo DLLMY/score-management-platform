@@ -756,10 +756,10 @@ class MQTTManager:
             client.loop_start()
             client.connect_async(broker, port, keepalive=keepalive)
         except Exception as e:
-            logger.error(f"[MQTTManager] 客户端({suffix})连接异常: {type(e).__name__}: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.error(
+                f"[MQTTManager] 客户端({suffix})连接异常: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             return None
 
         # M10: 连接确认等待上限收紧到 5s——connect_async + loop_start 已自带
@@ -864,10 +864,10 @@ class MQTTManager:
                 logger.error(f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}")
                 return False
         except Exception as e:
-            logger.error(f"[MQTTManager] 发布异常: {type(e).__name__}: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.error(
+                f"[MQTTManager] 发布异常: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             return False
 
     def subscribe(self, topic, qos=1):
