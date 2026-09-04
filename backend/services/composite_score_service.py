@@ -230,8 +230,12 @@ class CompositeScoreService:
                     "user_id": d["user_id"],
                     "name": d["name"],
                     "class_name": d["class_name"],
-                    "behavior_score": d["behavior"],
-                    "academic_score": round(d["academic"], 2),
+                    # D 级语义统一（2026-09-04 决策）：behavior/academic 与 social 一律存
+                    # 「0-100 归一化可比分量」（norm×100），与 composite_score(0-100) 同量纲；
+                    # 消除原 behavior/academic 存原始积分/均分、social 存 norm×100 的混档，
+                    # 以及增量重算写 0-1 norm 造成跨行单位漂移的问题。
+                    "behavior_score": round(float(d["behavior_norm"] * 100), 2),
+                    "academic_score": round(float(d["academic_norm"] * 100), 2),
                     "unlock_count": d["unlock_count"],
                     "social_score": round(float(d["compliance_norm"] * 100), 2),
                     "composite_score": composite_score,
@@ -308,25 +312,8 @@ class CompositeScoreService:
         }
 
         user_ids = [c.student_id for c in composites]
-        academic_map = {}
-        if user_ids:
-            score_stats = (
-                db.session.query(
-                    Score.student_id,
-                    func.avg(Score.score).label("avg_score"),
-                )
-                .filter(
-                    Score.student_id.in_(user_ids),
-                    Score.score > 0,
-                )
-                .group_by(Score.student_id)
-                .all()
-            )
-            for stat in score_stats:
-                academic_map[stat.student_id] = (
-                    round(float(stat.avg_score), 2) if stat.avg_score else None
-                )
-
+        # D 级语义统一（2026-09-04）：读路径直接返回存储的 0-100 分量，不再重算
+        # academic_map（原为第三套口径：写全量 raw / 增量 norm，读又重算 avg）。
         user_map = (
             {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
         )
@@ -341,9 +328,13 @@ class CompositeScoreService:
                     "behavior_score": (
                         composite.behavior_score
                         if composite.behavior_score is not None
-                        else (u.current_score if u else None)
-                    ),  # R7: 与写入归一化语义一致（原被 current_score 覆盖）
-                    "academic_score": academic_map.get(composite.student_id),
+                        else None
+                    ),
+                    "academic_score": (
+                        composite.academic_score
+                        if composite.academic_score is not None
+                        else None
+                    ),
                     "composite_score": composite.composite_score,
                     "ranking": i + 1,
                 }
@@ -515,9 +506,11 @@ class CompositeScoreService:
         composite = CompositeScore.query.filter_by(student_id=user_id).first()
         if composite:
             old_score = composite.composite_score
-            composite.behavior_score = behavior_norm_value
-            composite.academic_score = academic_norm_value
-            composite.social_score = compliance_norm_value
+            # D 级语义统一（2026-09-04）：增量路径与全量一致写 0-100 分量（×100）；
+            # 原写 0-1 norm → 该行与全量行（raw/social×100）单位漂移、不可比。
+            composite.behavior_score = round(float(behavior_norm_value * 100), 2)
+            composite.academic_score = round(float(academic_norm_value * 100), 2)
+            composite.social_score = round(float(compliance_norm_value * 100), 2)
             composite.composite_score = composite_score
             composite.computed_at = datetime.now()
             # P2-6 修复: 原 `db_session_scope(): pass` 空提交 → 真实持久化增量更新

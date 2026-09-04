@@ -1,4 +1,7 @@
+import base64
+import hmac
 import logging
+import time
 import requests
 import json
 from datetime import datetime
@@ -7,6 +10,13 @@ from flask import current_app
 from models import db, Notification
 
 logger = logging.getLogger(__name__)
+
+
+# 微信 access_token 进程内缓存：token 有效期 7200s、日获取有上限，
+# 群发通知每次现取会快速耗尽配额；按 appid 关联防多配置串用，
+# 提前 60s 刷新，网络/接口异常时降级回退旧 token。
+_WECHAT_TOKEN_CACHE: Dict = {}
+_WECHAT_TOKEN_REFRESH_SKEW = 60
 
 
 class NotificationService:
@@ -89,16 +99,33 @@ class NotificationService:
             if not appid or not secret:
                 return None
 
+            now = time.time()
+            if (
+                _WECHAT_TOKEN_CACHE.get("appid") == appid
+                and _WECHAT_TOKEN_CACHE.get("expires_at", 0) - _WECHAT_TOKEN_REFRESH_SKEW > now
+            ):
+                return _WECHAT_TOKEN_CACHE.get("token")
+
             url = f"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={appid}&secret={secret}"
             response = requests.get(url, timeout=10)
             result = response.json()
 
             if "access_token" in result:
+                _WECHAT_TOKEN_CACHE["appid"] = appid
+                _WECHAT_TOKEN_CACHE["token"] = result["access_token"]
+                _WECHAT_TOKEN_CACHE["expires_at"] = now + int(result.get("expires_in", 7200))
                 return result["access_token"]
+
+            # 接口返回错误（临时限频等）时降级用缓存 token，避免可用 token 被误弃
+            if _WECHAT_TOKEN_CACHE.get("appid") == appid and _WECHAT_TOKEN_CACHE.get("token"):
+                return _WECHAT_TOKEN_CACHE.get("token")
             return None
 
         except Exception as e:
             logger.error(f"_get_wechat_access_token failed: {e}")
+            # 网络异常同样回退缓存 token（按 appid 匹配），保持短窗口可用
+            if _WECHAT_TOKEN_CACHE.get("appid") == appid and _WECHAT_TOKEN_CACHE.get("token"):
+                return _WECHAT_TOKEN_CACHE.get("token")
             return None
 
     @staticmethod
@@ -126,7 +153,7 @@ class NotificationService:
                 # 统一由下方兜底报错，避免"腾讯云短信功能待实现"误导
                 return {
                     "success": False,
-                    "message": "不支持的短信提供商（当前仅支持 aliyun，请设置 SMS_PROVIDER=aliyun）",
+                    "message": "不支持的短信提供商（当前仅支持 aliyun，请设置 SMS_CONFIG.provider=aliyun）",
                 }
 
         except Exception as e:
@@ -173,15 +200,19 @@ class NotificationService:
 
             canonicalized = "&".join([f"{k}={requests.utils.quote(v)}" for k, v in sorted_params])
             string_to_sign = (
-                f'GET&{requests.utils.quote("/")}&{requests.utils.quote(canonicalized)}'
+                f"GET&%2F&{requests.utils.quote(canonicalized)}"
             )
 
-            signature = hashlib.hmac.new(
-                f"{access_key_secret}&".encode(), string_to_sign.encode(), hashlib.sha1
-            ).b64decode()
+            signature = base64.b64encode(
+                hmac.new(
+                    f"{access_key_secret}&".encode(),
+                    string_to_sign.encode(),
+                    hashlib.sha1,
+                ).digest()
+            ).decode()
             signature = requests.utils.quote(signature)
 
-            url = f"https://dysmsapi.aliyuncs.com/?Signature={signature}{canonicalized}"
+            url = f"https://dysmsapi.aliyuncs.com/?Signature={signature}&{canonicalized}"
 
             response = requests.get(url, timeout=10)
             result = response.json()
