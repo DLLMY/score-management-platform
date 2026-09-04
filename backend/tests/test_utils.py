@@ -43,17 +43,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from utils.sms_utils import SMSService
-except ImportError:
-    pass
-
-try:
-    from utils.wechat_utils import WechatService
-except ImportError:
-    pass
-
-
 class TestUtils:
 
     def test_logger(self, app):
@@ -137,15 +126,3 @@ class TestUtils:
 
         email_service = EmailService()
         assert email_service is not None
-
-    def test_sms_utils(self):
-        from utils.sms_utils import SMSService
-
-        sms_service = SMSService()
-        assert sms_service is not None
-
-    def test_wechat_utils(self):
-        from utils.wechat_utils import WechatService
-
-        wechat_service = WechatService()
-        assert wechat_service is not None
