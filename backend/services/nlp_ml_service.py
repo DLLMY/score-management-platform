@@ -101,6 +101,7 @@ TEXTCNN_INSTALLED = True
 BERT_INSTALLED = TRANSFORMERS_INSTALLED
 
 
+from utils.logger import log_info, log_warning, log_debug
 class MLAlgorithmType:
     SVM = "svm"
     RANDOM_FOREST = "random_forest"
@@ -565,9 +566,9 @@ class _SklearnBertWrapper:
             if self.bert.is_available():
                 self._available = True
             else:
-                print(f"[BertWrapper] BERT服务初始化未完成: {model_path}")
+                log_warning(f"[BertWrapper] BERT服务初始化未完成: {model_path}")
         except Exception as e:
-            print(f"[BertWrapper] 初始化失败: {e}")
+            log_warning(f"[BertWrapper] 初始化失败: {e}", exception=e)
 
     def _get_embedding(self, text):
         if self._available and self.bert is not None:
@@ -596,7 +597,7 @@ class _SklearnBertWrapper:
                     clf.fit(np.array(embeddings), labels)
                     self._fallback_clf = clf
                 except Exception as e:
-                    print(f"[BertWrapper] 训练失败: {e}")
+                    log_warning(f"[BertWrapper] 训练失败: {e}", exception=e)
                     self._fallback_clf = None
             else:
                 self._fallback_clf = None
@@ -758,7 +759,7 @@ class NLPMLTrainingService:
                     filter_sizes=[2, 3, 4],
                 )
             except Exception as e:
-                print(f"[NLPMLTrainingService] TextCNN初始化失败: {e}")
+                log_warning(f"[NLPMLTrainingService] TextCNN初始化失败: {e}", exception=e)
         # BERT: 预训练Transformer模型（CPU环境使用轻量级模式）
         if BERT_INSTALLED:
             try:
@@ -766,7 +767,7 @@ class NLPMLTrainingService:
                     model_path="models/bert", use_quantization=True
                 )
             except Exception as e:
-                print(f"[NLPMLTrainingService] BERT初始化失败: {e}")
+                log_warning(f"[NLPMLTrainingService] BERT初始化失败: {e}", exception=e)
 
     def _get_voting_model(self):
         base_models = []

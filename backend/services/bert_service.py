@@ -23,6 +23,7 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 
+from utils.logger import log_info, log_warning, log_debug
 class BertNLPService:
     def __init__(self, model_path: str = None, use_quantization: bool = True):
         self.model_path = model_path or os.path.join(
@@ -107,9 +108,9 @@ class BertNLPService:
                     self.model = torch.quantization.quantize_dynamic(
                         self.model, {torch.nn.Linear}, dtype=torch.qint8
                     )
-                    print("PyTorch动态量化成功")
+                    log_info("PyTorch动态量化成功")
                 except Exception as e:
-                    print(f"动态量化失败: {e}")
+                    log_warning(f"动态量化失败: {e}", exception=e)
                     self.use_quantization = False
             self.model.eval()
             self._initialized = True
@@ -119,7 +120,7 @@ class BertNLPService:
                 self._memory_usage = process.memory_info().rss / 1024 / 1024
             except Exception:
                 pass
-            print(
+            log_info(
                 (
                     f"BERT模型加载成功! 量化: {self.use_quantization}, "
                     f"耗时: {self._load_time:.2f}s, "
@@ -127,7 +128,7 @@ class BertNLPService:
                 )
             )
         except Exception as e:
-            print(f"BERT模型加载失败: {e}")
+            log_warning(f"BERT模型加载失败: {e}", exception=e)
             self._initialized = False
 
     def warmup(self):
@@ -135,13 +136,13 @@ class BertNLPService:
             return
         if self._warmup_done:
             return
-        print("BERT模型预热中...")
+        log_info("BERT模型预热中...")
         start_time = time.time()
         warmup_texts = ["上课发言", "迟到", "帮助同学", "打架", "认真听讲"]
         for text in warmup_texts:
             self.get_embedding(text)
         self._warmup_done = True
-        print(f"BERT预热完成! 耗时: {time.time() - start_time:.2f}s")
+        log_info(f"BERT预热完成! 耗时: {time.time() - start_time:.2f}s")
 
     def is_available(self) -> bool:
         return self._initialized
@@ -171,7 +172,7 @@ class BertNLPService:
             embedding = outputs.last_hidden_state.mean(dim=1).cpu().numpy()[0]
             return embedding
         except Exception as e:
-            print(f"获取向量失败: {e}")
+            log_warning(f"获取向量失败: {e}", exception=e)
             return None
 
     def batch_get_embeddings(self, texts: List[str]) -> List[np.ndarray]:
@@ -190,7 +191,7 @@ class BertNLPService:
             embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
             return [embeddings[i] for i in range(len(texts))]
         except Exception as e:
-            print(f"批量获取向量失败: {e}")
+            log_warning(f"批量获取向量失败: {e}", exception=e)
             return [None] * len(texts)
 
     def predict_intent(self, text: str) -> Tuple[str, float]:

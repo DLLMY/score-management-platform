@@ -15,6 +15,7 @@ NLP轻量级解析器 - 快速路径
 """
 
 
+from utils.logger import log_info, log_warning, log_debug
 class FastNLPParser:
     """轻量级NLP解析器"""
 
@@ -124,7 +125,7 @@ class FastNLPParser:
         self._cache = {}
         self._cache_max_size = 10000
 
-        print("[FastNLPParser] 轻量级解析器已初始化")
+        log_info("[FastNLPParser] 轻量级解析器已初始化")
 
     def _extract_name(self, text: str) -> Optional[str]:
         """从文本中提取姓名"""
@@ -388,7 +389,7 @@ class FastNLPParser:
     def clear_cache(self):
         """清空缓存"""
         self.parse.cache_clear()
-        print("[FastNLPParser] 缓存已清空")
+        log_info("[FastNLPParser] 缓存已清空")
 
 
 fast_parser = FastNLPParser()

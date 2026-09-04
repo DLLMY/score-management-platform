@@ -16,6 +16,7 @@ NLP性能优化服务
 """
 
 
+from utils.logger import log_info, log_warning, log_debug
 class NLPCache:
     """NLP结果缓存"""
 
@@ -125,7 +126,7 @@ class NLPPerformanceOptimizer:
         """模型预热"""
         if self._warmup_done:
             return
-        print("[NLP优化器] 开始预热...")
+        log_info("[NLP优化器] 开始预热...")
         start_time = time.time()
         try:
             from services.bert_service import get_bert_service
@@ -135,7 +136,7 @@ class NLPPerformanceOptimizer:
                 bert.warmup()
                 self._bert_service = bert
         except Exception as e:
-            print(f"[NLP优化器] BERT预热失败: {e}")
+            log_warning(f"[NLP优化器] BERT预热失败: {e}", exception=e)
         try:
             from services.nlp_ml_service import NLPMLTrainingService
 
@@ -146,7 +147,7 @@ class NLPPerformanceOptimizer:
             if hasattr(ml_service, "load_models"):
                 ml_service.load_models(["logistic_regression", "svm"])
             self._nlp_ml_service = ml_service
-            print("[NLP优化器] ML模型预热成功")
+            log_info("[NLP优化器] ML模型预热成功")
         except Exception as e:
             # 显式告警（不再静默吞错）：ML 服务不可用会在此暴露真实原因，便于排障。
             import logging
@@ -164,13 +165,13 @@ class NLPPerformanceOptimizer:
                 parser.parse(text)
             self._nlp_parser_service = parser
         except Exception as e:
-            print(f"[NLP优化器] 解析器预热失败: {e}")
+            log_warning(f"[NLP优化器] 解析器预热失败: {e}", exception=e)
         self._warmup_done = True
         self._models_loaded = True
         # P2-1 修复: 删除写死解析结果的 common_queries 缓存（命中会绕过真实解析返回伪造数据）。
         # 真实预热已由上方 warmup_texts 经 NLPParserService.parse 完成。
         elapsed = time.time() - start_time
-        print(f"[NLP优化器] 预热完成! 耗时: {elapsed:.2f}s")
+        log_info(f"[NLP优化器] 预热完成! 耗时: {elapsed:.2f}s")
 
     def parse_with_cache(self, text: str, parser_func) -> Dict:
         """带缓存的解析"""

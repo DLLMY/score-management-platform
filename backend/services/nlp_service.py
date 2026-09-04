@@ -7,6 +7,7 @@ import hashlib
 import threading
 
 
+from utils.logger import log_info, log_warning, log_debug
 class NLPParserType(Enum):
     RULE_BASED = "rule_based"
     ML_BASED = "ml_based"
@@ -55,7 +56,7 @@ class NLPService:
         self._initialize_parsers()
         self._initialize_redis_cache()
         self._initialized = True
-        print(f"NLP统一服务门面已初始化，使用解析器: {parser_type.value}")
+        log_info(f"NLP统一服务门面已初始化，使用解析器: {parser_type.value}")
 
     def set_flask_app(self, flask_app):
         self._flask_app = flask_app
@@ -65,9 +66,9 @@ class NLPService:
             from services.redis_cache_service import get_cache_service
 
             self._redis_cache = get_cache_service()
-            print("NLP服务已连接Redis缓存（二级缓存）")
+            log_info("NLP服务已连接Redis缓存（二级缓存）")
         except Exception as e:
-            print(f"NLP服务Redis缓存连接失败: {e}")
+            log_warning(f"NLP服务Redis缓存连接失败: {e}", exception=e)
             self._redis_cache = None
 
     def _initialize_parsers(self):
@@ -83,9 +84,9 @@ class NLPService:
                 from services.nlp_fast_parser import FastNLPParser
 
                 self._fast_parser = FastNLPParser()
-                print("NLP轻量级解析器已加载（快速路径）")
+                log_info("NLP轻量级解析器已加载（快速路径）")
             except Exception as e:
-                print(f"NLP轻量级解析器加载失败: {e}")
+                log_warning(f"NLP轻量级解析器加载失败: {e}", exception=e)
                 self._fast_parser = None
 
         thread = threading.Thread(target=load_fast_parser, daemon=True)
@@ -100,17 +101,17 @@ class NLPService:
                 from services.nlp_parser_service import NLPParserService
 
                 parser = NLPParserService()
-                print("NLP规则解析器已加载")
+                log_info("NLP规则解析器已加载")
             elif parser_type == NLPParserType.ENHANCED:
                 from services.nlp_enhanced_service import EnhancedNLPParserService
 
                 parser = EnhancedNLPParserService()
-                print("NLP增强解析器已加载")
+                log_info("NLP增强解析器已加载")
             elif parser_type == NLPParserType.ML_BASED:
                 # P0-2 修复：ml_based 为潜伏死分支——NLPMLTrainingService 仅有 predict* 方法，
                 # 无 parse()，调用必抛 AttributeError。门面禁用其经 API 触达，返回 None 由
                 # 调用方降级为“解析器不可用”（见 parse() 中 if not parser 分支）。
-                print("NLP机器学习解析器(ml_based)尚未实现 parse()，已禁用")
+                log_info("NLP机器学习解析器(ml_based)尚未实现 parse()，已禁用")
                 return None
             else:
                 return None
@@ -118,7 +119,7 @@ class NLPService:
             self._parser_instances[parser_type] = parser
             return parser
         except Exception as e:
-            print(f"加载{parser_type.value}解析器失败: {e}")
+            log_warning(f"加载{parser_type.value}解析器失败: {e}", exception=e)
             return None
 
     def get_parser(self, parser_type: Optional[NLPParserType] = None) -> Any:
@@ -288,10 +289,10 @@ class NLPService:
         if self._redis_cache:
             try:
                 self._redis_cache.flush(pattern="nlp_parse:*")
-                print("NLP解析Redis缓存已清空")
+                log_info("NLP解析Redis缓存已清空")
             except Exception as e:
-                print(f"NLP解析Redis缓存清空失败: {e}")
-        print("NLP解析内存缓存已清空")
+                log_warning(f"NLP解析Redis缓存清空失败: {e}", exception=e)
+        log_info("NLP解析内存缓存已清空")
 
     def warmup(self, texts: Optional[List[str]] = None):
         warmup_texts = texts or [
@@ -302,16 +303,16 @@ class NLPService:
             "赵六做好事加10分",
             "作业没交扣5分",
         ]
-        print("NLP服务预热中...")
+        log_info("NLP服务预热中...")
 
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                 futures = [executor.submit(self.parse, text) for text in warmup_texts]
                 concurrent.futures.wait(futures, timeout=30)
 
-            print("NLP服务预热完成")
+            log_info("NLP服务预热完成")
         except Exception as e:
-            print(f"NLP服务预热失败: {e}")
+            log_warning(f"NLP服务预热失败: {e}", exception=e)
 
     def async_warmup(self, texts: Optional[List[str]] = None):
         """异步预热，不阻塞主线程"""
@@ -321,7 +322,7 @@ class NLPService:
     def shutdown(self):
         self._initialized = False
         self._parsers = {}
-        print("NLP统一服务门面已关闭")
+        log_info("NLP统一服务门面已关闭")
 
 
 nlp_service = NLPService()
@@ -338,5 +339,5 @@ def init_nlp_service(parser_type: str = "enhanced"):
         nlp_service.warmup()
         return True
     except ValueError:
-        print(f"无效的解析器类型: {parser_type}")
+        log_warning(f"无效的解析器类型: {parser_type}")
         return False

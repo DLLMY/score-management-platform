@@ -14,6 +14,7 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+from utils.logger import log_info, log_warning, log_debug
 class TextCNNClassifier:
 
     def __init__(self, embedding_dim=128, max_len=32, num_filters=64, filter_sizes=[2, 3, 4]):
@@ -222,7 +223,7 @@ class TextCNNClassifier:
                 all_logits = all_flat @ self.fc_weights + self.fc_bias
                 predictions = np.argmax(all_logits, axis=1)
                 accuracy = np.mean(predictions == y)
-                print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}")
+                log_info(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}")
         self._trained = True
 
 
@@ -409,7 +410,7 @@ class IntentMatcher:
             self.predict(text)
         elapsed = time.time() - start_time
         avg_time = elapsed / len(test_texts) * 1000
-        print(f"TextCNN Benchmark: {len(test_texts)} samples, Avg: {avg_time:.2f} ms/sample")
+        log_info(f"TextCNN Benchmark: {len(test_texts)} samples, Avg: {avg_time:.2f} ms/sample")
         return avg_time
 
 
@@ -427,23 +428,23 @@ if __name__ == "__main__":
         "李明上课睡觉",
         "钱七打扫卫生",
     ]
-    print("=" * 60)
-    print("TextCNN意图分类测试")
-    print("=" * 60)
+    log_debug("=" * 60)
+    log_debug("TextCNN意图分类测试")
+    log_debug("=" * 60)
     for text in test_texts:
         result = matcher.predict(text)
-        print(f"文本: '{text}'")
-        print(f"  意图: {result['intent']}, 置信度: {result['confidence']:.3f}")
-        print(f"  CNN意图: {result['cnn_intent']} ({result['cnn_confidence']:.3f})")
-        print(f"  规则意图: {result['rule_intent']} ({result['rule_confidence']:.3f})")
+        log_debug(f"文本: '{text}'")
+        log_debug(f"  意图: {result['intent']}, 置信度: {result['confidence']:.3f}")
+        log_debug(f"  CNN意图: {result['cnn_intent']} ({result['cnn_confidence']:.3f})")
+        log_debug(f"  规则意图: {result['rule_intent']} ({result['rule_confidence']:.3f})")
         for k, v in result["matches"].items():
             if v:
-                print(f"  {k}匹配: {', '.join(v)}")
-        print()
+                log_debug(f"  {k}匹配: {', '.join(v)}")
+        log_debug("")
     matcher.benchmark(test_texts)
-    print("\n" + "=" * 60)
-    print("语义相似度测试")
-    print("=" * 60)
+    log_debug("\n" + "=" * 60)
+    log_debug("语义相似度测试")
+    log_debug("=" * 60)
     test_pairs = [
         ("上课发言", "主动回答老师问题"),
         ("上课发言", "在课堂上说话"),
@@ -453,4 +454,4 @@ if __name__ == "__main__":
     ]
     for text1, text2 in test_pairs:
         similarity = matcher.cnn.cosine_similarity(text1, text2)
-        print(f"'{text1}' vs '{text2}' -> 相似度: {similarity:.3f}")
+        log_debug(f"'{text1}' vs '{text2}' -> 相似度: {similarity:.3f}")

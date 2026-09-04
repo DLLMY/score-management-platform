@@ -24,6 +24,7 @@ from config.config_loader import config_loader
 from utils.db_session import db_session_scope
 
 
+from utils.logger import log_info, log_warning, log_debug
 def _coerce_dt(value):
     """将可能的 str/date/datetime 统一解析为 datetime；无法解析返回 None。
 
@@ -2924,10 +2925,10 @@ class EnhancedNLPParserService:
             cached_result = self._parse_cache[cache_key]
             if context_history and cached_result.get("context_used"):
                 return cached_result
-            print(f"[NLP缓存命中] key={cache_key[:30]}")
+            log_debug(f"[NLP缓存命中] key={cache_key[:30]}")
             return cached_result
 
-        print(f"[NLP缓存未命中] key={cache_key[:30]}")
+        log_debug(f"[NLP缓存未命中] key={cache_key[:30]}")
 
         correction_result = self._check_corrections(text)
         if correction_result:
@@ -3512,7 +3513,7 @@ class EnhancedNLPParserService:
                         results[idx] = result
                     return result
                 except Exception as e:
-                    print(f"[ERROR] batch_parse failed for text {text[:20]}...: {e}")
+                    log_warning(f"[ERROR] batch_parse failed for text {text[:20]}...: {e}", exception=e)
                     with lock:
                         results[idx] = {
                             "success": False,
@@ -3530,7 +3531,7 @@ class EnhancedNLPParserService:
             # 回退到串行处理
             return [self.parse(text) for text in texts]
         except Exception as e:
-            print(f"[ERROR] batch_parse parallel failed: {e}")
+            log_warning(f"[ERROR] batch_parse parallel failed: {e}", exception=e)
             return [self.parse(text) for text in texts]
 
     def analyze_sentiment(self, text):
