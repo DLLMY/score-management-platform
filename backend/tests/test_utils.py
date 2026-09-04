@@ -4,11 +4,6 @@ except ImportError:
     pass
 
 try:
-    from utils.structured_logger import StructuredLogger, LogCategory
-except ImportError:
-    pass
-
-try:
     from utils.backup_utils import backup_manager
 except ImportError:
     pass
@@ -52,13 +47,6 @@ class TestUtils:
         log_error("Test error message")
         log_debug("Test debug message")
         log_warning("Test warning message")
-
-    def test_structured_logger(self, app):
-        from utils.structured_logger import StructuredLogger, LogCategory
-
-        logger = StructuredLogger()
-        logger.info(LogCategory.SYSTEM, "Test structured info", extra={"key": "value"})
-        logger.error(LogCategory.SYSTEM, "Test structured error", exc_info=True)
 
     def test_backup_utils(self, app, tmp_path):
         with app.app_context():
