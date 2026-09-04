@@ -5,6 +5,7 @@ import os
 import time
 from flask_restx import Namespace, Resource, fields
 from models import FirmwareVersion, DeviceFirmwareUpdate, Device
+from utils.logger import log_info, log_warning, log_debug
 
 # 响应序列化字段子集（不含 created_by；OTA 命令 payload 字段集不同，不经由此处）
 FIRMWARE_FIELDS = [
@@ -432,7 +433,7 @@ def allowed_file(filename):
 def ensure_upload_folder():
     if not os.path.exists(FIRMWARE_UPLOAD_FOLDER):
         os.makedirs(FIRMWARE_UPLOAD_FOLDER)
-        print(f"[Firmware] Created upload directory: {FIRMWARE_UPLOAD_FOLDER}")
+        log_info(f"[Firmware] Created upload directory: {FIRMWARE_UPLOAD_FOLDER}")
 
 
 @ns_firmware.route("/upload")

@@ -1,6 +1,7 @@
 from celery_app import celery_app
 import json
 from datetime import datetime
+from utils.logger import log_info, log_warning, log_debug
 
 
 @celery_app.task(bind=True, name="tasks.mqtt_tasks.process_message", queue="mqtt")
@@ -47,7 +48,7 @@ def handle_device_message(topic, data):
     if sub_topic in ("heartbeat", "status") or ("status" in data or "device_id" in data):
         mqtt_message_service.handle_heartbeat_message(data)
     else:
-        print(f"[MQTT Task] 设备消息(未匹配处理): {topic} -> {data}")
+        log_debug(f"[MQTT Task] 设备消息(未匹配处理): {topic} -> {data}")
 
 
 def handle_score_message(topic, data):
@@ -64,7 +65,7 @@ def handle_score_message(topic, data):
     elif sub_topic in ("query", "points/query"):
         mqtt_message_service.handle_points_query(data)
     else:
-        print(f"[MQTT Task] 积分消息(未匹配处理): {topic} -> {data}")
+        log_debug(f"[MQTT Task] 积分消息(未匹配处理): {topic} -> {data}")
 
 
 @celery_app.task(bind=True, name="tasks.mqtt_tasks.process_phonebox_telemetry", queue="mqtt")
@@ -98,10 +99,10 @@ def process_phonebox_telemetry(self, topic, payload):
                 try:
                     mqtt_message_service.handle_heartbeat_message(data)
                 except Exception as e:
-                    print(f"[MQTT Task] 心跳处理失败: {e}")
+                    log_warning(f"[MQTT Task] 心跳处理失败: {e}", exception=e)
         return {"success": True, "topic": topic}
     except Exception as e:
-        print(f"[MQTT Task] 遥测处理异常: {e}")
+        log_warning(f"[MQTT Task] 遥测处理异常: {e}", exception=e)
         self.retry(exc=e, countdown=2, max_retries=3)
         return {"success": False, "error": str(e)}
 
@@ -122,7 +123,7 @@ def handle_command_message(topic, data):
         db.session.add(log)
         db.session.commit()
     except Exception as e:
-        print(f"[MQTT Task] 命令日志记录失败: {e}")
+        log_warning(f"[MQTT Task] 命令日志记录失败: {e}", exception=e)
         db.session.rollback()
 
     try:
@@ -135,4 +136,4 @@ def handle_command_message(topic, data):
         }
         publish_mqtt(f"{topic}/ack", json.dumps(ack, ensure_ascii=False), qos=1)
     except Exception as e:
-        print(f"[MQTT Task] 命令回执发布失败: {e}")
+        log_warning(f"[MQTT Task] 命令回执发布失败: {e}", exception=e)

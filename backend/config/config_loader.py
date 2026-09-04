@@ -8,6 +8,7 @@ import threading
 import importlib
 
 
+from utils.logger import log_info, log_warning, log_debug
 class ConfigLoader:
     _instance = None  # noqa: F841
     _lock = threading.Lock()  # noqa: F841
@@ -48,7 +49,7 @@ class ConfigLoader:
             spec.loader.exec_module(self._config_module)
             return self._config_module
         except Exception as e:
-            print(f"[ConfigLoader] 加载config.py失败: {e}")
+            log_warning(f"[ConfigLoader] 加载config.py失败: {e}", exception=e)
             return None
 
     def _get_config_instance(self):
@@ -63,7 +64,7 @@ class ConfigLoader:
             self._config_instance = module.Config()
             return self._config_instance
         except Exception as e:
-            print(f"[ConfigLoader] 创建Config实例失败: {e}")
+            log_warning(f"[ConfigLoader] 创建Config实例失败: {e}", exception=e)
             return None
 
     def get_config(self, key, default=None):
@@ -147,7 +148,7 @@ class ConfigLoader:
                 self._config_mtime[path] = current_mtime
                 return data
         except Exception as e:
-            print(f"[ConfigLoader] 加载配置文件失败 {filename}: {e}")
+            log_warning(f"[ConfigLoader] 加载配置文件失败 {filename}: {e}", exception=e)
             if path in self._config_cache:
                 return self._config_cache[path]
             return None
@@ -209,7 +210,7 @@ class ConfigLoader:
         self._config_module = None
         self._config_instance = None
         self._config_module_mtime = None
-        print("[ConfigLoader] 配置已重新加载")
+        log_info("[ConfigLoader] 配置已重新加载")
 
     def get_config_info(self):
         info = {}
@@ -232,13 +233,13 @@ class ConfigLoader:
                 return False
 
             if current_mtime > self._config_module_mtime:
-                print("[ConfigLoader] 检测到config.py变更，自动重新加载")
+                log_info("[ConfigLoader] 检测到config.py变更，自动重新加载")
                 self._config_module = None
                 self._config_instance = None
                 self._config_module_mtime = current_mtime
                 return True
         except Exception as e:
-            print(f"[ConfigLoader] 检查配置文件变更失败: {e}")
+            log_warning(f"[ConfigLoader] 检查配置文件变更失败: {e}", exception=e)
 
         return False
 
@@ -246,9 +247,9 @@ class ConfigLoader:
         while True:
             try:
                 if self._check_config_module_changes():
-                    print("[ConfigLoader] 配置热更新完成")
+                    log_info("[ConfigLoader] 配置热更新完成")
             except Exception as e:
-                print(f"[ConfigLoader] 配置监控线程异常: {e}")
+                log_warning(f"[ConfigLoader] 配置监控线程异常: {e}", exception=e)
             time.sleep(self._watch_interval)
 
     def start_config_watcher(self, interval=None):
@@ -260,12 +261,12 @@ class ConfigLoader:
                 target=self._config_watcher, daemon=True, name="config-watcher"
             )
             self._watch_thread.start()
-            print(f"[ConfigLoader] 配置监控线程已启动，检查间隔: {self._watch_interval}秒")
+            log_info(f"[ConfigLoader] 配置监控线程已启动，检查间隔: {self._watch_interval}秒")
 
     def stop_config_watcher(self):
         if self._watch_thread is not None:
             self._watch_thread = None
-            print("[ConfigLoader] 配置监控线程已停止")
+            log_info("[ConfigLoader] 配置监控线程已停止")
 
     def get_notification_config(self):
         return {

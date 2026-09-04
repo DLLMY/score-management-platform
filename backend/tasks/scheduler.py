@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 scheduler = None
 
 
+from utils.logger import log_info, log_warning, log_debug
 def scheduled_approval_timeout_check(app):
     try:
         from models import Approval, SystemConfig
@@ -34,7 +35,7 @@ def scheduled_approval_timeout_check(app):
             ).all()
 
             if timeout_approvals:
-                print(f"审批超时检查发现 {len(timeout_approvals)} 个超时审批")
+                log_info(f"审批超时检查发现 {len(timeout_approvals)} 个超时审批")
 
                 for approval in timeout_approvals:
                     notification = {
@@ -54,13 +55,13 @@ def scheduled_approval_timeout_check(app):
 
                     try:
                         publish_mqtt("phonebox/approval_timeout", notification)
-                        print(f"[Approval] 已发送审批超时提醒: approval_id={approval.id}")
+                        log_info(f"[Approval] 已发送审批超时提醒: approval_id={approval.id}")
                     except Exception as e:
-                        print(f"[Approval] 发送审批超时提醒失败: {e}")
+                        log_warning(f"[Approval] 发送审批超时提醒失败: {e}", exception=e)
             else:
-                print("审批超时检查完成，无超时审批")
+                log_debug("审批超时检查完成，无超时审批")
     except Exception as e:
-        print(f"审批超时检查异常: {e}")
+        log_warning(f"审批超时检查异常: {e}", exception=e)
 
 
 def scheduled_notify_check(app):
@@ -70,10 +71,10 @@ def scheduled_notify_check(app):
         with app.app_context():
             process_scheduled_notifications()
     except Exception as e:
-        print(f"定时通知检查异常: {e}")
+        log_warning(f"定时通知检查异常: {e}", exception=e)
 
 
 def shutdown_scheduler():
     if scheduler:
         scheduler.shutdown()
-        print("定时任务调度器已关闭")
+        log_info("定时任务调度器已关闭")

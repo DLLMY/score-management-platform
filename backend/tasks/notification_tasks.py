@@ -1,6 +1,7 @@
 from celery_app import celery_app
 import json
 import time
+from utils.logger import log_info, log_warning, log_debug
 
 
 @celery_app.task(
@@ -29,7 +30,7 @@ def send_remote_notify(self, device_id, message, urgent=False):
         }
         topic = f"phonebox/notify/{device_id}" if device_id else "phonebox/notify/broadcast"
         success = publish_mqtt(topic, json.dumps(notify_data, ensure_ascii=False), qos=1)
-        print(f"[Notification Task] 已发布通知到 {topic} (success={success})")
+        log_info(f"[Notification Task] 已发布通知到 {topic} (success={success})")
         return {"success": success, "device_id": device_id, "message": message, "topic": topic}
     except Exception as e:
         self.retry(exc=e, countdown=3, max_retries=3)
@@ -69,7 +70,7 @@ def broadcast_notify(self, message, device_ids=None, urgent=False):
                 )
                 if ok:
                     count += 1
-            print(f"[Notification Task] 定向广播通知完成: {count}/{total} 台设备")
+            log_info(f"[Notification Task] 定向广播通知完成: {count}/{total} 台设备")
             return {"success": count > 0, "message": message, "device_count": count, "total": total}
         else:
             notify_data = {
@@ -80,7 +81,7 @@ def broadcast_notify(self, message, device_ids=None, urgent=False):
             }
             topic = "phonebox/notify/broadcast"
             ok = publish_mqtt(topic, json.dumps(notify_data, ensure_ascii=False), qos=1)
-            print(f"[Notification Task] 已发布广播通知到 {topic} (success={ok})")
+            log_info(f"[Notification Task] 已发布广播通知到 {topic} (success={ok})")
             return {"success": ok, "message": message, "device_count": "all", "topic": topic}
     except Exception as e:
         self.retry(exc=e, countdown=3, max_retries=3)

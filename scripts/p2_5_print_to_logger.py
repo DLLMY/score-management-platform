@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""P2-6: 将 services 下剩余文件的调试 print 收口为 utils.logger。
+"""P2-7: 将 backend 运行时代码（api/utils/config/middleware/tasks）残留调试 print 收口为 utils.logger。
 规则：
   - 处于 except 块 -> log_warning(exception=<e 或忽略>)
   - 处于 `if __name__ == "__main__"` 块 -> log_debug
-  - 显式 override 映射（非 except 的告警 / 缓存调试行）
+  - 显式 override 映射（非 except 的告警 / 逐消息噪音行）
   - 其余 -> log_info
 保留原字符串与缩进（含多行 print）。已转换文件再跑会幂等跳过。
+注意：print(..., file=sys.stderr) 等带流参数的调用不在本脚本范围（手工处理）。
 """
 import ast
 import os
@@ -14,25 +15,28 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SERVICES = os.path.join(ROOT, "backend", "services")
 
+# 以 backend/ 开头的按仓库根相对路径；否则视为 services 下文件名
 TARGETS = [
-    "class_time_checker.py",
-    "composite_score_service.py",
-    "mqtt_message_service.py",
-    "mqtt_service.py",
-    "notification_config_store.py",
-    "websocket_service.py",
-    "wol_service.py",
+    "backend/api/devices/firmware_routes.py",
+    "backend/api/scores/approvals_routes.py",
+    "backend/api/scores/rules_routes.py",
+    "backend/api/system/system_routes.py",
+    "backend/config/config_loader.py",
+    "backend/middleware/__init__.py",
+    "backend/utils/validation_middleware.py",
+    "backend/tasks/mqtt_tasks.py",
+    "backend/tasks/notification_tasks.py",
+    "backend/tasks/scheduled_tasks.py",
+    "backend/tasks/scheduler.py",
 ]
 
 # (文件, 行号) -> ("warning"|"debug", exc_name_or_None)
 OVERRIDE = {
-    # websocket 逐连接/订阅事件，高频 -> debug；"处理器已注册"一次性 -> info（默认）
-    ("websocket_service.py", 42): ("debug", None),   # Client connected
-    ("websocket_service.py", 53): ("debug", None),   # Client disconnected
-    ("websocket_service.py", 65): ("debug", None),   # Client subscribed to room
-    # composite_score recalc 分支：异常态->warning；常态噪音->debug；结构态 426/446 -> info（默认）
-    ("composite_score_service.py", 440): ("warning", None),  # 学生不存在或已停用
-    ("composite_score_service.py", 451): ("debug", None),    # 无记录跳过增量（首次需全量）
+    # mqtt_tasks 未匹配处理：逐消息噪音 -> debug
+    ("mqtt_tasks.py", 50): ("debug", None),   # 设备消息(未匹配处理)
+    ("mqtt_tasks.py", 67): ("debug", None),   # 积分消息(未匹配处理)
+    # scheduler 每轮轮询"无超时审批" -> debug（否则周期日志噪音）
+    ("scheduler.py", 61): ("debug", None),
 }
 
 IMPORT_LINE = "from utils.logger import log_info, log_warning, log_debug"
@@ -170,15 +174,50 @@ def transform(path):
     for start, end, text in replacements:
         new_source = new_source[:start] + text + new_source[end:]
 
-    # 3) 补顶层 import（在首个 def/class 之前）
+    # 3) 补顶层 import（模块 docstring 之后、前导 import 段整体结束后插入；
+    #    不能以首个 def/class 为锚（可能在模块级 try/except 内或带装饰器），
+    #    也不能只看 col0 import 行（多行括号 import 需配平续行））
     if "from utils.logger import log_info" not in new_source:
         new_lines = new_source.splitlines(keepends=True)
-        insert_at = len(new_lines)
-        for i, ln in enumerate(new_lines):
+
+        def _bracket_delta(s):
+            return (
+                s.count("(")
+                + s.count("[")
+                + s.count("{")
+                - s.count(")")
+                - s.count("]")
+                - s.count("}")
+            )
+
+        # 模块 docstring 结束行（若 body[0] 是字符串表达式）→ 1-based；其后行从 0-based 索引 doc_end 开始
+        doc_end = 0
+        if tree.body and isinstance(tree.body[0], ast.Expr) and isinstance(
+            getattr(tree.body[0], "value", None), ast.Constant
+        ) and isinstance(tree.body[0].value.value, str):
+            doc_end = tree.body[0].end_lineno
+        i = doc_end
+        head_end = doc_end - 1  # 0-based 最后一行前导 import 段
+        while i < len(new_lines):
+            ln = new_lines[i]
             s = ln.lstrip()
-            if s.startswith("def ") or s.startswith("class "):
-                insert_at = i
-                break
+            if not s or s.startswith("#"):
+                i += 1
+                continue
+            if ln[0] in (" ", "\t"):
+                i += 1  # 续行/缩进代码不属于前导段
+                continue
+            if s.startswith("import ") or s.startswith("from "):
+                head_end = i
+                bal = _bracket_delta(ln)
+                while bal > 0 and i + 1 < len(new_lines):
+                    i += 1
+                    bal += _bracket_delta(new_lines[i])
+                head_end = i
+                i += 1
+                continue
+            break  # 首个非 import 顶层语句，前导段到此为止
+        insert_at = head_end + 1
         new_lines.insert(insert_at, IMPORT_LINE + "\n")
         new_source = "".join(new_lines)
 
@@ -198,7 +237,10 @@ def transform(path):
 if __name__ == "__main__":
     total = 0
     for name in TARGETS:
-        p = os.path.join(SERVICES, name)
+        if name.startswith("backend/"):
+            p = os.path.join(ROOT, name)
+        else:
+            p = os.path.join(SERVICES, name)
         if os.path.exists(p):
             total += transform(p)
         else:

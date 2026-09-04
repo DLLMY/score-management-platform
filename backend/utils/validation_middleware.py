@@ -11,6 +11,7 @@ Function: Add unified input validation for all API endpoints
 """
 
 
+from utils.logger import log_info, log_warning, log_debug
 class InputValidationMiddleware:
     """Global input validation middleware"""
 
@@ -301,4 +302,4 @@ def setup_validation(app):
         ]
     )
 
-    print("Global input validation middleware enabled")
+    log_info("Global input validation middleware enabled")

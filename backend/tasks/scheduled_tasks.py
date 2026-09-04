@@ -7,6 +7,7 @@ from services.redis_cache_service import get_cache_service
 
 from models import db
 from redis import Redis
+from utils.logger import log_info, log_warning, log_debug
 
 
 @celery_app.task(name="tasks.scheduled_tasks.clean_expired_results")
@@ -14,7 +15,7 @@ def clean_expired_results():
     """
     清理过期的任务结果
     """
-    print(f"[Scheduled Task] 清理过期任务结果 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 清理过期任务结果 - {datetime.now()}")
     try:
         from redis import Redis
 
@@ -38,10 +39,10 @@ def clean_expired_results():
             if ttl == -1:  # 无过期时间的键
                 redis_client.delete(key)
                 deleted_count += 1
-        print(f"[Scheduled Task] 清理了 {deleted_count} 个过期任务结果")
+        log_info(f"[Scheduled Task] 清理了 {deleted_count} 个过期任务结果")
         return {"success": True, "deleted_count": deleted_count}
     except Exception as e:
-        print(f"[Scheduled Task] 清理失败: {e}")
+        log_warning(f"[Scheduled Task] 清理失败: {e}", exception=e)
         return {"success": False, "error": str(e)}
 
 
@@ -50,7 +51,7 @@ def sync_device_status():
     """
     同步设备状态
     """
-    print(f"[Scheduled Task] 同步设备状态 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 同步设备状态 - {datetime.now()}")
     try:
         from app import app as flask_app
         from models import Device
@@ -66,10 +67,10 @@ def sync_device_status():
                 device.status = "offline"
             with db_session_scope():
                 pass
-            print(f"[Scheduled Task] 更新了 {len(offline_devices)} 个设备为离线状态")
+            log_info(f"[Scheduled Task] 更新了 {len(offline_devices)} 个设备为离线状态")
             return {"success": True, "offline_count": len(offline_devices)}
     except Exception as e:
-        print(f"[Scheduled Task] 同步失败: {e}")
+        log_warning(f"[Scheduled Task] 同步失败: {e}", exception=e)
         return {"success": False, "error": str(e)}
 
 
@@ -78,7 +79,7 @@ def daily_summary():
     """
     每日汇总任务
     """
-    print(f"[Scheduled Task] 每日汇总 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 每日汇总 - {datetime.now()}")
     try:
         from models import ScoreRecord
 
@@ -109,10 +110,10 @@ def daily_summary():
         cache = get_cache_service()
         if cache:
             cache.set_stats(f'daily:{yesterday.strftime("%Y-%m-%d")}', summary_data)
-        print(f"[Scheduled Task] 每日汇总完成: {summary_data}")
+        log_info(f"[Scheduled Task] 每日汇总完成: {summary_data}")
         return {"success": True, "summary": summary_data}
     except Exception as e:
-        print(f"[Scheduled Task] 每日汇总失败: {e}")
+        log_warning(f"[Scheduled Task] 每日汇总失败: {e}", exception=e)
         return {"success": False, "error": str(e)}
 
 
@@ -121,7 +122,7 @@ def health_check():
     """
     系统健康检查
     """
-    print(f"[Scheduled Task] 健康检查 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 健康检查 - {datetime.now()}")
     health_status = {"timestamp": datetime.now().isoformat(), "services": {}}
     # 检查数据库连接
     try:
@@ -158,7 +159,7 @@ def health_check():
     cache = get_cache_service()
     if cache:
         cache.set_stats("health_check", health_status)
-    print(f"[Scheduled Task] 健康检查完成: {health_status}")
+    log_info(f"[Scheduled Task] 健康检查完成: {health_status}")
     return {"success": True, "health_status": health_status}
 
 
@@ -167,7 +168,7 @@ def clean_api_cache():
     """
     清理API缓存
     """
-    print(f"[Scheduled Task] 清理API缓存 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 清理API缓存 - {datetime.now()}")
     try:
         cache = get_cache_service()
         if cache:
@@ -176,7 +177,7 @@ def clean_api_cache():
             cache.flush("api:*")
         return {"success": True}
     except Exception as e:
-        print(f"[Scheduled Task] 清理API缓存失败: {e}")
+        log_warning(f"[Scheduled Task] 清理API缓存失败: {e}", exception=e)
         return {"success": False, "error": str(e)}
 
 
@@ -185,14 +186,14 @@ def warmup_cache_task():
     """
     缓存预热任务
     """
-    print(f"[Scheduled Task] 缓存预热 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 缓存预热 - {datetime.now()}")
     try:
         from services.redis_cache_service import warmup_cache
 
         warmup_cache()
         return {"success": True}
     except Exception as e:
-        print(f"[Scheduled Task] 缓存预热失败: {e}")
+        log_warning(f"[Scheduled Task] 缓存预热失败: {e}", exception=e)
         return {"success": False, "error": str(e)}
 
 
@@ -204,7 +205,7 @@ def archive_operation_logs(days_to_keep: int = 90):
     Args:
         days_to_keep: 保留在主表中的天数（默认90天）
     """
-    print(f"[Scheduled Task] 归档操作日志 - {datetime.now()}")
+    log_info(f"[Scheduled Task] 归档操作日志 - {datetime.now()}")
     try:
         from models import OperationLog, OperationLogArchive
 
@@ -212,7 +213,7 @@ def archive_operation_logs(days_to_keep: int = 90):
         # 查询需要归档的日志
         old_logs = OperationLog.query.filter(OperationLog.created_at < cutoff_date).all()
         if not old_logs:
-            print("[Scheduled Task] 没有需要归档的日志")
+            log_info("[Scheduled Task] 没有需要归档的日志")
             return {"success": True, "archived_count": 0, "deleted_count": 0}
         # 批量插入归档表
         archives = []
@@ -234,9 +235,9 @@ def archive_operation_logs(days_to_keep: int = 90):
         # 删除原表中的旧记录
         OperationLog.query.filter(OperationLog.created_at < cutoff_date).delete()
         db.session.commit()
-        print(f"[Scheduled Task] 归档完成: 迁移 {len(archives)} 条日志")
+        log_info(f"[Scheduled Task] 归档完成: 迁移 {len(archives)} 条日志")
         return {"success": True, "archived_count": len(archives), "deleted_count": len(archives)}
     except Exception as e:
-        print(f"[Scheduled Task] 归档失败: {e}")
+        log_warning(f"[Scheduled Task] 归档失败: {e}", exception=e)
         db.session.rollback()
         return {"success": False, "error": str(e)}

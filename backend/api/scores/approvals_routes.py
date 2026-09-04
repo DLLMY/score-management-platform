@@ -23,6 +23,7 @@ from services.approval_service import (
     approve_approval,
     reject_approval,
 )
+from utils.logger import log_info, log_warning, log_debug
 
 try:
     from services.mqtt_manager import mqtt_manager
@@ -31,7 +32,7 @@ try:
     mqtt_available = True
 except ImportError:
     mqtt_available = False
-    print("[Approvals] MQTT模块未导入，审批通知功能不可用")
+    log_warning("[Approvals] MQTT模块未导入，审批通知功能不可用")
 
 try:
     from api.system.admin_notifications_routes import create_admin_notification
@@ -110,7 +111,7 @@ def _execute_approve(approval, data):
                 ),
             )
         except Exception as e:
-            print(f"[Approval] 审批结果通知写入失败: {e}")
+            log_warning(f"[Approval] 审批结果通知写入失败: {e}", exception=e)
 
     # 更新用户缓存
     if mqtt_available and user:
@@ -178,7 +179,7 @@ def _execute_approve(approval, data):
                 },
             )
         except Exception as e:
-            print(f"[ScoreChange] 审批积分变动通知发送失败: {e}")
+            log_warning(f"[ScoreChange] 审批积分变动通知发送失败: {e}", exception=e)
 
     invalidate_cache("api:/api/approvals/*")
     return True, "审批已通过", {
@@ -213,7 +214,7 @@ def _execute_reject(approval, data):
                 % (approval.title, approval.comment or "审批未通过"),
             )
         except Exception as e:
-            print(f"[Approval] 审批结果通知写入失败: {e}")
+            log_warning(f"[Approval] 审批结果通知写入失败: {e}", exception=e)
 
     if mqtt_available and user:
         notification = {

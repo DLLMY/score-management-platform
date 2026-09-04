@@ -41,6 +41,7 @@ RATE_LIMIT = {
 rate_limit_store: dict[str, dict[str, float | int]] = {}
 
 
+from utils.logger import log_info, log_warning, log_debug
 def cleanup_rate_limit_store():
     now = time.time()
     max_age = 300
@@ -395,7 +396,7 @@ class SystemRestore(Resource):
             )
             shutil.copy2(target_path, pre_bak)
         except Exception as _e:
-            print(f"[恢复] 当前库自动备份失败（继续恢复）: {_e}")
+            log_warning(f"[恢复] 当前库自动备份失败（继续恢复）: {_e}", exception=_e)
 
         shutil.copy2(backup_path, target_path)
         return APIResponse.success(message="数据库恢复成功（恢复前已尝试自动备份当前库）")

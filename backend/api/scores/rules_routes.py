@@ -4,7 +4,7 @@ from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
 from models import db, ScoreRule, ScoreCategory, get_by_id
 from utils.permission import requires_permission
-from utils.logger import log_operation
+from utils.logger import log_info, log_operation
 from utils.response import APIResponse
 from utils.pagination import get_pagination
 from utils.validation import (
@@ -609,7 +609,7 @@ class ApplyRuleTemplate(Resource):
                 return APIResponse.error(message=err, status_code=400)
             # 清除所有rules相关缓存
             invalidated_count = get_cache_service().invalidate_by_tag("rules")
-            print(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
+            log_info(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
             invalidate_cache("api:/api/rules/*")
             return APIResponse.success(
                 data=result,

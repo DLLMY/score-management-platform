@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, List
 import json
 import os
 from flask import request
+from utils.logger import log_warning
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ if not JWT_SECRET_KEY:
 
     if "pytest" in sys.modules:
         JWT_SECRET_KEY = "test_secret_key_for_pytest_only"
-        print("\n⚠️  测试模式: 使用固定测试 JWT 密钥\n", file=sys.stderr)
+        log_warning("测试模式: 使用固定测试 JWT 密钥（仅 pytest 环境）")
     else:
         raise RuntimeError(
             "JWT_SECRET_KEY 未配置！请设置环境变量 JWT_SECRET_KEY 后启动（安全要求，禁止弱密钥签发）"
