@@ -3,6 +3,7 @@ import api from '../services/api';
 import { Card, Select, Button, Space, Typography, Spin, Alert } from 'antd';
 import { DownloadOutlined, FileExcelOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useStableToast } from '../hooks/useStableToast';
+import { useListData } from '../hooks';
 import { getErrMsg } from '../utils/getErrMsg';
 
 const { Title, Paragraph, Text } = Typography;
@@ -13,27 +14,25 @@ interface ClassOption {
 }
 
 const SemesterReport: React.FC = () => {
-  const [classes, setClasses] = useState<ClassOption[]>([]);
   const [classId, setClassId] = useState<number | undefined>(undefined);
   const [studentCount, setStudentCount] = useState<number | null>(null);
-  const [loadingClasses, setLoadingClasses] = useState(false);
   const [exporting, setExporting] = useState<'' | 'excel' | 'csv'>('');
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useStableToast();
 
-  useEffect(() => {
-    setLoadingClasses(true);
-    api.classes
-      .getAll({ page: 1, per_page: 200 })
-      .then((res) => {
-        const list = (res?.classes || []) as ClassOption[];
-        setClasses(list);
-      })
-      .catch(() => setError('加载班级列表失败'))
-      .finally(() => setLoadingClasses(false));
-  }, []);
+  // A 轨：班级下拉（全量列表）迁 useListData —— 数据恒为数组，无需判空
+  const classes = useListData<ClassOption>({
+    fetcher: async () => {
+      const res = await api.classes.getAll({ page: 1, per_page: 200 });
+      return (res?.classes || []) as ClassOption[];
+    },
+    onError: () => setError('加载班级列表失败'),
+  });
 
-  const selectedClass = useMemo(() => classes.find((c) => c.id === classId), [classes, classId]);
+  const selectedClass = useMemo(
+    () => classes.data.find((c) => c.id === classId),
+    [classes.data, classId]
+  );
 
   useEffect(() => {
     if (!selectedClass) {
@@ -86,11 +85,11 @@ const SemesterReport: React.FC = () => {
             <div style={{ marginTop: 8 }}>
               <Select
                 style={{ width: '100%' }}
-                placeholder={loadingClasses ? '加载中…' : '请选择班级'}
-                loading={loadingClasses}
+                placeholder={classes.loading ? '加载中…' : '请选择班级'}
+                loading={classes.loading}
                 value={classId}
                 onChange={(v: number) => setClassId(v)}
-                options={classes.map((c) => ({ label: c.name, value: c.id }))}
+                options={classes.data.map((c) => ({ label: c.name, value: c.id }))}
                 showSearch
                 optionFilterProp='label'
               />
