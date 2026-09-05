@@ -15,6 +15,7 @@ import { useStableToast } from '../hooks/useStableToast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { formatDateTime } from '../utils/format';
 import { Pagination } from '../components/ui/Pagination';
+import { useListData, useListFetch } from '../hooks';
 import type { ColumnType } from '../components/data-display/DataTable';
 import { PresetsPanel } from './remote-notify/PresetsPanel';
 import { TemplatesPanel } from './remote-notify/TemplatesPanel';
@@ -78,8 +79,6 @@ function RemoteNotify() {
   );
 
   // 模板相关状态
-  const [templates, setTemplates] = useState<NotifyTemplate[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false); // M9: 模板加载反馈
   const [editingTemplate, setEditingTemplate] = useState<NotifyTemplate | null>(null);
   // 数据加载失败标记（模板/定时/历史任一失败置位，页面显示警示条而非空态误导）
   const [loadError, setLoadError] = useState(false);
@@ -128,10 +127,8 @@ function RemoteNotify() {
   const { isOpen: showHistory, open: openHistory, close: closeHistory } = useModal<null>({});
 
   // 定时通知相关状态
-  const [scheduledNotifications, setScheduledNotifications] = useState<ScheduledNotify[]>([]);
   const [scheduledPage, setScheduledPage] = useState(1);
   const scheduledPerPage = 50;
-  const [scheduledTotal, setScheduledTotal] = useState(0);
   const [editingScheduled, setEditingScheduled] = useState<ScheduledNotify | null>(null);
 
   const {
@@ -207,32 +204,45 @@ function RemoteNotify() {
     }
   }, []);
 
-  const loadTemplates = useCallback(async () => {
-    setTemplatesLoading(true);
-    try {
-      const data = await api.notifyTemplates.getAll();
-      setTemplates(data);
-      setLoadError(false);
-    } catch (error) {
-      logger.error('加载模板失败:', error);
-      setLoadError(true);
-    } finally {
-      setTemplatesLoading(false);
-    }
-  }, []);
+  // A 轨：模板为全量列表 → useListData（data 恒数组，免判空）
+  const templates = useListData<NotifyTemplate>({
+    fetcher: async () => {
+      try {
+        const data = await api.notifyTemplates.getAll();
+        setLoadError(false);
+        return data ?? [];
+      } catch (error) {
+        logger.error('加载模板失败:', error);
+        setLoadError(true);
+        throw error;
+      }
+    },
+  });
+  // 既有着儿/删除后刷新路径仍以 loadTemplates 命名调用（语义 = 重新拉取）
+  const loadTemplates = useCallback(async (): Promise<void> => {
+    await templates.refetch();
+  }, [templates]);
 
-  const loadScheduledNotifications = useCallback(async () => {
-    try {
-      const data = await api.scheduledNotify.getAll({ page: scheduledPage, per_page: scheduledPerPage });
-      const list = Array.isArray(data) ? (data as ScheduledNotify[]) : (data?.items ?? []);
-      setScheduledNotifications(list);
-      setScheduledTotal((data as { total?: number })?.total ?? list.length);
-      setLoadError(false);
-    } catch (error) {
-      logger.error('加载定时通知失败:', error);
-      setLoadError(true);
-    }
-  }, [scheduledPage, scheduledPerPage]);
+  // A 轨：定时通知列表迁 useListFetch（服务端分页，Array/信封两种形态兼容保留）
+  const scheduled = useListFetch<ScheduledNotify>({
+    params: { page: scheduledPage, pageSize: scheduledPerPage },
+    fetcher: async ({ page, pageSize }) => {
+      try {
+        const data = await api.scheduledNotify.getAll({ page, per_page: pageSize });
+        const list = Array.isArray(data) ? (data as ScheduledNotify[]) : (data?.items ?? []);
+        setLoadError(false);
+        return { items: list, total: (data as { total?: number })?.total ?? list.length };
+      } catch (error) {
+        logger.error('加载定时通知失败:', error);
+        setLoadError(true);
+        throw error;
+      }
+    },
+  });
+  // 既有增删改后刷新路径仍以 loadScheduledNotifications 命名调用（语义 = 重新拉取当前页）
+  const loadScheduledNotifications = useCallback(async (): Promise<void> => {
+    await scheduled.refetch();
+  }, [scheduled]);
 
   const loadHistoryData = useCallback(async () => {
     setIsLoadingHistory(true);
@@ -270,20 +280,11 @@ function RemoteNotify() {
 
   useEffect(() => {
     checkMqttStatus();
-    loadTemplates();
-    loadScheduledNotifications();
     if (showHistory) {
       loadHistoryData();
       loadHistoryStats();
     }
-  }, [
-    checkMqttStatus,
-    loadTemplates,
-    loadScheduledNotifications,
-    showHistory,
-    loadHistoryData,
-    loadHistoryStats,
-  ]);
+  }, [checkMqttStatus, showHistory, loadHistoryData, loadHistoryStats]);
 
   useEffect(() => {
     if (showHistory) {
@@ -745,8 +746,8 @@ function RemoteNotify() {
     handleReset,
     performSend,
     handleUsePreset,
-    templates,
-    templatesLoading,
+    templates: templates.data,
+    templatesLoading: templates.loading,
     editingTemplate,
     setEditingTemplate,
     templateForm,
@@ -757,7 +758,7 @@ function RemoteNotify() {
     handleUseTemplate,
     handleSaveTemplate,
     handleDeleteTemplate,
-    scheduledNotifications,
+    scheduledNotifications: scheduled.items,
     scheduledForceSend,
     setScheduledForceSend,
     scheduledClassNow,
@@ -877,12 +878,12 @@ function RemoteNotify() {
           <PresetsPanel deps={deps} />
           <TemplatesPanel deps={deps} />
           <ScheduledPanel deps={deps} />
-          {scheduledTotal > 0 && (
+          {scheduled.total > 0 && (
             <Pagination
               currentPage={scheduledPage}
-              totalPages={Math.max(1, Math.ceil(scheduledTotal / scheduledPerPage))}
+              totalPages={Math.max(1, Math.ceil(scheduled.total / scheduledPerPage))}
               onPageChange={setScheduledPage}
-              totalItems={scheduledTotal}
+              totalItems={scheduled.total}
               itemsPerPage={scheduledPerPage}
             />
           )}
