@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import api, { request } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useListFetch } from '../hooks';
 import { validateForm } from '../utils/validation';
 import { EmptyState, Skeleton, SearchFilter, Button, PermissionButton } from '../components';
 import { usePermissions } from '../hooks/usePermissions';
@@ -47,13 +48,6 @@ interface Category {
   id: number;
   name: string;
   color: string;
-}
-
-interface Pagination {
-  page: number;
-  per_page: number;
-  total: number;
-  pages: number;
 }
 
 interface FormData {
@@ -92,14 +86,12 @@ interface RuleTemplate {
 }
 
 function RuleList() {
-  const [rules, setRules] = useState<Rule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState<boolean>(false);
   const [templates, setTemplates] = useState<RuleTemplate[]>([]);
@@ -111,12 +103,7 @@ function RuleList() {
   confirmRef.current = confirmFn;
   const { submitting, run: runSubmit } = useSubmitGuard();
   usePermissions();
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    per_page: 50,
-    total: 0,
-    pages: 0,
-  });
+  const RULE_PER_PAGE = 50;
 
   const {
     formData,
@@ -187,38 +174,36 @@ function RuleList() {
     }
   }, []);
 
-  const fetchRules = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await api.rules.getAll({
-        page: pagination.page,
-        per_page: pagination.per_page,
-        category_id: selectedCategory ? Number(selectedCategory) : undefined,
-        is_active: null,
-      });
-      if (Array.isArray(data)) {
-        // 防御分支：后端异常时兜底，非真实总数
-        setRules(data as Rule[]);
-        setPagination((prev) => ({
-          ...prev,
-          total: data.length,
-          pages: 1,
-        }));
-      } else {
-        setRules((data as { rules: Rule[] }).rules || []);
-        setPagination((prev) => ({
-          ...prev,
-          total: (data as { total: number }).total,
-          pages: (data as { pages: number }).pages,
-        }));
+  // A 轨：规则列表迁 useListFetch（本页无分页 UI，取第 1 页 50 条；分类走服务端过滤）
+  const rules = useListFetch<Rule>({
+    params: { page: 1, pageSize: RULE_PER_PAGE, categoryId: selectedCategory || undefined },
+    fetcher: async ({ page, pageSize, categoryId }) => {
+      setError(null);
+      try {
+        const data = await api.rules.getAll({
+          page,
+          per_page: pageSize,
+          category_id: categoryId ? Number(categoryId) : undefined,
+          is_active: null,
+        });
+        if (Array.isArray(data)) {
+          // 防御分支：后端异常时兜底，非真实总数
+          return { items: data as Rule[], total: data.length };
+        }
+        return {
+          items: (data as { rules: Rule[] }).rules || [],
+          total: (data as { total: number }).total ?? 0,
+        };
+      } catch (err) {
+        setError('获取规则列表失败: ' + (err as Error).message);
+        throw err;
       }
-    } catch (err) {
-      setError('获取规则列表失败: ' + (err as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [pagination.page, pagination.per_page, selectedCategory]);
+    },
+  });
+  // 既有刷新/导入等路径仍以 fetchRules 命名调用（语义 = 重新拉取）
+  const fetchRules = useCallback(async (): Promise<void> => {
+    await rules.refetch();
+  }, [rules]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -236,10 +221,9 @@ function RuleList() {
   }, []);
 
   useEffect(() => {
-    fetchRules();
     fetchCategories();
     fetchTemplates();
-  }, [fetchRules, fetchCategories, fetchTemplates]);
+  }, [fetchCategories, fetchTemplates]);
 
   const handleSubmit = useCallback(
     async (e?: FormEvent<HTMLFormElement>) => {
@@ -269,14 +253,17 @@ function RuleList() {
           const newRule = await api.rules.create(submitData);
           showToast('success', '规则添加成功');
 
-          setRules((prevRules) => [newRule as Rule, ...prevRules]);
+          rules.mutate({
+            items: [newRule as Rule, ...rules.items],
+            total: rules.total + 1,
+          });
         }
         closeModal();
       } catch (err) {
         showToast('error', '操作失败: ' + (err as Error).message);
       }
     },
-    [formData, editingRule, showToast, validationRules]
+    [formData, editingRule, showToast, validationRules, rules]
   );
 
   const handleDelete = useCallback(
@@ -293,12 +280,15 @@ function RuleList() {
         await api.rules.delete(id);
         showToast('success', '删除成功');
 
-        setRules((prevRules) => prevRules.filter((rule) => rule.id !== id));
+        rules.mutate({
+          items: rules.items.filter((rule) => rule.id !== id),
+          total: Math.max(0, rules.total - 1),
+        });
       } catch (err) {
         showToast('error', '删除失败: ' + (err as Error).message);
       }
     },
-    [showToast]
+    [showToast, rules]
   );
 
   const handleExport = useCallback(async () => {
@@ -438,7 +428,7 @@ function RuleList() {
   );
 
   const filteredRules = useMemo(() => {
-    return rules.filter((rule) => {
+    return rules.items.filter((rule) => {
       if (!rule) return false;
       const matchesSearch =
         (rule.name && rule.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
@@ -448,7 +438,7 @@ function RuleList() {
       const matchesCategory = !selectedCategory || rule.category_id === categoryId;
       return matchesSearch && matchesCategory;
     });
-  }, [rules, debouncedSearchTerm, selectedCategory]);
+  }, [rules.items, debouncedSearchTerm, selectedCategory]);
 
   const getCategoryName = useMemo(() => {
     return (categoryId: number | null): string => {
@@ -485,8 +475,8 @@ function RuleList() {
           </div>
         </div>
         <div className='flex flex-wrap items-center gap-3'>
-          <Button variant='outline' onClick={() => fetchRules()} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <Button variant='outline' onClick={() => fetchRules()} disabled={rules.loading}>
+            <RefreshCw className={`w-4 h-4 ${rules.loading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
           <Button variant='outline' onClick={handleDownloadTemplate}>
@@ -581,7 +571,7 @@ function RuleList() {
         </div>
 
         <div className='card-body'>
-          {isLoading ? (
+          {rules.loading ? (
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
@@ -720,7 +710,7 @@ function RuleList() {
                 </div>
               ))}
 
-              {filteredRules.length === 0 && !isLoading && (
+              {filteredRules.length === 0 && !rules.loading && (
                 <EmptyState
                   icon='file'
                   title='暂无规则数据'
