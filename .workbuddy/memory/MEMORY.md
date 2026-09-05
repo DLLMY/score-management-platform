@@ -44,3 +44,10 @@
 ## 班主任工作台（✅2026-08-21）
 - `useWorkbenchClass`（store+useSyncExternalStore，12子页共享当前班级 sessionStorage 持久）；后端班级隔离 join User.class_info_id；评语模型 TeacherComment 路由 /api/teacher-comments 权限 comment.view/edit。
 - ⚠️ **CRLF 文件禁用 Edit 直改**：backend 大量 .py 为 CRLF，Edit 工具会把整文件规范成 LF → 全文件噪音 diff（已发生 2 次：system_routes/scheduled_tasks）。改 CRLF 文件须先用 python 二进制读改写（继承 \r\n），或用脚本注入时按源主行尾换行。改完 `git diff --stat` 若出现"行数≈全删全加"即翻 EOL，立即恢复。
+
+## A 轨列表钩子迁移 SOP（2026-09-05 固化，9 页验证）
+- **选型铁律**：服务端**分页**列表 → `useListFetch`（`{items,total,loading,error,refetch,mutate,setItems,setTotal}`）；**全量下拉/选项**列表 → `useListData`（`{data,loading,error,refetch}`，data 恒数组免判空）。
+- **标准迁移六步**：① 取证（列表态/信封 key/乐观更新点/命令式参数/是否有分页 UI）；② 删手工态（items/total/loading/error + fetch useCallback + mount useEffect）；③ `params` 声明式注入 page/pageSize/过滤（fetcher **只从解构参取值**，避开闭包 stale）；④ 乐观更新 → `mutate({items,total})`（override 层在新 data 到达后自动让位）；⑤ 既有 handler 以 `const loadX = useCallback(async()=>{ await list.refetch(); },[list])` 包装（返回 `Promise<void>` 以兼容 `await`）；⑥ 渲染引用全量映射（dataSource/loading/total/page/统计/空态/骨架）。
+- **适配性判定**：✅ 可迁 = 纯 reload 型、乐观增删型（mutate 覆盖）、"伪命令式"（`load(page)`+手工 `setPage;load(page)` → 直接声明式化）；❌ 不宜迁 = 真命令式语义（`ClassManagement` 的 skipCache/keyword 参数式调用，需先扩展 hook）；列表与表单共享的 `isLoading` 要**拆两层**（列表 loading 走 hook，busy 态保留）。
+- **踩坑清单**：CRLF 文件禁用 Edit（二进制 python 补丁，脚本必须显式 `write`，曾两次只 assert 未落盘）；锚点缩进以 Read 实测为准（catch 内常为 8 空格）；`ListFetchParams` 值域宽 → 自定义键需 cast/Boolean 收窄、`null` 需 `?? undefined`；`fetchJson` 失败返回 null 不抛错 → fetcher 内转抛使 error 态可见；迁移后必跑全量 vitest（271 passed 基线）而非仅 tsc/eslint。
+- **已迁 9 页**：FrontendTelemetry / FirmwareManagement / ActivityManage / HomeworkCheck / ParentContact / Notifications / Approvals / RuleList / SemesterReport(useListData) / WakeOnLan。
