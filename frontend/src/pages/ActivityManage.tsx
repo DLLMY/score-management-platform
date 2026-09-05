@@ -26,7 +26,7 @@ import { ClassSelect } from '../components/form/EntitySelect';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { DateRangeField, EmptyState, LoadingSpinner } from '../components';
-import { useClientFilter } from '../hooks';
+import { useClientFilter, useListFetch } from '../hooks';
 import { Pagination } from 'antd';
 
 interface ActivityFormData {
@@ -54,16 +54,11 @@ const defaultForm: ActivityFormData = {
 };
 
 function ActivityManage() {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  // M9 P1: 活动列表服务端分页状态
   const [activityPage, setActivityPage] = useState(1);
-  const [activityTotal, setActivityTotal] = useState(0);
-  const [activityPages, setActivityPages] = useState(1);
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
   // 弹窗表单绑定班级：页面本地，与视图筛选严格分离
   const [selectedClassId, setSelectedClassId] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
@@ -83,27 +78,30 @@ function ActivityManage() {
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
 
-  const fetchActivities = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const resp = await api.activity.getAll(undefined, publishedFilter, {
-        page: activityPage,
-        per_page: 50,
-      });
-      setActivities(resp.activities || []);
-      setActivityTotal(resp.total);
-      setActivityPages(resp.pages);
-    } catch (error) {
-      logger.error('获取活动列表失败:', error);
-      showToast('error', getErrMsg(error, '获取活动列表失败'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showToast, activityPage, publishedFilter]);
-
-  useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
+  // A 轨：活动列表迁 useListFetch（服务端分页 + published 过滤），失败 toast 保留
+  const activities = useListFetch<Activity>({
+    params: { page: activityPage, pageSize: 50, isPublished: publishedFilter },
+    fetcher: async ({ page, pageSize, isPublished }) => {
+      try {
+        const resp = await api.activity.getAll(
+          undefined,
+          isPublished === undefined ? undefined : Boolean(isPublished),
+          {
+          page,
+          per_page: pageSize,
+        });
+        return { items: resp.activities ?? [], total: resp.total ?? 0 };
+      } catch (error) {
+        logger.error('获取活动列表失败:', error);
+        showToast('error', getErrMsg(error, '获取活动列表失败'));
+        throw error;
+      }
+    },
+  });
+  // 既有增删/注册等 handler 仍以 fetchActivities 命名调用（语义 = 重新拉取当前页）
+  const fetchActivities = useCallback(() => {
+    void activities.refetch();
+  }, [activities]);
 
   // C-2: 切换发布状态过滤时回到第一页
   useEffect(() => {
@@ -270,7 +268,7 @@ function ActivityManage() {
   }, []);
 
   const filteredActivities = useClientFilter(
-    activities,
+    activities.items,
     (a) => {
       const matchSearch =
         !searchTerm ||
@@ -378,7 +376,7 @@ function ActivityManage() {
       </div>
 
       <div className='flex-1 px-6 pb-6 overflow-y-auto'>
-        {isLoading ? (
+        {activities.loading ? (
           <div className='flex items-center justify-center py-20'>
             <LoadingSpinner text='加载活动列表...' />
           </div>
@@ -486,11 +484,11 @@ function ActivityManage() {
             ))}
           </div>
         )}
-        {activityTotal > 50 && (
+        {activities.total > 50 && (
           <div className='mt-5 flex justify-center'>
             <Pagination
               current={activityPage}
-              total={activityTotal}
+              total={activities.total}
               pageSize={50}
               onChange={(p) => setActivityPage(p)}
               showSizeChanger={false}
