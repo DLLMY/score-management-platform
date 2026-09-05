@@ -271,26 +271,47 @@ function WorkbenchOverview() {
     [metrics.alerts]
   );
 
+  /** 指标卡点击下钻目标（C-1：数值卡 → 对应功能页，权限不足时不渲染链接） */
+  interface MetricLink {
+    path: string;
+    permission: string;
+  }
+
   const renderStat = (
     label: string,
     value: string | number | null,
     sub: string | undefined,
     icon: React.ReactNode,
     iconGradient: string,
-    decoGradient: string
-  ) => (
-    <div>
-      <StatCard
-        label={label}
-        value={value === null ? '—' : value}
-        icon={icon}
-        iconGradient={iconGradient}
-        decoGradient={decoGradient}
-        size='lg'
-      />
-      {sub && <p className='mt-2 text-xs text-slate-400 dark:text-slate-500'>{sub}</p>}
-    </div>
-  );
+    decoGradient: string,
+    link?: MetricLink
+  ) => {
+    const body = (
+      <>
+        <StatCard
+          label={label}
+          value={value === null ? '—' : value}
+          icon={icon}
+          iconGradient={iconGradient}
+          decoGradient={decoGradient}
+          size='lg'
+        />
+        {sub && <p className='mt-2 text-xs text-slate-400 dark:text-slate-500'>{sub}</p>}
+      </>
+    );
+    if (link && hasPermission(link.permission)) {
+      return (
+        <Link
+          to={link.path}
+          title={`查看${label}详情`}
+          className='block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5 hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60'
+        >
+          {body}
+        </Link>
+      );
+    }
+    return <div>{body}</div>;
+  };
 
   return (
     <div className='flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'>
@@ -355,7 +376,8 @@ function WorkbenchOverview() {
                   : '暂无考勤数据',
                 <CheckCircle2 className='w-6 h-6 text-white' />,
                 'from-emerald-500 to-teal-500',
-                'from-emerald-500/10 to-teal-500/10'
+                'from-emerald-500/10 to-teal-500/10',
+                { path: '/attendance', permission: 'attendance.view' }
               )}
               {renderStat(
                 '待完成作业',
@@ -363,7 +385,8 @@ function WorkbenchOverview() {
                 metrics.homework ? `共 ${metrics.homework.length} 项作业` : '暂无作业数据',
                 <BookCheck className='w-6 h-6 text-white' />,
                 'from-blue-500 to-indigo-500',
-                'from-blue-500/10 to-indigo-500/10'
+                'from-blue-500/10 to-indigo-500/10',
+                { path: '/homework-check', permission: 'homework.view' }
               )}
               {renderStat(
                 '未处理预警',
@@ -371,7 +394,8 @@ function WorkbenchOverview() {
                 metrics.alerts ? `共 ${metrics.alerts.length} 条心理预警` : '暂无预警数据',
                 <AlertTriangle className='w-6 h-6 text-white' />,
                 'from-amber-500 to-orange-500',
-                'from-amber-500/10 to-orange-500/10'
+                'from-amber-500/10 to-orange-500/10',
+                { path: '/mental-health', permission: 'mental_health.view' }
               )}
               {renderStat(
                 '学习小组',
@@ -381,7 +405,8 @@ function WorkbenchOverview() {
                   : '暂无小组数据',
                 <Users className='w-6 h-6 text-white' />,
                 'from-purple-500 to-pink-500',
-                'from-purple-500/10 to-pink-500/10'
+                'from-purple-500/10 to-pink-500/10',
+                { path: '/study-groups', permission: 'study_group.view' }
               )}
               <div className='md:hidden' />
               {renderStat(
@@ -390,7 +415,8 @@ function WorkbenchOverview() {
                 '已发布活动',
                 <PartyPopper className='w-6 h-6 text-white' />,
                 'from-pink-500 to-rose-500',
-                'from-pink-500/10 to-rose-500/10'
+                'from-pink-500/10 to-rose-500/10',
+                { path: '/activity', permission: 'activity.view' }
               )}
               {renderStat(
                 '值日组',
@@ -398,7 +424,8 @@ function WorkbenchOverview() {
                 '当前值日安排',
                 <ClipboardList className='w-6 h-6 text-white' />,
                 'from-cyan-500 to-blue-500',
-                'from-cyan-500/10 to-blue-500/10'
+                'from-cyan-500/10 to-blue-500/10',
+                { path: '/duty-roster', permission: 'class.view' }
               )}
               {renderStat(
                 '迟到/请假',
@@ -410,7 +437,8 @@ function WorkbenchOverview() {
                   : '暂无考勤数据',
                 <Clock className='w-6 h-6 text-white' />,
                 'from-orange-500 to-amber-500',
-                'from-orange-500/10 to-amber-500/10'
+                'from-orange-500/10 to-amber-500/10',
+                { path: '/attendance', permission: 'attendance.view' }
               )}
             </div>
           )}
