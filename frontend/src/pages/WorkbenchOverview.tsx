@@ -386,7 +386,7 @@ function WorkbenchOverview() {
                 <BookCheck className='w-6 h-6 text-white' />,
                 'from-blue-500 to-indigo-500',
                 'from-blue-500/10 to-indigo-500/10',
-                { path: '/homework-check', permission: 'homework.view' }
+                { path: '/homework-check?status=pending', permission: 'homework.view' }
               )}
               {renderStat(
                 '未处理预警',
