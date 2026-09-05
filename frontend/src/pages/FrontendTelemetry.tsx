@@ -7,12 +7,13 @@
  * 上报端 POST /api/system/frontend-performance(+/batch)、/api/system/frontend-error 已落库。
  */
 
-import React, { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
+import React, { useState, useMemo, ChangeEvent } from 'react';
 import { Activity, RefreshCw, Gauge, Filter, Bug } from 'lucide-react';
 import { formatDateTime } from '../utils/format';
 import { PermissionButton, DataTable } from '../components';
 import type { ColumnType } from '../components/data-display/DataTable';
 import { fetchJson } from '../hooks/useApiFetch';
+import { useListFetch } from '../hooks';
 
 interface PerfMetric {
   id: number;
@@ -49,71 +50,50 @@ const PERF_TYPE_OPTIONS = ['', 'web_vital', 'api_request', 'custom']; // S7-C-P0
 const ERROR_TYPE_OPTIONS = ['', 'javascript_error', 'api_error', 'resource_error']; // S7-C-P0-4: 与落库 error_type 对齐（原 'js_error' 过滤恒空）
 
 export const FrontendTelemetry: React.FC = () => {
-  // ---- 性能/指标 ----
-  const [metrics, setMetrics] = useState<PerfMetric[]>([]);
-  const [perfTotal, setPerfTotal] = useState(0);
+  // ---- 性能/指标（A 轨试点：useListFetch 收敛手写 load/effect/分页样板）----
   const [perfPage, setPerfPage] = useState(1);
   const [perfFilters, setPerfFilters] = useState<{ metric_type: string; name: string }>({
     metric_type: '',
     name: '',
   });
-  const [perfLoading, setPerfLoading] = useState(true);
-  const [perfError, setPerfError] = useState(false);
+  const perf = useListFetch<PerfMetric>({
+    params: {
+      page: perfPage,
+      pageSize: 50,
+      metric_type: perfFilters.metric_type || undefined,
+      name: perfFilters.name || undefined,
+    },
+    fetcher: async ({ page, pageSize, metric_type, name }) => {
+      const q = new URLSearchParams();
+      q.set('page', String(page));
+      q.set('per_page', String(pageSize));
+      if (metric_type) q.set('metric_type', String(metric_type));
+      if (name) q.set('name', String(name));
+      const data = await fetchJson<PageResult<PerfMetric>>(`/api/system/frontend-metrics?${q.toString()}`);
+      return { items: data?.items ?? [], total: data?.total ?? 0 };
+    },
+    debounceDelay: 250,
+  });
 
-  // ---- 前端错误 ----
-  const [errors, setErrors] = useState<FrontendError[]>([]);
-  const [errTotal, setErrTotal] = useState(0);
+  // ---- 前端错误（同上收敛）----
   const [errPage, setErrPage] = useState(1);
   const [errFilters, setErrFilters] = useState<{ error_type: string }>({ error_type: '' });
-  const [errLoading, setErrLoading] = useState(true);
-  const [errError, setErrError] = useState(false);
-
-  const loadMetrics = useCallback(async () => {
-    setPerfLoading(true);
-    const params = new URLSearchParams();
-    params.set('page', String(perfPage));
-    params.set('per_page', '50');
-    if (perfFilters.metric_type) params.set('metric_type', perfFilters.metric_type);
-    if (perfFilters.name) params.set('name', perfFilters.name);
-    const data = await fetchJson<PageResult<PerfMetric>>(
-      `/api/system/frontend-metrics?${params.toString()}`
-    );
-    if (data) {
-      setMetrics(data.items || []);
-      setPerfTotal(data.total || 0);
-      setPerfError(false);
-    } else {
-      setPerfError(true);
-    }
-    setPerfLoading(false);
-  }, [perfPage, perfFilters.metric_type, perfFilters.name]);
-
-  const loadErrors = useCallback(async () => {
-    setErrLoading(true);
-    const params = new URLSearchParams();
-    params.set('page', String(errPage));
-    params.set('per_page', '50');
-    if (errFilters.error_type) params.set('error_type', errFilters.error_type);
-    const data = await fetchJson<PageResult<FrontendError>>(
-      `/api/system/frontend-errors?${params.toString()}`
-    );
-    if (data) {
-      setErrors(data.items || []);
-      setErrTotal(data.total || 0);
-      setErrError(false);
-    } else {
-      setErrError(true);
-    }
-    setErrLoading(false);
-  }, [errPage, errFilters.error_type]);
-
-  useEffect(() => {
-    loadMetrics();
-  }, [loadMetrics]);
-
-  useEffect(() => {
-    loadErrors();
-  }, [loadErrors]);
+  const err = useListFetch<FrontendError>({
+    params: {
+      page: errPage,
+      pageSize: 50,
+      error_type: errFilters.error_type || undefined,
+    },
+    fetcher: async ({ page, pageSize, error_type }) => {
+      const q = new URLSearchParams();
+      q.set('page', String(page));
+      q.set('per_page', String(pageSize));
+      if (error_type) q.set('error_type', String(error_type));
+      const data = await fetchJson<PageResult<FrontendError>>(`/api/system/frontend-errors?${q.toString()}`);
+      return { items: data?.items ?? [], total: data?.total ?? 0 };
+    },
+    debounceDelay: 250,
+  });
 
   const onPerfFilterChange =
     (key: keyof typeof perfFilters) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -126,13 +106,8 @@ export const FrontendTelemetry: React.FC = () => {
       setErrPage(1);
     };
 
-  const handlePerfPageChange = useCallback((page: number) => {
-    setPerfPage(page);
-  }, []);
-
-  const handleErrPageChange = useCallback((page: number) => {
-    setErrPage(page);
-  }, []);
+  const handlePerfPageChange = (page: number) => setPerfPage(page);
+  const handleErrPageChange = (page: number) => setErrPage(page);
 
   const perfColumns = useMemo<ColumnType<PerfMetric>[]>(
     () => [
@@ -273,8 +248,8 @@ export const FrontendTelemetry: React.FC = () => {
         <PermissionButton
           permission='ops_center.view'
           onClick={() => {
-            loadMetrics();
-            loadErrors();
+            perf.refetch();
+            err.refetch();
           }}
           className='flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors'
         >
@@ -288,7 +263,7 @@ export const FrontendTelemetry: React.FC = () => {
         <div className='px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center gap-2'>
           <Gauge size={18} className='text-primary-500' />
           <span className='font-semibold text-gray-800 dark:text-slate-100'>性能指标</span>
-          <span className='text-xs text-gray-400'>共 {perfTotal} 条</span>
+          <span className='text-xs text-gray-400'>共 {perf.total} 条</span>
         </div>
 
         {/* 过滤 */}
@@ -319,17 +294,17 @@ export const FrontendTelemetry: React.FC = () => {
 
         <DataTable<PerfMetric>
           columns={perfColumns}
-          dataSource={metrics}
-          loading={perfLoading}
+          dataSource={perf.items}
+          loading={perf.loading}
           rowKey='id'
-          total={perfTotal}
+          total={perf.total}
           page={perfPage}
           pageSize={50}
           pageSizeOptions={[50]}
           onPageChange={handlePerfPageChange}
           error={
-            perfError
-              ? { message: '指标加载失败，请刷新重试', onRetry: loadMetrics }
+            perf.error
+              ? { message: '指标加载失败，请刷新重试', onRetry: perf.refetch }
               : null
           }
           empty={{
@@ -345,7 +320,7 @@ export const FrontendTelemetry: React.FC = () => {
         <div className='px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center gap-2'>
           <Bug size={18} className='text-red-500' />
           <span className='font-semibold text-gray-800 dark:text-slate-100'>前端错误</span>
-          <span className='text-xs text-gray-400'>共 {errTotal} 条</span>
+          <span className='text-xs text-gray-400'>共 {err.total} 条</span>
         </div>
 
         <div className='px-4 py-3 flex flex-wrap items-center gap-3 border-b border-gray-100 dark:border-slate-700'>
@@ -368,17 +343,17 @@ export const FrontendTelemetry: React.FC = () => {
 
         <DataTable<FrontendError>
           columns={errColumns}
-          dataSource={errors}
-          loading={errLoading}
+          dataSource={err.items}
+          loading={err.loading}
           rowKey='id'
-          total={errTotal}
+          total={err.total}
           page={errPage}
           pageSize={50}
           pageSizeOptions={[50]}
           onPageChange={handleErrPageChange}
           error={
-            errError
-              ? { message: '错误日志加载失败，请刷新重试', onRetry: loadErrors }
+            err.error
+              ? { message: '错误日志加载失败，请刷新重试', onRetry: err.refetch }
               : null
           }
           empty={{
