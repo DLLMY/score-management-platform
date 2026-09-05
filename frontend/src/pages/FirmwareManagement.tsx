@@ -16,6 +16,7 @@ import api, { Firmware, FirmwareRecord, OTAStatus, getAuthHeaders } from '../ser
 import { useForm, useModal } from '../hooks';
 import { Button, Modal, Badge, PermissionButton, DataTable, Pagination } from '../components';
 import type { ColumnType } from '../components/data-display/DataTable';
+import { useListFetch } from '../hooks';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useStableToast } from '../hooks/useStableToast';
 import { formatDateTime, formatFileSize } from '../utils/format';
@@ -31,10 +32,16 @@ interface UploadFormData {
 function FirmwareManagement() {
   const { showToast } = useStableToast();
 
-  const [versions, setVersions] = useState<Firmware[]>([]);
   const [versionsPage, setVersionsPage] = useState(1);
   const [versionsPerPage] = useState(20);
-  const [versionsTotal, setVersionsTotal] = useState(0);
+  // A 轨：固件版本列表迁 useListFetch（分页独立于 loadData 的 status/records）
+  const versions = useListFetch<Firmware>({
+    params: { page: versionsPage, pageSize: versionsPerPage },
+    fetcher: async ({ page, pageSize }) => {
+      const res = await api.firmware.getVersions({ page, per_page: pageSize });
+      return { items: res.versions ?? [], total: res.total ?? 0 };
+    },
+  });
   const [otaStatus, setOtaStatus] = useState<OTAStatus | null>(null);
   const [upgradeRecords, setUpgradeRecords] = useState<FirmwareRecord[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -81,14 +88,11 @@ function FirmwareManagement() {
       try {
         if (showRefreshToast) setIsRefreshing(true);
 
-        const [versionsRes, statusRes, recordsRes] = await Promise.all([
-          api.firmware.getVersions({ page: versionsPage, per_page: versionsPerPage }),
+        const [statusRes, recordsRes] = await Promise.all([
           api.firmware.getOTAStatus(),
           api.firmware.getUpgradeRecords(),
         ]);
 
-        setVersions(versionsRes.versions || []);
-        setVersionsTotal(versionsRes.total || 0);
         setOtaStatus(statusRes);
         setUpgradeRecords(recordsRes.records || []);
       } catch (error: unknown) {
@@ -107,7 +111,8 @@ function FirmwareManagement() {
   }, [loadData]);
 
   const handleRefresh = (): void => {
-    loadData(true);
+    void loadData(true);
+    void versions.refetch();
   };
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -147,7 +152,8 @@ function FirmwareManagement() {
       await api.firmware.upload(formData);
       showToast('success', '固件上传成功');
       closeUploadModal();
-      loadData(true);
+      void loadData(true);
+      void versions.refetch();
     } catch (error: unknown) {
       logger.error('上传失败:', error);
       showToast('error', `上传失败: ${(error as Error).message}`);
@@ -169,7 +175,8 @@ function FirmwareManagement() {
     try {
       await api.firmware.deleteVersion(version.id);
       showToast('success', '删除成功');
-      loadData(true);
+      void loadData(true);
+      void versions.refetch();
     } catch (error: unknown) {
       logger.error('删除失败:', error);
       showToast('error', `删除失败: ${(error as Error).message}`);
@@ -182,7 +189,8 @@ function FirmwareManagement() {
         is_active: !version.is_active,
       });
       showToast('success', !version.is_active ? '已启用' : '已禁用');
-      loadData(true);
+      void loadData(true);
+      void versions.refetch();
     } catch (error: unknown) {
       logger.error('更新失败:', error);
       showToast('error', `更新失败: ${(error as Error).message}`);
@@ -410,7 +418,7 @@ function FirmwareManagement() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>固件版本</p>
-              <p className='text-2xl font-bold'>{versions.length}</p>
+              <p className='text-2xl font-bold'>{versions.total}</p>
             </div>
           </div>
         </div>
@@ -459,7 +467,8 @@ function FirmwareManagement() {
         <h2 className='text-lg font-semibold mb-4'>固件版本列表</h2>
         <DataTable<Firmware>
           columns={versionColumns}
-          dataSource={versions}
+          dataSource={versions.items}
+          loading={versions.loading}
           rowKey='id'
           empty={{
             title: '暂无固件版本',
@@ -467,12 +476,12 @@ function FirmwareManagement() {
           }}
           scroll={{ x: 1000 }}
         />
-        {versionsTotal > 0 && (
+        {versions.total > 0 && (
           <Pagination
             currentPage={versionsPage}
-            totalPages={Math.max(1, Math.ceil(versionsTotal / versionsPerPage))}
+            totalPages={Math.max(1, Math.ceil(versions.total / versionsPerPage))}
             onPageChange={setVersionsPage}
-            totalItems={versionsTotal}
+            totalItems={versions.total}
             itemsPerPage={versionsPerPage}
           />
         )}
