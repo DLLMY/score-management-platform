@@ -25,6 +25,7 @@ import type { ParentContact, ParentContactCreateInput, ContactLog } from '../typ
 import { useStableToast } from '../hooks/useStableToast';
 import { useSubmitGuard } from '../hooks/useSubmitGuard';
 import { useWorkbenchClass } from '../hooks/useWorkbenchClass';
+import { useListFetch } from '../hooks';
 import CurrentClassLabel from '../components/workbench/CurrentClassLabel';
 import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
 import { EmptyState, LoadingSpinner, StatCard } from '../components';
@@ -70,15 +71,12 @@ const defaultLogForm: LogFormData = {
 };
 
 function ParentContactPage() {
-  const [contacts, setContacts] = useState<ParentContact[]>([]);
-  // M9 P1: 家长联系人列表服务端分页状态
   const [contactPage, setContactPage] = useState(1);
-  const [contactTotal, setContactTotal] = useState(0);
-  const [contactPages, setContactPages] = useState(1);
+  // 共享 busy：列表/表单提交（列表 loading 走 useListFetch 输出）
+  const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<ContactLog[]>([]);
   const [selectedContact, setSelectedContact] = useState<ParentContact | null>(null);
   const [expandedContactId, setExpandedContactId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [editingContactId, setEditingContactId] = useState<number | null>(null);
@@ -93,24 +91,28 @@ function ParentContactPage() {
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
 
-  const fetchContacts = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // 后端 /api/parent/contacts 支持 class_id 过滤 + 教师班级隔离
-      const resp = await api.parent.getAll(undefined, filterClassId || undefined, {
-        page: contactPage,
-        per_page: 50,
-      });
-      setContacts(resp.contacts || []);
-      setContactTotal(resp.total);
-      setContactPages(resp.pages);
-    } catch (error) {
-      logger.error('获取家长联系人列表失败:', error);
-      showToast('error', getErrMsg(error, '获取家长联系人列表失败'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showToast, filterClassId, contactPage]);
+  // A 轨：家长联系人列表迁 useListFetch（class_id 服务端过滤 + 分页，失败 toast 保留）
+  const contacts = useListFetch<ParentContact>({
+    params: { page: contactPage, pageSize: 50, classId: filterClassId },
+    fetcher: async ({ page, pageSize, classId }) => {
+      try {
+        const resp = await api.parent.getAll(
+          undefined,
+          classId ? Number(classId) : undefined,
+          { page, per_page: pageSize }
+        );
+        return { items: resp.contacts ?? [], total: resp.total ?? 0 };
+      } catch (error) {
+        logger.error('获取家长联系人列表失败:', error);
+        showToast('error', getErrMsg(error, '获取家长联系人列表失败'));
+        throw error;
+      }
+    },
+  });
+  // 既有新增/编辑等 handler 仍以 fetchContacts 命名调用（语义 = 重新拉取当前页）
+  const fetchContacts = useCallback(() => {
+    void contacts.refetch();
+  }, [contacts]);
 
   const fetchContactLogs = useCallback(
     async (parentId: number) => {
@@ -127,10 +129,6 @@ function ParentContactPage() {
     },
     [showToast]
   );
-
-  useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
 
   // M9 P1: 切换班级筛选时重置家长联系人分页到首页
   useEffect(() => {
@@ -324,7 +322,7 @@ function ParentContactPage() {
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <StatCard
             label='家长联系人'
-            value={contacts.length}
+            value={contacts.items.length}
             icon={<Users className='w-6 h-6 text-white' />}
             iconGradient='from-cyan-500 to-blue-500'
             decoGradient='from-cyan-500/10 to-blue-500/10'
@@ -350,11 +348,11 @@ function ParentContactPage() {
       </div>
 
       <div className='flex-1 px-6 pb-6 overflow-auto'>
-        {isLoading && contacts.length === 0 ? (
+        {contacts.loading && contacts.items.length === 0 ? (
           <div className='flex flex-col items-center justify-center h-full gap-3'>
             <LoadingSpinner text='加载中...' />
           </div>
-        ) : contacts.length === 0 ? (
+        ) : contacts.items.length === 0 ? (
           <EmptyState
             icon='users'
             title={filterClassId > 0 ? '该班级暂无家长联系方式' : '暂无家长联系方式'}
@@ -364,7 +362,7 @@ function ParentContactPage() {
           />
         ) : (
           <div className='space-y-4'>
-            {contacts.map((contact) => {
+            {contacts.items.map((contact) => {
               const isExpanded = expandedContactId === contact.id;
               const contactLogs = getLogsForContact(contact.id);
 
@@ -541,11 +539,11 @@ function ParentContactPage() {
             })}
           </div>
         )}
-        {contactTotal > 50 && (
+        {contacts.total > 50 && (
           <div className='mt-5 flex justify-center'>
             <Pagination
               current={contactPage}
-              total={contactTotal}
+              total={contacts.total}
               pageSize={50}
               onChange={(p) => setContactPage(p)}
               showSizeChanger={false}
