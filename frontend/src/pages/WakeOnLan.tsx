@@ -1,10 +1,10 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Power, Plus, Trash2, Zap, Check, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Pagination } from 'antd';
 import api from '../services/api';
 import type { WOLDevice } from '../services/api';
-import { useClassNowStatus } from '../hooks';
+import { useClassNowStatus, useListFetch } from '../hooks';
 import { PermissionButton, ClassStatusBadge } from '../components';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 
@@ -12,16 +12,13 @@ export default function WakeOnLan() {
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
-  const [devices, setDevices] = useState<WOLDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<number | null>(null);
+  // 共享 busy：唤醒/批量唤醒/增删设备（列表 loading 走 useListFetch 输出）
   const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   // 设备列表加载失败标记（诚实显示，不再 fallback 假设备）
-  const [loadError, setLoadError] = useState(false);
   // P0(M9): 服务端分页状态
   const [wolPage, setWolPage] = useState(1);
   const [wolPageSize] = useState(200);
-  const [wolTotal, setWolTotal] = useState(0);
   const [wakeResult, setWakeResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDevice, setNewDevice] = useState({ name: '', mac_address: '' });
@@ -30,32 +27,29 @@ export default function WakeOnLan() {
   // 远程开机属于全局下发，按全局上课时段拦截
   const wolClassNow = useClassNowStatus(undefined, { scope: 'global' });
 
-  // Load devices from database on mount（P0(M9)：服务端分页，默认拉满上限覆盖常规设备量）
-  const loadDevices = async (page: number = wolPage) => {
-    setIsRefreshing(true);
-    setLoadError(false);
-    try {
-      const result = await api.wakeOnLan.getDevices({ page, per_page: wolPageSize });
-      setDevices(result?.devices || []);
-      setWolTotal(result?.total || 0);
-    } catch (error) {
-      logger.error('Failed to load devices:', error);
-      // 诚实显示：加载失败不伪造默认设备
-      setDevices([]);
-      setLoadError(true);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  // A 轨：设备列表迁 useListFetch（P0(M9) 服务端分页，默认拉满上限覆盖常规设备量）
+  // 诚实显示：加载失败不伪造默认设备（catch 后 rethrow，items 为空 + list.error 可见）
+  const list = useListFetch<WOLDevice>({
+    params: { page: wolPage, pageSize: wolPageSize },
+    fetcher: async ({ page, pageSize }) => {
+      try {
+        const result = await api.wakeOnLan.getDevices({ page, per_page: pageSize });
+        return { items: result?.devices ?? [], total: result?.total ?? 0 };
+      } catch (error) {
+        logger.error('Failed to load devices:', error);
+        throw error;
+      }
+    },
+  });
+  // 既有刷新按钮仍以 loadDevices 命名调用（语义 = 重新拉取当前页）
+  const loadDevices = useCallback(async (): Promise<void> => {
+    await list.refetch();
+  }, [list]);
 
+  // 声明式分页：页码变化由 hook 自动重新拉取
   const handleWolPageChange = (page: number) => {
     setWolPage(page);
-    loadDevices(page);
   };
-
-  useEffect(() => {
-    loadDevices(1);
-  }, []);
 
   // Wake up selected device
   const handleWake = async (mac: string) => {
@@ -86,7 +80,7 @@ export default function WakeOnLan() {
 
   // Wake up all devices
   const handleWakeAll = async () => {
-    const validMacs = devices.filter((d) => d.mac_address).map((d) => d.mac_address!);
+    const validMacs = list.items.filter((d) => d.mac_address).map((d) => d.mac_address!);
 
     if (validMacs.length === 0) {
       setWakeResult({
@@ -157,8 +151,7 @@ export default function WakeOnLan() {
         port: 9,
       });
 
-      setDevices([...devices, result]);
-      setWolTotal((t) => t + 1);
+      list.mutate({ items: [...list.items, result], total: list.total + 1 });
       setNewDevice({ name: '', mac_address: '' });
       setShowAddForm(false);
       setWakeResult({
@@ -190,8 +183,10 @@ export default function WakeOnLan() {
     setIsLoading(true);
     try {
       await api.wakeOnLan.deleteDevice(id);
-      setDevices(devices.filter((d) => d.id !== id));
-      setWolTotal((t) => Math.max(0, t - 1));
+      list.mutate({
+        items: list.items.filter((d) => d.id !== id),
+        total: Math.max(0, list.total - 1),
+      });
       if (selectedDevice === id) {
         setSelectedDevice(null);
       }
@@ -243,10 +238,10 @@ export default function WakeOnLan() {
           <PermissionButton
             permission='device.view'
             onClick={() => loadDevices()}
-            disabled={isRefreshing}
+            disabled={list.loading}
             className='flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors'
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${list.loading ? 'animate-spin' : ''}`} />
             Refresh
           </PermissionButton>
         </div>
@@ -321,13 +316,13 @@ export default function WakeOnLan() {
       )}
 
       {/* Device List */}
-      {loadError ? (
+      {list.error ? (
         <div className='p-6 bg-red-50 border border-red-200 rounded-lg text-center'>
           <AlertCircle className='w-10 h-10 text-red-400 mx-auto mb-2' />
           <p className='text-red-700 font-medium'>设备列表加载失败</p>
           <p className='text-sm text-red-500 mt-1'>请点击右上角 Refresh 重试</p>
         </div>
-      ) : devices.length === 0 ? (
+      ) : list.items.length === 0 ? (
         <div className='p-6 bg-gray-50 border border-gray-200 rounded-lg text-center'>
           <Power className='w-10 h-10 text-gray-400 mx-auto mb-2' />
           <p className='text-gray-600 font-medium'>暂无远程开机设备</p>
@@ -335,7 +330,7 @@ export default function WakeOnLan() {
         </div>
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {devices.map((device) => (
+          {list.items.map((device) => (
             <div
               key={device.id}
               className={`p-4 bg-white rounded-lg border-2 transition-all cursor-pointer ${
@@ -393,12 +388,12 @@ export default function WakeOnLan() {
           ))}
         </div>
       )}
-      {!loadError && devices.length > 0 && wolTotal > wolPageSize && (
+      {!list.error && list.items.length > 0 && list.total > wolPageSize && (
         <div className='mt-4 flex justify-center'>
           <Pagination
             current={wolPage}
             pageSize={wolPageSize}
-            total={wolTotal}
+            total={list.total}
             onChange={handleWolPageChange}
             showSizeChanger={false}
           />
