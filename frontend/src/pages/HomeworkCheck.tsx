@@ -2,7 +2,7 @@ import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useClientFilter } from '../hooks';
+import { useClientFilter, useListFetch } from '../hooks';
 import {
   Plus,
   Edit2,
@@ -54,12 +54,7 @@ function HomeworkCheck() {
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
   const { submitting, run: runSubmit } = useSubmitGuard();
-  const [assignments, setAssignments] = useState<HomeworkAssignment[]>([]);
-  // M9 P1: 作业列表服务端分页状态
   const [hwPage, setHwPage] = useState(1);
-  const [hwTotal, setHwTotal] = useState(0);
-  const [hwPages, setHwPages] = useState(1);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   // C-2：支持从总览指标卡下钻带 ?status=pending|done 预置过滤
   const [searchParams] = useSearchParams();
@@ -73,28 +68,28 @@ function HomeworkCheck() {
   // 视图筛选班级：工作台级共享，跨子页保持一致（0 = 全部班级）
   const [filterClassId, setFilterClassId] = useWorkbenchClass();
 
-  const fetchAssignments = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // 后端 /api/homework 支持 class_id 过滤，直接服务端筛选
-      const resp = await api.homework.getAll(filterClassId || undefined, undefined, {
-        page: hwPage,
-        per_page: 50,
-      });
-      setAssignments(resp.assignments || []);
-      setHwTotal(resp.total);
-      setHwPages(resp.pages);
-    } catch (error) {
-      logger.error('获取作业列表失败:', error);
-      showToast('error', getErrMsg(error, '获取作业列表失败'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showToast, filterClassId, hwPage]);
-
-  useEffect(() => {
-    fetchAssignments();
-  }, [fetchAssignments]);
+  // A 轨：作业列表迁 useListFetch（服务端分页 + class_id 服务端过滤；status/search 保持页内过滤）
+  const homework = useListFetch<HomeworkAssignment>({
+    params: { page: hwPage, pageSize: 50, classId: filterClassId },
+    fetcher: async ({ page, pageSize, classId }) => {
+      try {
+        const resp = await api.homework.getAll(
+          classId ? Number(classId) : undefined,
+          undefined,
+          { page, per_page: pageSize }
+        );
+        return { items: resp.assignments ?? [], total: resp.total ?? 0 };
+      } catch (error) {
+        logger.error('获取作业列表失败:', error);
+        showToast('error', getErrMsg(error, '获取作业列表失败'));
+        throw error;
+      }
+    },
+  });
+  // 既有新增/编辑等 handler 仍以 fetchAssignments 命名调用（语义 = 重新拉取当前页）
+  const fetchAssignments = useCallback(() => {
+    void homework.refetch();
+  }, [homework]);
 
   // M9 P1: 切换班级筛选时重置作业分页到首页
   useEffect(() => {
@@ -102,7 +97,7 @@ function HomeworkCheck() {
   }, [filterClassId]);
 
   const filteredAssignments = useClientFilter(
-    assignments,
+    homework.items,
     (a) =>
       (a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.description && a.description.toLowerCase().includes(searchTerm.toLowerCase()))) &&
@@ -211,8 +206,8 @@ function HomeworkCheck() {
     [showToast, fetchAssignments]
   );
 
-  const totalAssignments = assignments.length;
-  const completedAssignments = assignments.filter((a) => a.is_completed).length;
+  const totalAssignments = homework.items.length;
+  const completedAssignments = homework.items.filter((a) => a.is_completed).length;
   const pendingAssignments = totalAssignments - completedAssignments;
 
   const columns = useMemo<ColumnType<HomeworkAssignment>[]>(
@@ -416,7 +411,7 @@ function HomeworkCheck() {
           <DataTable<HomeworkAssignment>
             columns={columns}
             dataSource={filteredAssignments}
-            loading={isLoading}
+            loading={homework.loading}
             rowKey='id'
             rowClassName={() => 'group cursor-pointer'}
             empty={{
@@ -452,11 +447,11 @@ function HomeworkCheck() {
             )}
           />
         </div>
-        {hwTotal > 50 && (
+        {homework.total > 50 && (
           <div className='mt-5 flex justify-center'>
             <Pagination
               current={hwPage}
-              total={hwTotal}
+              total={homework.total}
               pageSize={50}
               onChange={(p) => setHwPage(p)}
               showSizeChanger={false}
