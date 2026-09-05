@@ -70,7 +70,9 @@ export const FrontendTelemetry: React.FC = () => {
       if (metric_type) q.set('metric_type', String(metric_type));
       if (name) q.set('name', String(name));
       const data = await fetchJson<PageResult<PerfMetric>>(`/api/system/frontend-metrics?${q.toString()}`);
-      return { items: data?.items ?? [], total: data?.total ?? 0 };
+      // fetchJson 失败返回 null（仅 log 不抛）——此处转抛让 hook error 态可见（保持旧语义）
+      if (!data) throw new Error('性能指标接口不可用');
+      return { items: data.items ?? [], total: data.total ?? 0 };
     },
     debounceDelay: 250,
   });
@@ -90,7 +92,8 @@ export const FrontendTelemetry: React.FC = () => {
       q.set('per_page', String(pageSize));
       if (error_type) q.set('error_type', String(error_type));
       const data = await fetchJson<PageResult<FrontendError>>(`/api/system/frontend-errors?${q.toString()}`);
-      return { items: data?.items ?? [], total: data?.total ?? 0 };
+      if (!data) throw new Error('前端错误接口不可用');
+      return { items: data.items ?? [], total: data.total ?? 0 };
     },
     debounceDelay: 250,
   });
