@@ -1,6 +1,7 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Edit2,
@@ -66,6 +67,12 @@ function ActivityManage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
+  // C-2：支持从总览「文体活动·已发布」下钻 ?published=1|0 预置
+  const [searchParams] = useSearchParams();
+  const [publishedFilter, setPublishedFilter] = useState<boolean | undefined>(() => {
+    const v = searchParams.get('published');
+    return v === '1' ? true : v === '0' ? false : undefined;
+  });
   const [showModal, setShowModal] = useState<boolean>(false);
   const [formData, setFormData] = useState<ActivityFormData>(defaultForm);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -79,7 +86,7 @@ function ActivityManage() {
   const fetchActivities = useCallback(async () => {
     setIsLoading(true);
     try {
-      const resp = await api.activity.getAll(undefined, undefined, {
+      const resp = await api.activity.getAll(undefined, publishedFilter, {
         page: activityPage,
         per_page: 50,
       });
@@ -92,11 +99,16 @@ function ActivityManage() {
     } finally {
       setIsLoading(false);
     }
-  }, [showToast, activityPage]);
+  }, [showToast, activityPage, publishedFilter]);
 
   useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
+
+  // C-2: 切换发布状态过滤时回到第一页
+  useEffect(() => {
+    setActivityPage(1);
+  }, [publishedFilter]);
 
   const handleOpenCreate = useCallback(() => {
     setFormData(defaultForm);
@@ -336,6 +348,33 @@ function ActivityManage() {
             </option>
           ))}
         </select>
+        <div
+          className='flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-700/60 rounded-xl shrink-0'
+          role='group'
+          aria-label='按发布状态筛选活动'
+        >
+          {(
+            [
+              [undefined, '全部'],
+              [true, '已发布'],
+              [false, '未发布'],
+            ] as const
+          ).map(([key, label], idx) => (
+            <button
+              key={idx}
+              type='button'
+              onClick={() => setPublishedFilter(key)}
+              aria-pressed={publishedFilter === key}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                publishedFilter === key
+                  ? 'bg-white dark:bg-slate-600 text-violet-600 dark:text-violet-300 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className='flex-1 px-6 pb-6 overflow-y-auto'>

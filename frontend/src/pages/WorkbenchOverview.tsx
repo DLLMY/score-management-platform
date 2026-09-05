@@ -416,7 +416,7 @@ function WorkbenchOverview() {
                 <PartyPopper className='w-6 h-6 text-white' />,
                 'from-pink-500 to-rose-500',
                 'from-pink-500/10 to-rose-500/10',
-                { path: '/activity', permission: 'activity.view' }
+                { path: '/activity?published=1', permission: 'activity.view' }
               )}
               {renderStat(
                 '值日组',
