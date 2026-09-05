@@ -395,7 +395,7 @@ function WorkbenchOverview() {
                 <AlertTriangle className='w-6 h-6 text-white' />,
                 'from-amber-500 to-orange-500',
                 'from-amber-500/10 to-orange-500/10',
-                { path: '/mental-health', permission: 'mental_health.view' }
+                { path: '/mental-health?view=alerts&resolved=0', permission: 'mental_health.view' }
               )}
               {renderStat(
                 '学习小组',

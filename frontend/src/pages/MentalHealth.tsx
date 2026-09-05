@@ -1,6 +1,7 @@
 import { getErrMsg } from '../utils/getErrMsg';
 import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Pagination } from 'antd';
 import {
   Brain,
@@ -54,7 +55,15 @@ function MentalHealth() {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [formData, setFormData] = useState<RecordFormData>(defaultRecordForm);
   const [errors, setErrors] = useState<Partial<Record<keyof RecordFormData, string>>>({});
-  const [activeTab, setActiveTab] = useState<'records' | 'alerts'>('records');
+  // C-2：支持从总览「未处理预警」下钻 ?view=alerts&resolved=0 预置
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'records' | 'alerts'>(() =>
+    searchParams.get('view') === 'alerts' ? 'alerts' : 'records'
+  );
+  const [resolvedFilter, setResolvedFilter] = useState<boolean | undefined>(() => {
+    const v = searchParams.get('resolved');
+    return v === '1' ? true : v === '0' ? false : undefined;
+  });
   const [submitting, setSubmitting] = useState<boolean>(false);
   // M9 P1: 服务端分页状态（记录列表 + 预警列表）
   const [recordPage, setRecordPage] = useState(1);
@@ -94,7 +103,7 @@ function MentalHealth() {
       // M9 P1: 服务端分页信封（alerts 资源 key）
       const resp = await api.mentalHealth.getAlerts(
         undefined,
-        undefined,
+        resolvedFilter,
         filterClassId || undefined,
         { page: alertPage, per_page: 50 }
       );
@@ -106,7 +115,7 @@ function MentalHealth() {
       setAlerts(null); // 加载失败：不伪装成"已处理"或"无预警"
       showToast('error', getErrMsg(error, '获取预警列表失败，请稍后重试'));
     }
-  }, [showToast, filterClassId, alertPage]);
+  }, [showToast, filterClassId, alertPage, resolvedFilter]);
 
   useEffect(() => {
     fetchAlerts();
@@ -117,6 +126,11 @@ function MentalHealth() {
     setRecordPage(1);
     setAlertPage(1);
   }, [filterClassId]);
+
+  // C-2: 切换处理状态过滤时回到预警第一页
+  useEffect(() => {
+    setAlertPage(1);
+  }, [resolvedFilter]);
 
   const filteredRecords = useClientFilter(
     records,
@@ -486,6 +500,33 @@ function MentalHealth() {
           ) : (
             <div>
               <div className='p-5 space-y-4'>
+                <div
+                  className='inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-700/60 rounded-xl'
+                  role='group'
+                  aria-label='按处理状态筛选预警'
+                >
+                  {(
+                    [
+                      [undefined, '全部'],
+                      [false, '未处理'],
+                      [true, '已处理'],
+                    ] as const
+                  ).map(([key, label], idx) => (
+                    <button
+                      key={idx}
+                      type='button'
+                      onClick={() => setResolvedFilter(key)}
+                      aria-pressed={resolvedFilter === key}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                        resolvedFilter === key
+                          ? 'bg-white dark:bg-slate-600 text-cyan-600 dark:text-cyan-300 shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div>
                   <h3 className='flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3'>
                     <AlertTriangle className='w-4 h-4 text-red-500' />
