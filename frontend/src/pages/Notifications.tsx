@@ -1,9 +1,10 @@
 import logger from '../utils/logger';
-import { useState, useEffect, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
+import { useState, useCallback, useMemo, useRef, FormEvent, ChangeEvent } from 'react';
 import { Bell, Filter, Check, Trash2, RefreshCw, Sparkles, X, Info } from 'lucide-react';
 import { Card, Button, Modal, PermissionButton } from '../components';
 import api, { AdminNotification } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useListFetch } from '../hooks';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { formatRelativeTime } from '../utils/format';
 
@@ -14,20 +15,14 @@ interface SendForm {
   priority: 'high' | 'medium' | 'low';
 }
 
-interface Pagination {
-  page: number;
-  per_page: number;
-  total: number;
-  pages: number;
-}
-
 function Notifications() {
   const { showToast } = useStableToast();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
-  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  // A 轨：通知列表迁 useListFetch（乐观更新走 mutate/setTotal）
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 20;
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<string>('');
@@ -39,12 +34,7 @@ function Notifications() {
     priority: 'medium',
   });
   const [sending, setSending] = useState<boolean>(false);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    per_page: 20,
-    total: 0,
-    pages: 0,
-  });
+
 
   // 使用 useMemo 缓存 adminId，避免重复读取 localStorage
   const adminId = useMemo((): number | undefined => {
@@ -56,84 +46,63 @@ function Notifications() {
     return undefined;
   }, []);
 
-  // M8: 竞态防护——请求序号，快速切换筛选时仅最新请求生效
-  const loadSeqRef = useRef(0);
-  const loadNotifications = useCallback(async (): Promise<void> => {
-    const seq = ++loadSeqRef.current;
-    try {
-      setLoading(true);
-      const params: {
-        admin_id?: number;
-        page: number;
-        per_page: number;
-        is_read?: string;
-        type?: string;
-        priority?: string;
-      } = {
-        admin_id: adminId,
-        page: pagination.page,
-        per_page: pagination.per_page,
-      };
-      if (filterStatus) params.is_read = filterStatus;
-      if (filterType) params.type = filterType;
-      if (filterPriority) params.priority = filterPriority;
-      const data = await api.adminNotifications.getAll(params);
-      if (seq !== loadSeqRef.current) return; // 旧响应丢弃
-      setNotifications(data.notifications || []);
-      setPagination((prev: Pagination) => ({
-        ...prev,
-        total: data.total || 0,
-        pages: data.pages || 0,
-      }));
-    } catch (error) {
-      if (seq !== loadSeqRef.current) return;
-      logger.error('加载通知失败:', error);
-      showToast('error', '加载通知失败');
-    } finally {
-      if (seq === loadSeqRef.current) setLoading(false);
-    }
-  }, [
-    pagination.page,
-    pagination.per_page,
-    filterStatus,
-    filterType,
-    filterPriority,
-    adminId,
-    showToast,
-  ]);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+  // A 轨：useListFetch 接管分页/过滤/竞态（abort 内建）；失败 toast 由 fetcher 兜底
+  const list = useListFetch<AdminNotification>({
+    params: {
+      page,
+      pageSize: PER_PAGE,
+      admin_id: adminId,
+      is_read: filterStatus || undefined,
+      type: filterType || undefined,
+      priority: filterPriority || undefined,
+    },
+    fetcher: async ({ page: pg, pageSize, admin_id, is_read, type, priority }) => {
+      try {
+        const data = await api.adminNotifications.getAll({
+          admin_id: admin_id as number | undefined,
+          page: pg,
+          per_page: pageSize,
+          is_read: is_read as string | undefined,
+          type: type as string | undefined,
+          priority: priority as string | undefined,
+        });
+        return { items: data.notifications ?? [], total: data.total ?? 0 };
+      } catch (error) {
+        logger.error('加载通知失败:', error);
+        showToast('error', '加载通知失败');
+        throw error;
+      }
+    },
+  });
+  // 既有按钮/回退路径仍以 loadNotifications 命名调用（语义 = 重新拉取当前页）
+  const loadNotifications = useCallback(() => {
+    void list.refetch();
+  }, [list]);
 
   const handleMarkRead = useCallback(
     async (id: number): Promise<void> => {
       try {
         await api.adminNotifications.markRead(id);
-        setNotifications((prev: AdminNotification[]) =>
-          prev.map((n: AdminNotification) => (n.id === id ? { ...n, is_read: true } : n))
-        );
+        list.mutate({ items: list.items.map((n) => (n.id === id ? { ...n, is_read: true } : n)) });
         showToast('success', '已标记为已读');
       } catch (error) {
         logger.error('标记已读失败:', error);
         showToast('error', '操作失败: ' + ((error as Error).message || ''));
       }
     },
-    [showToast]
+    [showToast, list]
   );
 
   const handleMarkAllRead = useCallback(async (): Promise<void> => {
     try {
       const result = await api.adminNotifications.markAllRead(adminId);
-      setNotifications((prev: AdminNotification[]) =>
-        prev.map((n: AdminNotification) => ({ ...n, is_read: true }))
-      );
+      list.mutate({ items: list.items.map((n) => ({ ...n, is_read: true })) });
       showToast('success', result.message || '全部已读');
     } catch (error) {
       logger.error('全部已读失败:', error);
       showToast('error', '操作失败: ' + ((error as Error).message || ''));
     }
-  }, [adminId, showToast]);
+  }, [adminId, showToast, list]);
 
   const handleDelete = useCallback(
     async (id: number): Promise<void> => {
@@ -146,22 +115,17 @@ function Notifications() {
       if (!ok) return;
       try {
         await api.adminNotifications.delete(id);
-        setNotifications((prev: AdminNotification[]) =>
-          prev.filter((n: AdminNotification) => n.id !== id)
-        );
-        // M4: 总数同步减一 + 末页分页回退（防删除后页码越界）
-        setPagination((prev: Pagination) => {
-          const total = Math.max(0, prev.total - 1);
-          const pages = Math.max(1, Math.ceil(total / prev.per_page));
-          return { ...prev, total, pages, page: prev.page > pages ? pages : prev.page };
-        });
+        const nextTotal = Math.max(0, list.total - 1);
+        const nextPages = Math.max(1, Math.ceil(nextTotal / PER_PAGE));
+        list.mutate({ items: list.items.filter((n) => n.id !== id), total: nextTotal });
+        if (page > nextPages) setPage(nextPages); // M4: 末页删除回退
         showToast('success', '删除成功');
       } catch (error) {
         logger.error('删除通知失败:', error);
         showToast('error', '删除失败: ' + ((error as Error).message || ''));
       }
     },
-    [showToast]
+    [showToast, list, page]
   );
 
   const handleSendNotification = useCallback(
@@ -175,12 +139,7 @@ function Notifications() {
         setSendForm({ title: '', message: '', type: 'info', priority: 'medium' });
         // M4: 后端返回 data: {notification} 则前置插入；否则重新拉取保证列表与总数一致
         if (result && result.notification) {
-          setNotifications((prev: AdminNotification[]) => [result.notification, ...prev]);
-          setPagination((prev: Pagination) => ({
-            ...prev,
-            total: prev.total + 1,
-            pages: Math.max(1, Math.ceil((prev.total + 1) / prev.per_page)),
-          }));
+          list.mutate({ items: [result.notification, ...list.items], total: list.total + 1 });
         } else {
           loadNotifications();
         }
@@ -192,7 +151,7 @@ function Notifications() {
         setSending(false);
       }
     },
-    [sendForm, adminId, showToast, sending, loadNotifications]
+    [sendForm, adminId, showToast, sending, loadNotifications, list]
   );
 
   const getTypeColor = useMemo(() => {
@@ -268,9 +227,7 @@ function Notifications() {
     };
   }, []);
 
-  const totalPages = useMemo(() => {
-    return pagination.pages || Math.ceil(pagination.total / pagination.per_page);
-  }, [pagination.total, pagination.per_page, pagination.pages]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(list.total / PER_PAGE)), [list.total]);
 
   const handleFilterChange =
     (field: 'status' | 'type' | 'priority') =>
@@ -278,7 +235,7 @@ function Notifications() {
       if (field === 'status') setFilterStatus(e.target.value);
       if (field === 'type') setFilterType(e.target.value);
       if (field === 'priority') setFilterPriority(e.target.value);
-      setPagination((prev: Pagination) => ({ ...prev, page: 1 }));
+      setPage(1);
     };
 
   const handleFormChange =
@@ -288,8 +245,8 @@ function Notifications() {
     };
 
   const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.is_read).length;
-  }, [notifications]);
+    return list.items.filter((n) => !n.is_read).length;
+  }, [list.items]);
 
   return (
     <div className='max-w-4xl mx-auto px-4 sm:px-6'>
@@ -361,17 +318,17 @@ function Notifications() {
             </select>
           </div>
           <Button variant='outline' onClick={loadNotifications} size='sm'>
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${list.loading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
         </div>
 
-        {loading ? (
+        {list.loading ? (
           <div className='flex flex-col items-center justify-center py-12'>
             <RefreshCw className='w-8 h-8 text-primary-500 animate-spin mb-4' />
             <p className='text-gray-500'>加载中...</p>
           </div>
-        ) : notifications.length === 0 ? (
+        ) : list.items.length === 0 ? (
           <div className='flex flex-col items-center justify-center py-12'>
             <Bell className='w-12 h-12 text-gray-300 mb-4' />
             <p className='text-gray-500'>暂无通知</p>
@@ -380,7 +337,7 @@ function Notifications() {
           </div>
         ) : (
           <div className='space-y-3'>
-            {notifications.map((notification: AdminNotification) => (
+            {list.items.map((notification: AdminNotification) => (
               <div
                 key={notification.id}
                 className={`p-3 sm:p-4 rounded-xl border transition-colors ${
@@ -468,28 +425,24 @@ function Notifications() {
 
         {totalPages > 1 && (
           <div className='flex items-center justify-between mt-6 pt-4 border-t border-gray-100'>
-            <p className='text-sm text-gray-500'>共 {pagination.total} 条记录</p>
+            <p className='text-sm text-gray-500'>共 {list.total} 条记录</p>
             <div className='flex items-center gap-2'>
               <Button
                 variant='outline'
                 size='sm'
-                disabled={pagination.page <= 1}
-                onClick={() =>
-                  setPagination((prev: Pagination) => ({ ...prev, page: prev.page - 1 }))
-                }
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
               >
                 上一页
               </Button>
               <span className='text-sm text-gray-600'>
-                第 {pagination.page} 页 / 共 {totalPages} 页
+                第 {page} 页 / 共 {totalPages} 页
               </span>
               <Button
                 variant='outline'
                 size='sm'
-                disabled={pagination.page >= totalPages}
-                onClick={() =>
-                  setPagination((prev: Pagination) => ({ ...prev, page: prev.page + 1 }))
-                }
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
               >
                 下一页
               </Button>
