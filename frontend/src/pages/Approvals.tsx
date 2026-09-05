@@ -8,6 +8,7 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useTableUrlState } from '../hooks';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useListFetch } from '../hooks';
 import { StudentSelect } from '../components/form/EntitySelect';
 
 interface Approval {
@@ -30,12 +31,6 @@ interface CreateForm {
   description: string;
   type: 'score_adjust' | 'special_reward' | 'other';
   score_change: number;
-}
-
-interface Pagination {
-  page: number;
-  per_page: number;
-  total: number;
 }
 
 /** 常用拒绝理由模板（下拉即选，可再编辑） */
@@ -66,8 +61,6 @@ function Approvals() {
   confirmRef.current = confirmFn;
   const { page, pageSize, sortField, sortOrder, setPage, setPageSize, setSort } =
     useTableUrlState('approvals');
-  const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
@@ -80,56 +73,59 @@ function Approvals() {
     score_change: 0,
   });
   const [actionLoading, setActionLoading] = useState(false);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, per_page: 20, total: 0 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<Array<string | number>>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [showBatchRejectModal, setShowBatchRejectModal] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const [failedBatch, setFailedBatch] = useState<FailedBatch | null>(null);
 
-  const loadApprovals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params: Record<string, unknown> = {
-        page,
-        per_page: pageSize,
-      };
-      if (filterStatus) params.status = filterStatus;
-      if (sortField) {
-        params.sort_by = sortField;
-        params.sort_order = sortOrder === 'descend' ? 'desc' : 'asc';
+  // A 轨：审批列表迁 useListFetch（分页/排序/状态过滤声明式进 params，abort 竞态内建）
+  const list = useListFetch<Approval>({
+    params: {
+      page,
+      pageSize,
+      status: filterStatus || undefined,
+      sortBy: sortField || undefined,
+      sortOrd: sortOrder ?? undefined,
+    },
+    fetcher: async ({ page: pg, pageSize: size, status, sortBy, sortOrd }) => {
+      const params: Record<string, unknown> = { page: pg, per_page: size };
+      const st = status as string | undefined;
+      if (st) params.status = st;
+      const sf = sortBy as string | undefined;
+      if (sf) {
+        params.sort_by = sf;
+        params.sort_order = sortOrd === 'descend' ? 'desc' : 'asc';
       }
-      const data = await api.approvals.getAll(params);
-      // API返回格式是 { approvals: [...], pagination: { total } }
-      const approvalsList = Array.isArray(data)
-        ? data
-        : (data as { approvals?: Approval[] })?.approvals || [];
-      setApprovals(approvalsList);
-      // total 用后端 pagination.total（此前用当前页长度冒充导致分页栏隐藏无法翻页）
-      setPagination((prev) => ({
-        ...prev,
-        page,
-        per_page: pageSize,
-        total:
-          (data as { pagination?: { total?: number } }).pagination?.total ?? approvalsList.length,
-      }));
-    } catch (error) {
-      showToast('error', '加载审批失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, sortField, sortOrder, filterStatus, showToast]);
-
-  useEffect(() => {
-    loadApprovals();
-  }, [loadApprovals]);
+      try {
+        const data = await api.approvals.getAll(params);
+        // API返回格式是 { approvals: [...], pagination: { total } }
+        const approvalsList = Array.isArray(data)
+          ? data
+          : (data as { approvals?: Approval[] })?.approvals || [];
+        // total 用后端 pagination.total（此前用当前页长度冒充导致分页栏隐藏无法翻页）
+        const total = Array.isArray(data)
+          ? approvalsList.length
+          : ((data as { pagination?: { total?: number } }).pagination?.total ??
+            approvalsList.length);
+        return { items: approvalsList, total };
+      } catch (error) {
+        showToast('error', '加载审批失败');
+        throw error;
+      }
+    },
+  });
+  // 既有按钮/批量回退路径仍以 loadApprovals 命名调用（语义 = 重新拉取当前页）
+  const loadApprovals = useCallback(async (): Promise<void> => {
+    await list.refetch();
+  }, [list]);
 
   // 列表变化后收敛 activeIndex，避免越界
   useEffect(() => {
-    if (approvals.length > 0 && activeIndex >= approvals.length) {
-      setActiveIndex(approvals.length - 1);
+    if (list.items.length > 0 && activeIndex >= list.items.length) {
+      setActiveIndex(list.items.length - 1);
     }
-  }, [approvals.length, activeIndex]);
+  }, [list.items.length, activeIndex]);
 
   const handleViewDetail = useCallback(
     async (id: number) => {
@@ -157,7 +153,9 @@ function Approvals() {
       try {
         setActionLoading(true);
         await api.approvals.approve(id, { comment });
-        setApprovals((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'approved' } : a)));
+        list.mutate({
+          items: list.items.map((a) => (a.id === id ? { ...a, status: 'approved' } : a)),
+        });
         setShowDetailModal(false);
         showToast('success', '审批通过');
       } catch (error) {
@@ -167,7 +165,7 @@ function Approvals() {
       setActionLoading(false);
     }
   },
-  [showToast]
+  [showToast, list]
 );
 
   const handleReject = useCallback(
@@ -183,7 +181,9 @@ function Approvals() {
       try {
         setActionLoading(true);
         await api.approvals.reject(id, { comment });
-        setApprovals((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rejected' } : a)));
+        list.mutate({
+          items: list.items.map((a) => (a.id === id ? { ...a, status: 'rejected' } : a)),
+        });
         setShowDetailModal(false);
         showToast('success', '已拒绝');
       } catch (error) {
@@ -193,7 +193,7 @@ function Approvals() {
       setActionLoading(false);
     }
   },
-  [showToast]
+  [showToast, list]
 );
 
   /** 批量通过/拒绝的公共执行逻辑，含失败明细与重试数据维护 */
@@ -272,25 +272,25 @@ function Approvals() {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
         return;
       }
-      if (approvals.length === 0) return;
+      if (list.items.length === 0) return;
       const key = e.key;
       if (key === 'j' || key === 'J') {
         e.preventDefault();
-        setActiveIndex((prev) => Math.min(prev + 1, approvals.length - 1));
+        setActiveIndex((prev) => Math.min(prev + 1, list.items.length - 1));
       } else if (key === 'k' || key === 'K') {
         e.preventDefault();
         setActiveIndex((prev) => Math.max(prev - 1, 0));
       } else if (key === 'y' || key === 'Y') {
-        const item = approvals[activeIndex];
+        const item = list.items[activeIndex];
         if (item && item.status === 'pending') handleApprove(item.id);
       } else if (key === 'n' || key === 'N') {
-        const item = approvals[activeIndex];
+        const item = list.items[activeIndex];
         if (item && item.status === 'pending') handleReject(item.id);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [approvals, activeIndex, handleApprove, handleReject]);
+  }, [list.items, activeIndex, handleApprove, handleReject]);
 
   const handleCreateApproval = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -469,7 +469,7 @@ function Approvals() {
             </select>
           </div>
           <Button variant='outline' onClick={loadApprovals} size='sm'>
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${list.loading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
           {selectedRowKeys.length > 0 && (
@@ -531,16 +531,16 @@ function Approvals() {
 
         <DataTable<Approval>
           columns={columns}
-          dataSource={approvals}
-          loading={loading}
+          dataSource={list.items}
+          loading={list.loading}
           rowKey='id'
           selectable
           selectedRowKeys={selectedRowKeys}
           onSelectChange={handleSelectionChange}
           rowClassName={(_, index) => (index === activeIndex ? 'bg-primary-50' : '')}
-          total={pagination.total}
-          page={pagination.page}
-          pageSize={pagination.per_page}
+          total={list.total}
+          page={page}
+          pageSize={pageSize}
           onPageChange={handlePageChange}
           sortField={sortField || undefined}
           sortOrder={sortOrder}
