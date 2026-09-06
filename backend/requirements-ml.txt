@@ -4,8 +4,9 @@
 # 生产部署建议用 CPU 版以缩减体积与安装时长：
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 #
-# 安装方式：
+# 安装方式（二选一，等价）：
 #   pip install -r requirements-ml.txt
+#   pip install .[ml]        # 走 pyproject [project.optional-dependencies].ml
 xgboost>=2.0
 lightgbm>=4.0
 shap>=0.43

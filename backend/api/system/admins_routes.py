@@ -42,6 +42,36 @@ except ImportError:
         return func
 
 
+# B3 收敛 2026-09-05：Admin.to_dict(fields) 子集常量（逐字对齐既有端点契约）
+ADMIN_LIST_FIELDS = [
+    "id",
+    "username",
+    "role",
+    "real_name",
+    "phone",
+    "class_name",
+    "is_active",
+    "class_count",
+    "created_at",
+]
+ADMIN_DETAIL_FIELDS = [
+    "id",
+    "username",
+    "role",
+    "real_name",
+    "phone",
+    "class_name",
+    "is_active",
+    "created_at",
+    "updated_at",
+]
+ADMIN_LOGIN_FIELDS = [
+    "id",
+    "username",
+    "role",
+    "real_name",
+    "force_password_change",
+]
 ns_admins = Namespace("admins", description="管理员管理相关操作")
 
 
@@ -134,20 +164,7 @@ class AdminList(Resource):
         """
         admins = Admin.query.all()
         return {
-            "admins": [
-                {
-                    "id": a.id,
-                    "username": a.username,
-                    "role": a.role,
-                    "real_name": a.real_name,
-                    "phone": a.phone,
-                    "class_name": a.class_name,
-                    "is_active": a.is_active,
-                    "class_count": len(a.class_links),
-                    "created_at": a.created_at.isoformat() if a.created_at else None,
-                }
-                for a in admins
-            ]
+            "admins": [a.to_dict(ADMIN_LIST_FIELDS) for a in admins],
         }
 
     @ns_admins.doc("create_admin", description="创建新管理员", security="Bearer")
@@ -210,17 +227,7 @@ class AdminResource(Resource):
         根据管理员ID获取详细信息。需要管理员权限。
         """
         admin = Admin.query.get_or_404(id)
-        return {
-            "id": admin.id,
-            "username": admin.username,
-            "role": admin.role,
-            "real_name": admin.real_name,
-            "phone": admin.phone,
-            "class_name": admin.class_name,
-            "is_active": admin.is_active,
-            "created_at": admin.created_at.isoformat() if admin.created_at else None,
-            "updated_at": admin.updated_at.isoformat() if admin.updated_at else None,
-        }
+        return admin.to_dict()  # 默认输出 = 详情 8 字段契约
 
     @ns_admins.doc("update_admin", description="更新管理员信息", security="Bearer")
     @ns_admins.expect(admin_model)
@@ -306,13 +313,7 @@ class AdminLogin(Resource):
             return APIResponse.success(
                 data={
                     **tokens,
-                    "admin": {
-                        "id": admin.id,
-                        "username": admin.username,
-                        "role": admin.role,
-                        "real_name": admin.real_name,
-                        "force_password_change": admin.force_password_change or False,
-                    },
+                    "admin": admin.to_dict(ADMIN_LOGIN_FIELDS),
                 },
                 message="登录成功",
             )

@@ -3,6 +3,19 @@
 from models import ScoreRankRule
 from services.redis_cache_service import get_cache_service
 
+# B3 收敛 2026-09-06：ScoreRankRule.to_dict 子集（活跃规则 9 字段，逐字对齐原内联）
+RANK_RULE_ACTIVE_FIELDS = [
+    "id",
+    "name",
+    "min_score",
+    "max_score",
+    "color",
+    "icon",
+    "description",
+    "unlock_min_score",
+    "weekly_unlock_limit",
+]
+
 
 def _get_active_rank_rules_cached():
     """
@@ -22,20 +35,7 @@ def _get_active_rank_rules_cached():
     )
 
     # 转换为字典列表便于缓存
-    rules_data = [
-        {
-            "id": r.id,
-            "name": r.name,
-            "min_score": r.min_score,
-            "max_score": r.max_score,
-            "color": r.color,
-            "icon": r.icon,
-            "description": r.description,
-            "unlock_min_score": r.unlock_min_score,
-            "weekly_unlock_limit": r.weekly_unlock_limit,
-        }
-        for r in rules
-    ]
+    rules_data = [r.to_dict(RANK_RULE_ACTIVE_FIELDS) for r in rules]
 
     # 缓存5分钟
     get_cache_service().set(cache_key, rules_data, ttl=300, tags=["rank_rules"])

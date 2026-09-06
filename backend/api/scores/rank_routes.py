@@ -11,6 +11,21 @@ from services.score_rank_service import create_rank_rule, update_rank_rule, dele
 #   - 那个文件 = 排行榜展示（学生/班级排名，权限 score.view，调用 analysis_service 计算）
 # 两者 Namespace 不同（`rank-rules` vs `rank`）、URL 前缀不同（`/api/rank-rules/*` vs `/api/rank/*`），不合并。
 
+# B3 收敛 2026-09-06：ScoreRankRule.to_dict(fields) 子集常量（逐字对齐既有端点契约）
+# 详情端点用 rule.to_dict()（模型默认输出 = 详情 12 字段契约）+ 路由补 "cached"
+RANK_RULE_LIST_FIELDS = [
+    "id",
+    "name",
+    "min_score",
+    "max_score",
+    "color",
+    "icon",
+    "description",
+    "is_active",
+    "unlock_min_score",
+    "weekly_unlock_limit",
+    "created_at",
+]
 ns_rank = Namespace("rank-rules", description="排名规则相关操作")
 
 rank_rule_model = ns_rank.model(
@@ -42,22 +57,7 @@ class RankRuleList(Resource):
 
         rules = ScoreRankRule.query.all()
         result = {  # noqa: F841
-            "rules": [
-                {
-                    "id": r.id,
-                    "name": r.name,
-                    "min_score": r.min_score,
-                    "max_score": r.max_score,
-                    "color": r.color,
-                    "icon": r.icon,
-                    "description": r.description,
-                    "is_active": r.is_active,
-                    "unlock_min_score": r.unlock_min_score,
-                    "weekly_unlock_limit": r.weekly_unlock_limit,
-                    "created_at": r.created_at.isoformat() if r.created_at else None,
-                }
-                for r in rules
-            ],
+            "rules": [r.to_dict(RANK_RULE_LIST_FIELDS) for r in rules],
             "cached": False,
         }
 
@@ -93,18 +93,7 @@ class RankRuleResource(Resource):
 
         rule = ScoreRankRule.query.get_or_404(id)
         result = {  # noqa: F841
-            "id": rule.id,
-            "name": rule.name,
-            "min_score": rule.min_score,
-            "max_score": rule.max_score,
-            "color": rule.color,
-            "icon": rule.icon,
-            "description": rule.description,
-            "is_active": rule.is_active,
-            "unlock_min_score": rule.unlock_min_score,
-            "weekly_unlock_limit": rule.weekly_unlock_limit,
-            "created_at": rule.created_at.isoformat() if rule.created_at else None,
-            "updated_at": rule.updated_at.isoformat() if rule.updated_at else None,
+            **rule.to_dict(),  # 默认输出 = 详情 12 字段契约
             "cached": False,
         }
 

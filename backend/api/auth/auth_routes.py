@@ -11,6 +11,14 @@ from api.system.security_routes import (
 )
 from utils.logger import log_login_attempt
 
+# B3 收敛 2026-09-05：Admin.to_dict 登录响应子集（键序对齐 auth 端点原内联）
+AUTH_ADMIN_FIELDS = [
+    "id",
+    "username",
+    "real_name",
+    "role",
+    "force_password_change",
+]
 ns_auth = Namespace("auth", description="统一认证接口")
 
 login_model = ns_auth.model(
@@ -71,15 +79,7 @@ class Login(Resource):
                     "expires_in": token_data["expires_in"],
                     "access_token": token_data["access_token"],
                     "refresh_token": token_data["refresh_token"],
-                    "data": {
-                        "admin": {
-                            "id": admin.id,
-                            "username": admin.username,
-                            "real_name": admin.real_name,
-                            "role": admin.role,
-                            "force_password_change": admin.force_password_change,
-                        }
-                    },
+                    "data": {"admin": admin.to_dict(AUTH_ADMIN_FIELDS)},
                 }
 
                 response = make_response(jsonify(response_data))

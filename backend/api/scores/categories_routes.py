@@ -19,7 +19,19 @@ except ImportError:
         return f
 
 
+# B3 收敛 2026-09-05：ScoreRule.to_dict 字段子集（分类下规则 7 字段，逐字对齐原内联）
+CATEGORY_RULE_FIELDS = [
+    "id",
+    "name",
+    "description",
+    "score",
+    "is_active",
+    "daily_limit",
+    "min_interval",
+]
+
 ns_score_categories = Namespace("score-categories", description="积分规则分类管理")
+
 
 category_model = ns_score_categories.model(
     "Category",
@@ -131,16 +143,5 @@ class CategoryRules(Resource):
         return {
             "success": True,
             "category_name": category.name,
-            "rules": [
-                {
-                    "id": r.id,
-                    "name": r.name,
-                    "description": r.description,
-                    "score": r.score,
-                    "is_active": r.is_active,
-                    "daily_limit": r.daily_limit,
-                    "min_interval": r.min_interval,
-                }
-                for r in rules
-            ],
+            "rules": [r.to_dict(CATEGORY_RULE_FIELDS) for r in rules],
         }

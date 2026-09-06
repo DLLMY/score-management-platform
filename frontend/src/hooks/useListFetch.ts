@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useOptimizedFetch } from './useOptimizedFetch';
 
 /**
@@ -17,7 +17,20 @@ import { useOptimizedFetch } from './useOptimizedFetch';
 export interface ListFetchParams {
   page: number;
   pageSize: number;
+  /**
+   * 瞬时控制：由 `refetch({ skipCache: true })` / `refetch({ params })` 注入，
+   * 不作为依赖项（变更不会触发自驱重拉）。fetcher 据此透传给 API 请求选项。
+   */
+  skipCache?: boolean;
   [key: string]: string | number | boolean | undefined;
+}
+
+/** refetch 选项：一次性覆盖（不影响外部受控 params 状态） */
+export interface RefetchOptions {
+  /** 强制绕开前端响应缓存（透传给 API 请求的 skipCache 选项） */
+  skipCache?: boolean;
+  /** 仅作用于本次重拉的临时参数覆盖（如 mutation 后跳回第 1 页） */
+  params?: Partial<ListFetchParams>;
 }
 
 export interface UseListFetchResult<T> {
@@ -25,7 +38,8 @@ export interface UseListFetchResult<T> {
   total: number;
   loading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  /** 手动重拉；可传 { skipCache: true } 或 { params } 做单次覆盖 */
+  refetch: (opts?: RefetchOptions) => Promise<void>;
   /** 乐观更新：本地覆写列表（下轮服务端取数到达后自动让位） */
   setItems: (items: T[]) => void;
   /** 乐观更新：本地覆写 total（分页栏即时调整） */
@@ -41,6 +55,11 @@ export interface UseListFetchOptions<T> {
   params: ListFetchParams;
   initialData?: T[];
   debounceDelay?: number;
+  /**
+   * 自驱拉取开关（默认 true）。false 时挂载/deps 变化都不自动请求，
+   * 手动 refetch() 仍可触发——用于「模态打开 / 切 tab」等按需加载列表。
+   */
+  enabled?: boolean;
 }
 
 export function useListFetch<T = unknown>({
@@ -48,23 +67,52 @@ export function useListFetch<T = unknown>({
   params,
   initialData = [],
   debounceDelay = 300,
+  enabled = true,
 }: UseListFetchOptions<T>): UseListFetchResult<T> {
   const dependencies = [
     params.page,
     params.pageSize,
-    ...Object.values(params).filter(
-      (v): v is string | number | boolean =>
-        typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
-    ),
+    // skipCache 是瞬时控制（由 refetch 注入），不纳入依赖——其变更不应触发自驱重拉
+    ...Object.entries(params)
+      .filter(
+        ([key, v]) =>
+          key !== 'skipCache' &&
+          (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
+      )
+      .map(([, v]) => v),
   ];
 
-  const { data, loading, error, refetch } = useOptimizedFetch<{ items: T[]; total: number }>(
-    () => fetcher(params),
-    dependencies,
-    {
-      debounceDelay,
-      initialData: initialData.length ? { items: initialData, total: 0 } : undefined,
-    }
+  // 单次参数覆盖（refetch({ params }) 使用）：仅作用于当次请求，不改动外部受控 params。
+  const paramsOverrideRef = useRef<ListFetchParams | null>(null);
+
+  const fetcherForHook = useCallback(
+    (ctx: { skipCache: boolean }) =>
+      fetcher({ ...(paramsOverrideRef.current ?? params), skipCache: ctx.skipCache }),
+    [fetcher, params]
+  );
+
+  const { data, loading, error, refetch: baseRefetch } = useOptimizedFetch<{
+    items: T[];
+    total: number;
+  }>(fetcherForHook, dependencies, {
+    debounceDelay,
+    enabled,
+    initialData: initialData.length ? { items: initialData, total: 0 } : undefined,
+  });
+
+  // 手动重拉：支持 { skipCache } 绕缓存、{ params } 单次参数覆盖（如跳回第 1 页）。
+  const refetch = useCallback(
+    async (opts?: RefetchOptions) => {
+      if (opts?.params) {
+        paramsOverrideRef.current = { ...params, ...opts.params };
+      }
+      try {
+        await baseRefetch({ skipCache: opts?.skipCache });
+      } finally {
+        paramsOverrideRef.current = null;
+      }
+    },
+    [baseRefetch, params]
   );
 
   // 乐观更新本地覆写层：新的服务端数据到达时自动让位（effect 在 data 变化后清除）。

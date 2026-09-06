@@ -2,28 +2,45 @@ import logger from '../utils/logger';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useDebouncedValue } from './useDebouncedValue';
 
+/** 每次请求注入的上下文：skipCache 表示是否绕开前端响应缓存（透传给 API 请求选项） */
+export interface FetchContext {
+  skipCache: boolean;
+}
+
 interface UseOptimizedFetchOptions {
   debounceDelay?: number;
-  skipCache?: boolean;
   initialData?: unknown;
   onError?: (error: Error) => void;
   onSuccess?: (data: unknown) => void;
+  /**
+   * 自驱拉取开关（默认 true）。
+   * false 时：deps 变化/挂载都不再自动发请求，且会中止在途请求（避免过期响应写回）；
+   * 手动 refetch() 仍可强制触发（不受此开关限制）——用于「模态/切 tab 按需加载」场景。
+   */
+  enabled?: boolean;
 }
 
 interface UseOptimizedFetchResult<T> {
   data: T | null;
   loading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  /** 手动重拉；可传 { skipCache: true } 强制绕开前端缓存（如 mutation 后取最新数据） */
+  refetch: (opts?: { skipCache?: boolean }) => Promise<void>;
   reset: () => void;
 }
 
 export function useOptimizedFetch<T = unknown>(
-  fetcher: () => Promise<T>,
+  fetcher: (ctx: FetchContext) => Promise<T>,
   dependencies: unknown[],
   options: UseOptimizedFetchOptions = {}
 ): UseOptimizedFetchResult<T> {
-  const { debounceDelay = 300, initialData = null, onError, onSuccess } = options;
+  const {
+    debounceDelay = 300,
+    initialData = null,
+    onError,
+    onSuccess,
+    enabled = true,
+  } = options;
 
   const [data, setData] = useState<T | null>(initialData as T | null);
   const [loading, setLoading] = useState(false);
@@ -33,6 +50,9 @@ export function useOptimizedFetch<T = unknown>(
   const abortControllerRef = useRef<AbortController | null>(null);
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
+  // 仅作用于「单次请求」的缓存绕过标志：手动 refetch({skipCache:true}) 时置位，
+  // 普通自驱拉取（deps 变化）恒为 false；每次 fetchData 入口处写入，fetch 内读取。
+  const skipCacheRef = useRef(false);
 
   fetcherRef.current = fetcher;
   onSuccessRef.current = onSuccess;
@@ -55,7 +75,10 @@ export function useOptimizedFetch<T = unknown>(
 
   const debouncedDependencies = useDebouncedValue(stableDependencies, debounceDelay);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (opts?: { skipCache?: boolean }) => {
+    // 写入本次请求的缓存绕过标志（默认 false：普通自驱拉取走缓存）
+    skipCacheRef.current = opts?.skipCache ?? false;
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -67,7 +90,7 @@ export function useOptimizedFetch<T = unknown>(
     setError(null);
 
     try {
-      const result = await fetcherRef.current();
+      const result = await fetcherRef.current({ skipCache: skipCacheRef.current });
       // F2: 仅当本控制器仍是当前在途请求时才写回数据，丢弃过期响应，避免竞态覆盖。
       if (abortControllerRef.current === controller) {
         setData(result);
@@ -94,13 +117,21 @@ export function useOptimizedFetch<T = unknown>(
   }, []);
 
   useEffect(() => {
+    // enabled=false：跳过自驱拉取；仅中止在途请求（不置空 ref，交给 fetchData 的
+    // finally 正常收尾 loading，避免 loading 卡在 true）。手动 refetch 仍可触发。
+    if (!enabled) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      return;
+    }
     fetchData();
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [debouncedDependencies, fetchData]);
+  }, [debouncedDependencies, fetchData, enabled]);
 
   const reset = useCallback(() => {
     setData(initialData as T | null);

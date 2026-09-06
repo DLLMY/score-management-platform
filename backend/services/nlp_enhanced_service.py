@@ -2646,6 +2646,7 @@ class EnhancedNLPParserService:
                     .all()
                 )
         except Exception:
+            logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
             pass
 
         if not corrections:

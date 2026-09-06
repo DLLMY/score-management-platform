@@ -24,6 +24,7 @@ except ImportError:
 
 
 from utils.logger import log_info, log_warning, log_debug
+import logging
 class BertNLPService:
     def __init__(self, model_path: str = None, use_quantization: bool = True):
         self.model_path = model_path or os.path.join(
@@ -119,6 +120,7 @@ class BertNLPService:
                 process = psutil.Process()
                 self._memory_usage = process.memory_info().rss / 1024 / 1024
             except Exception:
+                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
                 pass
             log_info(
                 (

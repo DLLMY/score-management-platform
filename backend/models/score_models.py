@@ -86,6 +86,46 @@ class ScoreRule(db.Model):
 
     category = db.relationship("ScoreCategory", backref="rules")
 
+    def to_dict(self, fields=None):
+        """积分规则序列化（B3 收敛 2026-09-05，对齐 ScoreRecord 二级派生纪律）。
+
+        默认输出详情端点 11 字段契约：id/name/description/category_id/category_name/
+        score/is_active/daily_limit/min_interval/created_at/updated_at(serialize_dt)。
+        category_name 为二级派生字段（rule.category.name），仅当默认或 fields 显式
+        包含时才访问关联对象，以免在 detach=True 会话下触发 lazy 加载抛异常。
+        """
+        if fields is None:
+            fields = [
+                "id",
+                "name",
+                "description",
+                "category_id",
+                "category_name",
+                "score",
+                "is_active",
+                "daily_limit",
+                "min_interval",
+                "created_at",
+                "updated_at",
+            ]
+        category = self.category if "category_name" in fields else None
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "category_id": self.category_id,
+            "category_name": (
+                category.name if (category and "category_name" in fields) else None
+            ),
+            "score": self.score,
+            "is_active": self.is_active,
+            "daily_limit": self.daily_limit,
+            "min_interval": self.min_interval,
+            "created_at": serialize_dt(self.created_at),
+            "updated_at": serialize_dt(self.updated_at),
+        }
+        return {k: data[k] for k in fields if k in data}
+
 
 class ScoreRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -166,6 +206,44 @@ class ScoreRankRule(db.Model):
     )
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+    def to_dict(self, fields=None):
+        """排名规则序列化（B3 收敛 2026-09-06）。
+
+        默认输出详情端点 12 字段契约：id/name/min_score/max_score/color/icon/
+        description/is_active/unlock_min_score/weekly_unlock_limit/created_at/
+        updated_at(serialize_dt)。本模型无关联派生字段，全部为基础列。
+        """
+        if fields is None:
+            fields = [
+                "id",
+                "name",
+                "min_score",
+                "max_score",
+                "color",
+                "icon",
+                "description",
+                "is_active",
+                "unlock_min_score",
+                "weekly_unlock_limit",
+                "created_at",
+                "updated_at",
+            ]
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "min_score": self.min_score,
+            "max_score": self.max_score,
+            "color": self.color,
+            "icon": self.icon,
+            "description": self.description,
+            "is_active": self.is_active,
+            "unlock_min_score": self.unlock_min_score,
+            "weekly_unlock_limit": self.weekly_unlock_limit,
+            "created_at": serialize_dt(self.created_at),
+            "updated_at": serialize_dt(self.updated_at),
+        }
+        return {k: data[k] for k in fields if k in data}
 
 
 class Exam(db.Model):

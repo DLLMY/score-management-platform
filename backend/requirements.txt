@@ -52,7 +52,7 @@ reportlab>=4.0
 # 中文 NLP / 机器学习（重依赖已拆分到 requirements-ml.txt）
 # 注：catboost/gensim 已移除（代码内 try/except 可选导入，缺失自动降级；如需启用可自行补装）
 # 注：torch/transformers/xgboost/lightgbm/shap 体积较大，已移至 requirements-ml.txt（按需安装）
-#     基础安装仅含下方轻量依赖；启用 NLP/ML 能力请 `pip install -r requirements-ml.txt`
+#     基础安装仅含下方轻量依赖；启用 NLP/ML 能力请 `pip install -r requirements-ml.txt`（或 `pip install .[ml]`）
 jieba>=0.42
 pypinyin>=0.49
 scikit-learn>=1.3

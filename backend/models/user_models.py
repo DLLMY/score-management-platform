@@ -108,6 +108,42 @@ class Admin(db.Model):
         else:
             self._password = value
 
+    def to_dict(self, fields=None):
+        """管理员序列化（B3 收敛 2026-09-05）。
+
+        默认输出详情端点 8 字段契约：id/username/role/real_name/phone/class_name/
+        is_active/created_at/updated_at(serialize_dt)。
+        ⚠️ 永不序列化 _password（敏感字段，password property 仅验证用途，任何
+        fields 子集都取不到密码）。class_count（=len(class_links)）为二级派生字段，
+        仅当 fields 显式包含时才访问关联对象，以免 detach 会话 lazy 加载抛异常。
+        """
+        if fields is None:
+            fields = [
+                "id",
+                "username",
+                "role",
+                "real_name",
+                "phone",
+                "class_name",
+                "is_active",
+                "created_at",
+                "updated_at",
+            ]
+        class_links = self.class_links if "class_count" in fields else None
+        data = {
+            "id": self.id,
+            "username": self.username,
+            "role": self.role,
+            "real_name": self.real_name,
+            "phone": self.phone,
+            "class_name": self.class_name,
+            "is_active": self.is_active,
+            "force_password_change": self.force_password_change,
+            "class_count": len(class_links) if class_links is not None else None,
+            "created_at": serialize_dt(self.created_at),
+            "updated_at": serialize_dt(self.updated_at),
+        }
+        return {k: data[k] for k in fields if k in data}
 
 class SubAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)

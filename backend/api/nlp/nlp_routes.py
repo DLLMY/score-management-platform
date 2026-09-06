@@ -1412,6 +1412,7 @@ class NLPFeedbackRecord(Resource):
                     if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
                         del parser._parse_cache[cache_key]
                 except Exception:
+                    logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
                     pass
 
                 return APIResponse.success(

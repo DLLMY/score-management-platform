@@ -20,13 +20,13 @@ import {
   Upload,
   FileJson,
 } from 'lucide-react';
-import api, { ClassInfo, ClassListResponse, getAuthHeaders } from '../services/api';
+import api, { ClassInfo, getAuthHeaders } from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
 import { PermissionButton, SearchFilter, DataTable, StatCard } from '../components';
 import type { ColumnType } from '../components/data-display/DataTable';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { ToggleSwitch } from '../components/form/ToggleSwitch';
-import { useForm, useModal } from '../hooks';
+import { useForm, useModal, useListFetch } from '../hooks';
 import { Admin } from '../types';
 
 interface FormData {
@@ -52,10 +52,24 @@ const defaultForm: FormData = {
 };
 
 function ClassManagementPage() {
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, per_page: 10, total: 0, pages: 1 });
   const [searchInput, setSearchInput] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  // 仅用于「分配/移除班主任」等 mutation 的按钮 busy 态；列表加载走 classList.loading
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const classList = useListFetch<ClassInfo>({
+    fetcher: async (params) => {
+      const data = await api.classes.getAll({
+        page: params.page,
+        per_page: params.pageSize,
+        keyword: (params.keyword as string) || undefined,
+        skipCache: params.skipCache,
+      });
+      return { items: data.classes || [], total: data.pagination?.total ?? 0 };
+    },
+    params: { page, pageSize, keyword: searchInput },
+  });
   const { showToast } = useStableToast();
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
@@ -136,28 +150,6 @@ function ClassManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const performRemoveHeadTeacherRef = useRef<(() => Promise<void>) | null>(null);
 
-  const fetchClasses = useCallback(
-    async (page = 1, searchKeyword = searchInput, skipCache = false, perPage = pagination.per_page) => {
-      setIsLoading(true);
-      try {
-        const data: ClassListResponse = await api.classes.getAll({
-          page,
-          per_page: perPage,
-          keyword: searchKeyword || undefined,
-          skipCache,
-        });
-        setClasses(data.classes || []);
-        setPagination(data.pagination || { page: 1, per_page: 10, total: 0, pages: 1 });
-      } catch (error) {
-        logger.error('获取班级列表失败:', error);
-        showToast('error', '获取班级列表失败');
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [searchInput, pagination.per_page, showToast]
-  );
-
   const fetchTeachers = useCallback(async () => {
     try {
       const adminsData = await api.admins.getAll();
@@ -173,22 +165,18 @@ function ClassManagementPage() {
   }, [showToast]);
 
   useEffect(() => {
-    fetchClasses();
     fetchTeachers();
-  }, [fetchClasses, fetchTeachers]);
-
-  // 搜索词变化时自动触发搜索（SearchFilter组件自带防抖）
-  useEffect(() => {
-    fetchClasses(1, searchInput);
-  }, [searchInput, fetchClasses]);
+  }, [fetchTeachers]);
 
   const handlePageChange = useCallback(
     (newPage: number, newPageSize: number) => {
-      if (newPage >= 1 && newPage <= pagination.pages) {
-        fetchClasses(newPage, searchInput, false, newPageSize);
+      const totalPages = Math.max(1, Math.ceil(classList.total / newPageSize));
+      if (newPage >= 1 && newPage <= totalPages) {
+        setPage(newPage);
+        setPageSize(newPageSize);
       }
     },
-    [fetchClasses, searchInput, pagination.pages]
+    [classList.total]
   );
 
   const handleOpenModal = useCallback(
@@ -230,13 +218,13 @@ function ClassManagementPage() {
           showToast('success', '班级创建成功');
         }
         closeModal();
-        fetchClasses(pagination.page, searchInput);
+        await classList.refetch({ skipCache: true });
       } catch (error) {
         logger.error('操作失败:', error);
         showToast('error', data.id ? '更新班级失败' : '创建班级失败');
       }
     },
-    [showToast, closeModal, fetchClasses, pagination.page, searchInput]
+    [showToast, closeModal, classList]
   );
 
   const handleDelete = useCallback(
@@ -251,13 +239,13 @@ function ClassManagementPage() {
       try {
         await api.classes.delete(id);
         showToast('success', '班级删除成功');
-        fetchClasses(pagination.page, searchInput, true);
+        classList.refetch({ skipCache: true });
       } catch (error) {
         logger.error('删除失败:', error);
         showToast('error', '删除班级失败');
       }
     },
-    [showToast, fetchClasses, pagination.page, searchInput]
+    [showToast, classList]
   );
 
   const [exportFormat, setExportFormat] = useState<'json' | 'excel'>('excel');
@@ -349,7 +337,8 @@ function ClassManagementPage() {
             'success',
             `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
           );
-          fetchClasses(1, searchInput, true);
+            setPage(1);
+            await classList.refetch({ skipCache: true, params: { page: 1 } });
         } else {
           showToast('error', '导入失败');
         }
@@ -373,7 +362,8 @@ function ClassManagementPage() {
             'success',
             `导入完成：成功 ${resultData.success_count} 条，失败 ${resultData.failed_count} 条`
           );
-          fetchClasses(1, searchInput, true);
+          classList.refetch({ skipCache: true, params: { page: 1 } });
+          setPage(1);
         } else {
           showToast('error', '导入失败');
         }
@@ -384,7 +374,7 @@ function ClassManagementPage() {
     } finally {
       setIsImporting(false);
     }
-  }, [importFile, selectedConfigId, showToast, fetchClasses, searchInput]);
+  }, [importFile, selectedConfigId, showToast, classList]);
 
   const handleExportErrors = useCallback((): void => {
     if (!importResult?.messages) return;
@@ -415,7 +405,7 @@ function ClassManagementPage() {
       openTeacherPreview(previewData);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedClass, openTeacherPreview, fetchClasses]
+    [selectedClass, openTeacherPreview]
   );
 
   const confirmAssignHeadTeacher = useCallback(async () => {
@@ -439,7 +429,7 @@ function ClassManagementPage() {
 
       // 修复：分配成功后刷新班级列表（skipCache 绕开后端 60s 缓存），
       // 否则前端 state 保持旧 head_teacher_id 显示"未分配"
-      await fetchClasses(undefined, undefined, true);
+      await classList.refetch({ skipCache: true });
 
       const undoAction = async () => {
         if (!lastOperation) return;
@@ -454,7 +444,8 @@ function ClassManagementPage() {
             await api.adminClasses.remove(lastOperation.teacherId, lastOperation.classId);
           }
           showToast('success', '已撤销班主任分配');
-          fetchClasses(1, searchInput, true);
+          setPage(1);
+          await classList.refetch({ skipCache: true, params: { page: 1 } });
           setLastOperation(null);
         } catch (error: unknown) {
           showToast('error', '撤销失败: ' + (error as Error).message);
@@ -471,7 +462,8 @@ function ClassManagementPage() {
       closeHeadTeacherModal();
       setTeacherPreview(null);
       setSelectedClass(null);
-      fetchClasses(1, searchInput, true);
+      classList.refetch({ skipCache: true, params: { page: 1 } });
+      setPage(1);
     } catch (error: unknown) {
       showToast('error', '班主任分配失败: ' + (error as Error).message);
     } finally {
@@ -480,8 +472,7 @@ function ClassManagementPage() {
   }, [
     teacherPreview,
     showToast,
-    fetchClasses,
-    searchInput,
+    classList,
     lastOperation,
     closeTeacherPreview,
     closeHeadTeacherModal,
@@ -500,7 +491,7 @@ function ClassManagementPage() {
 
     performRemoveHeadTeacherRef.current?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [selectedClass, fetchClasses]);
+}, [selectedClass]);
 
   const performRemoveHeadTeacher = useCallback(async () => {
     if (!selectedClass || !selectedClass.head_teacher_id) return;
@@ -521,7 +512,7 @@ function ClassManagementPage() {
       });
 
       // 修复：移除成功后刷新列表（同分配）
-      await fetchClasses(undefined, undefined, true);
+      await classList.refetch({ skipCache: true });
 
       const undoAction = async () => {
         if (!lastOperation) return;
@@ -532,7 +523,8 @@ function ClassManagementPage() {
             true
           );
           showToast('success', '已恢复班主任');
-          fetchClasses(1, searchInput, true);
+          classList.refetch({ skipCache: true, params: { page: 1 } });
+          setPage(1);
           setLastOperation(null);
         } catch (error: unknown) {
           showToast('error', '撤销失败: ' + (error as Error).message);
@@ -546,7 +538,8 @@ function ClassManagementPage() {
 
       closeHeadTeacherModal();
       setSelectedClass(null);
-      fetchClasses(1, searchInput, true);
+      classList.refetch({ skipCache: true, params: { page: 1 } });
+      setPage(1);
     } catch (error: unknown) {
       showToast('error', '班主任移除失败: ' + (error as Error).message);
     } finally {
@@ -555,8 +548,7 @@ function ClassManagementPage() {
   }, [
     selectedClass,
     showToast,
-    fetchClasses,
-    searchInput,
+    classList,
     lastOperation,
     closeHeadTeacherModal,
   ]);
@@ -572,12 +564,12 @@ function ClassManagementPage() {
   }, [teachers, searchTeacherTerm]);
 
   const totalStudents = useMemo(() => {
-    return classes.reduce((sum, cls) => sum + (cls.student_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
-  }, [classes]);
+    return classList.items.reduce((sum, cls) => sum + (cls.student_count || 0), 0); // 缺失字段按 0 计（列表已加载才统计）
+  }, [classList.items]);
 
   const classesWithTeacher = useMemo(() => {
-    return classes.filter((cls) => cls.head_teacher_id).length;
-  }, [classes]);
+    return classList.items.filter((cls) => cls.head_teacher_id).length;
+  }, [classList.items]);
 
   const columns = useMemo<ColumnType<ClassInfo>[]>(
     () => [
@@ -729,7 +721,7 @@ function ClassManagementPage() {
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <StatCard
             label='班级总数'
-            value={pagination.total}
+            value={classList.total}
             icon={<GraduationCap className='w-7 h-7 text-white' />}
             iconGradient='from-blue-500 to-indigo-500'
             decoGradient='from-blue-500/10 to-indigo-500/10'
@@ -795,12 +787,12 @@ function ClassManagementPage() {
           {/* Table */}
           <DataTable<ClassInfo>
             columns={columns}
-            dataSource={classes}
-            loading={isLoading}
+            dataSource={classList.items}
+            loading={classList.loading}
             rowKey='id'
-            total={pagination.total}
-            page={pagination.page}
-            pageSize={pagination.per_page}
+            total={classList.total}
+            page={page}
+            pageSize={pageSize}
             onPageChange={handlePageChange}
             rowClassName={() => 'group'}
             empty={{

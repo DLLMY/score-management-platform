@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Sparkles, BookOpen, Train, BarChart3, Brain, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useStableToast } from '../hooks/useStableToast';
+import { useListFetch } from '../hooks/useListFetch';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import type { ColumnType } from '../components/data-display/DataTable';
 import type {
@@ -58,10 +59,7 @@ const NLPScoringManagement = () => {
     behavior_description: '',
     feedback_note: '',
   });
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [rulesLoading, setRulesLoading] = useState(false);
   const [rulePage, setRulePage] = useState(1);
-  const [ruleTotal, setRuleTotal] = useState(0);
   const [keywordFilter, setKeywordFilter] = useState('');
   const [scoreTypeFilter, setScoreTypeFilter] = useState('');
   const [statistics, setStatistics] = useState<Statistics | null>(null);
@@ -107,10 +105,7 @@ const NLPScoringManagement = () => {
   const [selectedStrategy, setSelectedStrategy] = useState<string>('balanced');
 
   // 自学习反馈相关状态
-  const [corrections, setCorrections] = useState<NlpCorrection[]>([]);
   const [correctionsPage, setCorrectionsPage] = useState(1);
-  const [correctionTotal, setCorrectionTotal] = useState(0);
-  const [correctionsLoading, setCorrectionsLoading] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [showCorrectionList, setShowCorrectionList] = useState(false);
   const [correctionStatusFilter, setCorrectionStatusFilter] = useState('');
@@ -322,27 +317,58 @@ const NLPScoringManagement = () => {
     }
   }, [parseResult, inputText, manualCorrection, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchRules = useCallback(async () => {
-    setRulesLoading(true);
-    try {
+  const rulesList = useListFetch<Rule>({
+    fetcher: async (p) => {
       const response = await api.nlp.getRules({
-        page: rulePage,
-        per_page: 20,
-        keyword: keywordFilter || undefined,
-        score_type: scoreTypeFilter || undefined,
+        page: p.page,
+        per_page: p.pageSize,
+        keyword: typeof p.keyword === 'string' ? p.keyword : undefined,
+        score_type: typeof p.score_type === 'string' ? p.score_type : undefined,
         sort_by: 'usage_count',
         sort_order: 'desc',
       });
-      if (response) {
-        setRules(response.items);
-        setRuleTotal(response.total);
+      return { items: response?.items ?? [], total: response?.total ?? 0 };
+    },
+    params: {
+      page: rulePage,
+      pageSize: 20,
+      keyword: keywordFilter || undefined,
+      score_type: scoreTypeFilter || undefined,
+    },
+  });
+
+  // mutation 后重新拉取（保留 fetchRules 调用点语义，最小改动）
+  const fetchRules = useCallback(() => rulesList.refetch(), [rulesList]);
+
+  // 纠正记录列表（A 轨：条件加载 → useListFetch + enabled 跟随 showCorrectionList 按需拉取）
+  const correctionsList = useListFetch<NlpCorrection>({
+    enabled: showCorrectionList,
+    fetcher: async (p) => {
+      const response = await api.nlp.getCorrections({
+        page: p.page,
+        per_page: p.pageSize,
+        status: typeof p.status === 'string' && p.status ? p.status : undefined,
+      });
+      return { items: response?.items ?? [], total: response?.total ?? 0 };
+    },
+    params: {
+      page: correctionsPage,
+      pageSize: 20,
+      status: correctionStatusFilter || undefined,
+    },
+  });
+
+  // mutation 后重新拉取（保留 fetchCorrections(page?) 调用点语义；翻页走 setCorrectionsPage 触发 params 变化自动重拉）
+  const fetchCorrections = useCallback(
+    async (page?: number) => {
+      if (typeof page === 'number') {
+        setCorrectionsPage(page);
+      } else {
+        await correctionsList.refetch();
       }
-    } catch (error) {
-      showToast('error', '获取规则失败');
-    } finally {
-      setRulesLoading(false);
-    }
-  }, [rulePage, keywordFilter, scoreTypeFilter, showToast]);
+    },
+    [correctionsList]
+  );
 
   const fetchStatistics = useCallback(async () => {
     try {
@@ -652,10 +678,6 @@ const NLPScoringManagement = () => {
   }, []);
 
   useEffect(() => {
-    fetchRules();
-  }, [fetchRules]);
-
-  useEffect(() => {
     if (activeTab === 'statistics') {
       fetchStatistics();
       fetchModelEvaluation();
@@ -739,25 +761,7 @@ const NLPScoringManagement = () => {
     }
   }, [fetchAnalysisData, showToast]);
 
-  // 获取纠正记录列表
-  const fetchCorrections = useCallback(async (page?: number) => {
-    setCorrectionsLoading(true);
-    try {
-      const response = await api.nlp.getCorrections({
-        page: page ?? correctionsPage,
-        per_page: 20,
-        status: correctionStatusFilter || undefined,
-      });
-      if (response) {
-        setCorrections(response.items);
-        setCorrectionTotal(response.total);
-      }
-    } catch (error) {
-      showToast('error', '获取纠正记录失败');
-    } finally {
-      setCorrectionsLoading(false);
-    }
-  }, [correctionsPage, correctionStatusFilter, showToast]);
+  // 纠正记录列表加载见上方 correctionsList（enabled: showCorrectionList）
 
   // 记录用户反馈（自学习）
   const handleRecordFeedback = useCallback(async () => {
@@ -1171,11 +1175,11 @@ const NLPScoringManagement = () => {
     fetchCorrections,
 
     // 规则 Tab
-    rules,
-    rulesLoading,
+    rules: rulesList.items,
+    rulesLoading: rulesList.loading,
     rulePage,
     setRulePage,
-    ruleTotal,
+    ruleTotal: rulesList.total,
     keywordFilter,
     setKeywordFilter,
     scoreTypeFilter,
@@ -1265,10 +1269,10 @@ const NLPScoringManagement = () => {
     handleBatchImport,
 
     // 纠正记录列表
-    corrections,
-    correctionsLoading,
+    corrections: correctionsList.items,
+    correctionsLoading: correctionsList.loading,
     correctionsPage,
-    correctionTotal,
+    correctionTotal: correctionsList.total,
     correctionStatusFilter,
     setCorrectionStatusFilter,
     correctionColumns,

@@ -36,6 +36,20 @@ EXPORT_USER_FIELDS = [
     "current_score", "created_at",
 ]
 
+# B3 ScoreRule.to_dict 字段子集（2026-09-05，对应原 rules 导出内联 10 字段，顺序逐字一致）
+RULE_EXPORT_FIELDS = [
+    "id",
+    "name",
+    "description",
+    "category_id",
+    "category_name",
+    "score",
+    "is_active",
+    "daily_limit",
+    "min_interval",
+    "created_at",
+]
+
 """
 数据导出API路由
 支持Excel和PDF格式的数据导出
@@ -107,21 +121,7 @@ class ExportData(Resource):
                     mimetype = "application/pdf"
             elif export_type == "rules":
                 rules = ScoreRule.query.all()
-                rule_data = [
-                    {
-                        "id": r.id,
-                        "name": r.name,
-                        "description": r.description,
-                        "category_id": r.category_id,
-                        "category_name": r.category.name if r.category else None,
-                        "score": r.score,
-                        "is_active": r.is_active,
-                        "daily_limit": r.daily_limit,
-                        "min_interval": r.min_interval,
-                        "created_at": r.created_at.isoformat() if r.created_at else None,
-                    }
-                    for r in rules
-                ]
+                rule_data = [r.to_dict(RULE_EXPORT_FIELDS) for r in rules]
                 if export_format == "excel":
                     output = export_service.export_rules_to_excel(rule_data)
                     filename = f"rules_{timestamp}.xlsx"
@@ -264,21 +264,7 @@ class ExportRules(Resource):
         if export_format not in ["excel", "pdf"]:
             return APIResponse.bad_request(message="不支持的导出格式")
         rules = ScoreRule.query.all()
-        rule_data = [
-            {
-                "id": r.id,
-                "name": r.name,
-                "description": r.description,
-                "category_id": r.category_id,
-                "category_name": r.category.name if r.category else None,
-                "score": r.score,
-                "is_active": r.is_active,
-                "daily_limit": r.daily_limit,
-                "min_interval": r.min_interval,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            }
-            for r in rules
-        ]
+        rule_data = [r.to_dict(RULE_EXPORT_FIELDS) for r in rules]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:
             if export_format == "excel":

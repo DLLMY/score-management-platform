@@ -15,7 +15,7 @@ import { useStableToast } from '../hooks/useStableToast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { formatDateTime } from '../utils/format';
 import { Pagination } from '../components/ui/Pagination';
-import { useListData, useListFetch } from '../hooks';
+import { useListData, useListFetch, useOptimizedFetch } from '../hooks';
 import type { ColumnType } from '../components/data-display/DataTable';
 import { PresetsPanel } from './remote-notify/PresetsPanel';
 import { TemplatesPanel } from './remote-notify/TemplatesPanel';
@@ -117,12 +117,8 @@ function RemoteNotify() {
   });
 
   // 历史记录
-  const [historyData, setHistoryData] = useState<NotifyHistory[]>([]);
-  const [historyStats, setHistoryStats] = useState<HistoryStats | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyTotal, setHistoryTotal] = useState(0);
   const [historyFilter, setHistoryFilter] = useState<string>('');
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const { isOpen: showHistory, open: openHistory, close: closeHistory } = useModal<null>({});
 
@@ -244,54 +240,55 @@ function RemoteNotify() {
     await scheduled.refetch();
   }, [scheduled]);
 
-  const loadHistoryData = useCallback(async () => {
-    setIsLoadingHistory(true);
-    try {
-      const params: { page: number; per_page: number; status?: string } = {
-        page: historyPage,
-        per_page: 20,
-      };
-      if (historyFilter) {
-        params.status = historyFilter;
+  // A 轨：历史记录列表迁 useListFetch（enabled 跟随 showHistory，打开弹窗才拉取）
+  const historyList = useListFetch<NotifyHistory>({
+    enabled: showHistory,
+    params: { page: historyPage, pageSize: 20, status: historyFilter || undefined },
+    fetcher: async ({ page, pageSize, status }) => {
+      try {
+        const result = await api.notifyHistory.getAll({
+          page,
+          per_page: pageSize,
+          ...(typeof status === 'string' && status ? { status } : {}),
+        });
+        setLoadError(false);
+        // M7: 数组赋值防护，非数组时置空避免渲染崩溃
+        const list = Array.isArray(result?.data) ? result.data : [];
+        return { items: list, total: result?.total ?? list.length };
+      } catch (error) {
+        logger.error('加载历史记录失败:', error);
+        setLoadError(true);
+        throw error;
       }
-      const result = await api.notifyHistory.getAll(params);
-      // M7: 数组赋值防护
-      setHistoryData(Array.isArray(result.data) ? result.data : []);
-      setHistoryTotal(result.total);
-      setLoadError(false);
-    } catch (error) {
-      logger.error('加载历史记录失败:', error);
-      setLoadError(true);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  }, [historyPage, historyFilter]);
+    },
+  });
 
-  const loadHistoryStats = useCallback(async () => {
-    try {
-      const stats = await api.notifyHistory.getStats();
-      setHistoryStats(stats);
-      setLoadError(false);
-    } catch (error) {
-      logger.error('加载统计数据失败:', error);
-      setLoadError(true);
-    }
-  }, []);
+  // 历史统计为标量（非列表），用 useOptimizedFetch 同款 enabled 语义按需加载
+  const historyStatsFetch = useOptimizedFetch<HistoryStats | null>(
+    async () => {
+      try {
+        const stats = await api.notifyHistory.getStats();
+        setLoadError(false);
+        return stats;
+      } catch (error) {
+        logger.error('加载统计数据失败:', error);
+        setLoadError(true);
+        throw error;
+      }
+    },
+    [],
+    { enabled: showHistory, initialData: null }
+  );
+
+  // 保持对外（deps / HistoryPanel）字段名不变，子组件零改动
+  const historyData = historyList.items;
+  const historyTotal = historyList.total;
+  const isLoadingHistory = historyList.loading;
+  const historyStats = historyStatsFetch.data;
 
   useEffect(() => {
     checkMqttStatus();
-    if (showHistory) {
-      loadHistoryData();
-      loadHistoryStats();
-    }
-  }, [checkMqttStatus, showHistory, loadHistoryData, loadHistoryStats]);
-
-  useEffect(() => {
-    if (showHistory) {
-      loadHistoryData();
-      loadHistoryStats();
-    }
-  }, [showHistory, historyPage, historyFilter, loadHistoryData, loadHistoryStats]);
+  }, [checkMqttStatus]);
 
   const handleCleanHistory = useCallback(async () => {
     const ok = await confirmRef.current({
@@ -304,12 +301,12 @@ function RemoteNotify() {
     try {
       await api.notifyHistory.clean(30);
       showToast('success', '历史记录已清理');
-      loadHistoryData();
-      loadHistoryStats();
+      historyList.refetch();
+      historyStatsFetch.refetch();
     } catch (error) {
       showToast('error', '清理失败');
     }
-  }, [loadHistoryData, loadHistoryStats, showToast]);
+  }, [historyList, historyStatsFetch, showToast]);
 
   // M6: 实际发送（broadcast/device 专用）。预览确认弹窗确认后调用；失败弹 [重试]/[关闭]，重试复用同一 notifyData 直接重发（不再弹预览）
   const performSend = useCallback(

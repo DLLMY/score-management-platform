@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatNumber } from '../utils/formatNumber';
+import { useListFetch } from '../hooks/useListFetch';
 import { useNavigate } from 'react-router-dom';
 import {
   LogOut,
@@ -45,12 +46,9 @@ function StudentPortal() {
 
   // 积分
   const [score, setScore] = useState<number | null>(null);
-  const [records, setRecords] = useState<ScoreRecordItem[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, per_page: 20, total: 0, pages: 0 });
+  const [scorePage, setScorePage] = useState(1);
 
-  // 通知
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notifTotal, setNotifTotal] = useState(0);
+  // 通知（列表走 useListFetch，enabled 跟随 tab 切换按需加载）
 
   // 请假
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
@@ -98,17 +96,20 @@ function StudentPortal() {
     }
   }, []);
 
-  const loadScore = useCallback(async (page = 1) => {
+  const scoreRecords = useListFetch<ScoreRecordItem>({
+    fetcher: async (p) => {
+      const res = await api.student.getRecords({ page: p.page, per_page: p.pageSize });
+      return { items: res?.data ?? [], total: res?.pagination?.total ?? 0 };
+    },
+    params: { page: scorePage, pageSize: 20 },
+  });
+
+  const loadScore = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [scoreRes, recRes] = await Promise.all([
-        api.student.getScore(),
-        api.student.getRecords({ page, per_page: 20 }),
-      ]);
+      const scoreRes = await api.student.getScore();
       setScore(scoreRes.current_score);
-      setRecords(recRes.data);
-      setPagination(recRes.pagination);
     } catch (err: unknown) {
       setError((err as Error)?.message || '加载失败');
     } finally {
@@ -116,20 +117,17 @@ function StudentPortal() {
     }
   }, []);
 
-  const loadNotifications = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
+  // A 轨：通知列表迁 useListFetch（enabled 跟随 tab 切换按需加载，切到通知 tab 才拉取）
+  const notifList = useListFetch<NotificationItem>({
+    enabled: tab === 'notifications',
+    params: { page: 1, pageSize: 20 },
+    initialData: [],
+    fetcher: async () => {
       const res = await api.student.getNotifications({ page: 1, per_page: 20 });
       // M7: 数组赋值防护，非数组时置空避免渲染崩溃
-      setNotifications(Array.isArray(res.data) ? res.data : []);
-      setNotifTotal(res.pagination.total);
-    } catch (err: unknown) {
-      setError((err as Error)?.message || '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return { items: Array.isArray(res.data) ? res.data : [], total: res?.pagination?.total ?? 0 };
+    },
+  });
 
   const loadLeaves = useCallback(async () => {
     setLoading(true);
@@ -158,12 +156,11 @@ function StudentPortal() {
   }, []);
 
   useEffect(() => {
-    if (tab === 'score') loadScore(1);
-    else if (tab === 'notifications') loadNotifications();
+    if (tab === 'score') loadScore();
     else if (tab === 'leaves') loadLeaves();
     else if (tab === 'rank') loadMyRank();
     else if (tab === 'growth') loadInsights();
-  }, [tab, loadScore, loadNotifications, loadLeaves, loadMyRank, loadInsights]);
+  }, [tab, loadScore, loadLeaves, loadMyRank, loadInsights]);
 
   const handleLogout = (): void => {
     localStorage.removeItem('student_token');
@@ -171,7 +168,7 @@ function StudentPortal() {
     navigate('/student/login', { replace: true });
   };
 
-  const totalChange = records.reduce((sum, r) => sum + (r.score_change || 0), 0);
+  const totalChange = scoreRecords.items.reduce((sum, r) => sum + (r.score_change || 0), 0);
 
   const submitLeave = async () => {
     if (!leaveForm.start_date || !leaveForm.end_date) {
@@ -260,7 +257,7 @@ function StudentPortal() {
                 <Award className='w-4 h-4' /> 当前积分
               </div>
               <div className='text-4xl font-bold mt-2'>{loading ? '...' : score ?? '—'}</div>
-              {records.length > 0 && (
+              {scoreRecords.items.length > 0 && (
                 <div className='text-white/70 text-xs mt-1'>
                   本页流水合计 {totalChange >= 0 ? '+' : ''}
                   {totalChange}
@@ -274,19 +271,19 @@ function StudentPortal() {
                   <History className='w-4 h-4' /> 积分流水
                 </div>
                 <button
-                  onClick={() => loadScore(pagination.page)}
-                  disabled={loading}
+                  onClick={() => scoreRecords.refetch()}
+                  disabled={scoreRecords.loading}
                   className='text-sm text-primary-500 flex items-center gap-1 disabled:opacity-50'
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> 刷新
+                  <RefreshCw className={`w-3.5 h-3.5 ${scoreRecords.loading ? 'animate-spin' : ''}`} /> 刷新
                 </button>
               </div>
 
-              {records.length === 0 ? (
+              {scoreRecords.items.length === 0 ? (
                 <p className='text-sm text-gray-400 py-6 text-center'>暂无积分记录</p>
               ) : (
                 <ul className='divide-y divide-gray-100 dark:divide-slate-700'>
-                  {records.map((r) => (
+                  {scoreRecords.items.map((r) => (
                     <li key={r.id} className='py-3 flex items-center justify-between'>
                       <div className='min-w-0'>
                         <p className='text-sm text-gray-800 dark:text-gray-100 truncate'>
@@ -310,21 +307,21 @@ function StudentPortal() {
                 </ul>
               )}
 
-              {pagination.pages > 1 && (
+              {Math.ceil(scoreRecords.total / 20) > 1 && (
                 <div className='flex items-center justify-center gap-3 mt-4'>
                   <button
-                    disabled={pagination.page <= 1}
-                    onClick={() => loadScore(pagination.page - 1)}
+                    disabled={scorePage <= 1}
+                    onClick={() => setScorePage(scorePage - 1)}
                     className='px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-slate-600 disabled:opacity-40'
                   >
                     上一页
                   </button>
                   <span className='text-sm text-gray-500'>
-                    {pagination.page} / {pagination.pages}
+                    {scorePage} / {Math.ceil(scoreRecords.total / 20)}
                   </span>
                   <button
-                    disabled={pagination.page >= pagination.pages}
-                    onClick={() => loadScore(pagination.page + 1)}
+                    disabled={scorePage >= Math.ceil(scoreRecords.total / 20)}
+                    onClick={() => setScorePage(scorePage + 1)}
                     className='px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-slate-600 disabled:opacity-40'
                   >
                     下一页
@@ -340,21 +337,21 @@ function StudentPortal() {
             <div className='flex items-center justify-between mb-3'>
               <div className='flex items-center gap-2 font-semibold text-gray-800 dark:text-white'>
                 <Bell className='w-4 h-4' /> 我的通知
-                {notifTotal > 0 && <span className='text-xs text-gray-400'>({notifTotal})</span>}
+                {notifList.total > 0 && <span className='text-xs text-gray-400'>({notifList.total})</span>}
               </div>
               <button
-                onClick={loadNotifications}
-                disabled={loading}
+                onClick={() => void notifList.refetch()}
+                disabled={notifList.loading}
                 className='text-sm text-primary-500 flex items-center gap-1 disabled:opacity-50'
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> 刷新
+                <RefreshCw className={`w-3.5 h-3.5 ${notifList.loading ? 'animate-spin' : ''}`} /> 刷新
               </button>
             </div>
-            {notifications.length === 0 ? (
+            {notifList.items.length === 0 ? (
               <p className='text-sm text-gray-400 py-6 text-center'>暂无通知</p>
             ) : (
               <ul className='divide-y divide-gray-100 dark:divide-slate-700'>
-                {notifications.map((n) => (
+                {notifList.items.map((n) => (
                   <li key={n.id} className='py-3'>
                     <div className='flex items-center justify-between'>
                       <p className='text-sm font-medium text-gray-800 dark:text-gray-100'>

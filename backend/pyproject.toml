@@ -7,6 +7,24 @@
 # package __init__ files). Black already delivers the required format
 # consistency; import *ordering* is not in scope for this task.
 
+[project]
+name = "score-management-backend"
+version = "0.1.0"
+description = "自我管理提升V2.0 管理平台 — 后端 (Flask + SQLAlchemy + MQTT)"
+requires-python = ">=3.11"
+# 基础运行依赖以 requirements.txt 为准（Dockerfile 从该文件安装）。
+# 以下 ml extra 为「可选重依赖」的一等公民声明，等价于 `pip install -r requirements-ml.txt`，
+# 使 `pip install .[ml]` 可独立启用 NLP/ML 能力而无需污染基础镜像。
+
+[project.optional-dependencies]
+ml = [
+    "xgboost>=2.0",
+    "lightgbm>=4.0",
+    "shap>=0.43",
+    "torch>=2.0",
+    "transformers>=4.30",
+]
+
 [tool.black]
 line-length = 100
 target-version = ['py311']

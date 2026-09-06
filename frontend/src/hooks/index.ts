@@ -13,8 +13,14 @@ export { useClassNowStatus } from './useClassNowStatus';
 export type { ClassNowStatusResult, BlockScope } from './useClassNowStatus';
 export { useSplitState, useSmartSplitState } from './useSplitState';
 export { useOptimizedFetch } from './useOptimizedFetch';
+export type { FetchContext } from './useOptimizedFetch';
 export { useListFetch } from './useListFetch';
-export type { ListFetchParams, UseListFetchResult, UseListFetchOptions } from './useListFetch';
+export type {
+  ListFetchParams,
+  UseListFetchResult,
+  UseListFetchOptions,
+  RefetchOptions,
+} from './useListFetch';
 export { useListData } from './useListData';
 export type { UseListDataResult, UseListDataOptions } from './useListData';
 export { useClientFilter } from './useClientFilter';

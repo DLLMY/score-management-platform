@@ -189,7 +189,7 @@ const OperationLogs: React.FC = () => {
             </div>
             <PermissionButton
               permission='system.logs'
-              onClick={refetch}
+              onClick={() => refetch()}
               className='flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors'
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />

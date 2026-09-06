@@ -28,6 +28,40 @@ from datetime import datetime
 import io
 import csv
 
+# B3 收敛 2026-09-05：ScoreRule.to_dict(fields) 子集常量（逐字对齐各端点既有响应契约）
+# 详情端点直接 rule.to_dict()（模型默认输出 = 详情 11 字段契约）
+RULE_LIST_FIELDS = [
+    "id",
+    "name",
+    "description",
+    "category_id",
+    "category_name",
+    "score",
+    "is_active",
+    "daily_limit",
+    "min_interval",
+    "created_at",
+]
+RULE_CREATE_FIELDS = [
+    "id",
+    "name",
+    "description",
+    "category_id",
+    "score",
+    "is_active",
+    "daily_limit",
+    "min_interval",
+]
+RULE_STAT_FIELDS = [
+    "id",
+    "name",
+    "description",
+    "score",
+    "is_active",
+    "category_id",
+    "category_name",
+]
+
 ns_rules = Namespace("rules", description="积分规则相关操作")
 rule_model = ns_rules.model(
     "ScoreRule",
@@ -90,21 +124,7 @@ class RuleList(Resource):
             page=page, per_page=per_page, error_out=False
         )
         result = {  # noqa: F841
-            "rules": [
-                {
-                    "id": r.id,
-                    "name": r.name,
-                    "description": r.description,
-                    "category_id": r.category_id,
-                    "category_name": r.category.name if r.category else None,
-                    "score": r.score,
-                    "is_active": r.is_active,
-                    "daily_limit": r.daily_limit,
-                    "min_interval": r.min_interval,
-                    "created_at": r.created_at.isoformat() if r.created_at else None,
-                }
-                for r in pagination.items
-            ],
+            "rules": [r.to_dict(RULE_LIST_FIELDS) for r in pagination.items],
             "total": pagination.total,
             "page": page,
             "per_page": per_page,
@@ -188,16 +208,7 @@ class RuleList(Resource):
         get_cache_service().invalidate_by_tag("rules")
         invalidate_cache("api:/api/rules/*")
         return APIResponse.success(
-            data={
-                "id": rule.id,
-                "name": rule.name,
-                "description": rule.description,
-                "category_id": rule.category_id,
-                "score": rule.score,
-                "is_active": rule.is_active,
-                "daily_limit": rule.daily_limit,
-                "min_interval": rule.min_interval,
-            },
+            data=rule.to_dict(RULE_CREATE_FIELDS),
             message="规则创建成功",
             status_code=201,
         )
@@ -220,19 +231,7 @@ class RuleResource(Resource):
         if cached_result is not None:
             return APIResponse.success(data=cached_result)
         rule = ScoreRule.query.get_or_404(id)
-        result = {  # noqa: F841
-            "id": rule.id,
-            "name": rule.name,
-            "description": rule.description,
-            "category_id": rule.category_id,
-            "category_name": rule.category.name if rule.category else None,
-            "score": rule.score,
-            "is_active": rule.is_active,
-            "daily_limit": rule.daily_limit,
-            "min_interval": rule.min_interval,
-            "created_at": rule.created_at.isoformat() if rule.created_at else None,
-            "updated_at": rule.updated_at.isoformat() if rule.updated_at else None,
-        }
+        result = rule.to_dict()  # 默认输出 = 详情 11 字段契约
         get_cache_service().set(cache_key, result, ttl=300, tags=["rules"])
         return APIResponse.success(data=result)
 
@@ -665,13 +664,7 @@ class RuleStatistics(Resource):
             )
             result.append(
                 {
-                    "id": rule.id,
-                    "name": rule.name,
-                    "description": rule.description,
-                    "score": rule.score,
-                    "is_active": rule.is_active,
-                    "category_id": rule.category_id,
-                    "category_name": rule.category.name if rule.category else None,
+                    **rule.to_dict(RULE_STAT_FIELDS),
                     "usage_count": stat["usage_count"],
                     "last_used_at": stat["last_used_at"],
                     "total_score_change": stat["total_score_change"],

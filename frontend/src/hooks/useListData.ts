@@ -28,6 +28,8 @@ export interface UseListDataOptions<T> {
   debounceDelay?: number;
   /** 拉取失败回调（如 toast 提示）；error 字段仍为 Error 对象 */
   onError?: (error: Error) => void;
+  /** 自驱拉取开关（默认 true）；false 时跳过自动请求，手动 refetch 仍可触发 */
+  enabled?: boolean;
 }
 
 export function useListData<T = unknown>({
@@ -36,11 +38,13 @@ export function useListData<T = unknown>({
   initialData = [],
   debounceDelay = 300,
   onError,
+  enabled = true,
 }: UseListDataOptions<T>): UseListDataResult<T> {
   const { data, loading, error, refetch } = useOptimizedFetch<T[]>(fetcher, deps, {
     debounceDelay,
     initialData,
     onError,
+    enabled,
   });
 
   return {
