@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -60,6 +61,7 @@ class RiskPredictService:
                 with open(path, "r", encoding="utf-8") as f:
                     return json.load(f)
         except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).warning("risk model config load/save failed; best-effort skipped", exc_info=True)
             pass
         return {}
 
@@ -72,6 +74,7 @@ class RiskPredictService:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).warning("risk model config load/save failed; best-effort skipped", exc_info=True)
             pass
 
     @staticmethod

@@ -88,9 +88,9 @@ def _execute_approve(approval, data):
     # R4: 审批通过改分后触发综合评分重算（原仅 score-entry 触发 → 两套行为）
     if user:
         try:
-            from services.composite_score_service import CompositeScoreService
+            from services.score_recalc import enqueue_or_recalc_user_score
 
-            CompositeScoreService.recalculate_user_score(user.id)
+            enqueue_or_recalc_user_score(user.id)
         except Exception as e:
             logging.getLogger(__name__).error(
                 "[CompositeScore] 审批通过重算综合分失败 user_id=%s: %s", user.id, e

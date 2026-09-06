@@ -615,9 +615,9 @@ class ScoreEntryResource(Resource):
         composite_score_updated = False
         composite_score_status = "ok"
         try:
-            from services.composite_score_service import CompositeScoreService
+            from services.score_recalc import enqueue_or_recalc_user_score
 
-            result = CompositeScoreService.recalculate_user_score(user_id)  # noqa: F841
+            result = enqueue_or_recalc_user_score(user_id)  # noqa: F841
             if result:
                 composite_score_updated = True
                 logger.info(

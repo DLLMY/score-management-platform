@@ -576,9 +576,9 @@ class MQTTMessageService:
 
                     # R4: MQTT 加分后触发综合评分重算（低频卡片操作，单学生聚合查询，失败不影响主流程）
                     try:
-                        from services.composite_score_service import CompositeScoreService
+                        from services.score_recalc import enqueue_or_recalc_user_score
 
-                        CompositeScoreService.recalculate_user_score(user_id)
+                        enqueue_or_recalc_user_score(user_id)
                     except Exception as e:
                         logger.error(
                             "[CompositeScore] MQTT 加分重算综合分失败 user_id=%s: %s",

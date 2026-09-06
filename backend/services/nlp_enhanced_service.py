@@ -3431,9 +3431,9 @@ class EnhancedNLPParserService:
 
             # S2 修复: 触发综合评分重算（与手动/批量/审批/MQTT 路径一致）
             try:
-                from services.composite_score_service import CompositeScoreService
+                from services.score_recalc import enqueue_or_recalc_user_score
 
-                CompositeScoreService.recalculate_user_score(user.id)
+                enqueue_or_recalc_user_score(user.id)
             except Exception as e:
                 logging.getLogger(__name__).error(
                     "[CompositeScore] NLP 评分重算综合分失败 user_id=%s: %s", user.id, e

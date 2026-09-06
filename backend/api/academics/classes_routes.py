@@ -41,6 +41,7 @@ def _audit_class_op(op, name, result, payload, target_id=None):
             after_data=payload,
         )
     except Exception:  # noqa: BLE001 - 审计失败不影响业务
+        logger.warning("审计操作记录失败（不影响主流程）", exc_info=True)
         pass
 
 
