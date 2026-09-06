@@ -5,7 +5,7 @@ from utils.response import APIResponse
 from utils.pagination import get_pagination
 from utils.params import get_int_arg
 from utils.permission import requires_permission
-from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.api_cache_middleware import cached_api
 from utils.decorators import safe_handle
 from utils.performance_monitor import performance_monitor
 from services.redis_cache_service import get_cache_service
@@ -41,7 +41,7 @@ RATE_LIMIT = {
 rate_limit_store: dict[str, dict[str, float | int]] = {}
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_warning
 def cleanup_rate_limit_store():
     now = time.time()
     max_age = 300

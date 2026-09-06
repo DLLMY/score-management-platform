@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 import time
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from services.mqtt_service import publish_mqtt, mqtt_manager, mqtt_logs
 from services.class_time_checker import ClassTimeChecker
 from services import phonebox_policy
@@ -16,7 +16,7 @@ from models import ScoreRecord, db, Approval, get_by_id, User, ScoreRule
 logger = logging.getLogger(__name__)
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_warning
 class MQTTMessageService:
 
     def __init__(self):

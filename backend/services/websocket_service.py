@@ -17,7 +17,7 @@ ALERT_EVENT = "alert"
 SYSTEM_EVENT = "system"
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_debug
 class WebSocketService:
     """WebSocket 服务类（面向对象封装，便于测试与复用）。
 

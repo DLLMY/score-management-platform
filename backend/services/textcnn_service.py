@@ -14,7 +14,7 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_debug
 class TextCNNClassifier:
 
     def __init__(self, embedding_dim=128, max_len=32, num_filters=64, filter_sizes=[2, 3, 4]):

@@ -2,7 +2,7 @@ from flask import request
 from flask_restx import Namespace, Resource
 from models import PermissionLog
 from utils.permission import requires_permission
-from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.api_cache_middleware import cached_api
 from utils.pagination import get_pagination
 from utils.response import APIResponse
 

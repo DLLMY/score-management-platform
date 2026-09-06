@@ -312,7 +312,7 @@ def _load_course_import_config(config_id, strategy_param):
     return field_mappings, conflict_strategy, default_values
 
 
-def _parse_course_import_input(content_type):
+def _parse_course_import_input(content_type, field_mappings, default_values):
     """按 Content-Type 解析导入源（Excel / JSON）为 import_list。"""
     import_list = []
 
@@ -1194,7 +1194,7 @@ class CourseScheduleImport(Resource):
             config_id, strategy_param
         )
 
-        import_list = _parse_course_import_input(content_type)
+        import_list = _parse_course_import_input(content_type, field_mappings, default_values)
 
         success_count = 0
         failed_count = 0

@@ -23,7 +23,6 @@ from datetime import datetime
 from models import db, ScoreRecord, User, ScoreRule, get_by_id
 from utils.score_utils import atomic_score_update
 from utils.logger import log_operation
-from utils.serialize import serialize_dt
 
 
 def create_record(data):

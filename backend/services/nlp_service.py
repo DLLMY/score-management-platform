@@ -7,7 +7,7 @@ import hashlib
 import threading
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_warning
 import logging
 class NLPParserType(Enum):
     RULE_BASED = "rule_based"

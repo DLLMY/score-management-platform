@@ -16,7 +16,7 @@ from models import db
 from models.notification_config import NotificationConfig
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_warning
 def _apply_row_to_config(row):
     """将 DB 行的配置键值合并进 current_app.config（非 None 字段才覆盖）。"""
     cfg = row.to_config_dict()

@@ -5,7 +5,7 @@ import os
 import time
 from flask_restx import Namespace, Resource, fields
 from models import FirmwareVersion, DeviceFirmwareUpdate, Device
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info
 
 # 响应序列化字段子集（不含 created_by；OTA 命令 payload 字段集不同，不经由此处）
 FIRMWARE_FIELDS = [

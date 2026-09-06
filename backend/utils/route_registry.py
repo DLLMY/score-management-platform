@@ -61,7 +61,7 @@ class RouteRegistry:
                         lines.append(f"    {i}. Endpoint: {endpoint} -> 视图函数: {view_func}")
 
             lines.append("=" * 70)
-            log_error(f"路由注册存在重复:\n" + "\n".join(lines))
+            log_error("路由注册存在重复:\n" + "\n".join(lines))
             return False
 
         log_info("路由注册检查报告 - 未发现重复路由")

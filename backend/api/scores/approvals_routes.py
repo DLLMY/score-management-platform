@@ -23,7 +23,7 @@ from services.approval_service import (
     approve_approval,
     reject_approval,
 )
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_warning
 
 try:
     from services.mqtt_manager import mqtt_manager
@@ -37,7 +37,6 @@ except ImportError:
 try:
     from api.system.admin_notifications_routes import create_admin_notification
 except ImportError:
-    import logging
 
     def create_admin_notification(**kwargs):
         logging.getLogger(__name__).warning(

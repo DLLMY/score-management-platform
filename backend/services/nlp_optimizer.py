@@ -5,6 +5,7 @@ from typing import List, Dict, Optional
 from config.config_loader import config_loader
 import redis
 import hashlib
+import logging
 
 """
 NLP性能优化服务
@@ -16,7 +17,7 @@ NLP性能优化服务
 """
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_warning
 class NLPCache:
     """NLP结果缓存"""
 

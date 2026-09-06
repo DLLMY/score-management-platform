@@ -15,7 +15,7 @@ NLP轻量级解析器 - 快速路径
 """
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info
 class FastNLPParser:
     """轻量级NLP解析器"""
 

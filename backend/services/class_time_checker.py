@@ -4,7 +4,7 @@ from typing import Optional, Dict, Tuple
 import json
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_warning
 class ClassTimeChecker:
     """
     上课时间检查器

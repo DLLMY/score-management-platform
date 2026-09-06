@@ -101,7 +101,7 @@ TEXTCNN_INSTALLED = True
 BERT_INSTALLED = TRANSFORMERS_INSTALLED
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_warning
 import logging
 class MLAlgorithmType:
     SVM = "svm"

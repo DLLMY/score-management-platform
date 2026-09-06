@@ -23,7 +23,7 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_warning
 import logging
 class BertNLPService:
     def __init__(self, model_path: str = None, use_quantization: bool = True):

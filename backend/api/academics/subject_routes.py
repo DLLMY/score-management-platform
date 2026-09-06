@@ -3,7 +3,6 @@ import logging
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from models import db, Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
-from sqlalchemy import func
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache

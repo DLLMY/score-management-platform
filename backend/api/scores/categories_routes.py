@@ -1,6 +1,5 @@
 from flask_restx import Namespace, Resource, fields
-from models import db, ScoreCategory, ScoreRule
-from sqlalchemy import func
+from models import ScoreCategory, ScoreRule
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache

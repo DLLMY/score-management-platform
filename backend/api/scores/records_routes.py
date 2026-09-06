@@ -27,7 +27,6 @@ from services.score_record_service import (
 )
 from services.score_recalc import enqueue_or_recalc_user_score
 from datetime import datetime
-from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 

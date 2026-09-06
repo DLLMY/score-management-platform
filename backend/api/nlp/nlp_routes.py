@@ -1406,7 +1406,6 @@ class NLPFeedbackRecord(Resource):
                 # S6-B-P0-4 修复: nlp_analyzer(NLPAlgorithmAnalyzer) 无 _parse_cache → 纠正对已缓存文本永不生效。
                 # 改为清真实解析器（EnhancedNLPParserService）的解析缓存。
                 try:
-                    from services.nlp_enhanced_service import get_nlp_parser
 
                     parser = _get_parser()
                     if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
