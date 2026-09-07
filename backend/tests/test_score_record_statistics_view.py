@@ -38,6 +38,7 @@ def _load_service_stubbed():
     utils_logger.log_operation = lambda *a, **k: True
     utils_permission = types.ModuleType("utils.permission")
     utils_permission.get_allowed_classes = lambda *a, **k: None
+    utils_permission.can_access_student = lambda *a, **k: True
     utils_params = types.ModuleType("utils.params")
     utils_params.parse_date_range = lambda *a, **k: (None, None, None)
 
@@ -120,6 +121,96 @@ class TestGetRecordStatisticsView(unittest.TestCase):
         m_stat.assert_called_once_with(
             user_id=None, class_name=None, start_dt=None, end_dt=None, allowed_classes=None
         )
+
+
+class _FakePagination:
+    def __init__(self, items, total, page, per_page, pages):
+        self.items = items
+        self.total = total
+        self.page = page
+        self.per_page = per_page
+        self.pages = pages
+
+
+class TestRecordListViews(unittest.TestCase):
+    def setUp(self):
+        self.srv = load_service()
+
+    def test_list_normal_aggregates_with_allowed_classes(self):
+        admin = types.SimpleNamespace(id=1)
+        sd, ed = "2026-01-01", "2026-02-01"
+        pag = _FakePagination(items=[types.SimpleNamespace(id=1)], total=10, page=2, per_page=50, pages=1)
+        with mock.patch.object(self.srv, "get_allowed_classes", return_value=["C1"]), \
+             mock.patch.object(self.srv, "parse_date_range", return_value=(sd, ed, None)), \
+             mock.patch.object(self.srv, "query_score_records", return_value=pag) as m_q, \
+             mock.patch.object(self.srv, "serialize_score_record", return_value={"id": 1}):
+            view = self.srv.get_record_list_view(admin, 7, 3, sd, ed, 2, 50)
+        self.assertEqual(
+            view,
+            {"data": {"records": [{"id": 1}], "total": 10, "page": 2, "per_page": 50, "pages": 1}},
+        )
+        m_q.assert_called_once_with(
+            user_id=7, rule_id=3, start_dt=sd, end_dt=ed, allowed_classes=["C1"], page=2, per_page=50
+        )
+
+    def test_list_date_error_returns_400_bad_request(self):
+        with mock.patch.object(self.srv, "get_allowed_classes", return_value=None), \
+             mock.patch.object(self.srv, "parse_date_range", return_value=(None, None, "日期格式错误")), \
+             mock.patch.object(self.srv, "query_score_records", return_value=None) as m_q:
+            view = self.srv.get_record_list_view(None, None, None, "bad", "bad", 1, 50)
+        self.assertEqual(view, {"error": "日期格式错误", "status": 400, "error_code": "BAD_REQUEST"})
+        m_q.assert_not_called()
+
+    def test_list_non_admin_passes_none_allowed_classes(self):
+        pag = _FakePagination(items=[], total=0, page=1, per_page=50, pages=0)
+        with mock.patch.object(self.srv, "get_allowed_classes", return_value=None) as m_a, \
+             mock.patch.object(self.srv, "parse_date_range", return_value=(None, None, None)), \
+             mock.patch.object(self.srv, "query_score_records", return_value=pag) as m_q, \
+             mock.patch.object(self.srv, "serialize_score_record", return_value={}):
+            view = self.srv.get_record_list_view(None, None, None, None, None, 1, 50)
+        m_a.assert_not_called()
+        m_q.assert_called_once_with(
+            user_id=None, rule_id=None, start_dt=None, end_dt=None, allowed_classes=None, page=1, per_page=50
+        )
+        self.assertEqual(
+            view,
+            {"data": {"records": [], "total": 0, "page": 1, "per_page": 50, "pages": 0}},
+        )
+
+    def test_by_user_normal_aggregates(self):
+        pag = _FakePagination(items=[types.SimpleNamespace(id=9)], total=1, page=1, per_page=50, pages=1)
+        with mock.patch.object(self.srv, "can_access_student", return_value=True), \
+             mock.patch.object(self.srv, "query_score_records", return_value=pag) as m_q, \
+             mock.patch.object(self.srv, "serialize_score_record", return_value={"id": 9}):
+            view = self.srv.get_record_list_by_user_view(9, 1, 50)
+        self.assertEqual(
+            view,
+            {"data": {"records": [{"id": 9}], "total": 1, "page": 1, "per_page": 50, "pages": 1}},
+        )
+        m_q.assert_called_once_with(user_id=9, allowed_classes=None, page=1, per_page=50)
+
+    def test_by_user_access_denied_returns_403(self):
+        with mock.patch.object(self.srv, "can_access_student", return_value=False), \
+             mock.patch.object(self.srv, "query_score_records", return_value=None) as m_q:
+            view = self.srv.get_record_list_by_user_view(9, 1, 50)
+        self.assertEqual(view, {"error": "无权查看该学生的记录", "status": 403})
+        m_q.assert_not_called()
+
+    def test_score_entry_aggregates_with_allowed_classes(self):
+        admin = types.SimpleNamespace(id=1)
+        with mock.patch.object(self.srv, "get_allowed_classes", return_value=["C1"]), \
+             mock.patch.object(self.srv, "get_score_entry_data", return_value={"rules": [], "users": []}) as m_d:
+            view = self.srv.get_score_entry_view(admin)
+        self.assertEqual(view, {"data": {"rules": [], "users": []}})
+        m_d.assert_called_once_with(allowed_classes=["C1"])
+
+    def test_score_entry_non_admin_passes_none_allowed_classes(self):
+        with mock.patch.object(self.srv, "get_allowed_classes", return_value=None) as m_a, \
+             mock.patch.object(self.srv, "get_score_entry_data", return_value={"rules": [], "users": []}) as m_d:
+            view = self.srv.get_score_entry_view(None)
+        m_a.assert_not_called()
+        m_d.assert_called_once_with(allowed_classes=None)
+        self.assertEqual(view, {"data": {"rules": [], "users": []}})
 
 
 if __name__ == "__main__":

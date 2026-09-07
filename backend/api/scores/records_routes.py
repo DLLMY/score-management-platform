@@ -3,7 +3,6 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
 from utils.pagination import get_pagination
-from utils.params import parse_date_range
 from models import ScoreRecord, User, ScoreRule, get_by_id
 from utils.permission import (
     requires_permission,
@@ -20,10 +19,11 @@ from services.score_record_service import (
     create_score_entry,
     delete_record,
     commit_batch_score_entry,
-    query_score_records,
     serialize_score_record,
     get_record_statistics_view,
-    get_score_entry_data,
+    get_record_list_view,
+    get_record_list_by_user_view,
+    get_score_entry_view,
 )
 from services.score_recalc import enqueue_or_recalc_user_score
 from datetime import datetime
@@ -95,14 +95,6 @@ def check_rule_limits(user_id, rule_id):
     return True, None
 
 
-def _resolve_allowed_classes():
-    """解析当前管理员可见班级白名单（读路径隔离）：None=全量不过滤；[]=无可见；list=白名单。"""
-    admin = get_current_admin()
-    if not admin:
-        return None
-    return get_allowed_classes(admin.id)
-
-
 ns_records = Namespace("records", description="积分记录相关操作")
 
 record_model = ns_records.model(
@@ -164,6 +156,7 @@ class RecordList(Resource):
 
         支持分页、学生筛选、规则筛选和日期范围筛选。
         非管理员用户只能查看关联班级的数据。
+        权限隔离、日期解析与查询聚合已下沉到 score_record_service.get_record_list_view。
         """
         page, per_page = get_pagination(default=50)
         user_id = request.args.get("user_id", type=int)
@@ -171,32 +164,15 @@ class RecordList(Resource):
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
 
-        start_dt, end_dt, date_err = parse_date_range(start_date, end_date)
-        if date_err:
-            return APIResponse.bad_request(message=date_err)
-
-        # 数据隔离：非管理员只能查看关联班级的数据（白名单由路由解析传入 service）
-        allowed_classes = _resolve_allowed_classes()
-
-        pagination = query_score_records(
-            user_id=user_id,
-            rule_id=rule_id,
-            start_dt=start_dt,
-            end_dt=end_dt,
-            allowed_classes=allowed_classes,
-            page=page,
-            per_page=per_page,
-        )
-
-        return APIResponse.success(
-            data={
-                "records": [serialize_score_record(r) for r in pagination.items],
-                "total": pagination.total,
-                "page": page,
-                "per_page": per_page,
-                "pages": pagination.pages,
-            }
-        )
+        admin = get_current_admin()
+        view = get_record_list_view(admin, user_id, rule_id, start_date, end_date, page, per_page)
+        if "error" in view:
+            return APIResponse.error(
+                message=view["error"],
+                status_code=view["status"],
+                error_code=view.get("error_code"),
+            )
+        return APIResponse.success(data=view["data"])
 
     @ns_records.doc("create_record", description="创建积分记录", security="Bearer")
     @ns_records.expect(record_model)
@@ -302,27 +278,13 @@ class RecordByUser(Resource):
 
         根据学生ID获取该学生的所有积分变动记录。
         非管理员用户只能查看关联班级的学生记录。
+        数据隔离与查询聚合已下沉到 score_record_service.get_record_list_by_user_view。
         """
-        # 数据隔离检查
-        if not can_access_student(user_id):
-            return APIResponse.error(message="无权查看该学生的记录", status_code=403)
-
         page, per_page = get_pagination(default=50)
-
-        # 单学生查询：已通过 _can_access_student 校验，无需再套隔离白名单
-        pagination = query_score_records(
-            user_id=user_id, allowed_classes=None, page=page, per_page=per_page
-        )
-
-        return APIResponse.success(
-            data={
-                "records": [serialize_score_record(r) for r in pagination.items],
-                "total": pagination.total,
-                "page": page,
-                "per_page": per_page,
-                "pages": pagination.pages,
-            }
-        )
+        view = get_record_list_by_user_view(user_id, page, per_page)
+        if "error" in view:
+            return APIResponse.error(message=view["error"], status_code=view["status"])
+        return APIResponse.success(data=view["data"])
 
 
 @ns_records.route("/statistics")
@@ -384,6 +346,7 @@ class ScoreEntryResource(Resource):
 
         返回用于积分录入的规则列表和学生列表数据。
         非管理员用户只能看到关联班级的学生。
+        权限隔离与数据聚合已下沉到 score_record_service.get_score_entry_view。
         """
         # 尝试从缓存获取
         cache_key = "score_entry_data"
@@ -391,13 +354,12 @@ class ScoreEntryResource(Resource):
         if cached_result is not None:
             return APIResponse.success(data=cached_result)
 
-        # 数据隔离：非管理员只能看到关联班级的学生（白名单由路由解析传入 service）
+        # 权限隔离与数据聚合已下沉到 score_record_service.get_score_entry_view
         admin = get_current_admin()
-        allowed_classes = None
-        if admin:
-            allowed_classes = get_allowed_classes(admin.id)
-
-        result = get_score_entry_data(allowed_classes=allowed_classes)
+        view = get_score_entry_view(admin)
+        if "error" in view:
+            return APIResponse.error(message=view["error"], status_code=view["status"])
+        result = view["data"]
 
         # 缓存结果，有效期5分钟
         get_cache_service().set(cache_key, result, ttl=300)

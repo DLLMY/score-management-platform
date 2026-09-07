@@ -23,7 +23,7 @@ from datetime import datetime
 from models import db, ScoreRecord, User, ScoreRule, get_by_id
 from utils.score_utils import atomic_score_update
 from utils.logger import log_operation
-from utils.permission import get_allowed_classes
+from utils.permission import get_allowed_classes, can_access_student
 from utils.params import parse_date_range
 
 
@@ -400,3 +400,66 @@ def get_record_statistics_view(admin, user_id, class_name, start_date, end_date)
         allowed_classes=allowed_classes,
     )
     return {"data": result}
+
+
+def _build_record_list_payload(pagination, page, per_page):
+    """列表响应构造（RecordList / RecordByUser 共用），形态与原路由一致。"""
+    return {
+        "records": [serialize_score_record(r) for r in pagination.items],
+        "total": pagination.total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pagination.pages,
+    }
+
+
+def get_record_list_view(admin, user_id, rule_id, start_date, end_date, page, per_page):
+    """记录列表视图聚合：权限隔离 + 日期解析 + 调 query_score_records + 响应构造。
+
+    纯只读编排，不碰 db.session。返回 dict：成功 {"data":...} / 失败 {"error":..., "status":..., "error_code":...}
+    路由据此映射为 APIResponse，对外契约不变。
+    """
+    allowed_classes = get_allowed_classes(admin.id) if admin else None
+
+    start_dt, end_dt, date_err = parse_date_range(start_date, end_date)
+    if date_err:
+        return {"error": date_err, "status": 400, "error_code": "BAD_REQUEST"}
+
+    pagination = query_score_records(
+        user_id=user_id,
+        rule_id=rule_id,
+        start_dt=start_dt,
+        end_dt=end_dt,
+        allowed_classes=allowed_classes,
+        page=page,
+        per_page=per_page,
+    )
+    return {"data": _build_record_list_payload(pagination, page, per_page)}
+
+
+def get_record_list_by_user_view(user_id, page, per_page):
+    """指定学生记录列表视图聚合：学生级数据隔离 + 调 query_score_records + 响应构造。
+
+    纯只读编排，不碰 db.session。返回 dict：成功 {"data":...} / 隔离失败 {"error":..., "status":403}
+    路由据此映射为 APIResponse，对外契约不变。
+    """
+    if not can_access_student(user_id):
+        return {"error": "无权查看该学生的记录", "status": 403}
+
+    pagination = query_score_records(
+        user_id=user_id,
+        allowed_classes=None,
+        page=page,
+        per_page=per_page,
+    )
+    return {"data": _build_record_list_payload(pagination, page, per_page)}
+
+
+def get_score_entry_view(admin):
+    """积分录入页数据视图聚合：权限隔离 + 调 get_score_entry_data。
+
+    纯只读编排，不碰 db.session。返回 dict：{"data": <get_score_entry_data 结果>}
+    路由保留缓存读写（score_entry_data 5 分钟缓存），对外契约不变。
+    """
+    allowed_classes = get_allowed_classes(admin.id) if admin else None
+    return {"data": get_score_entry_data(allowed_classes=allowed_classes)}
