@@ -12,6 +12,7 @@ from utils.logger import log_operation
 from models import User
 from models import ClassInfo
 from models import get_by_id
+from utils.decorators import safe_handle
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +143,7 @@ class ClassStudents(Resource):
     @ns_classes.doc("get_class_students", description="获取班级学生列表")
     @requires_permission("class.view")
     @cached_api(ttl=30)
+    @safe_handle(default_status=400, message="操作失败，请稍后重试")
     def get(self, class_param):
         """
         获取班级学生列表
@@ -149,35 +151,30 @@ class ClassStudents(Resource):
         支持通过班级ID或班级名称查询
         """
         try:
-            # 尝试解析为整数ID，如果失败则作为班级名称处理
-            try:
-                class_id = int(class_param)
-                class_info = get_by_id(ClassInfo, class_id)
-                class_name = class_info.name if class_info else class_param
-            except ValueError:
-                class_name = class_param
+            class_id = int(class_param)
+            class_info = get_by_id(ClassInfo, class_id)
+            class_name = class_info.name if class_info else class_param
+        except ValueError:
+            class_name = class_param
 
-            # T3: 强制分页（M9），替换原 .all() 无界查询
-            page, per_page = get_pagination(default=50)
-            pagination = (
-                User.query.filter_by(class_name=class_name)
-                .order_by(User.id)
-                .paginate(page=page, per_page=per_page, error_out=False)
-            )
-            student_list = [s.to_dict(CLASS_STUDENT_FIELDS) for s in pagination.items]
+        # T3: 强制分页（M9），替换原 .all() 无界查询
+        page, per_page = get_pagination(default=50)
+        pagination = (
+            User.query.filter_by(class_name=class_name)
+            .order_by(User.id)
+            .paginate(page=page, per_page=per_page, error_out=False)
+        )
+        student_list = [s.to_dict(CLASS_STUDENT_FIELDS) for s in pagination.items]
 
-            return APIResponse.success(
-                data=student_list,
-                pagination={
-                    "page": page,
-                    "per_page": per_page,
-                    "total": pagination.total,
-                    "pages": pagination.pages,
-                },
-            )
-        except Exception as e:
-            logger.error("classes_routes.py: %s", e)
-            return APIResponse.error(message="操作失败，请稍后重试")
+        return APIResponse.success(
+            data=student_list,
+            pagination={
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
+        )
 
 
 @ns_classes.route("/validate-associations")
