@@ -4,6 +4,7 @@ from services.class_migration_service import ClassMigrationService
 from utils.permission import requires_permission
 from utils.response import APIResponse
 import logging
+from utils.decorators import safe_handle
 
 """数据一致性校验 API"""
 logger = logging.getLogger(__name__)
@@ -33,71 +34,55 @@ stats_model = ns_consistency.model(
 class ConsistencyCheck(Resource):
     @ns_consistency.doc("check_data_consistency", description="Run data consistency check")
     @requires_permission("system.settings")
+    @safe_handle(default_status=500, message="一致性检查失败，请稍后重试")
     def get(self):
         """Execute consistency check"""
-        try:
-            checker = DataConsistencyChecker()
-            result = checker.check_all()  # noqa: F841
-            return APIResponse.success(
-                data={
-                    "timestamp": result["timestamp"],
-                    "total_issues": result["total_issues"],
-                    "healthy": result["healthy"],
-                    "issues": result["issues"][:100],
-                    "stats": result["stats"],
-                }
-            )
-        except Exception as e:
-            logger.error(f"Consistency check failed: {e}")
-            logger.error("consistency_routes.py: %s", e)
-            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
+        checker = DataConsistencyChecker()
+        result = checker.check_all()  # noqa: F841
+        return APIResponse.success(
+            data={
+                "timestamp": result["timestamp"],
+                "total_issues": result["total_issues"],
+                "healthy": result["healthy"],
+                "issues": result["issues"][:100],
+                "stats": result["stats"],
+            }
+        )
 
 
 @ns_consistency.route("/report")
 class ConsistencyReport(Resource):
     @ns_consistency.doc("get_consistency_report", description="Get consistency report")
     @requires_permission("system.settings")
+    @safe_handle(default_status=500, message="一致性检查失败，请稍后重试")
     def get(self):
         """Get consistency report"""
-        try:
-            checker = DataConsistencyChecker()
-            report = checker.generate_report()
-            return APIResponse.success(data={"report": report})
-        except Exception as e:
-            logger.error(f"Report generation failed: {e}")
-            logger.error("consistency_routes.py: %s", e)
-            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
+        checker = DataConsistencyChecker()
+        report = checker.generate_report()
+        return APIResponse.success(data={"report": report})
 
 
 @ns_consistency.route("/fix", methods=["POST"])
 class ConsistencyFix(Resource):
     @ns_consistency.doc("fix_data_consistency", description="Fix data consistency issues")
     @requires_permission("system.settings")
+    @safe_handle(default_status=500, message="一致性检查失败，请稍后重试")
     def post(self):
         """Execute data fix"""
-        try:
-            service = ClassMigrationService()
-            result = service.run_full_migration()  # noqa: F841
-            return APIResponse.success(
-                data={"stats": result["stats"]}, message="Data fix completed"
-            )
-        except Exception as e:
-            logger.error(f"Data fix failed: {e}")
-            logger.error("consistency_routes.py: %s", e)
-            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
+        service = ClassMigrationService()
+        result = service.run_full_migration()  # noqa: F841
+        return APIResponse.success(
+            data={"stats": result["stats"]}, message="Data fix completed"
+        )
 
 
 @ns_consistency.route("/status")
 class ConsistencyStatus(Resource):
     @ns_consistency.doc("get_consistency_status", description="Get migration status")
     @requires_permission("system.settings")
+    @safe_handle(default_status=500, message="一致性检查失败，请稍后重试")
     def get(self):
         """Get migration status"""
-        try:
-            service = ClassMigrationService()
-            status = service.get_migration_status()
-            return APIResponse.success(data={"status": status})
-        except Exception as e:
-            logger.error(f"Get status failed: {e}")
-            logger.error("consistency_routes.py: %s", e)
-            return APIResponse.error(message="一致性检查失败，请稍后重试", status_code=500)
+        service = ClassMigrationService()
+        status = service.get_migration_status()
+        return APIResponse.success(data={"status": status})

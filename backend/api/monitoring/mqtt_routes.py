@@ -9,6 +9,7 @@ from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from utils.rate_limit import RateLimitStrategy
 from utils.response import APIResponse
+from utils.decorators import safe_handle
 
 logger = logging.getLogger(__name__)
 
@@ -313,13 +314,10 @@ class MQTTDisconnect(Resource):
     @ns_mqtt.response(200, "Success")
     @ns_mqtt.response(500, "Disconnect failed")
     @requires_permission("manage_devices")
+    @safe_handle(default_status=500, message="MQTT disconnect error")
     def post(self):
-        try:
-            mqtt_manager.disconnect()
-            return APIResponse.success(message="MQTT disconnected")
-        except Exception as e:
-            logger.error("%s: %s", "MQTT disconnect error", e)
-            return APIResponse.error(message="MQTT disconnect error", status_code=500)
+        mqtt_manager.disconnect()
+        return APIResponse.success(message="MQTT disconnected")
 
 
 @ns_mqtt.route("/subscribe")
@@ -380,32 +378,29 @@ class MQTTUnlock(Resource):
     @ns_mqtt.expect(mqtt_unlock_model)
     @ns_mqtt.response(200, "Success")
     @requires_permission("manage_devices")
+    @safe_handle(default_status=500, message="Send error")
     def post(self):
-        try:
-            data = ns_mqtt.payload
-            box_id = data.get("box_id", "A")
+        data = ns_mqtt.payload
+        box_id = data.get("box_id", "A")
 
-            topic = f"phonebox/unlock/{box_id}"
+        topic = f"phonebox/unlock/{box_id}"
 
-            if box_id == "A":
-                payload = ""
-            else:
-                payload = json.dumps(
-                    {
-                        "result": data.get("response", {}).get("result", "false"),
-                        "reason": data.get("response", {}).get("reason", "manual"),
-                        "current_score": data.get("response", {}).get("current_score"),
-                    }
-                )
+        if box_id == "A":
+            payload = ""
+        else:
+            payload = json.dumps(
+                {
+                    "result": data.get("response", {}).get("result", "false"),
+                    "reason": data.get("response", {}).get("reason", "manual"),
+                    "current_score": data.get("response", {}).get("current_score"),
+                }
+            )
 
-            result = publish_mqtt(topic, payload)  # noqa: F841
-            if result:
-                return APIResponse.success(message=f"Unlock command sent to {topic}")
-            else:
-                return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
-        except Exception as e:
-            logger.error("%s: %s", "Send error", e)
-            return APIResponse.error(message="Send error", status_code=500)
+        result = publish_mqtt(topic, payload)  # noqa: F841
+        if result:
+            return APIResponse.success(message=f"Unlock command sent to {topic}")
+        else:
+            return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
 
 
 @ns_mqtt.route("/command")
@@ -417,39 +412,36 @@ class MQTTCommand(Resource):
     @ns_mqtt.response(400, "Bad request")
     @ns_mqtt.response(500, "Send failed")
     @requires_permission("device.manage")
+    @safe_handle(default_status=500, message="Send error")
     def post(self):
-        try:
-            data = ns_mqtt.payload
-            device_id = data.get("device_id")
-            command = data.get("command")
-            params = data.get("params", {})
+        data = ns_mqtt.payload
+        device_id = data.get("device_id")
+        command = data.get("command")
+        params = data.get("params", {})
 
-            if not command:
-                return APIResponse.error(message="Command type is required", status_code=400)
+        if not command:
+            return APIResponse.error(message="Command type is required", status_code=400)
 
-            valid_commands = ["open_door", "open_phonebox", "restart"]
-            if command not in valid_commands:
-                return APIResponse.error(
-                    message=f"Invalid command type, supported: {valid_commands}", status_code=400
-                )
+        valid_commands = ["open_door", "open_phonebox", "restart"]
+        if command not in valid_commands:
+            return APIResponse.error(
+                message=f"Invalid command type, supported: {valid_commands}", status_code=400
+            )
 
-            message = {"command": command, "timestamp": datetime.now().isoformat()}
-            if params:
-                message["params"] = params
+        message = {"command": command, "timestamp": datetime.now().isoformat()}
+        if params:
+            message["params"] = params
 
-            if device_id:
-                topic = f"phonebox/command/{device_id}"
-            else:
-                topic = "phonebox/command"
+        if device_id:
+            topic = f"phonebox/command/{device_id}"
+        else:
+            topic = "phonebox/command"
 
-            result = publish_mqtt(topic, json.dumps(message))  # noqa: F841
-            if result:
-                return APIResponse.success(message=f'Command "{command}" sent to {topic}')
-            else:
-                return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
-        except Exception as e:
-            logger.error("%s: %s", "Send error", e)
-            return APIResponse.error(message="Send error", status_code=500)
+        result = publish_mqtt(topic, json.dumps(message))  # noqa: F841
+        if result:
+            return APIResponse.success(message=f'Command "{command}" sent to {topic}')
+        else:
+            return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
 
 
 def register_mqtt_message_handler():
