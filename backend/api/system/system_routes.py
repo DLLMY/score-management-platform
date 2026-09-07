@@ -634,86 +634,83 @@ class SystemPerformance(Resource):
     @ns_system.doc("get_system_performance", description="获取系统性能指标")
     @ns_system.response(200, "成功")
     @requires_permission("system.view")
+    @safe_handle(default_status=500, message="获取性能指标失败")
     def get(self):
         """
         获取系统性能指标
 
         返回CPU、内存、磁盘等系统资源使用情况，以及API性能统计。
         """
-        try:
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            cpu_count = psutil.cpu_count()
-            cpu_freq = psutil.cpu_freq()
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_count = psutil.cpu_count()
+        cpu_freq = psutil.cpu_freq()
 
-            memory = psutil.virtual_memory()
+        memory = psutil.virtual_memory()
 
-            disk = psutil.disk_usage("/")
+        disk = psutil.disk_usage("/")
 
-            net_io = psutil.net_io_counters()
+        net_io = psutil.net_io_counters()
 
-            process = psutil.Process()
-            process_memory = process.memory_info()
+        process = psutil.Process()
+        process_memory = process.memory_info()
 
-            perf_metrics = performance_monitor.get_metrics()
-            perf_summary = perf_metrics.get_summary()
-            slow_requests = perf_metrics.get_slow_requests(10)
-            slow_queries = perf_metrics.get_slow_queries(10)
-            suggestions = perf_metrics.get_optimization_suggestions()
+        perf_metrics = performance_monitor.get_metrics()
+        perf_summary = perf_metrics.get_summary()
+        slow_requests = perf_metrics.get_slow_requests(10)
+        slow_queries = perf_metrics.get_slow_queries(10)
+        suggestions = perf_metrics.get_optimization_suggestions()
 
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "system": {
-                    "cpu": {
-                        "percent": cpu_percent,
-                        "count": cpu_count,
-                        "frequency": {
-                            "current": cpu_freq.current if cpu_freq else None,
-                            "min": cpu_freq.min if cpu_freq else None,
-                            "max": cpu_freq.max if cpu_freq else None,
-                        },
-                    },
-                    "memory": {
-                        "total": memory.total,
-                        "available": memory.available,
-                        "used": memory.used,
-                        "percent": memory.percent,
-                    },
-                    "disk": {
-                        "total": disk.total,
-                        "used": disk.used,
-                        "free": disk.free,
-                        "percent": disk.percent,
-                    },
-                    "network": {
-                        "bytes_sent": net_io.bytes_sent,
-                        "bytes_recv": net_io.bytes_recv,
-                        "packets_sent": net_io.packets_sent,
-                        "packets_recv": net_io.packets_recv,
-                    },
-                    "process": {
-                        "pid": process.pid,
-                        "memory_rss": process_memory.rss,
-                        "memory_vms": process_memory.vms,
-                        "cpu_percent": process.cpu_percent(),
-                        "threads": process.num_threads(),
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "system": {
+                "cpu": {
+                    "percent": cpu_percent,
+                    "count": cpu_count,
+                    "frequency": {
+                        "current": cpu_freq.current if cpu_freq else None,
+                        "min": cpu_freq.min if cpu_freq else None,
+                        "max": cpu_freq.max if cpu_freq else None,
                     },
                 },
-                "api_performance": {
-                    "uptime": perf_summary["uptime_formatted"],
-                    "total_requests": perf_summary["total_requests"],
-                    "total_queries": perf_summary["total_queries"],
-                    "cache": perf_summary["cache"],
-                    "overall": perf_summary["overall"],
-                    "request_stats": perf_summary["request_stats"],
-                    "query_stats": perf_summary["query_stats"],
+                "memory": {
+                    "total": memory.total,
+                    "available": memory.available,
+                    "used": memory.used,
+                    "percent": memory.percent,
                 },
-                "slow_requests": slow_requests,
-                "slow_queries": slow_queries,
-                "optimization_suggestions": suggestions,
-            }
-        except Exception as e:
-            logger.error("%s: %s", "获取性能指标失败", e)
-            return APIResponse.error(message="获取性能指标失败", status_code=500)
+                "disk": {
+                    "total": disk.total,
+                    "used": disk.used,
+                    "free": disk.free,
+                    "percent": disk.percent,
+                },
+                "network": {
+                    "bytes_sent": net_io.bytes_sent,
+                    "bytes_recv": net_io.bytes_recv,
+                    "packets_sent": net_io.packets_sent,
+                    "packets_recv": net_io.packets_recv,
+                },
+                "process": {
+                    "pid": process.pid,
+                    "memory_rss": process_memory.rss,
+                    "memory_vms": process_memory.vms,
+                    "cpu_percent": process.cpu_percent(),
+                    "threads": process.num_threads(),
+                },
+            },
+            "api_performance": {
+                "uptime": perf_summary["uptime_formatted"],
+                "total_requests": perf_summary["total_requests"],
+                "total_queries": perf_summary["total_queries"],
+                "cache": perf_summary["cache"],
+                "overall": perf_summary["overall"],
+                "request_stats": perf_summary["request_stats"],
+                "query_stats": perf_summary["query_stats"],
+            },
+            "slow_requests": slow_requests,
+            "slow_queries": slow_queries,
+            "optimization_suggestions": suggestions,
+        }
 
 
 frontend_performance_model = ns_system.model(
@@ -772,6 +769,7 @@ class FrontendPerformance(Resource):
     @ns_system.response(400, "参数错误")
     @ns_system.response(429, "请求过于频繁")
     @rate_limit("frontend_performance")
+    @safe_handle(default_status=500, message="接收失败")
     def post(self):
         """
         上报前端性能指标
@@ -779,21 +777,16 @@ class FrontendPerformance(Resource):
         接收前端上报的Web Vitals、API请求时间等性能数据。
         限流：60次/分钟
         """
-        try:
-            data = ns_system.payload
-            valid, msg = validate_performance_data(data)
-            if not valid:
-                return APIResponse.error(message=msg, status_code=400)
+        data = ns_system.payload
+        valid, msg = validate_performance_data(data)
+        if not valid:
+            return APIResponse.error(message=msg, status_code=400)
 
-            persist_perf_metric(data)
-            logger.info(
-                f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}'
-            )
-            return APIResponse.success(message="性能指标接收成功")
-        except Exception as e:
-            logger.error(f"接收前端性能指标失败: {str(e)}")
-            logger.error("%s: %s", "接收失败", e)
-            return APIResponse.error(message="接收失败", status_code=500)
+        persist_perf_metric(data)
+        logger.info(
+            f'前端性能指标上报: {data.get("type")} - {data.get("name")} = {data.get("value")}'
+        )
+        return APIResponse.success(message="性能指标接收成功")
 
 
 @ns_system.route("/frontend-performance/batch")
@@ -808,6 +801,7 @@ class FrontendPerformanceBatch(Resource):
     @ns_system.response(400, "参数错误")
     @ns_system.response(429, "请求过于频繁")
     @rate_limit("frontend_performance_batch")
+    @safe_handle(default_status=500, message="接收失败")
     def post(self):
         """
         批量上报前端性能指标
@@ -815,34 +809,29 @@ class FrontendPerformanceBatch(Resource):
         接收多个前端性能指标数据，减少请求次数。
         限流：60次/分钟，单次最多100条
         """
-        try:
-            data = ns_system.payload
-            metrics = data.get("metrics", [])
+        data = ns_system.payload
+        metrics = data.get("metrics", [])
 
-            if not isinstance(metrics, list):
-                return APIResponse.error(message="metrics 必须是数组", status_code=400)
+        if not isinstance(metrics, list):
+            return APIResponse.error(message="metrics 必须是数组", status_code=400)
 
-            if len(metrics) > 100:
-                return APIResponse.error(message="单次最多上报100条指标", status_code=400)
+        if len(metrics) > 100:
+            return APIResponse.error(message="单次最多上报100条指标", status_code=400)
 
-            valid_metrics = []
-            for metric in metrics:
-                valid, msg = validate_performance_data(metric)
-                if not valid:
-                    logger.warning(f"批量上报中跳过无效数据: {msg}")
-                    continue
-                valid_metrics.append(metric)
+        valid_metrics = []
+        for metric in metrics:
+            valid, msg = validate_performance_data(metric)
+            if not valid:
+                logger.warning(f"批量上报中跳过无效数据: {msg}")
+                continue
+            valid_metrics.append(metric)
 
-            if valid_metrics:
-                bulk_persist_perf_metrics(valid_metrics)
+        if valid_metrics:
+            bulk_persist_perf_metrics(valid_metrics)
 
-            valid_count = len(valid_metrics)
-            logger.info(f"批量接收前端性能指标: {valid_count}/{len(metrics)} 条有效")
-            return APIResponse.success(message=f"成功接收 {valid_count} 条性能指标")
-        except Exception as e:
-            logger.error(f"批量接收前端性能指标失败: {str(e)}")
-            logger.error("%s: %s", "接收失败", e)
-            return APIResponse.error(message="接收失败", status_code=500)
+        valid_count = len(valid_metrics)
+        logger.info(f"批量接收前端性能指标: {valid_count}/{len(metrics)} 条有效")
+        return APIResponse.success(message=f"成功接收 {valid_count} 条性能指标")
 
 
 @ns_system.route("/frontend-error")
@@ -854,6 +843,7 @@ class FrontendError(Resource):
     @ns_system.response(400, "参数错误")
     @ns_system.response(429, "请求过于频繁")
     @rate_limit("frontend_error")
+    @safe_handle(default_status=500, message="接收失败")
     def post(self):
         """
         上报前端错误
@@ -861,19 +851,14 @@ class FrontendError(Resource):
         接收前端捕获的JavaScript错误、API请求错误等。
         限流：30次/分钟
         """
-        try:
-            data = ns_system.payload
-            valid, msg = validate_error_data(data)
-            if not valid:
-                return APIResponse.error(message=msg, status_code=400)
+        data = ns_system.payload
+        valid, msg = validate_error_data(data)
+        if not valid:
+            return APIResponse.error(message=msg, status_code=400)
 
-            persist_frontend_error(data)
-            logger.error(f'前端错误上报: {data.get("type")} - {data.get("message")}')
-            return APIResponse.success(message="错误信息接收成功")
-        except Exception as e:
-            logger.error(f"接收前端错误失败: {str(e)}")
-            logger.error("%s: %s", "接收失败", e)
-            return APIResponse.error(message="接收失败", status_code=500)
+        persist_frontend_error(data)
+        logger.error(f'前端错误上报: {data.get("type")} - {data.get("message")}')
+        return APIResponse.success(message="错误信息接收成功")
 
 
 @ns_system.route("/stats")
@@ -883,105 +868,102 @@ class SystemStats(Resource):
     @ns_system.response(200, "成功")
     @requires_permission("system.view")
     @cached_api(ttl=60)
+    @safe_handle(default_status=500, message="获取系统统计失败")
     def get(self):
         """
         获取系统统计信息
 
         返回系统的综合统计数据，包括用户数、积分记录数等。
         """
+        cache_stats = get_cache_service().get_stats()
+
+        user_count = 0
+        record_count = 0
+        rule_count = 0
+        category_count = 0
+        device_count = 0
+        admin_count = 0
+
+        # 合并数据库查询，减少连接开销
+        # 注意：实际表名为单数（user/score_record/score_rule/score_category/device/admin）
         try:
-            cache_stats = get_cache_service().get_stats()
+            with db.engine.connect() as conn:
+                results = conn.execute(text("""
+                    SELECT
+                        (SELECT COUNT(*) FROM user) as user_count,
+                        (SELECT COUNT(*) FROM score_record) as record_count,
+                        (SELECT COUNT(*) FROM score_rule) as rule_count,
+                        (SELECT COUNT(*) FROM score_category) as category_count,
+                        (SELECT COUNT(*) FROM device) as device_count,
+                        (SELECT COUNT(*) FROM admin) as admin_count
+                """)).first()
 
-            user_count = 0
-            record_count = 0
-            rule_count = 0
-            category_count = 0
-            device_count = 0
-            admin_count = 0
+                if results:
+                    user_count = results.user_count or 0
+                    record_count = results.record_count or 0
+                    rule_count = results.rule_count or 0
+                    category_count = results.category_count or 0
+                    device_count = results.device_count or 0
+                    admin_count = results.admin_count or 0
+        except Exception as e:
+            logger.warning(f"批量统计查询失败，降级为单表查询: {e}")
 
-            # 合并数据库查询，减少连接开销
-            # 注意：实际表名为单数（user/score_record/score_rule/score_category/device/admin）
+            tables = ["user", "score_record", "score_rule", "score_category", "device", "admin"]
+            counts = {}
+
+            # 单表降级：任一表失败视为整体不可信——绝不返回部分 0 冒充全量真实值
             try:
                 with db.engine.connect() as conn:
-                    results = conn.execute(text("""
-                        SELECT
-                            (SELECT COUNT(*) FROM user) as user_count,
-                            (SELECT COUNT(*) FROM score_record) as record_count,
-                            (SELECT COUNT(*) FROM score_rule) as rule_count,
-                            (SELECT COUNT(*) FROM score_category) as category_count,
-                            (SELECT COUNT(*) FROM device) as device_count,
-                            (SELECT COUNT(*) FROM admin) as admin_count
-                    """)).first()
+                    for table in tables:
+                        try:
+                            if table not in (
+                                "user",
+                                "score_record",
+                                "score_rule",
+                                "score_category",
+                                "device",
+                                "admin",
+                            ):
+                                continue
+                            counts[table] = (
+                                conn.execute(
+                                    text(
+                                        "SELECT COUNT(*) FROM " + table
+                                    )  # nosec B608 - table is whitelisted
+                                ).scalar()
+                                or 0
+                            )
+                        except Exception as e2:
+                            logger.error(f"系统统计单表 {table} 计数查询失败: {e2}")
+                            return APIResponse.error(
+                                message=f"系统统计查询失败（{table}），数据不完整",
+                                status_code=500,
+                            )
+            except Exception as e2:
+                logger.error(f"系统统计单表降级查询整体失败: {e2}")
+                # DB 不可用：返回失败而非伪造全 0（防止前端误信"0 用户 0 记录"为真实值）
+                return APIResponse.error(
+                    message="数据库不可用，无法获取系统统计", status_code=500
+                )
 
-                    if results:
-                        user_count = results.user_count or 0
-                        record_count = results.record_count or 0
-                        rule_count = results.rule_count or 0
-                        category_count = results.category_count or 0
-                        device_count = results.device_count or 0
-                        admin_count = results.admin_count or 0
-            except Exception as e:
-                logger.warning(f"批量统计查询失败，降级为单表查询: {e}")
+            # counts 字典 key 与表名一致（单数）——此前用复数 key 取值致降级分支必全 0
+            user_count = counts.get("user", 0)
+            record_count = counts.get("score_record", 0)
+            rule_count = counts.get("score_rule", 0)
+            category_count = counts.get("score_category", 0)
+            device_count = counts.get("device", 0)
+            admin_count = counts.get("admin", 0)
 
-                tables = ["user", "score_record", "score_rule", "score_category", "device", "admin"]
-                counts = {}
-
-                # 单表降级：任一表失败视为整体不可信——绝不返回部分 0 冒充全量真实值
-                try:
-                    with db.engine.connect() as conn:
-                        for table in tables:
-                            try:
-                                if table not in (
-                                    "user",
-                                    "score_record",
-                                    "score_rule",
-                                    "score_category",
-                                    "device",
-                                    "admin",
-                                ):
-                                    continue
-                                counts[table] = (
-                                    conn.execute(
-                                        text(
-                                            "SELECT COUNT(*) FROM " + table
-                                        )  # nosec B608 - table is whitelisted
-                                    ).scalar()
-                                    or 0
-                                )
-                            except Exception as e2:
-                                logger.error(f"系统统计单表 {table} 计数查询失败: {e2}")
-                                return APIResponse.error(
-                                    message=f"系统统计查询失败（{table}），数据不完整",
-                                    status_code=500,
-                                )
-                except Exception as e2:
-                    logger.error(f"系统统计单表降级查询整体失败: {e2}")
-                    # DB 不可用：返回失败而非伪造全 0（防止前端误信"0 用户 0 记录"为真实值）
-                    return APIResponse.error(
-                        message="数据库不可用，无法获取系统统计", status_code=500
-                    )
-
-                # counts 字典 key 与表名一致（单数）——此前用复数 key 取值致降级分支必全 0
-                user_count = counts.get("user", 0)
-                record_count = counts.get("score_record", 0)
-                rule_count = counts.get("score_rule", 0)
-                category_count = counts.get("score_category", 0)
-                device_count = counts.get("device", 0)
-                admin_count = counts.get("admin", 0)
-
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "users": user_count,
-                "records": record_count,
-                "rules": rule_count,
-                "categories": category_count,
-                "devices": device_count,
-                "admins": admin_count,
-                "cache": cache_stats,
-            }
-        except Exception as e:
-            logger.error("%s: %s", "获取系统统计失败", e)
-            return APIResponse.error(message="获取系统统计失败", status_code=500)
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "users": user_count,
+            "records": record_count,
+            "rules": rule_count,
+            "categories": category_count,
+            "devices": device_count,
+            "admins": admin_count,
+            "cache": cache_stats,
+        }
 
 
 # ---------- 运维中心：前端遥测 / 系统指标查看 ----------
@@ -993,51 +975,48 @@ class FrontendMetricsList(Resource):
     @ns_system.doc("get_frontend_metrics", description="查看已落库的前端性能指标")
     @ns_system.response(200, "成功")
     @requires_permission("ops_center.view")
+    @safe_handle(default_status=500, message="获取前端指标失败")
     def get(self):
         """分页查看前端性能/自定义指标上报记录（运维中心）。"""
-        try:
-            metric_type = request.args.get("metric_type")
-            name = request.args.get("name")
-            hours = get_int_arg("hours", default=24)
-            page, per_page = get_pagination(default=50)
+        metric_type = request.args.get("metric_type")
+        name = request.args.get("name")
+        hours = get_int_arg("hours", default=24)
+        page, per_page = get_pagination(default=50)
 
-            query = FrontendPerfMetric.query
-            if metric_type:
-                query = query.filter(FrontendPerfMetric.metric_type == metric_type)
-            if name:
-                query = query.filter(FrontendPerfMetric.name == name)
-            if hours > 0:
-                since = datetime.now() - timedelta(hours=hours)
-                query = query.filter(FrontendPerfMetric.created_at >= since)
+        query = FrontendPerfMetric.query
+        if metric_type:
+            query = query.filter(FrontendPerfMetric.metric_type == metric_type)
+        if name:
+            query = query.filter(FrontendPerfMetric.name == name)
+        if hours > 0:
+            since = datetime.now() - timedelta(hours=hours)
+            query = query.filter(FrontendPerfMetric.created_at >= since)
 
-            pagination = query.order_by(FrontendPerfMetric.created_at.desc()).paginate(
-                page=page, per_page=per_page, error_out=False
-            )
-            items = [
-                {
-                    "id": m.id,
-                    "metric_type": m.metric_type,
-                    "name": m.name,
-                    "value": m.value,
-                    "unit": m.unit,
-                    "page": m.page,
-                    "detail": m.detail,
-                    "created_at": m.created_at.isoformat() if m.created_at else None,
-                }
-                for m in pagination.items
-            ]
-            return APIResponse.success(
-                data={
-                    "items": items,
-                    "total": pagination.total,
-                    "page": page,
-                    "per_page": per_page,
-                    "pages": pagination.pages,
-                }
-            )
-        except Exception as e:
-            logger.error("%s: %s", "获取前端指标失败", e)
-            return APIResponse.error(message="获取前端指标失败", status_code=500)
+        pagination = query.order_by(FrontendPerfMetric.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        items = [
+            {
+                "id": m.id,
+                "metric_type": m.metric_type,
+                "name": m.name,
+                "value": m.value,
+                "unit": m.unit,
+                "page": m.page,
+                "detail": m.detail,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in pagination.items
+        ]
+        return APIResponse.success(
+            data={
+                "items": items,
+                "total": pagination.total,
+                "page": page,
+                "per_page": per_page,
+                "pages": pagination.pages,
+            }
+        )
 
 
 @ns_system.route("/frontend-errors")
@@ -1046,48 +1025,45 @@ class FrontendErrorList(Resource):
     @ns_system.doc("get_frontend_errors", description="查看已落库的前端错误")
     @ns_system.response(200, "成功")
     @requires_permission("ops_center.view")
+    @safe_handle(default_status=500, message="获取前端错误失败")
     def get(self):
         """分页查看前端错误上报记录（运维中心）。"""
-        try:
-            error_type = request.args.get("error_type")
-            hours = get_int_arg("hours", default=24)
-            page, per_page = get_pagination(default=50)
+        error_type = request.args.get("error_type")
+        hours = get_int_arg("hours", default=24)
+        page, per_page = get_pagination(default=50)
 
-            query = FrontendErrorLog.query
-            if error_type:
-                query = query.filter(FrontendErrorLog.error_type == error_type)
-            if hours > 0:
-                since = datetime.now() - timedelta(hours=hours)
-                query = query.filter(FrontendErrorLog.created_at >= since)
+        query = FrontendErrorLog.query
+        if error_type:
+            query = query.filter(FrontendErrorLog.error_type == error_type)
+        if hours > 0:
+            since = datetime.now() - timedelta(hours=hours)
+            query = query.filter(FrontendErrorLog.created_at >= since)
 
-            pagination = query.order_by(FrontendErrorLog.created_at.desc()).paginate(
-                page=page, per_page=per_page, error_out=False
-            )
-            items = [
-                {
-                    "id": e.id,
-                    "error_type": e.error_type,
-                    "message": e.message,
-                    "page": e.page,
-                    "url": e.url,
-                    "method": e.method,
-                    "status": e.status,
-                    "created_at": e.created_at.isoformat() if e.created_at else None,
-                }
-                for e in pagination.items
-            ]
-            return APIResponse.success(
-                data={
-                    "items": items,
-                    "total": pagination.total,
-                    "page": page,
-                    "per_page": per_page,
-                    "pages": pagination.pages,
-                }
-            )
-        except Exception as e:
-            logger.error("%s: %s", "获取前端错误失败", e)
-            return APIResponse.error(message="获取前端错误失败", status_code=500)
+        pagination = query.order_by(FrontendErrorLog.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        items = [
+            {
+                "id": e.id,
+                "error_type": e.error_type,
+                "message": e.message,
+                "page": e.page,
+                "url": e.url,
+                "method": e.method,
+                "status": e.status,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in pagination.items
+        ]
+        return APIResponse.success(
+            data={
+                "items": items,
+                "total": pagination.total,
+                "page": page,
+                "per_page": per_page,
+                "pages": pagination.pages,
+            }
+        )
 
 
 @ns_system.route("/metrics")
@@ -1096,67 +1072,64 @@ class SystemMetricsList(Resource):
     @ns_system.doc("get_system_metrics", description="查看系统指标历史采样")
     @ns_system.response(200, "成功")
     @requires_permission("ops_center.view")
+    @safe_handle(default_status=500, message="获取系统指标失败")
     def get(self):
         """分页查看系统指标历史采样（CPU/内存/磁盘/网络），并提供各指标最新值概览。"""
-        try:
-            metric_name = request.args.get("metric_name")
-            category = request.args.get("category")
-            hours = get_int_arg("hours", default=24)
-            page, per_page = get_pagination(default=200)
+        metric_name = request.args.get("metric_name")
+        category = request.args.get("category")
+        hours = get_int_arg("hours", default=24)
+        page, per_page = get_pagination(default=200)
 
-            query = SystemMetric.query
-            if metric_name:
-                query = query.filter(SystemMetric.metric_name == metric_name)
-            if category:
-                query = query.filter(SystemMetric.category == category)
-            if hours > 0:
-                since = datetime.now() - timedelta(hours=hours)
-                query = query.filter(SystemMetric.created_at >= since)
+        query = SystemMetric.query
+        if metric_name:
+            query = query.filter(SystemMetric.metric_name == metric_name)
+        if category:
+            query = query.filter(SystemMetric.category == category)
+        if hours > 0:
+            since = datetime.now() - timedelta(hours=hours)
+            query = query.filter(SystemMetric.created_at >= since)
 
-            # 各指标最新值（用于趋势卡片）
-            latest = {}
-            names = (
-                [metric_name]
-                if metric_name
-                else ["cpu_percent", "memory_percent", "disk_percent", "net_sent", "net_recv"]
+        # 各指标最新值（用于趋势卡片）
+        latest = {}
+        names = (
+            [metric_name]
+            if metric_name
+            else ["cpu_percent", "memory_percent", "disk_percent", "net_sent", "net_recv"]
+        )
+        for nm in names:
+            row = (
+                SystemMetric.query.filter(SystemMetric.metric_name == nm)
+                .order_by(SystemMetric.created_at.desc())
+                .first()
             )
-            for nm in names:
-                row = (
-                    SystemMetric.query.filter(SystemMetric.metric_name == nm)
-                    .order_by(SystemMetric.created_at.desc())
-                    .first()
-                )
-                if row:
-                    latest[nm] = {
-                        "value": row.metric_value,
-                        "unit": row.unit,
-                        "updated_at": row.created_at.isoformat() if row.created_at else None,
-                    }
-
-            pagination = query.order_by(SystemMetric.created_at.desc()).paginate(
-                page=page, per_page=per_page, error_out=False
-            )
-            items = [
-                {
-                    "id": s.id,
-                    "metric_name": s.metric_name,
-                    "metric_value": s.metric_value,
-                    "unit": s.unit,
-                    "category": s.category,
-                    "created_at": s.created_at.isoformat() if s.created_at else None,
+            if row:
+                latest[nm] = {
+                    "value": row.metric_value,
+                    "unit": row.unit,
+                    "updated_at": row.created_at.isoformat() if row.created_at else None,
                 }
-                for s in pagination.items
-            ]
-            return APIResponse.success(
-                data={
-                    "items": items,
-                    "latest": latest,
-                    "total": pagination.total,
-                    "page": page,
-                    "per_page": per_page,
-                    "pages": pagination.pages,
-                }
-            )
-        except Exception as e:
-            logger.error("%s: %s", "获取系统指标失败", e)
-            return APIResponse.error(message="获取系统指标失败", status_code=500)
+
+        pagination = query.order_by(SystemMetric.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        items = [
+            {
+                "id": s.id,
+                "metric_name": s.metric_name,
+                "metric_value": s.metric_value,
+                "unit": s.unit,
+                "category": s.category,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            }
+            for s in pagination.items
+        ]
+        return APIResponse.success(
+            data={
+                "items": items,
+                "latest": latest,
+                "total": pagination.total,
+                "page": page,
+                "per_page": per_page,
+                "pages": pagination.pages,
+            }
+        )
