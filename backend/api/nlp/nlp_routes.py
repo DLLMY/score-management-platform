@@ -1,7 +1,6 @@
 from flask import request, g, current_app
 import time
 import json
-import traceback
 import logging
 import threading
 import itertools
@@ -1330,102 +1329,95 @@ class NLPFeedbackRecord(Resource):
 
     @ns_nlp.doc("nlp_feedback_record", description="记录预测反馈和纠正")
     @requires_permission("score.entry")
-    @safe_handle()
+    @safe_handle(default_status=400, message="记录失败")
     def post(self):
         """
         记录预测结果反馈和用户纠正，用于持续优化算法（自学习）
         """
-        try:
-            data = request.get_json()
-            input_text = data.get("text", "")
-            predicted_intent = data.get("predicted_intent", "")
-            true_intent = data.get("true_intent")
-            confidence = data.get("confidence", 0.0)
-            processing_time = data.get("processing_time", 0.0)
+        data = request.get_json()
+        input_text = data.get("text", "")
+        predicted_intent = data.get("predicted_intent", "")
+        true_intent = data.get("true_intent")
+        confidence = data.get("confidence", 0.0)
+        processing_time = data.get("processing_time", 0.0)
 
-            corrected_name = data.get("corrected_name")
-            corrected_intent = data.get("corrected_intent")
-            corrected_score = data.get("corrected_score")
-            original_name = data.get("original_name")
-            original_score = data.get("original_score")
+        corrected_name = data.get("corrected_name")
+        corrected_intent = data.get("corrected_intent")
+        corrected_score = data.get("corrected_score")
+        original_name = data.get("original_name")
+        original_score = data.get("original_score")
 
-            if not input_text:
-                return APIResponse.error(message="输入文本不能为空")
+        if not input_text:
+            return APIResponse.error(message="输入文本不能为空")
 
-            nlp_analyzer.record_intent_prediction(predicted_intent, true_intent, confidence)
+        nlp_analyzer.record_intent_prediction(predicted_intent, true_intent, confidence)
 
-            nlp_analyzer.record_performance(processing_time, cache_hit=data.get("cache_hit", False))
+        nlp_analyzer.record_performance(processing_time, cache_hit=data.get("cache_hit", False))
 
-            if true_intent and predicted_intent != true_intent:
-                nlp_analyzer.record_error(
-                    "intent_mismatch", input_text, expected=true_intent, predicted=predicted_intent
-                )
+        if true_intent and predicted_intent != true_intent:
+            nlp_analyzer.record_error(
+                "intent_mismatch", input_text, expected=true_intent, predicted=predicted_intent
+            )
 
-            # #990: 请求结束前将线程局部缓冲原子提交到全局存储
-            nlp_analyzer.flush_request_metrics()
+        # #990: 请求结束前将线程局部缓冲原子提交到全局存储
+        nlp_analyzer.flush_request_metrics()
 
-            corrections = []
-            if corrected_name and corrected_name != original_name:
-                corrections.append(
-                    {
-                        "field_type": "name",
-                        "original_value": original_name,
-                        "corrected_value": corrected_name,
-                    }
-                )
+        corrections = []
+        if corrected_name and corrected_name != original_name:
+            corrections.append(
+                {
+                    "field_type": "name",
+                    "original_value": original_name,
+                    "corrected_value": corrected_name,
+                }
+            )
 
-            if corrected_intent and corrected_intent != predicted_intent:
-                corrections.append(
-                    {
-                        "field_type": "intent",
-                        "original_value": predicted_intent,
-                        "corrected_value": corrected_intent,
-                    }
-                )
+        if corrected_intent and corrected_intent != predicted_intent:
+            corrections.append(
+                {
+                    "field_type": "intent",
+                    "original_value": predicted_intent,
+                    "corrected_value": corrected_intent,
+                }
+            )
 
-            if corrected_score is not None and corrected_score != original_score:
-                corrections.append(
-                    {
-                        "field_type": "score",
-                        "original_value": str(original_score) if original_score else None,
-                        "corrected_value": str(corrected_score),
-                    }
-                )
+        if corrected_score is not None and corrected_score != original_score:
+            corrections.append(
+                {
+                    "field_type": "score",
+                    "original_value": str(original_score) if original_score else None,
+                    "corrected_value": str(corrected_score),
+                }
+            )
 
-            if corrections:
+        if corrections:
+            user_id = None
+            try:
+                if hasattr(g, "current_user") and g.current_user:
+                    user_id = g.current_user.id
+            except Exception:
                 user_id = None
-                try:
-                    if hasattr(g, "current_user") and g.current_user:
-                        user_id = g.current_user.id
-                except Exception:
-                    user_id = None
 
-                saved = record_corrections(corrections, user_id, input_text, confidence)
+            saved = record_corrections(corrections, user_id, input_text, confidence)
 
-                cache_key = input_text.lower().strip()
-                # S6-B-P0-4 修复: nlp_analyzer(NLPAlgorithmAnalyzer) 无 _parse_cache → 纠正对已缓存文本永不生效。
-                # 改为清真实解析器（EnhancedNLPParserService）的解析缓存。
-                try:
+            cache_key = input_text.lower().strip()
+            # S6-B-P0-4 修复: nlp_analyzer(NLPAlgorithmAnalyzer) 无 _parse_cache → 纠正对已缓存文本永不生效。
+            # 改为清真实解析器（EnhancedNLPParserService）的解析缓存。
+            try:
 
-                    parser = _get_parser()
-                    if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
-                        del parser._parse_cache[cache_key]
-                except Exception:
-                    logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
-                    pass
+                parser = _get_parser()
+                if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
+                    del parser._parse_cache[cache_key]
+            except Exception:
+                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                pass
 
-                return APIResponse.success(
-                    message="反馈已记录，纠正已保存（自学习生效）",
-                    data={"corrections_saved": saved},
-                )
+            return APIResponse.success(
+                message="反馈已记录，纠正已保存（自学习生效）",
+                data={"corrections_saved": saved},
+            )
 
-            return APIResponse.success(message="反馈已记录")
-        except Exception as e:
-            from utils.logger import logger
-
-            logger.error(f"Feedback record error: {str(e)}\n{traceback.format_exc()}")
-            logger.error("%s: %s", "记录失败", e)
-            return APIResponse.error(message="记录失败")
+        return APIResponse.success(message="反馈已记录")
 
 
 @ns_nlp.route("/corrections")
