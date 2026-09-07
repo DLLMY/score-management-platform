@@ -22,7 +22,7 @@ from services.score_record_service import (
     commit_batch_score_entry,
     query_score_records,
     serialize_score_record,
-    get_score_statistics,
+    get_record_statistics_view,
     get_score_entry_data,
 )
 from services.score_recalc import enqueue_or_recalc_user_score
@@ -345,44 +345,31 @@ class RecordStatistics(Resource):
 
         获取积分记录的统计数据，包括总记录数、累计加分、累计扣分等。
         非管理员用户只能查看关联班级的统计数据。
+        权限隔离与统计聚合已下沉到 score_record_service.get_record_statistics_view。
         """
         user_id = request.args.get("user_id", type=int)
         class_name = request.args.get("class_name")
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
 
-        # 数据隔离：检查班级权限
-        admin = get_current_admin()
-        allowed_classes = None
-        if admin:
-            allowed_classes = get_allowed_classes(admin.id)
-            if allowed_classes is not None:
-                if class_name and class_name not in allowed_classes:
-                    return APIResponse.error(message="无权查看该班级的统计", status_code=403)
-                if not class_name and not user_id:
-                    class_name = allowed_classes[0] if allowed_classes else None
-
         cache_key = f"score_statistics:{user_id}:{class_name}:{start_date}:{end_date}"
         cached_result = get_cache_service().get(cache_key)
         if cached_result:
             return APIResponse.success(data=cached_result)
 
-        start_dt, end_dt, date_err = parse_date_range(start_date, end_date)
-        if date_err:
-            return APIResponse.bad_request(message=date_err)
-
-        result = get_score_statistics(
-            user_id=user_id,
-            class_name=class_name,
-            start_dt=start_dt,
-            end_dt=end_dt,
-            allowed_classes=allowed_classes,
-        )
+        admin = get_current_admin()
+        view = get_record_statistics_view(admin, user_id, class_name, start_date, end_date)
+        if "error" in view:
+            return APIResponse.error(
+                message=view["error"],
+                status_code=view["status"],
+                error_code=view.get("error_code"),
+            )
 
         # 使用标签缓存，便于积分变动时清除
-        get_cache_service().set(cache_key, result, ttl=300, tags=["statistics"])
+        get_cache_service().set(cache_key, view["data"], ttl=300, tags=["statistics"])
 
-        return APIResponse.success(data=result)
+        return APIResponse.success(data=view["data"])
 
 
 @ns_records.route("/score-entry")

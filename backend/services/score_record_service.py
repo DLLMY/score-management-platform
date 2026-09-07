@@ -23,6 +23,8 @@ from datetime import datetime
 from models import db, ScoreRecord, User, ScoreRule, get_by_id
 from utils.score_utils import atomic_score_update
 from utils.logger import log_operation
+from utils.permission import get_allowed_classes
+from utils.params import parse_date_range
 
 
 def create_record(data):
@@ -368,3 +370,33 @@ def get_score_entry_data(allowed_classes=None):
     ]
 
     return {"rules": rule_list, "users": user_list}
+
+
+
+def get_record_statistics_view(admin, user_id, class_name, start_date, end_date):
+    """统计视图聚合：权限隔离决策 + 日期解析 + 调 get_score_statistics。
+
+    纯只读编排，不碰 db.session。返回 dict：
+    - 成功：{"data": <get_score_statistics 结果>}
+    - 失败：{"error": <message>, "status": <http_code>}
+    路由据此映射为 APIResponse，对外契约不变。
+    """
+    allowed_classes = None
+    if admin:
+        allowed_classes = get_allowed_classes(admin.id)
+        if allowed_classes is not None:
+            if class_name and class_name not in allowed_classes:
+                return {"error": "无权查看该班级的统计", "status": 403}
+            if not class_name and not user_id:
+                class_name = allowed_classes[0] if allowed_classes else None
+    start_dt, end_dt, date_err = parse_date_range(start_date, end_date)
+    if date_err:
+        return {"error": date_err, "status": 400, "error_code": "BAD_REQUEST"}
+    result = get_score_statistics(
+        user_id=user_id,
+        class_name=class_name,
+        start_dt=start_dt,
+        end_dt=end_dt,
+        allowed_classes=allowed_classes,
+    )
+    return {"data": result}
