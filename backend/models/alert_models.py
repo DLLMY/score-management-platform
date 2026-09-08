@@ -51,9 +51,7 @@ class Alert(db.Model):
             "risk_score": self.risk_score,
             "recommended_action": self.recommended_action,
             "status": self.status,
-            "acknowledged_at": (
-                self.acknowledged_at.isoformat() if self.acknowledged_at else None
-            ),
+            "acknowledged_at": (self.acknowledged_at.isoformat() if self.acknowledged_at else None),
         }
         if fields is None:
             return data

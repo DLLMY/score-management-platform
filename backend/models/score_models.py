@@ -114,9 +114,7 @@ class ScoreRule(db.Model):
             "name": self.name,
             "description": self.description,
             "category_id": self.category_id,
-            "category_name": (
-                category.name if (category and "category_name" in fields) else None
-            ),
+            "category_name": (category.name if (category and "category_name" in fields) else None),
             "score": self.score,
             "is_active": self.is_active,
             "daily_limit": self.daily_limit,

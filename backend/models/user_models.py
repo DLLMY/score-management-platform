@@ -145,6 +145,7 @@ class Admin(db.Model):
         }
         return {k: data[k] for k in fields if k in data}
 
+
 class SubAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     parent_admin_id = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=False, index=True)

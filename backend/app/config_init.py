@@ -34,7 +34,9 @@ def validate_secret_keys(app):
 
     # 生产环境必须显式通过环境变量提供密钥，禁止自动生成的临时密钥（fail-closed）
     if is_production and not flask_secret_env:
-        validation_errors.append("FLASK_SECRET_KEY 未通过环境变量提供（生产环境禁止自动生成临时密钥）")
+        validation_errors.append(
+            "FLASK_SECRET_KEY 未通过环境变量提供（生产环境禁止自动生成临时密钥）"
+        )
     if not secret_key or secret_key == DEFAULT_SECRET or len(secret_key) < 32:
         validation_errors.append("FLASK_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
     if not jwt_secret or jwt_secret == DEFAULT_JWT or len(jwt_secret) < 32:
@@ -43,7 +45,9 @@ def validate_secret_keys(app):
     if validation_errors:
         logger.error("🔒 密钥安全检查结果: %s", validation_errors)
         if is_production:
-            logger.critical("生产环境下密钥校验失败，拒绝启动！请设置 FLASK_SECRET_KEY 与 JWT_SECRET_KEY（均 >=32 位）后再部署。")
+            logger.critical(
+                "生产环境下密钥校验失败，拒绝启动！请设置 FLASK_SECRET_KEY 与 JWT_SECRET_KEY（均 >=32 位）后再部署。"
+            )
             sys.exit(1)
         else:
             logger.warning("非生产环境仅警告（开发 / 测试可继续使用当前密钥）")
