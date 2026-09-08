@@ -135,3 +135,33 @@ class TestExamImportRoutes:
             resp = self._post_execute(client, auth_headers, exam_id, buf, validate_score="true")
             d = resp.get_json()["data"]
             assert d["failed_count"] == 1
+
+    def test_get_import_history(self, client, app, auth_headers, exam_ctx):
+        # F17：ImportHistory 读路径下沉到 exam_import_query_service 后行为零漂移
+        exam_id = exam_ctx["exam_id"]
+        with app.app_context():
+            sc = Score(
+                exam_id=exam_id,
+                student_id=exam_ctx["stu_id"],
+                subject_id=exam_ctx["subj_id"],
+                score=88.0,
+                full_score=100.0,
+                status="confirmed",
+                entered_by=1,
+            )
+            db.session.add(sc)
+            db.session.commit()
+        resp = client.get(
+            "/api/exam-import/history?exam_id=%d" % exam_id,
+            headers={"Authorization": auth_headers["Authorization"]},
+        )
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert body["success"] is True
+        d = body["data"]
+        assert {"data", "total", "page", "per_page", "pages"} <= set(d.keys())
+        assert d["total"] >= 1
+        row = d["data"][0]
+        assert row["exam_name"] is not None
+        assert row["student_name"] is not None
+        assert "subject" in row and "entered_at" in row

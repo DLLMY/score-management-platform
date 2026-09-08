@@ -11,6 +11,7 @@ from io import BytesIO
 from services.excel_service import excel_import_service
 from services.academics_service import academics_service
 from services.score_import_helper import ScoreImportHelper, _resolve_subject_id
+from services.exam_import_query_service import get_import_history_view
 
 
 logger = logging.getLogger(__name__)
@@ -499,44 +500,5 @@ class ImportHistory(Resource):
         """
         exam_id = request.args.get("exam_id", type=int)
         page, per_page = get_pagination(default=20)
-
-        query = Score.query.filter(Score.entered_by.isnot(None))
-
-        if exam_id:
-            query = query.filter_by(exam_id=exam_id)
-
-        pagination = query.order_by(Score.entered_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-
-        results = []
-        for score in pagination.items:
-            student = get_by_id(User, score.student_id)
-            exam = get_by_id(Exam, score.exam_id)
-            entered_by_admin = get_by_id(Admin, score.entered_by) if score.entered_by else None
-
-            results.append(
-                {
-                    "id": score.id,
-                    "exam_name": exam.name if exam else None,
-                    "student_name": student.name if student else None,
-                    "student_card_id": student.card_id if student else None,
-                    "subject": score.subject_rel.name if score.subject_rel else "",
-                    "score": score.score,
-                    "full_score": score.full_score,
-                    "status": score.status,
-                    "rank": None,  # R7: Score.rank 列废弃，无排名上下文
-                    "entered_by": entered_by_admin.username if entered_by_admin else None,
-                    "entered_at": score.entered_at.isoformat() if score.entered_at else None,
-                }
-            )
-
-        return APIResponse.success(
-            data={
-                "data": results,
-                "total": pagination.total,
-                "page": page,
-                "per_page": per_page,
-                "pages": pagination.pages,
-            }
-        )
+        result = get_import_history_view(exam_id=exam_id, page=page, per_page=per_page)
+        return APIResponse.success(data=result)
