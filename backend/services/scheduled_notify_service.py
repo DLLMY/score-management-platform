@@ -196,3 +196,48 @@ def commit_scheduled_session():
     逐字节复刻原路由末尾 db.session.commit()。
     """
     db.session.commit()
+
+
+def _serialize_scheduled(s):
+    """定时通知序列化。与路由原内联 21 字段字典逐字一致。"""
+    return {
+        "id": s.id,
+        "text": s.text,
+        "volume": s.volume,
+        "speak": s.speak,
+        "popup": s.popup,
+        "timeout_sec": s.timeout_sec,
+        "urgent": s.urgent,
+        "send_mode": s.send_mode,
+        "device_id": s.device_id,
+        "scheduled_at": s.scheduled_at.isoformat() if s.scheduled_at else None,
+        "repeat_type": s.repeat_type,
+        "repeat_interval": s.repeat_interval,
+        "repeat_day_of_week": (
+            json.loads(s.repeat_day_of_week) if s.repeat_day_of_week else []
+        ),
+        "repeat_end_at": s.repeat_end_at.isoformat() if s.repeat_end_at else None,
+        "status": s.status,
+        "last_sent_at": s.last_sent_at.isoformat() if s.last_sent_at else None,
+        "next_send_at": s.next_send_at.isoformat() if s.next_send_at else None,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+    }
+
+
+def get_scheduled_list_view(page, per_page):
+    """定时通知列表视图（分页）。返回裸 dict，由路由层 APIResponse.success 包裹。"""
+    pagination = ScheduledNotify.query.order_by(ScheduledNotify.scheduled_at).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    return {
+        "items": [_serialize_scheduled(s) for s in pagination.items],
+        "total": pagination.total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pagination.pages,
+    }
+
+
+def get_scheduled_detail_view(notify_id):
+    """单条定时通知详情（含 404）。返回模型，由路由层 _serialize_scheduled 序列化。"""
+    return ScheduledNotify.query.get_or_404(notify_id)

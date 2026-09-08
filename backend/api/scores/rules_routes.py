@@ -2,7 +2,7 @@ import logging
 
 from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from models import db, ScoreRule, ScoreCategory, get_by_id
+from models import ScoreRule, ScoreCategory, get_by_id
 from utils.permission import requires_permission
 from utils.logger import log_info, log_operation
 from utils.response import APIResponse
@@ -24,24 +24,17 @@ from services.score_rule_service import (
     import_rules,
     apply_rule_template,
 )
+from services.score_rule_query_service import (
+    get_rule_list_view,
+    get_rule_statistics_view,
+)
 from datetime import datetime
 import io
 import csv
 
-# B3 收敛 2026-09-05：ScoreRule.to_dict(fields) 子集常量（逐字对齐各端点既有响应契约）
-# 详情端点直接 rule.to_dict()（模型默认输出 = 详情 11 字段契约）
-RULE_LIST_FIELDS = [
-    "id",
-    "name",
-    "description",
-    "category_id",
-    "category_name",
-    "score",
-    "is_active",
-    "daily_limit",
-    "min_interval",
-    "created_at",
-]
+# B3 收敛 2026-09-05：ScoreRule.to_dict(fields) 子集常量。
+# 列表/统计字段子集已下沉至 services/score_rule_query_service.py；
+# 此处仅保留 create/update 响应用的子集。详情端点直接 rule.to_dict()。
 RULE_CREATE_FIELDS = [
     "id",
     "name",
@@ -51,15 +44,6 @@ RULE_CREATE_FIELDS = [
     "is_active",
     "daily_limit",
     "min_interval",
-]
-RULE_STAT_FIELDS = [
-    "id",
-    "name",
-    "description",
-    "score",
-    "is_active",
-    "category_id",
-    "category_name",
 ]
 
 ns_rules = Namespace("rules", description="积分规则相关操作")
@@ -115,21 +99,7 @@ class RuleList(Resource):
         cached_result = get_cache_service().get(cache_key)
         if cached_result is not None:
             return APIResponse.success(data=cached_result)
-        query = ScoreRule.query
-        if category_id:
-            query = query.filter(ScoreRule.category_id == category_id)
-        if is_active is not None:
-            query = query.filter(ScoreRule.is_active == (is_active.lower() == "true"))
-        pagination = query.order_by(ScoreRule.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        result = {  # noqa: F841
-            "rules": [r.to_dict(RULE_LIST_FIELDS) for r in pagination.items],
-            "total": pagination.total,
-            "page": page,
-            "per_page": per_page,
-            "pages": pagination.pages,
-        }
+        result = get_rule_list_view(page, per_page, category_id, is_active)
         get_cache_service().set(cache_key, result, ttl=300, tags=["rules"])
         return APIResponse.success(data=result)
 
@@ -630,62 +600,4 @@ class RuleStatistics(Resource):
         获取规则使用统计
         返回各规则的被使用次数、最近使用时间等信息，帮助了解规则的使用情况。
         """
-        from models import ScoreRecord
-        from sqlalchemy import func
-
-        # 按规则分组统计使用次数
-        stats = (
-            db.session.query(
-                ScoreRecord.rule_id,
-                func.count(ScoreRecord.id).label("usage_count"),
-                func.max(ScoreRecord.created_at).label("last_used_at"),
-                func.sum(ScoreRecord.score_change).label("total_score_change"),
-            )
-            .filter(ScoreRecord.rule_id.isnot(None))
-            .group_by(ScoreRecord.rule_id)
-            .all()
-        )
-        # 构建规则ID到统计信息的映射
-        rule_stats = {}
-        for stat in stats:
-            rule_stats[stat.rule_id] = {
-                "usage_count": stat.usage_count,
-                "last_used_at": stat.last_used_at.isoformat() if stat.last_used_at else None,
-                "total_score_change": (
-                    float(stat.total_score_change) if stat.total_score_change else 0
-                ),
-            }
-        # 获取规则详情并关联统计
-        rules = ScoreRule.query.all()
-        result = []  # noqa: F841
-        for rule in rules:
-            stat = rule_stats.get(
-                rule.id, {"usage_count": 0, "last_used_at": None, "total_score_change": 0}
-            )
-            result.append(
-                {
-                    **rule.to_dict(RULE_STAT_FIELDS),
-                    "usage_count": stat["usage_count"],
-                    "last_used_at": stat["last_used_at"],
-                    "total_score_change": stat["total_score_change"],
-                }
-            )
-        # 按使用次数排序
-        result.sort(key=lambda x: x["usage_count"], reverse=True)
-        # 计算总计
-        total_usage = sum(r["usage_count"] for r in result)
-        total_score = sum(r["total_score_change"] for r in result)
-        return APIResponse.success(
-            data={
-                "statistics": result,
-                "summary": {
-                    "total_rules": len(result),
-                    "active_rules": sum(1 for r in result if r["is_active"]),
-                    "total_usage_count": total_usage,
-                    "total_score_change": total_score,
-                    "most_used_rule": (
-                        result[0]["name"] if result and result[0]["usage_count"] > 0 else None
-                    ),
-                },
-            }
-        )
+        return APIResponse.success(data=get_rule_statistics_view())

@@ -14,6 +14,9 @@ from services.scheduled_notify_service import (
     record_scheduled_history,
     rollback_scheduled_session,
     commit_scheduled_session,
+    get_scheduled_list_view,
+    get_scheduled_detail_view,
+    _serialize_scheduled,
 )
 from utils.response import APIResponse
 from utils.pagination import get_pagination
@@ -65,44 +68,7 @@ class ScheduledList(Resource):
     def get(self):
         """获取定时通知列表（分页）"""
         page, per_page = get_pagination(default=50)
-        pagination = ScheduledNotify.query.order_by(
-            ScheduledNotify.scheduled_at
-        ).paginate(page=page, per_page=per_page, error_out=False)
-        items = [
-            {
-                "id": s.id,
-                "text": s.text,
-                "volume": s.volume,
-                "speak": s.speak,
-                "popup": s.popup,
-                "timeout_sec": s.timeout_sec,
-                "urgent": s.urgent,
-                "send_mode": s.send_mode,
-                "device_id": s.device_id,
-                "scheduled_at": s.scheduled_at.isoformat() if s.scheduled_at else None,
-                "repeat_type": s.repeat_type,
-                "repeat_interval": s.repeat_interval,
-                "repeat_day_of_week": (
-                    json.loads(s.repeat_day_of_week) if s.repeat_day_of_week else []
-                ),
-                "repeat_end_at": s.repeat_end_at.isoformat() if s.repeat_end_at else None,
-                "status": s.status,
-                "last_sent_at": s.last_sent_at.isoformat() if s.last_sent_at else None,
-                "next_send_at": s.next_send_at.isoformat() if s.next_send_at else None,
-                "created_at": s.created_at.isoformat() if s.created_at else None,
-            }
-            for s in pagination.items
-        ]
-        return APIResponse.success(
-            {
-                "items": items,
-                "total": pagination.total,
-                "page": page,
-                "per_page": per_page,
-                "pages": pagination.pages,
-            }
-        )
-
+        return APIResponse.success(get_scheduled_list_view(page, per_page))
     @ns_scheduled_notify.expect(scheduled_model)
     @requires_permission("notification.send")
     def post(self):
@@ -127,30 +93,7 @@ class ScheduledDetail(Resource):
     @requires_permission("notification.send")
     def get(self, id):
         """获取单个定时通知详情"""
-        notify = ScheduledNotify.query.get_or_404(id)
-        return {
-            "id": notify.id,
-            "text": notify.text,
-            "volume": notify.volume,
-            "speak": notify.speak,
-            "popup": notify.popup,
-            "timeout_sec": notify.timeout_sec,
-            "urgent": notify.urgent,
-            "send_mode": notify.send_mode,
-            "device_id": notify.device_id,
-            "scheduled_at": notify.scheduled_at.isoformat() if notify.scheduled_at else None,
-            "repeat_type": notify.repeat_type,
-            "repeat_interval": notify.repeat_interval,
-            "repeat_day_of_week": (
-                json.loads(notify.repeat_day_of_week) if notify.repeat_day_of_week else []
-            ),
-            "repeat_end_at": notify.repeat_end_at.isoformat() if notify.repeat_end_at else None,
-            "status": notify.status,
-            "last_sent_at": notify.last_sent_at.isoformat() if notify.last_sent_at else None,
-            "next_send_at": notify.next_send_at.isoformat() if notify.next_send_at else None,
-            "created_at": notify.created_at.isoformat() if notify.created_at else None,
-        }
-
+        return _serialize_scheduled(get_scheduled_detail_view(id))
     @ns_scheduled_notify.expect(scheduled_model)
     @requires_permission("notification.send")
     def put(self, id):

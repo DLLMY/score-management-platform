@@ -5,8 +5,6 @@ from flask_restx import Namespace, Resource, fields
 from models import Approval, User, SystemConfig, get_by_id
 from utils.permission import (
     requires_permission,
-    get_current_admin,
-    get_allowed_classes,
     can_access_student,
 )
 from utils.response import APIResponse
@@ -14,7 +12,6 @@ from utils.pagination import get_pagination
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.class_time_checker import ClassTimeChecker
 from datetime import datetime
-from sqlalchemy.orm import joinedload
 
 from services.approval_service import (
     create_approval,
@@ -22,6 +19,12 @@ from services.approval_service import (
     delete_approval,
     approve_approval,
     reject_approval,
+)
+from services.approval_query_service import (
+    get_approval_list_view,
+    get_pending_approvals_view,
+    get_approval_detail_view,
+    _serialize_approval,
 )
 from utils.logger import log_warning
 
@@ -238,19 +241,6 @@ def _execute_reject(approval, data):
     }
 
 
-def _apply_approval_data_isolation(query):
-    """对审批查询应用数据隔离：非管理员只能查看关联班级的审批"""
-    admin = get_current_admin()
-    if not admin:
-        return query
-    allowed_classes = get_allowed_classes(admin.id)
-    if allowed_classes is None:
-        return query
-    if not allowed_classes:
-        return query.filter(False)
-    return query.join(User).filter(User.class_name.in_(allowed_classes))
-
-
 @ns_approvals.route("/")
 class ApprovalList(Resource):
     @ns_approvals.doc(
@@ -267,47 +257,7 @@ class ApprovalList(Resource):
         """获取审批列表。非管理员用户只能查看关联班级的审批。"""
         page, per_page = get_pagination(default=10)
         status = request.args.get("status")
-
-        query = Approval.query.options(joinedload(Approval.user))
-        if status:
-            query = query.filter_by(status=status)
-
-        # 数据隔离
-        query = _apply_approval_data_isolation(query)
-
-        pagination = query.order_by(Approval.created_at.desc()).paginate(
-            page=page, per_page=per_page
-        )
-        approvals = pagination.items
-
-        return APIResponse.success(
-            data={
-                "approvals": [
-                    {
-                        "id": a.id,
-                        "user_id": a.student_id,
-                        "student_id": a.student_id,
-                        "user_name": a.user.name if a.user else None,
-                        "type": a.type,
-                        "title": a.title,
-                        "description": a.description,
-                        "score_change": a.score_change,
-                        "status": a.status,
-                        "approver_id": a.approver_id,
-                        "comment": a.comment,
-                        "created_at": a.created_at.isoformat() if a.created_at else None,
-                        "approve_time": a.approve_time.isoformat() if a.approve_time else None,
-                    }
-                    for a in approvals
-                ],
-                "pagination": {
-                    "page": pagination.page,
-                    "per_page": pagination.per_page,
-                    "total": pagination.total,
-                    "pages": pagination.pages,
-                },
-            }
-        )
+        return APIResponse.success(data=get_approval_list_view(page, per_page, status))
 
     @ns_approvals.doc("create_approval")
     @ns_approvals.expect(approval_model)
@@ -345,28 +295,10 @@ class ApprovalResource(Resource):
     @requires_permission("score.view")
     def get(self, id):
         """获取单个审批详情。非管理员用户只能查看关联班级的审批。"""
-        approval = Approval.query.options(joinedload(Approval.user)).get_or_404(id)
+        approval = get_approval_detail_view(id)
         if not can_access_student(approval.student_id):
             return APIResponse.error(message="无权查看该审批", status_code=403)
-        return APIResponse.success(
-            data={
-                "id": approval.id,
-                "user_id": approval.student_id,
-                "student_id": approval.student_id,
-                "user_name": approval.user.name if approval.user else None,
-                "type": approval.type,
-                "title": approval.title,
-                "description": approval.description,
-                "score_change": approval.score_change,
-                "status": approval.status,
-                "approver_id": approval.approver_id,
-                "comment": approval.comment,
-                "created_at": approval.created_at.isoformat() if approval.created_at else None,
-                "approve_time": (
-                    approval.approve_time.isoformat() if approval.approve_time else None
-                ),
-            }
-        )
+        return APIResponse.success(data=_serialize_approval(approval, detail=True))
 
     @ns_approvals.doc("update_approval")
     @ns_approvals.expect(approval_model)
@@ -502,38 +434,4 @@ class PendingApprovals(Resource):
     def get(self):
         """获取待审批列表。非管理员用户只能查看关联班级的待审批。"""
         page, per_page = get_pagination(default=10)
-
-        query = Approval.query.filter_by(status="pending")
-        # 数据隔离
-        query = _apply_approval_data_isolation(query)
-
-        pagination = query.order_by(Approval.created_at.desc()).paginate(
-            page=page, per_page=per_page
-        )
-        approvals = pagination.items
-
-        return APIResponse.success(
-            data={
-                "approvals": [
-                    {
-                        "id": a.id,
-                        "user_id": a.student_id,
-                        "student_id": a.student_id,
-                        "user_name": a.user.name if a.user else None,
-                        "type": a.type,
-                        "title": a.title,
-                        "description": a.description,
-                        "score_change": a.score_change,
-                        "status": a.status,
-                        "created_at": a.created_at.isoformat() if a.created_at else None,
-                    }
-                    for a in approvals
-                ],
-                "pagination": {
-                    "page": pagination.page,
-                    "per_page": pagination.per_page,
-                    "total": pagination.total,
-                    "pages": pagination.pages,
-                },
-            }
-        )
+        return APIResponse.success(data=get_pending_approvals_view(page, per_page))

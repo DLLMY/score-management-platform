@@ -2,15 +2,19 @@ import logging
 
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
-from models import db, Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
+from models import Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.pagination import get_pagination
-from utils.query_optimizer import count_by_fk
 from datetime import datetime
 from services.excel_service import excel_export_service, excel_import_service
 from services.academics_service import academics_service
+from services.subject_service import (
+    get_subject_list_view,
+    get_subject_detail_view,
+    get_subject_classes_view,
+    get_subject_export_data_view,
+)
 import json
 import io
 
@@ -70,36 +74,10 @@ class SubjectList(Resource):
         """获取所有科目"""
         include_inactive = request.args.get("include_inactive", "false").lower() == "true"
         search = request.args.get("search", "").strip()
-
-        query = Subject.query
-        if not include_inactive:
-            query = query.filter_by(is_active=True)
-
-        if search:
-            search_pattern = f"%{search}%"
-            query = query.filter(
-                db.or_(
-                    Subject.name.like(search_pattern),
-                    Subject.code.like(search_pattern),
-                    Subject.grade.like(search_pattern),
-                )
-            )
-
-        page, per_page = get_pagination(default=20)
-        pagination = query.order_by(Subject.sort_order, Subject.name).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        subjects = pagination.items
-
-        result = []
-        # P3: in_ 聚合替代循环内 count（单查询 group by）
-        subject_ids = [s.id for s in subjects]
-        class_counts = count_by_fk(SubjectClass, SubjectClass.subject_id, subject_ids)
-        for s in subjects:
-            result.append({**s.to_dict(), "class_count": class_counts.get(s.id, 0)})
+        result = get_subject_list_view(include_inactive=include_inactive, search=search)
         return APIResponse.success(
-            data=result,
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            data=result["items"],
+            pagination=result["pagination"],
         )
 
     @ns_subjects.doc("create_subject", description="创建新科目")
@@ -160,10 +138,10 @@ class SubjectResource(Resource):
     @requires_permission("score.view")
     def get(self, id):
         """获取科目详情"""
-        subject = Subject.query.get_or_404(id)  # noqa: F841
-        class_count = SubjectClass.query.filter_by(subject_id=id).count()
-
-        return {**subject.to_dict(), "class_count": class_count}
+        subject = get_subject_detail_view(id)
+        if not subject:
+            return APIResponse.not_found(message="科目不存在")
+        return subject
 
     @ns_subjects.doc("update_subject", description="更新科目信息")
     @ns_subjects.expect(subject_model)
@@ -216,26 +194,10 @@ class SubjectClasses(Resource):
     @cached_api(ttl=30)
     def get(self, id):
         """获取科目关联的班级列表"""
-        subject = Subject.query.get_or_404(id)  # noqa: F841
-
-        links = SubjectClass.query.filter_by(subject_id=id).all()
-        result = []  # noqa: F841
-        for link in links:
-            teacher = get_by_id(Admin, link.teacher_id) if link.teacher_id else None
-            class_info = get_by_id(ClassInfo, link.class_info_id)
-            result.append(
-                {
-                    "id": link.id,
-                    "class_info_id": link.class_info_id,
-                    "class_name": class_info.name if class_info else "",
-                    "grade": class_info.grade if class_info else "",
-                    "teacher_id": link.teacher_id,
-                    "teacher_name": teacher.real_name if teacher else None,
-                    "created_at": link.created_at.isoformat() if link.created_at else None,
-                }
-            )
-
-        return APIResponse.success(data={"classes": result})
+        result = get_subject_classes_view(id)
+        if not result:
+            return APIResponse.not_found(message="科目不存在")
+        return APIResponse.success(data=result)
 
     @ns_subjects.doc("add_subject_class", description="添加科目与班级的关联")
     @ns_subjects.expect(subject_class_model)
@@ -344,82 +306,7 @@ class SubjectExport(Resource):
         export_format = request.args.get("format", "json").lower()
         search = request.args.get("search", "").strip()
 
-        query = Subject.query
-        if not include_inactive:
-            query = query.filter_by(is_active=True)
-
-        if search:
-            search_pattern = f"%{search}%"
-            query = query.filter(
-                db.or_(
-                    Subject.name.like(search_pattern),
-                    Subject.code.like(search_pattern),
-                    Subject.grade.like(search_pattern),
-                )
-            )
-
-        subjects = query.order_by(Subject.name).all()
-
-        if not subjects:
-            export_data = []
-        else:
-            # 批量获取所有科目关联（1次查询）
-            subject_ids = [s.id for s in subjects]
-            class_links = SubjectClass.query.filter(SubjectClass.subject_id.in_(subject_ids)).all()
-
-            # 批量获取所有班级信息（1次查询）
-            class_info_ids = list(
-                set(link.class_info_id for link in class_links if link.class_info_id)
-            )
-            class_info_map = {}
-            if class_info_ids:
-                class_infos = ClassInfo.query.filter(ClassInfo.id.in_(class_info_ids)).all()
-                class_info_map = {c.id: c for c in class_infos}
-
-            # 批量获取所有教师信息（1次查询）
-            teacher_ids = list(set(link.teacher_id for link in class_links if link.teacher_id))
-            teacher_map = {}
-            if teacher_ids:
-                teachers = Admin.query.filter(Admin.id.in_(teacher_ids)).all()
-                teacher_map = {t.id: t for t in teachers}
-
-            # 构建科目关联映射
-            subject_class_map = {}
-            for link in class_links:
-                if link.subject_id not in subject_class_map:
-                    subject_class_map[link.subject_id] = []
-                subject_class_map[link.subject_id].append(link)
-
-            # 构建导出数据（无额外查询）
-            export_data = []
-            for s in subjects:
-                classes = []
-                for link in subject_class_map.get(s.id, []):
-                    class_info = class_info_map.get(link.class_info_id)
-                    teacher = teacher_map.get(link.teacher_id)
-                    classes.append(
-                        {
-                            "class_info_id": link.class_info_id,
-                            "class_name": class_info.name if class_info else "",
-                            "grade": class_info.grade if class_info else "",
-                            "teacher_id": link.teacher_id,
-                            "teacher_name": teacher.real_name if teacher else None,
-                        }
-                    )
-
-                export_data.append(
-                    {
-                        "name": s.name,
-                        "code": s.code,
-                        "grade": s.grade,
-                        "description": s.description,
-                        "color": s.color,
-                        "is_active": "是" if s.is_active else "否",
-                        "classes": classes,
-                        "created_at": s.created_at.isoformat() if s.created_at else None,
-                        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
-                    }
-                )
+        export_data = get_subject_export_data_view(include_inactive, search)
 
         if export_format == "excel":
             headers = [

@@ -2,31 +2,29 @@ import logging
 
 from flask_restx import Namespace, Resource, fields
 from flask import request, g, send_file
-from models import Exam, Score, User, Subject, get_by_id
+from models import Exam, Score, User, get_by_id
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
-from utils.permission import requires_permission, get_current_admin, get_allowed_classes
+from utils.permission import requires_permission
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.pagination import get_pagination
 from services.academics_service import academics_service
 from services.export_service import export_service
+from services.exam_service import (
+    get_exam_list_view,
+    get_exam_detail_view,
+    get_score_list_view,
+    get_score_detail_view,
+    get_exam_score_analysis_view,
+    get_exam_rankings_view,
+    get_student_score_analysis_view,
+    get_class_score_analysis_view,
+    get_score_export_data_view,
+    get_exam_export_data_view,
+    _resolve_subject_id,
+)
 
 
 logger = logging.getLogger(__name__)
-
-def _resolve_subject_id(subject_name, subject_id):
-    """将科目名称或科目ID解析为 subject.id；均缺失返回 None。"""
-    if subject_id:
-        return subject_id
-    if subject_name:
-        sub = Subject.query.filter_by(name=subject_name).first()
-        if sub:
-            return sub.id
-        sub = Subject.query.filter_by(code=subject_name).first()
-        if sub:
-            return sub.id
-    return None
 
 
 ns_exam = Namespace("exams", description="考试管理相关操作")
@@ -77,20 +75,8 @@ class ExamList(Resource):
     def get(self):
         class_id = request.args.get("class_id", type=int)
         status = request.args.get("status")
-        query = Exam.query
-        if class_id:
-            query = query.filter_by(class_id=class_id)
-        if status:
-            query = query.filter_by(status=status)
-        page, per_page = get_pagination(default=20)
-        pagination = query.order_by(Exam.start_time.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        exams = pagination.items
-        return APIResponse.success(
-            data=[e.to_dict() for e in exams],
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
-        )
+        result = get_exam_list_view(class_id=class_id, status=status)
+        return APIResponse.success(data=result["items"], pagination=result["pagination"])
 
     @ns_exam.doc("create_exam", description="创建考试")
     @ns_exam.expect(exam_model)
@@ -113,7 +99,7 @@ class ExamResource(Resource):
     @ns_exam.doc("get_exam", description="获取考试详情")
     @requires_permission("score.view")
     def get(self, exam_id):
-        exam = get_by_id(Exam, exam_id)
+        exam = get_exam_detail_view(exam_id)
         if not exam:
             return APIResponse.not_found(message="考试不存在")
         return APIResponse.success(data=exam.to_dict())
@@ -194,33 +180,10 @@ class ScoreList(Resource):
         student_id = request.args.get("student_id", type=int)
         subject = request.args.get("subject")
         subject_id = request.args.get("subject_id", type=int)
-        query = Score.query
-        if exam_id:
-            query = query.filter_by(exam_id=exam_id)
-        if student_id:
-            query = query.filter_by(student_id=student_id)
-        sid = _resolve_subject_id(subject, subject_id)
-        if sid:
-            query = query.filter_by(subject_id=sid)
-        # R6 修复: 非超管按班级隔离（原无过滤 → 班主任可跨班读成绩）
-        admin = get_current_admin()
-        allowed = get_allowed_classes(admin.id) if admin else None
-        if allowed is not None:
-            query = query.join(User, Score.student_id == User.id).filter(
-                User.class_name.in_(allowed)
-            )
-        page, per_page = get_pagination(default=20)
-        # N+1 修复：to_dict 访问 subject_rel.name，预加载避免逐行查询
-        pagination = (
-            query.options(joinedload(Score.subject_rel))
-            .order_by(Score.score.desc())
-            .paginate(page=page, per_page=per_page, error_out=False)
+        result = get_score_list_view(
+            exam_id=exam_id, student_id=student_id, subject=subject, subject_id=subject_id
         )
-        scores = pagination.items
-        return APIResponse.success(
-            data=[s.to_dict() for s in scores],
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
-        )
+        return APIResponse.success(data=result["items"], pagination=result["pagination"])
 
     @ns_scores.doc("create_score", description="创建成绩")
     @ns_scores.expect(score_model)
@@ -380,7 +343,7 @@ class ScoreResource(Resource):
     @ns_scores.doc("get_score", description="获取成绩详情")
     @requires_permission("score.view")
     def get(self, score_id):
-        score = get_by_id(Score, score_id)
+        score = get_score_detail_view(score_id)
         if not score:
             return APIResponse.not_found(message="成绩不存在")
         return APIResponse.success(data=score.to_dict())
@@ -461,22 +424,10 @@ class ExamScoreAnalysis(Resource):
     @ns_score_analysis.doc("analyze_exam_scores", description="分析考试成绩")
     @requires_permission("score.view")
     def get(self, exam_id):
-        exam = get_by_id(Exam, exam_id)
-        if not exam:
+        result = get_exam_score_analysis_view(exam_id)
+        if not result:
             return APIResponse.not_found(message="考试不存在")
-        scores = Score.query.filter_by(exam_id=exam_id).all()
-        if not scores:
-            return APIResponse.success(data={"exam": exam.to_dict(), "analysis": None})
-        total = len(scores)
-        scores_list = [s.score for s in scores if s.score is not None]
-        analysis = {
-            "total_students": total,
-            "subjects": sorted({s.subject_rel.name for s in scores if s.subject_rel}),
-            "avg_score": sum(scores_list) / len(scores_list) if scores_list else 0,
-            "max_score": max(scores_list) if scores_list else 0,
-            "min_score": min(scores_list) if scores_list else 0,
-        }
-        return APIResponse.success(data={"exam": exam.to_dict(), "analysis": analysis})
+        return APIResponse.success(data=result)
 
 
 @ns_score_analysis.route("/rankings/<int:exam_id>")
@@ -485,33 +436,14 @@ class ExamRankings(Resource):
     @ns_score_analysis.doc("get_rankings", description="获取考试排名")
     @requires_permission("score.view")
     def get(self, exam_id):
-        exam = get_by_id(Exam, exam_id)
-        if not exam:
-            return APIResponse.not_found(message="考试不存在")
         subject = request.args.get("subject")
         subject_id = request.args.get("subject_id", type=int)
-        # R9 修复: 成绩状态为 confirmed（原筛 published 与实际状态不符 → 排名恒空）
-        query = Score.query.filter_by(exam_id=exam_id, status="confirmed")
-        sid = _resolve_subject_id(subject, subject_id)
-        if sid:
-            query = query.filter_by(subject_id=sid)
-        page, per_page = get_pagination(default=20)
-        pagination = query.order_by(Score.score.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        rankings = pagination.items
-        result = []
-        for idx, score in enumerate(rankings):
-            rank = (page - 1) * per_page + idx + 1
-            entry = score.to_dict()
-            entry["rank"] = rank
-            student = get_by_id(User, score.student_id)
-            if student:
-                entry["student_name"] = student.name
-            result.append(entry)
+        result = get_exam_rankings_view(exam_id, subject=subject, subject_id=subject_id)
+        if not result:
+            return APIResponse.not_found(message="考试不存在")
         return APIResponse.success(
-            data={"exam": exam.to_dict(), "rankings": result},
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            data={"exam": result["exam"], "rankings": result["rankings"]},
+            pagination=result["pagination"],
         )
 
 
@@ -521,26 +453,10 @@ class StudentScoreAnalysis(Resource):
     @ns_score_analysis.doc("analyze_student_scores", description="分析学生成绩")
     @requires_permission("score.view")
     def get(self, student_id):
-        student = get_by_id(User, student_id)
-        if not student:
+        result = get_student_score_analysis_view(student_id)
+        if not result:
             return APIResponse.not_found(message="学生不存在")
-        scores = (
-            Score.query.filter_by(student_id=student_id).order_by(Score.entered_at.desc()).all()
-        )
-        score_list = [s.to_dict() for s in scores]
-        if score_list:
-            raw_scores = [s.score for s in scores if s.score is not None]
-            avg = sum(raw_scores) / len(raw_scores) if raw_scores else 0
-        else:
-            avg = 0
-        return APIResponse.success(
-            data={
-            "student": student.to_dict(["id", "name", "class_name"]),
-                "scores": score_list,
-                "total": len(score_list),
-                "avg_score": round(avg, 2),
-            }
-        )
+        return APIResponse.success(data=result)
 
 
 @ns_score_analysis.route("/class/<string:class_name>")
@@ -549,35 +465,10 @@ class ClassScoreAnalysis(Resource):
     @ns_score_analysis.doc("analyze_class_scores", description="分析班级成绩")
     @requires_permission("score.view")
     def get(self, class_name):
-        students = User.query.filter_by(class_name=class_name).all()
-        if not students:
+        result = get_class_score_analysis_view(class_name)
+        if not result:
             return APIResponse.not_found(message="班级不存在")
-        student_ids = [s.id for s in students]
-        scores = (
-            Score.query.filter(Score.student_id.in_(student_ids))
-            .order_by(Score.entered_at.desc())
-            .all()
-        )
-        score_list = [s.to_dict() for s in scores]
-        exam_ids = set(s.exam_id for s in scores)
-        exams = (
-            {e.id: e.to_dict() for e in Exam.query.filter(Exam.id.in_(exam_ids)).all()}
-            if exam_ids
-            else {}
-        )
-        subjects = {s.subject_rel.name for s in scores if s.subject_rel}
-        raw_scores = [s.score for s in scores if s.score is not None]
-        return APIResponse.success(
-            data={
-                "class_name": class_name,
-                "student_count": len(students),
-                "scores": score_list,
-                "total": len(score_list),
-                "subjects": list(subjects),
-                "exams": list(exams.values()),
-                "avg_score": round(sum(raw_scores) / len(raw_scores), 2) if raw_scores else 0,
-            }
-        )
+        return APIResponse.success(data=result)
 
 
 @ns_scores.route("/export")
@@ -590,49 +481,10 @@ class ScoreExport(Resource):
         exam_id = request.args.get("exam_id", type=int)
         if not exam_id:
             return APIResponse.bad_request(message="请指定 exam_id")
-        query = Score.query.filter_by(exam_id=exam_id)
         student_id = request.args.get("student_id", type=int)
         subject_id = request.args.get("subject_id", type=int)
-        if student_id:
-            query = query.filter_by(student_id=student_id)
-        if subject_id:
-            query = query.filter_by(subject_id=subject_id)
-        scores = query.order_by(Score.subject_id, Score.score.desc()).all()
-        exam = Exam.query.get(exam_id)
-        headers = [
-            "学生姓名",
-            "学号",
-            "班级",
-            "科目",
-            "分数",
-            "满分",
-            "排名",
-            "状态",
-            "录入时间",
-            "备注",
-        ]
-        rows = []
-        # R7: 排名列动态计算（Score.rank 列已废弃恒 None；按当前排序 1..N）
-        for _idx, s in enumerate(scores, 1):
-            u = s.student
-            rows.append(
-                {
-                    "学生姓名": u.name if u else "",
-                    "学号": u.card_id if u else "",
-                    "班级": (
-                        u.class_info.name if u and u.class_info else (u.class_name if u else "")
-                    ),
-                    "科目": s.subject_rel.name if s.subject_rel else "",
-                    "分数": s.score,
-                    "满分": s.full_score,
-                    "排名": _idx,
-                    "状态": s.status or "",
-                    "录入时间": s.entered_at.strftime("%Y-%m-%d %H:%M") if s.entered_at else "",
-                    "备注": s.remark or "",
-                }
-            )
-        filename = "成绩导出_%s" % (exam.name if exam else exam_id)
-        output = export_service.export_to_excel(rows, headers, filename)
+        data = get_score_export_data_view(exam_id, student_id=student_id, subject_id=subject_id)
+        output = export_service.export_to_excel(data["rows"], data["headers"], data["filename"])
         return send_file(
             output,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -648,30 +500,10 @@ class ExamExport(Resource):
     @ns_exam.doc("export_exams", description="导出考试列表 Excel")
     @requires_permission("score.view")
     def get(self):
-        query = Exam.query
         class_id = request.args.get("class_id", type=int)
         status = request.args.get("status")
-        if class_id:
-            query = query.filter_by(class_id=class_id)
-        if status:
-            query = query.filter_by(status=status)
-        exams = query.order_by(Exam.start_time.desc()).all()
-        headers = ["考试名称", "类型", "科目", "开始时间", "结束时间", "重要性", "状态"]
-        rows = []
-        for e in exams:
-            subjects = ",".join(e.subjects) if isinstance(e.subjects, list) else (e.subjects or "")
-            rows.append(
-                {
-                    "考试名称": e.name,
-                    "类型": e.exam_type or "",
-                    "科目": subjects,
-                    "开始时间": e.start_time.strftime("%Y-%m-%d %H:%M") if e.start_time else "",
-                    "结束时间": e.end_time.strftime("%Y-%m-%d %H:%M") if e.end_time else "",
-                    "重要性": e.importance or "",
-                    "状态": e.status or "",
-                }
-            )
-        output = export_service.export_to_excel(rows, headers, "考试列表导出")
+        data = get_exam_export_data_view(class_id=class_id, status=status)
+        output = export_service.export_to_excel(data["rows"], data["headers"], "考试列表导出")
         return send_file(
             output,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
