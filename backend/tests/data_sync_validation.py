@@ -254,7 +254,7 @@ def compare_models(
         "level",
         "text",
         "type",
-        "last_seen",
+        "last_heartbeat",
         "user_name",
         "card_id",
         "reason",

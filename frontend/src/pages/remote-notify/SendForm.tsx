@@ -595,7 +595,7 @@ export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
                             {item.class_name || '—'}
                           </div>
                           <div className='col-span-5 truncate text-gray-500 dark:text-slate-400'>
-                            {formatDateTime(item.last_seen, '—')}
+                            {formatDateTime(item.last_heartbeat, '—')}
                           </div>
                         </div>
                       ))}

@@ -1669,7 +1669,7 @@ export interface NotifyHistory {
 export interface RemoteNotifyPreviewSample {
   device_id: string;
   class_name: string | null;
-  last_seen: string | null;
+  last_heartbeat: string | null;
 }
 
 /** GET /api/remote_notify/preview 返回的在线预览（发送前防误发） */

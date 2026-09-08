@@ -157,7 +157,7 @@ class RemoteNotifyPreview(Resource):
             {
                 "device_id": d.device_id,
                 "class_name": d.class_info.name if d.class_info else None,
-                "last_seen": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+                "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
             }
             for d in online_query.order_by(Device.last_heartbeat.desc()).limit(20).all()
         ]
