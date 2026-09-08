@@ -34,6 +34,8 @@ _DEFAULT_PROGRESS = {
 
 
 from utils.logger import log_info, log_warning, log_debug
+
+
 class CompositeScoreService:
     """综合评分服务类"""
 
@@ -259,9 +261,9 @@ class CompositeScoreService:
         # 否则带 class_name 的部分重算会清空其他班级的综合评分（数据丢失高危 bug）。
         result_user_ids = [r["user_id"] for r in results]
         if result_user_ids:
-            CompositeScore.query.filter(
-                CompositeScore.student_id.in_(result_user_ids)
-            ).delete(synchronize_session=False)
+            CompositeScore.query.filter(CompositeScore.student_id.in_(result_user_ids)).delete(
+                synchronize_session=False
+            )
         with db_session_scope():
             for r in results:
                 composite = CompositeScore(
@@ -326,14 +328,10 @@ class CompositeScoreService:
                     "name": u.name if u else None,
                     "class_name": u.class_name if u else None,
                     "behavior_score": (
-                        composite.behavior_score
-                        if composite.behavior_score is not None
-                        else None
+                        composite.behavior_score if composite.behavior_score is not None else None
                     ),
                     "academic_score": (
-                        composite.academic_score
-                        if composite.academic_score is not None
-                        else None
+                        composite.academic_score if composite.academic_score is not None else None
                     ),
                     "composite_score": composite.composite_score,
                     "ranking": i + 1,
@@ -440,7 +438,9 @@ class CompositeScoreService:
         # 学生无综合评分记录（首次积分变动即触发 recalc）→ 返回 None，由全量计算生成；
         # 原实现直接 index() 抛 ValueError → 崩
         if user_id not in active_user_ids:
-            log_debug(f"[CompositeScore] 学生 {user_id} 无综合评分记录，跳过增量重算（首次需全量计算）")
+            log_debug(
+                f"[CompositeScore] 学生 {user_id} 无综合评分记录，跳过增量重算（首次需全量计算）"
+            )
             return None
 
         behavior_map = {
@@ -530,7 +530,9 @@ class CompositeScoreService:
             )
             return CompositeScoreService.get_student_composite_score(user_id)
         else:
-            logger.info(f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}")
+            logger.info(
+                f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}"
+            )
             return None
 
     # P2-6 修复: 移除 _update_rankings 空操作（无 rank 列 + 空提交 + 虚假"排名已更新"日志；

@@ -167,9 +167,7 @@ def create_score_entry(data):
     _cfg = _SysCfg.query.first()
     _min_s = _cfg.min_score if _cfg else 0
     _max_s = _cfg.max_score if _cfg else 100
-    ok, final_score = atomic_score_update(
-        user_id, score_change, min_score=_min_s, max_score=_max_s
-    )
+    ok, final_score = atomic_score_update(user_id, score_change, min_score=_min_s, max_score=_max_s)
     if ok:
         user.current_score = final_score
     user_name = user.name
@@ -370,7 +368,6 @@ def get_score_entry_data(allowed_classes=None):
     ]
 
     return {"rules": rule_list, "users": user_list}
-
 
 
 def get_record_statistics_view(admin, user_id, class_name, start_date, end_date):

@@ -237,9 +237,7 @@ class AnomalyService:
         # 替代原先「逐同学查库」的 N+1，避免 get_all_anomalies 全校扫描时放大为 O(学生×同学)。
         classmate_totals = [
             t
-            for (t,) in db.session.query(
-                func.coalesce(func.sum(ScoreRecord.score_change), 0.0)
-            )
+            for (t,) in db.session.query(func.coalesce(func.sum(ScoreRecord.score_change), 0.0))
             .join(User)
             .filter(
                 User.class_name == user.class_name,

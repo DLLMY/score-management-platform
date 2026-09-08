@@ -13,14 +13,40 @@ from pypinyin import lazy_pinyin
 from services.redis_cache_service import get_cache_service
 
 USER_LIST_PY_FIELDS = [
-    "id", "name", "gender", "class_name", "phone", "father_name", "father_phone",
-    "mother_name", "mother_phone", "guardian_name", "guardian_phone", "guardian_relation",
-    "card_id", "current_score", "is_active", "is_blacklisted", "created_at",
+    "id",
+    "name",
+    "gender",
+    "class_name",
+    "phone",
+    "father_name",
+    "father_phone",
+    "mother_name",
+    "mother_phone",
+    "guardian_name",
+    "guardian_phone",
+    "guardian_relation",
+    "card_id",
+    "current_score",
+    "is_active",
+    "is_blacklisted",
+    "created_at",
 ]
 USER_LIST_BASIC_FIELDS = [
-    "id", "name", "gender", "class_name", "phone", "father_name", "father_phone",
-    "mother_name", "mother_phone", "guardian_name", "guardian_phone", "guardian_relation",
-    "card_id", "current_score", "created_at",
+    "id",
+    "name",
+    "gender",
+    "class_name",
+    "phone",
+    "father_name",
+    "father_phone",
+    "mother_name",
+    "mother_phone",
+    "guardian_name",
+    "guardian_phone",
+    "guardian_relation",
+    "card_id",
+    "current_score",
+    "created_at",
 ]
 
 
@@ -125,8 +151,7 @@ def get_user_list_view(
             paginated_users = matched_users[start_idx:end_idx]
             result = {
                 "users": [
-                    {**u.to_dict(USER_LIST_PY_FIELDS), "role": "student"}
-                    for u in paginated_users
+                    {**u.to_dict(USER_LIST_PY_FIELDS), "role": "student"} for u in paginated_users
                 ],
                 "total": len(matched_users),
                 "page": page,
@@ -171,8 +196,7 @@ def get_user_list_view(
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     result = {
         "users": [
-            {**u.to_dict(USER_LIST_BASIC_FIELDS), "role": "student"}
-            for u in pagination.items
+            {**u.to_dict(USER_LIST_BASIC_FIELDS), "role": "student"} for u in pagination.items
         ],
         "total": pagination.total,
         "page": page,

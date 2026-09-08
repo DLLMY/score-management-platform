@@ -3,6 +3,7 @@ import time
 import json
 import jieba
 import numpy as np
+
 try:
     import torch
 
@@ -103,6 +104,8 @@ BERT_INSTALLED = TRANSFORMERS_INSTALLED
 
 from utils.logger import log_warning
 import logging
+
+
 class MLAlgorithmType:
     SVM = "svm"
     RANDOM_FOREST = "random_forest"
@@ -578,7 +581,10 @@ class _SklearnBertWrapper:
                 if emb is not None:
                     return np.array(emb)
             except Exception:
-                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                logging.getLogger(__name__).warning(
+                    "NLP best-effort operation failed; exception previously swallowed silently",
+                    exc_info=True,
+                )
                 pass
         return None
 
@@ -619,7 +625,10 @@ class _SklearnBertWrapper:
                 try:
                     return self._fallback_clf.predict(np.array(embeddings))
                 except Exception:
-                    logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                    logging.getLogger(__name__).warning(
+                        "NLP best-effort operation failed; exception previously swallowed silently",
+                        exc_info=True,
+                    )
                     pass
         # 退化为使用BERT的predict_intent
         preds = []

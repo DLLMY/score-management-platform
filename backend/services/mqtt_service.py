@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 # 动态属性访问
 from utils.logger import log_info, log_warning
+
+
 def __getattr__(name):
     if name == "mqtt_connected":
         return mqtt_manager.is_connected

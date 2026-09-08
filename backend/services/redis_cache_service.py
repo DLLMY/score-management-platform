@@ -138,7 +138,9 @@ class RedisCache:
 
             exe = self._resolve_redis_server_executable(app)
             if not exe:
-                logger.warning("未找到 redis-server 可执行文件，跳过自动拉起（可设置 REDIS_SERVER_COMMAND）")
+                logger.warning(
+                    "未找到 redis-server 可执行文件，跳过自动拉起（可设置 REDIS_SERVER_COMMAND）"
+                )
                 return False
 
             port = int(app.config.get("REDIS_PORT", 6379))

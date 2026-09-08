@@ -6,7 +6,9 @@ from services.entity_names import names
 
 
 class HomeworkService:
-    def list_assignments(self, class_id=None, subject_id=None, is_completed=None, page=None, per_page=None):
+    def list_assignments(
+        self, class_id=None, subject_id=None, is_completed=None, page=None, per_page=None
+    ):
         query = HomeworkAssignment.query
         if class_id:
             query = query.filter_by(class_id=class_id)

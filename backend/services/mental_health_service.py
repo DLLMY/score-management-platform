@@ -56,7 +56,9 @@ class MentalHealthService:
         self._check_and_create_alerts(record)
         return {"success": True, "data": self._build_record_response(record)}, 201
 
-    def list_alerts(self, student_id=None, is_resolved=None, class_id=None, page=None, per_page=None):
+    def list_alerts(
+        self, student_id=None, is_resolved=None, class_id=None, page=None, per_page=None
+    ):
         query = Alert.query.filter_by(source="mental")
         # 隐私隔离：非超管只能看自己关联班级学生的心理预警；隔离与 class_id 合并单次 join
         admin = get_current_admin()

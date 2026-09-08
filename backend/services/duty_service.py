@@ -70,7 +70,9 @@ class DutyService:
         db.session.commit()
         return {"success": True, "message": "删除成功"}
 
-    def list_assignments(self, group_id=None, student_id=None, date=None, is_completed=None, page=None, per_page=None):
+    def list_assignments(
+        self, group_id=None, student_id=None, date=None, is_completed=None, page=None, per_page=None
+    ):
         query = DutyAssignment.query
         if group_id:
             query = query.filter_by(group_id=group_id)

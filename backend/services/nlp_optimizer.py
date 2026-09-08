@@ -18,6 +18,8 @@ NLP性能优化服务
 
 
 from utils.logger import log_info, log_warning
+
+
 class NLPCache:
     """NLP结果缓存"""
 
@@ -58,7 +60,10 @@ class NLPCache:
                         self._local_cache[key] = data
                     return data
             except Exception:
-                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                logging.getLogger(__name__).warning(
+                    "NLP best-effort operation failed; exception previously swallowed silently",
+                    exc_info=True,
+                )
                 pass
         return None
 
@@ -73,7 +78,10 @@ class NLPCache:
             try:
                 self._redis.setex(key, self._cache_ttl, json.dumps(result))
             except Exception:
-                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                logging.getLogger(__name__).warning(
+                    "NLP best-effort operation failed; exception previously swallowed silently",
+                    exc_info=True,
+                )
                 pass
 
     def batch_get(self, texts: List[str]) -> Dict[str, Optional[Dict]]:
@@ -103,7 +111,10 @@ class NLPCache:
                 if keys:
                     self._redis.delete(*keys)
             except Exception:
-                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                logging.getLogger(__name__).warning(
+                    "NLP best-effort operation failed; exception previously swallowed silently",
+                    exc_info=True,
+                )
                 pass
 
 

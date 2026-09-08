@@ -76,7 +76,12 @@ class TeacherCommentService:
         if denied:
             return denied
         for key, value in data.items():
-            if hasattr(comment, key) and key not in ("id", "student_id", "created_by", "created_at"):
+            if hasattr(comment, key) and key not in (
+                "id",
+                "student_id",
+                "created_by",
+                "created_at",
+            ):
                 setattr(comment, key, value)
         db.session.commit()
         return {"success": True, "data": self._build_response(comment)}

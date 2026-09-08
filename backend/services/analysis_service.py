@@ -158,8 +158,7 @@ class AnalysisService:
         # 日均开锁：分母用日历天数（含零开锁日），避免虚高
         if start_date and end_date:
             cal_days = (
-                datetime.fromisoformat(end_date).date()
-                - datetime.fromisoformat(start_date).date()
+                datetime.fromisoformat(end_date).date() - datetime.fromisoformat(start_date).date()
             ).days + 1
         elif start_date:
             cal_days = (datetime.now().date() - datetime.fromisoformat(start_date).date()).days + 1

@@ -321,9 +321,7 @@ class AlgorithmService:
                     "avg_behavior": (
                         round(float(np.mean([x[0] for x in vals])), 2) if vals else 0.0
                     ),
-                    "avg_score": (
-                        round(float(np.mean([x[1] for x in vals])), 2) if vals else 0.0
-                    ),
+                    "avg_score": (round(float(np.mean([x[1] for x in vals])), 2) if vals else 0.0),
                     "count": len(vals),
                 }
                 for g, vals in groups.items()

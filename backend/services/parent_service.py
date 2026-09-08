@@ -93,10 +93,10 @@ class ParentService:
         if admin and admin.role not in ("admin", "super_admin"):
             allowed_ids = get_admin_class_ids(admin.id)
             if allowed_ids:
-                query = query.join(
-                    ParentContact, ParentContact.id == ContactLog.parent_id
-                ).join(User, User.id == ParentContact.student_id).filter(
-                    User.class_info_id.in_(allowed_ids)
+                query = (
+                    query.join(ParentContact, ParentContact.id == ContactLog.parent_id)
+                    .join(User, User.id == ParentContact.student_id)
+                    .filter(User.class_info_id.in_(allowed_ids))
                 )
             else:
                 query = query.filter(False)

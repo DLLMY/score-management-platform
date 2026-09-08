@@ -130,9 +130,7 @@ def bulk_import_users(rows):
                     if not is_valid:
                         row_errors.append({"field": "card_id", "message": msg})
                     elif User.query.filter_by(card_id=card_id).first():
-                        row_errors.append(
-                            {"field": "card_id", "message": f"学号 {card_id} 已存在"}
-                        )
+                        row_errors.append({"field": "card_id", "message": f"学号 {card_id} 已存在"})
 
                 if row_errors:
                     failed_count += 1

@@ -240,14 +240,11 @@ class RuleExecutionEngine:
                     # RE3：执行每日上限 / 最小间隔约束（此前已加载却从不执行，
                     # 行为触发会无限制累加积分）
                     if daily_limit:
-                        already = (
-                            ScoreRecord.query.filter(
-                                ScoreRecord.student_id == user_context["user_id"],
-                                ScoreRecord.rule_id == rule_id,
-                                ScoreRecord.created_at >= today_start,
-                            ).count()
-                            + batch_counts.get(rule_id, 0)
-                        )
+                        already = ScoreRecord.query.filter(
+                            ScoreRecord.student_id == user_context["user_id"],
+                            ScoreRecord.rule_id == rule_id,
+                            ScoreRecord.created_at >= today_start,
+                        ).count() + batch_counts.get(rule_id, 0)
                         if already >= daily_limit:
                             skipped_rules.append({"rule_id": rule_id, "reason": "daily_limit"})
                             continue
@@ -264,9 +261,7 @@ class RuleExecutionEngine:
                         if last and last.created_at:
                             elapsed = (datetime.now() - last.created_at).total_seconds()
                             if elapsed < min_interval:
-                                skipped_rules.append(
-                                    {"rule_id": rule_id, "reason": "min_interval"}
-                                )
+                                skipped_rules.append({"rule_id": rule_id, "reason": "min_interval"})
                                 continue
 
                     score_change = rule.get("score", 0)

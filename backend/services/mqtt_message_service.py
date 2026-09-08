@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 from utils.logger import log_warning
+
+
 class MQTTMessageService:
 
     def __init__(self):
@@ -571,7 +573,9 @@ class MQTTMessageService:
                         db.session.add(record)
                         db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
 
-                        if self._try_insert_processed(msg_id, record.id, new_score, client_id, response_topic):
+                        if self._try_insert_processed(
+                            msg_id, record.id, new_score, client_id, response_topic
+                        ):
                             return
 
                     # R4: MQTT 加分后触发综合评分重算（低频卡片操作，单学生聚合查询，失败不影响主流程）
@@ -582,7 +586,8 @@ class MQTTMessageService:
                     except Exception as e:
                         logger.error(
                             "[CompositeScore] MQTT 加分重算综合分失败 user_id=%s: %s",
-                            user_id, e,
+                            user_id,
+                            e,
                         )
 
                     response = {
@@ -653,7 +658,9 @@ class MQTTMessageService:
                         db.session.add(record)
                         db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
 
-                        if self._try_insert_processed(msg_id, record.id, new_score, client_id, response_topic):
+                        if self._try_insert_processed(
+                            msg_id, record.id, new_score, client_id, response_topic
+                        ):
                             return
 
                     response = {
@@ -696,7 +703,9 @@ class MQTTMessageService:
                 db.session.add(record)
                 db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
 
-                if self._try_insert_processed(msg_id, record.id, new_score, client_id, response_topic):
+                if self._try_insert_processed(
+                    msg_id, record.id, new_score, client_id, response_topic
+                ):
                     return
 
             response = {

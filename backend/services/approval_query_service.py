@@ -56,9 +56,7 @@ def get_approval_list_view(page, per_page, status):
     if status:
         query = query.filter_by(status=status)
     query = apply_approval_data_isolation(query)
-    pagination = query.order_by(Approval.created_at.desc()).paginate(
-        page=page, per_page=per_page
-    )
+    pagination = query.order_by(Approval.created_at.desc()).paginate(page=page, per_page=per_page)
     return {
         "approvals": [_serialize_approval(a, detail=True) for a in pagination.items],
         "pagination": {
@@ -72,13 +70,9 @@ def get_approval_list_view(page, per_page, status):
 
 def get_pending_approvals_view(page, per_page):
     """待审批列表视图（status=pending + 数据隔离 + 分页）。"""
-    query = Approval.query.filter_by(status="pending").options(
-        joinedload(Approval.user)
-    )
+    query = Approval.query.filter_by(status="pending").options(joinedload(Approval.user))
     query = apply_approval_data_isolation(query)
-    pagination = query.order_by(Approval.created_at.desc()).paginate(
-        page=page, per_page=per_page
-    )
+    pagination = query.order_by(Approval.created_at.desc()).paginate(page=page, per_page=per_page)
     return {
         "approvals": [_serialize_approval(a, detail=False) for a in pagination.items],
         "pagination": {

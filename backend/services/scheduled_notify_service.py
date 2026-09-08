@@ -213,9 +213,7 @@ def _serialize_scheduled(s):
         "scheduled_at": s.scheduled_at.isoformat() if s.scheduled_at else None,
         "repeat_type": s.repeat_type,
         "repeat_interval": s.repeat_interval,
-        "repeat_day_of_week": (
-            json.loads(s.repeat_day_of_week) if s.repeat_day_of_week else []
-        ),
+        "repeat_day_of_week": (json.loads(s.repeat_day_of_week) if s.repeat_day_of_week else []),
         "repeat_end_at": s.repeat_end_at.isoformat() if s.repeat_end_at else None,
         "status": s.status,
         "last_sent_at": s.last_sent_at.isoformat() if s.last_sent_at else None,

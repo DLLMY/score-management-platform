@@ -15,6 +15,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 from utils.logger import log_info, log_debug
+
+
 class TextCNNClassifier:
 
     def __init__(self, embedding_dim=128, max_len=32, num_filters=64, filter_sizes=[2, 3, 4]):
@@ -223,7 +225,9 @@ class TextCNNClassifier:
                 all_logits = all_flat @ self.fc_weights + self.fc_bias
                 predictions = np.argmax(all_logits, axis=1)
                 accuracy = np.mean(predictions == y)
-                log_info(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}")
+                log_info(
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}"
+                )
         self._trained = True
 
 

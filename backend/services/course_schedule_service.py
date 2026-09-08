@@ -55,9 +55,7 @@ def _schedule_dict(schedule):
         {
             "class_name": schedule.class_info.name if schedule.class_info else "",
             "subject_name": schedule.subject.name if schedule.subject else "",
-            "subject_color": (
-                schedule.subject.color if schedule.subject else schedule.color
-            ),
+            "subject_color": (schedule.subject.color if schedule.subject else schedule.color),
             "day_of_week_text": format_day_of_week(schedule.day_of_week),
             "period_name": period_info["name"],
             "period_time": period_info["time"],
@@ -201,12 +199,10 @@ def get_schedule_list_view(args):
 
     page, per_page = get_pagination(default=20)
     # N+1 修复：列表序列化循环内访问 class_info/subject 关联，预加载避免逐行查询
-    query = query.options(
-        joinedload(CourseSchedule.class_info), joinedload(CourseSchedule.subject)
+    query = query.options(joinedload(CourseSchedule.class_info), joinedload(CourseSchedule.subject))
+    pagination = query.order_by(CourseSchedule.day_of_week, CourseSchedule.period_number).paginate(
+        page=page, per_page=per_page, error_out=False
     )
-    pagination = query.order_by(
-        CourseSchedule.day_of_week, CourseSchedule.period_number
-    ).paginate(page=page, per_page=per_page, error_out=False)
     schedules = pagination.items
 
     result = [_schedule_dict(schedule) for schedule in schedules]
@@ -234,11 +230,7 @@ def get_schedule_by_class_view(class_info_id):
     ).order_by(CourseSchedule.day_of_week, CourseSchedule.period_number)
 
     class_info = get_by_id(ClassInfo, class_info_id)
-    periods = (
-        ClassPeriod.query.filter_by(is_active=True)
-        .order_by(ClassPeriod.sort_order)
-        .all()
-    )
+    periods = ClassPeriod.query.filter_by(is_active=True).order_by(ClassPeriod.sort_order).all()
 
     result = {
         "class_info_id": class_info_id,
@@ -256,9 +248,7 @@ def get_schedule_by_class_view(class_info_id):
                 "class_name": schedule.class_info.name if schedule.class_info else "",
                 "subject_id": schedule.subject_id,
                 "subject_name": schedule.subject.name if schedule.subject else "",
-                "subject_color": (
-                    schedule.subject.color if schedule.subject else schedule.color
-                ),
+                "subject_color": (schedule.subject.color if schedule.subject else schedule.color),
                 "day_of_week": schedule.day_of_week,
                 "day_of_week_text": format_day_of_week(schedule.day_of_week),
                 "period_number": schedule.period_number,
@@ -314,11 +304,7 @@ def get_schedule_options_view():
     """课程表选项（班级、科目、节次）。返回纯 data dict，不含信封。"""
     classes = ClassInfo.query.filter_by(is_active=True).order_by(ClassInfo.name).all()
     subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
-    periods = (
-        ClassPeriod.query.filter_by(is_active=True)
-        .order_by(ClassPeriod.sort_order)
-        .all()
-    )
+    periods = ClassPeriod.query.filter_by(is_active=True).order_by(ClassPeriod.sort_order).all()
 
     return {
         "classes": [{"id": c.id, "name": c.name, "grade": c.grade} for c in classes],
@@ -361,16 +347,12 @@ def check_schedule_conflict_view(args):
 
     if teacher_name and day_of_week is not None and period_number:
         conflicts.extend(
-            check_teacher_conflicts(
-                teacher_name, day_of_week, period_number, exclude_id=exclude_id
-            )
+            check_teacher_conflicts(teacher_name, day_of_week, period_number, exclude_id=exclude_id)
         )
 
     if classroom and day_of_week is not None and period_number:
         conflicts.extend(
-            check_classroom_conflicts(
-                classroom, day_of_week, period_number, exclude_id=exclude_id
-            )
+            check_classroom_conflicts(classroom, day_of_week, period_number, exclude_id=exclude_id)
         )
 
     return {"has_conflict": len(conflicts) > 0, "conflicts": conflicts}

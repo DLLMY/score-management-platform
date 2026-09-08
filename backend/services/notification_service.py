@@ -199,9 +199,7 @@ class NotificationService:
             )
 
             canonicalized = "&".join([f"{k}={requests.utils.quote(v)}" for k, v in sorted_params])
-            string_to_sign = (
-                f"GET&%2F&{requests.utils.quote(canonicalized)}"
-            )
+            string_to_sign = f"GET&%2F&{requests.utils.quote(canonicalized)}"
 
             signature = base64.b64encode(
                 hmac.new(

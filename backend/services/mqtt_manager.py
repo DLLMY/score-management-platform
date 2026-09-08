@@ -8,8 +8,9 @@ from datetime import datetime
 from enum import Enum
 from collections import deque
 
-
 logger = logging.getLogger(__name__)
+
+
 class MQTTConnectionState(Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -142,7 +143,9 @@ class MQTTManager:
                     }
                     # R2: 记录最近一次已知好配置，供重连 / DB 读取失败时回退
                     self._last_known_good = dict(self._config)
-                    logger.info(f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}")
+                    logger.info(
+                        f"[MQTTManager] 配置已从数据库加载: broker={config.broker}, port={config.port}"
+                    )
                     return True
         except Exception as e:
             logger.error(f"[MQTTManager] 从数据库加载配置失败: {e}")
@@ -182,13 +185,17 @@ class MQTTManager:
                     4: "用户名或密码错误",
                     5: "未授权",
                 }
-                logger.error(f"[MQTTManager] 控制连接失败, rc={rc}: {error_messages.get(rc, '未知错误')}")
+                logger.error(
+                    f"[MQTTManager] 控制连接失败, rc={rc}: {error_messages.get(rc, '未知错误')}"
+                )
         if self.is_connected:
             self._subscribed_topics = []
             for topic, qos in self.CONTROL_SUBSCRIPTIONS:
                 client.subscribe(topic, qos=qos)
                 self._subscribed_topics.append(topic)
-            logger.info(f"[MQTTManager] 控制连接已订阅: {[t[0] for t in self.CONTROL_SUBSCRIPTIONS]}")
+            logger.info(
+                f"[MQTTManager] 控制连接已订阅: {[t[0] for t in self.CONTROL_SUBSCRIPTIONS]}"
+            )
 
     def _on_connect_telemetry(self, client, userdata, flags, rc):
         logger.info(f"[MQTTManager] 遥测连接 _on_connect, rc={rc}, flags={flags}")
@@ -204,7 +211,9 @@ class MQTTManager:
             for topic, qos in self.TELEMETRY_SUBSCRIPTIONS:
                 client.subscribe(topic, qos=qos)
                 self._telemetry_subscribed_topics.append(topic)
-            logger.info(f"[MQTTManager] 遥测连接已订阅: {[t[0] for t in self.TELEMETRY_SUBSCRIPTIONS]}")
+            logger.info(
+                f"[MQTTManager] 遥测连接已订阅: {[t[0] for t in self.TELEMETRY_SUBSCRIPTIONS]}"
+            )
 
     def _on_disconnect_control(self, client, userdata, rc):
         with self._state_lock:
@@ -438,7 +447,9 @@ class MQTTManager:
                 if device_type:
                     device.device_type = device_type
                 db.session.commit()
-                logger.info(f"[OTA] 设备注册/类型上报: {device_id} type={device_type} fw={fw_version}")
+                logger.info(
+                    f"[OTA] 设备注册/类型上报: {device_id} type={device_type} fw={fw_version}"
+                )
                 # 版本协商 + 可能自动推送（无缝 OTA 闭环）
                 try:
                     from services.ota_negotiation_service import try_auto_negotiate
@@ -464,7 +475,9 @@ class MQTTManager:
             to_version = data.get("to_version")
             error_message = data.get("error_message")
 
-            logger.info(f"[OTA] 设备 {device_id} OTA状态更新: status={status}, progress={progress}%")
+            logger.info(
+                f"[OTA] 设备 {device_id} OTA状态更新: status={status}, progress={progress}%"
+            )
 
             from app import app
             from models import db, Device, DeviceFirmwareUpdate, OperationLog
@@ -524,7 +537,9 @@ class MQTTManager:
                         record.status = "completed"
                         record.completed_at = datetime.now()
                         db.session.commit()
-                        logger.info(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
+                        logger.info(
+                            f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}"
+                        )
                     if device:
                         device_ota_status = "idle"
                         if to_version:
@@ -846,7 +861,9 @@ class MQTTManager:
             if isinstance(payload, dict):
                 payload = json.dumps(payload)
 
-            logger.info(f"[MQTTManager] 准备发布消息 - topic: {topic}, payload_length: {len(payload) if payload else 0}, qos: {qos}")  # noqa: E501
+            logger.info(
+                f"[MQTTManager] 准备发布消息 - topic: {topic}, payload_length: {len(payload) if payload else 0}, qos: {qos}"
+            )  # noqa: E501
             result = self._client.publish(topic, payload, qos=qos)
 
             # 检查发布结果
@@ -861,7 +878,9 @@ class MQTTManager:
                     4: "权限不足",
                     5: "服务器不可用",
                 }
-                logger.error(f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}")
+                logger.error(
+                    f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}"
+                )
                 return False
         except Exception as e:
             logger.error(

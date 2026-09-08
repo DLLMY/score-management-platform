@@ -11,7 +11,9 @@ from services.entity_names import names
 
 
 class StudyGuideService:
-    def list_guides(self, class_id=None, guide_type=None, is_published=True, page=None, per_page=None):
+    def list_guides(
+        self, class_id=None, guide_type=None, is_published=True, page=None, per_page=None
+    ):
         query = StudyGuide.query
         if class_id:
             query = query.filter_by(class_id=class_id)
@@ -69,7 +71,9 @@ class StudyGuideService:
         db.session.commit()
         return {"success": True, "message": "删除成功"}
 
-    def list_plans(self, student_id=None, plan_type=None, is_completed=None, page=None, per_page=None):
+    def list_plans(
+        self, student_id=None, plan_type=None, is_completed=None, page=None, per_page=None
+    ):
         query = ImprovementPlan.query
         if student_id:
             query = query.filter_by(student_id=student_id)

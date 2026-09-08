@@ -24,6 +24,8 @@ from config.config_loader import config_loader
 
 
 from utils.logger import log_warning, log_debug
+
+
 def _coerce_dt(value):
     """将可能的 str/date/datetime 统一解析为 datetime；无法解析返回 None。
 
@@ -600,7 +602,9 @@ class EnhancedNLPParserService:
     def __init__(self):
         self.jieba_initialized = False
         self._init_jieba()
-        self._ml_service = None  # T7: 懒加载，避免解析器初始化即导入 torch 重型链（见 _get_ml_service）
+        self._ml_service = (
+            None  # T7: 懒加载，避免解析器初始化即导入 torch 重型链（见 _get_ml_service）
+        )
         self.vectorizer = None
         self._load_vectorizer()
         self.intent_classifier = MLIntentClassifier()
@@ -1061,7 +1065,9 @@ class EnhancedNLPParserService:
                     r"因为(?:迟到|早退|旷课|违纪|违规|睡觉|说话|玩手机)"
                     r"([\u4e00-\u9fa5]{3})(?:同学)?被(?:扣分|加分|扣\d+分|加\d+分)"
                 ),
-                re.compile(r"^([\u4e00-\u9fa5]{3})(?:同学)?"),  # N2: 3字锚定优先于2字，避免未知3字名被截断
+                re.compile(
+                    r"^([\u4e00-\u9fa5]{3})(?:同学)?"
+                ),  # N2: 3字锚定优先于2字，避免未知3字名被截断
                 re.compile(
                     r"([\u4e00-\u9fa5]{2})(?:同学|的|在|上课|今天|昨天|刚才|"
                     r"表现|作业|发言|迟到|早退|旷课|做了|完成|违反|积极|"
@@ -1591,14 +1597,38 @@ class EnhancedNLPParserService:
         # 否定词仅当紧贴关键词左侧窗口末端时才翻转极性（endswith 判定），
         # 避免"不断进步"类文本被误判为否定。
         _DEGREE_WEIGHTS = {
-            "非常": 1.5, "十分": 1.5, "极其": 1.8, "极为": 1.8, "特别": 1.4,
-            "很": 1.3, "挺": 1.2, "比较": 1.2, "较": 1.2, "格外": 1.5,
-            "太": 1.3, "超级": 2.0, "超": 1.6, "有点": 0.8, "稍微": 0.8,
-            "略微": 0.8, "不太": 0.6, "不够": 0.7,
+            "非常": 1.5,
+            "十分": 1.5,
+            "极其": 1.8,
+            "极为": 1.8,
+            "特别": 1.4,
+            "很": 1.3,
+            "挺": 1.2,
+            "比较": 1.2,
+            "较": 1.2,
+            "格外": 1.5,
+            "太": 1.3,
+            "超级": 2.0,
+            "超": 1.6,
+            "有点": 0.8,
+            "稍微": 0.8,
+            "略微": 0.8,
+            "不太": 0.6,
+            "不够": 0.7,
         }
         _NEG_WORDS = (
-            "不", "没", "没有", "无", "未", "别", "莫", "非",
-            "不是", "并不", "不太", "不够",
+            "不",
+            "没",
+            "没有",
+            "无",
+            "未",
+            "别",
+            "莫",
+            "非",
+            "不是",
+            "并不",
+            "不太",
+            "不够",
         )
         _CTX = 3  # 关键词左侧上下文窗口长度（字符）
 
@@ -1606,7 +1636,7 @@ class EnhancedNLPParserService:
             # 返回每个命中词的局部权重（含程度副词加权 / 否定翻转）
             results = []
             for m in re.finditer(re.escape(word), text):
-                left = text[max(0, m.start() - _CTX):m.start()]
+                left = text[max(0, m.start() - _CTX) : m.start()]
                 deg = 1.0
                 for _d, _w in _DEGREE_WEIGHTS.items():
                     if left.endswith(_d):
@@ -1694,9 +1724,7 @@ class EnhancedNLPParserService:
         behavior_keywords = self._get_behavior_keywords()
 
         # 缓存为纯 dict 列表（#912 实机：ORM 对象脱离 session 后访问属性 DetachedInstanceError）
-        behavior_kw_list = [
-            kw["keyword"] for kw in behavior_keywords if isinstance(kw, dict)
-        ]
+        behavior_kw_list = [kw["keyword"] for kw in behavior_keywords if isinstance(kw, dict)]
 
         # N1 修复: user_names 为 set 无序遍历，当一名学生姓名是另一名学生姓名的子串
         # （如 "小明" ⊂ "王小明"）时，命中选择取决于 set 迭代顺序 → 可能把"王小明"误判为
@@ -2645,7 +2673,10 @@ class EnhancedNLPParserService:
                     .all()
                 )
         except Exception:
-            logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+            logging.getLogger(__name__).warning(
+                "NLP best-effort operation failed; exception previously swallowed silently",
+                exc_info=True,
+            )
             pass
 
         if not corrections:
@@ -3232,9 +3263,7 @@ class EnhancedNLPParserService:
                 results = []
                 any_failed = False
                 for sub in subclauses:
-                    sub_result = self.execute_scoring(
-                        sub, None, context_history, sub_clause=True
-                    )
+                    sub_result = self.execute_scoring(sub, None, context_history, sub_clause=True)
                     results.append(sub_result)
                     if not sub_result.get("success"):
                         any_failed = True
@@ -3360,7 +3389,9 @@ class EnhancedNLPParserService:
         # #912 手动修正接管学生：manual_correction 显式指定 user_id 或 corrected_name 时
         # 覆盖 parse_result 的错误识别（如 NLP 把"上课玩手机"当学生名），让手动修正真正生效
         _mc_user_id = (manual_correction or {}).get("user_id") if manual_correction else None
-        _mc_user_name = (manual_correction or {}).get("corrected_name") if manual_correction else None
+        _mc_user_name = (
+            (manual_correction or {}).get("corrected_name") if manual_correction else None
+        )
         if _mc_user_id:
             user = get_by_id(User, _mc_user_id)
         elif _mc_user_name:
@@ -3513,7 +3544,9 @@ class EnhancedNLPParserService:
                         results[idx] = result
                     return result
                 except Exception as e:
-                    log_warning(f"[ERROR] batch_parse failed for text {text[:20]}...: {e}", exception=e)
+                    log_warning(
+                        f"[ERROR] batch_parse failed for text {text[:20]}...: {e}", exception=e
+                    )
                     with lock:
                         results[idx] = {
                             "success": False,

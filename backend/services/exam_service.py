@@ -66,9 +66,7 @@ def get_score_list_view(exam_id=None, student_id=None, subject=None, subject_id=
     admin = get_current_admin()
     allowed = get_allowed_classes(admin.id) if admin else None
     if allowed is not None:
-        query = query.join(User, Score.student_id == User.id).filter(
-            User.class_name.in_(allowed)
-        )
+        query = query.join(User, Score.student_id == User.id).filter(User.class_name.in_(allowed))
     page, per_page = get_pagination(default=20)
     # N+1 修复：to_dict 访问 subject_rel.name，预加载避免逐行查询
     pagination = (
@@ -152,9 +150,7 @@ def get_student_score_analysis_view(student_id):
     student = get_by_id(User, student_id)
     if not student:
         return None
-    scores = (
-        Score.query.filter_by(student_id=student_id).order_by(Score.entered_at.desc()).all()
-    )
+    scores = Score.query.filter_by(student_id=student_id).order_by(Score.entered_at.desc()).all()
     score_list = [s.to_dict() for s in scores]
     if score_list:
         raw_scores = [s.score for s in scores if s.score is not None]
@@ -232,9 +228,7 @@ def get_score_export_data_view(exam_id, student_id=None, subject_id=None):
             {
                 "学生姓名": u.name if u else "",
                 "学号": u.card_id if u else "",
-                "班级": (
-                    u.class_info.name if u and u.class_info else (u.class_name if u else "")
-                ),
+                "班级": (u.class_info.name if u and u.class_info else (u.class_name if u else "")),
                 "科目": s.subject_rel.name if s.subject_rel else "",
                 "分数": s.score,
                 "满分": s.full_score,

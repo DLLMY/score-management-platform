@@ -9,6 +9,8 @@ import threading
 
 from utils.logger import log_info, log_warning
 import logging
+
+
 class NLPParserType(Enum):
     RULE_BASED = "rule_based"
     ML_BASED = "ml_based"
@@ -279,7 +281,10 @@ class NLPService:
             parser_stats = get_parser_stats()
             stats.update(parser_stats)
         except Exception:
-            logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+            logging.getLogger(__name__).warning(
+                "NLP best-effort operation failed; exception previously swallowed silently",
+                exc_info=True,
+            )
             pass
         return stats
 

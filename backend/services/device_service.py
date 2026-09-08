@@ -151,8 +151,7 @@ def import_devices(file):
     device_map = {}
     if device_ids:
         device_map = {
-            d.device_id: d
-            for d in Device.query.filter(Device.device_id.in_(device_ids)).all()
+            d.device_id: d for d in Device.query.filter(Device.device_id.in_(device_ids)).all()
         }
 
     class_map = {}

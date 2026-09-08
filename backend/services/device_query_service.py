@@ -3,6 +3,7 @@
 仅含 GET 查询逻辑，不含任何 MQTT 发布或写路径。路由层保留 @cached_api 缓存与信封。
 原 routes.get_devices_for_admin 已迁入本模块（仅 DeviceList.get 使用，无写路径依赖）。
 """
+
 from datetime import datetime, timedelta
 
 from sqlalchemy import func

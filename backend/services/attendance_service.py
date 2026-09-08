@@ -8,7 +8,9 @@ from services.entity_names import names
 
 
 class AttendanceService:
-    def list_attendance(self, class_id=None, student_id=None, date=None, status=None, page=None, per_page=None):
+    def list_attendance(
+        self, class_id=None, student_id=None, date=None, status=None, page=None, per_page=None
+    ):
         query = Attendance.query
         # R6 修复: 非超管按关联班级隔离（原无过滤 → 班主任可跨班读考勤）
         admin = get_current_admin()

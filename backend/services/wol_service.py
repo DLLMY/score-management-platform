@@ -2,6 +2,8 @@ import socket
 
 
 from utils.logger import log_info, log_warning
+
+
 def wake_on_lan(mac_address: str, broadcast_ip: str = "255.255.255.255", port: int = 9) -> bool:
     """
     发送Wake-on-LAN魔术包来远程开机
