@@ -192,7 +192,7 @@ class-manger-integral/
 ├── firmware/                 # ESP32 固件工程（设备端）
 ├── infra/                    # Dockerfile / mosquitto / pm2 配置
 ├── tools/                    # 独立工具（remote_notify 桌面通知客户端）
-├── reports/                  # 历次项目评估报告
+├── docs/reports/              # 历次项目评估报告（原根 reports/）
 └── scripts/                  # run_regression.sh（五步回归闸门）
 ```
 
@@ -267,7 +267,7 @@ bash scripts/run_regression.sh
 | [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | 启动流程指南（开发/测试/生产） |
 | [docs/MQTT_INTEGRATION.md](docs/MQTT_INTEGRATION.md) | MQTT 设备集成 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更日志 |
-| [reports/](reports/) | 历次项目评估报告（第七~十一次） |
+| [docs/reports/](docs/reports/) | 历次项目评估报告（第七~十一次） |
 
 ## 📄 许可证
 

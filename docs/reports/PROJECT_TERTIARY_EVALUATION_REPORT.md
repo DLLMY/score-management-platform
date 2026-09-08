@@ -247,7 +247,7 @@
 | 根目录 | 6 个 .md | README/CHANGELOG/DEVELOPMENT_GUIDELINES + 2 份评估报告 + 空文件 |
 | deploy/ | 9 个 .md | 部署/配置/发布/分支策略等完整文档 |
 | doc/ | ~45 篇 | 按目录组织：MQTT/优化/前端/后端/安全/测试/硬件/算法/部署/项目介绍 |
-| api-docs/ | 4 个 | API_DOCUMENTATION.md(290KB) + openapi.json(502KB) + redoc/swagger HTML |
+| docs/api/ | 4 个 | API_DOCUMENTATION.md(290KB) + openapi.json(502KB) + redoc/swagger HTML |
 
 ### 8.2 文档问题
 
