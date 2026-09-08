@@ -183,4 +183,4 @@ cp backups/pre_upgrade_20260817/.env .env
 1. **F16/F17/F19** 大型重构与 **S4**（JWT→Cookie 会话）需独立专项评估与真机/集成测试，建议单独排期。
 2. **S2** 固件 OTA 需 ESP32 工具链实编 + 真机验证（本机无工具链），由硬件侧单独完成。
 3. P1 `--execute` 仅在**维护窗口 + 已确认备份**后执行；建议先在生产克隆库演练。
-4. 定期清理 `api-docs/openapi.json.bak_*` 与 `instance/*.bak_*` 历史快照（注意 NTFS 去重下删除不释放空间，仅作逻辑清理）。
+4. 定期清理 `docs/api/openapi.json.bak_*` 与 `instance/*.bak_*` 历史快照（注意 NTFS 去重下删除不释放空间，仅作逻辑清理）。

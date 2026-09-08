@@ -4,7 +4,7 @@ name: CI 回归基线
 # 设计要点：
 #   - 后端不安装 torch（requirements 中 torch 为可选注释）；M10 懒加载后契约/路由测试无需 torch。
 #   - G5 OpenAPI 真验（2026-09-04）：回归前以 nohup 启动后端（MQTT 连不上不阻塞）→
-#     run_regression.sh step2 以 --strict 真验实时 swagger vs 根 api-docs 快照，漂移即失败；
+#     run_regression.sh step2 以 --strict 真验实时 swagger vs 根 docs/api 快照，漂移即失败；
 #     后端 90s 未就绪时降级为非阻塞跳过（维持失败软性）。
 #   - 索引闸门前置：create_app 建表 + create_indexes --create（幂等）→ verify_indexes 全绿。
 #   - PYTHON_BIN 环境变量让 run_regression.sh 在 CI（python）与本机（系统 3.11）通用。

@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # 串起四套契约保障 + 关键路由测试 + 索引闸门：
 #   1. RBAC 一致性校验（check-only，漂移即失败）
-#   2. OpenAPI 契约漂移校验（--strict：需后端 5000 已启动 + 根 api-docs/openapi.json；
+#   2. OpenAPI 契约漂移校验（--strict：需后端 5000 已启动 + 根 docs/api/openapi.json；
 #      后端未起或快照缺失才跳过；漂移即失败——2026-09-04 修复快照路径 bug 后 G5 真验）
 #   3. 后端契约测试 test_api_envelope（0 5xx + shape 快照）
 #   4. 关键业务路由 pytest（rules / export / notify / classes）
@@ -52,7 +52,7 @@ fi
 
 step "2/4 OpenAPI 契约漂移校验（--strict：漂移即失败；后端未起/快照缺失才跳过）"
 rc=0
-"$PY" backend/scripts/verify_openapi_contract.py --strict --snapshot "$ROOT/api-docs/openapi.json" || rc=$?
+"$PY" backend/scripts/verify_openapi_contract.py --strict --snapshot "$ROOT/docs/api/openapi.json" || rc=$?
 if [ "$rc" = "0" ]; then
   echo "[OK] OpenAPI 一致"
 elif [ "$rc" = "2" ]; then

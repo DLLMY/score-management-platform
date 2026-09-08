@@ -3,13 +3,13 @@
 """
 OpenAPI 契约漂移校验脚本（P1 改进项：建立前后端 API 契约）。
 
-背景：api-docs/openapi.json 是 2026-07-29 手工导出的 OpenAPI 快照；后端持续演进，
+背景：docs/api/openapi.json 是 2026-07-29 手工导出的 OpenAPI 快照；后端持续演进，
 文档极易过期（新增/删除/改名端点后没人同步）。本脚本对比「实时 swagger.json」
 与「快照」，报告契约漂移，使文档过期可被发现。
 
 用法（cwd=backend，需后端 5000 已启动）：
     python scripts/verify_openapi_contract.py                 # 默认对比运行中后端
-    python scripts/verify_openapi_contract.py --snapshot ../api-docs/openapi.json
+    python scripts/verify_openapi_contract.py --snapshot ../docs/api/openapi.json
     python scripts/verify_openapi_contract.py --live-url http://127.0.0.1:5000/api/swagger.json
     python scripts/verify_openapi_contract.py --strict        # 有漂移时 exit 1
 """
@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
-DEFAULT_SNAPSHOT = BASE_DIR.parent / "api-docs" / "openapi.json"
+DEFAULT_SNAPSHOT = BASE_DIR.parent / "docs/api" / "openapi.json"
 DEFAULT_LIVE_URL = "http://127.0.0.1:5000/api/swagger.json"
 
 
@@ -137,7 +137,7 @@ def main():
     else:
         print(
             f"[结果] 发现 {len(only_live)} 新增 + {len(only_snap)} 消失 + {len(method_diffs)} 方法差异 处漂移"
-            f"（提示：更新 api-docs/openapi.json 快照）"
+            f"（提示：更新 docs/api/openapi.json 快照）"
         )
     sys.exit(1 if (drift and args.strict) else 0)
 

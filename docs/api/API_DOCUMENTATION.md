@@ -14277,7 +14277,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 ```bash
 # 本地启动HTTP服务器
-cd api-docs
+cd docs/api
 python -m http.server 8000
 # 然后浏览器访问 http://localhost:8000/swagger-ui.html
 ```

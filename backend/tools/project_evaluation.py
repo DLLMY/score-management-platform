@@ -350,7 +350,7 @@ def collect_api_coverage():
             except Exception as e:
                 logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 检查已生成的Swagger文档
-    swagger_path = os.path.join(PROJECT_ROOT, "api-docs", "openapi.json")
+    swagger_path = os.path.join(PROJECT_ROOT, "docs", "api", "openapi.json")
     if os.path.exists(swagger_path):
         api_metrics["swagger_docs_available"] = True
         try:

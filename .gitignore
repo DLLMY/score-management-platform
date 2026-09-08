@@ -179,4 +179,4 @@ frontend/playwright-report/
 frontend/test-results/
 
 # OpenAPI 快照自动备份（verify_openapi_contract.py --update 生成）
-api-docs/*.bak_*
+docs/api/*.bak_*
