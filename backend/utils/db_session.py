@@ -29,7 +29,11 @@ def db_session_scope(auto_commit=True, detach=True):
         raise
     finally:
         try:
-            if detach and session.is_active and not (current_app and current_app.config.get("TESTING")):
+            if (
+                detach
+                and session.is_active
+                and not (current_app and current_app.config.get("TESTING"))
+            ):
                 session.remove()
         except Exception as e:
             logger.debug("session.remove 清理失败（可忽略）: %s", e)

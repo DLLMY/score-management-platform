@@ -11,6 +11,7 @@
     from utils.pagination import get_pagination
     page, per_page = get_pagination(default=20)
 """
+
 from flask import request
 
 

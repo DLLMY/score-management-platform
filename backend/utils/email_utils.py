@@ -74,7 +74,9 @@ class EmailService:
                 server.sendmail(msg["From"], [to_email], msg.as_string())
             return True
         except Exception as e:
-            log_warning(f"[Email] 纯文本邮件发送失败 to={to_email} subject={subject}: {e}", exception=e)
+            log_warning(
+                f"[Email] 纯文本邮件发送失败 to={to_email} subject={subject}: {e}", exception=e
+            )
             return False
 
 

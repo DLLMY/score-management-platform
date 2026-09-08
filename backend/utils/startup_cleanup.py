@@ -31,12 +31,10 @@ def cleanup_stale_training_records(app, max_running_minutes=5):
             # 必须用 datetime.now()（与训练流程 datetime.now() 写入同基准/本地 naive），
             # 不能用 datetime.utcnow()——会导致时区错位、阈值与写入时间不可比（#912 实机）。
             threshold = datetime.now() - timedelta(minutes=max_running_minutes)
-            stale = (
-                NLPModelTraining.query.filter(
-                    NLPModelTraining.status == "running",
-                    NLPModelTraining.created_at < threshold,
-                ).all()
-            )
+            stale = NLPModelTraining.query.filter(
+                NLPModelTraining.status == "running",
+                NLPModelTraining.created_at < threshold,
+            ).all()
         except Exception as e:  # noqa: BLE001
             logger.error("扫描悬挂训练记录失败: %s", e, exc_info=True)
             return 0

@@ -52,12 +52,7 @@ def safe_handle(default_status=500, log_trace=True, message=None):
                     logger.error("路由 %s 执行异常: %s", name, e)
                 code = getattr(e, "code", -1)
                 status = getattr(e, "status_code", default_status)
-                error_message = (
-                    message
-                    or getattr(e, "message", None)
-                    or str(e)
-                    or "服务器内部错误"
-                )
+                error_message = message or getattr(e, "message", None) or str(e) or "服务器内部错误"
                 return APIResponse.error(message=error_message, code=code, status_code=status)
 
         return wrapper

@@ -93,7 +93,11 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
                     return result
                 response_data, status_code = (
                     (result, 200)
-                    if not (isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int))
+                    if not (
+                        isinstance(result, tuple)
+                        and len(result) == 2
+                        and isinstance(result[1], int)
+                    )
                     else result
                 )
                 response = make_response(jsonify(response_data), status_code)
@@ -175,7 +179,7 @@ def invalidate_cache(path_pattern=None):
         # 反复出现的总根源）。统一归一为去尾斜杠/尾星后的单星：`api:/api/users*` 匹配
         # `api:/api/users:hash`。
         clean = pattern[:-1] if pattern.endswith("*") else pattern  # 去掉已有尾 *
-        clean = clean.rstrip("/")                                   # 去尾斜杠
+        clean = clean.rstrip("/")  # 去尾斜杠
         cache.flush(clean + "*")
     else:
         # 清除所有API缓存

@@ -148,9 +148,7 @@ def log_operation(
                     user_attrs = getattr(user, "__dict__", {})
                     user_id = user_attrs.get("id")
                     operator = (
-                        user_attrs.get("username")
-                        or user_attrs.get("name")
-                        or f"管理员_{user_id}"
+                        user_attrs.get("username") or user_attrs.get("name") or f"管理员_{user_id}"
                     )
             if operator is None:
                 admin_id = request.headers.get("X-Admin-Id")

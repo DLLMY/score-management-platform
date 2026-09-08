@@ -13,6 +13,7 @@ try:
 except ImportError:
     OPENPYXL_AVAILABLE = False
 
+
 class ExcelUtils:
     """Excel文件处理工具类"""
 
