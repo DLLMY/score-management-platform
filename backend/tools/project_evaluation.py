@@ -88,7 +88,7 @@ def collect_code_metrics():
                 metrics["by_dir"][top_dir]["files"] += 1
                 metrics["by_dir"][top_dir]["lines"] += file_lines
             except Exception as e:
-                logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     print(f'  总文件数: {metrics["total_files"]}')
     print(f'  总代码行: {metrics["total_lines"]}')
     print(f'  有效代码: {metrics["code_lines"]}')
@@ -151,7 +151,7 @@ def collect_test_metrics():
                 }
             )
         except Exception as e:
-            logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+            logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 估算覆盖率：测试文件数 vs 源文件数
     py_files = 0
     for root, dirs, files in os.walk(BACKEND_DIR):
@@ -210,7 +210,7 @@ def collect_security_metrics():
                 env_match = re.search(r'os\.environ\.get\([\'"]JWT_SECRET_KEY[\'"]', content)
                 sec_metrics["jwt_config"]["uses_env_var"] = bool(env_match)
             except Exception as e:
-                logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 2. 检查CSRF
     try:
         with open(os.path.join(BACKEND_DIR, "app", "config.py"), "r", encoding="utf-8") as f:
@@ -236,7 +236,7 @@ def collect_security_metrics():
                             {"file": os.path.basename(fpath), "permissions": count}
                         )
                 except Exception as e:
-                    logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                    logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     sec_metrics["permission_system"]["total_decorators"] = perm_decorators
     sec_metrics["permission_system"]["files_with_permissions"] = len(perm_files_checked)
     # 4. 检查硬编码密钥
@@ -265,7 +265,7 @@ def collect_security_metrics():
                                     }
                                 )
                 except Exception as e:
-                    logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                    logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 5. 检查SQL注入风险（字符串拼接SQL）
     for root, dirs, files in os.walk(BACKEND_DIR):
         dirs[:] = [d for d in dirs if d not in ("__pycache__", "instance")]
@@ -287,7 +287,7 @@ def collect_security_metrics():
                             }
                         )
                 except Exception as e:
-                    logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                    logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 打印结果
     print(f'  JWT密钥长度: {sec_metrics["jwt_config"].get("secret_length", "N/A")}')
     print(f'  JWT使用环境变量: {sec_metrics["jwt_config"].get("uses_env_var", "N/A")}')
@@ -348,7 +348,7 @@ def collect_api_coverage():
                         if ns_desc:
                             api_metrics["by_namespace"][ns_desc] += 1
             except Exception as e:
-                logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 检查已生成的Swagger文档
     swagger_path = os.path.join(PROJECT_ROOT, "api-docs", "openapi.json")
     if os.path.exists(swagger_path):
@@ -365,7 +365,7 @@ def collect_api_coverage():
             )
             api_metrics["swagger_endpoints"] = swagger_endpoints
         except Exception as e:
-            logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+            logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     print(f'  总端点数 (源文件扫描): {api_metrics["total_endpoints"]}')
     print(f'  Swagger端点数: {api_metrics.get("swagger_endpoints", "N/A")}')
     print(f'  Swagger文档可用: {api_metrics["swagger_docs_available"]}')
@@ -452,7 +452,7 @@ def collect_architecture_metrics():
             arch_metrics["model_count"] = len(model_classes)
             print(f"  ORM模型数: {len(model_classes)}")
         except Exception as e:
-            logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+            logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 统计服务
     services_path = os.path.join(BACKEND_DIR, "services")
     if os.path.isdir(services_path):
@@ -489,7 +489,7 @@ def collect_architecture_metrics():
                     patterns_found.append("Service Layer")
                     break
             except Exception as e:
-                logger.warning('项目评估采集异常（已跳过该项）: %s', e)
+                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     if "Service Layer" not in patterns_found:
         patterns_found.append("Service Layer")
     patterns_found.extend(

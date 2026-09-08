@@ -17,6 +17,8 @@ scheduler = None
 
 
 from utils.logger import log_info, log_warning, log_debug
+
+
 def scheduled_approval_timeout_check(app):
     try:
         from models import Approval, SystemConfig

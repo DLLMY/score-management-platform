@@ -240,9 +240,7 @@ def archive_operation_logs(days_to_keep: int = 90):
         db.session.add_all(archives)
         # 仅删除已成功归档的旧记录（按 id 精确匹配，避免与批量 insert 同批 evaluate 冲突）
         log_ids = [log.id for log in old_logs]
-        OperationLog.query.filter(OperationLog.id.in_(log_ids)).delete(
-            synchronize_session=False
-        )
+        OperationLog.query.filter(OperationLog.id.in_(log_ids)).delete(synchronize_session=False)
         db.session.commit()
         log_info(f"[Scheduled Task] 归档完成: 迁移 {len(archives)} 条日志")
         return {"success": True, "archived_count": len(archives), "deleted_count": len(archives)}

@@ -193,7 +193,7 @@ def check_bandit():
                 high_count = len([r for r in results if r.get("issue_severity") == "HIGH"])
                 medium_count = len([r for r in results if r.get("issue_severity") == "MEDIUM"])
     except Exception as e:
-        logger.warning('代码质量检查读取报告异常（已跳过）: %s', e)
+        logger.warning("代码质量检查读取报告异常（已跳过）: %s", e)
 
     print(f"  HIGH: {high_count}")
     print(f"  MEDIUM: {medium_count}")

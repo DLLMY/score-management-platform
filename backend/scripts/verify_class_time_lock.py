@@ -22,6 +22,7 @@ import os
 import sys
 import argparse
 import logging
+
 logger = logging.getLogger(__name__)
 
 BASEDIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -40,7 +41,7 @@ def _boot_app():
         if os.path.exists(env_file):
             load_dotenv(env_file)
     except Exception as e:
-        logger.warning('加载 .env 失败（已忽略）: %s', e)
+        logger.warning("加载 .env 失败（已忽略）: %s", e)
     os.environ.setdefault("FLASK_ENV", "development")
     from app import app  # noqa: E402
 

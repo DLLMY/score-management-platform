@@ -63,6 +63,7 @@ import time
 import urllib.request
 import urllib.error
 import logging
+
 logger = logging.getLogger(__name__)
 
 import paho.mqtt.client as mqtt
@@ -349,7 +350,7 @@ def _shutdown():
                 c.loop_stop()
                 c.disconnect()
             except Exception as e:
-                logger.warning('OTA 客户端关闭异常（已忽略）: %s', e)
+                logger.warning("OTA 客户端关闭异常（已忽略）: %s", e)
 
 
 if __name__ == "__main__":

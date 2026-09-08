@@ -6,6 +6,8 @@ from utils.rate_limit import RateLimitStrategy, get_rate_limit_config
 
 
 from utils.logger import log_info, log_warning, log_debug
+
+
 def init_cors(app):
     CORS(
         app,

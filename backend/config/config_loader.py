@@ -9,6 +9,8 @@ import importlib
 
 
 from utils.logger import log_info, log_warning, log_debug
+
+
 class ConfigLoader:
     _instance = None  # noqa: F841
     _lock = threading.Lock()  # noqa: F841

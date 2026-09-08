@@ -6,6 +6,7 @@
 测试 / 本地无 worker 时，调用方通过 services.score_recalc.enqueue_or_recalc_user_score
 自动回退同步，保证综合分不漂移、写路径契约不变。
 """
+
 import logging
 
 from celery_app import celery_app

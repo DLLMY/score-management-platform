@@ -187,9 +187,7 @@ def create_indexes():
                 conn.execute(_db.text(sql))
                 conn.commit()
                 indexes_created.append(f"{table_name}.{index_name}")
-                print(
-                    "Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str)
-                )
+                print("Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str))
             except Exception as e:
                 print("Failed to create index {0}.{1}: {2}".format(table_name, index_name, e))
 
@@ -230,9 +228,7 @@ def verify_indexes():
     inspector = _db.inspect(_db.engine)
     for table_name, indexes in get_all_indexes():
         try:
-            existing_index_names = {
-                idx["name"] for idx in inspector.get_indexes(table_name)
-            }
+            existing_index_names = {idx["name"] for idx in inspector.get_indexes(table_name)}
         except Exception as e:
             missing.append(f"{table_name} (检查失败: {e})")
             continue
@@ -248,17 +244,17 @@ def check_existing_indexes():
     inspector = _db.inspect(_db.engine)
 
     tables = [
-            User.__tablename__,
-            ScoreRecord.__tablename__,
-            Device.__tablename__,
-            DeviceHeartbeat.__tablename__,
-            Exam.__tablename__,
-            Score.__tablename__,
-            Notification.__tablename__,
-            Approval.__tablename__,
-            Alert.__tablename__,
-            OperationLog.__tablename__,
-        ]
+        User.__tablename__,
+        ScoreRecord.__tablename__,
+        Device.__tablename__,
+        DeviceHeartbeat.__tablename__,
+        Exam.__tablename__,
+        Score.__tablename__,
+        Notification.__tablename__,
+        Approval.__tablename__,
+        Alert.__tablename__,
+        OperationLog.__tablename__,
+    ]
 
     print("当前数据库索引状态:")
     print("=" * 60)
@@ -279,7 +275,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="数据库索引管理")
     parser.add_argument("--check", action="store_true", help="检查当前索引状态")
     parser.add_argument("--create", action="store_true", help="创建缺失的索引")
-    parser.add_argument("--verify", action="store_true", help="校验核心索引齐全（缺失退出码 1，闸门用）")
+    parser.add_argument(
+        "--verify", action="store_true", help="校验核心索引齐全（缺失退出码 1，闸门用）"
+    )
 
     args = parser.parse_args()
 

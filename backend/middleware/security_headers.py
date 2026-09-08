@@ -12,6 +12,7 @@
 
 仅在 HTML/API 响应上附加；对已设置同头的响应不覆盖（幂等）。
 """
+
 from flask import request
 
 # 注意：script-src 不开放 'unsafe-eval'；dev 模式 vite HMR 需要 ws://127.0.0.1:3000，

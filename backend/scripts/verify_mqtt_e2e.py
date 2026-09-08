@@ -54,6 +54,7 @@ import threading
 import time
 import glob
 import logging
+
 logger = logging.getLogger(__name__)
 
 import paho.mqtt.client as mqtt
@@ -344,7 +345,7 @@ def _shutdown():
                 c.loop_stop()
                 c.disconnect()
             except Exception as e:
-                logger.warning('MQTT 客户端关闭异常（已忽略）: %s', e)
+                logger.warning("MQTT 客户端关闭异常（已忽略）: %s", e)
 
 
 if __name__ == "__main__":

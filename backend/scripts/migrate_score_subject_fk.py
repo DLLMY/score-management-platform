@@ -175,7 +175,7 @@ def main():
         try:
             conn.rollback()
         except Exception as e:
-            logger.warning('迁移回滚异常（已忽略）: %s', e)
+            logger.warning("迁移回滚异常（已忽略）: %s", e)
         conn.close()
         sys.exit(4)
 
