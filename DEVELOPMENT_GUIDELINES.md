@@ -58,10 +58,10 @@ function MyComponent() {
 **解决方案**：修改模型后，必须运行验证脚本和数据库迁移。
 
 **操作流程**：
-1. 修改 `backend/models/__init__.py` 中的模型定义
+1. 修改 `apps/backend/models/__init__.py` 中的模型定义
 2. 创建数据库迁移脚本（参考 `fix_subject_fields.py`、`fix_course_schedule_fields.py`）
 3. 运行迁移脚本更新数据库
-4. 运行 `backend/validate_models.py` 验证字段一致性
+4. 运行 `apps/backend/validate_models.py` 验证字段一致性
 
 ### 2.2 角色权限规范
 
@@ -70,7 +70,7 @@ function MyComponent() {
 **解决方案**：
 - `super_admin` 和 `admin` 角色应自动拥有所有权限（`'all'`）
 - 新增角色时，必须在 `RolePermission` 表中配置对应的权限
-- 修改权限逻辑后，运行 `backend/verify_permissions.py` 验证
+- 修改权限逻辑后，运行 `apps/backend/verify_permissions.py` 验证
 
 ### 2.3 API 路由规范
 
@@ -82,7 +82,7 @@ function MyComponent() {
 
 ### 3.1 数据初始化
 
-- 使用 `backend/init_full_data.py` 初始化基础数据
+- 使用 `apps/backend/init_full_data.py` 初始化基础数据
 - 修改初始化脚本后，重新运行确保数据一致性
 
 ### 3.2 字段命名
@@ -120,7 +120,7 @@ cp .git/hooks/pre-commit.sample .git/hooks/pre-commit
 ### 5.1 500 错误排查
 
 1. 检查后端日志，定位具体错误
-2. 运行 `backend/validate_models.py` 检查字段缺失
+2. 运行 `apps/backend/validate_models.py` 检查字段缺失
 3. 检查数据库表结构是否与模型一致
 
 ### 5.2 无限循环排查
@@ -132,8 +132,8 @@ cp .git/hooks/pre-commit.sample .git/hooks/pre-commit
 ### 5.3 权限不足排查
 
 1. 检查当前用户角色（`Admin.role` 字段）
-2. 运行 `backend/verify_permissions.py` 验证权限数据
-3. 检查 `backend/utils/permission.py` 中的权限判断逻辑
+2. 运行 `apps/backend/verify_permissions.py` 验证权限数据
+3. 检查 `apps/backend/utils/permission.py` 中的权限判断逻辑
 
 ## 六、代码审查要点
 
@@ -148,7 +148,7 @@ cp .git/hooks/pre-commit.sample .git/hooks/pre-commit
 | 命令 | 用途 |
 |------|------|
 | `python run_validation.py` | 运行完整验证 |
-| `python backend/validate_models.py` | 验证模型字段 |
-| `python backend/verify_permissions.py` | 验证权限数据 |
+| `python apps/backend/validate_models.py` | 验证模型字段 |
+| `python apps/backend/verify_permissions.py` | 验证权限数据 |
 | `npx tsc --noEmit` | TypeScript 编译检查 |
-| `python backend/init_full_data.py` | 初始化数据库数据 |
+| `python apps/backend/init_full_data.py` | 初始化数据库数据 |

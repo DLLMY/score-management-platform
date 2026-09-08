@@ -72,11 +72,11 @@ npm run build
 ```bash
 # 依赖漏洞扫描
 pip install safety
-safety check -r backend/requirements.txt
+safety check -r apps/backend/requirements.txt
 
 # 代码安全扫描
 pip install bandit
-bandit -r backend/app -ll
+bandit -r apps/backend/app -ll
 ```
 
 **通过标准**:
@@ -99,7 +99,7 @@ git checkout -b release/v1.1.0
 
 # 3. 更新版本号
 # - 修改 package.json (前端)
-# - 修改 backend/config.py (后端)
+# - 修改 apps/backend/config.py (后端)
 # - 更新 CHANGELOG.md
 ```
 

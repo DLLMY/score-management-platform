@@ -141,9 +141,9 @@ def main():
     
     # 获取路径
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(script_dir)
-    backend_dir = os.path.join(project_dir, 'backend')
-    frontend_dir = os.path.join(project_dir, 'frontend')
+    project_dir = os.path.dirname(os.path.dirname(script_dir))
+    backend_dir = os.path.join(project_dir, 'apps', 'backend')
+    frontend_dir = os.path.join(project_dir, 'apps', 'frontend')
     
     print_info(f"项目目录: {project_dir}")
     print_info(f"后端目录: {backend_dir}")
@@ -277,7 +277,7 @@ def main():
         os.makedirs(instance_dir)
         print_success(f"创建目录: {instance_dir}")
     
-    # 创建 .env 文件：从 backend/.env.example 复制（单一配置来源）并注入随机密钥
+    # 创建 .env 文件：从 apps/backend/.env.example 复制（单一配置来源）并注入随机密钥
     flask_secret_key = secrets.token_hex(32)
     csrf_secret_key = secrets.token_hex(32)
     jwt_secret_key = secrets.token_hex(32)
@@ -288,7 +288,7 @@ def main():
         with open(env_example, encoding='utf-8') as f:
             env_content = f.read()
     else:
-        print_warning("未找到 backend/.env.example，跳过 .env 生成")
+        print_warning("未找到 apps/backend/.env.example，跳过 .env 生成")
         env_content = ""
 
     if env_content:

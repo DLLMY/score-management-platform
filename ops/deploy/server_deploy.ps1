@@ -14,9 +14,9 @@ $scriptDir = $PSScriptRoot
 if (-not $scriptDir) {
     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 }
-$projectDir = (Get-Item $scriptDir).Parent.FullName
-$backendDir = Join-Path $projectDir "backend"
-$frontendDir = Join-Path $projectDir "frontend"
+$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
+$backendDir = Join-Path $projectDir "apps/backend"
+$frontendDir = Join-Path $projectDir "apps/frontend"
 $redisDir = Join-Path $scriptDir "redis"
 $nssmDir = Join-Path $scriptDir "nssm"
 

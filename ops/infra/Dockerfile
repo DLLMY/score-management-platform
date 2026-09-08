@@ -9,11 +9,11 @@ FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY apps/frontend/package.json apps/frontend/package-lock.json ./
 
 RUN npm ci --only=production
 
-COPY frontend/ ./
+COPY apps/frontend/ ./
 
 RUN npm run build
 
@@ -22,7 +22,7 @@ FROM python:3.11-slim AS backend-builder
 
 WORKDIR /app/backend
 
-COPY backend/requirements.txt .
+COPY apps/backend/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -43,7 +43,7 @@ COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/l
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 
 # Copy backend source
-COPY backend/ ./backend/
+COPY apps/backend/ ./backend/
 
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/build ./frontend/build

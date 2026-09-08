@@ -44,7 +44,7 @@ FAILED=0
 step() { echo ""; echo "========== $1 =========="; }
 
 step "1/4 RBAC 一致性校验"
-if "$PY" backend/scripts/verify_rbac_consistency.py --check-only; then
+if "$PY" apps/backend/scripts/verify_rbac_consistency.py --check-only; then
   echo "[OK] RBAC 一致"
 else
   echo "[失败] RBAC 漂移（可用 --apply 幂等补齐）"; FAILED=1
@@ -52,7 +52,7 @@ fi
 
 step "2/4 OpenAPI 契约漂移校验（--strict：漂移即失败；后端未起/快照缺失才跳过）"
 rc=0
-"$PY" backend/scripts/verify_openapi_contract.py --strict --snapshot "$ROOT/docs/api/openapi.json" || rc=$?
+"$PY" apps/backend/scripts/verify_openapi_contract.py --strict --snapshot "$ROOT/docs/api/openapi.json" || rc=$?
 if [ "$rc" = "0" ]; then
   echo "[OK] OpenAPI 一致"
 elif [ "$rc" = "2" ]; then
@@ -61,7 +61,7 @@ else
   echo "[失败] OpenAPI 契约漂移"; FAILED=1
 fi
 
-cd "$ROOT/backend"
+cd "$ROOT/apps/backend"
 
 step "3/4 后端契约测试（0 5xx + shape 快照）"
 if "$PY" -m pytest tests/test_api_envelope.py -p no:locust --timeout=300 -q; then
@@ -87,7 +87,7 @@ else
 fi
 
 if [ "$1" = "--full" ]; then
-  cd "$ROOT/frontend"
+  cd "$ROOT/apps/frontend"
   step "6/7 前端单测（vitest，jsdom 无需后端）"
   if npm test; then
     echo "[OK] 前端单测通过"

@@ -59,7 +59,7 @@ start_server.bat
 
 ### 问题：登录失败（外网）
 
-确保 `frontend/.env` 中 `REACT_APP_API_URL=` 为空（删除等号后内容）
+确保 `apps/frontend/.env` 中 `REACT_APP_API_URL=` 为空（删除等号后内容）
 
 ---
 
@@ -108,7 +108,7 @@ start_server.bat
 ## 📝 部署文件结构
 
 ```
-deploy/
+ops/deploy/
 ├── start_server.bat                    ← 一键启动（推荐）
 ├── start_server.bat             ← 手动启动（备用）
 ├── stop_all.bat                     ← 一键停止

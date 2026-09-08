@@ -2,8 +2,8 @@
 
 ## 一、配置文件位置清单
 
-### 1. 部署配置 (`deploy/config.json`)
-**位置**: `deploy/config.json`
+### 1. 部署配置 (`ops/deploy/config.json`)
+**位置**: `ops/deploy/config.json`
 **用途**: 控制服务端口、启动延迟、部署模式参数
 
 ```json
@@ -25,8 +25,8 @@
 }
 ```
 
-### 2. 后端环境配置 (`backend/.env`)
-**位置**: `backend/.env` (从 `backend/.env.example` 复制，模板为全部配置键的"单一来源")
+### 2. 后端环境配置 (`apps/backend/.env`)
+**位置**: `apps/backend/.env` (从 `apps/backend/.env.example` 复制，模板为全部配置键的"单一来源")
 **用途**: Flask应用、数据库、Redis、MQTT、JWT等核心配置
 
 **必须配置项**:
@@ -66,8 +66,8 @@ MQTT_PORT=1883
 DATABASE_URI=sqlite:///instance/score_management.db
 ```
 
-### 3. 前端环境配置 (`frontend/.env`)
-**位置**: `frontend/.env.development` (开发) / `.env.production` (生产)
+### 3. 前端环境配置 (`apps/frontend/.env`)
+**位置**: `apps/frontend/.env.development` (开发) / `.env.production` (生产)
 **用途**: API地址、MQTT连接、WebSocket配置
 
 **开发环境配置**:
@@ -81,8 +81,8 @@ REACT_APP_MQTT_PORT=8083
 REACT_APP_MQTT_USE_TLS=true
 ```
 
-### 4. ngrok外网穿透配置 (`deploy/ngrok/ngrok.yml`)
-**位置**: `deploy/ngrok/ngrok.yml`
+### 4. ngrok外网穿透配置 (`ops/deploy/ngrok/ngrok.yml`)
+**位置**: `ops/deploy/ngrok/ngrok.yml`
 **用途**: 外网穿透隧道配置
 
 **配置步骤**:
@@ -105,8 +105,8 @@ tunnels:
         host_header: localhost:3001
 ```
 
-### 5. Redis配置 (`deploy/redis/redis.windows.conf`)
-**位置**: `deploy/redis/redis.windows.conf`
+### 5. Redis配置 (`ops/deploy/redis/redis.windows.conf`)
+**位置**: `ops/deploy/redis/redis.windows.conf`
 **用途**: Redis服务器配置
 
 **关键配置**:
@@ -121,7 +121,7 @@ maxmemory 256mb
 ## 二、一键启动脚本
 
 ### 服务器模式启动
-**脚本**: `deploy/start_server.bat`
+**脚本**: `ops/deploy/start_server.bat`
 **特点**:
 - 生产模式运行 (Waitress + 静态文件服务)
 - 后台最小化运行
@@ -129,7 +129,7 @@ maxmemory 256mb
 - 适合长期运行的服务器
 
 ### 笔记本模式启动
-**脚本**: `deploy/start_server.bat`
+**脚本**: `ops/deploy/start_server.bat`
 **特点**:
 - 开发模式运行 (热重载)
 - 自动打开浏览器
@@ -137,7 +137,7 @@ maxmemory 256mb
 - 适合教学现场快速部署
 
 ### 停止所有服务
-**脚本**: `deploy/stop_all.bat`
+**脚本**: `ops/deploy/stop_all.bat`
 **功能**: 停止所有端口上的服务进程
 
 ---
@@ -147,15 +147,15 @@ maxmemory 256mb
 ### 步骤1: 环境安装
 ```bash
 # 运行环境安装脚本 (自动安装Python/Node.js/Redis/ngrok)
-双击 deploy/deploy.ps1 → 选择 [3] 仅安装依赖
+双击 ops/deploy/deploy.ps1 → 选择 [3] 仅安装依赖
 ```
 
 ### 步骤2: 配置密钥
 ```bash
 # 1. 复制后端配置模板
-copy backend\.env.example backend\.env
+copy apps\backend\.env.example apps\backend\.env
 
-# 2. 编辑 backend\.env，修改以下密钥:
+# 2. 编辑 apps\backend\.env，修改以下密钥:
 FLASK_SECRET_KEY=<生成32位以上随机字符串>
 JWT_SECRET_KEY=<生成32位以上随机字符串>
 CSRF_SECRET_KEY=<生成32位以上随机字符串>
@@ -166,17 +166,17 @@ ADMIN_INIT_PASSWORD=<初始化密码>
 ### 步骤3: 配置ngrok (可选)
 ```bash
 # 如果需要外网访问，配置ngrok authtoken
-cd deploy\ngrok
+cd ops\deploy\ngrok
 ngrok.exe authtoken <your_authtoken>
 ```
 
 ### 步骤4: 启动服务
 ```bash
 # 服务器模式
-双击 deploy/start_server.bat
+双击 ops/deploy/start_server.bat
 
 # 笔记本模式
-双击 deploy/start_server.bat
+双击 ops/deploy/start_server.bat
 ```
 
 ---
@@ -198,7 +198,7 @@ print(secrets.token_urlsafe(32))
 
 ## 五、端口冲突处理
 
-如果默认端口被占用，修改 `deploy/config.json`:
+如果默认端口被占用，修改 `ops/deploy/config.json`:
 
 ```json
 {
@@ -208,7 +208,7 @@ print(secrets.token_urlsafe(32))
 }
 ```
 
-同时修改后端配置 `backend/.env`:
+同时修改后端配置 `apps/backend/.env`:
 ```bash
 FLASK_PORT=5001
 ```
@@ -217,9 +217,9 @@ FLASK_PORT=5001
 
 ## 六、日志位置
 
-- **服务管理日志**: `deploy/logs/service_manager.log`
-- **后端运行日志**: `deploy/logs/backend.log`
-- **前端运行日志**: `deploy/logs/frontend.log`
+- **服务管理日志**: `ops/deploy/logs/service_manager.log`
+- **后端运行日志**: `ops/deploy/logs/backend.log`
+- **前端运行日志**: `ops/deploy/logs/frontend.log`
 
 ---
 
@@ -258,5 +258,5 @@ where node
 
 1. **密钥安全**: 所有SECRET_KEY必须使用强随机字符串
 2. **生产环境**: 使用HTTPS，不要暴露5000端口到公网
-3. **数据库备份**: 定期备份 `backend/instance/score_management.db`
-4. **日志清理**: 定期清理 `deploy/logs/` 目录
+3. **数据库备份**: 定期备份 `apps/backend/instance/score_management.db`
+4. **日志清理**: 定期清理 `ops/deploy/logs/` 目录

@@ -13,9 +13,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
-FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+BACKEND_DIR = os.path.join(PROJECT_ROOT, "apps", "backend")
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "apps", "frontend")
 
 
 def collect_code_metrics():

@@ -11,9 +11,9 @@ $ErrorActionPreference = "Continue"
 
 # 设置路径
 $scriptDir = $PSScriptRoot
-$projectDir = (Get-Item $scriptDir).Parent.FullName
-$backendDir = Join-Path $projectDir "backend"
-$frontendDir = Join-Path $projectDir "frontend"
+$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
+$backendDir = Join-Path $projectDir "apps/backend"
+$frontendDir = Join-Path $projectDir "apps/frontend"
 $redisDir = Join-Path $projectDir "redis"
 $ngrokDir = Join-Path $scriptDir "ngrok"
 $downloadScript = Join-Path $scriptDir "download_deps.py"

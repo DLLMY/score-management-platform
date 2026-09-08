@@ -11,7 +11,7 @@
 双击运行 `启动器.bat`，选择 "一键部署"，系统将自动完成：
 - ✅ 环境检查
 - ✅ 依赖安装
-- ✅ 配置初始化（基于 `backend/.env.example` 生成 `.env`）
+- ✅ 配置初始化（基于 `apps/backend/.env.example` 生成 `.env`）
 - ✅ 数据库创建
 - ✅ 核心索引创建与校验（`create_indexes.py --create` + `verify_indexes.py`）
 - ✅ 默认管理员初始化（密码取 `ADMIN_INIT_PASSWORD`，未设置则随机生成）
@@ -63,10 +63,10 @@
 | **CICD_GUIDE.md** | CI/CD 流水线说明（ci.yml / deploy.yml） |
 | **CHANGELOG.md** | 更新记录（位于仓库根目录） |
 
-### 🗝️ 后端环境变量模板（在 `backend/`，不在 `deploy/`）
+### 🗝️ 后端环境变量模板（在 `apps/backend/`，不在 `ops/deploy/`）
 | 文件 | 说明 |
 |------|------|
-| **backend/.env.example** | 后端环境变量模板的"单一来源"，含全部配置键与注释（Flask/JWT/Cookie/MQTT/OTA/备份/CORS/Celery 等）。部署时复制为 `backend/.env`，一键部署脚本会自动生成 |
+| **apps/backend/.env.example** | 后端环境变量模板的"单一来源"，含全部配置键与注释（Flask/JWT/Cookie/MQTT/OTA/备份/CORS/Celery 等）。部署时复制为 `apps/backend/.env`，一键部署脚本会自动生成 |
 
 ## 🎯 使用场景
 
@@ -117,7 +117,7 @@
 1. 检查系统环境 (Python 3.11, Node.js, npm)
 2. 安装后端依赖 (Flask, SQLAlchemy, etc.)
 3. 安装前端依赖 (React, Tailwind, etc.)
-4. 创建配置文件 (.env，基于 backend/.env.example)
+4. 创建配置文件 (.env，基于 apps/backend/.env.example)
 5. 初始化数据库 (SQLite)
 6. 创建核心索引 (create_indexes.py --create) + 校验 (verify_indexes.py)
 7. 初始化默认管理员 (密码取 ADMIN_INIT_PASSWORD，未设置则随机生成)

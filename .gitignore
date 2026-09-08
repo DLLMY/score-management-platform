@@ -1,13 +1,13 @@
 # ================ 数据库和数据文件 ================
 # SQLite 数据库（含真实业务数据，禁止入库！仅用于本地开发）
-backend/instance/
+apps/backend/instance/
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
 
 # 备份文件（运行时生成，不上传）
-backend/backups/
+apps/backend/backups/
 
 # 测试数据和临时导入文件
 测试文档/
@@ -15,28 +15,28 @@ backend/backups/
 
 # ================ 前端相关 ================
 # 依赖目录（不上传，通过npm install安装）
-frontend/node_modules/
+apps/frontend/node_modules/
 
 # 环境变量（敏感信息不上传）
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
+apps/frontend/.env
+apps/frontend/.env.local
+apps/frontend/.env.development.local
+apps/frontend/.env.test.local
+apps/frontend/.env.production.local
 
 # 构建产物（不上传，通过npm run build生成）
-frontend/build/
+apps/frontend/build/
 
 # 测试覆盖率报告
-frontend/coverage/
+apps/frontend/coverage/
 
 # npm 锁文件
-frontend/yarn.lock
+apps/frontend/yarn.lock
 
 
 # ================ 后端相关 ================
 # 环境变量（敏感信息不上传，但.env.example可以上传）
-backend/.env
+apps/backend/.env
 
 # Python 缓存
 __pycache__/
@@ -59,21 +59,21 @@ env/
 
 # ================ 部署相关 ================
 # ngrok 日志文件（运行时生成）
-deploy/ngrok/*.log
+ops/deploy/ngrok/*.log
 
 # ngrok 可执行文件和配置（可上传，方便离线部署）
 # authtoken 通过 "ngrok config add-authtoken" 命令配置，不存储在 ngrok.yml 中
-# deploy/ngrok/ngrok.exe
-# deploy/ngrok/ngrok.yml
+# ops/deploy/ngrok/ngrok.exe
+# ops/deploy/ngrok/ngrok.yml
 
 # Redis 服务器（上传到仓库，方便离线部署）
 # redis/  # 已取消忽略，允许上传
 
 # 服务管理器日志
-deploy/service_manager.log
+ops/deploy/service_manager.log
 
 # 部署检查脚本（可上传）
-# deploy/check_deploy.py
+# ops/deploy/check_deploy.py
 
 # 压缩包（一律忽略，避免仓库体积膨胀；部署时另行分发）
 *.zip
@@ -89,13 +89,13 @@ deploy/service_manager.log
 
 # PM2 进程文件
 .pm2/
-infra/pm2.config.json
+ops/infra/pm2.config.json
 
 # 后端日志归档（仅忽略归档和临时文件，保留当前日志）
-backend/logs/*.log.*
-backend/logs/*.json.*
-backend/logs/.__*.lock
-backend/logs/*.json
+apps/backend/logs/*.log.*
+apps/backend/logs/*.json.*
+apps/backend/logs/.__*.lock
+apps/backend/logs/*.json
 
 
 # ================ 系统和 IDE ================
@@ -150,7 +150,7 @@ lerna-debug.log*
 
 # ===== 2026-08-06 增补 =====
 # 构建产物
-frontend/dist/
+apps/frontend/dist/
 # 历史备份目录（不入库）
 _cleanup_backup_20260803/
 backup_scripts_20260731/
@@ -160,23 +160,23 @@ backup_scripts_20260731/
 # Windows 保留设备名伪影文件（git 无法索引，忽略）
 nul
 # 临时诊断脚本与截图（用完即清，不入库）
-frontend/probe/
+apps/frontend/probe/
 # 本地训练模型（运行资产，体积大，不入库；部署时单独提供）
-backend/models/bert/
-backend/models/trained/
+apps/backend/models/bert/
+apps/backend/models/trained/
 
 # 代码健康清理归档（孤儿调试脚本/截图/DB备份，保留本地不删）
-backend/scripts/archive/
+apps/backend/scripts/archive/
 # 防止 backend 根散落调试截图
-backend/*.png
+apps/backend/*.png
 
 # Playwright e2e 产物（报告/失败截图/视频）
-frontend/playwright-report/
-frontend/test-results/
+apps/frontend/playwright-report/
+apps/frontend/test-results/
 
 # Playwright e2e 产物（报告/失败截图/视频）
-frontend/playwright-report/
-frontend/test-results/
+apps/frontend/playwright-report/
+apps/frontend/test-results/
 
 # OpenAPI 快照自动备份（verify_openapi_contract.py --update 生成）
 docs/api/*.bak_*

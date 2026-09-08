@@ -108,7 +108,7 @@ def check_directory_structure():
     print_step(6, 8, "检查项目目录结构")
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(script_dir)
+    project_dir = os.path.dirname(os.path.dirname(script_dir))
     
     required_dirs = [
         'backend',
@@ -132,14 +132,14 @@ def check_config_files():
     print_step(7, 8, "检查配置文件")
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(script_dir)
+    project_dir = os.path.dirname(os.path.dirname(script_dir))
     
     config_files = [
-        ('backend/.env.example', True),
-        ('frontend/.env.example', True),
-        ('deploy/one_click_deploy.py', True),
-        ('deploy/download_deps.py', True),
-        ('frontend/setupProxy.js', True)
+        ('apps/backend/.env.example', True),
+        ('apps/frontend/.env.example', True),
+        ('ops/deploy/one_click_deploy.py', True),
+        ('ops/deploy/download_deps.py', True),
+        ('apps/frontend/setupProxy.js', True)
     ]
     
     all_exists = True
@@ -161,7 +161,7 @@ def check_redis():
     print_step(8, 8, "检查Redis")
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(script_dir)
+    project_dir = os.path.dirname(os.path.dirname(script_dir))
     redis_exe = os.path.join(project_dir, 'redis', 'redis-server.exe')
     
     if os.path.exists(redis_exe):

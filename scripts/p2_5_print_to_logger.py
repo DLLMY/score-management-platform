@@ -17,17 +17,17 @@ SERVICES = os.path.join(ROOT, "backend", "services")
 
 # 以 backend/ 开头的按仓库根相对路径；否则视为 services 下文件名
 TARGETS = [
-    "backend/api/devices/firmware_routes.py",
-    "backend/api/scores/approvals_routes.py",
-    "backend/api/scores/rules_routes.py",
-    "backend/api/system/system_routes.py",
-    "backend/config/config_loader.py",
-    "backend/middleware/__init__.py",
-    "backend/utils/validation_middleware.py",
-    "backend/tasks/mqtt_tasks.py",
-    "backend/tasks/notification_tasks.py",
-    "backend/tasks/scheduled_tasks.py",
-    "backend/tasks/scheduler.py",
+    "apps/backend/api/devices/firmware_routes.py",
+    "apps/backend/api/scores/approvals_routes.py",
+    "apps/backend/api/scores/rules_routes.py",
+    "apps/backend/api/system/system_routes.py",
+    "apps/backend/config/config_loader.py",
+    "apps/backend/middleware/__init__.py",
+    "apps/backend/utils/validation_middleware.py",
+    "apps/backend/tasks/mqtt_tasks.py",
+    "apps/backend/tasks/notification_tasks.py",
+    "apps/backend/tasks/scheduled_tasks.py",
+    "apps/backend/tasks/scheduler.py",
 ]
 
 # (文件, 行号) -> ("warning"|"debug", exc_name_or_None)
@@ -238,7 +238,7 @@ def transform(path):
 if __name__ == "__main__":
     total = 0
     for name in TARGETS:
-        if name.startswith("backend/"):
+        if name.startswith("apps/backend/"):
             p = os.path.join(ROOT, name)
         else:
             p = os.path.join(SERVICES, name)

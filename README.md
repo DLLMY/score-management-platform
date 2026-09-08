@@ -58,7 +58,7 @@
 
 ### 部署
 - GitHub Actions（CI：后端五步回归 + 前端 vitest/build/lint；CD：Release）
-- Windows 一键部署（`deploy/`：bat / PowerShell / Python 三套脚本）
+- Windows 一键部署（`ops/deploy/`：bat / PowerShell / Python 三套脚本）
 - Waitress / Gunicorn / Docker Compose
 
 ## 📦 环境要求
@@ -70,9 +70,9 @@
 | Redis | 可选 | 缺失时自动降级内存缓存 |
 | MQTT Broker | 可选 | 设备功能需要（默认支持 EMQX / 公共 broker） |
 
-> ⚠️ **模型资产（NLP/算法功能运行必需）**：`backend/models/` 下的本地训练模型**不入库**（体积大，`.gitignore` 排除），`git clone` 后需从原环境拷贝，否则 `/api/nlp/*` 与算法分析接口不可用（不影响登录/积分/设备/班级等核心功能）：
-> - `backend/models/bert/`（约 393MB，`pytorch_model.bin` 等）— BERT 语义分析
-> - `backend/models/trained/`（约 169MB，`*.pkl`）— NLP 文本分类
+> ⚠️ **模型资产（NLP/算法功能运行必需）**：`apps/backend/models/` 下的本地训练模型**不入库**（体积大，`.gitignore` 排除），`git clone` 后需从原环境拷贝，否则 `/api/nlp/*` 与算法分析接口不可用（不影响登录/积分/设备/班级等核心功能）：
+> - `apps/backend/models/bert/`（约 393MB，`pytorch_model.bin` 等）— BERT 语义分析
+> - `apps/backend/models/trained/`（约 169MB，`*.pkl`）— NLP 文本分类
 
 ## 🚀 快速开始
 
@@ -88,7 +88,7 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1
 start_server.bat
 ```
 
-一键部署自动完成：环境检查 → 依赖安装 → 生成 `.env`（从 `backend/.env.example`，密钥随机）→
+一键部署自动完成：环境检查 → 依赖安装 → 生成 `.env`（从 `apps/backend/.env.example`，密钥随机）→
 建库建表 → **创建核心索引** → 创建默认管理员 → 启动后端（生产模式）→ 启动前端 → 可选 ngrok 外网穿透。
 
 ### 方式二：分步部署（手动控制）
@@ -115,8 +115,8 @@ python scripts/verify_indexes.py             # 校验（缺失会退出码 1）
 python run.py --env production --host 0.0.0.0 --port 5000
 ```
 
-> 📖 完整部署流程（含故障排查/安全加固）见 [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md)；
-> 环境变量全量说明见 [deploy/ENV_CONFIG.md](deploy/ENV_CONFIG.md)。
+> 📖 完整部署流程（含故障排查/安全加固）见 [ops/deploy/DEPLOYMENT_GUIDE.md](ops/deploy/DEPLOYMENT_GUIDE.md)；
+> 环境变量全量说明见 [ops/deploy/ENV_CONFIG.md](ops/deploy/ENV_CONFIG.md)。
 
 ### 本地开发模式
 
@@ -136,7 +136,7 @@ cd frontend && npm start
 
 - 首次启动后端时若库中无管理员，自动创建 `admin` 账户：
   密码取 `ADMIN_INIT_PASSWORD` 环境变量，未设置则随机生成并**打印在后端启动日志**（请及时登录修改）。
-- 设置方式：在 `backend/.env` 中预设 `ADMIN_INIT_PASSWORD=your_password` 后再首次启动。
+- 设置方式：在 `apps/backend/.env` 中预设 `ADMIN_INIT_PASSWORD=your_password` 后再首次启动。
 - 学生自助端：凭卡号 + 姓名双因子登录（`/student/login`）。
 
 ## 🔄 CI/CD 流水线
@@ -159,14 +159,14 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 git push origin v1.0.0
 ```
 
-> 部署分支策略（main/develop/feature）见 [deploy/BRANCH_STRATEGY.md](deploy/BRANCH_STRATEGY.md)。
+> 部署分支策略（main/develop/feature）见 [ops/deploy/BRANCH_STRATEGY.md](ops/deploy/BRANCH_STRATEGY.md)。
 
 ## 📁 项目结构
 
 ```
 class-manger-integral/
 ├── .github/workflows/        # ci.yml（回归） / deploy.yml（Release）
-├── backend/                  # 后端（app 包工厂 + api 路由 + services 业务）
+├── apps/backend/                  # 后端（app 包工厂 + api 路由 + services 业务）
 │   ├── app/                  # 应用工厂 create_app、服务初始化、DB 自举（建表+索引+默认管理员）
 │   ├── api/                  # 路由层（按域：scores/academics/devices/nlp/...）
 │   ├── services/             # 业务服务（防腐层，写路径事务封装）
@@ -179,7 +179,7 @@ class-manger-integral/
 │   ├── wsgi.py               # WSGI 入口（Waitress/Gunicorn）
 │   ├── run.py                # 统一启动脚本（development/production）
 │   └── .env.example          # 环境变量模板（配置唯一来源）
-├── frontend/                 # React + TS + Vite
+├── apps/frontend/                 # React + TS + Vite
 │   ├── src/
 │   │   ├── components/       # DataTable 统一组件库 / ConfirmDialog / 布局
 │   │   ├── pages/            # 56 个业务页面
@@ -187,10 +187,10 @@ class-manger-integral/
 │   │   ├── hooks/            # useAutoSave（草稿）/ useSubmitGuard / 键盘快捷键
 │   │   └── tests/            # vitest 用例
 │   └── .env.example
-├── deploy/                   # 部署：一键部署 / 服务器模式 / 服务管理 / 文档
+├── ops/deploy/                   # 部署：一键部署 / 服务器模式 / 服务管理 / 文档
 ├── docs/                     # 启动指南 / MQTT 集成 / 重构评估
-├── firmware/                 # ESP32 固件工程（设备端）
-├── infra/                    # Dockerfile / mosquitto / pm2 配置
+├── apps/firmware/                 # ESP32 固件工程（设备端）
+├── ops/infra/                    # Dockerfile / mosquitto / pm2 配置
 ├── tools/                    # 独立工具（remote_notify 桌面通知客户端）
 ├── docs/reports/              # 历次项目评估报告（原根 reports/）
 └── scripts/                  # run_regression.sh（五步回归闸门）
@@ -251,19 +251,19 @@ bash scripts/run_regression.sh
 - **安全响应头**：CSP + `X-Content-Type-Options` + `X-Frame-Options` + `Referrer-Policy`（中间件统一注入）
 - **CSRF**：flask-wtf 启用 + token 注入；**限流**：登录/设备/通知等敏感端点按频控
 - **输入安全**：SQL 全参数化（0 拼接）；上传类型/大小校验；SQL 注入/XSS 模式拦截
-- **密钥管理**：`.env`（已 gitignore）承载全部密钥；`backend/.env.example` 提供模板，部署脚本自动生成随机密钥
+- **密钥管理**：`.env`（已 gitignore）承载全部密钥；`apps/backend/.env.example` 提供模板，部署脚本自动生成随机密钥
 - **生产部署**：建议 HTTPS（`SESSION_COOKIE_SECURE=true`）、修改默认密码、CORS 限定前端域名
 
 ## 📚 文档索引
 
 | 文档 | 说明 |
 |------|------|
-| [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md) | 完整部署指南（含故障排查/安全加固） |
-| [deploy/ENV_CONFIG.md](deploy/ENV_CONFIG.md) | 环境变量全量说明 |
+| [ops/deploy/DEPLOYMENT_GUIDE.md](ops/deploy/DEPLOYMENT_GUIDE.md) | 完整部署指南（含故障排查/安全加固） |
+| [ops/deploy/ENV_CONFIG.md](ops/deploy/ENV_CONFIG.md) | 环境变量全量说明 |
 | [docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md) | **配置手册（全量）**：全部手动配置项（后端/前端/数据库/第三方服务/部署脚本），含格式/默认值/必填/示例 |
-| [deploy/QUICK_REFERENCE.md](deploy/QUICK_REFERENCE.md) | 部署快速参考 |
-| [deploy/RELEASE_GUIDE.md](deploy/RELEASE_GUIDE.md) | 版本发布流程 |
-| [deploy/BRANCH_STRATEGY.md](deploy/BRANCH_STRATEGY.md) | 分支策略 |
+| [ops/deploy/QUICK_REFERENCE.md](ops/deploy/QUICK_REFERENCE.md) | 部署快速参考 |
+| [ops/deploy/RELEASE_GUIDE.md](ops/deploy/RELEASE_GUIDE.md) | 版本发布流程 |
+| [ops/deploy/BRANCH_STRATEGY.md](ops/deploy/BRANCH_STRATEGY.md) | 分支策略 |
 | [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | 启动流程指南（开发/测试/生产） |
 | [docs/MQTT_INTEGRATION.md](docs/MQTT_INTEGRATION.md) | MQTT 设备集成 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更日志 |

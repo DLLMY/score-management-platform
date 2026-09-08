@@ -20,7 +20,7 @@
 
 - **环境**：`ubuntu-latest` + Python 3.11，并启动 Redis 服务（端口 6379）
 - **步骤**：
-  1. 安装后端依赖（`pip install -r backend/requirements.txt`）
+  1. 安装后端依赖（`pip install -r apps/backend/requirements.txt`）
   2. 初始化数据库与索引（闸门前置）：导入 app 建表 + `python scripts/create_indexes.py --create`（幂等）
   3. 运行回归基线 `bash scripts/run_regression.sh`（五步闸门）：
      - G2 RBAC 权限回归

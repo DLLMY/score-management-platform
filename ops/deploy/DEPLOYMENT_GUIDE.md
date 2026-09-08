@@ -20,7 +20,7 @@
 |------|------|------|----------|
 | Python | 3.11 | 后端运行环境（含 torch 依赖） | https://www.python.org/downloads/ |
 | Node.js | 18+ | 前端运行环境 | https://nodejs.org/ |
-| ngrok | 3.x | 内网穿透工具（已自带） | 已放在 `deploy/ngrok/` |
+| ngrok | 3.x | 内网穿透工具（已自带） | 已放在 `ops/deploy/ngrok/` |
 
 ### 安装步骤
 
@@ -119,7 +119,7 @@ npm start
 
 ```cmd
 # 新开一个命令行窗口
-cd 管理平台设计\deploy\ngrok
+cd 管理平台设计\ops\deploy\ngrok
 ngrok.exe http 3000
 ```
 
@@ -139,7 +139,7 @@ ngrok.exe http 3000
    - 状态检查：http://localhost:3000
 
 3. **ngrok内网穿透** (端口 4040)
-   - 启动命令：`cd deploy\ngrok && ngrok.exe http 3000`
+   - 启动命令：`cd ops\deploy\ngrok && ngrok.exe http 3000`
    - 管理面板：http://localhost:4040
 
 ### 自恢复功能
@@ -211,7 +211,7 @@ ERR_NGROK_8012: Connection refused
 1. 确保前端服务已启动（http://localhost:3000）
 2. 重启ngrok：
    ```cmd
-   cd deploy\ngrok
+   cd ops\deploy\ngrok
    ngrok.exe http 3000
    ```
 
@@ -235,7 +235,7 @@ ERR_NGROK_8012: Connection refused
 npm cache clean --force
 
 # 删除node_modules
-rd /s /q frontend\node_modules
+rd /s /q apps\frontend\node_modules
 
 # 重新安装
 cd frontend
@@ -291,7 +291,7 @@ python run.py  # 查看控制台输出
 
 ```
 管理平台设计/
-├── deploy/                    # 部署目录
+├── ops/deploy/                    # 部署目录
 │   ├── service_manager.py    # 服务管理器（自恢复）
 │   ├── start_server.bat             # 一键启动脚本
 │   ├── stop_all.bat              # 一键停止脚本
@@ -302,18 +302,18 @@ python run.py  # 查看控制台输出
 │       ├── ngrok.yml
 │       └── start_server.bat
 │
-├── backend/                  # 后端服务
+├── apps/backend/                  # 后端服务
 │   ├── run.py               # Flask应用入口
 │   ├── mqtt_client.py       # MQTT客户端
 │   ├── instance/            # 数据库
 │   └── backups/             # 备份目录
 │
-├── frontend/                 # 前端服务
+├── apps/frontend/                 # 前端服务
 │   ├── src/                 # React源代码
 │   ├── public/              # 静态资源
 │   └── package.json         # 依赖配置
 │
-└── firmware/phonebox.ino      # ESP32固件
+└── apps/firmware/phonebox.ino      # ESP32固件
 ```
 
 ---

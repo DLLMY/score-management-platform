@@ -259,7 +259,7 @@ if __name__ == "__main__":
     # 获取后端目录
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # 输出文件路径
-    output_file = os.path.join(os.path.dirname(backend_dir), "API_DOCUMENTATION.md")
+    output_file = os.path.join(os.path.dirname(os.path.dirname(backend_dir)), "API_DOCUMENTATION.md")
     # 生成文档
     total_endpoints = generate_full_docs(backend_dir, output_file)
     # 打印摘要

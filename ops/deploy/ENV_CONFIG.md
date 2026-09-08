@@ -24,14 +24,14 @@
 
 ### 后端环境变量
 
-> **模板来源（单一来源）**：所有后端配置键以 [`backend/.env.example`](../backend/.env.example) 为准（含全部键与注释）。部署时复制为 `backend/.env` 后按需修改：
+> **模板来源（单一来源）**：所有后端配置键以 [`apps/backend/.env.example`](../apps/backend/.env.example) 为准（含全部键与注释）。部署时复制为 `apps/backend/.env` 后按需修改：
 > ```bash
 > # Windows
-> copy backend\.env.example backend\.env
+> copy apps\backend\.env.example apps\backend\.env
 > # Linux/Mac
-> cp backend/.env.example backend/.env
+> cp apps/backend/.env.example apps/backend/.env
 > ```
-> 一键部署（`deploy/one_click_deploy.py` / `deploy.ps1`）会自动基于模板生成 `.env`，无需手动复制。
+> 一键部署（`ops/deploy/one_click_deploy.py` / `deploy.ps1`）会自动基于模板生成 `.env`，无需手动复制。
 
 #### Flask 基础
 
@@ -59,7 +59,7 @@
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `DATABASE_URI` | 数据库连接 URI（相对 backend/ 目录） | `sqlite:///instance/score_management.db` |
+| `DATABASE_URI` | 数据库连接 URI（相对 apps/backend/ 目录） | `sqlite:///instance/score_management.db` |
 | `REDIS_HOST` | Redis 主机地址 | `localhost` |
 | `REDIS_PORT` | Redis 端口 | `6379` |
 | `REDIS_DB` | Redis 数据库编号 | `0` |
@@ -125,7 +125,7 @@
 
 ### 默认配置（无需修改）
 
-本地开发环境使用默认配置即可，所有服务都在 localhost 运行。后端配置基于 `backend/.env.example` 模板生成：
+本地开发环境使用默认配置即可，所有服务都在 localhost 运行。后端配置基于 `apps/backend/.env.example` 模板生成：
 
 ```bash
 # 前端 .env
@@ -162,7 +162,7 @@ cd deploy
 
 #### 前端服务器配置
 
-编辑 `frontend/.env`：
+编辑 `apps/frontend/.env`：
 
 ```bash
 HOST=0.0.0.0
@@ -172,7 +172,7 @@ REACT_APP_API_URL=http://192.168.1.200:5000
 
 #### 后端服务器配置
 
-编辑 `backend/.env`（从 `backend/.env.example` 复制）：
+编辑 `apps/backend/.env`（从 `apps/backend/.env.example` 复制）：
 
 ```bash
 FLASK_PORT=5000
@@ -200,7 +200,7 @@ python run.py
 
 ### 使用环境变量文件
 
-创建生产环境配置文件 `production.env`（或直接基于 `backend/.env.example` 生成 `backend/.env`）：
+创建生产环境配置文件 `production.env`（或直接基于 `apps/backend/.env.example` 生成 `apps/backend/.env`）：
 
 ```bash
 # 前端生产环境配置

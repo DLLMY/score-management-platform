@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
-DEFAULT_SNAPSHOT = BASE_DIR.parent / "docs/api" / "openapi.json"
+DEFAULT_SNAPSHOT = BASE_DIR.parent / "docs" / "api" / "openapi.json"
 DEFAULT_LIVE_URL = "http://127.0.0.1:5000/api/swagger.json"
 
 
