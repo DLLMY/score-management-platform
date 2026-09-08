@@ -47,9 +47,7 @@ def test_list_scheduled_notify_paging_params(client, app, auth_headers, db_sessi
         for i in range(3):
             _make_notify(db_session, i)
         db_session.commit()
-        resp = client.get(
-            "/api/scheduled_notify/?page=1&per_page=2", headers=auth_headers
-        )
+        resp = client.get("/api/scheduled_notify/?page=1&per_page=2", headers=auth_headers)
         assert resp.status_code == 200
         body = _unwrap(resp.get_json())
         data = body["data"]

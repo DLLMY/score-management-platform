@@ -8,6 +8,7 @@ TypeError 恒败，主表日志从不归档。本用例验证：
 1. 超过保留期的日志被迁移到 operation_log_archives（字段正确映射）并删除；
 2. 保留期内的日志不动。
 """
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -27,8 +28,8 @@ def archive_env(app):
             target_id=7,
             operator="tester",
             description="旧日志（应归档）",
-            before_data="{\"a\":1}",
-            after_data="{\"a\":2}",
+            before_data='{"a":1}',
+            after_data='{"a":2}',
             ip_address="127.0.0.1",
             user_id=3,
             created_at=datetime.now() - timedelta(days=100),

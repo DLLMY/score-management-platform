@@ -11,6 +11,7 @@
 全量(_calculate_scores) / 增量(recalculate_user_score) 落库口径一致；
 读取(get_composite_scores)直接透出存储分量，不再重算。
 """
+
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -96,12 +97,11 @@ class TestCompositeUniformUnit:
             def add_capture(obj):
                 added.append(obj)  # 不真实落库，仅捕获构造入参
 
-            with patch(
-                "services.composite_score_service.CompositeScore.query"
-            ) as mock_query:
+            with patch("services.composite_score_service.CompositeScore.query") as mock_query:
                 mock_query.filter.return_value.delete.return_value = None
-                with patch.object(db.session, "add", side_effect=add_capture), patch(
-                    "services.composite_score_service.db_session_scope", new=nullcontext
+                with (
+                    patch.object(db.session, "add", side_effect=add_capture),
+                    patch("services.composite_score_service.db_session_scope", new=nullcontext),
                 ):
                     CompositeScoreService._save_results(results, weights)
 
@@ -138,9 +138,7 @@ class TestCompositeUniformUnit:
             ]
             with patch("services.composite_score_service.User.query") as mock_user_query:
                 mock_user_query.filter.return_value.all.return_value = [u]
-                with patch(
-                    "services.composite_score_service.db.session.query"
-                ) as mock_db_query:
+                with patch("services.composite_score_service.db.session.query") as mock_db_query:
                     result = CompositeScoreService.get_composite_scores()
 
         assert result["rankings"][0]["behavior_score"] == 55.5

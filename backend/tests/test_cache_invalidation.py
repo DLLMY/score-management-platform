@@ -36,9 +36,22 @@ REDIS_TEST_URL = os.environ.get("CACHE_TEST_REDIS_URL", "redis://127.0.0.1:6379/
 
 PREFIX = rcs.cache._prefix  # "score_management:"
 ALL_SEGS = {
-    "scores", "exams", "records", "rank", "analysis", "permission-logs",
-    "operation-logs", "classes", "subjects", "students", "users", "rbac",
-    "admins", "exam-import", "import_export", "devices",
+    "scores",
+    "exams",
+    "records",
+    "rank",
+    "analysis",
+    "permission-logs",
+    "operation-logs",
+    "classes",
+    "subjects",
+    "students",
+    "users",
+    "rbac",
+    "admins",
+    "exam-import",
+    "import_export",
+    "devices",
 }
 
 
@@ -59,6 +72,7 @@ def _patterns_for_write_path(path: str):
 # ---------------------------------------------------------------------------
 # 不依赖 Redis 的映射结构断言（始终运行）
 # ---------------------------------------------------------------------------
+
 
 def test_related_segments_cover_derived_collections():
     """scores/records/exams 必须关联派生集合 rank + analysis。"""
@@ -88,6 +102,7 @@ def test_always_invalidate_on_write_set():
 # ---------------------------------------------------------------------------
 # 依赖真实 Redis 的端到端失效测试
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def real_redis():
@@ -124,7 +139,8 @@ def _seed_and_invalidate(client, write_path, expect_gone):
 
 def test_scores_write_invalidates_rank_analysis(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/scores/add",
+        real_redis,
+        "/api/scores/add",
         {"scores", "exams", "rank", "analysis", "operation-logs", "permission-logs"},
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
@@ -132,7 +148,8 @@ def test_scores_write_invalidates_rank_analysis(real_redis):
 
 def test_records_write_invalidates_rank_analysis(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/records/xxx",
+        real_redis,
+        "/api/records/xxx",
         {"records", "rank", "analysis", "operation-logs", "permission-logs"},
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
@@ -140,7 +157,8 @@ def test_records_write_invalidates_rank_analysis(real_redis):
 
 def test_exams_write_invalidates_rank_analysis(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/exams/yyy",
+        real_redis,
+        "/api/exams/yyy",
         {"exams", "scores", "rank", "analysis", "operation-logs", "permission-logs"},
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
@@ -148,7 +166,8 @@ def test_exams_write_invalidates_rank_analysis(real_redis):
 
 def test_rbac_write_invalidates_permission_logs(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/rbac/assign-roles",
+        real_redis,
+        "/api/rbac/assign-roles",
         {"rbac", "admins", "permission-logs", "operation-logs"},
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
@@ -156,7 +175,8 @@ def test_rbac_write_invalidates_permission_logs(real_redis):
 
 def test_admins_write_invalidates_permission_logs(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/admins/zzz",
+        real_redis,
+        "/api/admins/zzz",
         {"admins", "rbac", "permission-logs", "operation-logs"},
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
@@ -164,18 +184,40 @@ def test_admins_write_invalidates_permission_logs(real_redis):
 
 def test_exam_import_write_invalidates_scored_collections(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/exam-import/execute",
-        {"exam-import", "scores", "records", "exams", "classes", "subjects",
-         "students", "users", "operation-logs", "permission-logs"},
+        real_redis,
+        "/api/exam-import/execute",
+        {
+            "exam-import",
+            "scores",
+            "records",
+            "exams",
+            "classes",
+            "subjects",
+            "students",
+            "users",
+            "operation-logs",
+            "permission-logs",
+        },
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
 
 
 def test_import_export_write_invalidates_multi_collections(real_redis):
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/import_export/students",
-        {"import_export", "scores", "records", "exams", "classes", "subjects",
-         "students", "users", "operation-logs", "permission-logs"},
+        real_redis,
+        "/api/import_export/students",
+        {
+            "import_export",
+            "scores",
+            "records",
+            "exams",
+            "classes",
+            "subjects",
+            "students",
+            "users",
+            "operation-logs",
+            "permission-logs",
+        },
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"
 
@@ -183,7 +225,8 @@ def test_import_export_write_invalidates_multi_collections(real_redis):
 def test_any_write_invalidates_append_only_logs(real_redis):
     """ALWAYS_INVALIDATE_ON_WRITE：完全无关的写（devices）也必须清掉两个追加日志段。"""
     gone, missing = _seed_and_invalidate(
-        real_redis, "/api/devices/register",
+        real_redis,
+        "/api/devices/register",
         {"devices", "operation-logs", "permission-logs"},
     )
     assert not missing, f"未被失效: {missing}；已失效: {sorted(gone)}"

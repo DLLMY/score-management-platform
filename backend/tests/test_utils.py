@@ -38,6 +38,7 @@ try:
 except ImportError:
     pass
 
+
 class TestUtils:
 
     def test_logger(self, app):

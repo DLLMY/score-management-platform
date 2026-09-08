@@ -126,9 +126,7 @@ def test_train_all_async_flow(client, app, auth_headers, monkeypatch):
 
     status_body = None
     for _ in range(100):
-        r = client.get(
-            "/api/nlp/model/train-all/status?task_id=%s" % task_id, headers=auth_headers
-        )
+        r = client.get("/api/nlp/model/train-all/status?task_id=%s" % task_id, headers=auth_headers)
         assert r.status_code == 200
         status_body = _json(r)["data"]
         if status_body["status"] in ("done", "error"):
@@ -178,9 +176,7 @@ def test_train_async_flow(client, app, auth_headers, monkeypatch):
 
     status_body = None
     for _ in range(100):
-        r = client.get(
-            "/api/nlp/model/train/status?task_id=%s" % task_id, headers=auth_headers
-        )
+        r = client.get("/api/nlp/model/train/status?task_id=%s" % task_id, headers=auth_headers)
         assert r.status_code == 200
         status_body = _json(r)["data"]
         if status_body["status"] in ("done", "error"):
@@ -521,9 +517,7 @@ def test_rule_suggest_requires_keyword(client, app, auth_headers):
 def test_rule_batch_import_counts(client, app, auth_headers):
     """POST /rules/batch-import：空数组 → 400；重复项跳过并正确计数。"""
     with app.app_context():
-        empty = client.post(
-            "/api/nlp/rules/batch-import", json={"rules": []}, headers=auth_headers
-        )
+        empty = client.post("/api/nlp/rules/batch-import", json={"rules": []}, headers=auth_headers)
     assert empty.status_code == 400
     assert "规则数据不能为空" in _json(empty)["message"]
 
@@ -559,9 +553,7 @@ def test_parse_degrades_gracefully_when_parser_raises(client, app, auth_headers,
     monkeypatch.setattr(nlp_routes, "_get_parser", lambda: _BrokenParser())
 
     with app.app_context():
-        resp = client.post(
-            "/api/nlp/parse", json={"text": "张三迟到扣2分"}, headers=auth_headers
-        )
+        resp = client.post("/api/nlp/parse", json={"text": "张三迟到扣2分"}, headers=auth_headers)
     assert resp.status_code == 500
     body = _json(resp)
     assert body["success"] is False, "解析失败不得包装成成功返回（拒绝假绿）"

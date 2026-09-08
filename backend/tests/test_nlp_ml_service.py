@@ -541,16 +541,19 @@ class TestPrepareEnhancedTrainingData:
         with app.app_context():
             # 注意：Model.query 是 query_property，每次访问生成新 Query 实例，
             # 必须类级 patch 替换 query 属性，patch 单实例的 filter 会落空。
-            with patch.object(
-                NLPScoringRule,
-                "query",
-                MagicMock(
-                    filter=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[rule])))
+            with (
+                patch.object(
+                    NLPScoringRule,
+                    "query",
+                    MagicMock(
+                        filter=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[rule])))
+                    ),
                 ),
-            ), patch.object(
-                NLPMatchResult,
-                "query",
-                MagicMock(all=MagicMock(return_value=[match])),
+                patch.object(
+                    NLPMatchResult,
+                    "query",
+                    MagicMock(all=MagicMock(return_value=[match])),
+                ),
             ):
                 service = NLPMLTrainingService()
                 texts, labels, rule_id_map = service._prepare_enhanced_training_data()

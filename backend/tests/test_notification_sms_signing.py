@@ -11,6 +11,7 @@
 本测试以独立算法路径（urllib.parse + RFC3986 safe=''）重算期望签名，
 逐字节比对 HTTP 请求 URL 中的 Signature，锁定修复并防回归。
 """
+
 import base64
 import hashlib
 import hmac

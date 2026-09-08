@@ -47,6 +47,8 @@ def _reset_analyzer_singleton():
     NLPAlgorithmAnalyzer().reset_metrics()
     yield
     NLPAlgorithmAnalyzer().reset_metrics()
+
+
 # 测试NLP算法分析服务的核心功能
 """
 """

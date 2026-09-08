@@ -625,9 +625,7 @@ class TestMQTTMessageService:
             def rollback(self):
                 pass
 
-        with patch("models.db") as mock_db, patch(
-            "models.ProcessedMessage"
-        ) as mock_pm:
+        with patch("models.db") as mock_db, patch("models.ProcessedMessage") as mock_pm:
             mock_db.session = _FakeSession()
             mock_pm.query.filter_by.return_value.first.return_value = Mock(
                 new_score=85, record_id=999
@@ -657,9 +655,7 @@ class TestMQTTMessageService:
             def rollback(self):
                 pass
 
-        with patch("models.db") as mock_db, patch(
-            "models.ProcessedMessage"
-        ) as mock_pm:
+        with patch("models.db") as mock_db, patch("models.ProcessedMessage") as mock_pm:
             mock_db.session = _FakeSession()
             mock_pm.query.filter_by.return_value.first.return_value = None
             service = MQTTMessageService()

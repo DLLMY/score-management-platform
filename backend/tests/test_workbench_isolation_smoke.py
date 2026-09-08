@@ -15,6 +15,7 @@
 {contacts|records|alerts|comments, total, page, per_page, pages}；
 本文件统一经 _items() 解包为裸列表再断言，兼容旧裸数组契约。
 """
+
 import uuid
 
 import pytest

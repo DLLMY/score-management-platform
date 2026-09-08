@@ -215,7 +215,6 @@ class TestApprovalsRoutes:
             assert rec is not None
             assert rec.score_change == 10
 
-
     def test_approve_approval_not_pending(self, client, app, auth_headers, sample_user, db_session):
         with app.app_context():
             a = Approval(
@@ -359,20 +358,27 @@ class TestApprovalsRoutes:
             resp = client.delete("/api/approvals/%d" % aid, headers=auth_headers)
             assert resp.status_code == 200
             assert Approval.query.get(aid) is None
+
     def test_batch_approve_success(self, client, app, auth_headers, sample_user, db_session):
         with app.app_context():
             a1 = Approval(
-                student_id=sample_user.id, type="score_adjust", title="a1", score_change=1, status="pending"
+                student_id=sample_user.id,
+                type="score_adjust",
+                title="a1",
+                score_change=1,
+                status="pending",
             )
             a2 = Approval(
-                student_id=sample_user.id, type="score_adjust", title="a2", score_change=2, status="pending"
+                student_id=sample_user.id,
+                type="score_adjust",
+                title="a2",
+                score_change=2,
+                status="pending",
             )
             db_session.add_all([a1, a2])
             db_session.commit()
             ids = [a1.id, a2.id]
-        resp = client.post(
-            "/api/approvals/batch-approve", json={"ids": ids}, headers=auth_headers
-        )
+        resp = client.post("/api/approvals/batch-approve", json={"ids": ids}, headers=auth_headers)
         assert resp.status_code == 200
         data = resp.get_json()["data"]
         assert data["success_count"] == 2
@@ -385,7 +391,11 @@ class TestApprovalsRoutes:
     def test_batch_reject_with_comment(self, client, app, auth_headers, sample_user, db_session):
         with app.app_context():
             a = Approval(
-                student_id=sample_user.id, type="leave", title="请假", score_change=0, status="pending"
+                student_id=sample_user.id,
+                type="leave",
+                title="请假",
+                score_change=0,
+                status="pending",
             )
             db_session.add(a)
             db_session.commit()
@@ -403,20 +413,28 @@ class TestApprovalsRoutes:
             assert a2.status == "rejected"
             assert a2.comment == "请假理由不充分"
 
-    def test_batch_approve_partial_failure(self, client, app, auth_headers, sample_user, db_session):
+    def test_batch_approve_partial_failure(
+        self, client, app, auth_headers, sample_user, db_session
+    ):
         with app.app_context():
             a1 = Approval(
-                student_id=sample_user.id, type="score_adjust", title="p1", score_change=1, status="pending"
+                student_id=sample_user.id,
+                type="score_adjust",
+                title="p1",
+                score_change=1,
+                status="pending",
             )
             a2 = Approval(
-                student_id=sample_user.id, type="score_adjust", title="p2", score_change=1, status="approved"
+                student_id=sample_user.id,
+                type="score_adjust",
+                title="p2",
+                score_change=1,
+                status="approved",
             )
             db_session.add_all([a1, a2])
             db_session.commit()
             ids = [a1.id, a2.id]
-        resp = client.post(
-            "/api/approvals/batch-approve", json={"ids": ids}, headers=auth_headers
-        )
+        resp = client.post("/api/approvals/batch-approve", json={"ids": ids}, headers=auth_headers)
         assert resp.status_code == 200
         data = resp.get_json()["data"]
         assert data["success_count"] == 1

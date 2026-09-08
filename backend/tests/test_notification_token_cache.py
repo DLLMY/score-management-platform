@@ -5,6 +5,7 @@
 有每日上限，原实现每次发送都现取 → 群发通知会快速耗尽配额。修复：进程内缓存
 （按 appid 关联 + 提前 60s 刷新 + 网络/接口异常降级回退旧 token）。
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -74,9 +75,7 @@ def test_expired_token_refetches(monkeypatch, token_config, clean_cache, app):
 def test_api_error_degrades_to_stale_token(monkeypatch, token_config, clean_cache, app):
     import time
 
-    clean_cache.update(
-        {"appid": "test_appid", "token": "stale", "expires_at": time.time() - 10}
-    )
+    clean_cache.update({"appid": "test_appid", "token": "stale", "expires_at": time.time() - 10})
     # 过期触发刷新，但接口返回错误 → 降级回退旧 token
     fake = _fake_get_factory({"errcode": 45009, "errmsg": "reach max api daily quota limit"})
     monkeypatch.setattr("requests.get", fake)
@@ -88,9 +87,7 @@ def test_api_error_degrades_to_stale_token(monkeypatch, token_config, clean_cach
 def test_network_error_degrades_to_stale_token(monkeypatch, token_config, clean_cache, app):
     import time
 
-    clean_cache.update(
-        {"appid": "test_appid", "token": "stale", "expires_at": time.time() - 10}
-    )
+    clean_cache.update({"appid": "test_appid", "token": "stale", "expires_at": time.time() - 10})
 
     def boom(url, timeout=10):
         raise ConnectionError("network down")

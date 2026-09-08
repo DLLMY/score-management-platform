@@ -41,7 +41,10 @@ def test_serialize_dt_equivalent_to_inline_guard():
     value = _dt(2026, 1, 2, 3, 4, 5)
     # 与原路由写法 `value.isoformat() if value else None` 等价
     assert serialize_dt(value) == (value.isoformat() if value else None)
-    assert serialize_dt(None) == (value.isoformat() if value else None) is False or serialize_dt(None) is None
+    assert (
+        serialize_dt(None) == (value.isoformat() if value else None) is False
+        or serialize_dt(None) is None
+    )
 
 
 def test_serialize_date():

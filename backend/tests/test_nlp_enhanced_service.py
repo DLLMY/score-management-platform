@@ -561,9 +561,7 @@ class TestEnhancedNLPParserServiceDeepMatch:
 
         assert "query" in intents
         query_conf = next(r["confidence"] for r in result if r["intent"] == "query")
-        add_conf = next(
-            (r["confidence"] for r in result if r["intent"] == "add"), 0.0
-        )
+        add_conf = next((r["confidence"] for r in result if r["intent"] == "add"), 0.0)
         assert query_conf >= add_conf
 
     def test_ml_predict(self, app):
@@ -782,9 +780,7 @@ def test_deep_semantic_match_bert_rescues_lexically_unrelated_rule(app, db_sessi
     _stub_components(monkeypatch, engine, bm25=0.0)
 
     rule_text = "睡觉 睡觉"  # behavior_keyword + behavior_description 拼接
-    fake = _FakeBertService(
-        {rule_text: np.array([1.0, 0.0]), "上课打瞌睡": np.array([0.6, 0.8])}
-    )
+    fake = _FakeBertService({rule_text: np.array([1.0, 0.0]), "上课打瞌睡": np.array([0.6, 0.8])})
     monkeypatch.setattr("services.bert_service.get_bert_service", lambda: fake)
 
     matched = engine.deep_semantic_match("上课打瞌睡", "deduct")

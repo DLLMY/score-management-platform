@@ -129,7 +129,9 @@ class TestLargeDatasetPerformance:
         else:
             print(f"  - 状态: ⚠️ 警告 (>{csv_timeout}秒)")
 
-        assert elapsed_time <= csv_timeout, f"CSV导出耗时 {elapsed_time:.2f}秒 超过{csv_timeout}秒基线"
+        assert (
+            elapsed_time <= csv_timeout
+        ), f"CSV导出耗时 {elapsed_time:.2f}秒 超过{csv_timeout}秒基线"
 
     def test_filter_10000_performance(self, client, auth_headers, db_session, large_dataset_setup):
         """测试10000条数据筛选响应性能"""
