@@ -71,9 +71,7 @@ class ConsistencyFix(Resource):
         """Execute data fix"""
         service = ClassMigrationService()
         result = service.run_full_migration()  # noqa: F841
-        return APIResponse.success(
-            data={"stats": result["stats"]}, message="Data fix completed"
-        )
+        return APIResponse.success(data={"stats": result["stats"]}, message="Data fix completed")
 
 
 @ns_consistency.route("/status")

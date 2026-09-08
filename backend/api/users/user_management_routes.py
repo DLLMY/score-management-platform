@@ -31,12 +31,25 @@ unlock_limit_request = ns_user_management.model(
 
 # B3 User.to_dict 字段子集（2026-08-23）
 USER_BLACKLIST_FIELDS = [
-    "id", "name", "card_id", "class_name", "blacklist_reason",
-    "blacklist_until", "current_score", "created_at",
+    "id",
+    "name",
+    "card_id",
+    "class_name",
+    "blacklist_reason",
+    "blacklist_until",
+    "current_score",
+    "created_at",
 ]
 USER_UNLOCK_FIELDS = [
-    "id", "name", "card_id", "class_name", "current_score", "is_active",
-    "is_blacklisted", "daily_unlock_limit", "today_unlock_count",
+    "id",
+    "name",
+    "card_id",
+    "class_name",
+    "current_score",
+    "is_active",
+    "is_blacklisted",
+    "daily_unlock_limit",
+    "today_unlock_count",
     "last_unlock_date",
 ]
 
@@ -94,12 +107,15 @@ class UserBlacklist(Resource):
 
         return APIResponse.success(
             data={
-                "users": [
-                    u.to_dict(USER_BLACKLIST_FIELDS) for u in blacklisted_users
-                ],
+                "users": [u.to_dict(USER_BLACKLIST_FIELDS) for u in blacklisted_users],
                 "total": pagination.total,
             },
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            pagination={
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
         )
 
 
@@ -236,19 +252,20 @@ class UserStatusList(Resource):
             query = query.filter_by(is_blacklisted=is_blacklisted.lower() == "true")
 
         page, per_page = get_pagination(default=20)
-        pagination = query.order_by(User.id).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        pagination = query.order_by(User.id).paginate(page=page, per_page=per_page, error_out=False)
         users = pagination.items
 
         return APIResponse.success(
             data={
-                "users": [
-                    u.to_dict(USER_UNLOCK_FIELDS) for u in users
-                ],
+                "users": [u.to_dict(USER_UNLOCK_FIELDS) for u in users],
                 "total": pagination.total,
             },
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            pagination={
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
         )
 
 

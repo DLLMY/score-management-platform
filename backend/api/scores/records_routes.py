@@ -735,7 +735,11 @@ class BatchScoreEntryResource(Resource):
             )
         return (
             APIResponse.success(
-                data={"results": results, "errors": errors, "composite_score": composite_score_status},
+                data={
+                    "results": results,
+                    "errors": errors,
+                    "composite_score": composite_score_status,
+                },
                 message=f"批量录入完成，成功{len(results)}条，失败{len(errors)}条",
             ),
             status_code,
@@ -792,7 +796,14 @@ class RecordResource(Resource):
                 data={
                     "record_info": {
                         **record.to_dict(
-                            ["id", "user_id", "user_name", "score_change", "description", "created_at"]
+                            [
+                                "id",
+                                "user_id",
+                                "user_name",
+                                "score_change",
+                                "description",
+                                "created_at",
+                            ]
                         ),
                         "user_name": user_name,
                     },
@@ -848,9 +859,14 @@ class RecordResource(Resource):
             )
             composite_score_status = "recalculate_failed"
 
-        logger.info(f"[Record] 删除记录: id={id}, user={user_name}, score_change={record.score_change}")
+        logger.info(
+            f"[Record] 删除记录: id={id}, user={user_name}, score_change={record.score_change}"
+        )
 
         return APIResponse.success(
-            data={"rollback_score": -record.score_change, "composite_score": composite_score_status},
+            data={
+                "rollback_score": -record.score_change,
+                "composite_score": composite_score_status,
+            },
             message="记录删除成功",
         )

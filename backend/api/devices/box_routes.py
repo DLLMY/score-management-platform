@@ -143,7 +143,5 @@ class BoxVerify(Resource):
 
         return APIResponse.success(
             message="用户验证成功",
-            data={
-                "user": user.to_dict(BOX_VERIFY_FIELDS)
-            },
+            data={"user": user.to_dict(BOX_VERIFY_FIELDS)},
         )

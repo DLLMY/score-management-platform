@@ -36,8 +36,14 @@ RECORD_MINIMAL_FIELDS = ["id", "score_change", "description", "operator", "rule_
 
 # 学生自助端登录/me 序列化字段子集（B3 扩展 2026-08-23）
 STUDENT_LOGIN_FIELDS = [
-    "id", "name", "card_id", "gender", "class_info_id", "class_name",
-    "current_score", "is_active",
+    "id",
+    "name",
+    "card_id",
+    "gender",
+    "class_info_id",
+    "class_name",
+    "current_score",
+    "is_active",
 ]
 
 login_model = ns_student.model(
@@ -137,9 +143,7 @@ class StudentScore(Resource):
     def get(self):
         """获取当前学生的当前积分。"""
         student = g.current_student
-        return APIResponse.success(
-            data=student.to_dict(["current_score", "name", "card_id"])
-        )
+        return APIResponse.success(data=student.to_dict(["current_score", "name", "card_id"]))
 
 
 @ns_student.route("/records")
@@ -149,7 +153,9 @@ class StudentRecords(Resource):
     def get(self):
         """获取当前学生的积分流水，按时间倒序分页返回。"""
         student = g.current_student
-        per_page = min(200, max(1, get_int_arg("per_page", default=get_int_arg("page_size", default=20))))
+        per_page = min(
+            200, max(1, get_int_arg("per_page", default=get_int_arg("page_size", default=20)))
+        )
         page = max(1, get_int_arg("page", default=1))
 
         query = ScoreRecord.query.filter_by(student_id=student.id)
@@ -211,7 +217,9 @@ class StudentNotifications(Resource):
     def get(self):
         """获取当前学生收到的通知，按时间倒序分页返回。"""
         student = g.current_student
-        per_page = min(200, max(1, get_int_arg("per_page", default=get_int_arg("page_size", default=20))))
+        per_page = min(
+            200, max(1, get_int_arg("per_page", default=get_int_arg("page_size", default=20)))
+        )
         page = max(1, get_int_arg("page", default=1))
 
         query = Notification.query.filter_by(student_id=student.id)

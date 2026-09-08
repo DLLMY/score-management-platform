@@ -363,7 +363,12 @@ class SuspiciousIPs(Resource):
                 for ip, event_count, error_count in suspicious_ips
             ],
             "total": pagination.total,
-            "pagination": {"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
         }
 
 
@@ -392,9 +397,9 @@ class RateLimitStatus(Resource):
         query = RateLimitRecord.query.filter(
             RateLimitRecord.ip_address == ip, RateLimitRecord.window_start >= window_start
         )
-        total_requests = query.with_entities(
-            db.func.sum(RateLimitRecord.request_count)
-        ).scalar() or 0
+        total_requests = (
+            query.with_entities(db.func.sum(RateLimitRecord.request_count)).scalar() or 0
+        )
         page, per_page = get_pagination(default=20)
         pagination = query.order_by(RateLimitRecord.window_start.desc()).paginate(
             page=page, per_page=per_page, error_out=False
@@ -412,7 +417,12 @@ class RateLimitStatus(Resource):
                 for r in records
             ],
             "total_requests": int(total_requests),
-            "pagination": {"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
         }
 
 

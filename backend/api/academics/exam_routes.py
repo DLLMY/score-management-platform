@@ -23,7 +23,6 @@ from services.exam_service import (
     _resolve_subject_id,
 )
 
-
 logger = logging.getLogger(__name__)
 
 

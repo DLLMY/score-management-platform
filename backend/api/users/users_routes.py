@@ -39,14 +39,41 @@ ns_users = Namespace("users", description="学生管理相关操作")
 
 # User 响应字段子集（B3 扩展 2026-08-23，对应原各端点内联 dict；role 为端点硬编码常量由路由补）
 USER_CREATE_FIELDS = [
-    "id", "name", "gender", "class_name", "phone", "father_name", "father_phone",
-    "mother_name", "mother_phone", "guardian_name", "guardian_phone", "guardian_relation",
-    "card_id", "current_score", "created_at",
+    "id",
+    "name",
+    "gender",
+    "class_name",
+    "phone",
+    "father_name",
+    "father_phone",
+    "mother_name",
+    "mother_phone",
+    "guardian_name",
+    "guardian_phone",
+    "guardian_relation",
+    "card_id",
+    "current_score",
+    "created_at",
 ]
 USER_DETAIL_FIELDS = [
-    "id", "name", "gender", "class_name", "phone", "father_name", "father_phone",
-    "mother_name", "mother_phone", "guardian_name", "guardian_phone", "guardian_relation",
-    "card_id", "current_score", "is_active", "is_blacklisted", "created_at", "updated_at",
+    "id",
+    "name",
+    "gender",
+    "class_name",
+    "phone",
+    "father_name",
+    "father_phone",
+    "mother_name",
+    "mother_phone",
+    "guardian_name",
+    "guardian_phone",
+    "guardian_relation",
+    "card_id",
+    "current_score",
+    "is_active",
+    "is_blacklisted",
+    "created_at",
+    "updated_at",
 ]
 USER_BY_CARD_FIELDS = ["id", "name", "gender", "class_name", "phone", "card_id", "current_score"]
 login_model = ns_users.model(
@@ -149,8 +176,18 @@ class UserList(Resource):
             if cached_result is not None:
                 return APIResponse.success(data=cached_result)
         result = get_user_list_view(
-            admin, page, per_page, search, class_name, class_id,
-            keyword, min_score, max_score, sort_by, sort_order, cache_key,
+            admin,
+            page,
+            per_page,
+            search,
+            class_name,
+            class_id,
+            keyword,
+            min_score,
+            max_score,
+            sort_by,
+            sort_order,
+            cache_key,
         )
         return APIResponse.success(data=result)
 
@@ -258,10 +295,10 @@ class UserList(Resource):
         invalidate_cache("api:/api/users/*")
         return APIResponse.success(
             data={
-            "user": {
-                **user.to_dict(USER_CREATE_FIELDS),
-                "role": "student",
-            }
+                "user": {
+                    **user.to_dict(USER_CREATE_FIELDS),
+                    "role": "student",
+                }
             },
             message="用户创建成功",
             status_code=201,
@@ -356,10 +393,10 @@ class UserResource(Resource):
         invalidate_cache("api:/api/users/*")
         return APIResponse.success(
             data={
-            "user": {
-                **user.to_dict(USER_CREATE_FIELDS),
-                "role": "student",
-            }
+                "user": {
+                    **user.to_dict(USER_CREATE_FIELDS),
+                    "role": "student",
+                }
             },
             message="用户更新成功",
         )

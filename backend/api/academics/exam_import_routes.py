@@ -13,7 +13,6 @@ from services.academics_service import academics_service
 from services.score_import_helper import ScoreImportHelper, _resolve_subject_id
 from services.exam_import_query_service import get_import_history_view
 
-
 logger = logging.getLogger(__name__)
 
 ns_exam_import = Namespace("exam-import", description="成绩导入增强功能")

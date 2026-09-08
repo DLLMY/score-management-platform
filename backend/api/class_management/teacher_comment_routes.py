@@ -5,7 +5,9 @@ from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.pagination import get_pagination
 
-ns_teacher_comment = Namespace("teacher_comment", description="班主任评语管理", path="/teacher-comments")
+ns_teacher_comment = Namespace(
+    "teacher_comment", description="班主任评语管理", path="/teacher-comments"
+)
 
 comment_model = ns_teacher_comment.model(
     "TeacherCommentInput",

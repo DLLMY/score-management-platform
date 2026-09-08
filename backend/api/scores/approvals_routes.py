@@ -139,9 +139,13 @@ def _execute_approve(approval, data):
     if mqtt_available and user:
         try:
             score_change_str = (
-                f"{approval.score_change:+g}" if approval.score_change > 0 else str(approval.score_change)
+                f"{approval.score_change:+g}"
+                if approval.score_change > 0
+                else str(approval.score_change)
             )
-            score_change_text = f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
+            score_change_text = (
+                f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
+            )
 
             allowed, check_message, reason_code, rule_info = (
                 ClassTimeChecker.is_notification_allowed(
@@ -184,13 +188,17 @@ def _execute_approve(approval, data):
             log_warning(f"[ScoreChange] 审批积分变动通知发送失败: {e}", exception=e)
 
     invalidate_cache("api:/api/approvals/*")
-    return True, "审批已通过", {
-        "approval_id": approval.id,
-        "user_name": user.name if user else None,
-        "score_change": approval.score_change,
-        "new_points": user.current_score if user else None,
-        "notification_sent": mqtt_available,
-    }
+    return (
+        True,
+        "审批已通过",
+        {
+            "approval_id": approval.id,
+            "user_name": user.name if user else None,
+            "score_change": approval.score_change,
+            "new_points": user.current_score if user else None,
+            "notification_sent": mqtt_available,
+        },
+    )
 
 
 def _execute_reject(approval, data):
@@ -234,11 +242,15 @@ def _execute_reject(approval, data):
         publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
 
     invalidate_cache("api:/api/approvals/*")
-    return True, "审批已拒绝", {
-        "approval_id": approval.id,
-        "comment": approval.comment,
-        "notification_sent": mqtt_available,
-    }
+    return (
+        True,
+        "审批已拒绝",
+        {
+            "approval_id": approval.id,
+            "comment": approval.comment,
+            "notification_sent": mqtt_available,
+        },
+    )
 
 
 @ns_approvals.route("/")
@@ -338,6 +350,8 @@ class ApprovalApprove(Resource):
         if not ok:
             return APIResponse.error(message=message, status_code=detail.get("code", 400))
         return APIResponse.success(data=detail, message=message)
+
+
 @ns_approvals.route("/<int:id>/reject")
 @ns_approvals.param("id", "审批ID")
 class ApprovalReject(Resource):
@@ -351,10 +365,14 @@ class ApprovalReject(Resource):
         if not ok:
             return APIResponse.error(message=message, status_code=detail.get("code", 400))
         return APIResponse.success(data=detail, message=message)
+
+
 @ns_approvals.route("/batch-approve")
 class ApprovalBatchApprove(Resource):
 
-    @ns_approvals.doc("batch_approve_approvals", description="批量通过审批（逐条处理，返回逐条结果）")
+    @ns_approvals.doc(
+        "batch_approve_approvals", description="批量通过审批（逐条处理，返回逐条结果）"
+    )
     @requires_permission("score.approve")
     def post(self):
         """批量通过。逐条执行完整审批链路；单条失败不影响其余。"""
@@ -390,7 +408,9 @@ class ApprovalBatchApprove(Resource):
 @ns_approvals.route("/batch-reject")
 class ApprovalBatchReject(Resource):
 
-    @ns_approvals.doc("batch_reject_approvals", description="批量拒绝审批（逐条处理，返回逐条结果）")
+    @ns_approvals.doc(
+        "batch_reject_approvals", description="批量拒绝审批（逐条处理，返回逐条结果）"
+    )
     @requires_permission("score.approve")
     def post(self):
         """批量拒绝。逐条执行完整审批链路；单条失败不影响其余。"""

@@ -69,6 +69,7 @@ class ScheduledList(Resource):
         """获取定时通知列表（分页）"""
         page, per_page = get_pagination(default=50)
         return APIResponse.success(get_scheduled_list_view(page, per_page))
+
     @ns_scheduled_notify.expect(scheduled_model)
     @requires_permission("notification.send")
     def post(self):
@@ -94,6 +95,7 @@ class ScheduledDetail(Resource):
     def get(self, id):
         """获取单个定时通知详情"""
         return _serialize_scheduled(get_scheduled_detail_view(id))
+
     @ns_scheduled_notify.expect(scheduled_model)
     @requires_permission("notification.send")
     def put(self, id):
@@ -275,7 +277,9 @@ def process_scheduled_notifications():
                 publish_results.append((topic, bool(ok)))
             if not all(ok for _, ok in publish_results):
                 failed_topics = [t for t, ok in publish_results if not ok]
-                logger.warning(f"定时通知(id={notify.id}) MQTT发布失败，保持pending待重试: {failed_topics}")
+                logger.warning(
+                    f"定时通知(id={notify.id}) MQTT发布失败，保持pending待重试: {failed_topics}"
+                )
                 continue
 
             record_scheduled_history(notify, topics)

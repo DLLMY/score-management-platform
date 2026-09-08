@@ -645,7 +645,10 @@ class NLPModelTrainAll(Resource):
     （开发/单进程部署安全；若将来多 worker 需迁移 Redis/DB）。
     """
 
-    @ns_nlp.doc("nlp_train_all_models", description="训练所有算法并自动选择最佳模型（异步，返回 task_id 后轮询状态）")
+    @ns_nlp.doc(
+        "nlp_train_all_models",
+        description="训练所有算法并自动选择最佳模型（异步，返回 task_id 后轮询状态）",
+    )
     @requires_permission("algorithm.manage")
     @safe_handle()
     def post(self):
@@ -1409,7 +1412,10 @@ class NLPFeedbackRecord(Resource):
                 if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
                     del parser._parse_cache[cache_key]
             except Exception:
-                logging.getLogger(__name__).warning("NLP best-effort operation failed; exception previously swallowed silently", exc_info=True)
+                logging.getLogger(__name__).warning(
+                    "NLP best-effort operation failed; exception previously swallowed silently",
+                    exc_info=True,
+                )
                 pass
 
             return APIResponse.success(

@@ -119,7 +119,6 @@ class CompositeScore(Resource):
         result = CompositeScoreService.get_composite_scores(class_name)  # noqa: F841
         return APIResponse.success(data=result, message="success")
 
-
     @ns_algorithm.doc("post_composite_score_recalculate", description="重新计算综合评分")
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
@@ -183,7 +182,6 @@ class Warning(Resource):
         result = WarningService.get_warnings(class_name)  # noqa: F841
         return APIResponse.success(data=result, message="success")
 
-
     @ns_algorithm.doc("post_warning_evaluate", description="执行风险评估")
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
@@ -211,7 +209,6 @@ class WarningConfig(Resource):
         """
         config = WarningService.get_config()
         return APIResponse.success(data=config, message="success")
-
 
     @ns_algorithm.doc("post_warning_config", description="更新预警配置")
     @ns_algorithm.response(200, "成功")
@@ -465,9 +462,7 @@ class RuleRecommend(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = RuleRecommendationService.get_all_recommendations(
-            class_name, days
-        )  # noqa: F841
+        result = RuleRecommendationService.get_all_recommendations(class_name, days)  # noqa: F841
         return APIResponse.success(data=result, message="success")
 
 
@@ -525,9 +520,7 @@ class RuleCombination(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = RuleRecommendationService.suggest_rule_combinations(
-            class_name, days
-        )  # noqa: F841
+        result = RuleRecommendationService.suggest_rule_combinations(class_name, days)  # noqa: F841
         return APIResponse.success(data=result, message="success")
 
 

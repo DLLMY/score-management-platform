@@ -42,6 +42,8 @@ rate_limit_store: dict[str, dict[str, float | int]] = {}
 
 
 from utils.logger import log_warning
+
+
 def cleanup_rate_limit_store():
     now = time.time()
     max_age = 300
@@ -385,9 +387,7 @@ class SystemRestore(Resource):
         except OSError as _e:
             return APIResponse.error(message=f"备份文件不可读: {_e}", status_code=500)
         if not magic.startswith(b"SQLite format 3"):
-            return APIResponse.error(
-                message="备份文件不是有效的 SQLite 数据库", status_code=400
-            )
+            return APIResponse.error(message="备份文件不是有效的 SQLite 数据库", status_code=400)
 
         # F14 修复: 恢复前自动备份当前库（磁盘空间不足时仅告警不阻断恢复）
         try:
@@ -424,7 +424,9 @@ class SystemClearCache(Resource):
             try:
                 shutil.rmtree(path)
             except OSError as exc:
-                log_warning(f"[clear-cache] 清理 {path} 失败（目录占用/受限），已跳过: {exc}", exception=exc)
+                log_warning(
+                    f"[clear-cache] 清理 {path} 失败（目录占用/受限），已跳过: {exc}", exception=exc
+                )
 
         if os.path.exists(cache_dir):
             _clear_pycache(cache_dir)
@@ -942,9 +944,7 @@ class SystemStats(Resource):
             except Exception as e2:
                 logger.error(f"系统统计单表降级查询整体失败: {e2}")
                 # DB 不可用：返回失败而非伪造全 0（防止前端误信"0 用户 0 记录"为真实值）
-                return APIResponse.error(
-                    message="数据库不可用，无法获取系统统计", status_code=500
-                )
+                return APIResponse.error(message="数据库不可用，无法获取系统统计", status_code=500)
 
             # counts 字典 key 与表名一致（单数）——此前用复数 key 取值致降级分支必全 0
             user_count = counts.get("user", 0)

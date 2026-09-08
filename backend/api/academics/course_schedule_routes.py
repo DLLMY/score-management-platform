@@ -208,9 +208,7 @@ def _parse_course_import_input(content_type, field_mappings, default_values):
                     if source_val is None:
                         if mapping.get("required"):
                             break
-                        source_val = mapping.get(
-                            "default_value", default_values.get(target_field)
-                        )
+                        source_val = mapping.get("default_value", default_values.get(target_field))
 
                     if field_type == "boolean":
                         if isinstance(source_val, str):
@@ -257,13 +255,9 @@ def _validate_course_import_item(item, day_text_map, max_period):
     if not class_name:
         row_errors.append({"field": "class_name", "message": "班级名称不能为空"})
     elif not isinstance(class_name, str) or len(class_name.strip()) == 0:
-        row_errors.append(
-            {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
-        )
+        row_errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
     elif len(class_name.strip()) > 100:
-        row_errors.append(
-            {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
-        )
+        row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
 
     if not subject_name:
         row_errors.append({"field": "subject_name", "message": "科目名称不能为空"})
@@ -287,9 +281,7 @@ def _validate_course_import_item(item, day_text_map, max_period):
                 }
             )
     elif not isinstance(day_of_week, int) or day_of_week < 0 or day_of_week > 6:
-        row_errors.append(
-            {"field": "day_of_week", "message": "星期值无效，必须为0-6之间的整数"}
-        )
+        row_errors.append({"field": "day_of_week", "message": "星期值无效，必须为0-6之间的整数"})
 
     if period_number is None:
         row_errors.append({"field": "period_number", "message": "节次不能为空"})
@@ -332,6 +324,8 @@ def _validate_course_import_item(item, day_text_map, max_period):
             )
 
     return row_errors
+
+
 @ns_course_schedule.route("/")
 class CourseScheduleList(Resource):
 
@@ -353,7 +347,12 @@ class CourseScheduleList(Resource):
         view = get_schedule_list_view(args)
         return APIResponse.success(
             data={"schedules": view["schedules"]},
-            pagination={"page": view["page"], "per_page": view["per_page"], "total": view["total"], "pages": view["pages"]},
+            pagination={
+                "page": view["page"],
+                "per_page": view["per_page"],
+                "total": view["total"],
+                "pages": view["pages"],
+            },
         )
 
     @ns_course_schedule.doc("create_course_schedule", description="创建课程安排", security="Bearer")
@@ -831,7 +830,6 @@ class CourseScheduleImport(Resource):
         content_type = request.content_type or ""
         config_id = request.args.get("config_id", type=int)
         strategy_param = request.args.get("conflict_strategy", type=str)
-
 
         field_mappings, conflict_strategy, default_values = _load_course_import_config(
             config_id, strategy_param

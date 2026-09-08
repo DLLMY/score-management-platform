@@ -47,6 +47,7 @@ def _notification_dict(n):
     """完整通知响应（NOTIFICATION_FIELDS + 派生 user_name）。"""
     return {**n.to_dict(NOTIFICATION_FIELDS), "user_name": n.user.name if n.user else None}
 
+
 from utils.response import APIResponse
 from utils.pagination import get_pagination
 from utils.api_cache_middleware import cached_api, invalidate_cache

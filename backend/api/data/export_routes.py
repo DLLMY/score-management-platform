@@ -32,8 +32,14 @@ RECORD_EXPORT_FIELDS = [
 
 # B3 User.to_dict 字段子集（2026-08-23，对应原 users 导出内联 8 字段）
 EXPORT_USER_FIELDS = [
-    "id", "name", "gender", "class_name", "phone", "card_id",
-    "current_score", "created_at",
+    "id",
+    "name",
+    "gender",
+    "class_name",
+    "phone",
+    "card_id",
+    "current_score",
+    "created_at",
 ]
 
 # B3 ScoreRule.to_dict 字段子集（2026-09-05，对应原 rules 导出内联 10 字段，顺序逐字一致）
@@ -108,9 +114,7 @@ class ExportData(Resource):
                 if _cn is not None:
                     users_q = users_q.filter(User.class_name.in_(_cn))
                 users = users_q.all()
-                user_data = [
-                    u.to_dict(EXPORT_USER_FIELDS) for u in users
-                ]
+                user_data = [u.to_dict(EXPORT_USER_FIELDS) for u in users]
                 if export_format == "excel":
                     output = export_service.export_users_to_excel(user_data)
                     filename = f"users_{timestamp}.xlsx"
@@ -184,7 +188,9 @@ class ExportData(Resource):
                 users_count = User.query.count()
                 rules_count = ScoreRule.query.count()
                 devices_count = Device.query.count()
-                online_devices = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
+                online_devices = Device.query.filter(
+                    Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
+                ).count()
                 records_count = ScoreRecord.query.count()
                 output = export_service.export_summary_report(
                     users_count, rules_count, devices_count, online_devices, records_count
@@ -224,9 +230,7 @@ class ExportUsers(Resource):
         if _cn is not None:
             users_q = users_q.filter(User.class_name.in_(_cn))
         users = users_q.all()
-        user_data = [
-            u.to_dict(EXPORT_USER_FIELDS) for u in users
-        ]
+        user_data = [u.to_dict(EXPORT_USER_FIELDS) for u in users]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:
             if export_format == "excel":
@@ -435,7 +439,9 @@ class ExportSummary(Resource):
         users_count = User.query.count()
         rules_count = ScoreRule.query.count()
         devices_count = Device.query.count()
-        online_devices = Device.query.filter(Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)).count()
+        online_devices = Device.query.filter(
+            Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
+        ).count()
         records_count = ScoreRecord.query.count()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:

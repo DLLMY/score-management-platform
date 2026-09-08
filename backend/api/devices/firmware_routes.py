@@ -32,6 +32,7 @@ from services.ota_negotiation_service import (
     negotiate_all_devices,
     sign_ota_command,
 )
+
 logger = logging.getLogger(__name__)
 from services.firmware_service import (
     create_firmware_version,

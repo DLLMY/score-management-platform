@@ -29,6 +29,7 @@ from services.device_query_service import (
     get_device_stats_view,
     get_device_advanced_stats_view,
 )
+
 logger = logging.getLogger(__name__)
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime, timedelta
@@ -173,7 +174,6 @@ device_stats_response = ns_devices.model(
 )
 
 
-
 @ns_devices.route("/")
 class DeviceList(Resource):
 
@@ -196,7 +196,6 @@ class DeviceList(Resource):
         class_id = request.args.get("class_id", type=int)
         view = get_device_list_view(admin, page, per_page, device_id, name, status, class_id)
         return APIResponse.success(data=view)
-
 
     @ns_devices.doc("create_device", description="创建设备", security="Bearer")
     @ns_devices.expect(device_model)
@@ -407,7 +406,6 @@ class DeviceStats(Resource):
         return APIResponse.success(data=view)
 
 
-
 @ns_devices.route("/online")
 class OnlineDevices(Resource):
 
@@ -586,20 +584,25 @@ class DevicesByClass(Resource):
         devices = pagination.items
         return APIResponse.success(
             data=[
-            {
-                "id": d.id,
-                "device_id": d.device_id,
-                "name": d.name,
-                "status": d.status,
-                "is_online": is_device_online(d),
-                "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
-                "wifi_signal": d.wifi_signal,
-                "admin_name": d.admin.real_name if d.admin else None,
-                "updated_at": d.updated_at.isoformat() if d.updated_at else None,
-            }
-            for d in devices
+                {
+                    "id": d.id,
+                    "device_id": d.device_id,
+                    "name": d.name,
+                    "status": d.status,
+                    "is_online": is_device_online(d),
+                    "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+                    "wifi_signal": d.wifi_signal,
+                    "admin_name": d.admin.real_name if d.admin else None,
+                    "updated_at": d.updated_at.isoformat() if d.updated_at else None,
+                }
+                for d in devices
             ],
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            pagination={
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
         )
 
 
@@ -627,20 +630,25 @@ class DevicesByAdmin(Resource):
         devices = pagination.items
         return APIResponse.success(
             data=[
-            {
-                "id": d.id,
-                "device_id": d.device_id,
-                "name": d.name,
-                "status": d.status,
-                "is_online": is_device_online(d),
-                "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
-                "wifi_signal": d.wifi_signal,
-                "class_name": d.class_info.name if d.class_info else None,
-                "updated_at": d.updated_at.isoformat() if d.updated_at else None,
-            }
-            for d in devices
+                {
+                    "id": d.id,
+                    "device_id": d.device_id,
+                    "name": d.name,
+                    "status": d.status,
+                    "is_online": is_device_online(d),
+                    "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+                    "wifi_signal": d.wifi_signal,
+                    "class_name": d.class_info.name if d.class_info else None,
+                    "updated_at": d.updated_at.isoformat() if d.updated_at else None,
+                }
+                for d in devices
             ],
-            pagination={"page": page, "per_page": per_page, "total": pagination.total, "pages": pagination.pages},
+            pagination={
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
         )
 
 
@@ -661,7 +669,6 @@ class DeviceAlerts(Resource):
         page, per_page = get_pagination(default=50)
         view = get_device_alerts_view(resolved, severity, page, per_page)
         return APIResponse.success(data=view)
-
 
 
 @ns_devices.route("/<int:id>/alerts/<int:alert_id>/resolve")
@@ -839,7 +846,6 @@ class DeviceAdvancedStats(Resource):
     @cached_api(ttl=60)
     def get(self):
         return get_device_advanced_stats_view()
-
 
 
 @ns_devices.route("/heartbeat-timeout-check")
