@@ -1,4 +1,3 @@
-import type React from 'react';
 import type { ChangeEvent } from 'react';
 import {
   Plus,

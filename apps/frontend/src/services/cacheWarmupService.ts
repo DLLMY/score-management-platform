@@ -146,15 +146,6 @@ class CacheWarmupService {
   }
 
   /**
-   * 批量获取端点
-   */
-  private async fetchEndpoints(endpoints: CacheWarmupConfig['endpoints']): Promise<void> {
-    if (!endpoints || endpoints.length === 0) return;
-
-    await Promise.all(endpoints.map((endpoint) => this.fetchEndpoint(endpoint)));
-  }
-
-  /**
    * 获取单个端点
    */
   private async fetchEndpoint(endpoint: CacheWarmupConfig['endpoints'][0]): Promise<void> {

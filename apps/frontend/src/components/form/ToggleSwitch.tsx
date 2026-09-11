@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * 公共开关组件（ToggleSwitch）。
  *

@@ -6,7 +6,6 @@
 /// <reference types="jest" />
 import { screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
-import React from 'react';
 import RankBoard from '../../pages/RankBoard';
 import { renderWithProviders } from '../utils/test-utils';
 

@@ -84,7 +84,6 @@ interface StudyGroupsViewProps {
 }
 
 export default function StudyGroupsView({
-  groups,
   isLoading,
   searchTerm,
   setSearchTerm,
@@ -101,7 +100,6 @@ export default function StudyGroupsView({
   formData,
   setFormData,
   errors,
-  setErrors,
   selectedGroup,
   setSelectedGroup,
   scoreAdjustValue,

@@ -6,7 +6,7 @@
 
 import logger from '../../utils/logger';
 import { downloadBlob } from '../../utils/download';
-import React, { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react';
 import { useConfirm, type ColumnType } from '../../components';
 import api, { getAuthHeaders } from '../../services/api';
 import type { User, Subject } from '../../types';

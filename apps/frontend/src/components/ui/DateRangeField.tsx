@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * 起止日期范围选择（F10 2026-08-23）。
  *

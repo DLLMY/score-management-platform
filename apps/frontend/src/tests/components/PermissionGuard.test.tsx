@@ -6,7 +6,6 @@
 /// <reference types="jest" />
 import { screen, fireEvent, act, cleanup, render } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
-import React from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { PermissionGuard } from '../../components';
 import { ToastProvider } from '../../context/ToastContext';

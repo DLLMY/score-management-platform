@@ -92,7 +92,7 @@ class PerformanceMonitor {
     }
   }
 
-  recordError(name: string): void {
+  recordError(_name: string): void {
     this.stats.errors++;
     this.notifyListeners();
   }

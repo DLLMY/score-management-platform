@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 /**
  * 班主任工作台概览页（WorkbenchOverview）的类型契约与静态配置。
  *

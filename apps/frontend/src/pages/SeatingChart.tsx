@@ -232,7 +232,7 @@ function SeatingChartPage() {
   );
 
   const handleSeatPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>, seat: SeatPosition) => {
+    (e: ReactPointerEvent<HTMLDivElement>, _seat: SeatPosition) => {
       const st = dragStateRef.current;
       if (!st.candidate) return;
       if (!st.active) {
@@ -247,7 +247,7 @@ function SeatingChartPage() {
   );
 
   const handleSeatPointerUp = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>, seat: SeatPosition) => {
+    (e: ReactPointerEvent<HTMLDivElement>, _seat: SeatPosition) => {
       const st = dragStateRef.current;
       if (!st.candidate) return;
       if (st.active) {

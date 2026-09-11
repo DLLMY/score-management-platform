@@ -25,7 +25,6 @@ import { EmptyState, Button, PermissionButton } from '../../components';
 import type { UserDetailViewProps } from './types';
 
 const UserDetailView: React.FC<UserDetailViewProps> = ({
-  id,
   navigate,
   user,
   records,

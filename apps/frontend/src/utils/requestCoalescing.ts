@@ -16,7 +16,6 @@ interface CoalescedRequest<T> {
 class RequestCoalescer {
   private pendingRequests = new Map<string, CoalescedRequest<unknown>>();
   private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
-  private maxCacheTTL = 60000;
   private cleanupInterval: number | null = null;
 
   constructor() {

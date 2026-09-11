@@ -14,8 +14,11 @@
     "strict": true,
     // strict 之外已开启项：强制 class 覆盖父类成员时显式写 override
     "noImplicitOverride": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    // 禁止未引用的局部变量 / 私有类成员（eslint 的 no-unused-vars 覆盖不到类成员，
+    // 且 react/jsx-uses-react 会掩盖 React 未用导入，故必须在 tsc 侧兜底）
+    "noUnusedLocals": true,
+    // 禁止未使用的形参（下划线前缀形参豁免）
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "allowSyntheticDefaultImports": true,

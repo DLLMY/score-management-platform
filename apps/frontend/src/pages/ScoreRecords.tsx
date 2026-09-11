@@ -197,7 +197,7 @@ const ScoreRecords: React.FC = () => {
           }
           <tr><th colspan='4' style='background:#4472C4;color:white'>历次考试成绩</th></tr>
           ${Object.entries(examScores)
-            .map(([examId, exam]) => {
+            .map(([, exam]) => {
               const scores = exam.scores || {};
               return (
                 `<tr><td colspan='4' style='background:#D6DCE4;font-weight:bold'>${
