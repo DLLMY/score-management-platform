@@ -89,7 +89,7 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
             logger.info(f"已提交 {alerts_created} 条心跳超时告警")
         except Exception as e:
             db.session.rollback()
-            logger.error(f"心跳超时告警提交失败: {e}")
+            logger.error(f"心跳超时告警提交失败: {e}", exc_info=True)
 
     return {
         "timeout_devices": [

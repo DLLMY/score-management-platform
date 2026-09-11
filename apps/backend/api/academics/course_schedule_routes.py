@@ -3,7 +3,6 @@ import io
 from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from models import CourseSchedule, ClassInfo, Subject, ClassPeriod, Admin, ImportConfig, get_by_id
-from services.class_time_checker import ClassTimeChecker
 from services.academics_service import academics_service
 from services.course_schedule_service import (
     get_schedule_list_view,
@@ -414,7 +413,7 @@ class CourseScheduleList(Resource):
         if conflicts:
             return APIResponse.bad_request(message="存在时间冲突", errors=conflicts)
 
-        subject = get_by_id(Subject, data["subject_id"])  # noqa: F841
+        subject = get_by_id(Subject, data["subject_id"])
         color = data.get("color") or (subject.color if subject else "#3B82F6")
 
         schedule_id = academics_service.create_course_schedule(
@@ -478,9 +477,12 @@ class CourseScheduleResource(Resource):
         # 数据隔离：非管理员只能查看关联班级的课程
         admin = get_current_admin()
         allowed_classes = get_allowed_classes(admin.id) if admin else None
-        if allowed_classes is not None:
-            if schedule.class_info and schedule.class_info.name not in allowed_classes:
-                return APIResponse.forbidden(message="无权查看该课程")
+        if (
+            allowed_classes is not None
+            and schedule.class_info
+            and schedule.class_info.name not in allowed_classes
+        ):
+            return APIResponse.forbidden(message="无权查看该课程")
 
         return APIResponse.success(data=_schedule_dict(schedule))
 
@@ -496,9 +498,12 @@ class CourseScheduleResource(Resource):
         # 数据隔离：非管理员只能修改关联班级的课程
         admin = get_current_admin()
         allowed_classes = get_allowed_classes(admin.id) if admin else None
-        if allowed_classes is not None:
-            if schedule.class_info and schedule.class_info.name not in allowed_classes:
-                return APIResponse.forbidden(message="无权修改该课程")
+        if (
+            allowed_classes is not None
+            and schedule.class_info
+            and schedule.class_info.name not in allowed_classes
+        ):
+            return APIResponse.forbidden(message="无权修改该课程")
 
         data = ns_course_schedule.payload
 
@@ -586,7 +591,7 @@ class CourseScheduleResource(Resource):
         if "color" in data:
             final_color = data["color"]
         else:
-            color_subject = get_by_id(Subject, new_subject_id)  # noqa: F841
+            color_subject = get_by_id(Subject, new_subject_id)
             final_color = color_subject.color if color_subject else None
 
         academics_service.update_course_schedule(
@@ -644,9 +649,12 @@ class CourseScheduleResource(Resource):
         # 数据隔离：非管理员只能删除关联班级的课程
         admin = get_current_admin()
         allowed_classes = get_allowed_classes(admin.id) if admin else None
-        if allowed_classes is not None:
-            if schedule.class_info and schedule.class_info.name not in allowed_classes:
-                return APIResponse.forbidden(message="无权删除该课程")
+        if (
+            allowed_classes is not None
+            and schedule.class_info
+            and schedule.class_info.name not in allowed_classes
+        ):
+            return APIResponse.forbidden(message="无权删除该课程")
 
         academics_service.delete_course_schedule(id)
         invalidate_cache("api:/api/course-schedules/*")
@@ -691,6 +699,7 @@ class CourseScheduleNow(Resource):
                     if dev and dev.class_info_id:
                         class_info_id = dev.class_info_id
                 except Exception:
+                    logger.warning("按设备解析 class_info_id 失败，置 None", exc_info=True)
                     class_info_id = None
         data = get_schedule_now_view(class_info_id)
         return APIResponse.success(data=data)
@@ -800,24 +809,23 @@ class CourseScheduleExport(Resource):
                 as_attachment=True,
                 download_name=f"{filename_prefix}.xlsx",
             )
-        else:
-            output = {
-                "export_time": datetime.now().isoformat(),
-                "total": len(export_data),
-                "class_info_id": class_info_id,
-                "data": export_data,
-            }
+        output = {
+            "export_time": datetime.now().isoformat(),
+            "total": len(export_data),
+            "class_info_id": class_info_id,
+            "data": export_data,
+        }
 
-            json_str = json.dumps(output, ensure_ascii=False, indent=2)
-            buf = io.BytesIO(json_str.encode("utf-8"))
-            buf.seek(0)
+        json_str = json.dumps(output, ensure_ascii=False, indent=2)
+        buf = io.BytesIO(json_str.encode("utf-8"))
+        buf.seek(0)
 
-            return send_file(
-                buf,
-                mimetype="application/json",
-                as_attachment=True,
-                download_name=f"{filename_prefix}.json",
-            )
+        return send_file(
+            buf,
+            mimetype="application/json",
+            as_attachment=True,
+            download_name=f"{filename_prefix}.json",
+        )
 
 
 @ns_course_schedule.route("/import")
@@ -868,7 +876,7 @@ class CourseScheduleImport(Resource):
                 if subject_name:
                     subject = Subject.query.filter_by(
                         name=subject_name.strip()
-                    ).first()  # noqa: F841
+                    ).first()
                     if not subject:
                         row_errors.append(
                             {
@@ -903,7 +911,7 @@ class CourseScheduleImport(Resource):
                     continue
 
                 class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                subject = Subject.query.filter_by(name=subject_name.strip()).first()  # noqa: F841
+                subject = Subject.query.filter_by(name=subject_name.strip()).first()
 
                 day_of_week = item["day_of_week"]
                 if isinstance(day_of_week, str):

@@ -226,7 +226,7 @@ class RecordList(Resource):
                 }
             )
         except Exception as e:
-            logger.error("%s: %s", "创建积分记录失败", e)
+            logger.error("%s: %s", "创建积分记录失败", e, exc_info=True)
             return APIResponse.error(message="创建积分记录失败", status_code=500)
 
         # R4: 手动创建积分记录同样触发综合评分重算（异步入队，无 broker 时同步回退）
@@ -234,7 +234,7 @@ class RecordList(Resource):
         try:
             enqueue_or_recalc_user_score(user_id)
         except Exception as e:
-            logger.error("手动创建记录后综合评分重算失败 user_id=%s: %s", user_id, e)
+            logger.error("手动创建记录后综合评分重算失败 user_id=%s: %s", user_id, e, exc_info=True)
             composite_score_status = "recalculate_failed"
 
         # 记录操作日志（失败不影响主流程）
@@ -251,7 +251,7 @@ class RecordList(Resource):
                 after_data=data,
             )
         except Exception as e:
-            logger.warning("记录积分操作日志失败 record_id=%s: %s", record.id, e)
+            logger.warning("记录积分操作日志失败 record_id=%s: %s", record.id, e, exc_info=True)
 
         invalidate_cache("api:/api/records/*")
 
@@ -489,7 +489,7 @@ class ScoreEntryResource(Resource):
                     f"[Rank] 排名变动通知已发送: {user_name} {before_rank_name} -> {after_rank_name}"
                 )
             except Exception as e:
-                logger.warning(f"[Rank] 发送排名变动通知失败: {e}")
+                logger.warning(f"[Rank] 发送排名变动通知失败: {e}", exc_info=True)
 
         # 发送积分变动通知到远程客户端（积分窗口显示）
         try:
@@ -549,14 +549,14 @@ class ScoreEntryResource(Resource):
                 },
             )
         except Exception as e:
-            logger.warning(f"[ScoreChange] 发送积分变动通知失败: {e}")
+            logger.warning(f"[ScoreChange] 发送积分变动通知失败: {e}", exc_info=True)
 
         # 清除统计缓存
         try:
             invalidated = get_cache_service().invalidate_by_tag("statistics")
             logger.info(f"[Cache] 积分录入后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
-            logger.warning(f"[Cache] 清除缓存失败: {e}")
+            logger.warning(f"[Cache] 清除缓存失败: {e}", exc_info=True)
         invalidate_cache("api:/api/records/*")
 
         # 触发综合评分增量更新
@@ -565,14 +565,14 @@ class ScoreEntryResource(Resource):
         try:
             from services.score_recalc import enqueue_or_recalc_user_score
 
-            result = enqueue_or_recalc_user_score(user_id)  # noqa: F841
+            result = enqueue_or_recalc_user_score(user_id)
             if result:
                 composite_score_updated = True
                 logger.info(
                     f"[CompositeScore] 用户{user_id}综合评分已更新: {result.get('composite_score')}"
                 )
         except Exception as e:
-            logger.warning(f"[CompositeScore] 综合评分更新失败: {e}")
+            logger.warning(f"[CompositeScore] 综合评分更新失败: {e}", exc_info=True)
             composite_score_status = "recalculate_failed"
 
         return (
@@ -713,7 +713,7 @@ class BatchScoreEntryResource(Resource):
         try:
             get_cache_service().invalidate_by_tag("statistics")
         except Exception as e:
-            logger.warning("批量录入后清除 statistics 缓存失败: %s", e)
+            logger.warning("批量录入后清除 statistics 缓存失败: %s", e, exc_info=True)
         invalidate_cache("api:/api/records/*")
 
         # R4: 批量录入后对涉及学生触发综合评分重算（异步入队，无 broker 时同步回退）
@@ -723,7 +723,7 @@ class BatchScoreEntryResource(Resource):
                 for uid in {item["user"].id for item in created_records}:
                     enqueue_or_recalc_user_score(uid)
             except Exception as e:
-                logger.error("批量录入后综合评分重算失败: %s", e)
+                logger.error("批量录入后综合评分重算失败: %s", e, exc_info=True)
 
         status_code = 200 if results else 400
         if not results:
@@ -843,7 +843,7 @@ class RecordResource(Resource):
             invalidated = get_cache_service().invalidate_by_tag("statistics")
             logger.info(f"[Cache] 删除记录后清除了 {invalidated} 个statistics相关缓存")
         except Exception as e:
-            logger.warning(f"[Cache] 清除缓存失败: {e}")
+            logger.warning(f"[Cache] 清除缓存失败: {e}", exc_info=True)
         invalidate_cache("api:/api/records/*")
 
         # R4: 删除回滚后触发综合评分重算（异步入队，无 broker 时同步回退）
@@ -856,6 +856,7 @@ class RecordResource(Resource):
                 id,
                 record.student_id,
                 e,
+                exc_info=True,
             )
             composite_score_status = "recalculate_failed"
 

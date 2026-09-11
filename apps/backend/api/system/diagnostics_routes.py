@@ -210,7 +210,7 @@ class SystemInfo(Resource):
         """获取系统信息"""
         try:
             process = psutil.Process()
-            result = {  # noqa: F841
+            result = {
                 "system": {
                     "platform": platform.system(),
                     "platform_version": platform.version(),
@@ -226,7 +226,7 @@ class SystemInfo(Resource):
             }
             return APIResponse.success(data=result)
         except ImportError:
-            result = {  # noqa: F841
+            result = {
                 "system": {
                     "platform": platform.system(),
                     "platform_version": platform.version(),
@@ -241,7 +241,7 @@ class SystemInfo(Resource):
             }
             return APIResponse.success(data=result)
         except Exception as e:
-            logger.error("diagnostics_routes.py: %s", e)
+            logger.error("diagnostics_routes.py: %s", e, exc_info=True)
             return APIResponse.error(message="诊断失败，请稍后重试", status_code=500)
 
 

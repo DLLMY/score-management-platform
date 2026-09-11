@@ -14,7 +14,8 @@ import threading
 import time
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
 import redis
 
@@ -38,7 +39,7 @@ def _safe(default):
             try:
                 return fn(self, *args, **kwargs)
             except Exception as e:
-                logger.warning(f"Redis {fn.__name__} error (degraded): {e}")
+                logger.warning(f"Redis {fn.__name__} error (degraded): {e}", exc_info=True)
                 return default() if callable(default) else default
 
         return wrapper
@@ -97,7 +98,7 @@ class RedisCache:
         try:
             app.config["CACHE_SERVICE"] = self
         except Exception as e:
-            logger.warning(f"注册 CACHE_SERVICE 到 app.config 失败: {e}")
+            logger.warning(f"注册 CACHE_SERVICE 到 app.config 失败: {e}", exc_info=True)
 
     def _resolve_redis_server_executable(self, app):
         """按优先级探测本地 redis-server 可执行文件，返回绝对路径或 None。"""
@@ -155,11 +156,11 @@ class RedisCache:
                     opened = open(log_path, "ab", buffering=0)
                     logf = opened
                 except Exception as e:
-                    logger.warning(f"打开 Redis 日志文件失败，降级为丢弃输出: {e}")
+                    logger.warning(f"打开 Redis 日志文件失败，降级为丢弃输出: {e}", exc_info=True)
                     logf = subprocess.DEVNULL
                     opened = None
 
-            spawn_kwargs = dict(stdout=logf, stderr=logf, stdin=subprocess.DEVNULL)
+            spawn_kwargs = {"stdout": logf, "stderr": logf, "stdin": subprocess.DEVNULL}
             if os.name == "nt":
                 flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
                     subprocess, "CREATE_NEW_PROCESS_GROUP", 0
@@ -174,14 +175,14 @@ class RedisCache:
                 proc = subprocess.Popen(args, **spawn_kwargs)
                 logger.info(f"已启动 Redis 子进程 pid={proc.pid} exe={exe}")
             except Exception as e:
-                logger.error(f"启动 Redis 子进程失败: {e}")
+                logger.error(f"启动 Redis 子进程失败: {e}", exc_info=True)
                 return False
             finally:
                 if opened is not None:
                     try:
                         opened.close()
                     except Exception as e:
-                        logger.debug(f"关闭 Redis 日志文件句柄失败: {e}")
+                        logger.debug(f"关闭 Redis 日志文件句柄失败: {e}", exc_info=True)
 
             timeout = int(app.config.get("REDIS_AUTO_START_TIMEOUT", 15))
             deadline = time.time() + timeout
@@ -193,7 +194,7 @@ class RedisCache:
                         return True
                 except Exception:
                     # 就绪探测轮询：未就绪属预期（0.5s 后重试），无需告警刷日志
-                    pass
+                    logger.debug("Redis 就绪探测失败（未就绪，0.5s 后重试）", exc_info=True)
                 time.sleep(0.5)
             logger.error("Redis 子进程启动后超时未就绪")
             return False
@@ -213,6 +214,7 @@ class RedisCache:
             self._pool = redis.ConnectionPool.from_url(url)
             return True
         except Exception:
+            logger.debug("Redis 创建连接池失败（降级）", exc_info=True)
             self._pool = None
             return False
 
@@ -230,13 +232,14 @@ class RedisCache:
             self.client = client
             return True
         except Exception:
+            logger.debug("Redis 连接失败（降级）", exc_info=True)
             self.client = None
             return False
 
     def _key(self, key: str) -> str:
         return f"{self._prefix}{key}"
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         if not self.client:
             return None
         try:
@@ -255,9 +258,10 @@ class RedisCache:
                         value.encode("latin1")
                     )  # nosec B301 - trusted internal cache
                 except Exception:
+                    logger.debug("Redis 缓存值反序列化失败（返回原始值）", exc_info=True)
                     return value
         except Exception as e:
-            logger.error(f"Redis get error: {e}")
+            logger.error(f"Redis get error: {e}", exc_info=True)
             self.client = None
             return None
 
@@ -287,7 +291,7 @@ class RedisCache:
             self._store_tags(redis_key, tags, expire)
             return True
         except Exception as e:
-            logger.error(f"Redis set error: {e}")
+            logger.error(f"Redis set error: {e}", exc_info=True)
             self.client = None
             return False
 
@@ -303,7 +307,7 @@ class RedisCache:
                     self.client.expire(tag_key, expire + 3600)
         except Exception as e:
             # 标签登记失败会导致按标签批量失效不完整（可能读到旧缓存值），需告警
-            logger.warning(f"缓存标签登记失败: {e}")
+            logger.warning(f"缓存标签登记失败: {e}", exc_info=True)
 
     def delete(self, key: str) -> bool:
         if not self.client:
@@ -313,7 +317,7 @@ class RedisCache:
             self._stats["deletes"] += 1
             return True
         except Exception as e:
-            logger.error(f"Redis delete error: {e}")
+            logger.error(f"Redis delete error: {e}", exc_info=True)
             self.client = None
             return False
 
@@ -332,28 +336,28 @@ class RedisCache:
             return -1
         return self.client.ttl(self._key(key))
 
-    def incr(self, key: str, amount: int = 1) -> Optional[int]:
+    def incr(self, key: str, amount: int = 1) -> int | None:
         if not self.client:
             return None
         try:
             return self.client.incr(self._key(key), amount)
         except Exception as e:
-            logger.error(f"Redis incr error: {e}")
+            logger.error(f"Redis incr error: {e}", exc_info=True)
             self.client = None
             return None
 
-    def decr(self, key: str, amount: int = 1) -> Optional[int]:
+    def decr(self, key: str, amount: int = 1) -> int | None:
         if not self.client:
             return None
         try:
             return self.client.decr(self._key(key), amount)
         except Exception as e:
-            logger.error(f"Redis decr error: {e}")
+            logger.error(f"Redis decr error: {e}", exc_info=True)
             self.client = None
             return None
 
     @_safe(None)
-    def hget(self, name: str, key: str) -> Optional[str]:
+    def hget(self, name: str, key: str) -> str | None:
         if not self.client:
             return None
         return self.client.hget(self._key(name), key)
@@ -365,7 +369,7 @@ class RedisCache:
             self.client.hset(self._key(name), key, value)
             return True
         except Exception as e:
-            logger.error(f"Redis hset error: {e}")
+            logger.error(f"Redis hset error: {e}", exc_info=True)
             return False
 
     @_safe({})
@@ -387,7 +391,7 @@ class RedisCache:
         return self.client.lpush(self._key(key), *values)
 
     @_safe(None)
-    def rpop(self, key: str) -> Optional[str]:
+    def rpop(self, key: str) -> str | None:
         if not self.client:
             return None
         return self.client.rpop(self._key(key))
@@ -429,18 +433,18 @@ class RedisCache:
         return self.client.zrange(self._key(key), start, end, desc=desc)
 
     @_safe(None)
-    def zrevrank(self, key: str, member: str) -> Optional[int]:
+    def zrevrank(self, key: str, member: str) -> int | None:
         if not self.client:
             return None
         return self.client.zrevrank(self._key(key), member)
 
     @_safe(None)
-    def zscore(self, key: str, member: str) -> Optional[float]:
+    def zscore(self, key: str, member: str) -> float | None:
         if not self.client:
             return None
         return self.client.zscore(self._key(key), member)
 
-    def acquire_lock(self, lock_name: str, timeout: int = 10) -> Optional[str]:
+    def acquire_lock(self, lock_name: str, timeout: int = 10) -> str | None:
         if not self.client:
             return None
         lock_key = self._key(f"lock:{lock_name}")
@@ -477,6 +481,7 @@ class RedisCache:
         try:
             return self.client.ping()
         except Exception:
+            logger.debug("Redis ping 失败（降级为未连接）", exc_info=True)
             return False
 
     @property
@@ -491,6 +496,7 @@ class RedisCache:
                 self._connect()
             return self.ping()
         except Exception:
+            logger.debug("Redis ensure_connection 失败（降级）", exc_info=True)
             return False
 
     def flush(self, pattern: str = None) -> bool:
@@ -507,6 +513,7 @@ class RedisCache:
                 self.client.flushdb()
             return True
         except Exception:
+            logger.debug("Redis flush 失败（降级）", exc_info=True)
             return False
 
     def get_pool_status(self) -> dict:
@@ -529,6 +536,7 @@ class RedisCache:
                 "available": None,
             }
         except Exception:
+            logger.debug("Redis get_pool_status 失败（降级）", exc_info=True)
             return {"mode": "single_connection", "connected": False}
 
     def invalidate_by_tag(self, tag: str) -> int:
@@ -544,7 +552,7 @@ class RedisCache:
             self.client.delete(tag_key)
             return len(keys)
         except Exception as e:
-            logger.error(f"Redis invalidate_by_tag error: {e}")
+            logger.error(f"Redis invalidate_by_tag error: {e}", exc_info=True)
             self.client = None
             return 0
 
@@ -572,6 +580,7 @@ class RedisCache:
                 **pool,
             }
         except Exception:
+            logger.debug("Redis get_stats 失败（降级）", exc_info=True)
             return {"redis_available": False, "hit_rate": "N/A", "total_operations": 0}
 
     def flush_all(self) -> bool:

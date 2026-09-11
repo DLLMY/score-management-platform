@@ -320,6 +320,7 @@ class MQTTManager:
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
+                    logger.exception("[MQTTManager] 遥测兜底落库失败（已回滚）")
                 if topic == "phonebox/heartbeat" and isinstance(data, dict):
                     from services.mqtt_message_service import mqtt_message_service
 
@@ -863,25 +864,24 @@ class MQTTManager:
 
             logger.info(
                 f"[MQTTManager] 准备发布消息 - topic: {topic}, payload_length: {len(payload) if payload else 0}, qos: {qos}"
-            )  # noqa: E501
+            )
             result = self._client.publish(topic, payload, qos=qos)
 
             # 检查发布结果
             if result.rc == 0:
                 logger.info(f"[MQTTManager] 发布成功: {topic}")
                 return True
-            else:
-                error_messages = {
-                    1: "协议错误",
-                    2: "无效主题",
-                    3: "消息太大",
-                    4: "权限不足",
-                    5: "服务器不可用",
-                }
-                logger.error(
-                    f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}"
-                )
-                return False
+            error_messages = {
+                1: "协议错误",
+                2: "无效主题",
+                3: "消息太大",
+                4: "权限不足",
+                5: "服务器不可用",
+            }
+            logger.error(
+                f"[MQTTManager] 发布失败, rc={result.rc}: {error_messages.get(result.rc, '未知错误')}"
+            )
+            return False
         except Exception as e:
             logger.error(
                 f"[MQTTManager] 发布异常: {type(e).__name__}: {e}",
@@ -951,8 +951,7 @@ class MQTTManager:
                 cached = self._user_cache[card_id]
                 if time.time() - cached["timestamp"] < self._cache_ttl:
                     return cached["user"]
-                else:
-                    del self._user_cache[card_id]
+                del self._user_cache[card_id]
         return None
 
     def set_cached_user(self, card_id, user):

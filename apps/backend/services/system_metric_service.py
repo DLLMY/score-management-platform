@@ -88,7 +88,7 @@ def sample_once(app):
             db.session.commit()
             logger.debug(f"系统指标采样完成（写入 {len(rows)} 条，清理过期 {deleted} 条）")
     except Exception as e:
-        logger.warning(f"系统指标采样失败: {e}")
+        logger.warning(f"系统指标采样失败: {e}", exc_info=True)
         try:
             from models import db
 
@@ -109,7 +109,7 @@ def start_sampler(app, interval=SAMPLING_INTERVAL):
         while True:
             try:
                 sample_once(app)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.warning(f"系统指标采样线程异常: {e}")
             time.sleep(interval)
 

@@ -102,8 +102,8 @@ def download_score_template():
                 as_attachment=True,
                 download_name=filename,
             )
-        except Exception as e:
-            logger.error("%s: %s", "生成模板失败", e)
+        except Exception:
+            logger.exception("生成模板失败")
             return APIResponse.error(message="生成模板失败", status_code=500)
 
     return generate_template()

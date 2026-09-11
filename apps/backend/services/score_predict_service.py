@@ -279,7 +279,7 @@ class ScorePredictService:
         for user in users:
             try:
                 result = ScorePredictService.predict_exam_score(user.id, days)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 # 单生异常隔离：失败学生不影响其余学生与整体响应
                 failed_students.append(
                     {
@@ -342,7 +342,7 @@ class ScorePredictService:
 
         scores = []
         for user in users:
-            result = ScorePredictService.predict_exam_score(user.id)  # noqa: F841
+            result = ScorePredictService.predict_exam_score(user.id)
             if "predicted_score" in result:
                 scores.append(result["predicted_score"])
 
@@ -512,7 +512,7 @@ class ScorePredictService:
         actual_scores = []
 
         for user in users:
-            result = ScorePredictService.predict_exam_score(user.id, days)  # noqa: F841
+            result = ScorePredictService.predict_exam_score(user.id, days)
             if "predicted_score" in result:
                 predictions.append(result["predicted_score"])
                 # 注意：系统无真实考试成绩标签。此处以用户当前积分作为真实值锚点，

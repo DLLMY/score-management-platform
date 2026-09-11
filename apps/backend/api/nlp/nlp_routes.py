@@ -8,10 +8,11 @@ from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
 from utils.pagination import get_pagination
 from services.nlp_rule_service import NLPRuleManagementService
+from services.nlp_service import get_match_results_evaluation
 from services.nlp_analyzer_service import nlp_analyzer, AlgorithmBenchmark
 from services.nlp_optimizer import get_nlp_optimizer, warmup_nlp
 from config.nlp_algorithm import nlp_optimizer, OptimizationStrategy, get_optimizer
-from models import db, NLPCorrection
+from models import NLPCorrection
 from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.decorators import safe_handle
@@ -22,7 +23,6 @@ from services.nlp_correction_service import (
     update_correction_status,
     delete_correction,
 )
-from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ def _break_stale_training_tasks(now=None):
     无限占用互斥锁导致前端永远 already_running）。调用方须持有 _train_lock。
     """
     now = time.time() if now is None else now
-    for tid, t in _train_tasks.items():
+    for _tid, t in _train_tasks.items():
         if t["status"] == "running" and t["finished_at"] is None:
             try:
                 created_ts = datetime.fromisoformat(t["created_at"]).timestamp()
@@ -118,7 +118,7 @@ def get_context_memory():
                 return memory_data
             return json.loads(memory_data)
     except Exception as e:
-        logger.warning(f"[DEBUG] get_context_memory error: {e}")
+        logger.warning(f"[DEBUG] get_context_memory error: {e}", exc_info=True)
     return {
         "recent_users": [],
         "recent_rules": [],
@@ -132,7 +132,7 @@ def save_context_memory(memory):
         cache = get_cache_service()
         cache.set("nlp_context_memory", memory, ttl=3600)
     except Exception as e:
-        logger.warning(f"[DEBUG] save_context_memory error: {e}")
+        logger.warning(f"[DEBUG] save_context_memory error: {e}", exc_info=True)
 
 
 parse_input_model = ns_nlp.model(
@@ -261,7 +261,7 @@ class NLPParse(Resource):
 
         result = optimizer.parse_with_cache(
             text, lambda t: parser.parse(t, context_history=context_memory)
-        )  # noqa: F841
+        )
 
         return APIResponse.success(data=result, message="success")
 
@@ -286,7 +286,7 @@ class NLPExecute(Resource):
         context_memory = get_context_memory()
         result = parser.execute_scoring(
             text, manual_correction, context_history=context_memory
-        )  # noqa: F841
+        )
 
         if result["success"]:
             if result.get("parse_result"):
@@ -321,8 +321,7 @@ class NLPExecute(Resource):
                 save_context_memory(context_memory)
 
             return APIResponse.success(data=result, message="评分成功")
-        else:
-            return APIResponse.error(message=result["message"], data=result)
+        return APIResponse.error(message=result["message"], data=result)
 
 
 @ns_nlp.route("/batch-parse")
@@ -363,7 +362,7 @@ class NLPSentiment(Resource):
             return APIResponse.error(message="输入文本不能为空")
 
         parser = _get_parser()
-        result = parser.analyze_sentiment(text)  # noqa: F841
+        result = parser.analyze_sentiment(text)
 
         return APIResponse.success(data=result, message="success")
 
@@ -391,7 +390,7 @@ class NLPRuleList(Resource):
         service = NLPRuleManagementService()
         result = service.get_rules(
             page, per_page, keyword, score_type, sort_by, sort_order
-        )  # noqa: F841
+        )
 
         return APIResponse.success(data=result, message="success")
 
@@ -408,12 +407,11 @@ class NLPRuleList(Resource):
                 return APIResponse.error(message=f"{field}不能为空")
 
         service = NLPRuleManagementService()
-        result = service.create_rule(data)  # noqa: F841
+        result = service.create_rule(data)
 
         if result["success"]:
             return APIResponse.success(data=result, message="规则创建成功")
-        else:
-            return APIResponse.error(message=result["message"], data=result)
+        return APIResponse.error(message=result["message"], data=result)
 
 
 @ns_nlp.route("/rules/<int:rule_id>")
@@ -424,12 +422,11 @@ class NLPRule(Resource):
     @safe_handle()
     def get(self, rule_id):
         service = NLPRuleManagementService()
-        result = service.get_rule(rule_id)  # noqa: F841
+        result = service.get_rule(rule_id)
 
         if result:
             return APIResponse.success(data=result, message="success")
-        else:
-            return APIResponse.error(message="规则不存在")
+        return APIResponse.error(message="规则不存在")
 
     @ns_nlp.doc("nlp_update_rule", description="更新评分规则")
     @requires_permission("rule.manage")
@@ -437,26 +434,24 @@ class NLPRule(Resource):
     def put(self, rule_id):
         data = request.get_json()
         service = NLPRuleManagementService()
-        result = service.update_rule(rule_id, data)  # noqa: F841
+        result = service.update_rule(rule_id, data)
 
         if result["success"]:
             invalidate_cache("api:/api/nlp/*")
             return APIResponse.success(data=result, message="规则更新成功")
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
     @ns_nlp.doc("nlp_delete_rule", description="删除评分规则")
     @requires_permission("rule.manage")
     @safe_handle()
     def delete(self, rule_id):
         service = NLPRuleManagementService()
-        result = service.delete_rule(rule_id)  # noqa: F841
+        result = service.delete_rule(rule_id)
 
         if result["success"]:
             invalidate_cache("api:/api/nlp/*")
             return APIResponse.success(message="规则删除成功")
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
 
 @ns_nlp.route("/rules/<int:rule_id>/usage")
@@ -471,7 +466,7 @@ class NLPRuleUsage(Resource):
         page, per_page = get_pagination(default=20)
 
         service = NLPRuleManagementService()
-        result = service.get_rule_usage(rule_id, page, per_page)  # noqa: F841
+        result = service.get_rule_usage(rule_id, page, per_page)
 
         return APIResponse.success(data=result, message="success")
 
@@ -485,7 +480,7 @@ class NLPRuleStatistics(Resource):
     @safe_handle()
     def get(self):
         service = NLPRuleManagementService()
-        result = service.get_rule_statistics()  # noqa: F841
+        result = service.get_rule_statistics()
 
         return APIResponse.success(data=result, message="success")
 
@@ -504,7 +499,7 @@ class NLPRuleSuggest(Resource):
             return APIResponse.error(message="关键词不能为空")
 
         service = NLPRuleManagementService()
-        result = service.suggest_similar_rules(keyword)  # noqa: F841
+        result = service.suggest_similar_rules(keyword)
 
         return APIResponse.success(data=result, message="success")
 
@@ -523,13 +518,12 @@ class NLPRuleBatchImport(Resource):
             return APIResponse.error(message="规则数据不能为空")
 
         service = NLPRuleManagementService()
-        result = service.batch_import_rules(rules_data)  # noqa: F841
+        result = service.batch_import_rules(rules_data)
 
         if result["success"]:
             invalidate_cache("api:/api/nlp/*")
             return APIResponse.success(data=result, message=result["message"])
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
 
 @ns_nlp.route("/model/train")
@@ -754,12 +748,11 @@ class NLPModelEvaluateAll(Resource):
     @safe_handle()
     def get(self):
         ml_service = _get_ml_service()
-        result = ml_service.evaluate_all()  # noqa: F841
+        result = ml_service.evaluate_all()
 
         if result["success"]:
             return APIResponse.success(data=result, message="评估完成")
-        else:
-            return APIResponse.error(message=result["message"], data=result)
+        return APIResponse.error(message=result["message"], data=result)
 
 
 @ns_nlp.route("/model/predict")
@@ -778,12 +771,11 @@ class NLPModelPredict(Resource):
             return APIResponse.error(message="文本不能为空")
 
         ml_service = _get_ml_service()
-        result = ml_service.predict(text, algorithm)  # noqa: F841
+        result = ml_service.predict(text, algorithm)
 
         if result:
             return APIResponse.success(data=result, message="预测成功")
-        else:
-            return APIResponse.error(message="模型未训练或加载失败")
+        return APIResponse.error(message="模型未训练或加载失败")
 
 
 @ns_nlp.route("/model/predict-multi")
@@ -806,8 +798,7 @@ class NLPModelPredictMulti(Resource):
 
         if results:
             return APIResponse.success(data=results, message="预测成功")
-        else:
-            return APIResponse.error(message="模型未训练或加载失败")
+        return APIResponse.error(message="模型未训练或加载失败")
 
 
 @ns_nlp.route("/model/ensemble-predict")
@@ -825,12 +816,11 @@ class NLPModelEnsemblePredict(Resource):
             return APIResponse.error(message="文本不能为空")
 
         ml_service = _get_ml_service()
-        result = ml_service.ensemble_predict(text)  # noqa: F841
+        result = ml_service.ensemble_predict(text)
 
         if result:
             return APIResponse.success(data=result, message="预测成功")
-        else:
-            return APIResponse.error(message="集成预测失败")
+        return APIResponse.error(message="集成预测失败")
 
 
 @ns_nlp.route("/model/training-history")
@@ -846,7 +836,7 @@ class NLPModelTrainingHistory(Resource):
         page, per_page = get_pagination(default=10)
 
         service = NLPRuleManagementService()
-        result = service.get_training_history(page, per_page)  # noqa: F841
+        result = service.get_training_history(page, per_page)
 
         return APIResponse.success(data=result, message="success")
 
@@ -862,15 +852,9 @@ class NLPModelEvaluate(Resource):
         # （无 is_correct / predicted_intent / actual_intent），无法计算真实准确率。
         # 严禁伪造 0.85 默认值；无样本时四项指标返回 null，有样本时仅能给出
         # “自动匹配率”这一描述性比率（明确标注非真实准确率）。
-        results = db.session.execute(text("""
-            SELECT
-                COUNT(*) as total_count,
-                SUM(CASE WHEN is_manual_correction = 0 AND intent != 'unknown' THEN 1 ELSE 0 END) as correct_count
-            FROM nlp_match_results
-        """)).first()
-
-        total_count = results.total_count or 0
-        correct_count = results.correct_count or 0
+        evaluation = get_match_results_evaluation()
+        total_count = evaluation["total_count"]
+        correct_count = evaluation["correct_count"]
 
         if total_count == 0:
             return APIResponse.success(
@@ -917,12 +901,11 @@ class NLPModelDynamicWeightedPredict(Resource):
             return APIResponse.error(message="文本不能为空")
 
         ml_service = _get_ml_service()
-        result = ml_service.dynamic_weighted_predict(text)  # noqa: F841
+        result = ml_service.dynamic_weighted_predict(text)
 
         if result:
             return APIResponse.success(data=result, message="预测成功")
-        else:
-            return APIResponse.error(message="动态加权预测失败")
+        return APIResponse.error(message="动态加权预测失败")
 
 
 @ns_nlp.route("/model/predict-with-explanation")
@@ -940,12 +923,11 @@ class NLPModelPredictWithExplanation(Resource):
             return APIResponse.error(message="文本不能为空")
 
         ml_service = _get_ml_service()
-        result = ml_service.predict_with_explanation(text, algorithm)  # noqa: F841
+        result = ml_service.predict_with_explanation(text, algorithm)
 
         if result:
             return APIResponse.success(data=result, message="预测成功")
-        else:
-            return APIResponse.error(message="模型未训练或加载失败")
+        return APIResponse.error(message="模型未训练或加载失败")
 
 
 @ns_nlp.route("/model/incremental-train")
@@ -967,12 +949,11 @@ class NLPModelIncrementalTrain(Resource):
             return APIResponse.error(message="文本和标签数量不一致")
 
         ml_service = _get_ml_service()
-        result = ml_service.incremental_train(texts, labels, algorithm)  # noqa: F841
+        result = ml_service.incremental_train(texts, labels, algorithm)
 
         if result["success"]:
             return APIResponse.success(data=result, message=result["message"])
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
 
 @ns_nlp.route("/model/online-train")
@@ -990,12 +971,11 @@ class NLPModelOnlineTrain(Resource):
             return APIResponse.error(message="文本和标签不能为空")
 
         ml_service = _get_ml_service()
-        result = ml_service.online_train(text, label)  # noqa: F841
+        result = ml_service.online_train(text, label)
 
         if result["success"]:
             return APIResponse.success(data=result, message=result["message"])
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
 
 @ns_nlp.route("/model/explanation")
@@ -1008,12 +988,11 @@ class NLPModelExplanation(Resource):
         algorithm = request.args.get("algorithm")
 
         ml_service = _get_ml_service()
-        result = ml_service.get_model_explanation(algorithm)  # noqa: F841
+        result = ml_service.get_model_explanation(algorithm)
 
         if result["success"]:
             return APIResponse.success(data=result, message="获取成功")
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
 
 @ns_nlp.route("/model/bias-analysis")
@@ -1024,12 +1003,11 @@ class NLPModelBiasAnalysis(Resource):
     @safe_handle()
     def get(self):
         ml_service = _get_ml_service()
-        result = ml_service.analyze_model_bias()  # noqa: F841
+        result = ml_service.analyze_model_bias()
 
         if result["success"]:
             return APIResponse.success(data=result, message="分析完成")
-        else:
-            return APIResponse.error(message=result["message"])
+        return APIResponse.error(message=result["message"])
 
 
 @ns_nlp.route("/parse/context-aware")
@@ -1047,7 +1025,7 @@ class NLPParseContextAware(Resource):
             return APIResponse.error(message="输入文本不能为空")
 
         parser = _get_parser()
-        result = parser.parse(text, context_history)  # noqa: F841
+        result = parser.parse(text, context_history)
 
         return APIResponse.success(data=result, message="success")
 
@@ -1398,7 +1376,8 @@ class NLPFeedbackRecord(Resource):
             try:
                 if hasattr(g, "current_user") and g.current_user:
                     user_id = g.current_user.id
-            except Exception:
+            except Exception as e:
+                logger.warning("获取 current_user 失败（非致命，已跳过用户关联）: %s", e, exc_info=True)
                 user_id = None
 
             saved = record_corrections(corrections, user_id, input_text, confidence)
@@ -1416,7 +1395,6 @@ class NLPFeedbackRecord(Resource):
                     "NLP best-effort operation failed; exception previously swallowed silently",
                     exc_info=True,
                 )
-                pass
 
             return APIResponse.success(
                 message="反馈已记录，纠正已保存（自学习生效）",
@@ -1571,7 +1549,7 @@ class NLPParseWithAnalysis(Resource):
         parser.determine_intent(text, behavior_result)
         components["determine_intent"] = time.time() - t3
 
-        result = parser.parse(text, context_history=context_memory)  # noqa: F841
+        result = parser.parse(text, context_history=context_memory)
         total_time = time.time() - start_time
 
         components["total"] = total_time

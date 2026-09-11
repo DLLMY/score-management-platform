@@ -177,7 +177,7 @@ def get_class_score_analysis_view(class_name):
         .all()
     )
     score_list = [s.to_dict() for s in scores]
-    exam_ids = set(s.exam_id for s in scores)
+    exam_ids = {s.exam_id for s in scores}
     exams = (
         {e.id: e.to_dict() for e in Exam.query.filter(Exam.id.in_(exam_ids)).all()}
         if exam_ids

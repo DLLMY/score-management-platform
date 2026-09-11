@@ -9,6 +9,7 @@
 
 from flask_restx import Namespace, Resource, fields
 from flask import request, g, make_response
+import logging
 from datetime import datetime
 from models import User, ScoreRecord, Notification, Approval
 from utils.security import generate_student_token, validate_card_id
@@ -28,6 +29,8 @@ from services.risk_predict_service import RiskPredictService
 from services import phonebox_policy
 from services.mqtt_service import publish_mqtt
 from services.analysis_service import analysis_service
+
+logger = logging.getLogger(__name__)
 
 ns_student = Namespace("student", description="学生自助端接口")
 
@@ -487,41 +490,44 @@ class StudentInsights(Resource):
         # 参与度
         try:
             engagement = calculate_engagement(uid, days)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
+            logger.exception("参与度计算失败: %s", e)
             # 诚实失败：error 标记 + 数值置 None（前端即使忽略 error，也不会误读为"低参与度 0 分"）
             engagement = {
                 "has_data": False,
                 "engagement_score": None,
                 "level": None,
-                "error": "参与度计算失败: %s" % e,
+                "error": f"参与度计算失败: {e}",
             }
 
         # 风险
         try:
             risk = RiskPredictService.predict_risk(uid, days)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
+            logger.exception("风险评估失败: %s", e)
             risk = {
                 "overall_risk_level": None,
                 "overall_risk_score": None,
-                "error": "风险评估失败: %s" % e,
+                "error": f"风险评估失败: {e}",
             }
 
         # 积分趋势
         try:
             score_trend = _build_score_trend(uid, weeks)
-        except Exception:  # noqa: BLE001
+        except Exception:
             score_trend = []
 
         # 参与度周趋势（复用 weekly_trend，与算法 Tab 同口径）
         try:
             participation_trend = EngagementService.weekly_trend(uid, weeks)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
+            logger.exception("参与度周趋势计算失败: %s", e)
             participation_trend = {
                 "user_id": uid,
                 "weeks": weeks,
                 "trend": None,
                 "series": [],
-                "error": "参与度周趋势计算失败: %s" % e,
+                "error": f"参与度周趋势计算失败: {e}",
             }
 
         return APIResponse.success(

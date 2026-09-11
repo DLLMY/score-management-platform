@@ -159,7 +159,7 @@ class MQTTMessageService:
                     check_time = datetime.now().replace(
                         hour=int(hour), minute=int(minute), second=0, microsecond=0
                     )
-                except Exception:
+                except (ValueError, TypeError):
                     check_time = None
             if class_info_id:
                 result = phonebox_policy.evaluate(class_info_id, check_time)
@@ -218,7 +218,7 @@ class MQTTMessageService:
                         check_time = datetime.now().replace(
                             hour=int(hour), minute=int(minute), second=0, microsecond=0
                         )
-                    except Exception:
+                    except (ValueError, TypeError):
                         check_time = None
                 in_session, info = ClassTimeChecker.check_class_in_session(
                     class_info_id, check_time
@@ -830,7 +830,7 @@ class MQTTMessageService:
                     .order_by(ScoreRule.category_id, ScoreRule.id)
                     .all()
                 )
-            except SQLAlchemyError as last_err:
+            except SQLAlchemyError:
                 time.sleep(0.15 * (attempt + 1))
         raise last_err
 
@@ -864,7 +864,7 @@ class MQTTMessageService:
                 "rules": rule_list,
                 "request_id": request_id,
             }
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             # 诚实失败 + 留痕：不再静默吞异常（此前洪流下 database is locked 被吞成 rules=[] 难排查）
             logger.error("score/rules/query 加载规则失败: %s", e, exc_info=True)
             response = {

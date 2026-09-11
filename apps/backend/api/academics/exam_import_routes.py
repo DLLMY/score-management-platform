@@ -5,7 +5,7 @@ import openpyxl
 from flask_restx import Namespace, Resource, fields
 from utils.response import APIResponse
 from utils.pagination import get_pagination
-from models import Exam, Score, User, Admin, get_by_id
+from models import Exam, Score, User, get_by_id
 from utils.permission import requires_permission
 from io import BytesIO
 from services.excel_service import excel_import_service
@@ -30,7 +30,7 @@ exam_import_request = ns_exam_import.model(
 
 def _parse_score_excel(file_content: bytes) -> dict:
     """统一解析成绩Excel文件，返回 headers, parsed_rows (list of dicts), total_count"""
-    result = excel_import_service.parse_excel_file(file_content)  # noqa: F841
+    result = excel_import_service.parse_excel_file(file_content)
     if not result.get("success"):
         raise ValueError(result.get("error", "文件解析失败"))
     headers = result.get("headers", [])
@@ -85,7 +85,7 @@ class ValidateImportFile(Resource):
                 card_id = row_data.get(headers[card_id_idx]) if card_id_idx >= 0 else None
                 subject = (
                     row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
-                )  # noqa: F841
+                )
                 score_val = row_data.get(headers[score_idx]) if score_idx >= 0 else None
 
                 student = User.query.filter_by(card_id=str(card_id)).first() if card_id else None
@@ -111,8 +111,8 @@ class ValidateImportFile(Resource):
                 },
             )
 
-        except Exception as e:
-            logger.error("%s: %s", "验证失败", e)
+        except Exception:
+            logger.exception("验证失败")
             return APIResponse.error(message="验证失败", status_code=500)
 
 
@@ -170,7 +170,7 @@ class PreviewImportData(Resource):
                 )
                 subject = (
                     row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
-                )  # noqa: F841
+                )
                 score_val = (
                     ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
                     if score_idx >= 0
@@ -242,8 +242,8 @@ class PreviewImportData(Resource):
                 },
             )
 
-        except Exception as e:
-            logger.error("%s: %s", "预览失败", e)
+        except Exception:
+            logger.exception("预览失败")
             return APIResponse.error(message="预览失败", status_code=500)
 
 
@@ -303,8 +303,8 @@ class ExecuteImport(Resource):
                 data=result,
             )
 
-        except Exception as e:
-            logger.error("%s: %s", "导入失败", e)
+        except Exception:
+            logger.exception("导入失败")
             return APIResponse.error(message="导入失败", status_code=500)
 
 

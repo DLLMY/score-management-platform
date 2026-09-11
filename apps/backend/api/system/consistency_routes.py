@@ -38,7 +38,7 @@ class ConsistencyCheck(Resource):
     def get(self):
         """Execute consistency check"""
         checker = DataConsistencyChecker()
-        result = checker.check_all()  # noqa: F841
+        result = checker.check_all()
         return APIResponse.success(
             data={
                 "timestamp": result["timestamp"],
@@ -70,7 +70,7 @@ class ConsistencyFix(Resource):
     def post(self):
         """Execute data fix"""
         service = ClassMigrationService()
-        result = service.run_full_migration()  # noqa: F841
+        result = service.run_full_migration()
         return APIResponse.success(data={"stats": result["stats"]}, message="Data fix completed")
 
 

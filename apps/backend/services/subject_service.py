@@ -109,14 +109,14 @@ def get_subject_export_data_view(include_inactive=False, search=None):
     class_links = SubjectClass.query.filter(SubjectClass.subject_id.in_(subject_ids)).all()
 
     # 批量获取所有班级信息（1次查询）
-    class_info_ids = list(set(link.class_info_id for link in class_links if link.class_info_id))
+    class_info_ids = list({link.class_info_id for link in class_links if link.class_info_id})
     class_info_map = {}
     if class_info_ids:
         class_infos = ClassInfo.query.filter(ClassInfo.id.in_(class_info_ids)).all()
         class_info_map = {c.id: c for c in class_infos}
 
     # 批量获取所有教师信息（1次查询）
-    teacher_ids = list(set(link.teacher_id for link in class_links if link.teacher_id))
+    teacher_ids = list({link.teacher_id for link in class_links if link.teacher_id})
     teacher_map = {}
     if teacher_ids:
         teachers = Admin.query.filter(Admin.id.in_(teacher_ids)).all()

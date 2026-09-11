@@ -79,7 +79,8 @@ def _read_class_info_id():
     payload = None
     try:
         payload = request.get_json(silent=True)
-    except Exception:
+    except Exception as e:
+        logger.debug("读取 JSON body 失败（回退至 query 参数）: %s", e, exc_info=True)
         payload = None
     if isinstance(payload, dict):
         raw = payload.get("class_info_id")

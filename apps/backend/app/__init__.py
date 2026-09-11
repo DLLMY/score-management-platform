@@ -41,7 +41,7 @@ def create_app(lightweight=False):
                 search_engine.init_app(app)
             app.search_engine = search_engine
         except Exception as e:
-            app.logger.warning(f"全文搜索引擎初始化失败: {e}")
+            app.logger.warning(f"全文搜索引擎初始化失败: {e}", exc_info=True)
 
     from utils.error_handler import register_error_handlers
 

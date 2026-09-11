@@ -173,7 +173,7 @@ class FirmwareVersionItem(Resource):
                     os.remove(firmware.file_path)
                 except Exception as e:
                     # 固件文件删除失败（权限/已被清理）不应阻断版本记录删除，仅留痕（T9 日志化）。
-                    logger.warning(f"删除固件文件失败 path={firmware.file_path}: {e}")
+                    logger.warning(f"删除固件文件失败 path={firmware.file_path}: {e}", exc_info=True)
 
         delete_firmware_version(firmware)
 
@@ -217,12 +217,14 @@ class OTACheck(Resource):
         if self._compare_versions(latest_firmware.version, current_version) <= 0:
             return {"has_update": False, "message": "Already latest version"}
 
-        if latest_firmware.min_compatible_version:
-            if self._compare_versions(current_version, latest_firmware.min_compatible_version) < 0:
-                return {
-                    "has_update": False,
-                    "message": "Current version too old, need intermediate upgrade first",
-                }
+        if (
+            latest_firmware.min_compatible_version
+            and self._compare_versions(current_version, latest_firmware.min_compatible_version) < 0
+        ):
+            return {
+                "has_update": False,
+                "message": "Current version too old, need intermediate upgrade first",
+            }
 
         return {
             "has_update": True,
@@ -279,11 +281,11 @@ class OTAReport(Resource):
             report_ota_status("started", device_id, device_name, from_version, to_version)
             return APIResponse.success(message="Upgrade started")
 
-        elif status == "completed":
+        if status == "completed":
             report_ota_status("completed", device_id, device_name, from_version, to_version)
             return APIResponse.success(message="Upgrade completed")
 
-        elif status == "failed":
+        if status == "failed":
             report_ota_status(
                 "failed", device_id, device_name, from_version, to_version, error_message
             )
@@ -523,10 +525,10 @@ class FirmwareUpload(Resource):
                 },
             }
 
-        except Exception as e:
+        except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)
-            logger.error("%s: %s", "Upload failed", e)
+            logger.exception("Upload failed")
             return APIResponse.error(message="Upload failed", status_code=500)
 
 

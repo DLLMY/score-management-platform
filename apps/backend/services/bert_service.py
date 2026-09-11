@@ -2,7 +2,6 @@ import os
 import time
 import psutil
 import numpy as np
-from typing import List, Tuple, Dict
 
 try:
     import torch
@@ -126,13 +125,12 @@ class BertNLPService:
                     "NLP best-effort operation failed; exception previously swallowed silently",
                     exc_info=True,
                 )
-                pass
             log_info(
-                (
+                
                     f"BERT模型加载成功! 量化: {self.use_quantization}, "
                     f"耗时: {self._load_time:.2f}s, "
                     f"内存: {self._memory_usage:.0f}MB"
-                )
+                
             )
         except Exception as e:
             log_warning(f"BERT模型加载失败: {e}", exception=e)
@@ -154,7 +152,7 @@ class BertNLPService:
     def is_available(self) -> bool:
         return self._initialized
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         return {
             "initialized": self._initialized,
             "warmup_done": self._warmup_done,
@@ -182,7 +180,7 @@ class BertNLPService:
             log_warning(f"获取向量失败: {e}", exception=e)
             return None
 
-    def batch_get_embeddings(self, texts: List[str]) -> List[np.ndarray]:
+    def batch_get_embeddings(self, texts: list[str]) -> list[np.ndarray]:
         if not self._initialized:
             return [None] * len(texts)
         try:
@@ -201,7 +199,7 @@ class BertNLPService:
             log_warning(f"批量获取向量失败: {e}", exception=e)
             return [None] * len(texts)
 
-    def predict_intent(self, text: str) -> Tuple[str, float]:
+    def predict_intent(self, text: str) -> tuple[str, float]:
         if not self._initialized:
             return "unknown", 0.0
         embedding = self.get_embedding(text)
@@ -215,7 +213,7 @@ class BertNLPService:
                     score += 1
             keyword_scores[intent] = score
         intent_confidence = {}
-        for intent in self.intent_keywords.keys():
+        for intent in self.intent_keywords:
             intent_keywords_text = " ".join(self.intent_keywords[intent])
             intent_embedding = self.get_embedding(intent_keywords_text)
             if intent_embedding is not None:
@@ -225,13 +223,11 @@ class BertNLPService:
         if intent_confidence:
             best_intent = max(intent_confidence, key=intent_confidence.get)
             confidence = intent_confidence[best_intent]
-            if confidence > 0.6:
-                return best_intent, min(confidence, 1.0)
-            elif confidence > 0.4:
+            if confidence > 0.6 or confidence > 0.4:
                 return best_intent, min(confidence, 1.0)
         return "unknown", 0.0
 
-    def batch_predict_intent(self, texts: List[str]) -> List[Tuple[str, float]]:
+    def batch_predict_intent(self, texts: list[str]) -> list[tuple[str, float]]:
         if not self._initialized:
             return [("unknown", 0.0)] * len(texts)
         results = []
@@ -248,7 +244,7 @@ class BertNLPService:
             return 0.0
         return self._cosine_sim(emb1, emb2)
 
-    def batch_calculate_similarity(self, texts: List[str], target: str) -> List[float]:
+    def batch_calculate_similarity(self, texts: list[str], target: str) -> list[float]:
         if not self._initialized:
             return [0.0] * len(texts)
         target_emb = self.get_embedding(target)
@@ -274,7 +270,7 @@ class BertNLPService:
             log_warning(f"[BERT] 余弦相似度计算异常，回退 0.0: {e}", exception=e)
             return 0.0
 
-    def analyze_sentiment(self, text: str) -> Dict:
+    def analyze_sentiment(self, text: str) -> dict:
         if not self._initialized:
             return {"positive": 0, "negative": 0, "neutral": 0, "score": 0.0}
         positive_words = [

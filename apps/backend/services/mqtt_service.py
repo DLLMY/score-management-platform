@@ -55,11 +55,11 @@ def log_mqtt_message_async(client, topic, data, qos=1):
                 }
             )
         except Exception as e:
-            logger.error(f"记录MQTT消息失败: {e}")
+            logger.error(f"记录MQTT消息失败: {e}", exc_info=True)
             try:
                 db.session.rollback()  # 防 add/commit 失败遗留 pending 对象
             except Exception as e2:
-                logger.warning(f"MQTT消息记录回滚失败: {e2}")
+                logger.warning(f"MQTT消息记录回滚失败: {e2}", exc_info=True)
 
     # 启动后台线程执行日志记录，不阻塞主流程
     thread = threading.Thread(target=log_task, daemon=True)
@@ -84,11 +84,11 @@ def log_operation_detail(operation_type, details, success=True):
             db.session.add(log)
             db.session.commit()
     except Exception as e:
-        logger.error(f"记录操作日志失败: {e}")
+        logger.error(f"记录操作日志失败: {e}", exc_info=True)
         try:
             db.session.rollback()  # 防 add/commit 失败遗留 pending 对象
         except Exception as e2:
-            logger.warning(f"操作日志回滚失败: {e2}")
+            logger.warning(f"操作日志回滚失败: {e2}", exc_info=True)
 
 
 def get_mqtt_config_from_db():

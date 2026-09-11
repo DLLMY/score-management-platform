@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any, List
+from typing import Any
 from enum import Enum
 
 
@@ -125,11 +125,11 @@ class NLPService:
             log_warning(f"加载{parser_type.value}解析器失败: {e}", exception=e)
             return None
 
-    def get_parser(self, parser_type: Optional[NLPParserType] = None) -> Any:
+    def get_parser(self, parser_type: NLPParserType | None = None) -> Any:
         pt = parser_type or self.parser_type
         return self._get_parser_instance(pt)
 
-    def _get_cache_key(self, text: str, parser_type: Optional[NLPParserType] = None) -> str:
+    def _get_cache_key(self, text: str, parser_type: NLPParserType | None = None) -> str:
         pt = parser_type or self.parser_type
         cache_key = f"{text}:{pt.value}"
         return hashlib.sha256(cache_key.encode()).hexdigest()
@@ -137,8 +137,8 @@ class NLPService:
     def _cache_parse_result(
         self,
         text: str,
-        parser_type: Optional[NLPParserType],
-        result: Dict[str, Any],
+        parser_type: NLPParserType | None,
+        result: dict[str, Any],
     ):
         key = self._get_cache_key(text, parser_type)
         with self._cache_lock:
@@ -147,7 +147,7 @@ class NLPService:
                 del self._parse_cache[oldest_key]
             self._parse_cache[key] = result
 
-    def parse(self, text: str, parser_type: Optional[NLPParserType] = None) -> Dict[str, Any]:
+    def parse(self, text: str, parser_type: NLPParserType | None = None) -> dict[str, Any]:
         cache_key = self._get_cache_key(text, parser_type)
         redis_key = f"nlp_parse:{cache_key}"
 
@@ -166,7 +166,7 @@ class NLPService:
             if redis_result is not None:
                 self._cache_hits += 1
                 self._cache_parse_result(text, parser_type, redis_result)
-                result = redis_result.copy()  # noqa: F841
+                result = redis_result.copy()
                 result["cached"] = True
                 result["cache_layer"] = "redis"
                 return result
@@ -196,9 +196,9 @@ class NLPService:
         try:
             if self._flask_app:
                 with self._flask_app.app_context():
-                    result = parser.parse(text)  # noqa: F841
+                    result = parser.parse(text)
             else:
-                result = parser.parse(text)  # noqa: F841
+                result = parser.parse(text)
 
             if isinstance(result, dict):
                 pt = parser_type or self.parser_type
@@ -226,8 +226,8 @@ class NLPService:
             }
 
     def parse_batch(
-        self, texts: List[str], parser_type: Optional[NLPParserType] = None
-    ) -> List[Dict[str, Any]]:
+        self, texts: list[str], parser_type: NLPParserType | None = None
+    ) -> list[dict[str, Any]]:
         if not texts:
             return []
 
@@ -256,7 +256,7 @@ class NLPService:
             ]
             return results
 
-    def optimize(self, text: str) -> Dict[str, Any]:
+    def optimize(self, text: str) -> dict[str, Any]:
         try:
             from services.nlp_optimizer import NLPOptimizer
 
@@ -265,7 +265,7 @@ class NLPService:
         except Exception as e:
             return {"success": False, "message": f"优化失败: {str(e)}"}
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         total = self._cache_hits + self._cache_misses
         hit_rate = round(self._cache_hits / total * 100, 2) if total > 0 else 0
         stats = {
@@ -285,7 +285,6 @@ class NLPService:
                 "NLP best-effort operation failed; exception previously swallowed silently",
                 exc_info=True,
             )
-            pass
         return stats
 
     def clear_cache(self):
@@ -301,7 +300,7 @@ class NLPService:
                 log_warning(f"NLP解析Redis缓存清空失败: {e}", exception=e)
         log_info("NLP解析内存缓存已清空")
 
-    def warmup(self, texts: Optional[List[str]] = None):
+    def warmup(self, texts: list[str] | None = None):
         warmup_texts = texts or [
             "给张三加分",
             "李四迟到扣2分",
@@ -321,7 +320,7 @@ class NLPService:
         except Exception as e:
             log_warning(f"NLP服务预热失败: {e}", exception=e)
 
-    def async_warmup(self, texts: Optional[List[str]] = None):
+    def async_warmup(self, texts: list[str] | None = None):
         """异步预热，不阻塞主线程"""
         thread = threading.Thread(target=self.warmup, args=(texts,), daemon=True)
         thread.start()
@@ -348,3 +347,28 @@ def init_nlp_service(parser_type: str = "enhanced"):
     except ValueError:
         log_warning(f"无效的解析器类型: {parser_type}")
         return False
+
+
+def get_match_results_evaluation():
+    """nlp_match_results 自动匹配率统计（薄路由收尾）。
+
+    P0-1 数据诚信：仅统计自动匹配（非人工校正且 intent != 'unknown'）占比，
+    不伪造准确率。返回 {total_count, correct_count}，响应构造与 null 逻辑保留路由层。
+    """
+    from models import db
+    from sqlalchemy import text
+
+    row = db.session.execute(
+        text(
+            """
+        SELECT
+            COUNT(*) as total_count,
+            SUM(CASE WHEN is_manual_correction = 0 AND intent != 'unknown' THEN 1 ELSE 0 END) as correct_count
+        FROM nlp_match_results
+    """
+        )
+    ).first()
+    return {
+        "total_count": row.total_count or 0,
+        "correct_count": row.correct_count or 0,
+    }

@@ -12,6 +12,9 @@ from models import (
 )
 from utils.db_session import db_session_scope
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class NLPParserService:
     """自然语言解析服务"""
@@ -97,8 +100,9 @@ class NLPParserService:
             try:
                 jieba.initialize()
                 self.jieba_initialized = True
-            except Exception:
+            except Exception as e:
                 self.jieba_initialized = False
+                logger.warning("jieba 初始化失败，降级为未初始化模式: %s", e, exc_info=True)
 
     def extract_name(self, text):
         """从文本中提取学生姓名"""
@@ -218,16 +222,15 @@ class NLPParserService:
 
         if negative_count > positive_count:
             return "deduct"
-        elif positive_count > negative_count:
+        if positive_count > negative_count:
             return "add"
-        else:
-            keywords = behavior_result["keywords"]
-            if keywords:
-                for kw in keywords:
-                    if kw[2] == "deduct":
-                        return "deduct"
-                    if kw[2] == "add":
-                        return "add"
+        keywords = behavior_result["keywords"]
+        if keywords:
+            for kw in keywords:
+                if kw[2] == "deduct":
+                    return "deduct"
+                if kw[2] == "add":
+                    return "add"
 
         return "unknown"
 
@@ -236,7 +239,7 @@ class NLPParserService:
         behavior_result = self.extract_behavior(text, name)
         matched_rules = []
 
-        for kw, kw_type, kw_score_type, default_score in behavior_result["keywords"]:
+        for kw, _, _, _ in behavior_result["keywords"]:
             rules = (
                 NLPScoringRule.query.filter(
                     NLPScoringRule.behavior_keyword.like(f"%{kw}%"),
@@ -279,7 +282,7 @@ class NLPParserService:
         intent = self.determine_intent(text, behavior_result)
         matched_rules = self.match_rule(text, intent, name)
 
-        result = {  # noqa: F841
+        result = {
             "success": True,
             "input_text": text,
             "extracted_name": name,

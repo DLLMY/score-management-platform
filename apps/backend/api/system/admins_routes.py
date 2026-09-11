@@ -89,7 +89,7 @@ def log_permission_action(action, target_type, target_id=None, description=None)
             ip_address=request.remote_addr if request else None,
         )
     except Exception as e:
-        logger.warning("记录管理员操作日志失败: %s", e)
+        logger.warning("记录管理员操作日志失败: %s", e, exc_info=True)
 
 
 ROLE_MAPPING = {
@@ -456,7 +456,7 @@ class AdminAssignClass(Resource):
         is_primary = data.get("is_primary", False)
         if not class_id:
             return APIResponse.error(message="请提供班级ID", status_code=400)
-        _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
+        _admin = Admin.query.get_or_404(admin_id)
         ClassInfo.query.get_or_404(class_id)
         assign_class_link(admin_id, class_id, is_primary)
         invalidate_cache("api:/api/admins/*")

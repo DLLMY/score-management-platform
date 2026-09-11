@@ -228,13 +228,15 @@ def negotiate(device, reported_version):
     if compare_versions(reported_version or "", latest.version) >= 0:
         return {"action": "up_to_date", "latest_version": latest.version}
 
-    if latest.min_compatible_version:
-        if compare_versions(reported_version or "0", latest.min_compatible_version) < 0:
-            return {
-                "action": "skip_too_old",
-                "latest_version": latest.version,
-                "min_compatible_version": latest.min_compatible_version,
-            }
+    if (
+        latest.min_compatible_version
+        and compare_versions(reported_version or "0", latest.min_compatible_version) < 0
+    ):
+        return {
+            "action": "skip_too_old",
+            "latest_version": latest.version,
+            "min_compatible_version": latest.min_compatible_version,
+        }
 
     return {"action": "upgrade", "firmware": latest, "latest_version": latest.version}
 
@@ -286,7 +288,7 @@ def schedule_auto_push(device, firmware, extra_delay=0):
             d.last_ota_push_at = datetime.now()
             db.session.commit()
     except Exception as e:  # 占坑失败不致命，仅跳过本次调度
-        logger.warning("[OTA协商] 占坑失败 %s: %s", device_id, e)
+        logger.warning("[OTA协商] 占坑失败 %s: %s", device_id, e, exc_info=True)
         return
 
     old = _ota_timers.pop(device_id, None)

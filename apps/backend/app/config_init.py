@@ -88,7 +88,7 @@ def _check_rbac_consistency(app):
         if _current_flask_env(app) == "production":
             logger.warning("   🚨 生产环境建议先修复 RBAC 不一致再上线")
     except Exception as e:  # 启动检查本身失败绝不应阻断服务启动
-        logger.warning("[启动检查] RBAC 检查跳过（异常：%s）", e)
+        logger.warning("[启动检查] RBAC 检查跳过（异常：%s）", e, exc_info=True)
 
 
 def _check_redis_connectivity(app):
@@ -98,7 +98,7 @@ def _check_redis_connectivity(app):
     绝不阻断启动。生产环境下 Redis 不可达会显著告警以引起重视。
     """
     try:
-        import redis  # noqa: F401
+        import redis
     except ImportError:
         logger.warning("[R1] ⚠️  redis 客户端库未安装，缓存降级为内存（非致命）")
         return
@@ -114,9 +114,9 @@ def _check_redis_connectivity(app):
     except Exception as e:
         msg = f"Redis 不可达（{e}），缓存降级为内存（非致命）"
         if _current_flask_env(app) == "production":
-            logger.error("[R1] 🚨 生产环境 %s", msg)
+            logger.error("[R1] 🚨 生产环境 %s", msg, exc_info=True)
         else:
-            logger.warning("[R1] ⚠️  %s", msg)
+            logger.warning("[R1] ⚠️  %s", msg, exc_info=True)
 
 
 def init_config(app, lightweight=False):
@@ -175,7 +175,7 @@ def init_config(app, lightweight=False):
         global _swagger_initialized
         if not _swagger_initialized:
             Swagger(app, template=swagger_template, config=swagger_config)
-            _swagger_initialized = True  # noqa: F841
+            _swagger_initialized = True
 
         Compress(app)
 

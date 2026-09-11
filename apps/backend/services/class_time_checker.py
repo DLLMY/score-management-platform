@@ -1,6 +1,5 @@
 from models import TimeRule, CourseSchedule, ClassPeriod, User
 from datetime import datetime
-from typing import Optional, Dict, Tuple
 import json
 
 
@@ -21,8 +20,8 @@ class ClassTimeChecker:
 
     @staticmethod
     def is_during_class_time(
-        check_time: Optional[datetime] = None,
-    ) -> Tuple[bool, Optional[Dict]]:
+        check_time: datetime | None = None,
+    ) -> tuple[bool, dict | None]:
         """
         判断当前时间是否处于 TimeRule 定义的全局上课时段
 
@@ -74,9 +73,9 @@ class ClassTimeChecker:
 
     @staticmethod
     def check_class_in_session(
-        class_info_id: Optional[int],
-        check_time: Optional[datetime] = None,
-    ) -> Tuple[bool, Optional[Dict]]:
+        class_info_id: int | None,
+        check_time: datetime | None = None,
+    ) -> tuple[bool, dict | None]:
         """
         判断指定班级此刻是否正在上课（含自习）
 
@@ -120,7 +119,7 @@ class ClassTimeChecker:
         return True, info
 
     @staticmethod
-    def any_class_in_session(check_time: Optional[datetime] = None) -> bool:
+    def any_class_in_session(check_time: datetime | None = None) -> bool:
         """是否有任意班级此刻正在上课（用于广播类下发）"""
         if check_time is None:
             check_time = datetime.now()
@@ -135,9 +134,9 @@ class ClassTimeChecker:
 
     @staticmethod
     def resolve_class_info_id(
-        target_class_info_id: Optional[int] = None,
-        target_user_id: Optional[int] = None,
-    ) -> Optional[int]:
+        target_class_info_id: int | None = None,
+        target_user_id: int | None = None,
+    ) -> int | None:
         """解析目标班级 ID：优先直接用传入的班级，否则从用户反查"""
         if target_class_info_id:
             return target_class_info_id
@@ -149,10 +148,10 @@ class ClassTimeChecker:
 
     @staticmethod
     def is_notification_allowed(
-        target_class_info_id: Optional[int] = None,
-        target_user_id: Optional[int] = None,
+        target_class_info_id: int | None = None,
+        target_user_id: int | None = None,
         force_send: bool = False,
-    ) -> Tuple[bool, str, Optional[str], Optional[Dict]]:
+    ) -> tuple[bool, str, str | None, dict | None]:
         """
         判断是否允许发送通知 / 下发
 
@@ -195,7 +194,7 @@ class ClassTimeChecker:
     @staticmethod
     def is_broadcast_blocked(
         force_send: bool = False,
-    ) -> Tuple[bool, str, Optional[str]]:
+    ) -> tuple[bool, str, str | None]:
         """
         广播类下发是否应被拦截：全局上课时段 或 任意班级在上课 即拦截
         """
@@ -211,8 +210,8 @@ class ClassTimeChecker:
     @staticmethod
     def log_notify_audit(
         audit_type: str,
-        target_class_id: Optional[int],
-        admin_id: Optional[int],
+        target_class_id: int | None,
+        admin_id: int | None,
         payload,
         reason_code: str,
         reason_message: str,
@@ -225,7 +224,7 @@ class ClassTimeChecker:
             if not isinstance(payload, str):
                 try:
                     payload = json.dumps(payload, ensure_ascii=False)
-                except Exception:
+                except TypeError:
                     payload = str(payload)
             if payload and len(payload) > 2000:
                 payload = payload[:2000]
@@ -246,7 +245,7 @@ class ClassTimeChecker:
             log_warning(f"[NotifyAudit] 写入失败: {e}", exception=e)
 
     @staticmethod
-    def get_today_class_schedule() -> Dict:
+    def get_today_class_schedule() -> dict:
         """
         获取今日课程时间表
 
@@ -305,7 +304,7 @@ class ClassTimeChecker:
         return days[day] if 0 <= day <= 6 else "未知"
 
     @staticmethod
-    def get_next_class() -> Optional[Dict]:
+    def get_next_class() -> dict | None:
         """
         获取下一节课程信息
 

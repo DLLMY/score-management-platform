@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any
+from typing import Any
 from functools import lru_cache
 import re
 
@@ -129,7 +129,7 @@ class FastNLPParser:
 
         log_info("[FastNLPParser] 轻量级解析器已初始化")
 
-    def _extract_name(self, text: str) -> Optional[str]:
+    def _extract_name(self, text: str) -> str | None:
         """从文本中提取姓名"""
         for pattern in self._name_patterns:
             match = pattern.search(text)
@@ -141,7 +141,7 @@ class FastNLPParser:
                         return name
         return None
 
-    def _validate_name(self, name: str, text: str, start_pos: int, end_pos: int) -> Optional[str]:
+    def _validate_name(self, name: str, text: str, start_pos: int, end_pos: int) -> str | None:
         """验证姓名是否有效，排除行为关键词"""
         intent_keywords = set()
         for keywords in self._quick_intent_keywords.values():
@@ -167,20 +167,19 @@ class FastNLPParser:
 
         if end_pos < len(text):
             next_char = text[end_pos]
-            if next_char in "\u4e00-\u9fa5":
-                if next_char not in "，。！？、 的":
-                    remaining_text = text[end_pos:]
-                    matched_behavior = False
-                    for kw in intent_keywords:
-                        if remaining_text.startswith(kw):
-                            matched_behavior = True
-                            break
-                    if not matched_behavior:
-                        return None
+            if next_char in "\u4e00-\u9fa5" and next_char not in "，。！？、 的":
+                remaining_text = text[end_pos:]
+                matched_behavior = False
+                for kw in intent_keywords:
+                    if remaining_text.startswith(kw):
+                        matched_behavior = True
+                        break
+                if not matched_behavior:
+                    return None
 
         return name
 
-    def _extract_score(self, text: str) -> Optional[float]:
+    def _extract_score(self, text: str) -> float | None:
         """从文本中提取分数"""
         for pattern in self._score_patterns:
             match = pattern.search(text)
@@ -191,7 +190,7 @@ class FastNLPParser:
                     continue
         return None
 
-    def _extract_description(self, text: str) -> Optional[str]:
+    def _extract_description(self, text: str) -> str | None:
         """从文本中提取描述"""
         for pattern in self._description_patterns:
             match = pattern.search(text)
@@ -238,7 +237,7 @@ class FastNLPParser:
         parts = (part.strip() for part in self._CLAUSE_SPLIT_PATTERN.split(text))
         return [part for part in parts if part]
 
-    def _parse_single(self, text: str) -> Dict[str, Any]:
+    def _parse_single(self, text: str) -> dict[str, Any]:
         """解析单个子句（调用方保证 text 已不含分句分隔符）。"""
         intent = self._detect_intent(text)
         name = self._extract_name(text)
@@ -266,7 +265,7 @@ class FastNLPParser:
         }
 
     @lru_cache(maxsize=1000)
-    def parse(self, text: str) -> Dict[str, Any]:
+    def parse(self, text: str) -> dict[str, Any]:
         """
         解析文本，返回解析结果
 
@@ -349,7 +348,7 @@ class FastNLPParser:
         }
 
     def _calculate_confidence(
-        self, intent: str, name: Optional[str], score: Optional[float]
+        self, intent: str, name: str | None, score: float | None
     ) -> float:
         """计算置信度"""
         factors = []
@@ -376,7 +375,7 @@ class FastNLPParser:
         """判断是否可以处理该文本"""
         return self._is_simple_text(text)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取解析器统计信息"""
         return {
             "parser_type": "fast",

@@ -1,7 +1,6 @@
 import time
 import json
 import threading
-from typing import List, Dict, Optional
 from config.config_loader import config_loader
 import redis
 import hashlib
@@ -35,17 +34,18 @@ class NLPCache:
                 port=config_loader.get("REDIS_PORT", 6379),
                 db=config_loader.get("REDIS_DB", 0),
                 socket_timeout=5,
-            )  # noqa: E501
+            )
             self._redis.ping()
             self._redis_available = True
-        except Exception:
+        except Exception as e:
+            log_warning(f"[NLP优化器] Redis缓存连接失败: {e}", exception=e)
             self._redis_available = False
 
     def _hash_text(self, text: str) -> str:
         """生成文本缓存键"""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-    def get(self, text: str) -> Optional[Dict]:
+    def get(self, text: str) -> dict | None:
         """获取缓存结果"""
         key = f"nlp:{self._hash_text(text)}"
         with self._lock:
@@ -64,10 +64,9 @@ class NLPCache:
                     "NLP best-effort operation failed; exception previously swallowed silently",
                     exc_info=True,
                 )
-                pass
         return None
 
-    def set(self, text: str, result: Dict):
+    def set(self, text: str, result: dict):
         """设置缓存结果"""
         key = f"nlp:{self._hash_text(text)}"
         with self._lock:
@@ -82,9 +81,8 @@ class NLPCache:
                     "NLP best-effort operation failed; exception previously swallowed silently",
                     exc_info=True,
                 )
-                pass
 
-    def batch_get(self, texts: List[str]) -> Dict[str, Optional[Dict]]:
+    def batch_get(self, texts: list[str]) -> dict[str, dict | None]:
         """批量获取缓存"""
         results = {}
         uncached_texts = []
@@ -96,7 +94,7 @@ class NLPCache:
                 uncached_texts.append(text)
         return (results, uncached_texts)
 
-    def batch_set(self, text_results: Dict[str, Dict]):
+    def batch_set(self, text_results: dict[str, dict]):
         """批量设置缓存"""
         for text, result in text_results.items():
             self.set(text, result)
@@ -115,7 +113,6 @@ class NLPCache:
                     "NLP best-effort operation failed; exception previously swallowed silently",
                     exc_info=True,
                 )
-                pass
 
 
 class NLPPerformanceOptimizer:
@@ -188,7 +185,7 @@ class NLPPerformanceOptimizer:
         elapsed = time.time() - start_time
         log_info(f"[NLP优化器] 预热完成! 耗时: {elapsed:.2f}s")
 
-    def parse_with_cache(self, text: str, parser_func) -> Dict:
+    def parse_with_cache(self, text: str, parser_func) -> dict:
         """带缓存的解析"""
         self._performance_stats["total_requests"] += 1
         cached = self._cache.get(text)
@@ -203,7 +200,7 @@ class NLPPerformanceOptimizer:
             self._cache.set(text, result)
         return result
 
-    def batch_parse(self, texts: List[str], parser_func) -> List[Dict]:
+    def batch_parse(self, texts: list[str], parser_func) -> list[dict]:
         """批量解析优化"""
         results = []
         cached_results, uncached_texts = self._cache.batch_get(texts)
@@ -233,7 +230,7 @@ class NLPPerformanceOptimizer:
         if total > 0:
             stats["avg_response_time"] = (current_avg * (total - 1) + elapsed) / total
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """获取性能统计"""
         stats = self._performance_stats.copy()
         stats["cache_size"] = len(self._cache._local_cache)

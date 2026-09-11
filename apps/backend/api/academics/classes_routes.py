@@ -41,9 +41,8 @@ def _audit_class_op(op, name, result, payload, target_id=None):
             f"{op} 班级: {name}",
             after_data=payload,
         )
-    except Exception:  # noqa: BLE001 - 审计失败不影响业务
+    except Exception:
         logger.warning("审计操作记录失败（不影响主流程）", exc_info=True)
-        pass
 
 
 class_model = ns_classes.model(
@@ -87,7 +86,7 @@ class ClassList(Resource):
         page, per_page = get_pagination(default=10)
         keyword = args.get("keyword")
         admin = get_current_admin()
-        result = class_service.get_class_list(page, per_page, keyword, admin=admin)  # noqa: F841
+        result = class_service.get_class_list(page, per_page, keyword, admin=admin)
         return APIResponse.success(data=result)
 
     @ns_classes.doc("create_class")
@@ -201,7 +200,7 @@ class ClassExport(Resource):
         keyword = args.get("keyword")
         export_format = request.args.get("format", "json").lower()
 
-        result = class_service.export_classes(keyword, export_format)  # noqa: F841
+        result = class_service.export_classes(keyword, export_format)
 
         if result["type"] == "excel":
             return send_file(
@@ -210,13 +209,12 @@ class ClassExport(Resource):
                 as_attachment=True,
                 download_name=result["filename"],
             )
-        else:
-            return send_file(
-                result["data"],
-                mimetype="application/json",
-                as_attachment=True,
-                download_name=result["filename"],
-            )
+        return send_file(
+            result["data"],
+            mimetype="application/json",
+            as_attachment=True,
+            download_name=result["filename"],
+        )
 
 
 @ns_classes.route("/import")

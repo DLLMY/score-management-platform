@@ -116,11 +116,10 @@ def bulk_import_users(rows):
                         )
 
                 # 验证手机号
-                if phone:
-                    if not re.match(r"^1[3-9]\d{9}$", phone):
-                        row_errors.append(
-                            {"field": "phone", "message": "手机号格式无效，应为11位数字"}
-                        )
+                if phone and not re.match(r"^1[3-9]\d{9}$", phone):
+                    row_errors.append(
+                        {"field": "phone", "message": "手机号格式无效，应为11位数字"}
+                    )
 
                 # 验证学号/饭卡号
                 if not card_id:
@@ -190,7 +189,7 @@ def bulk_import_users(rows):
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"数据提交失败（已重试{retry.retry_count}次）: {str(e)}")
-                raise ImportCommitError(str(e), imported_count, failed_count)
+                raise ImportCommitError(str(e), imported_count, failed_count) from e
 
     except ImportCommitError:
         raise

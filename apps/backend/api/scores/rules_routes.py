@@ -586,7 +586,7 @@ class ApplyRuleTemplate(Resource):
                 message=f"成功应用模板，创建了 {result['created_count']} 条规则",
             )
         except Exception as e:
-            logger.error("%s: %s", "应用模板失败", e)
+            logger.error("%s: %s", "应用模板失败", e, exc_info=True)
             return APIResponse.error(message="应用模板失败", status_code=500)
 
 

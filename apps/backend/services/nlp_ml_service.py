@@ -428,14 +428,13 @@ class FeatureEngineeringService:
                 features = features.toarray()
             self.pca_model = PCA(n_components=n_components, random_state=42)
             return self.pca_model.fit_transform(features)
-        elif method == "nmf":
+        if method == "nmf":
             if sp.issparse(features):
                 features = features.toarray()
             nmf_model = NMF(n_components=n_components, random_state=42, init="nndsvda")
             return nmf_model.fit_transform(features)
-        else:
-            self.svd_model = TruncatedSVD(n_components=n_components, random_state=42)
-            return self.svd_model.fit_transform(features)
+        self.svd_model = TruncatedSVD(n_components=n_components, random_state=42)
+        return self.svd_model.fit_transform(features)
 
     def apply_feature_selection(self, features, labels, k=500, method="chi2"):
         if method == "f_classif":
@@ -540,7 +539,7 @@ class _SklearnTextCNNWrapper:
         texts = [str(t) for t in X]
         probs_list = []
         for t in texts:
-            result = self.cnn.forward(t)  # noqa: F841
+            result = self.cnn.forward(t)
             probs = result["probabilities"][0]
             row = np.zeros(len(self.classes_))
             for i, cls in enumerate(self.classes_):
@@ -585,7 +584,6 @@ class _SklearnBertWrapper:
                     "NLP best-effort operation failed; exception previously swallowed silently",
                     exc_info=True,
                 )
-                pass
         return None
 
     def fit(self, X, y):
@@ -629,7 +627,6 @@ class _SklearnBertWrapper:
                         "NLP best-effort operation failed; exception previously swallowed silently",
                         exc_info=True,
                     )
-                    pass
         # 退化为使用BERT的predict_intent
         preds = []
         for t in texts:
@@ -637,6 +634,10 @@ class _SklearnBertWrapper:
                 intent, _ = self.bert.predict_intent(t)
                 preds.append(intent)
             except Exception:
+                logging.getLogger(__name__).warning(
+                    "NLP best-effort operation failed; exception previously swallowed silently",
+                    exc_info=True,
+                )
                 preds.append(self.classes_[0])
         return np.array(preds)
 
@@ -986,6 +987,7 @@ class NLPMLTrainingService:
                 },
             }
         except Exception as e:
+            log_warning(f"[NLPML] 解释预测失败: {e}", exception=e)
             return {"error": str(e)}
 
     def _get_feature_importance(self, model, vectorizer, top_n=10):
@@ -1010,7 +1012,8 @@ class NLPMLTrainingService:
                 }
                 for i, idx in enumerate(indices)
             ]
-        except Exception:
+        except Exception as e:
+            log_warning(f"[NLPML] 获取特征重要性失败: {e}", exception=e)
             return []
 
     def _prepare_training_data(self):
@@ -1390,6 +1393,7 @@ class NLPMLTrainingService:
                     best_algorithm = algorithm
                     best_model = model
             except Exception as e:
+                log_warning(f"[NLPML] 算法训练失败 {algorithm}: {e}", exception=e)
                 results.append(
                     {
                         "algorithm": algorithm,
@@ -1465,7 +1469,8 @@ class NLPMLTrainingService:
                 confidence = model.predict_proba(X)[0].max()
             else:
                 confidence = 0.5
-        except Exception:
+        except Exception as e:
+            log_warning(f"[NLPML] 预测失败: {e}", exception=e)
             return None
         return {
             "rule_id": rule_id,
@@ -1496,7 +1501,8 @@ class NLPMLTrainingService:
                         "confidence": round(confidence, 4),
                     }
                 )
-            except Exception:
+            except Exception as e:
+                log_warning(f"[NLPML] 多模型预测单模型失败: {e}", exception=e)
                 continue
         results.sort(key=lambda x: x["confidence"], reverse=True)
         return results[:top_n]
@@ -1625,6 +1631,7 @@ class NLPMLTrainingService:
                             }
                         )
             except Exception as e:
+                log_warning(f"[NLPML] 评估算法失败 {algorithm}: {e}", exception=e)
                 results.append(
                     {
                         "algorithm": algorithm,
@@ -1660,7 +1667,8 @@ class NLPMLTrainingService:
                 confidence = 0.5
             explanation = self._explain_prediction(model, vectorizer, text)
             feature_importance = self._get_feature_importance(model, vectorizer)
-        except Exception:
+        except Exception as e:
+            log_warning(f"[NLPML] 带解释预测失败: {e}", exception=e)
             return None
         return {
             "rule_id": rule_id,
@@ -1723,6 +1731,7 @@ class NLPMLTrainingService:
                 "message": f"{MLAlgorithmType.get_name(algorithm)} 模型增量更新完成",
             }
         except Exception as e:
+            log_warning(f"[NLPML] 增量学习失败: {e}", exception=e)
             return {"success": False, "message": f"增量学习失败: {str(e)}"}
 
     def online_train(self, text, label):

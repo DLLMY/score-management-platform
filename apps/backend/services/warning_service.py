@@ -190,7 +190,7 @@ class WarningService:
         score_threshold = int(WarningService._get_config()["score_threshold"])
         if user.current_score < score_threshold:
             score += (1 - user.current_score / score_threshold) * 0.3
-        if any(("连续" in r for r in reasons)) or any(("开锁次数" in r for r in reasons)):
+        if any("连续" in r for r in reasons) or any("开锁次数" in r for r in reasons):
             score += 0.3
         avg_score = WarningService._get_student_avg_score(user.id)
         if avg_score is not None and avg_score < 60:

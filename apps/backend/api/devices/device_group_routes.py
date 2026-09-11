@@ -146,7 +146,7 @@ class DeviceGroupItem(Resource):
         if not group:
             return APIResponse.not_found(message="设备分组不存在")
 
-        result = group.to_dict()  # noqa: F841
+        result = group.to_dict()
         result["devices"] = [m.to_dict() for m in group.devices]
         return APIResponse.success(data=result)
 

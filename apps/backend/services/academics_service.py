@@ -129,7 +129,7 @@ class AcademicsService:
                 )
                 subject = (
                     row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
-                )  # noqa: F841
+                )
                 subject_id = _resolve_subject_id(subject, None)
                 score_val = (
                     ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
@@ -316,21 +316,15 @@ class AcademicsService:
                     message = rule.get("message", f"{field}验证失败")
                     value = item.get(field)
 
-                    if rule_type == "required" and value is None:
-                        errors.append(message)
-                    elif (
+                    if rule_type == "required" and value is None or (
                         rule_type == "max_length"
                         and value
                         and len(str(value)) > params.get("max", 100)
-                    ):
-                        errors.append(message)
-                    elif (
+                    ) or (
                         rule_type == "min_length"
                         and value
                         and len(str(value)) < params.get("min", 1)
-                    ):
-                        errors.append(message)
-                    elif (
+                    ) or (
                         rule_type == "regex"
                         and value
                         and not re.match(params.get("pattern", ""), str(value))
@@ -723,9 +717,9 @@ class AcademicsService:
                     score.score = float(score.score)
                     full = float(full)
                 except (TypeError, ValueError):
-                    raise ValueError("分数格式非法")
+                    raise ValueError("分数格式非法") from None
                 if score.score < 0 or (full > 0 and score.score > full):
-                    raise ValueError("成绩需在 0 ~ %s 之间" % full)
+                    raise ValueError(f"成绩需在 0 ~ {full} 之间")
             score.updated_at = datetime.now()
             return score.id
 

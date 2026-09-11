@@ -56,7 +56,7 @@ class DashboardService:
             .all()
         )
 
-        result = {  # noqa: F841
+        result = {
             "total_users": total_users,
             "total_admins": total_admins,
             "total_rules": total_rules,

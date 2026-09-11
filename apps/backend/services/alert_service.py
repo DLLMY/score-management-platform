@@ -6,7 +6,6 @@
 import time
 import json
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
 from models import db, Alert
 from utils.logger import log_info, log_error
 
@@ -60,7 +59,7 @@ class AlertService:
         """获取告警级别"""
         return self.ALERT_TYPES.get(alert_type, {}).get("level", "info")
 
-    def _should_suppress(self, alert_type: str, device_id: Optional[str] = None) -> bool:
+    def _should_suppress(self, alert_type: str, device_id: str | None = None) -> bool:
         """检查是否应该抑制该告警"""
         key = f"{alert_type}:{device_id}" if device_id else alert_type
         last_time = self.last_alert_time.get(key, 0)
@@ -70,7 +69,7 @@ class AlertService:
             return True
         return False
 
-    def _update_last_alert_time(self, alert_type: str, device_id: Optional[str] = None):
+    def _update_last_alert_time(self, alert_type: str, device_id: str | None = None):
         """更新最后告警时间"""
         key = f"{alert_type}:{device_id}" if device_id else alert_type
         self.last_alert_time[key] = time.time()
@@ -79,9 +78,9 @@ class AlertService:
         self,
         alert_type: str,
         message: str,
-        device_id: Optional[str] = None,
-        device_name: Optional[str] = None,
-        extra_data: Optional[Dict] = None,
+        device_id: str | None = None,
+        device_name: str | None = None,
+        extra_data: dict | None = None,
         suppress: bool = True,
     ) -> Alert:
         """
@@ -134,7 +133,7 @@ class AlertService:
 
             return alert
         except Exception as e:
-            log_error(f"创建告警失败: {e}")
+            log_error(f"创建告警失败: {e}", exception=e)
             db.session.rollback()
             return None
 
@@ -157,16 +156,16 @@ class AlertService:
             db.session.commit()
             log_info(f"告警通知已写入管理员通知中心: id={notification.id}")
         except Exception as e:
-            log_error(f"写入告警通知失败: {e}")
+            log_error(f"写入告警通知失败: {e}", exception=e)
 
     def get_alerts(
         self,
         limit: int = 50,
         offset: int = 0,
-        severity: Optional[str] = None,
-        is_read: Optional[bool] = None,
-        alert_type: Optional[str] = None,
-    ) -> List[Alert]:
+        severity: str | None = None,
+        is_read: bool | None = None,
+        alert_type: str | None = None,
+    ) -> list[Alert]:
         """
         获取告警列表
 
@@ -193,7 +192,7 @@ class AlertService:
 
         return query.offset(offset).limit(limit).all()
 
-    def get_alert_by_id(self, alert_id: int) -> Optional[Alert]:
+    def get_alert_by_id(self, alert_id: int) -> Alert | None:
         """根据ID获取告警"""
         return Alert.query.get(alert_id)
 
@@ -207,7 +206,7 @@ class AlertService:
                 db.session.commit()
                 return True
             except Exception as e:
-                log_error(f"标记告警已读失败: {e}")
+                log_error(f"标记告警已读失败: {e}", exception=e)
                 db.session.rollback()
         return False
 
@@ -225,7 +224,7 @@ class AlertService:
                 db.session.commit()
                 return True
             except Exception as e:
-                log_error(f"更新告警状态失败: {e}")
+                log_error(f"更新告警状态失败: {e}", exception=e)
                 db.session.rollback()
         return False
 
@@ -234,11 +233,11 @@ class AlertService:
         try:
             count = Alert.query.filter(Alert.is_read == False).update(
                 {"is_read": True, "read_at": datetime.now()}
-            )  # noqa: E712, E501
+            )
             db.session.commit()
             return count
         except Exception as e:
-            log_error(f"标记所有告警已读失败: {e}")
+            log_error(f"标记所有告警已读失败: {e}", exception=e)
             db.session.rollback()
             return None
 
@@ -251,7 +250,7 @@ class AlertService:
                 db.session.commit()
                 return True
             except Exception as e:
-                log_error(f"删除告警失败: {e}")
+                log_error(f"删除告警失败: {e}", exception=e)
                 db.session.rollback()
         return False
 
@@ -264,7 +263,7 @@ class AlertService:
             log_info(f"删除了 {count} 条过期告警")
             return count
         except Exception as e:
-            log_error(f"删除过期告警失败: {e}")
+            log_error(f"删除过期告警失败: {e}", exception=e)
             db.session.rollback()
             return None
 
@@ -275,11 +274,11 @@ class AlertService:
             total = Alert.query.count()
 
             # 未读告警数
-            unread = Alert.query.filter(Alert.is_read == False).count()  # noqa: E712
+            unread = Alert.query.filter(Alert.is_read == False).count()
 
             # 按级别统计
             severity_stats = {}
-            for severity in self.SEVERITY_LEVELS.keys():
+            for severity in self.SEVERITY_LEVELS:
                 count = Alert.query.filter(Alert.severity == severity).count()
                 severity_stats[severity] = count
 
@@ -294,7 +293,7 @@ class AlertService:
                 "today_count": today_count,
             }
         except Exception as e:
-            log_error(f"获取告警统计失败: {e}")
+            log_error(f"获取告警统计失败: {e}", exception=e)
             db.session.rollback()
             return None
 

@@ -67,9 +67,9 @@ class ClassPeriodList(Resource):
         periods = ClassPeriod.query.order_by(
             ClassPeriod.sort_order, ClassPeriod.period_number
         ).all()
-        result = []  # noqa: F841
+        result = []
         for p in periods:
-            item = p.to_dict()  # noqa: F841
+            item = p.to_dict()
             item["duration"] = (p.end_hour * 60 + p.end_minute) - (
                 p.start_hour * 60 + p.start_minute
             )
@@ -89,7 +89,7 @@ class ClassPeriodList(Resource):
 
         period = create_class_period(data)
 
-        result = period.to_dict()  # noqa: F841
+        result = period.to_dict()
         result["duration"] = (period.end_hour * 60 + period.end_minute) - (
             period.start_hour * 60 + period.start_minute
         )
@@ -106,7 +106,7 @@ class ClassPeriodResource(Resource):
     @requires_permission("timetable.rule.manage")
     def get(self, id):
         period = ClassPeriod.query.get_or_404(id)
-        result = period.to_dict()  # noqa: F841
+        result = period.to_dict()
         result["duration"] = (period.end_hour * 60 + period.end_minute) - (
             period.start_hour * 60 + period.start_minute
         )
@@ -128,7 +128,7 @@ class ClassPeriodResource(Resource):
 
         update_class_period(period, data)
 
-        result = period.to_dict()  # noqa: F841
+        result = period.to_dict()
         result["duration"] = (period.end_hour * 60 + period.end_minute) - (
             period.start_hour * 60 + period.start_minute
         )
@@ -156,9 +156,9 @@ class ClassPeriodActiveList(Resource):
             .order_by(ClassPeriod.sort_order, ClassPeriod.period_number)
             .order_by(ClassPeriod.sort_order, ClassPeriod.period_number)
         )
-        result = []  # noqa: F841
+        result = []
         for p in periods:
-            item = p.to_dict()  # noqa: F841
+            item = p.to_dict()
             item["duration"] = (p.end_hour * 60 + p.end_minute) - (
                 p.start_hour * 60 + p.start_minute
             )

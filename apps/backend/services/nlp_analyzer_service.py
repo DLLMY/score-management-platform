@@ -1,6 +1,5 @@
 from datetime import datetime
 from collections import defaultdict
-from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 import time
 import logging
@@ -20,7 +19,7 @@ class IntentMetrics:
 
     total_predictions: int = 0
     correct_predictions: int = 0
-    intent_stats: Dict[str, Dict] = field(default_factory=dict)
+    intent_stats: dict[str, dict] = field(default_factory=dict)
 
     @property
     def accuracy(self) -> float:
@@ -28,7 +27,7 @@ class IntentMetrics:
             return 0.0
         return self.correct_predictions / self.total_predictions
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "total_predictions": self.total_predictions,
             "correct_predictions": self.correct_predictions,
@@ -45,7 +44,7 @@ class PerformanceMetrics:
     total_processing_time: float = 0.0
     cache_hits: int = 0
     cache_misses: int = 0
-    slow_requests: List[Dict] = field(default_factory=list)
+    slow_requests: list[dict] = field(default_factory=list)
 
     @property
     def avg_processing_time(self) -> float:
@@ -60,7 +59,7 @@ class PerformanceMetrics:
             return 0.0
         return self.cache_hits / total
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "total_requests": self.total_requests,
             "avg_processing_time": round(self.avg_processing_time, 4),
@@ -73,11 +72,11 @@ class PerformanceMetrics:
 class ErrorAnalysis:
     """错误分析"""
 
-    error_types: Dict[str, int] = field(default_factory=dict)
-    error_examples: List[Dict] = field(default_factory=list)
-    common_failures: List[Dict] = field(default_factory=list)
+    error_types: dict[str, int] = field(default_factory=dict)
+    error_examples: list[dict] = field(default_factory=list)
+    common_failures: list[dict] = field(default_factory=list)
 
-    def add_error(self, error_type: str, example: Dict):
+    def add_error(self, error_type: str, example: dict):
         self.error_types[error_type] = self.error_types.get(error_type, 0) + 1
         if len(self.error_examples) < 100:
             self.error_examples.append(
@@ -88,7 +87,7 @@ class ErrorAnalysis:
                 }
             )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "error_types": self.error_types,
             "error_examples": self.error_examples[-10:],
@@ -99,8 +98,8 @@ class ErrorAnalysis:
 class NLPAlgorithmAnalyzer:
     """NLP算法分析器"""
 
-    _instance = None  # noqa: F841
-    _lock = threading.Lock()  # noqa: F841
+    _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
@@ -118,7 +117,7 @@ class NLPAlgorithmAnalyzer:
         self.performance_metrics = PerformanceMetrics()
         self.error_analysis = ErrorAnalysis()
         # 时间序列数据
-        self.request_history: List[Dict] = []
+        self.request_history: list[dict] = []
         self.max_history_size = 10000
         # 算法组件统计
         self.component_stats = defaultdict(
@@ -150,9 +149,9 @@ class NLPAlgorithmAnalyzer:
     def record_intent_prediction(
         self,
         predicted_intent: str,
-        true_intent: Optional[str] = None,
+        true_intent: str | None = None,
         confidence: float = 0.0,
-        features: Optional[Dict] = None,
+        features: dict | None = None,
     ):
         """记录意图预测（写入请求级缓冲，flush 时原子提交）"""
         self._get_buffer().append(
@@ -169,7 +168,7 @@ class NLPAlgorithmAnalyzer:
         self,
         processing_time: float,
         cache_hit: bool = False,
-        components: Optional[Dict[str, float]] = None,
+        components: dict[str, float] | None = None,
     ):
         """记录性能指标（写入请求级缓冲，flush 时原子提交）"""
         self._get_buffer().append(
@@ -185,9 +184,9 @@ class NLPAlgorithmAnalyzer:
         self,
         error_type: str,
         input_text: str,
-        expected: Optional[str] = None,
-        predicted: Optional[str] = None,
-        error_detail: Optional[str] = None,
+        expected: str | None = None,
+        predicted: str | None = None,
+        error_detail: str | None = None,
     ):
         """记录错误（写入请求级缓冲，flush 时原子提交）"""
         self._get_buffer().append(
@@ -212,7 +211,7 @@ class NLPAlgorithmAnalyzer:
             }
         )
 
-    def add_request_to_history(self, request_data: Dict):
+    def add_request_to_history(self, request_data: dict):
         """添加请求到历史记录（写入请求级缓冲，flush 时原子提交）"""
         self._get_buffer().append(
             {
@@ -236,7 +235,7 @@ class NLPAlgorithmAnalyzer:
                 self._apply_event(ev)
             buffer.clear()
 
-    def _apply_event(self, ev: Dict):
+    def _apply_event(self, ev: dict):
         """在全局锁内应用单个缓冲事件（原 record_* 逻辑的内联）。"""
         etype = ev.get("type")
         if etype == "intent":
@@ -308,7 +307,7 @@ class NLPAlgorithmAnalyzer:
             if len(self.request_history) > self.max_history_size:
                 self.request_history.pop(0)
 
-    def get_intent_analysis(self) -> Dict:
+    def get_intent_analysis(self) -> dict:
         """获取意图分析报告"""
         self.flush_request_metrics()
         with self._lock:
@@ -327,7 +326,7 @@ class NLPAlgorithmAnalyzer:
                 }
             return report
 
-    def get_performance_analysis(self) -> Dict:
+    def get_performance_analysis(self) -> dict:
         """获取性能分析报告"""
         self.flush_request_metrics()
         with self._lock:
@@ -348,13 +347,13 @@ class NLPAlgorithmAnalyzer:
                 }
             return report
 
-    def get_error_analysis(self) -> Dict:
+    def get_error_analysis(self) -> dict:
         """获取错误分析报告"""
         self.flush_request_metrics()
         with self._lock:
             return self.error_analysis.to_dict()
 
-    def get_optimization_suggestions(self) -> List[Dict]:
+    def get_optimization_suggestions(self) -> list[dict]:
         """获取优化建议"""
         self.flush_request_metrics()
         suggestions = []
@@ -446,7 +445,7 @@ class NLPAlgorithmAnalyzer:
                 )
         return suggestions
 
-    def get_comprehensive_report(self) -> Dict:
+    def get_comprehensive_report(self) -> dict:
         """获取综合分析报告"""
         return {
             "timestamp": datetime.now().isoformat(),
@@ -457,7 +456,7 @@ class NLPAlgorithmAnalyzer:
             "recommendations": self._generate_recommendations(),
         }
 
-    def _generate_recommendations(self) -> List[str]:
+    def _generate_recommendations(self) -> list[str]:
         """生成最终建议"""
         recommendations = []
         intent_accuracy = self.intent_metrics.accuracy
@@ -491,7 +490,7 @@ class NLPAlgorithmAnalyzer:
             self._get_buffer().clear()
             logger.info("[NLPAnalyzer] 指标已重置")
 
-    def export_metrics(self) -> Dict:
+    def export_metrics(self) -> dict:
         """导出所有指标数据"""
         self.flush_request_metrics()
         with self._lock:
@@ -510,8 +509,8 @@ class AlgorithmBenchmark:
 
     @staticmethod
     def benchmark_intent_classifier(
-        classifier, test_cases: List[Dict], iterations: int = 10
-    ) -> Dict:
+        classifier, test_cases: list[dict], iterations: int = 10
+    ) -> dict:
         """
         基准测试意图分类器
         :param classifier: 分类器实例

@@ -23,7 +23,7 @@ def calculate_next_send(notify):
         if notify.repeat_day_of_week:
             try:
                 day_of_week_list = json.loads(notify.repeat_day_of_week)
-            except Exception:
+            except (json.JSONDecodeError, TypeError):
                 day_of_week_list = []
             if day_of_week_list:
                 current_weekday = now.weekday()

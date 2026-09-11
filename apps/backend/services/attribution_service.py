@@ -11,7 +11,6 @@
 """
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -26,12 +25,12 @@ from models import (
 )
 
 # 各维度灵敏度：每单位原生变化对应的考试成绩影响（仅用于相对权重，非因果）。
-SENSITIVITY: Dict[str, float] = {
+SENSITIVITY: dict[str, float] = {
     "behavior": 1.5,  # 行为积分：日均分值差
     "attendance": 30.0,  # 出勤率：0~1 差值
     "homework": 25.0,  # 作业提交率：0~1 差值
 }
-FACTOR_LABELS: Dict[str, str] = {
+FACTOR_LABELS: dict[str, str] = {
     "behavior": "行为积分",
     "attendance": "出勤",
     "homework": "作业完成",
@@ -44,12 +43,12 @@ class AttributionService:
     # ------------------------------------------------------------------
     @staticmethod
     def attribute_score_change(
-        score_before: Optional[float],
-        score_after: Optional[float],
-        factor_values: Dict[str, Tuple[Optional[float], Optional[float]]],
-        sensitivities: Optional[Dict[str, float]] = None,
-        factor_labels: Optional[Dict[str, str]] = None,
-    ) -> Dict:
+        score_before: float | None,
+        score_after: float | None,
+        factor_values: dict[str, tuple[float | None, float | None]],
+        sensitivities: dict[str, float] | None = None,
+        factor_labels: dict[str, str] | None = None,
+    ) -> dict:
         """将成绩净变化归因到各维度。
 
         Args:
@@ -82,7 +81,7 @@ class AttributionService:
         eps = 1e-9
 
         # 计算各维度原始影响（delta × 灵敏度）
-        impacts: Dict[str, float] = {}
+        impacts: dict[str, float] = {}
         for key, (before, after) in factor_values.items():
             before = 0.0 if before is None else float(before)
             after = 0.0 if after is None else float(after)
@@ -90,7 +89,7 @@ class AttributionService:
             impacts[key] = delta * float(sensitivities.get(key, 1.0))
 
         total_signed = sum(impacts.values())
-        factors: List[Dict] = []
+        factors: list[dict] = []
 
         if abs(total_signed) < eps:
             # 各维度影响相互抵消或均未变化：等分到 total_change（保证贡献度和=净变化）
@@ -166,7 +165,7 @@ class AttributionService:
         return f"变化 {delta:+.3f}"
 
     @staticmethod
-    def _summarize(total_change: float, factors: List[Dict]) -> str:
+    def _summarize(total_change: float, factors: list[dict]) -> str:
         if not factors:
             return "成绩波动较小，各维度无明显变化"
         direction_word = (
@@ -182,7 +181,7 @@ class AttributionService:
     # DB 包装层
     # ------------------------------------------------------------------
     @staticmethod
-    def analyze_score_attribution(user_id: int, days: int = 30) -> Dict:
+    def analyze_score_attribution(user_id: int, days: int = 30) -> dict:
         """分析单名学生成绩波动归因。
 
         Args:
@@ -240,7 +239,7 @@ class AttributionService:
         return result
 
     @staticmethod
-    def batch_analyze(class_name: str, days: int = 30) -> Dict:
+    def batch_analyze(class_name: str, days: int = 30) -> dict:
         """批量分析某班级全部学生的成绩波动归因。
 
         Args:
@@ -260,8 +259,8 @@ class AttributionService:
         days = max(int(days), 1)
         users = User.query.filter(User.class_name == class_name).all() if class_name else []
         total = len(users)
-        students: List[Dict] = []
-        failed_students: List[Dict] = []
+        students: list[dict] = []
+        failed_students: list[dict] = []
         with_data = 0
 
         for u in users:

@@ -1,7 +1,6 @@
 import logging
 from models import db, User, Admin, ClassInfo, AdminClass, get_by_id
 from services.class_migration_service import ClassMigrationService
-from typing import Dict, Optional, List
 
 "\n"
 "数据同步服务"
@@ -14,7 +13,7 @@ class DataSyncService:
     """数据同步服务"""
 
     @staticmethod
-    def sync_class_name_change(class_info: ClassInfo, old_name: str, new_name: str) -> Dict:
+    def sync_class_name_change(class_info: ClassInfo, old_name: str, new_name: str) -> dict:
         """
         同步班级名称变更
         当 ClassInfo.name 变更时，同步更新所有使用旧名称的记录
@@ -32,15 +31,15 @@ class DataSyncService:
                 admin.class_name = new_name
                 stats["admins_updated"] += 1
             logger.info(
-                f"Class name sync: {old_name} -> {new_name}, updated {stats['users_updated']} users, {stats['admins_updated']} admins"  # noqa: E501
+                f"Class name sync: {old_name} -> {new_name}, updated {stats['users_updated']} users, {stats['admins_updated']} admins"
             )
         except Exception as e:
             stats["errors"].append(str(e))
-            logger.error(f"Class name sync failed: {e}")
+            logger.error(f"Class name sync failed: {e}", exc_info=True)
         return stats
 
     @staticmethod
-    def sync_new_class_creation(class_info: ClassInfo) -> Dict:
+    def sync_new_class_creation(class_info: ClassInfo) -> dict:
         """
         同步新班级创建
         检查是否有未关联的用户/管理员使用该班级名称，自动建立关联
@@ -65,18 +64,18 @@ class DataSyncService:
                 stats["admins_linked"] += 1
                 stats["admin_classes_created"] += 1
             logger.info(
-                f"New class sync: {class_info.name}, linked {stats['users_linked']} users, {stats['admins_linked']} admins"  # noqa: E501
+                f"New class sync: {class_info.name}, linked {stats['users_linked']} users, {stats['admins_linked']} admins"
             )
         except Exception as e:
-            logger.error(f"New class sync failed: {e}")
+            logger.error(f"New class sync failed: {e}", exc_info=True)
             try:
                 db.session.rollback()  # 防中途异常遗留 pending 修改
             except Exception as e2:
-                logger.warning(f"New class sync 回滚失败: {e2}")
+                logger.warning(f"New class sync 回滚失败: {e2}", exc_info=True)
         return stats
 
     @staticmethod
-    def sync_class_deletion(class_info: ClassInfo) -> Dict:
+    def sync_class_deletion(class_info: ClassInfo) -> dict:
         """
         同步班级删除
         处理班级删除时的关联数据
@@ -110,17 +109,17 @@ class DataSyncService:
                 f"Class delete sync: {class_info.name}, unlinked {stats['users_unlinked']} users"
             )
         except Exception as e:
-            logger.error(f"Class delete sync failed: {e}")
+            logger.error(f"Class delete sync failed: {e}", exc_info=True)
             try:
                 db.session.rollback()  # 防中途异常遗留 pending 修改
             except Exception as e2:
-                logger.warning(f"Class delete sync 回滚失败: {e2}")
+                logger.warning(f"Class delete sync 回滚失败: {e2}", exc_info=True)
         return stats
 
     @staticmethod
     def sync_user_class_change(
-        user: User, old_class_name: Optional[str], new_class_name: Optional[str]
-    ) -> Dict:
+        user: User, old_class_name: str | None, new_class_name: str | None
+    ) -> dict:
         """
         同步用户班级变更
         当用户班级变更时，自动建立或解除关联
@@ -147,8 +146,8 @@ class DataSyncService:
 
     @staticmethod
     def sync_admin_class_change(
-        admin: Admin, old_class_name: Optional[str], new_class_name: Optional[str]
-    ) -> Dict:
+        admin: Admin, old_class_name: str | None, new_class_name: str | None
+    ) -> dict:
         """
         同步管理员班级变更
         当管理员班级变更时，自动建立或解除关联
@@ -180,17 +179,17 @@ class DataSyncService:
         return stats
 
     @staticmethod
-    def get_class_students(class_info_id: int) -> List[User]:
+    def get_class_students(class_info_id: int) -> list[User]:
         """获取班级的所有学生"""
         return User.query.filter_by(class_info_id=class_info_id, is_active=True).all()
 
     @staticmethod
-    def get_class_teachers(class_info_id: int) -> List[Admin]:
+    def get_class_teachers(class_info_id: int) -> list[Admin]:
         """获取班级的所有教师/班主任"""
         return Admin.query.filter_by(primary_class_id=class_info_id).all()
 
     @staticmethod
-    def get_teacher_classes(teacher_id: int) -> List[ClassInfo]:
+    def get_teacher_classes(teacher_id: int) -> list[ClassInfo]:
         """获取教师负责的所有班级"""
         admin = get_by_id(Admin, teacher_id)
         if not admin or not admin.primary_class_id:

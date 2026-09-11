@@ -1,6 +1,5 @@
 from models import db, User, TimeRule, ScoreRankRule, ScoreRecord
 from datetime import datetime, date, time
-from typing import Dict, Tuple, Optional
 
 
 class UnlockValidator:
@@ -10,7 +9,7 @@ class UnlockValidator:
     DAILY_LIMIT = 10
 
     @staticmethod
-    def get_user_rank(user: User) -> Optional[ScoreRankRule]:
+    def get_user_rank(user: User) -> ScoreRankRule | None:
         """根据用户分数获取对应的排名规则"""
         if not user.current_score:
             return None
@@ -20,15 +19,16 @@ class UnlockValidator:
             .all()
         )
         for rule in rules:
-            if user.current_score >= rule.min_score:
-                if rule.max_score is None or user.current_score <= rule.max_score:
-                    return rule
+            if user.current_score >= rule.min_score and (
+                rule.max_score is None or user.current_score <= rule.max_score
+            ):
+                return rule
         return None
 
     @staticmethod
     def validate_unlock(
         card_id: str, skip_time_window: bool = False
-    ) -> Tuple[bool, str, Optional[Dict]]:
+    ) -> tuple[bool, str, dict | None]:
         """
         验证开锁资格
 
@@ -59,7 +59,7 @@ class UnlockValidator:
                         "current_score": user.current_score,
                     },
                 )
-            elif user.blacklist_until is None:
+            if user.blacklist_until is None:
                 return (
                     False,
                     "user_permanently_blacklisted",
@@ -84,7 +84,7 @@ class UnlockValidator:
             rank.weekly_unlock_limit
             if rank and rank.weekly_unlock_limit is not None
             else UnlockValidator.WEEKLY_LIMIT
-        )  # noqa: E501
+        )
         if not UnlockValidator._check_weekly_limit(user, weekly_limit):
             return (
                 False,
@@ -229,7 +229,7 @@ class UnlockValidator:
         db.session.commit()
 
     @staticmethod
-    def get_unlock_status(card_id: str) -> Dict:
+    def get_unlock_status(card_id: str) -> dict:
         user = User.query.filter_by(card_id=card_id).first()
 
         if not user:
@@ -274,7 +274,7 @@ class UnlockValidator:
         return UnlockValidator.DAILY_LIMIT
 
 
-def check_user_blacklist(card_id: str) -> Tuple[bool, str]:
+def check_user_blacklist(card_id: str) -> tuple[bool, str]:
     user = User.query.filter_by(card_id=card_id).first()
 
     if not user:
@@ -286,13 +286,13 @@ def check_user_blacklist(card_id: str) -> Tuple[bool, str]:
     if user.is_blacklisted:
         if user.blacklist_until and user.blacklist_until > datetime.now():
             return True, user.blacklist_reason or "暂时禁用"
-        elif user.blacklist_until is None:
+        if user.blacklist_until is None:
             return True, user.blacklist_reason or "永久禁用"
 
     return False, ""
 
 
-def add_to_blacklist(card_id: str, reason: str, until: datetime = None) -> Tuple[bool, str]:
+def add_to_blacklist(card_id: str, reason: str, until: datetime = None) -> tuple[bool, str]:
     user = User.query.filter_by(card_id=card_id).first()
 
     if not user:
@@ -308,7 +308,7 @@ def add_to_blacklist(card_id: str, reason: str, until: datetime = None) -> Tuple
     return True, "用户已加入黑名单"
 
 
-def remove_from_blacklist(card_id: str) -> Tuple[bool, str]:
+def remove_from_blacklist(card_id: str) -> tuple[bool, str]:
     user = User.query.filter_by(card_id=card_id).first()
 
     if not user:
@@ -324,7 +324,7 @@ def remove_from_blacklist(card_id: str) -> Tuple[bool, str]:
     return True, "用户已从黑名单移除"
 
 
-def set_daily_unlock_limit(card_id: str, limit: int) -> Tuple[bool, str]:
+def set_daily_unlock_limit(card_id: str, limit: int) -> tuple[bool, str]:
     if limit < 0 or limit > 100:
         return False, "limit_out_of_range"
 

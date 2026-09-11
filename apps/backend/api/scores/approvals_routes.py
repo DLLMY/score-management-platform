@@ -95,7 +95,7 @@ def _execute_approve(approval, data):
             enqueue_or_recalc_user_score(user.id)
         except Exception as e:
             logging.getLogger(__name__).error(
-                "[CompositeScore] 审批通过重算综合分失败 user_id=%s: %s", user.id, e
+                "[CompositeScore] 审批通过重算综合分失败 user_id=%s: %s", user.id, e, exc_info=True
             )
 
     # D3/R4: 审批结果写入学生通知中心（学生端 /notifications 可见）
@@ -106,10 +106,9 @@ def _execute_approve(approval, data):
             create_approval_result_notification(
                 user_id=user.id,
                 title="审批通过",
-                content="您的申请「%s」已审批通过%s"
-                % (
+                content="您的申请「{}」已审批通过{}".format(
                     approval.title,
-                    "，积分变动 %+g 分" % actual_change if actual_change else "",
+                    f"，积分变动 {actual_change:+g} 分" if actual_change else "",
                 ),
             )
         except Exception as e:
@@ -220,8 +219,7 @@ def _execute_reject(approval, data):
             create_approval_result_notification(
                 user_id=user.id,
                 title="审批未通过",
-                content="您的申请「%s」未通过审批：%s"
-                % (approval.title, approval.comment or "审批未通过"),
+                content="您的申请「{}」未通过审批：{}".format(approval.title, approval.comment or "审批未通过"),
             )
         except Exception as e:
             log_warning(f"[Approval] 审批结果通知写入失败: {e}", exception=e)
@@ -401,7 +399,7 @@ class ApprovalBatchApprove(Resource):
                 "success_count": ok_count,
                 "failed_count": len(results) - ok_count,
             },
-            message="成功 %d 条，失败 %d 条" % (ok_count, len(results) - ok_count),
+            message=f"成功 {ok_count} 条，失败 {len(results) - ok_count} 条",
         )
 
 
@@ -439,7 +437,7 @@ class ApprovalBatchReject(Resource):
                 "success_count": ok_count,
                 "failed_count": len(results) - ok_count,
             },
-            message="成功 %d 条，失败 %d 条" % (ok_count, len(results) - ok_count),
+            message=f"成功 {ok_count} 条，失败 {len(results) - ok_count} 条",
         )
 
 

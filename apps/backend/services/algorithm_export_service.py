@@ -89,4 +89,4 @@ def build_algorithm_export_rows(tab, class_name, days):
             )
         return "风险评估", headers, rows
 
-    raise ValueError("不支持的导出类型: %s" % tab)
+    raise ValueError(f"不支持的导出类型: {tab}")

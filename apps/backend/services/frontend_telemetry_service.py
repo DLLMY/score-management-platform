@@ -64,7 +64,7 @@ def persist_frontend_error(data):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        logger.warning(f"前端错误落库失败（已忽略）: {e}")
+        logger.warning(f"前端错误落库失败（已忽略）: {e}", exc_info=True)
 
 
 def bulk_persist_perf_metrics(metrics):

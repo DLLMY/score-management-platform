@@ -1,7 +1,6 @@
 import logging
 from models import db, User, Admin, ClassInfo, AdminClass, CourseSchedule
 from datetime import datetime
-from typing import Dict, List
 
 "\n"
 "数据一致性校验服务"
@@ -17,7 +16,7 @@ class DataConsistencyChecker:
         self.issues = []
         self.stats = {}
 
-    def check_all(self) -> Dict:
+    def check_all(self) -> dict:
         """执行所有一致性检查"""
         self.issues = []
         self.check_user_class_consistency()
@@ -33,7 +32,7 @@ class DataConsistencyChecker:
             "healthy": len(self.issues) == 0,
         }
 
-    def check_user_class_consistency(self) -> List[Dict]:
+    def check_user_class_consistency(self) -> list[dict]:
         """
         检查用户班级一致性
         """
@@ -110,7 +109,7 @@ class DataConsistencyChecker:
         self.issues.extend(issues)
         return issues
 
-    def check_admin_class_consistency(self) -> List[Dict]:
+    def check_admin_class_consistency(self) -> list[dict]:
         """
         检查管理员班级一致性
         """
@@ -150,7 +149,7 @@ class DataConsistencyChecker:
         self.issues.extend(issues)
         return issues
 
-    def check_admin_class_links(self) -> List[Dict]:
+    def check_admin_class_links(self) -> list[dict]:
         """
         检查 AdminClass 关联表一致性
         """
@@ -197,7 +196,7 @@ class DataConsistencyChecker:
             .filter(AdminClass.is_primary)
             .group_by(AdminClass.admin_id)
             .all()
-        )  # noqa: E501
+        )
         for admin_id, count in admins_with_multiple_primary:
             issues.append(
                 {
@@ -211,7 +210,7 @@ class DataConsistencyChecker:
         self.issues.extend(issues)
         return issues
 
-    def check_course_schedule_consistency(self) -> List[Dict]:
+    def check_course_schedule_consistency(self) -> list[dict]:
         """
         检查课程表一致性
         """
@@ -232,7 +231,7 @@ class DataConsistencyChecker:
                     "model": "CourseSchedule",
                     "id": schedule.id,
                     "class_info_id": schedule.class_info_id,
-                    "message": f"CourseSchedule ID:{schedule.id} references non-existent class ID:{schedule.class_info_id}",  # noqa: E501
+                    "message": f"CourseSchedule ID:{schedule.id} references non-existent class ID:{schedule.class_info_id}",
                 }
             )
         from models import Subject
@@ -251,13 +250,13 @@ class DataConsistencyChecker:
                     "model": "CourseSchedule",
                     "id": schedule.id,
                     "subject_id": schedule.subject_id,
-                    "message": f"CourseSchedule ID:{schedule.id} references non-existent subject ID:{schedule.subject_id}",  # noqa: E501
+                    "message": f"CourseSchedule ID:{schedule.id} references non-existent subject ID:{schedule.subject_id}",
                 }
             )
         self.issues.extend(issues)
         return issues
 
-    def check_orphaned_classes(self) -> List[Dict]:
+    def check_orphaned_classes(self) -> list[dict]:
         """
         检查孤立班级
         """

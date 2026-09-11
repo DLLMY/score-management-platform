@@ -529,11 +529,10 @@ class CompositeScoreService:
                 f"old_score={old_score}, new_score={composite_score}"
             )
             return CompositeScoreService.get_student_composite_score(user_id)
-        else:
-            logger.info(
-                f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}"
-            )
-            return None
+        logger.info(
+            f"[CompositeScore] 学生没有综合评分记录，需要先进行全量计算: user_id={user_id}"
+        )
+        return None
 
     # P2-6 修复: 移除 _update_rankings 空操作（无 rank 列 + 空提交 + 虚假"排名已更新"日志；
     # 排名由 get_student_composite_score 动态 COUNT 计算，无需落库）

@@ -198,9 +198,9 @@ class ExportData(Resource):
                 filename = f"summary_{timestamp}.pdf"
                 mimetype = "application/pdf"
             return build_attachment_response(output, filename, mimetype)
-        except Exception as e:
+        except Exception:
             # S8 修复: 不直返异常细节（泄露路径/实现）
-            logger.warning(f"[Export] 导出失败: {e}")
+            logger.exception("[Export] 导出失败")
             return APIResponse.server_error(message="导出失败，请稍后重试或联系管理员")
 
 
@@ -242,8 +242,8 @@ class ExportUsers(Resource):
                 filename = f"users_{timestamp}.pdf"
                 mimetype = "application/pdf"
             return build_attachment_response(output, filename, mimetype)
-        except Exception as e:
-            logger.error("%s: %s", "导出失败", e)
+        except Exception:
+            logger.exception("导出失败")
             return APIResponse.server_error(message="导出失败")
 
 
@@ -280,8 +280,8 @@ class ExportRules(Resource):
                 filename = f"rules_{timestamp}.pdf"
                 mimetype = "application/pdf"
             return build_attachment_response(output, filename, mimetype)
-        except Exception as e:
-            logger.error("%s: %s", "导出失败", e)
+        except Exception:
+            logger.exception("导出失败")
             return APIResponse.server_error(message="导出失败")
 
 
@@ -331,8 +331,8 @@ class ExportDevices(Resource):
                 filename = f"devices_{timestamp}.pdf"
                 mimetype = "application/pdf"
             return build_attachment_response(output, filename, mimetype)
-        except Exception as e:
-            logger.error("%s: %s", "导出失败", e)
+        except Exception:
+            logger.exception("导出失败")
             return APIResponse.server_error(message="导出失败")
 
 
@@ -373,8 +373,8 @@ class ExportRecords(Resource):
                 filename = f"records_{timestamp}.pdf"
                 mimetype = "application/pdf"
             return build_attachment_response(output, filename, mimetype)
-        except Exception as e:
-            logger.error("%s: %s", "导出失败", e)
+        except Exception:
+            logger.exception("导出失败")
             return APIResponse.server_error(message="导出失败")
 
 
@@ -421,8 +421,8 @@ class ExportCategories(Resource):
                 filename = f"categories_{timestamp}.pdf"
                 mimetype = "application/pdf"
             return build_attachment_response(output, filename, mimetype)
-        except Exception as e:
-            logger.error("%s: %s", "导出失败", e)
+        except Exception:
+            logger.exception("导出失败")
             return APIResponse.server_error(message="导出失败")
 
 
@@ -452,8 +452,8 @@ class ExportSummary(Resource):
             return send_file(
                 output, mimetype="application/pdf", as_attachment=True, download_name=filename
             )
-        except Exception as e:
-            logger.error("%s: %s", "导出失败", e)
+        except Exception:
+            logger.exception("导出失败")
             return APIResponse.server_error(message="导出失败")
 
 
@@ -519,7 +519,7 @@ class ExportErrors(Resource):
                 except Exception:
                     # 与 utils/excel_utils.py 同理：逐单元格列宽热循环，失败仅跳过该列估算，
                     # 属可预期降级。改为 logger 会刷屏，保留静默并显式说明（T9 评估结论）。
-                    pass
+                    logger.debug("列宽估算失败（跳过该列）", exc_info=True)
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column].width = adjusted_width
         output = io.BytesIO()

@@ -58,13 +58,12 @@ class RiskPredictService:
         path = RiskPredictService._model_config_path()
         try:
             if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     return json.load(f)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logging.getLogger(__name__).warning(
                 "risk model config load/save failed; best-effort skipped", exc_info=True
             )
-            pass
         return {}
 
     @staticmethod
@@ -75,11 +74,10 @@ class RiskPredictService:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logging.getLogger(__name__).warning(
                 "risk model config load/save failed; best-effort skipped", exc_info=True
             )
-            pass
 
     @staticmethod
     def _resolve_weights():
@@ -346,9 +344,12 @@ class RiskPredictService:
                     leave_days += (le - ls).days + 1
 
             return rate, absent, late, total, leave_days
-        except Exception:  # noqa: BLE001
+        except Exception:
             # 诚实失败：全 None 传导，调用方（detect_attendance_risk）见 attendance_rate=None
             # 走代理回退，不把缺勤/迟到伪装成 0（避免系统故障被读作"表现正常"）。
+            logging.getLogger(__name__).warning(
+                "考勤指标计算失败，诚实返回全 None（调用方走代理回退）", exc_info=True
+            )
             return None, None, None, None, None
 
     @staticmethod
@@ -774,7 +775,7 @@ class RiskPredictService:
         for user in users:
             try:
                 result = RiskPredictService.predict_risk(user.id, days)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 # 单生异常隔离：失败学生不影响其余学生与整体响应
                 failed_students.append(
                     {
@@ -1002,7 +1003,7 @@ class RiskPredictService:
         results = []
 
         for user in users:
-            result = RiskPredictService.predict_risk(user.id, days)  # noqa: F841
+            result = RiskPredictService.predict_risk(user.id, days)
             if "overall_risk_score" in result:
                 results.append(result)
 

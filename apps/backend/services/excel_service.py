@@ -1,7 +1,8 @@
 import io
 from datetime import datetime, date
 from decimal import Decimal
-from typing import List, Dict, Any, Optional, Callable
+from typing import Any
+from collections.abc import Callable
 
 import math
 import csv
@@ -75,12 +76,12 @@ class ExcelExportService:
 
     @staticmethod
     def export_large_dataset(
-        data_getter: Callable[[int, int], List[Dict[str, Any]]],
+        data_getter: Callable[[int, int], list[dict[str, Any]]],
         total_count: int,
-        headers: List[str],
+        headers: list[str],
         filename: str,
         sheet_name: str = "数据",
-        progress_callback: Optional[Callable[[int, int], None]] = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> io.BytesIO:
         """
         大数据量分批导出（流式写入）
@@ -154,8 +155,8 @@ class ExcelExportService:
 
     @staticmethod
     def export_to_excel(
-        data: List[Dict[str, Any]],
-        headers: List[str],
+        data: list[dict[str, Any]],
+        headers: list[str],
         filename: str = None,
         sheet_name: str = "Sheet1",
     ) -> io.BytesIO:
@@ -203,8 +204,8 @@ class ExcelExportService:
 
     @staticmethod
     def export_to_csv(
-        data: List[Dict[str, Any]],
-        headers: List[str],
+        data: list[dict[str, Any]],
+        headers: list[str],
         filename: str = None,
     ) -> io.StringIO:
         """CSV导出"""
@@ -240,7 +241,7 @@ class ExcelImportService:
         return str(value).strip()
 
     @staticmethod
-    def parse_excel_file(file_content: bytes) -> Dict[str, Any]:
+    def parse_excel_file(file_content: bytes) -> dict[str, Any]:
         """
         解析Excel文件并返回结构化数据和验证结果
         Returns:
@@ -270,7 +271,7 @@ class ExcelImportService:
             parsed_data = []
             errors = []
             empty_rows = 0
-            for row_idx, row in enumerate(data_rows, start=2):
+            for _row_idx, row in enumerate(data_rows, start=2):
                 if all(
                     cell is None or (isinstance(cell, str) and not cell.strip()) for cell in row
                 ):
@@ -300,10 +301,10 @@ class ExcelImportService:
 
     @staticmethod
     def validate_required_fields(
-        data: List[Dict[str, Any]],
-        required_fields: List[str],
-        field_labels: Dict[str, str] = None,
-    ) -> Dict[str, Any]:
+        data: list[dict[str, Any]],
+        required_fields: list[str],
+        field_labels: dict[str, str] = None,
+    ) -> dict[str, Any]:
         """
         验证必填字段
         Args:
@@ -347,7 +348,7 @@ class ExcelImportService:
         }
 
     @staticmethod
-    def generate_error_excel(errors: List[Dict], filename: str = "导入错误数据.xlsx") -> io.BytesIO:
+    def generate_error_excel(errors: list[dict], filename: str = "导入错误数据.xlsx") -> io.BytesIO:
         """生成包含错误详情的Excel文件"""
         if not OPENPYXL_AVAILABLE:
             return io.BytesIO()

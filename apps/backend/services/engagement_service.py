@@ -166,8 +166,7 @@ def calculate_engagement(user_id, days=30, end_date=None):
                 "activity_rate": (float(activity_rate) if activity_rate is not None else None),
                 "leave_days": int(leave_days),
             },
-            "description": "该学生在近 %d 天内暂无出勤、作业或积分行为记录，无法计算参与度。"
-            % days,
+            "description": f"该学生在近 {days} 天内暂无出勤、作业或积分行为记录，无法计算参与度。",
             "has_data": False,
         }
 
@@ -208,7 +207,7 @@ def calculate_engagement(user_id, days=30, end_date=None):
         else ("medium" if engagement_score >= LEVEL_MEDIUM else "low")
     )
 
-    description = "参与度指数 %s（%s），由出勤、作业提交与积分活跃度综合评估。" % (
+    description = "参与度指数 {}（{}），由出勤、作业提交与积分活跃度综合评估。".format(
         engagement_score,
         "高" if level == "high" else ("中" if level == "medium" else "低"),
     )
@@ -257,7 +256,7 @@ def weekly_trend(user_id, weeks=8):
         week_end = today - timedelta(days=7 * i)
         res = calculate_engagement(user_id, days=7, end_date=week_end)
         iso = week_end.isocalendar()
-        week_label = "%d-W%02d" % (iso[0], iso[1])
+        week_label = f"{iso[0]}-W{iso[1]:02d}"
         comp = res.get("components", {}) or {}
         series.append(
             {

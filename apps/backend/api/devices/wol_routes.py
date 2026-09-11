@@ -156,11 +156,10 @@ class WakeOnLAN(Resource):
                     "timestamp": None,
                 }
             )
-        else:
-            return APIResponse.server_error(
-                message="Failed to send magic packet",
-                data={"mac_address": mac_address, "timestamp": None},
-            )
+        return APIResponse.server_error(
+            message="Failed to send magic packet",
+            data={"mac_address": mac_address, "timestamp": None},
+        )
 
 
 @ns_wol.route("/wake/batch")
@@ -296,7 +295,7 @@ class DeviceStatus(Resource):
                     break
         except Exception as e:
             # arp 查询失败（命令缺失/超时）仅降级为"未解析到 IP"，不阻断后续按 DB 兜底，但需留痕。
-            logger.warning(f"解析设备 ARP 表失败 mac={mac_clean}: {e}")
+            logger.warning(f"解析设备 ARP 表失败 mac={mac_clean}: {e}", exc_info=True)
 
         if not target_ip:
             device = Device.query.filter_by(mac_address=mac_clean, device_type="wol").first()
@@ -317,9 +316,10 @@ class DeviceStatus(Resource):
         command = ["ping", param, "1", "-w", "1000", target_ip]
 
         try:
-            result = subprocess.run(command, capture_output=True, timeout=2)  # noqa: F841
+            result = subprocess.run(command, capture_output=True, timeout=2)
             online = result.returncode == 0
         except Exception:
+            logger.debug("Ping 设备失败（视为不可达）", exc_info=True)
             online = None
 
         return APIResponse.success(

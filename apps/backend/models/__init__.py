@@ -111,55 +111,55 @@ def get_by_id(model_class, obj_id):
 
 # 班主任工作台 - 座次表
 
-from models.seating import SeatingChart, SeatingSeat  # noqa: E402,F401
+from models.seating import SeatingChart, SeatingSeat
 
 # 班主任工作台 - 值日生表
 
-from models.duty import DutyGroup, DutyAssignment  # noqa: E402,F401
+from models.duty import DutyGroup, DutyAssignment
 
 # 班主任工作台 - 班委名单
 
-from models.committee import ClassCommittee, CommitteeTerm  # noqa: E402,F401
+from models.committee import ClassCommittee, CommitteeTerm
 
 # 班主任工作台 - 家长联系
 
-from models.parent import ParentContact, ContactLog  # noqa: E402,F401
+from models.parent import ParentContact, ContactLog
 
 # 班主任工作台 - 评语管理（P1 新增）
 
-from models.teacher_comment import TeacherComment  # noqa: E402,F401
+from models.teacher_comment import TeacherComment
 
 # 班主任工作台 - 作业检查
 
-from models.homework import HomeworkAssignment, HomeworkSubmission  # noqa: E402,F401
+from models.homework import HomeworkAssignment, HomeworkSubmission
 
 # 班主任工作台 - 考勤管理
 
-from models.attendance import Attendance  # noqa: E402,F401
+from models.attendance import Attendance
 
 # 班主任工作台 - 学习小组
 
-from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore  # noqa: E402,F401
+from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore
 
 # 班主任工作台 - 心理健康
 
-from models.mental_health import MentalHealthRecord  # noqa: E402,F401
+from models.mental_health import MentalHealthRecord
 
 # 班主任工作台 - 文体活动
 
-from models.activity import Activity, ActivityRegistration  # noqa: E402,F401
+from models.activity import Activity, ActivityRegistration
 
 # 班主任工作台 - 班级文化
 
-from models.culture import CultureRecord, CultureItem  # noqa: E402,F401
+from models.culture import CultureRecord, CultureItem
 
 # 班主任工作台 - 学法指导
 
-from models.study_guide import StudyGuide, ImprovementPlan  # noqa: E402,F401
+from models.study_guide import StudyGuide, ImprovementPlan
 
 # 通知配置（单行持久化，替代 current_app.config 内存实现）
 
-from models.notification_config import NotificationConfig  # noqa: E402,F401
+from models.notification_config import NotificationConfig
 
 # === F16 拆包：以下为新增子模块再导出（保持 from models import X 兼容）===
 from models.user_models import (
@@ -174,7 +174,7 @@ from models.user_models import (
     RoleHierarchy,
     SecurityAudit,
     LoginAttempt,
-)  # noqa: E402,F401
+)
 from models.score_models import (
     ScoreCategory,
     Subject,
@@ -188,7 +188,7 @@ from models.score_models import (
     CourseSchedule,
     CompositeScore,
     WarningConfig,
-)  # noqa: E402,F401
+)
 from models.device_models import (
     MQTTLog,
     MQTTConfig,
@@ -200,7 +200,7 @@ from models.device_models import (
     DeviceFirmwareUpdate,
     DeviceGroup,
     DeviceGroupMapping,
-)  # noqa: E402,F401
+)
 from models.system_models import (
     OperationLog,
     SystemConfig,
@@ -212,7 +212,7 @@ from models.system_models import (
     FrontendErrorLog,
     SystemMetric,
     RateLimitRecord,
-)  # noqa: E402,F401
+)
 from models.notify_models import (
     Notification,
     Approval,
@@ -220,13 +220,13 @@ from models.notify_models import (
     ScheduledNotify,
     NotifyTemplate,
     NotifyHistory,
-)  # noqa: E402,F401
-from models.alert_models import Alert, StudentCluster  # noqa: E402,F401
+)
+from models.alert_models import Alert, StudentCluster
 from models.archive_models import (
     ScoreArchive,
     AttendanceArchive,
     OperationLogArchive,
-)  # noqa: E402,F401
+)
 from models.nlp_models import (
     NLPScoringRule,
     NLPBehaviorKeyword,
@@ -234,7 +234,7 @@ from models.nlp_models import (
     NLPRuleUsage,
     NLPModelTraining,
     NLPCorrection,
-)  # noqa: E402,F401
+)
 
 # 显式导出清单（消除 pyflakes F401 再导出噪音；from models import X 保持兼容）
 __all__ = [

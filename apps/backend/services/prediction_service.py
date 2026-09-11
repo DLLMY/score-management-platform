@@ -42,7 +42,7 @@ class PredictionService:
                     "cumulative_score": cumulative_score,
                     "rule_name": record.rule_name if hasattr(record, "rule_name") else None,
                 }
-            )  # noqa: E501
+            )
         return history
 
     @staticmethod
@@ -174,7 +174,7 @@ class PredictionService:
         for user in users:
             try:
                 prediction = PredictionService.predict_future_scores(user.id, days)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 # 单生异常隔离：失败学生不影响其余学生与整体响应
                 results["failed"] += 1
                 results["failed_students"].append(
@@ -216,42 +216,43 @@ class PredictionService:
         risk_students = []
         for item in batch_result["predictions"]:
             prediction = item["prediction"]
-            if prediction["trend"] == "falling" and prediction["slope"] < threshold:
-                if prediction["predicted_scores"]:
-                    predicted_change = (
-                        prediction["predicted_scores"][-1] - prediction["current_score"]
-                    )
+            if (
+                prediction["trend"] == "falling"
+                and prediction["slope"] < threshold
+                and prediction["predicted_scores"]
+            ):
+                predicted_change = prediction["predicted_scores"][-1] - prediction["current_score"]
 
-                    # 以调用方给定的 threshold 作为风险基准线衡量严重度：
-                    # severity = |slope| / |threshold|，因过滤条件所限必然 >= 1。
-                    # 映射到与 RiskPredictService 一致的 0~1 分档（>=0.7 高，>=0.4 中）。
-                    severity = abs(prediction["slope"]) / abs(threshold) if threshold else 1.0
-                    risk_score = round(min(1.0, 0.7 * severity / 1.2), 2)
-                    if risk_score >= 0.7:
-                        risk_level = "high"
-                    elif risk_score >= 0.4:
-                        risk_level = "medium"
-                    else:
-                        risk_level = "low"
+                # 以调用方给定的 threshold 作为风险基准线衡量严重度：
+                # severity = |slope| / |threshold|，因过滤条件所限必然 >= 1。
+                # 映射到与 RiskPredictService 一致的 0~1 分档（>=0.7 高，>=0.4 中）。
+                severity = abs(prediction["slope"]) / abs(threshold) if threshold else 1.0
+                risk_score = round(min(1.0, 0.7 * severity / 1.2), 2)
+                if risk_score >= 0.7:
+                    risk_level = "high"
+                elif risk_score >= 0.4:
+                    risk_level = "medium"
+                else:
+                    risk_level = "low"
 
-                    risk_students.append(
-                        {
-                            "user_id": item["user_id"],
-                            "name": item["name"],
-                            "class_name": item["class_name"],
-                            "current_score": prediction["current_score"],
-                            "predicted_change": predicted_change,
-                            "risk_score": risk_score,
-                            "risk_level": risk_level,
-                            # 未来预测窗口内低于当前积分的天数
-                            "warning_count": sum(
-                                1
-                                for s in prediction["predicted_scores"]
-                                if s < prediction["current_score"]
-                            ),
-                            "confidence": prediction.get("confidence", 0.0),
-                        }
-                    )
+                risk_students.append(
+                    {
+                        "user_id": item["user_id"],
+                        "name": item["name"],
+                        "class_name": item["class_name"],
+                        "current_score": prediction["current_score"],
+                        "predicted_change": predicted_change,
+                        "risk_score": risk_score,
+                        "risk_level": risk_level,
+                        # 未来预测窗口内低于当前积分的天数
+                        "warning_count": sum(
+                            1
+                            for s in prediction["predicted_scores"]
+                            if s < prediction["current_score"]
+                        ),
+                        "confidence": prediction.get("confidence", 0.0),
+                    }
+                )
         risk_students.sort(key=lambda x: x["predicted_change"])
         return risk_students
 

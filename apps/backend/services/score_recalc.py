@@ -22,13 +22,12 @@ def enqueue_or_recalc_user_score(user_id):
 
         if not current_app.config.get("CELERY_ASYNC_SCORE_RECALC", False):
             raise RuntimeError("async score recalc not enabled")
-        from celery_app import celery_app  # noqa: F401  (仅用于早失败探测)
         from tasks.score_tasks import recalc_user_score
 
         recalc_user_score.delay(user_id)
         return  # 已异步入队，实际重算在 worker 中执行
-    except Exception as e:  # noqa: BLE001
-        logger.debug("[CompositeScore] 异步重算未启用/不可用，回退同步 user_id=%s: %s", user_id, e)
+    except Exception as e:
+        logger.debug("[CompositeScore] 异步重算未启用/不可用，回退同步 user_id=%s: %s", user_id, e, exc_info=True)
 
     # 同步回退：保证综合分不漂移（测试 / 本地无 worker 时）
     from services.composite_score_service import CompositeScoreService

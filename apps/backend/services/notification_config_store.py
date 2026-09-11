@@ -44,7 +44,7 @@ def load_notification_config_to_app(app):
                 return
             _apply_row_to_config(row)
             log_info("通知配置：已从数据库加载")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log_warning(f"通知配置加载失败(沿用环境默认): {e}", exception=e)
 
 
@@ -64,7 +64,7 @@ def save_notification_config(updates):
         db.session.add(row)
         db.session.commit()
         return True, None
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         db.session.rollback()
         log_warning(f"通知配置落库失败: {e}", exception=e)
         return False, str(e)

@@ -56,7 +56,7 @@ class RankRuleList(Resource):
             return APIResponse.success(data=cached)
 
         rules = ScoreRankRule.query.all()
-        result = {  # noqa: F841
+        result = {
             "rules": [r.to_dict(RANK_RULE_LIST_FIELDS) for r in rules],
             "cached": False,
         }
@@ -92,7 +92,7 @@ class RankRuleResource(Resource):
             return APIResponse.success(data=cached)
 
         rule = ScoreRankRule.query.get_or_404(id)
-        result = {  # noqa: F841
+        result = {
             **rule.to_dict(),  # 默认输出 = 详情 12 字段契约
             "cached": False,
         }

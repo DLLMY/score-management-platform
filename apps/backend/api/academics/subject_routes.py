@@ -154,14 +154,20 @@ class SubjectResource(Resource):
         data = request.json
 
         # 检查名称是否重复
-        if data.get("name") and data["name"] != subject.name:
-            if Subject.query.filter_by(name=data["name"]).first():
-                return APIResponse.error(message="科目名称已存在", status_code=400)
+        if (
+            data.get("name")
+            and data["name"] != subject.name
+            and Subject.query.filter_by(name=data["name"]).first()
+        ):
+            return APIResponse.error(message="科目名称已存在", status_code=400)
 
         # 检查代码是否重复
-        if data.get("code") and data["code"] != subject.code:
-            if Subject.query.filter_by(code=data["code"]).first():
-                return APIResponse.error(message="科目代码已存在", status_code=400)
+        if (
+            data.get("code")
+            and data["code"] != subject.code
+            and Subject.query.filter_by(code=data["code"]).first()
+        ):
+            return APIResponse.error(message="科目代码已存在", status_code=400)
 
         academics_service.update_subject(subject, data)
         subject = Subject.query.get(id)
@@ -177,7 +183,7 @@ class SubjectResource(Resource):
     @requires_permission("score.entry")
     def delete(self, id):
         """删除科目（先级联清理关联数据，再删除科目本身）"""
-        subject = Subject.query.get_or_404(id)  # noqa: F841
+        Subject.query.get_or_404(id)
         academics_service.delete_subject(id)
         invalidate_cache("api:/api/subjects/*")
         return APIResponse.success(message="科目已删除")
@@ -352,7 +358,7 @@ class SubjectExport(Resource):
                 as_attachment=True,
                 download_name=filename,
             )
-        elif export_format == "csv":
+        if export_format == "csv":
             headers = [
                 "科目名称",
                 "科目代码",
@@ -402,23 +408,22 @@ class SubjectExport(Resource):
                 as_attachment=True,
                 download_name=filename,
             )
-        else:
-            output = {
-                "export_time": datetime.now().isoformat(),
-                "total": len(export_data),
-                "data": export_data,
-            }
+        output = {
+            "export_time": datetime.now().isoformat(),
+            "total": len(export_data),
+            "data": export_data,
+        }
 
-            json_str = json.dumps(output, ensure_ascii=False, indent=2)
-            buf = io.BytesIO(json_str.encode("utf-8"))
-            buf.seek(0)
+        json_str = json.dumps(output, ensure_ascii=False, indent=2)
+        buf = io.BytesIO(json_str.encode("utf-8"))
+        buf.seek(0)
 
-            return send_file(
-                buf,
-                mimetype="application/json",
-                as_attachment=True,
-                download_name=f'subjects_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
-            )
+        return send_file(
+            buf,
+            mimetype="application/json",
+            as_attachment=True,
+            download_name=f'subjects_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
+        )
 
 
 @ns_subjects.route("/template")

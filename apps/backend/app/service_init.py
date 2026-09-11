@@ -50,8 +50,9 @@ def init_index_check(app):
         for table_name, index_names in core_indexes.items():
             try:
                 existing = {idx["name"] for idx in inspector.get_indexes(table_name)}
-            except Exception:
+            except Exception as exc:
                 existing = set()
+                log_warning("检查索引失败，按无现有索引处理", exception=exc)
             for index_name in index_names:
                 if index_name not in existing:
                     missing.append(f"{table_name}.{index_name}")
@@ -188,7 +189,7 @@ def init_scheduler(app):
         try:
             from utils.backup_utils import backup_manager
 
-            result = backup_manager.create_backup("full")  # noqa: F841
+            result = backup_manager.create_backup("full")
             if result["success"]:
                 log_info(f"数据库定时备份成功: {result['filename']}")
                 backup_manager.clean_old_backups()
@@ -214,7 +215,7 @@ def init_scheduler(app):
             from services.heartbeat_service import check_heartbeat_timeout
 
             with app.app_context():
-                result = check_heartbeat_timeout()  # noqa: F841
+                result = check_heartbeat_timeout()
                 if result and result.get("total_timeout", 0) > 0:
                     log_warning(f"心跳超时检查发现 {result['total_timeout']} 台设备离线")
                 else:
@@ -239,7 +240,7 @@ def init_scheduler(app):
         scheduler.add_job(lambda: scheduled_notify_check(app), "interval", seconds=10)
         log_info("审批超时检查任务已启动，每5分钟执行一次")
         log_info("定时通知检查任务已启动，每10秒执行一次")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log_error(f"审批超时/定时通知任务注册失败（不影响其他定时任务）: {e}", exception=e)
 
     scheduler.start()
@@ -247,7 +248,7 @@ def init_scheduler(app):
     # pytest 进程退出（此前表现为“用例跑完后卡死”）。生产环境主进程常驻，不受影响。
     try:
         scheduler._thread.daemon = True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     app.scheduler = scheduler
     _ACTIVE_SCHEDULERS.append(scheduler)
@@ -260,7 +261,7 @@ def shutdown_all_schedulers():
     for sched in list(_ACTIVE_SCHEDULERS):
         try:
             sched.shutdown(wait=False)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     _ACTIVE_SCHEDULERS.clear()
 

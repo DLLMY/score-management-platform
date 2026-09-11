@@ -5,7 +5,6 @@ import time
 import requests
 import json
 from datetime import datetime
-from typing import Optional, Dict, List
 from flask import current_app
 from models import db, Notification
 
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 # 微信 access_token 进程内缓存：token 有效期 7200s、日获取有上限，
 # 群发通知每次现取会快速耗尽配额；按 appid 关联防多配置串用，
 # 提前 60s 刷新，网络/接口异常时降级回退旧 token。
-_WECHAT_TOKEN_CACHE: Dict = {}
+_WECHAT_TOKEN_CACHE: dict = {}
 _WECHAT_TOKEN_REFRESH_SKEW = 60
 
 
@@ -24,8 +23,8 @@ class NotificationService:
 
     @staticmethod
     def send_wechat_notification(
-        user_id: int, template_id: str, data: Dict, jump_url: Optional[str] = None
-    ) -> Dict:
+        user_id: int, template_id: str, data: dict, jump_url: str | None = None
+    ) -> dict:
         """
         发送微信模板消息
 
@@ -83,15 +82,14 @@ class NotificationService:
                 db.session.commit()
 
                 return {"success": True, "message": "发送成功", "msgid": result.get("msgid")}
-            else:
-                return {"success": False, "message": result.get("errmsg")}
+            return {"success": False, "message": result.get("errmsg")}
 
         except Exception as e:
             logger.error(f"send_wechat_notification failed: {e}")
             return {"success": False, "message": str(e)}
 
     @staticmethod
-    def _get_wechat_access_token() -> Optional[str]:
+    def _get_wechat_access_token() -> str | None:
         try:
             appid = current_app.config.get("WECHAT_APPID")
             secret = current_app.config.get("WECHAT_SECRET")
@@ -122,14 +120,14 @@ class NotificationService:
             return None
 
         except Exception as e:
-            logger.error(f"_get_wechat_access_token failed: {e}")
+            logger.error(f"_get_wechat_access_token failed: {e}", exc_info=True)
             # 网络异常同样回退缓存 token（按 appid 匹配），保持短窗口可用
             if _WECHAT_TOKEN_CACHE.get("appid") == appid and _WECHAT_TOKEN_CACHE.get("token"):
                 return _WECHAT_TOKEN_CACHE.get("token")
             return None
 
     @staticmethod
-    def send_sms_notification(phone: str, message: str) -> Dict:
+    def send_sms_notification(phone: str, message: str) -> dict:
         """
         发送短信通知
 
@@ -148,20 +146,19 @@ class NotificationService:
 
             if sms_config.get("provider") == "aliyun":
                 return NotificationService._send_aliyun_sms(phone, message, sms_config)
-            else:
-                # P2-3 修复: 移除腾讯云 stub 分支（产品配置层无腾讯云凭据字段，该渠道不可达）；
-                # 统一由下方兜底报错，避免"腾讯云短信功能待实现"误导
-                return {
-                    "success": False,
-                    "message": "不支持的短信提供商（当前仅支持 aliyun，请设置 SMS_CONFIG.provider=aliyun）",
-                }
+            # P2-3 修复: 移除腾讯云 stub 分支（产品配置层无腾讯云凭据字段，该渠道不可达）；
+            # 统一由下方兜底报错，避免"腾讯云短信功能待实现"误导
+            return {
+                "success": False,
+                "message": "不支持的短信提供商（当前仅支持 aliyun，请设置 SMS_CONFIG.provider=aliyun）",
+            }
 
         except Exception as e:
             logger.error(f"notification_service error: {e}")
             return {"success": False, "message": str(e)}
 
     @staticmethod
-    def _send_aliyun_sms(phone: str, message: str, config: Dict) -> Dict:
+    def _send_aliyun_sms(phone: str, message: str, config: dict) -> dict:
         try:
             import uuid
             from datetime import timezone
@@ -217,15 +214,14 @@ class NotificationService:
 
             if result.get("Code") == "OK":
                 return {"success": True, "message": "发送成功", "biz_id": result.get("BizId")}
-            else:
-                return {"success": False, "message": result.get("Message")}
+            return {"success": False, "message": result.get("Message")}
 
         except Exception as e:
             logger.error(f"notification_service error: {e}")
             return {"success": False, "message": str(e)}
 
 
-def notify_unlock_success(user_id: int, box: str, device_name: str) -> Dict:
+def notify_unlock_success(user_id: int, box: str, device_name: str) -> dict:
     """
     发送开锁成功通知给家长
     """
@@ -255,7 +251,7 @@ def notify_unlock_success(user_id: int, box: str, device_name: str) -> Dict:
         return {"success": False, "message": str(e)}
 
 
-def notify_unlock_failure(user_id: int, reason: str, score: int) -> Dict:
+def notify_unlock_failure(user_id: int, reason: str, score: int) -> dict:
     """
     发送开锁失败通知给家长
     """
@@ -292,7 +288,7 @@ def notify_unlock_failure(user_id: int, reason: str, score: int) -> Dict:
         return {"success": False, "message": str(e)}
 
 
-def notify_score_change(user_id: int, change: int, reason: str) -> Dict:
+def notify_score_change(user_id: int, change: int, reason: str) -> dict:
     """
     发送积分变动通知
     """
@@ -325,7 +321,7 @@ def notify_score_change(user_id: int, change: int, reason: str) -> Dict:
         return {"success": False, "message": str(e)}
 
 
-def notify_device_offline(device_id: str, device_name: str, admin_ids: List[int]) -> Dict:
+def notify_device_offline(device_id: str, device_name: str, admin_ids: list[int]) -> dict:
     """
     发送设备离线告警给管理员
     """
@@ -478,7 +474,7 @@ def batch_send_notifications(title, content, notify_type, target_ids):
                     )
                 )
             sent += 1
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             errors.append({"user_id": uid, "message": str(e)})
     if sent:
         db.session.commit()

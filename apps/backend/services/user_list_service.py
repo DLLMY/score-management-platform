@@ -160,13 +160,12 @@ def get_user_list_view(
             }
             get_cache_service().set(cache_key, result, ttl=300, tags=["users"])
             return result
-        else:
-            # 常规搜索：匹配姓名、卡号、电话
-            query = query.filter(
-                (User.name.like(f"%{search}%"))
-                | (User.card_id.like(f"%{search}%"))
-                | (User.phone.like(f"%{search}%"))
-            )
+        # 常规搜索：匹配姓名、卡号、电话
+        query = query.filter(
+            (User.name.like(f"%{search}%"))
+            | (User.card_id.like(f"%{search}%"))
+            | (User.phone.like(f"%{search}%"))
+        )
     if class_name:
         query = query.filter(User.class_name == class_name)
     # 高级筛选：关键词搜索（如果不是拼音搜索）

@@ -157,7 +157,7 @@ class TextCNNClassifier:
 
     def load_model(self, path):
         """加载模型"""
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             model_data = json.load(f)
         self.embedding_dim = model_data["embedding_dim"]
         self.max_len = model_data["max_len"]

@@ -208,7 +208,7 @@ class ScoreList(Resource):
             except (TypeError, ValueError):
                 return APIResponse.bad_request(message="分数格式非法")
             if score_val < 0 or (full_val > 0 and score_val > full_val):
-                return APIResponse.bad_request(message="成绩需在 0 ~ %s 之间" % full_val)
+                return APIResponse.bad_request(message=f"成绩需在 0 ~ {full_val} 之间")
         # F4 修复: 单条创建也做 (exam_id, student_id, subject_id) 冲突检测
         existing = Score.query.filter_by(
             exam_id=exam.id, student_id=data.get("student_id"), subject_id=subject_id
@@ -286,7 +286,7 @@ class ScoreBatch(Resource):
                 errors.append({"index": idx, "message": "满分格式非法"})
                 continue
             if score_val is not None and (score_val < 0 or (full_val > 0 and score_val > full_val)):
-                errors.append({"index": idx, "message": "成绩需在 0 ~ %s 之间" % full_val})
+                errors.append({"index": idx, "message": f"成绩需在 0 ~ {full_val} 之间"})
                 continue
             student = (
                 User.query.filter_by(id=student_id, is_active=True).first()
@@ -332,7 +332,7 @@ class ScoreBatch(Resource):
                 )
         return APIResponse.success(
             data={"created": created, "errors": errors, "total": len(items)},
-            message="成功录入 %s 条，%s 条失败" % (created, len(errors)),
+            message=f"成功录入 {created} 条，{len(errors)} 条失败",
         )
 
 
@@ -409,7 +409,7 @@ class ScoreConfirmAll(Resource):
             return APIResponse.not_found(message="考试不存在")
         try:
             updated = academics_service.confirm_all_scores(exam_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return APIResponse.error(message=f"确认失败: {e}", code=500)
         return APIResponse.success(
             data={"exam_id": exam_id, "updated": int(updated or 0)},
@@ -488,7 +488,7 @@ class ScoreExport(Resource):
             output,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
-            download_name="scores_%s.xlsx" % exam_id,
+            download_name=f"scores_{exam_id}.xlsx",
         )
 
 

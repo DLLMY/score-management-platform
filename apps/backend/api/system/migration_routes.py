@@ -43,8 +43,7 @@ def run_migration():
     success = manager.migrate(db.engine.raw_connection(), target_version)
     if success:
         return APIResponse.success(message="Migration executed successfully")
-    else:
-        return APIResponse.error(message="Migration failed", status_code=500)
+    return APIResponse.error(message="Migration failed", status_code=500)
 
 
 @migration_bp.route("/api/migration/rollback", methods=["POST"])
@@ -56,8 +55,7 @@ def run_rollback():
     success = manager.rollback(db.engine.raw_connection(), steps)
     if success:
         return APIResponse.success(message=f"Rollback {steps} steps successful")
-    else:
-        return APIResponse.error(message="Rollback failed", status_code=500)
+    return APIResponse.error(message="Rollback failed", status_code=500)
 
 
 @migration_bp.route("/api/migration/seed", methods=["POST"])
@@ -69,8 +67,7 @@ def run_seed():
     success = manager.seed(db.engine.raw_connection(), seed_name)
     if success:
         return APIResponse.success(message="Seed data imported successfully")
-    else:
-        return APIResponse.error(message="Seed data import failed", status_code=500)
+    return APIResponse.error(message="Seed data import failed", status_code=500)
 
 
 @migration_bp.route("/api/migration/create", methods=["POST"])

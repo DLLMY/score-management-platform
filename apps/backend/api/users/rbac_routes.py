@@ -49,7 +49,7 @@ def log_permission_action(action, target_type, target_id=None, description=None)
             ip_address=request.remote_addr if request else None,
         )
     except Exception as e:
-        logger.warning("记录RBAC操作日志失败 action=%s: %s", action, e)
+        logger.warning("记录RBAC操作日志失败 action=%s: %s", action, e, exc_info=True)
 
 
 permission_model = ns_rbac.model(
@@ -246,7 +246,7 @@ class RoleList(Resource):
                 child_map[h.parent_role_code] = []
             child_map[h.parent_role_code].append(h.child_role_code)
         # 构建结果（无额外查询）
-        result = []  # noqa: F841
+        result = []
         for rp in role_permissions:
             result.append(
                 {
@@ -366,10 +366,9 @@ class AdminRoleList(Resource):
         current_admin = get_current_admin()
         if not current_admin:
             return APIResponse.unauthorized(message="未登录")
-        if current_admin.id != admin_id:
-            if not has_permission(current_admin, "system.roles"):
-                return APIResponse.forbidden(message="无权访问")
-        _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
+        if current_admin.id != admin_id and not has_permission(current_admin, "system.roles"):
+            return APIResponse.forbidden(message="无权访问")
+        _admin = Admin.query.get_or_404(admin_id)
         admin_roles = AdminRole.query.filter_by(admin_id=admin_id).all()
         role_codes = [ar.role_code for ar in admin_roles]
         if not role_codes and _admin.role:
@@ -411,7 +410,7 @@ class AdminRoleList(Resource):
     @requires_permission("system.roles")
     def put(self, admin_id):
         """为管理员分配角色（覆盖式）"""
-        _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
+        _admin = Admin.query.get_or_404(admin_id)
         data = request.json
         role_codes = data.get("role_codes", [])
         assign_admin_roles(admin_id, role_codes)
@@ -434,7 +433,7 @@ class AdminRoleResource(Resource):
     @requires_permission("system.roles")
     def post(self, admin_id, role_code):
         """为管理员添加单个角色"""
-        _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
+        _admin = Admin.query.get_or_404(admin_id)
         RolePermission.query.filter_by(role_code=role_code).first_or_404()
         existing = AdminRole.query.filter_by(admin_id=admin_id, role_code=role_code).first()
         if existing:

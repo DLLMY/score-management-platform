@@ -133,13 +133,19 @@ def validate_performance_data(data):
     if not isinstance(data["value"], (int, float)):
         return False, "value 必须是数字"
 
-    if "unit" in data and data["unit"] is not None:
-        if not isinstance(data["unit"], str) or len(data["unit"]) > 50:
-            return False, "unit 必须是字符串且长度不超过50"
+    if (
+        "unit" in data
+        and data["unit"] is not None
+        and (not isinstance(data["unit"], str) or len(data["unit"]) > 50)
+    ):
+        return False, "unit 必须是字符串且长度不超过50"
 
-    if "page" in data and data["page"] is not None:
-        if not isinstance(data["page"], str) or len(data["page"]) > 200:
-            return False, "page 必须是字符串且长度不超过200"
+    if (
+        "page" in data
+        and data["page"] is not None
+        and (not isinstance(data["page"], str) or len(data["page"]) > 200)
+    ):
+        return False, "page 必须是字符串且长度不超过200"
 
     if "data" in data and data["data"] is not None:
 
@@ -163,21 +169,25 @@ def validate_error_data(data):
     if not isinstance(data["message"], str) or len(data["message"]) > 2000:
         return False, "message 必须是字符串且长度不超过2000"
 
-    if "stack" in data and data["stack"] is not None:
-        if not isinstance(data["stack"], str) or len(data["stack"]) > 5000:
-            return False, "stack 必须是字符串且长度不超过5000"
+    if (
+        "stack" in data
+        and data["stack"] is not None
+        and (not isinstance(data["stack"], str) or len(data["stack"]) > 5000)
+    ):
+        return False, "stack 必须是字符串且长度不超过5000"
 
-    if "file" in data and data["file"] is not None:
-        if not isinstance(data["file"], str) or len(data["file"]) > 500:
-            return False, "file 必须是字符串且长度不超过500"
+    if (
+        "file" in data
+        and data["file"] is not None
+        and (not isinstance(data["file"], str) or len(data["file"]) > 500)
+    ):
+        return False, "file 必须是字符串且长度不超过500"
 
-    if "line" in data and data["line"] is not None:
-        if not isinstance(data["line"], int):
-            return False, "line 必须是整数"
+    if "line" in data and data["line"] is not None and not isinstance(data["line"], int):
+        return False, "line 必须是整数"
 
-    if "column" in data and data["column"] is not None:
-        if not isinstance(data["column"], int):
-            return False, "column 必须是整数"
+    if "column" in data and data["column"] is not None and not isinstance(data["column"], int):
+        return False, "column 必须是整数"
 
     return True, ""
 
@@ -301,8 +311,7 @@ class SystemBackup(Resource):
             return APIResponse.success(
                 data={"filename": f"score_management_{timestamp}.db"}, message="数据库备份成功"
             )
-        else:
-            return APIResponse.error(message="数据库文件不存在", status_code=404)
+        return APIResponse.error(message="数据库文件不存在", status_code=404)
 
 
 @ns_system.route("/backups")
@@ -431,7 +440,7 @@ class SystemClearCache(Resource):
         if os.path.exists(cache_dir):
             _clear_pycache(cache_dir)
 
-        for root, dirs, files in os.walk(os.path.join(basedir, "..")):
+        for root, dirs, _files in os.walk(os.path.join(basedir, "..")):
             for dir in dirs:
                 if dir == "__pycache__":
                     _clear_pycache(os.path.join(root, dir))
@@ -462,11 +471,10 @@ class SystemCacheStats(Resource):
 
         清空所有缓存数据，需要管理员权限。
         """
-        result = get_cache_service().flush_all()  # noqa: F841
+        result = get_cache_service().flush_all()
         if result:
             return APIResponse.success(message="缓存刷新成功")
-        else:
-            return APIResponse.error(message="缓存刷新失败", status_code=500)
+        return APIResponse.error(message="缓存刷新失败", status_code=500)
 
 
 @ns_system.route("/csrf-token")
@@ -524,7 +532,8 @@ class SystemHealth(Resource):
                 "status": "healthy",
                 "message": "数据库连接正常",
             }
-        except Exception as e:
+        except Exception:
+            logger.exception("系统健康检查: 数据库连接检查失败")
             health_status["status"] = "unhealthy"
             health_status["components"]["database"] = {
                 "status": "unhealthy",
@@ -540,7 +549,7 @@ class SystemHealth(Resource):
                 "hit_rate": redis_stats.get("hit_rate", "N/A"),
                 "operations": redis_stats.get("total_operations", 0),
             }
-        except Exception as e:
+        except Exception:
             health_status["status"] = "unhealthy"
             health_status["components"]["redis"] = {
                 "status": "unhealthy",
@@ -559,7 +568,8 @@ class SystemHealth(Resource):
                 "status": "healthy" if mqtt_connected else "degraded",
                 "message": mqtt_message,
             }
-        except Exception as e:
+        except Exception:
+            logger.exception("系统健康检查: MQTT状态检查失败")
             health_status["components"]["mqtt"] = {
                 "status": "unknown",
                 "message": "MQTT状态检查失败",

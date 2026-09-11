@@ -80,7 +80,7 @@ def log_admin_permission_action(
         db.session.commit()
     except Exception:
         db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
-        pass
+        logger.exception("记录操作日志失败（已回滚，不影响主流程）")
 
 
 def create_admin(username, password, role, real_name, phone, class_name, roles=None):

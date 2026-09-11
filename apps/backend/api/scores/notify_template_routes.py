@@ -2,7 +2,7 @@ import logging
 
 from flask_restx import Namespace, Resource, fields
 from flask import g
-from models import db, NotifyTemplate, Device
+from models import NotifyTemplate, Device
 from services.class_time_checker import ClassTimeChecker
 from utils.permission import requires_permission, has_permission
 from datetime import datetime
@@ -14,6 +14,7 @@ from services.notify_template_service import (
     update_template,
     delete_template,
     record_template_usage,
+    get_categories,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def _resolve_class_from_device(device_id):
             return dev.class_info_id
     except Exception as e:
         # 设备查表失败仅降级为"无法解析班级"，不影响模板创建流程，但需留痕（T9 日志化）。
-        logger.warning(f"由设备解析班级失败 device_id={device_id}: {e}")
+        logger.warning(f"由设备解析班级失败 device_id={device_id}: {e}", exc_info=True)
     return None
 
 
@@ -252,7 +253,7 @@ class TemplateUse(Resource):
                 "topics": topics,
             }
         except Exception as e:
-            logger.error("%s: %s", "发送失败", e)
+            logger.error("%s: %s", "发送失败", e, exc_info=True)
             return APIResponse.error(message="发送失败")
 
 
@@ -262,12 +263,4 @@ class TemplateCategories(Resource):
     @requires_permission("notification.view")
     def get(self):
         """获取模板分类列表"""
-        categories = (
-            db.session.query(NotifyTemplate.category)
-            .filter(
-                NotifyTemplate.category is not None,
-            )
-            .distinct()
-            .all()
-        )
-        return [c[0] for c in categories if c[0]]
+        return get_categories()

@@ -39,7 +39,7 @@ def algorithm_cache(key_func, ttl=3600):
             if cached_result is not None:
                 return cached_result
             # 执行实际计算
-            result = func(*args, **kwargs)  # noqa: F841
+            result = func(*args, **kwargs)
             # 缓存结果
             if cache:
                 cache.set(cache_key, result, expire=ttl)
@@ -198,7 +198,7 @@ class AlgorithmService:
             dict: {label: name} 映射
         """
         # 假设第一列为行为得分，第二列为学业得分
-        result = {}  # noqa: F841
+        result = {}
         for i, centroid in enumerate(centroids):
             behavior_score, academic_score = centroid[0], centroid[1]
             if behavior_score > 0.5 and academic_score > 0.5:
@@ -326,6 +326,7 @@ class AlgorithmService:
                 }
                 for g, vals in groups.items()
             ]
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logger.warning("分组对比统计失败，置空", exc_info=True)
             stats["group_comparison"] = []
         return stats

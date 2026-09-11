@@ -119,11 +119,11 @@ class ParameterMapper:
         """参数转换"""
         if transform_type == "direct":
             return value
-        elif transform_type == "scale_0_1":
+        if transform_type == "scale_0_1":
             return min(max(value, 0), 1)
-        elif transform_type == "normalize":
+        if transform_type == "normalize":
             return (value - 1) / 10 if value > 1 else 0
-        elif transform_type == "dynamic_calculate":
+        if transform_type == "dynamic_calculate":
             return round(value * 1.2)
         return value
 
@@ -155,9 +155,9 @@ class RulePriorityEngine:
 
         if self.conflict_strategy == "highest_priority":
             return self._resolve_by_highest_priority(groups)
-        elif self.conflict_strategy == "merge":
+        if self.conflict_strategy == "merge":
             return self._resolve_by_merge(groups)
-        elif self.conflict_strategy == "latest":
+        if self.conflict_strategy == "latest":
             return self._resolve_by_latest(groups)
 
         return matched_rules

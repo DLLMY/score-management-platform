@@ -78,10 +78,10 @@ class ClusterService:
             cluster_summary[cluster_name]["avg_behavior"] += row["behavior_score"]
             cluster_summary[cluster_name]["avg_score"] += row["academic_score"]
         # 计算平均值
-        for name, stats in cluster_summary.items():
+        for _name, stats in cluster_summary.items():
             stats["avg_behavior"] = round(stats["avg_behavior"] / stats["count"], 2)
             stats["avg_score"] = round(stats["avg_score"] / stats["count"], 2)
-        result = {  # noqa: F841
+        result = {
             "algorithm": "KMeans",
             "n_clusters": n_clusters,
             "students": students_result,
@@ -210,10 +210,10 @@ class ClusterService:
             avg_score = ClusterService._get_student_avg_score(cluster.student_id)
             cluster_summary[cluster_name]["avg_score"] += avg_score if avg_score else 0
         # 计算平均值
-        for name, stats in cluster_summary.items():
+        for _name, stats in cluster_summary.items():
             stats["avg_behavior"] = round(stats["avg_behavior"] / stats["count"], 2)
             stats["avg_score"] = round(stats["avg_score"] / stats["count"], 2)
-        result = {  # noqa: F841
+        result = {
             "algorithm": "KMeans",
             "n_clusters": len(cluster_summary),
             "students": students_result,

@@ -50,7 +50,7 @@ class Statistics(Resource):
         包括描述性统计、相关性分析、分组对比等。
         """
         class_name = request.args.get("class_name")
-        result = AlgorithmService.calculate_statistics(class_name)  # noqa: F841
+        result = AlgorithmService.calculate_statistics(class_name)
         return APIResponse.success(data=result, message="success")
 
 
@@ -67,7 +67,7 @@ class Cluster(Resource):
         获取学生分群结果
         """
         class_name = request.args.get("class_name")
-        result = ClusterService.get_cluster_results(class_name)  # noqa: F841
+        result = ClusterService.get_cluster_results(class_name)
         return APIResponse.success(data=result, message="success")
 
     @ns_algorithm.doc("post_cluster", description="触发分群重新计算")
@@ -82,7 +82,7 @@ class Cluster(Resource):
         """
         class_name = request.args.get("class_name")
         n_clusters = get_int_arg("n_clusters", default=4)
-        result = ClusterService.perform_clustering(class_name, n_clusters)  # noqa: F841
+        result = ClusterService.perform_clustering(class_name, n_clusters)
         return APIResponse.success(data=result, message="分群计算完成")
 
 
@@ -97,11 +97,10 @@ class ClusterByUser(Resource):
         """
         获取单个学生的分群信息
         """
-        result = ClusterService.get_cluster_by_user(user_id)  # noqa: F841
+        result = ClusterService.get_cluster_by_user(user_id)
         if result:
             return APIResponse.success(data=result, message="success")
-        else:
-            return APIResponse.error(message="未找到分群信息")
+        return APIResponse.error(message="未找到分群信息")
 
 
 @ns_algorithm.route("/composite-score")
@@ -116,7 +115,7 @@ class CompositeScore(Resource):
         获取综合评分排名
         """
         class_name = request.args.get("class_name")
-        result = CompositeScoreService.get_composite_scores(class_name)  # noqa: F841
+        result = CompositeScoreService.get_composite_scores(class_name)
         return APIResponse.success(data=result, message="success")
 
     @ns_algorithm.doc("post_composite_score_recalculate", description="重新计算综合评分")
@@ -129,7 +128,7 @@ class CompositeScore(Resource):
         重新计算综合评分
         """
         class_name = request.args.get("class_name")
-        result = CompositeScoreService.calculate_composite_score(class_name)  # noqa: F841
+        result = CompositeScoreService.calculate_composite_score(class_name)
         return APIResponse.success(data=result, message="综合评分计算完成")
 
 
@@ -144,11 +143,10 @@ class CompositeScoreByUser(Resource):
         """
         获取单个学生的综合评分
         """
-        result = CompositeScoreService.get_student_composite_score(user_id)  # noqa: F841
+        result = CompositeScoreService.get_student_composite_score(user_id)
         if result:
             return APIResponse.success(data=result, message="success")
-        else:
-            return APIResponse.error(message="未找到综合评分信息")
+        return APIResponse.error(message="未找到综合评分信息")
 
 
 @ns_algorithm.route("/composite-score/progress")
@@ -179,7 +177,7 @@ class Warning(Resource):
         获取风险预警列表
         """
         class_name = request.args.get("class_name")
-        result = WarningService.get_warnings(class_name)  # noqa: F841
+        result = WarningService.get_warnings(class_name)
         return APIResponse.success(data=result, message="success")
 
     @ns_algorithm.doc("post_warning_evaluate", description="执行风险评估")
@@ -192,7 +190,7 @@ class Warning(Resource):
         执行风险评估
         """
         class_name = request.args.get("class_name")
-        result = WarningService.evaluate_risk(class_name)  # noqa: F841
+        result = WarningService.evaluate_risk(class_name)
         return APIResponse.success(data=result, message="风险评估完成")
 
 
@@ -231,8 +229,7 @@ class WarningConfig(Resource):
         success = WarningService.update_config(config_key, config_value, description)
         if success:
             return APIResponse.success(message="配置更新成功")
-        else:
-            return APIResponse.error(message="无效的配置键")
+        return APIResponse.error(message="无效的配置键")
 
 
 @ns_algorithm.route("/warning/<int:warning_id>/resolve")
@@ -250,8 +247,7 @@ class WarningResolve(Resource):
         success = WarningService.resolve_warning(warning_id)
         if success:
             return APIResponse.success(message="预警处理成功")
-        else:
-            return APIResponse.error(message="预警不存在或已处理")
+        return APIResponse.error(message="预警不存在或已处理")
 
 
 @ns_algorithm.route("/prediction/<int:user_id>")
@@ -267,7 +263,7 @@ class StudentPrediction(Resource):
         获取学生积分预测
         """
         days = get_int_arg("days", default=7)
-        result = PredictionService.predict_future_scores(user_id, days)  # noqa: F841
+        result = PredictionService.predict_future_scores(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -285,7 +281,7 @@ class BatchPrediction(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=7)
-        result = PredictionService.predict_batch(class_name, days)  # noqa: F841
+        result = PredictionService.predict_batch(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -302,7 +298,7 @@ class RiskStudents(Resource):
         获取有下降风险的学生
         """
         days = get_int_arg("days", default=7)
-        result = PredictionService.get_risk_students(days)  # noqa: F841
+        result = PredictionService.get_risk_students(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -319,7 +315,7 @@ class UserAnomaly(Resource):
         获取用户异常检测
         """
         days = get_int_arg("days", default=30)
-        result = AnomalyService.detect_all_anomalies(user_id, days)  # noqa: F841
+        result = AnomalyService.detect_all_anomalies(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -338,7 +334,7 @@ class BatchAnomaly(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = AnomalyService.get_all_anomalies(class_name, days)  # noqa: F841
+        result = AnomalyService.get_all_anomalies(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -355,7 +351,7 @@ class SuddenChange(Resource):
         检测突变异常
         """
         days = get_int_arg("days", default=30)
-        result = AnomalyService.detect_sudden_change(user_id, days)  # noqa: F841
+        result = AnomalyService.detect_sudden_change(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -372,7 +368,7 @@ class TrendAnomaly(Resource):
         检测趋势异常
         """
         days = get_int_arg("days", default=30)
-        result = AnomalyService.detect_trend_anomaly(user_id, days)  # noqa: F841
+        result = AnomalyService.detect_trend_anomaly(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -389,7 +385,7 @@ class GroupAnomaly(Resource):
         检测群体异常
         """
         days = get_int_arg("days", default=30)
-        result = AnomalyService.detect_group_anomaly(user_id, days)  # noqa: F841
+        result = AnomalyService.detect_group_anomaly(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -409,7 +405,7 @@ class BatchEngagement(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = EngagementService.batch_rank(class_name, days)  # noqa: F841
+        result = EngagementService.batch_rank(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -427,7 +423,7 @@ class UserEngagement(Resource):
         综合出勤率、作业提交率、积分活跃度与请假天数评估。
         """
         days = get_int_arg("days", default=30)
-        result = EngagementService.calculate_engagement(user_id, days)  # noqa: F841
+        result = EngagementService.calculate_engagement(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -444,7 +440,7 @@ class UserEngagementTrend(Resource):
         获取学生参与度周趋势（由远及近的时间序列，用于折线图展示）。
         """
         weeks = get_int_arg("weeks", default=8)
-        result = EngagementService.weekly_trend(user_id, weeks)  # noqa: F841
+        result = EngagementService.weekly_trend(user_id, weeks)
         return APIResponse.success(data=result, message="success")
 
 
@@ -462,7 +458,7 @@ class RuleRecommend(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = RuleRecommendationService.get_all_recommendations(class_name, days)  # noqa: F841
+        result = RuleRecommendationService.get_all_recommendations(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -482,7 +478,7 @@ class NewRuleRecommend(Resource):
         days = get_int_arg("days", default=30)
         result = RuleRecommendationService.find_new_rule_opportunities(
             class_name, days
-        )  # noqa: F841
+        )
         return APIResponse.success(data=result, message="success")
 
 
@@ -502,7 +498,7 @@ class RuleOptimization(Resource):
         days = get_int_arg("days", default=30)
         result = RuleRecommendationService.suggest_rule_optimizations(
             class_name, days
-        )  # noqa: F841
+        )
         return APIResponse.success(data=result, message="success")
 
 
@@ -520,7 +516,7 @@ class RuleCombination(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = RuleRecommendationService.suggest_rule_combinations(class_name, days)  # noqa: F841
+        result = RuleRecommendationService.suggest_rule_combinations(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -536,7 +532,7 @@ class RuleStatistics(Resource):
         获取规则统计信息
         """
         days = get_int_arg("days", default=30)
-        result = RuleRecommendationService.get_rule_statistics(days)  # noqa: F841
+        result = RuleRecommendationService.get_rule_statistics(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -552,7 +548,7 @@ class RuleRecommendTrain(Resource):
         训练规则推荐模型
         """
         days = get_int_arg("days", default=90)
-        result = RuleRecommendationService.train_recommendation_model(days)  # noqa: F841
+        result = RuleRecommendationService.train_recommendation_model(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -568,7 +564,7 @@ class RuleRecommendEvaluate(Resource):
         评估规则推荐模型
         """
         days = get_int_arg("days", default=30)
-        result = RuleRecommendationService.evaluate_model(days)  # noqa: F841
+        result = RuleRecommendationService.evaluate_model(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -585,7 +581,7 @@ class ScorePredict(Resource):
         预测学生考试成绩
         """
         days = get_int_arg("days", default=30)
-        result = ScorePredictService.predict_exam_score(user_id, days)  # noqa: F841
+        result = ScorePredictService.predict_exam_score(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -604,7 +600,7 @@ class BatchScoreAttribution(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = AttributionService.batch_analyze(class_name, days)  # noqa: F841
+        result = AttributionService.batch_analyze(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -639,7 +635,7 @@ class BatchScorePredict(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = ScorePredictService.predict_batch(class_name, days)  # noqa: F841
+        result = ScorePredictService.predict_batch(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -655,7 +651,7 @@ class ScoreDistribution(Resource):
         获取成绩分布预测
         """
         class_name = request.args.get("class_name")
-        result = ScorePredictService.get_score_distribution(class_name)  # noqa: F841
+        result = ScorePredictService.get_score_distribution(class_name)
         return APIResponse.success(data=result, message="success")
 
 
@@ -671,7 +667,7 @@ class ScorePredictTrain(Resource):
         训练成绩预测模型
         """
         days = get_int_arg("days", default=90)
-        result = ScorePredictService.train_score_model(days)  # noqa: F841
+        result = ScorePredictService.train_score_model(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -687,7 +683,7 @@ class ScorePredictEvaluate(Resource):
         评估成绩预测模型
         """
         days = get_int_arg("days", default=30)
-        result = ScorePredictService.evaluate_score_model(days)  # noqa: F841
+        result = ScorePredictService.evaluate_score_model(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -704,7 +700,7 @@ class RiskPredict(Resource):
         预测学生风险
         """
         days = get_int_arg("days", default=30)
-        result = RiskPredictService.predict_risk(user_id, days)  # noqa: F841
+        result = RiskPredictService.predict_risk(user_id, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -722,7 +718,7 @@ class BatchRiskPredict(Resource):
         """
         class_name = request.args.get("class_name")
         days = get_int_arg("days", default=30)
-        result = RiskPredictService.predict_batch(class_name, days)  # noqa: F841
+        result = RiskPredictService.predict_batch(class_name, days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -738,7 +734,7 @@ class HighRiskStudents(Resource):
         获取高风险学生
         """
         days = get_int_arg("days", default=30)
-        result = RiskPredictService.get_high_risk_students(days)  # noqa: F841
+        result = RiskPredictService.get_high_risk_students(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -754,7 +750,7 @@ class RiskPredictTrain(Resource):
         训练风险预测模型
         """
         days = get_int_arg("days", default=90)
-        result = RiskPredictService.train_risk_model(days)  # noqa: F841
+        result = RiskPredictService.train_risk_model(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -770,7 +766,7 @@ class RiskPredictEvaluate(Resource):
         评估风险预测模型
         """
         days = get_int_arg("days", default=30)
-        result = RiskPredictService.evaluate_risk_model(days)  # noqa: F841
+        result = RiskPredictService.evaluate_risk_model(days)
         return APIResponse.success(data=result, message="success")
 
 
@@ -788,7 +784,7 @@ class RuleEngineExecute(Resource):
         model_output = data.get("model_output", {})
         user_context = data.get("user_context", {})
         engine = RuleExecutionEngine()
-        result = engine.execute_rules(model_output, user_context)  # noqa: F841
+        result = engine.execute_rules(model_output, user_context)
         return APIResponse.success(data=result, message="success")
 
 
@@ -807,7 +803,7 @@ class RuleEngineApplyByBehavior(Resource):
         behavior_type = data.get("behavior_type")
         context = data.get("context", {})
         engine = RuleExecutionEngine()
-        result = engine.apply_rule_by_behavior(user_id, behavior_type, context)  # noqa: F841
+        result = engine.apply_rule_by_behavior(user_id, behavior_type, context)
         return APIResponse.success(data=result, message="success")
 
 
@@ -824,7 +820,7 @@ class ScoreDistributionStats(Resource):
         """
         class_name = request.args.get("class_name")
         controller = ScoreDistributionController()
-        result = controller.get_distribution_statistics(class_name)  # noqa: F841
+        result = controller.get_distribution_statistics(class_name)
         return APIResponse.success(data=result, message="success")
 
 
@@ -841,7 +837,7 @@ class ScoreDistributionAdjust(Resource):
         """
         class_name = request.args.get("class_name")
         controller = ScoreDistributionController()
-        result = controller.adjust_class_scores(class_name)  # noqa: F841
+        result = controller.adjust_class_scores(class_name)
         return APIResponse.success(data=result, message="success")
 
 
@@ -858,7 +854,7 @@ class ScoreDistributionValidate(Resource):
         data = request.get_json()
         scores = data.get("scores", [])
         controller = ScoreDistributionController()
-        result = controller.validate_distribution(scores)  # noqa: F841
+        result = controller.validate_distribution(scores)
         return APIResponse.success(data=result, message="success")
 
 
@@ -875,7 +871,7 @@ class ScoreValidatorDetectOutliers(Resource):
         data = request.get_json()
         scores = data.get("scores", [])
         validator = ScoreValidator()
-        result = validator.detect_outliers(scores)  # noqa: F841
+        result = validator.detect_outliers(scores)
         return APIResponse.success(data=result, message="success")
 
 
@@ -892,7 +888,7 @@ class ScoreValidatorValidateAndCorrect(Resource):
         data = request.get_json()
         scores = data.get("scores", [])
         validator = ScoreValidator()
-        result = validator.validate_and_correct(scores)  # noqa: F841
+        result = validator.validate_and_correct(scores)
         return APIResponse.success(data=result, message="success")
 
 
@@ -911,7 +907,7 @@ class ScoreEcosystemEarn(Resource):
         behavior_type = data.get("behavior_type")
         context = data.get("context", {})
         ecosystem = ScoreEcosystem()
-        result = ecosystem.earn_score(user_id, behavior_type, context)  # noqa: F841
+        result = ecosystem.earn_score(user_id, behavior_type, context)
         return APIResponse.success(data=result, message="success")
 
 
@@ -930,7 +926,7 @@ class ScoreEcosystemSpend(Resource):
         spending_type = data.get("spending_type")
         amount = data.get("amount", 1)
         ecosystem = ScoreEcosystem()
-        result = ecosystem.spend_score(user_id, spending_type, amount)  # noqa: F841
+        result = ecosystem.spend_score(user_id, spending_type, amount)
         return APIResponse.success(data=result, message="success")
 
 
@@ -945,7 +941,7 @@ class ScoreEcosystemEarningRules(Resource):
         获取积分获取规则
         """
         ecosystem = ScoreEcosystem()
-        result = ecosystem.get_earning_rules()  # noqa: F841
+        result = ecosystem.get_earning_rules()
         return APIResponse.success(data=result, message="success")
 
 
@@ -960,7 +956,7 @@ class ScoreEcosystemSpendingRules(Resource):
         获取积分消费规则
         """
         ecosystem = ScoreEcosystem()
-        result = ecosystem.get_spending_rules()  # noqa: F841
+        result = ecosystem.get_spending_rules()
         return APIResponse.success(data=result, message="success")
 
 
@@ -976,7 +972,7 @@ class ScoreEcosystemBalance(Resource):
         获取用户积分余额
         """
         ecosystem = ScoreEcosystem()
-        result = ecosystem.get_user_balance(user_id)  # noqa: F841
+        result = ecosystem.get_user_balance(user_id)
         return APIResponse.success(data=result, message="success")
 
 
@@ -994,7 +990,7 @@ class RewardPhoneAccess(Resource):
         user_id = data.get("user_id")
         access_count = data.get("access_count", 1)
         handler = PhoneAccessHandler()
-        result = handler.handle_phone_access(user_id, access_count)  # noqa: F841
+        result = handler.handle_phone_access(user_id, access_count)
         return APIResponse.success(data=result, message="success")
 
 
@@ -1009,7 +1005,7 @@ class RewardTypes(Resource):
         获取所有奖励类型
         """
         system = RewardSystem()
-        result = system.get_reward_types()  # noqa: F841
+        result = system.get_reward_types()
         return APIResponse.success(data=result, message="success")
 
 
@@ -1025,7 +1021,7 @@ class RewardEligible(Resource):
         获取用户可兑换的奖励
         """
         system = RewardSystem()
-        result = system.get_user_eligible_rewards(user_id)  # noqa: F841
+        result = system.get_user_eligible_rewards(user_id)
         return APIResponse.success(data=result, message="success")
 
 
@@ -1043,7 +1039,7 @@ class RewardRedeem(Resource):
         user_id = data.get("user_id")
         reward_type = data.get("reward_type")
         system = RewardSystem()
-        result = system.redeem_reward(user_id, reward_type)  # noqa: F841
+        result = system.redeem_reward(user_id, reward_type)
         return APIResponse.success(data=result, message="success")
 
 
@@ -1059,7 +1055,7 @@ class RewardDailyUsage(Resource):
         获取用户今日奖励使用情况
         """
         controller = RewardInteractionController()
-        result = controller.get_daily_usage(user_id)  # noqa: F841
+        result = controller.get_daily_usage(user_id)
         return APIResponse.success(data=result, message="success")
 
 
@@ -1091,7 +1087,7 @@ class AlgorithmRun(Resource):
         """
         运行算法分析
         """
-        result = AlgorithmService().run_analysis()  # noqa: F841
+        result = AlgorithmService().run_analysis()
         return APIResponse.success(data=result, message="算法分析完成")
 
 
@@ -1106,7 +1102,7 @@ class ClusterRecalculate(Resource):
         重新计算学生分群
         """
         service = ClusterService()
-        result = service.recalculate_clusters()  # noqa: F841
+        result = service.recalculate_clusters()
         return APIResponse.success(data=result, message="分群重新计算完成")
 
 
@@ -1121,7 +1117,7 @@ class CompositeScoreRecalculate(Resource):
         重新计算所有学生的综合评分
         """
         service = CompositeScoreService()
-        result = service.recalculate_all()  # noqa: F841
+        result = service.recalculate_all()
         return APIResponse.success(data=result, message="综合评分重新计算完成")
 
 
@@ -1136,7 +1132,7 @@ class WarningEvaluate(Resource):
         评估所有风险预警
         """
         service = WarningService()
-        result = service.evaluate_all()  # noqa: F841
+        result = service.evaluate_all()
         return APIResponse.success(data=result, message="预警评估完成")
 
 

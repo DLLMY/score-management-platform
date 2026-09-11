@@ -2,6 +2,7 @@ import os
 import sys
 import threading
 import argparse
+import traceback
 from dotenv import load_dotenv
 
 "\n"
@@ -66,6 +67,7 @@ def main():
         print("[Startup] NLP服务初始化完成")
     except Exception as e:
         print(f"[Startup] NLP服务初始化失败: {e}")
+        traceback.print_exc()
     print("[Startup] 触发缓存预热...")
     try:
         from services.redis_cache_service import warmup_cache
@@ -74,6 +76,7 @@ def main():
         print("[Startup] 缓存预热完成")
     except Exception as e:
         print(f"[Startup] 缓存预热失败: {e}")
+        traceback.print_exc()
 
     def bert_warmup():
         try:
@@ -87,6 +90,7 @@ def main():
                 print("[Startup] BERT模型预热失败，将使用TextCNN作为降级方案")
         except Exception as e:
             print(f"[Startup] BERT预热异常: {e}")
+        traceback.print_exc()
 
     bert_thread = threading.Thread(target=bert_warmup, daemon=True)
     bert_thread.start()

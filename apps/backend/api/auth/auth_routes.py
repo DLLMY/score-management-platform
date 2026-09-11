@@ -66,38 +66,37 @@ class Login(Resource):
 
         # 尝试管理员登录
         admin = Admin.query.filter_by(username=username).first()
-        if admin:
-            if verify_password(password, admin.password):
-                clear_login_attempts(username)
-                token_data = generate_tokens(admin.id, admin.username, admin.role)
-                log_login_attempt(username, success=True)
+        if admin and verify_password(password, admin.password):
+            clear_login_attempts(username)
+            token_data = generate_tokens(admin.id, admin.username, admin.role)
+            log_login_attempt(username, success=True)
 
-                response_data = {
-                    "success": True,
-                    "code": 0,
-                    "message": "登录成功",
-                    "expires_in": token_data["expires_in"],
-                    "access_token": token_data["access_token"],
-                    "refresh_token": token_data["refresh_token"],
-                    "data": {"admin": admin.to_dict(AUTH_ADMIN_FIELDS)},
-                }
+            response_data = {
+                "success": True,
+                "code": 0,
+                "message": "登录成功",
+                "expires_in": token_data["expires_in"],
+                "access_token": token_data["access_token"],
+                "refresh_token": token_data["refresh_token"],
+                "data": {"admin": admin.to_dict(AUTH_ADMIN_FIELDS)},
+            }
 
-                response = make_response(jsonify(response_data))
-                set_auth_cookies(response, token_data["access_token"], token_data["refresh_token"])
+            response = make_response(jsonify(response_data))
+            set_auth_cookies(response, token_data["access_token"], token_data["refresh_token"])
 
-                csrf_token = generate_csrf()
-                response.set_cookie(
-                    "csrf_token",
-                    value=csrf_token,
-                    httponly=False,
-                    secure=False,
-                    samesite="Lax",
-                    max_age=3600,
-                    path="/",
-                )
-                response_data["csrf_token"] = csrf_token
+            csrf_token = generate_csrf()
+            response.set_cookie(
+                "csrf_token",
+                value=csrf_token,
+                httponly=False,
+                secure=False,
+                samesite="Lax",
+                max_age=3600,
+                path="/",
+            )
+            response_data["csrf_token"] = csrf_token
 
-                return response
+            return response
 
         # 登录失败
         record_failed_login(username, ip_address)

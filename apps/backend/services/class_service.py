@@ -403,23 +403,22 @@ class ClassService:
                 "data": buf,
                 "filename": filename,
             }
-        else:
-            output = {
-                "export_time": datetime.now().isoformat(),
-                "total": len(export_data),
-                "data": export_data,
-            }
+        output = {
+            "export_time": datetime.now().isoformat(),
+            "total": len(export_data),
+            "data": export_data,
+        }
 
-            json_str = json.dumps(output, ensure_ascii=False, indent=2)
-            buf = io.BytesIO(json_str.encode("utf-8"))
-            buf.seek(0)
+        json_str = json.dumps(output, ensure_ascii=False, indent=2)
+        buf = io.BytesIO(json_str.encode("utf-8"))
+        buf.seek(0)
 
-            filename = f'classes_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}' ".json"
-            return {
-                "type": "json",
-                "data": buf,
-                "filename": filename,
-            }
+        filename = f'classes_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}' ".json"
+        return {
+            "type": "json",
+            "data": buf,
+            "filename": filename,
+        }
 
     def import_classes(self, import_list, config=None):
         default_mappings = [
@@ -475,15 +474,9 @@ class ClassService:
                 message = rule.get("message", f"{field}验证失败")
                 value = item.get(field)
 
-                if rule_type == "required" and value is None:
-                    errors.append(message)
-                elif (
+                if rule_type == "required" and value is None or (
                     rule_type == "max_length" and value and len(str(value)) > params.get("max", 100)
-                ):
-                    errors.append(message)
-                elif rule_type == "min_length" and value and len(str(value)) < params.get("min", 1):
-                    errors.append(message)
-                elif (
+                ) or rule_type == "min_length" and value and len(str(value)) < params.get("min", 1) or (
                     rule_type == "regex"
                     and value
                     and not re.match(params.get("pattern", ""), str(value))

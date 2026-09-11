@@ -3,6 +3,7 @@ import sys
 import time
 import subprocess
 import argparse
+import traceback
 
 # \nCelery启动脚本\n
 # 支持启动worker和beat
@@ -50,6 +51,7 @@ def start_worker(queues="default,notification,mqtt,export", concurrency=4):
         return process
     except Exception as e:
         print_error(f"Failed to start Celery worker: {e}")
+        traceback.print_exc()
         return None
 
 
@@ -65,6 +67,7 @@ def start_beat():
         return process
     except Exception as e:
         print_error(f"Failed to start Celery Beat: {e}")
+        traceback.print_exc()
         return None
 
 

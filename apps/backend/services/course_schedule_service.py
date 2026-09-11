@@ -15,7 +15,6 @@ from models import (
     ClassInfo,
     ClassPeriod,
     CourseSchedule,
-    Device,
     Subject,
     get_by_id,
 )
@@ -374,7 +373,7 @@ def build_schedule_export_data(class_info_id):
     class_info = None
     for schedule in schedules:
         class_info = get_by_id(ClassInfo, schedule.class_info_id)
-        subject = get_by_id(Subject, schedule.subject_id)  # noqa: F841
+        subject = get_by_id(Subject, schedule.subject_id)
 
         export_data.append(
             {

@@ -1,5 +1,4 @@
 from models import User, Admin, SubAccount, ClassInfo, AdminClass, db
-from typing import List, Dict, Tuple
 import logging
 
 """
@@ -22,7 +21,7 @@ class ClassMigrationService:
             "errors": [],
         }
 
-    def analyze_existing_data(self) -> Dict:
+    def analyze_existing_data(self) -> dict:
         """分析现有数据，生成迁移报告"""
         # 收集所有使用的班级名称
         user_classes = set()
@@ -52,7 +51,7 @@ class ClassMigrationService:
             "total_missing": len(missing_classes),
         }
 
-    def create_missing_classes(self, class_names: List[str]) -> Dict[str, ClassInfo]:
+    def create_missing_classes(self, class_names: list[str]) -> dict[str, ClassInfo]:
         """创建缺失的班级记录"""
         created = {}
         for name in class_names:
@@ -96,7 +95,7 @@ class ClassMigrationService:
                     return grade
         return ""
 
-    def migrate_users(self, class_map: Dict[str, ClassInfo]) -> Tuple[int, List[str]]:
+    def migrate_users(self, class_map: dict[str, ClassInfo]) -> tuple[int, list[str]]:
         """迁移用户数据"""
         users = User.query.filter(
             User.class_name.isnot(None), User.class_info_id.is_(None)
@@ -116,7 +115,7 @@ class ClassMigrationService:
         db.session.commit()
         return migrated, errors
 
-    def migrate_admins(self, class_map: Dict[str, ClassInfo]) -> Tuple[int, List[str]]:
+    def migrate_admins(self, class_map: dict[str, ClassInfo]) -> tuple[int, list[str]]:
         """迁移管理员/教师数据"""
         admins = Admin.query.filter(
             Admin.class_name.isnot(None),
@@ -130,10 +129,10 @@ class ClassMigrationService:
                 continue
             if class_name not in class_map:
                 errors.append(
-                    (
+                    
                         f"管理员 {admin.real_name or admin.username} "
                         f"(ID:{admin.id}) 班级 '{class_name}' 不存在"
-                    )
+                    
                 )
                 continue
             # 设置主班级
@@ -155,7 +154,7 @@ class ClassMigrationService:
         db.session.commit()
         return migrated, errors
 
-    def migrate_subaccounts(self, class_map: Dict[str, ClassInfo]) -> Tuple[int, List[str]]:
+    def migrate_subaccounts(self, class_map: dict[str, ClassInfo]) -> tuple[int, list[str]]:
         """迁移子账号数据"""
         # SubAccount 通过 parent_admin_id 关联到 Admin，不需要单独迁移班级
         # 子账号的班级关联通过其父级管理员间接获取
@@ -168,7 +167,7 @@ class ClassMigrationService:
                 self.stats["subaccounts_migrated"] += 1
         return migrated, errors
 
-    def run_full_migration(self) -> Dict:
+    def run_full_migration(self) -> dict:
         """执行完整迁移流程"""
         logger.info("开始班级数据迁移...")
         # 1. 分析现有数据
@@ -196,7 +195,7 @@ class ClassMigrationService:
             "analysis": analysis,
         }
 
-    def get_migration_status(self) -> Dict:
+    def get_migration_status(self) -> dict:
         """获取迁移状态"""
         analysis = self.analyze_existing_data()
         # 统计已迁移的数据

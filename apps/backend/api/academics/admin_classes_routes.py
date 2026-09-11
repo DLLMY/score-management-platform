@@ -58,7 +58,7 @@ class AdminClasses(Resource):
         参数：
         - admin_id: 管理员ID（路径参数）
         """
-        _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
+        _admin = Admin.query.get_or_404(admin_id)
         class_links = AdminClass.query.filter_by(admin_id=admin_id).all()
         classes = []
         for link in class_links:
@@ -105,7 +105,7 @@ class AdminAssignClass(Resource):
         is_primary = data.get("is_primary", False)
 
         # 404 语义保留在路由层
-        _admin = Admin.query.get_or_404(admin_id)  # noqa: F841
+        _admin = Admin.query.get_or_404(admin_id)
         class_info = ClassInfo.query.get_or_404(class_id)
 
         academics_service.assign_class_to_admin(admin_id, class_id, is_primary, class_info)

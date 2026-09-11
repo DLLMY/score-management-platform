@@ -9,6 +9,8 @@ from services.security_service import (
     create_rate_limit_record,
     log_security_event as _service_log_security_event,
     clear_rate_limit_records,
+    get_audit_stats,
+    get_suspicious_ips,
 )
 from datetime import datetime, timedelta
 from utils.permission import requires_permission
@@ -261,59 +263,7 @@ class SecurityAuditStats(Resource):
 
         提供安全事件的统计概览。
         """
-        today = datetime.now().date()
-        today_start = datetime.combine(today, datetime.min.time())
-
-        last_24h = today_start - timedelta(hours=24)
-        last_7d = today_start - timedelta(days=7)
-
-        stats = {
-            "total": SecurityAudit.query.count(),
-            "last_24h": SecurityAudit.query.filter(SecurityAudit.created_at >= last_24h).count(),
-            "last_7d": SecurityAudit.query.filter(SecurityAudit.created_at >= last_7d).count(),
-            "by_severity": {},
-            "by_type": {},
-            "top_ips": [],
-        }
-
-        severity_counts = (
-            db.session.query(SecurityAudit.severity, db.func.count(SecurityAudit.id))
-            .group_by(SecurityAudit.severity)
-            .all()
-        )
-
-        for severity, count in severity_counts:
-            stats["by_severity"][severity] = count
-
-        type_counts = (
-            db.session.query(SecurityAudit.event_type, db.func.count(SecurityAudit.id))
-            .filter(SecurityAudit.created_at >= last_7d)
-            .all()
-        )
-
-        for event_type, count in type_counts:
-            stats["by_type"][event_type] = count
-
-        top_ips = (
-            db.session.query(
-                SecurityAudit.ip_address, db.func.count(SecurityAudit.id).label("count")
-            )
-            .filter(
-                SecurityAudit.created_at >= last_24h,
-                SecurityAudit.severity.in_(["warning", "error", "critical"]),
-            )
-            .filter(
-                SecurityAudit.created_at >= last_24h,
-                SecurityAudit.severity.in_(["warning", "error", "critical"]),
-            )
-            .order_by(db.text("count DESC"))
-            .limit(10)
-            .all()
-        )
-
-        stats["top_ips"] = [{"ip": ip, "count": count} for ip, count in top_ips]
-
-        return stats
+        return get_audit_stats()
 
 
 @ns_security.route("/suspicious-ips")
@@ -330,46 +280,8 @@ class SuspiciousIPs(Resource):
         基于访问频率和错误率识别可疑IP。
         """
         threshold = get_int_arg("threshold", default=50)
-
-        last_1h = datetime.now() - timedelta(hours=1)
-
         page, per_page = get_pagination(default=20)
-        pagination = (
-            db.session.query(
-                SecurityAudit.ip_address,
-                db.func.count(SecurityAudit.id).label("event_count"),
-                db.func.count(db.func.nullif(SecurityAudit.response_status, 200)).label(
-                    "error_count"
-                ),
-            )
-            .filter(SecurityAudit.created_at >= last_1h)
-            .group_by(SecurityAudit.ip_address)
-            .having(db.func.count(SecurityAudit.id) > threshold)
-            .order_by(db.text("event_count DESC"))
-            .paginate(page=page, per_page=per_page, error_out=False)
-        )
-        suspicious_ips = pagination.items
-
-        return {
-            "ips": [
-                {
-                    "ip_address": ip,
-                    "event_count": event_count,
-                    "error_count": error_count,
-                    "error_rate": (
-                        round(error_count / event_count * 100, 1) if event_count > 0 else 0
-                    ),
-                }
-                for ip, event_count, error_count in suspicious_ips
-            ],
-            "total": pagination.total,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": pagination.total,
-                "pages": pagination.pages,
-            },
-        }
+        return get_suspicious_ips(threshold, page, per_page)
 
 
 @ns_security.route("/rate-limit-status")
@@ -473,5 +385,4 @@ class VerifyToken(Resource):
 
         if is_valid:
             return APIResponse.success(data={"valid": True, "payload": result})
-        else:
-            return APIResponse.error(message=result, status_code=401, valid=False)
+        return APIResponse.error(message=result, status_code=401, valid=False)

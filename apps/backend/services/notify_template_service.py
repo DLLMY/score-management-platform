@@ -101,3 +101,18 @@ def record_template_usage(template, send_mode, device_id, topics):
         db.session.rollback()
         raise
     return history
+
+
+def get_categories():
+    """获取去重的通知模板分类列表（排除空值）。
+
+    只读查询下沉（薄路由收尾）：原路由内联 db.session.query 已迁移至此，
+    响应形态逐字节不变。
+    """
+    rows = (
+        db.session.query(NotifyTemplate.category)
+        .filter(NotifyTemplate.category is not None)
+        .distinct()
+        .all()
+    )
+    return [c[0] for c in rows if c[0]]

@@ -6,6 +6,8 @@ GET /api/reports/class-semester?class_id=<id>&format=excel|csv
 - 输出：Excel（默认）/ CSV，文件名含班级名
 """
 
+import logging
+
 from io import BytesIO
 
 from flask import request, send_file
@@ -16,6 +18,8 @@ from utils.excel_utils import ExcelUtils
 from utils.permission import requires_permission
 from utils.response import APIResponse
 from services.report_summary_service import build_class_summary, summary_to_rows
+
+logger = logging.getLogger(__name__)
 
 ns_reports = Namespace("reports", description="报表导出")
 
@@ -97,7 +101,8 @@ class ClassSemesterReport(Resource):
             try:
                 summary = build_class_summary(class_info.name or "", 30)
                 summary_rows = summary_to_rows(summary)
-            except Exception:  # noqa: BLE001 - 摘要只是附加内容，失败不阻塞导出
+            except Exception as e:
+                logger.warning("班级算法摘要生成失败（不影响主表格导出）: %s", e, exc_info=True)
                 summary_rows = []
 
             if fmt == "csv":
@@ -132,5 +137,5 @@ class ClassSemesterReport(Resource):
                 as_attachment=True,
                 download_name=f"{filename}.xlsx",
             )
-        except Exception as exc:  # noqa: BLE001 - 统一兜底，避免 5xx
+        except Exception as exc:
             return APIResponse.error(message=f"生成报表失败: {exc}", status_code=500)

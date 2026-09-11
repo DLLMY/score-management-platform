@@ -553,7 +553,7 @@ class MLIntentClassifier:
         y_pred = model.predict(X_test)
         from sklearn.metrics import f1_score
 
-        _ = f1_score(y_test, y_pred, average="weighted")  # noqa: F841
+        _ = f1_score(y_test, y_pred, average="weighted")
 
         self.intent_model = model
 
@@ -579,7 +579,7 @@ class MLIntentClassifier:
             intent_idx = self.intent_model.predict(X)[0]
             confidence = self.intent_model.predict_proba(X)[0][intent_idx]
 
-            result = (  # noqa: F841
+            result = (
                 self.intent_labels_reverse[intent_idx],
                 round(confidence, 4),
             )
@@ -593,7 +593,8 @@ class MLIntentClassifier:
                 self._prediction_cache[text] = result
 
             return result
-        except Exception:
+        except Exception as e:
+            log_debug("意图预测失败（降级返回 None）", exception=e)
             return None, 0.0
 
 
@@ -1359,7 +1360,8 @@ class EnhancedNLPParserService:
             try:
                 jieba.initialize()
                 self.jieba_initialized = True
-            except Exception:
+            except Exception as e:
+                log_warning("jieba 初始化失败", exception=e)
                 self.jieba_initialized = False
 
     def _refresh_cache(self):
@@ -1499,7 +1501,8 @@ class EnhancedNLPParserService:
             if os.path.exists(vectorizer_path):
                 with open(vectorizer_path, "rb") as f:
                     self.vectorizer = pickle.load(f)  # nosec B301 - trusted internal model
-        except Exception:
+        except Exception as e:
+            log_warning("加载 NLP 向量器模型失败（降级为 None）", exception=e)
             self.vectorizer = None
 
     def _build_bm25_index(self, documents):
@@ -1519,7 +1522,7 @@ class EnhancedNLPParserService:
             doc_term_freq.append(tf)
 
         idf = {}
-        for doc_index, doc in enumerate(documents):
+        for _doc_index, doc in enumerate(documents):
             terms = list(jieba.lcut(doc)) if self.jieba_initialized else list(doc)
             unique_terms = set(terms)
             for term in unique_terms:
@@ -1582,10 +1585,9 @@ class EnhancedNLPParserService:
 
         if ratio <= 0.3:
             return self.position_weights["start"]
-        elif ratio >= 0.7:
+        if ratio >= 0.7:
             return self.position_weights["end"]
-        else:
-            return self.position_weights["middle"]
+        return self.position_weights["middle"]
 
     def _get_keyword_importance(self, keyword_type):
         return self.keyword_importance.get(keyword_type, 1.0)
@@ -1673,11 +1675,10 @@ class EnhancedNLPParserService:
         return sentiment
 
     def _resolve_referral(self, text):
-        for referral, gender in self.referral_words.items():
-            if referral in text:
-                if self.context_memory["recent_users"]:
-                    recent_user = self.context_memory["recent_users"][-1]
-                    return recent_user, referral
+        for referral, _gender in self.referral_words.items():
+            if referral in text and self.context_memory["recent_users"]:
+                recent_user = self.context_memory["recent_users"][-1]
+                return recent_user, referral
         return None, None
 
     def _update_context_memory(self, user_name=None, rule_id=None, intent=None):
@@ -2151,7 +2152,7 @@ class EnhancedNLPParserService:
                 negative_count = behavior_result.get("negative_count", 0)
                 if negative_count > positive_count:
                     return "deduct"
-                elif positive_count > negative_count:
+                if positive_count > negative_count:
                     return "add"
                 return "add"
             return "add" if "add" in rule_hits else "deduct"
@@ -2170,7 +2171,7 @@ class EnhancedNLPParserService:
         negative_count = behavior_result.get("negative_count", 0)
         if negative_count > positive_count:
             return "deduct"
-        elif positive_count > negative_count:
+        if positive_count > negative_count:
             return "add"
 
         # 如果没有任何线索，直接返回unknown，避免机器学习调用开销
@@ -2223,9 +2224,8 @@ class EnhancedNLPParserService:
         for i, similarity in enumerate(final_similarities):
             if similarity > 0.15:
                 rule = get_by_id(NLPScoringRule, rule_ids[i])
-                if rule:
-                    if not self._has_antonym_conflict(text, rule):
-                        matched_rules.append((rule, similarity))
+                if rule and not self._has_antonym_conflict(text, rule):
+                    matched_rules.append((rule, similarity))
 
         matched_rules.sort(key=lambda x: x[1], reverse=True)
 
@@ -2241,12 +2241,20 @@ class EnhancedNLPParserService:
             from services.bert_service import get_bert_service
 
             service = get_bert_service()
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "NLP best-effort operation failed; exception previously swallowed silently",
+                exc_info=True,
+            )
             return None
         try:
             if service is None or not service.is_available():
                 return None
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "NLP best-effort operation failed; exception previously swallowed silently",
+                exc_info=True,
+            )
             return None
         return service
 
@@ -2258,7 +2266,11 @@ class EnhancedNLPParserService:
             return cache["vectors"]
         try:
             vectors = service.batch_get_embeddings(rule_texts)
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "NLP best-effort operation failed; exception previously swallowed silently",
+                exc_info=True,
+            )
             vectors = [None] * len(rule_texts)
         self._bert_rule_embeddings = {"signature": signature, "vectors": vectors}
         return vectors
@@ -2270,7 +2282,11 @@ class EnhancedNLPParserService:
             return cached
         try:
             vector = service.get_embedding(text)
-        except Exception:  # noqa: BLE001
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "NLP best-effort operation failed; exception previously swallowed silently",
+                exc_info=True,
+            )
             vector = None
         if len(self._bert_text_cache) >= self._bert_text_cache_max_size:
             self._bert_text_cache.clear()
@@ -2382,7 +2398,7 @@ class EnhancedNLPParserService:
         bert_similarities = self._compute_bert_similarities(text, rule_texts)
 
         keyword_matches = []
-        for i, rule in enumerate(rules):
+        for _, rule in enumerate(rules):
             match_score = 0.0
             if rule.behavior_keyword:
                 keywords = rule.behavior_keyword.split("|")
@@ -2578,7 +2594,7 @@ class EnhancedNLPParserService:
         best_rule = None
         best_score = 0.0
 
-        for rule_id, data in rule_scores.items():
+        for _, data in rule_scores.items():
             if data["weight_sum"] > 0:
                 normalized_score = data["total_score"] / data["weight_sum"]
                 normalized_score *= 1 + len(data["methods"]) * 0.05
@@ -2593,7 +2609,7 @@ class EnhancedNLPParserService:
         behavior_result = self.extract_behavior(text, name)
         matched_rules = []
 
-        for kw, kw_type, kw_score_type, default_score in behavior_result["keywords"]:
+        for kw, kw_type, _, _ in behavior_result["keywords"]:
             rules = (
                 NLPScoringRule.query.filter(
                     NLPScoringRule.behavior_keyword.like(f"%{kw}%"),
@@ -2677,7 +2693,6 @@ class EnhancedNLPParserService:
                 "NLP best-effort operation failed; exception previously swallowed silently",
                 exc_info=True,
             )
-            pass
 
         if not corrections:
             return None
@@ -2761,7 +2776,7 @@ class EnhancedNLPParserService:
             rules_cache = self._get_rules_by_intent(intent)
             rules_cache = self._sort_rules_by_dynamic_priority(rules_cache)
 
-            for kw, kw_type, kw_score_type, default_score in behavior_result["keywords"]:
+            for kw, kw_type, kw_score_type, _ in behavior_result["keywords"]:
                 if kw_score_type != intent:
                     continue
 
@@ -2773,11 +2788,7 @@ class EnhancedNLPParserService:
                     position_weight = self._get_position_weight(behavior_text, kw)
                     importance_weight = self._get_keyword_importance(kw_type)
 
-                    if kw == rule.behavior_keyword:
-                        exact_match = True
-                    elif rule.behavior_description and kw in rule.behavior_description:
-                        exact_match = True
-                    elif rule.behavior_keyword in behavior_text:
+                    if kw == rule.behavior_keyword or rule.behavior_description and kw in rule.behavior_description or rule.behavior_keyword in behavior_text:
                         exact_match = True
 
                     if exact_match:
@@ -2800,7 +2811,7 @@ class EnhancedNLPParserService:
                     kw,
                     kw_type,
                     kw_score_type,
-                    default_score,
+                    _,
                 ) in behavior_result["keywords"]:
                     if kw_score_type != intent:
                         continue
@@ -2840,7 +2851,7 @@ class EnhancedNLPParserService:
         if best_rule and best_rule not in [r[0] for r in matched_rules]:
             matched_rules.insert(0, (best_rule, "soft_vote", best_confidence))
 
-        result = {  # noqa: F841
+        result = {
             "success": True,
             "input_text": text,
             "extracted_name": name,
@@ -2919,19 +2930,22 @@ class EnhancedNLPParserService:
                         original_pos = text.find(original_name)
                         corrected_pos = text.find(corrected_name)
 
-                        if original_pos != -1 and corrected_pos != -1:
-                            if original_pos < corrected_pos:
-                                prefix = text[:original_pos]
-                                if len(prefix) >= 2:
-                                    prefix_pattern = re.escape(prefix) + r"[\u4e00-\u9fa5]{2}"
-                                    found_existing = False
-                                    for pattern in self.name_patterns:
-                                        if prefix_pattern in pattern.pattern:
-                                            found_existing = True
-                                            break
-                                    if not found_existing and len(prefix) <= 8:
-                                        new_pattern = re.compile(prefix_pattern + r"(?:的)?")
-                                        self.name_patterns.insert(1, new_pattern)
+                        if (
+                            original_pos != -1
+                            and corrected_pos != -1
+                            and original_pos < corrected_pos
+                        ):
+                            prefix = text[:original_pos]
+                            if len(prefix) >= 2:
+                                prefix_pattern = re.escape(prefix) + r"[\u4e00-\u9fa5]{2}"
+                                found_existing = False
+                                for pattern in self.name_patterns:
+                                    if prefix_pattern in pattern.pattern:
+                                        found_existing = True
+                                        break
+                                if not found_existing and len(prefix) <= 8:
+                                    new_pattern = re.compile(prefix_pattern + r"(?:的)?")
+                                    self.name_patterns.insert(1, new_pattern)
 
                 elif corr.field_type == "intent":
                     if corr.corrected_value in self.intent_keywords:
@@ -3001,7 +3015,7 @@ class EnhancedNLPParserService:
             rules_cache = self._get_rules_by_intent(intent)
             rules_cache = self._sort_rules_by_dynamic_priority(rules_cache)
 
-            for kw, kw_type, kw_score_type, default_score in behavior_result["keywords"]:
+            for kw, kw_type, kw_score_type, _ in behavior_result["keywords"]:
                 if kw_score_type != intent:
                     continue
 
@@ -3013,11 +3027,7 @@ class EnhancedNLPParserService:
                     position_weight = self._get_position_weight(behavior_text, kw)
                     importance_weight = self._get_keyword_importance(kw_type)
 
-                    if kw == rule.behavior_keyword:
-                        exact_match = True
-                    elif rule.behavior_description and kw in rule.behavior_description:
-                        exact_match = True
-                    elif rule.behavior_keyword in behavior_text:
+                    if kw == rule.behavior_keyword or rule.behavior_description and kw in rule.behavior_description or rule.behavior_keyword in behavior_text:
                         exact_match = True
 
                     if exact_match:
@@ -3040,7 +3050,7 @@ class EnhancedNLPParserService:
                     kw,
                     kw_type,
                     kw_score_type,
-                    default_score,
+                    _,
                 ) in behavior_result["keywords"]:
                     if kw_score_type != intent:
                         continue
@@ -3080,7 +3090,7 @@ class EnhancedNLPParserService:
         if best_rule and best_rule not in [r[0] for r in matched_rules]:
             matched_rules.insert(0, (best_rule, "soft_vote", best_confidence))
 
-        result = {  # noqa: F841
+        result = {
             "success": True,
             "input_text": text,
             "extracted_name": name,
@@ -3303,9 +3313,7 @@ class EnhancedNLPParserService:
             intent = manual_correction.get("intent", parse_result["intent"])
             score_value = manual_correction.get("score_value", 0)
             # S6-B-P0-3 修复: 分数符号按意图归一化（deduct 误存正数 → 扣分变加分）
-            if intent == "deduct" and score_value is not None and score_value > 0:
-                score_value = -score_value
-            elif intent == "add" and score_value is not None and score_value < 0:
+            if intent == "deduct" and score_value is not None and score_value > 0 or intent == "add" and score_value is not None and score_value < 0:
                 score_value = -score_value
             behavior_tags = manual_correction.get("behavior_tags", [])
             behavior_description = manual_correction.get(
@@ -3366,9 +3374,7 @@ class EnhancedNLPParserService:
                 rule.last_used_at = datetime.now()
                 score_value = rule.score_value
                 # S6-B-P0-3 修复: 分数符号按规则 score_type 归一化（deduct 规则误存正数 → 扣分变加分）
-                if rule.score_type == "deduct" and score_value is not None and score_value > 0:
-                    score_value = -score_value
-                elif rule.score_type == "add" and score_value is not None and score_value < 0:
+                if rule.score_type == "deduct" and score_value is not None and score_value > 0 or rule.score_type == "add" and score_value is not None and score_value < 0:
                     score_value = -score_value
             else:
                 score_value = parse_result["matched_rules"][0]["score_value"]
@@ -3466,7 +3472,8 @@ class EnhancedNLPParserService:
                 enqueue_or_recalc_user_score(user.id)
             except Exception as e:
                 logging.getLogger(__name__).error(
-                    "[CompositeScore] NLP 评分重算综合分失败 user_id=%s: %s", user.id, e
+                    "[CompositeScore] NLP 评分重算综合分失败 user_id=%s: %s", user.id, e,
+                    exc_info=True,
                 )
 
             usage_record = NLPRuleUsage(
@@ -3539,7 +3546,7 @@ class EnhancedNLPParserService:
             def parse_with_index(idx_text):
                 idx, text = idx_text
                 try:
-                    result = self.parse(text)  # noqa: F841
+                    result = self.parse(text)
                     with lock:
                         results[idx] = result
                     return result
@@ -3611,5 +3618,5 @@ _nlp_parser_instance = None
 def get_nlp_parser():
     global _nlp_parser_instance
     if _nlp_parser_instance is None:
-        _nlp_parser_instance = EnhancedNLPParserService()  # noqa: F841
+        _nlp_parser_instance = EnhancedNLPParserService()
     return _nlp_parser_instance

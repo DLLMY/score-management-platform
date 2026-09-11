@@ -188,8 +188,7 @@ class MQTTPublish(Resource):
         result = _do_publish(topic, message)
         if result:
             return APIResponse.success(message="Published successfully")
-        else:
-            return APIResponse.error(message="Publish failed")
+        return APIResponse.error(message="Publish failed")
 
 
 @ns_mqtt.route("/recent")
@@ -243,7 +242,7 @@ class MQTTConnect(Resource):
                 data = ns_mqtt.payload
             except Exception as e:
                 # payload 解析失败（body 为空/畸形）仅降级为"沿用 DB 配置"，但需留痕（T9 日志化）。
-                logger.warning(f"读取 MQTT 请求 payload 失败，降级使用 DB 配置: {e}")
+                logger.warning(f"读取 MQTT 请求 payload 失败，降级使用 DB 配置: {e}", exc_info=True)
 
             if data:
                 # P2-7 修复: username/password 不再回退硬编码 "phoneboxtest"/"123456"，缺省置空
@@ -281,9 +280,8 @@ class MQTTConnect(Resource):
                         message="MQTT 未配置：请先在系统 MQTT 配置中填写 Broker 地址与凭据，再发起连接",
                         status_code=400,
                     )
-                else:
-                    config_dict["transport"] = "tcp"
-                    config_dict["ws_path"] = "/mqtt"
+                config_dict["transport"] = "tcp"
+                config_dict["ws_path"] = "/mqtt"
 
             logger.info(
                 f"Using config: broker={config_dict['broker']}, "
@@ -291,14 +289,13 @@ class MQTTConnect(Resource):
                 f"transport={config_dict['transport']}"
             )
 
-            result = connect_mqtt(config_dict)  # noqa: F841
+            result = connect_mqtt(config_dict)
 
             if result:
                 logger.info("MQTT connection successful!")
                 return APIResponse.success(message="MQTT connection successful")
-            else:
-                logger.warning("MQTT connection failed")
-                return APIResponse.error(message="MQTT connection failed", status_code=500)
+            logger.warning("MQTT connection failed")
+            return APIResponse.error(message="MQTT connection failed", status_code=500)
 
         except Exception as e:
             logger.warning(f"MQTT connection failed: {type(e).__name__}: {e}")
@@ -337,13 +334,12 @@ class MQTTSubscribe(Resource):
         if not topic:
             return APIResponse.error(message="Topic is required", status_code=400)
 
-        result = mqtt_manager.subscribe(topic, qos)  # noqa: F841
+        result = mqtt_manager.subscribe(topic, qos)
         if result:
             return APIResponse.success(message=f"Subscribed successfully: {topic}")
-        else:
-            return APIResponse.error(
-                message="Subscribe failed, MQTT not connected", status_code=500
-            )
+        return APIResponse.error(
+            message="Subscribe failed, MQTT not connected", status_code=500
+        )
 
 
 @ns_mqtt.route("/unsubscribe")
@@ -362,13 +358,12 @@ class MQTTUnsubscribe(Resource):
         if not topic:
             return APIResponse.error(message="Topic is required", status_code=400)
 
-        result = mqtt_manager.unsubscribe(topic)  # noqa: F841
+        result = mqtt_manager.unsubscribe(topic)
         if result:
             return APIResponse.success(message=f"Unsubscribed successfully: {topic}")
-        else:
-            return APIResponse.error(
-                message="Unsubscribe failed, MQTT not connected", status_code=500
-            )
+        return APIResponse.error(
+            message="Unsubscribe failed, MQTT not connected", status_code=500
+        )
 
 
 @ns_mqtt.route("/unlock")
@@ -396,11 +391,10 @@ class MQTTUnlock(Resource):
                 }
             )
 
-        result = publish_mqtt(topic, payload)  # noqa: F841
+        result = publish_mqtt(topic, payload)
         if result:
             return APIResponse.success(message=f"Unlock command sent to {topic}")
-        else:
-            return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
+        return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
 
 
 @ns_mqtt.route("/command")
@@ -437,11 +431,10 @@ class MQTTCommand(Resource):
         else:
             topic = "phonebox/command"
 
-        result = publish_mqtt(topic, json.dumps(message))  # noqa: F841
+        result = publish_mqtt(topic, json.dumps(message))
         if result:
             return APIResponse.success(message=f'Command "{command}" sent to {topic}')
-        else:
-            return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
+        return APIResponse.error(message="Send failed, MQTT not connected", status_code=500)
 
 
 def register_mqtt_message_handler():

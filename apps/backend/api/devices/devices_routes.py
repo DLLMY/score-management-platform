@@ -6,7 +6,7 @@ import threading
 import io
 import openpyxl
 from flask_restx import Namespace, Resource, fields
-from models import db, Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
+from models import Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
 from sqlalchemy.orm import joinedload
 from utils.permission import requires_permission, get_current_admin, get_admin_class_ids
 from utils.response import APIResponse
@@ -33,7 +33,6 @@ from services.device_query_service import (
 logger = logging.getLogger(__name__)
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime, timedelta
-from sqlalchemy import func
 
 from models import Alert
 
@@ -75,7 +74,7 @@ def send_ota_upgrade_command(firmware_url, version="", force=False, device_id=No
         }
 
         ota_topic = f"phonebox/ota/{device_id}"
-        result = publish_mqtt(ota_topic, json.dumps(ota_payload))  # noqa: F841
+        result = publish_mqtt(ota_topic, json.dumps(ota_payload))
 
         if result:
             return APIResponse.success(
@@ -88,41 +87,38 @@ def send_ota_upgrade_command(firmware_url, version="", force=False, device_id=No
                     "force": force,
                 }
             )
-        else:
-            return APIResponse.server_error(message="MQTT发送失败，请检查连接")
-    else:
-        # P3: 索引 filter 替代 all()+内存过滤（last_heartbeat 带 ix_device_last_heartbeat）
-        online_devices = Device.query.filter(
-            Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
-        ).all()
+        return APIResponse.server_error(message="MQTT发送失败，请检查连接")
+    # P3: 索引 filter 替代 all()+内存过滤（last_heartbeat 带 ix_device_last_heartbeat）
+    online_devices = Device.query.filter(
+        Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
+    ).all()
 
-        if not online_devices:
-            return APIResponse.bad_request(message="没有在线设备")
+    if not online_devices:
+        return APIResponse.bad_request(message="没有在线设备")
 
-        ota_payload = {
-            "action": "update",
-            "url": firmware_url,
-            "version": version,
-            "force": force,
-            "timestamp": int(datetime.now().timestamp()),
-        }
+    ota_payload = {
+        "action": "update",
+        "url": firmware_url,
+        "version": version,
+        "force": force,
+        "timestamp": int(datetime.now().timestamp()),
+    }
 
-        ota_topic = "phonebox/ota"
-        result = publish_mqtt(ota_topic, json.dumps(ota_payload))  # noqa: F841
+    ota_topic = "phonebox/ota"
+    result = publish_mqtt(ota_topic, json.dumps(ota_payload))
 
-        if result:
-            return APIResponse.success(
-                data={
-                    "success": True,
-                    "message": f"OTA升级指令已发送到 {len(online_devices)} 个在线设备",
-                    "online_count": len(online_devices),
-                    "firmware_url": firmware_url,
-                    "version": version,
-                    "force": force,
-                }
-            )
-        else:
-            return APIResponse.server_error(message="MQTT发送失败，请检查连接")
+    if result:
+        return APIResponse.success(
+            data={
+                "success": True,
+                "message": f"OTA升级指令已发送到 {len(online_devices)} 个在线设备",
+                "online_count": len(online_devices),
+                "firmware_url": firmware_url,
+                "version": version,
+                "force": force,
+            }
+        )
+    return APIResponse.server_error(message="MQTT发送失败，请检查连接")
 
 
 device_model = ns_devices.model(
@@ -769,21 +765,19 @@ class DeviceRemoteControl(Resource):
         if not action:
             return APIResponse.bad_request(message="需要提供操作类型")
 
-        if action in ["restart", "unlock_a", "unlock_b"]:
-            if device.status != "online":
-                return APIResponse.bad_request(message="设备不在线，无法执行远程操作")
+        if action in ["restart", "unlock_a", "unlock_b"] and device.status != "online":
+            return APIResponse.bad_request(message="设备不在线，无法执行远程操作")
 
         if action == "restart":
             restart_topic = "phonebox/control/restart"
-            result = publish_mqtt(restart_topic, '{"command": "restart"}')  # noqa: F841
+            result = publish_mqtt(restart_topic, '{"command": "restart"}')
             if result:
                 return APIResponse.success(
                     message="重启指令已发送", data={"action": action, "device_id": device.device_id}
                 )
-            else:
-                return APIResponse.server_error(message="MQTT发送失败，请检查连接")
+            return APIResponse.server_error(message="MQTT发送失败，请检查连接")
 
-        elif action == "unlock_a":
+        if action == "unlock_a":
             # 智能开锁：增加重试机制，确保指令能被设备接收
             # ESP32设备只在IDLE状态时响应A箱开锁指令
             # 通过多次发送指令，覆盖设备状态转换的时间窗口
@@ -807,7 +801,7 @@ class DeviceRemoteControl(Resource):
                 data={"action": action, "device_id": device.device_id},
             )
 
-        elif action == "unlock_b":
+        if action == "unlock_b":
             # 智能开锁：增加重试机制，确保指令能被设备接收
             # ESP32设备只在IDLE或SHOWING_CARD状态时响应开锁指令
             # 通过多次发送指令，覆盖设备状态转换的时间窗口
@@ -833,8 +827,7 @@ class DeviceRemoteControl(Resource):
                 data={"action": action, "device_id": device.device_id},
             )
 
-        else:
-            return APIResponse.bad_request(message=f"不支持的操作类型: {action}")
+        return APIResponse.bad_request(message=f"不支持的操作类型: {action}")
 
 
 @ns_devices.route("/advanced-stats")
@@ -863,7 +856,7 @@ class HeartbeatTimeoutCheck(Resource):
         """
         from services.heartbeat_service import check_heartbeat_timeout
 
-        result = check_heartbeat_timeout()  # noqa: F841
+        result = check_heartbeat_timeout()
         return APIResponse.success(data=result)
 
 
@@ -951,14 +944,14 @@ class BatchDeviceControl(Resource):
             if device.is_online:
                 if action == "restart":
                     restart_topic = "phonebox/control/restart"
-                    result = publish_mqtt(restart_topic, '{"command": "restart"}')  # noqa: F841
+                    result = publish_mqtt(restart_topic, '{"command": "restart"}')
                 elif action == "unlock":
                     unlock_topic_a = "phonebox/unlock/A"
                     publish_mqtt(unlock_topic_a, "")
                     unlock_topic_b = "phonebox/unlock/B"
                     result = publish_mqtt(
                         unlock_topic_b, '{"result": "true", "reason": "manual", "current_score": 0}'
-                    )  # noqa: F841
+                    )
 
                 if result:
                     results.append(
@@ -1119,8 +1112,8 @@ class DeviceImport(Resource):
             result = import_devices(file)
             return APIResponse.success(data=result)
 
-        except Exception as e:
-            logger.error("devices_routes.py: %s", e)
+        except Exception:
+            logger.exception("设备操作失败")
             return APIResponse.server_error(message="设备操作失败，请稍后重试")
 
 
@@ -1186,75 +1179,74 @@ class DeviceExport(Resource):
                     json_str,
                     mimetype="application/json",
                     headers={
-                        "Content-Disposition": f'attachment; filename=devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'  # noqa: E501
+                        "Content-Disposition": f'attachment; filename=devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
                     },
                 )
 
-            else:
-                wb = openpyxl.Workbook()
-                sheet = wb.active
-                sheet.title = "设备数据"
+            wb = openpyxl.Workbook()
+            sheet = wb.active
+            sheet.title = "设备数据"
 
-                headers = [
-                    "设备标识",
-                    "设备名称",
-                    "状态",
-                    "是否在线",
-                    "最后心跳",
-                    "WiFi信号",
-                    "班级名称",
-                    "管理员姓名",
-                    "创建时间",
-                    "更新时间",
+            headers = [
+                "设备标识",
+                "设备名称",
+                "状态",
+                "是否在线",
+                "最后心跳",
+                "WiFi信号",
+                "班级名称",
+                "管理员姓名",
+                "创建时间",
+                "更新时间",
+            ]
+            sheet.append(headers)
+
+            header_font = openpyxl.styles.Font(bold=True, color="FFFFFF")
+            header_fill = openpyxl.styles.PatternFill(
+                start_color="4A5568", end_color="4A5568", fill_type="solid"
+            )
+            for col in range(1, len(headers) + 1):
+                cell = sheet.cell(row=1, column=col)
+                cell.font = header_font
+                cell.fill = header_fill
+
+            for device in devices:
+                row_data = [
+                    device.device_id,
+                    device.name,
+                    device.status,
+                    "是" if is_device_online(device) else "否",
+                    (
+                        device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
+                        if device.last_heartbeat
+                        else ""
+                    ),
+                    device.wifi_signal,
+                    device.class_info.name if device.class_info else "",
+                    device.admin.name if device.admin else "",
+                    (
+                        device.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                        if device.created_at
+                        else ""
+                    ),
+                    (
+                        device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                        if device.updated_at
+                        else ""
+                    ),
                 ]
-                sheet.append(headers)
+                sheet.append(row_data)
 
-                header_font = openpyxl.styles.Font(bold=True, color="FFFFFF")
-                header_fill = openpyxl.styles.PatternFill(
-                    start_color="4A5568", end_color="4A5568", fill_type="solid"
-                )
-                for col in range(1, len(headers) + 1):
-                    cell = sheet.cell(row=1, column=col)
-                    cell.font = header_font
-                    cell.fill = header_fill
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
 
-                for device in devices:
-                    row_data = [
-                        device.device_id,
-                        device.name,
-                        device.status,
-                        "是" if is_device_online(device) else "否",
-                        (
-                            device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
-                            if device.last_heartbeat
-                            else ""
-                        ),
-                        device.wifi_signal,
-                        device.class_info.name if device.class_info else "",
-                        device.admin.name if device.admin else "",
-                        (
-                            device.created_at.strftime("%Y-%m-%d %H:%M:%S")
-                            if device.created_at
-                            else ""
-                        ),
-                        (
-                            device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
-                            if device.updated_at
-                            else ""
-                        ),
-                    ]
-                    sheet.append(row_data)
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                download_name=f'devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx',
+            )
 
-                output = io.BytesIO()
-                wb.save(output)
-                output.seek(0)
-
-                return send_file(
-                    output,
-                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    download_name=f'devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx',
-                )
-
-        except Exception as e:
-            logger.error("devices_routes.py: %s", e)
+        except Exception:
+            logger.exception("设备操作失败")
             return APIResponse.server_error(message="设备操作失败，请稍后重试")

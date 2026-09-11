@@ -70,4 +70,3 @@ def log_sub_account_action(
         db.session.commit()
     except Exception:
         db.session.rollback()
-        pass

@@ -10,7 +10,6 @@ from sqlalchemy import func
 
 from models import db, Device, DeviceHeartbeat, Alert
 from utils.permission import get_admin_class_ids
-from utils.pagination import get_pagination
 from services.heartbeat_service import is_device_online
 
 

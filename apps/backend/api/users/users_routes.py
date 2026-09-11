@@ -283,7 +283,7 @@ class UserList(Resource):
             )
         except Exception as e:
             # 索引更新失败：新数据搜不到（索引与 DB 不一致），须留痕
-            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}")
+            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}", exc_info=True)
         log_operation(
             operation_type="create",
             target_type="user",
@@ -380,7 +380,7 @@ class UserResource(Resource):
             )
         except Exception as e:
             # 索引更新失败：改动后搜不到（索引与 DB 不一致），须留痕
-            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}")
+            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}", exc_info=True)
         log_operation(
             operation_type="update",
             target_type="user",
@@ -432,7 +432,7 @@ class UserResource(Resource):
             search_engine.remove_from_index(id)
         except Exception as e:
             # 索引移除失败：已删除用户仍可被搜到（索引残留），须留痕
-            logger.warning(f"FTS索引移除失败(user_id={id}): {e}")
+            logger.warning(f"FTS索引移除失败(user_id={id}): {e}", exc_info=True)
         log_operation(
             operation_type="delete",
             target_type="user",
@@ -748,7 +748,7 @@ class UserBatchScore(Resource):
                     f"[ScoreChange] 批量积分变动通知被拦截（上课时间）: {updated_count}个用户, {score_change_str}分"
                 )
         except Exception as e:
-            logger.warning(f"[ScoreChange] 批量发送积分变动通知失败: {e}")
+            logger.warning(f"[ScoreChange] 批量发送积分变动通知失败: {e}", exc_info=True)
         invalidate_cache("api:/api/users/*")
         return APIResponse.success(message=f"批量积分调整完成: 成功{updated_count}条")
 
@@ -953,11 +953,10 @@ class UserImportFile(Resource):
                             {"field": "gender", "message": '性别格式无效，只能是"男"或"女"'}
                         )
                     phone = row_dict.get("phone", "").strip()
-                    if phone:
-                        if not re.match(r"^1[3-9]\d{9}$", phone):
-                            row_errors.append(
-                                {"field": "phone", "message": "联系电话格式无效，请输入11位手机号"}
-                            )
+                    if phone and not re.match(r"^1[3-9]\d{9}$", phone):
+                        row_errors.append(
+                            {"field": "phone", "message": "联系电话格式无效，请输入11位手机号"}
+                        )
                     father_phone = row_dict.get("father_phone", "").strip()
                     if father_phone and not re.match(r"^1[3-9]\d{9}$", father_phone):
                         row_errors.append(
@@ -1105,7 +1104,7 @@ class UserImportFile(Resource):
                         }
                     )
         except Exception as e:
-            logger.error("%s: %s", "导入失败", e)
+            logger.error("%s: %s", "导入失败", e, exc_info=True)
             return APIResponse.error(message="导入失败", status_code=500)
         user_service.apply_csv_import(pending_users, pending_updates)
         failed_count = len(errors)

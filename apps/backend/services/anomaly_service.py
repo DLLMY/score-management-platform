@@ -192,8 +192,8 @@ class AnomalyService:
             return {"has_anomaly": False, "trend": "stable"}
         window = ANOMALY_TYPES["trend_anomaly"]["window"]
         recent_changes = daily_list[-window:]
-        all_positive = all((c > 0 for c in recent_changes))
-        all_negative = all((c < 0 for c in recent_changes))
+        all_positive = all(c > 0 for c in recent_changes)
+        all_negative = all(c < 0 for c in recent_changes)
         if all_positive:
             total_change = sum(recent_changes)
             return {
@@ -203,7 +203,7 @@ class AnomalyService:
                 "total_change": round(total_change, 2),
                 "description": f"连续{window}天积分持续上升，总计上升{total_change}分",
             }
-        elif all_negative:
+        if all_negative:
             total_change = sum(recent_changes)
             return {
                 "has_anomaly": True,
@@ -230,7 +230,7 @@ class AnomalyService:
         changes = AnomalyService.get_student_score_changes(user_id, days)
         if not changes:
             return {"has_anomaly": False, "deviation": 0}
-        user_total = float(sum((c["score_change"] for c in changes)))
+        user_total = float(sum(c["score_change"] for c in changes))
         start_date = datetime.now() - timedelta(days=days)
 
         # AN2：用单条聚合查询计算同班同学（排除本人）的积分总量，
@@ -323,7 +323,7 @@ class AnomalyService:
                     "details": anomaly["description"],
                     "severity": "high" if anomaly.get("z_score", 0) > 3 else "medium",
                 }
-            )  # noqa: E501
+            )
         trend_anomaly = AnomalyService.detect_trend_anomaly(user_id, days)
         result["summary"]["trend_anomaly"] = trend_anomaly["has_anomaly"]
         if trend_anomaly["has_anomaly"]:
@@ -334,7 +334,7 @@ class AnomalyService:
                     "details": trend_anomaly["description"],
                     "severity": "high" if abs(trend_anomaly["total_change"]) > 10 else "medium",
                 }
-            )  # noqa: E501
+            )
         group_anomaly = AnomalyService.detect_group_anomaly(user_id, days)
         result["summary"]["group_anomaly"] = group_anomaly["has_anomaly"]
         if group_anomaly["has_anomaly"]:
@@ -345,7 +345,7 @@ class AnomalyService:
                     "details": group_anomaly["description"],
                     "severity": "high" if abs(group_anomaly["deviation"]) > 10 else "medium",
                 }
-            )  # noqa: E501
+            )
         frequency_anomaly = AnomalyService.detect_frequency_anomaly(user_id, days=1)
         result["summary"]["frequency_anomaly"] = frequency_anomaly["has_anomaly"]
         if frequency_anomaly["has_anomaly"]:

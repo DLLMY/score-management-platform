@@ -54,7 +54,7 @@ class RuleRecommendationService:
             }
 
         score_changes = [r.score_change for r in records]
-        unique_users = len(set(r.student_id for r in records))
+        unique_users = len({r.student_id for r in records})
 
         avg_change = np.mean(score_changes)
         total_change = sum(score_changes)
@@ -342,7 +342,7 @@ class RuleRecommendationService:
         # 找出频繁组合
         combinations = defaultdict(int)
 
-        for user_id, rule_counts in user_rule_combinations.items():
+        for _user_id, rule_counts in user_rule_combinations.items():
             rules = sorted(rule_counts.keys())
             # 找出使用次数超过3次的规则对
             for i in range(len(rules)):

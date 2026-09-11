@@ -75,7 +75,7 @@ class AlertList(Resource):
             is_read=is_read,
             alert_type=args["alert_type"],
         )
-        result = []  # noqa: F841
+        result = []
         for alert in alerts:
             result.append(alert.to_dict(ALERT_FIELDS))
         return APIResponse.success(data={"alerts": result})
@@ -127,7 +127,7 @@ class AlertResource(Resource):
         删除告警
         删除指定的告警记录。
         """
-        result = alert_service.delete_alert(alert_id)  # noqa: F841
+        result = alert_service.delete_alert(alert_id)
         if not result:
             return APIResponse.error(message="告警不存在", status_code=404)
         invalidate_cache("api:/api/alerts/*")
@@ -145,7 +145,7 @@ class AlertRead(Resource):
         标记告警为已读
         将指定告警标记为已读状态。
         """
-        result = alert_service.mark_as_read(alert_id)  # noqa: F841
+        result = alert_service.mark_as_read(alert_id)
         if not result:
             return APIResponse.error(message="告警不存在", status_code=404)
         invalidate_cache("api:/api/alerts/*")
@@ -228,5 +228,4 @@ class AlertTest(Resource):
         if alert:
             invalidate_cache("api:/api/alerts/*")
             return APIResponse.success(data={"alert_id": alert.id}, message="测试告警创建成功")
-        else:
-            return APIResponse.error(message="测试告警创建失败", status_code=500)
+        return APIResponse.error(message="测试告警创建失败", status_code=500)

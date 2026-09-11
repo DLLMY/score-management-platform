@@ -48,7 +48,7 @@ def log_permission_action(action, target_id=None, description=None):
             ip_address=request.remote_addr if request else None,
         )
     except Exception as e:
-        logger.warning("记录子账号操作日志失败 action=%s: %s", action, e)
+        logger.warning("记录子账号操作日志失败 action=%s: %s", action, e, exc_info=True)
 
 
 sub_account_model = ns_sub_accounts.model(

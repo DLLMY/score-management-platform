@@ -51,7 +51,7 @@ def delete_rule(rule):
         ScoreRecord.query.filter_by(rule_id=rule.id).update({ScoreRecord.rule_id: None})
     except Exception as e:
         # 解除引用失败（如该规则本无流水）不应阻断删除，仅留痕（T9 日志化）。
-        logger.warning(f"解除规则历史流水引用失败（跳过）rule_id={rule.id}: {e}")
+        logger.warning(f"解除规则历史流水引用失败（跳过）rule_id={rule.id}: {e}", exc_info=True)
     db.session.delete(rule)
     db.session.commit()
     return None
@@ -67,7 +67,7 @@ def import_rules(rules_data):
     error_count = 0
     errors = []
     messages = []
-    existing_names = set(r.name for r in ScoreRule.query.all())
+    existing_names = {r.name for r in ScoreRule.query.all()}
     for idx, rule_data in enumerate(rules_data):
         try:
             row_errors = []

@@ -5,7 +5,7 @@
 
 import io
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
 
 try:
     import xlsxwriter
@@ -30,7 +30,7 @@ class ExportService:
 
     @staticmethod
     def export_to_excel(
-        data: List[Dict[str, Any]], headers: List[str], filename: str = None
+        data: list[dict[str, Any]], headers: list[str], filename: str = None
     ) -> io.BytesIO:
         """
         导出数据到Excel格式
@@ -81,7 +81,7 @@ class ExportService:
         return output
 
     @staticmethod
-    def export_users_to_excel(users: List[Dict[str, Any]]) -> io.BytesIO:
+    def export_users_to_excel(users: list[dict[str, Any]]) -> io.BytesIO:
         """
         导出用户数据到Excel
 
@@ -109,7 +109,7 @@ class ExportService:
         return ExportService.export_to_excel(data, headers)
 
     @staticmethod
-    def export_rules_to_excel(rules: List[Dict[str, Any]]) -> io.BytesIO:
+    def export_rules_to_excel(rules: list[dict[str, Any]]) -> io.BytesIO:
         """
         导出积分规则数据到Excel
 
@@ -148,7 +148,7 @@ class ExportService:
         return ExportService.export_to_excel(data, headers)
 
     @staticmethod
-    def export_devices_to_excel(devices: List[Dict[str, Any]]) -> io.BytesIO:
+    def export_devices_to_excel(devices: list[dict[str, Any]]) -> io.BytesIO:
         """
         导出设备数据到Excel
 
@@ -187,7 +187,7 @@ class ExportService:
         return ExportService.export_to_excel(data, headers)
 
     @staticmethod
-    def export_records_to_excel(records: List[Dict[str, Any]]) -> io.BytesIO:
+    def export_records_to_excel(records: list[dict[str, Any]]) -> io.BytesIO:
         """
         导出积分记录数据到Excel
 
@@ -232,8 +232,8 @@ class ExportService:
     @staticmethod
     def export_to_pdf(
         title: str,
-        data: List[Dict[str, Any]],
-        headers: List[str],
+        data: list[dict[str, Any]],
+        headers: list[str],
         filename: str = None,
         page_size: str = "A4",
     ) -> io.BytesIO:
@@ -301,7 +301,7 @@ class ExportService:
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("GRID", (0, 0), (-1, -1), 1, colors.grey),
             ]
-        )  # noqa: E501
+        )
         table.setStyle(table_style)
         col_widths = [1.5 * inch] + [2 * inch] * (len(headers) - 1)
         table._argW = col_widths
@@ -315,7 +315,7 @@ class ExportService:
         return output
 
     @staticmethod
-    def export_users_to_pdf(users: List[Dict[str, Any]], title: str = "学生列表报告") -> io.BytesIO:
+    def export_users_to_pdf(users: list[dict[str, Any]], title: str = "学生列表报告") -> io.BytesIO:
         """
         导出用户数据到PDF
 
@@ -343,7 +343,7 @@ class ExportService:
         return ExportService.export_to_pdf(title, data, headers)
 
     @staticmethod
-    def export_rules_to_pdf(rules: List[Dict[str, Any]], title: str = "积分规则报告") -> io.BytesIO:
+    def export_rules_to_pdf(rules: list[dict[str, Any]], title: str = "积分规则报告") -> io.BytesIO:
         """
         导出积分规则数据到PDF
 
@@ -373,7 +373,7 @@ class ExportService:
 
     @staticmethod
     def export_devices_to_pdf(
-        devices: List[Dict[str, Any]], title: str = "设备列表报告"
+        devices: list[dict[str, Any]], title: str = "设备列表报告"
     ) -> io.BytesIO:
         """
         导出设备数据到PDF
@@ -404,7 +404,7 @@ class ExportService:
 
     @staticmethod
     def export_records_to_pdf(
-        records: List[Dict[str, Any]], title: str = "积分记录报告"
+        records: list[dict[str, Any]], title: str = "积分记录报告"
     ) -> io.BytesIO:
         """
         导出积分记录数据到PDF
@@ -503,7 +503,7 @@ class ExportService:
                 "设备在线率",
                 f"{online_devices/devices_count*100:.1f}%" if devices_count > 0 else "0%",
             ],
-        ]  # noqa: E501
+        ]
         summary_table = Table(summary_data, colWidths=[3 * inch, 2 * inch])
         summary_style = TableStyle(
             [
@@ -513,7 +513,7 @@ class ExportService:
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("GRID", (0, 0), (-1, -1), 1, colors.grey),
             ]
-        )  # noqa: E501
+        )
         summary_table.setStyle(summary_style)
         elements.append(summary_table)
         note_style = ParagraphStyle(
@@ -525,7 +525,7 @@ class ExportService:
         return output
 
     @staticmethod
-    def export_to_csv(data: List[Dict[str, Any]], headers: List[str], filepath: str = None):
+    def export_to_csv(data: list[dict[str, Any]], headers: list[str], filepath: str = None):
         """导出数据为 CSV（兼容旧测试接口）。有 filepath 则写文件并返回路径，否则返回 CSV 字符串。
         只输出 headers 指定的列，容忍传入 dict 含多余字段。"""
         import csv as _csv
@@ -548,7 +548,7 @@ class ExportService:
         return buf.getvalue()
 
     @staticmethod
-    def export_users_to_csv(users: List[Dict[str, Any]]) -> str:
+    def export_users_to_csv(users: list[dict[str, Any]]) -> str:
         """导出用户为 CSV 字符串。测试数据使用英文键，映射到中文表头。"""
         headers = ["ID", "姓名", "卡号", "班级", "当前积分", "状态", "创建时间"]
         key_map = {
@@ -567,7 +567,7 @@ class ExportService:
         return ExportService.export_to_csv(mapped, headers)
 
     @staticmethod
-    def export_score_records_to_csv(records: List[Dict[str, Any]]) -> str:
+    def export_score_records_to_csv(records: list[dict[str, Any]]) -> str:
         """导出积分记录为 CSV 字符串。测试数据使用英文键，映射到中文表头。"""
         headers = ["用户ID", "用户名", "规则ID", "规则名", "积分变化", "描述", "时间"]
         key_map = {
@@ -586,7 +586,7 @@ class ExportService:
         return ExportService.export_to_csv(mapped, headers)
 
     @staticmethod
-    def export_exam_scores_to_csv(scores: List[Dict[str, Any]]) -> str:
+    def export_exam_scores_to_csv(scores: list[dict[str, Any]]) -> str:
         """导出考试成绩为 CSV 字符串。测试数据使用英文键，映射到中文表头。"""
         headers = ["学生ID", "学生姓名", "考试ID", "考试名", "科目", "分数", "时间"]
         key_map = {
@@ -605,7 +605,7 @@ class ExportService:
         return ExportService.export_to_csv(mapped, headers)
 
     @staticmethod
-    def export_summary_to_excel(summary_data: List[Dict[str, Any]]):
+    def export_summary_to_excel(summary_data: list[dict[str, Any]]):
         """兼容旧测试接口：以汇总数据生成报告（返回 BytesIO）。"""
         mapping = {d.get("统计项"): d.get("数值") for d in summary_data}
         return ExportService.export_summary_report(

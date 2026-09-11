@@ -35,7 +35,7 @@ def _resolve_class_from_device(device_id):
             return dev.class_info_id
     except Exception as e:
         # 反查失败会导致上课时间拦截按"无班级"放行，须留痕
-        logger.warning(f"设备班级反查失败(device_id={device_id}): {e}")
+        logger.warning(f"设备班级反查失败(device_id={device_id}): {e}", exc_info=True)
     return None
 
 
@@ -198,7 +198,7 @@ class ScheduledTrigger(Resource):
             for topic in topics:
                 try:
                     ok = publish_mqtt(topic, json.dumps(message))
-                except Exception:  # noqa: BLE001
+                except Exception:
                     ok = False
                 publish_results.append((topic, bool(ok)))
             if not all(ok for _, ok in publish_results):
@@ -211,7 +211,7 @@ class ScheduledTrigger(Resource):
             return APIResponse.success(message="通知已发送")
         except Exception as e:
             rollback_scheduled_session()  # 失败回滚，避免脏 session 污染后续请求
-            logger.error("%s: %s", "发送失败", e)
+            logger.error("%s: %s", "发送失败", e, exc_info=True)
             return APIResponse.error(message="发送失败")
 
 
@@ -272,7 +272,7 @@ def process_scheduled_notifications():
             for topic in topics:
                 try:
                     ok = publish_mqtt(topic, json.dumps(message))
-                except Exception:  # noqa: BLE001
+                except Exception:
                     ok = False
                 publish_results.append((topic, bool(ok)))
             if not all(ok for _, ok in publish_results):

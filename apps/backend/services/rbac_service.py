@@ -38,7 +38,6 @@ def log_rbac_permission_action(
         db.session.commit()
     except Exception:
         db.session.rollback()  # 失败回滚，防脏 session 污染后续请求
-        pass
 
 
 def create_permission(data):

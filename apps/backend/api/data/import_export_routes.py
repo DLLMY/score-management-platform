@@ -111,15 +111,14 @@ class ExportUsers(Resource):
                 as_attachment=True,
                 download_name=f"users_{timestamp}.csv",
             )
-        else:
-            sheets = [{"name": "用户数据", "headers": headers, "data": data}]
-            content = ExcelUtils.export_to_excel(sheets)
-            return send_file(
-                io.BytesIO(content),
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=f"users_{timestamp}.xlsx",
-            )
+        sheets = [{"name": "用户数据", "headers": headers, "data": data}]
+        content = ExcelUtils.export_to_excel(sheets)
+        return send_file(
+            io.BytesIO(content),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"users_{timestamp}.xlsx",
+        )
 
 
 @ns_import_export.route("/export/records")
@@ -190,15 +189,14 @@ class ExportRecords(Resource):
                 as_attachment=True,
                 download_name=f"records_{timestamp}.csv",
             )
-        else:
-            sheets = [{"name": "积分记录", "headers": headers, "data": data}]
-            content = ExcelUtils.export_to_excel(sheets)
-            return send_file(
-                io.BytesIO(content),
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=f"records_{timestamp}.xlsx",
-            )
+        sheets = [{"name": "积分记录", "headers": headers, "data": data}]
+        content = ExcelUtils.export_to_excel(sheets)
+        return send_file(
+            io.BytesIO(content),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"records_{timestamp}.xlsx",
+        )
 
 
 @ns_import_export.route("/export/rules")
@@ -251,15 +249,14 @@ class ExportRules(Resource):
                 as_attachment=True,
                 download_name=f"rules_{timestamp}.csv",
             )
-        else:
-            sheets = [{"name": "积分规则", "headers": headers, "data": data}]
-            content = ExcelUtils.export_to_excel(sheets)
-            return send_file(
-                io.BytesIO(content),
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=f"rules_{timestamp}.xlsx",
-            )
+        sheets = [{"name": "积分规则", "headers": headers, "data": data}]
+        content = ExcelUtils.export_to_excel(sheets)
+        return send_file(
+            io.BytesIO(content),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"rules_{timestamp}.xlsx",
+        )
 
 
 @ns_import_export.route("/export/categories")
@@ -300,15 +297,14 @@ class ExportCategories(Resource):
                 as_attachment=True,
                 download_name=f"categories_{timestamp}.csv",
             )
-        else:
-            sheets = [{"name": "积分分类", "headers": headers, "data": data}]
-            content = ExcelUtils.export_to_excel(sheets)
-            return send_file(
-                io.BytesIO(content),
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=f"categories_{timestamp}.xlsx",
-            )
+        sheets = [{"name": "积分分类", "headers": headers, "data": data}]
+        content = ExcelUtils.export_to_excel(sheets)
+        return send_file(
+            io.BytesIO(content),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"categories_{timestamp}.xlsx",
+        )
 
 
 # ==================== 模板下载API ====================
@@ -410,9 +406,9 @@ class ImportUsers(Resource):
             file_type = ExcelUtils.detect_file_type(file_bytes, file.filename)
 
             if file_type == "csv":
-                result = ExcelUtils.read_csv(file_bytes)  # noqa: F841
+                result = ExcelUtils.read_csv(file_bytes)
             elif file_type in ["xlsx", "xls"]:
-                result = ExcelUtils.read_excel(file_bytes)  # noqa: F841
+                result = ExcelUtils.read_excel(file_bytes)
             else:
                 return APIResponse.bad_request(
                     message="不支持的文件格式",
@@ -446,7 +442,7 @@ class ImportUsers(Resource):
                     },
                 )
             except Exception as e:
-                logger.error("导入失败: %s", e)
+                logger.exception("导入失败")
                 return APIResponse.server_error(
                     message="导入失败",
                     data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
@@ -464,7 +460,7 @@ class ImportUsers(Resource):
             )
 
         except Exception as e:
-            logger.error("导入失败: %s", e)
+            logger.exception("导入失败")
             return APIResponse.server_error(
                 message="导入失败",
                 data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
@@ -496,9 +492,9 @@ class ImportRules(Resource):
             file_type = ExcelUtils.detect_file_type(file_bytes, file.filename)
 
             if file_type == "csv":
-                result = ExcelUtils.read_csv(file_bytes)  # noqa: F841
+                result = ExcelUtils.read_csv(file_bytes)
             elif file_type in ["xlsx", "xls"]:
-                result = ExcelUtils.read_excel(file_bytes)  # noqa: F841
+                result = ExcelUtils.read_excel(file_bytes)
             else:
                 return APIResponse.bad_request(
                     message="不支持的文件格式",
@@ -532,7 +528,7 @@ class ImportRules(Resource):
             )
 
         except Exception as e:
-            logger.error("导入失败: %s", e)
+            logger.exception("导入失败")
             return APIResponse.server_error(
                 message="导入失败",
                 data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
@@ -564,9 +560,9 @@ class ImportCategories(Resource):
             file_type = ExcelUtils.detect_file_type(file_bytes, file.filename)
 
             if file_type == "csv":
-                result = ExcelUtils.read_csv(file_bytes)  # noqa: F841
+                result = ExcelUtils.read_csv(file_bytes)
             elif file_type in ["xlsx", "xls"]:
-                result = ExcelUtils.read_excel(file_bytes)  # noqa: F841
+                result = ExcelUtils.read_excel(file_bytes)
             else:
                 return APIResponse.bad_request(
                     message="不支持的文件格式",
@@ -600,7 +596,7 @@ class ImportCategories(Resource):
             )
 
         except Exception as e:
-            logger.error("导入失败: %s", e)
+            logger.exception("导入失败")
             return APIResponse.server_error(
                 message="导入失败",
                 data={"imported_count": 0, "failed_count": 0, "errors": [str(e)]},
@@ -620,7 +616,7 @@ class CreateBackup(Resource):
     def post(self):
         """创建手动备份"""
         backup_type = request.args.get("type", "full").lower()
-        result = backup_manager.create_backup(backup_type)  # noqa: F841
+        result = backup_manager.create_backup(backup_type)
         if result.get("success"):
             return APIResponse.success(data=result, message=result.get("message"))
         return APIResponse.error(message=result.get("message"), status_code=400)
@@ -644,7 +640,7 @@ class RestoreBackup(Resource):
     @requires_permission("system.settings")
     def post(self, filename):
         """恢复备份"""
-        result = backup_manager.restore_backup(filename)  # noqa: F841
+        result = backup_manager.restore_backup(filename)
         if result.get("success"):
             return APIResponse.success(data=result, message=result.get("message"))
         return APIResponse.error(message=result.get("message"), status_code=400)
@@ -665,10 +661,9 @@ class DeleteBackup(Resource):
             if backup_path.exists():
                 backup_path.unlink()
                 return APIResponse.success(message="备份文件已删除")
-            else:
-                return APIResponse.not_found(message="备份文件不存在")
-        except Exception as e:
-            logger.error("%s: %s", "删除失败", e)
+            return APIResponse.not_found(message="备份文件不存在")
+        except Exception:
+            logger.exception("删除失败")
             return APIResponse.server_error(message="删除失败")
 
 
@@ -735,8 +730,7 @@ class SetBackupScheduleTime(Resource):
         success = backup_scheduler.set_schedule_time(time_str)
         if success:
             return APIResponse.success(message=f"定时备份时间已设置为 {time_str}")
-        else:
-            return APIResponse.bad_request(message="无效的时间格式，请使用HH:MM格式")
+        return APIResponse.bad_request(message="无效的时间格式，请使用HH:MM格式")
 
 
 @ns_import_export.route("/backup/clean_old")
@@ -746,7 +740,7 @@ class CleanOldBackups(Resource):
     @requires_permission("system.settings")
     def post(self):
         """清理过期备份"""
-        result = backup_manager.clean_old_backups()  # noqa: F841
+        result = backup_manager.clean_old_backups()
         if result.get("success"):
             return APIResponse.success(data=result, message=result.get("message"))
         return APIResponse.error(message=result.get("message"), status_code=400)

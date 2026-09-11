@@ -145,7 +145,7 @@ class TestWechatNotification(Resource):
 
         result = NotificationService.send_wechat_notification(
             user_id=0, template_id=template_id, data=data
-        )  # noqa: F841
+        )
 
         if result.get("success"):
             return APIResponse.success(data=result, message=result.get("message"))
@@ -170,7 +170,7 @@ class TestSmsNotification(Resource):
         if not phone:
             return APIResponse.error(message="请提供手机号", status_code=400)
 
-        result = NotificationService.send_sms_notification(  # noqa: F841
+        result = NotificationService.send_sms_notification(
             phone=phone,
             message=f'【测试消息】这是一条测试短信，发送时间：{datetime.now().strftime("%Y-%m-%d %H:%M")}',
         )

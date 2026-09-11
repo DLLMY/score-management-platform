@@ -61,7 +61,7 @@ def build_class_summary(class_name: str, days: int = 30) -> dict:
                 "low": int(levels.get("low", 0)),
             },
         }
-    except Exception:  # noqa: BLE001 - 摘要维度隔离
+    except Exception:
         summary["participation"] = None
 
     # —— 风险：高/中风险名单 ——
@@ -85,7 +85,7 @@ def build_class_summary(class_name: str, days: int = 30) -> dict:
             "medium": int(s.get("medium_risk", 0)),
             "risk_students": risk_students[:10],
         }
-    except Exception:  # noqa: BLE001
+    except Exception:
         summary["risk"] = None
 
     # —— 归因：班级 top 因子（按贡献聚合所有学生） ——
@@ -114,7 +114,8 @@ def build_class_summary(class_name: str, days: int = 30) -> dict:
             "with_data": int(ab.get("with_data", 0)),
             "top_factors": top[:5],
         }
-    except Exception:  # noqa: BLE001
+    except Exception:
+        logger.warning("归因摘要计算失败，置 None", exc_info=True)
         summary["attribution"] = None
 
     return summary
@@ -130,22 +131,21 @@ def summary_to_rows(summary: dict) -> list:
     p = summary.get("participation")
     if p:
         avg = p.get("avg_score")
-        rows.append(["参与度均值", "%.1f" % avg if avg is not None else "无数据"])
+        rows.append(["参与度均值", f"{avg:.1f}" if avg is not None else "无数据"])
         dist = p.get("level_distribution", {})
         rows.append(
             [
                 "参与度等级分布",
-                "高:%d 中:%d 低:%d"
-                % (dist.get("high", 0), dist.get("medium", 0), dist.get("low", 0)),
+                f'高:{dist.get("high", 0)} 中:{dist.get("medium", 0)} 低:{dist.get("low", 0)}',
             ]
         )
-        rows.append(["参与度有效人数", "%d/%d" % (p.get("valid_students", 0), p.get("total", 0))])
+        rows.append(["参与度有效人数", f'{p.get("valid_students", 0)}/{p.get("total", 0)}'])
     else:
         rows.append(["参与度", "无数据或计算失败"])
 
     r = summary.get("risk")
     if r:
-        rows.append(["风险预警", "高:%d 中:%d" % (r.get("high", 0), r.get("medium", 0))])
+        rows.append(["风险预警", f'高:{r.get("high", 0)} 中:{r.get("medium", 0)}'])
         if r.get("risk_students"):
             names = "、".join(s["name"] for s in r["risk_students"][:8])
             rows.append(["风险名单", names])
@@ -154,7 +154,7 @@ def summary_to_rows(summary: dict) -> list:
 
     a = summary.get("attribution")
     if a and a.get("top_factors"):
-        parts = ["%s(均%.2f)" % (f["name"], f["avg_contribution"]) for f in a["top_factors"]]
+        parts = ["{}(均{:.2f})".format(f["name"], f["avg_contribution"]) for f in a["top_factors"]]
         rows.append(["成绩波动主因", "；".join(parts)])
     elif a:
         rows.append(["成绩波动归因", "无足够数据"])
