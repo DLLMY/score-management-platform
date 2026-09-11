@@ -1,4 +1,5 @@
 import React from 'react';
+import type { FormErrors } from '../../hooks';
 import {
   Plus,
   Edit2,
@@ -75,7 +76,7 @@ export interface SubjectManagementViewProps {
   loadError: boolean;
   showModal: boolean;
   formData: FormData;
-  errors: Record<string, string>;
+  errors: FormErrors<FormData>;
   handleChange: (field: string, value: unknown) => void;
   handleChangeEvent: (
     field: string

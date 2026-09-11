@@ -708,11 +708,12 @@ export function useNLPManagementLogic(): NLPDeps & {
         api.nlp.getOptimizationConfig(),
       ]);
 
-      if (intentRes.code === 0) setIntentAnalysis(intentRes.data);
-      if (perfRes.code === 0) setPerformanceAnalysis(perfRes.data);
+      // api 层这 4 个端点声明 data: unknown（后端形状由 NLP 服务决定），此处按本地契约断言。
+      if (intentRes.code === 0) setIntentAnalysis((intentRes.data as NlpAnalysisData) ?? null);
+      if (perfRes.code === 0) setPerformanceAnalysis((perfRes.data as NlpAnalysisData) ?? null);
       if (suggestionsRes.code === 0)
-        setOptimizationSuggestions((suggestionsRes.data as unknown[]) ?? []);
-      if (configRes.code === 0) setOptimizerConfig(configRes.data);
+        setOptimizationSuggestions((suggestionsRes.data as NlpSuggestion[]) ?? []);
+      if (configRes.code === 0) setOptimizerConfig((configRes.data as NlpOptimizerConfig) ?? null);
       setLoadError(false);
     } catch (error) {
       logger.error('获取分析数据失败:', error);

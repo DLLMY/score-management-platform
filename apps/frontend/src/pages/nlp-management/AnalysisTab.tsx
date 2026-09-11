@@ -240,7 +240,7 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                 <div className='p-4 bg-purple-50 rounded-lg'>
                   <p className='text-sm text-purple-600 mb-1'>平均准确率</p>
                   <p className='text-xl font-bold text-purple-700'>
-                    {(benchmarkResults.avg_accuracy * 100).toFixed(1)}%
+                    {((benchmarkResults.avg_accuracy as number) * 100).toFixed(1)}%
                   </p>
                 </div>
                 <div className='p-4 bg-yellow-50 rounded-lg'>
@@ -282,7 +282,7 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                       <div>
                         <p className='font-medium text-gray-800'>{suggestion.issue}</p>
                         <ul className='mt-2 space-y-1 text-sm text-gray-600'>
-                          {suggestion.suggestions.map((s: string, i: number) => (
+                          {(suggestion.suggestions ?? []).map((s: string, i: number) => (
                             <li key={i} className='flex items-start gap-2'>
                               <span className='text-gray-400'>•</span>
                               {s}
@@ -298,7 +298,7 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
           )}
 
           {/* 慢请求记录 */}
-          {performanceAnalysis?.slow_requests?.length > 0 && (
+          {performanceAnalysis?.slow_requests && performanceAnalysis.slow_requests.length > 0 && (
             <div className='bg-white rounded-xl shadow-sm p-6'>
               <h3 className='text-sm font-medium text-gray-600 mb-4'>最近慢请求</h3>
               <div className='space-y-2'>

@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { ColumnType } from '../../components';
+import type { NLPCorrection } from '../../services/api';
 
 // —— 业务接口定义（原 NLPManagement.tsx 内联，拆分后统一收敛到此）——
 export interface ParseResult {
@@ -173,7 +174,7 @@ export interface NlpAnalysisData {
   };
   // 后端真实形状：每意图一个统计对象 {total, correct, accuracy}，非 number
   intent_breakdown?: Record<string, IntentBreakdownItem>;
-  components?: unknown[];
+  components?: Record<string, PerformanceRowStats>;
   slow_requests?: Array<{ timestamp: string; processing_time: number }>;
 }
 
@@ -197,14 +198,12 @@ export interface NlpBenchmarkResult {
   throughput?: number;
 }
 
-export interface NlpCorrection {
-  id?: number;
-  original_text?: string;
-  field_type?: string;
-  original_value?: string;
-  corrected_value?: string;
-  status?: string;
-}
+/**
+ * 纠正记录：与 API 层 `NLPCorrection` 为同一实体。
+ * 此前为本地重复定义，且字段可选性与 api.ts 不一致（`string | null` vs `?string`），
+ * 导致 useListFetch<NlpCorrection> 的 fetcher 返回类型不兼容；统一为别名消除重复。
+ */
+export type NlpCorrection = NLPCorrection;
 
 export type TabType = 'parse' | 'rules' | 'training' | 'statistics' | 'analysis';
 

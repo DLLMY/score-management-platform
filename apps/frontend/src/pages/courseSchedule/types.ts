@@ -79,7 +79,10 @@ export interface CourseScheduleViewProps {
   conflictResult: ConflictResult | null;
   setConflictResult: Dispatch<SetStateAction<ConflictResult | null>>;
   formData: FormData;
-  handleFormChange: (field: keyof FormData, value: string | number | boolean | null) => void;
+  handleFormChange: (
+    field: keyof FormData,
+    value: string | number | boolean | null | undefined
+  ) => void;
   handleSubjectChange: (e: { target: { value: string } }) => void;
   subjects: Subject[];
   weekDays: WeekDay[];

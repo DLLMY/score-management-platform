@@ -47,7 +47,8 @@ export interface EntryItem {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   gradient: string;
-  permission?: string;
+  /** 入口所需权限（必填：ENTRIES / GLOBAL_ENTRIES 各项均显式声明） */
+  permission: string;
 }
 
 export const ENTRIES: EntryItem[] = [
@@ -231,8 +232,8 @@ export interface WorkbenchOverviewViewProps {
     decoGradient: string,
     link?: { path: string; permission: string }
   ) => React.ReactNode;
-  /** 待交作业数 */
-  pendingHomework: number;
-  /** 未处理心理预警数 */
-  unresolvedAlerts: number;
+  /** 待交作业数（数据未就绪时为 null，由 renderStat 渲染占位） */
+  pendingHomework: number | null;
+  /** 未处理心理预警数（同上） */
+  unresolvedAlerts: number | null;
 }

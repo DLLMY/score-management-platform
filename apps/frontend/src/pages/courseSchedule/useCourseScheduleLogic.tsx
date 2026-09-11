@@ -507,7 +507,10 @@ export function useCourseScheduleLogic(): CourseScheduleViewProps {
     }));
   };
 
-  const handleFormChange = (field: keyof FormData, value: string | number | boolean | null) => {
+  const handleFormChange = (
+    field: keyof FormData,
+    value: string | number | boolean | null | undefined
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (conflictResult) {
       setConflictResult(null);

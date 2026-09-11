@@ -875,13 +875,8 @@ const executeRequest = async (
         }
         return cached.data;
       }
-      const persistentCache: { data: unknown } | null = null; // 持久化缓存已废弃（幽灵数据根源），304 仅依赖内存缓存
-      if (persistentCache) {
-        if (isDev) {
-          logger.log(`[API] ${method} ${url} - 304 Not Modified (使用持久化缓存)`);
-        }
-        return persistentCache.data;
-      }
+      // 持久化缓存已废弃（幽灵数据根源）：原 `if (persistentCache)` 的变量恒为 null，
+      // 该分支运行期不可达，删除属零行为变更；304 仅依赖内存缓存。
       throw new Error('304响应但没有缓存数据');
     }
 
@@ -2656,7 +2651,12 @@ export interface Api {
     update: (id: number, data: Partial<SeatingChartCreateInput>) => Promise<SeatingChart>;
     delete: (id: number) => Promise<void>;
     autoArrange: (chartId: number, strategy: string, class_id: number) => Promise<SeatingChart>;
-    updateSeat: (chartId: number, row: number, col: number, student_id: number) => Promise<void>;
+    updateSeat: (
+      chartId: number,
+      row: number,
+      col: number,
+      student_id: number | null
+    ) => Promise<void>;
   };
   // 值日生表
   duty: {

@@ -802,7 +802,8 @@ export interface BatchAnomalyData {
 }
 
 export interface RuleRecommendResult {
-  rule_id: number;
+  /** 后端仅在命中已有规则时给出，兜底构造的推荐项为 null */
+  rule_id: number | null;
   rule_name: string;
   description: string;
   estimated_impact: number;
@@ -1493,7 +1494,7 @@ export interface ActivityRegistration {
 }
 
 export interface ActivityCreateInput {
-  class_id: number;
+  class_id?: number;
   title: string;
   description?: string;
   activity_type?: string;
@@ -1526,7 +1527,7 @@ export interface CultureItem {
 }
 
 export interface CultureCreateInput {
-  class_id: number;
+  class_id?: number;
   category?: string;
   title?: string;
   content?: string;
@@ -1563,7 +1564,7 @@ export interface ImprovementPlan {
 }
 
 export interface StudyGuideCreateInput {
-  class_id: number;
+  class_id?: number;
   title: string;
   guide_type?: string;
   content?: string;

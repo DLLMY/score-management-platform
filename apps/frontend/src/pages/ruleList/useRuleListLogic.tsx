@@ -297,7 +297,7 @@ export function useRuleListLogic(): RuleViewProps {
           body: JSON.stringify({ template_id: templateId }),
         })) as { success?: boolean; message?: string };
         if (data.success) {
-          showToast('success', data.message);
+          showToast('success', data.message as string);
           closeTemplateModal();
           fetchRules();
         } else {

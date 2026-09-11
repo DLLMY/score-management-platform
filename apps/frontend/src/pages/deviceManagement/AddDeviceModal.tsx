@@ -1,11 +1,13 @@
 import { Button, Modal } from '../../components';
+import type { FormErrors } from '../../hooks';
+import type { NewDeviceForm } from './types';
 
 interface AddDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   device_id: string;
   name: string;
-  errors: Record<string, string>;
+  errors: FormErrors<NewDeviceForm>;
   onChange: (field: 'device_id' | 'name', value: string) => void;
   submitting: boolean;
   onSubmit: () => void;

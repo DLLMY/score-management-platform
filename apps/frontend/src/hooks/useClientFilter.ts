@@ -13,7 +13,7 @@ import { useMemo, useRef } from 'react';
  */
 export function useClientFilter<T>(
   items: T[],
-  predicate: (item: T) => boolean,
+  predicate: (item: T) => unknown,
   deps: unknown[] = []
 ): T[] {
   const predicateRef = useRef(predicate);

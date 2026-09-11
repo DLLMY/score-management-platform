@@ -476,7 +476,7 @@ function UserListView(props: UserListViewProps) {
                 </span>
                 <ToggleSwitch
                   checked={state.editingUser.is_active}
-                  onChange={() => handleToggleActive(state.editingUser)}
+                  onChange={() => state.editingUser && handleToggleActive(state.editingUser)}
                   size='md'
                 />
               </div>

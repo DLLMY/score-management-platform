@@ -144,10 +144,10 @@ export default function StudentPortalView({
                       </div>
                       <span
                         className={`text-sm font-semibold flex-shrink-0 ml-3 ${
-                          r.score_change >= 0 ? 'text-green-500' : 'text-red-500'
+                          (r.score_change as number) >= 0 ? 'text-green-500' : 'text-red-500'
                         }`}
                       >
-                        {r.score_change >= 0 ? '+' : ''}
+                        {(r.score_change as number) >= 0 ? '+' : ''}
                         {r.score_change}
                       </span>
                     </li>

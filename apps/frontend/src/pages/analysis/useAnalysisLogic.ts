@@ -149,7 +149,7 @@ export function useAnalysisLogic() {
     const max = has ? Math.max(...scores) : null;
     const avg = has ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length) : null;
     const variance = has
-      ? scores.reduce((sum, s) => sum + Math.pow((s - avg) as number, 2), 0) / scores.length
+      ? scores.reduce((sum, s) => sum + Math.pow(s - (avg as number), 2), 0) / scores.length
       : 0;
     const std = has ? Math.round(Math.sqrt(variance)) : null;
     const need = filteredUsers.filter((u) => (u.current_score || 0) < 60);

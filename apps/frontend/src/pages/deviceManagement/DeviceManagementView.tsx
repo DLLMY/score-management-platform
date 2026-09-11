@@ -2,6 +2,7 @@ import { type ChangeEvent } from 'react';
 import { RefreshCw, FileSpreadsheet, FileDown, Plus, Activity } from 'lucide-react';
 import { Button, PermissionButton, type ColumnType } from '../../components';
 import type { Alert, Heartbeat } from '../../services/api';
+import type { FormErrors } from '../../hooks';
 import type { Device } from '../../types';
 import type {
   AdvancedStats,
@@ -73,7 +74,7 @@ interface DeviceManagementViewProps {
   selectedDevice: Device | null;
   heartbeats: Heartbeat[];
   newDevice: NewDeviceForm;
-  newDeviceErrors: Record<string, string>;
+  newDeviceErrors: FormErrors<NewDeviceForm>;
   bindForm: BindForm;
   deviceSettings: DeviceSettings;
   otaForm: OTAForm;

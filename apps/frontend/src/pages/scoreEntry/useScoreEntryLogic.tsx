@@ -494,8 +494,9 @@ export function useScoreEntryLogic(): ScoreEntryViewProps {
     }
     try {
       let resp: unknown;
-      if (existing?.id) {
-        resp = await api.scores.update(existing.id, { score });
+      const existingId = existing?.id;
+      if (existingId) {
+        resp = await api.scores.update(existingId, { score: score as number });
       } else {
         resp = await api.scores.create({
           exam_id: parseInt(selectedExam),
