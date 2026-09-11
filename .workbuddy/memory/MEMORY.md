@@ -7,17 +7,20 @@
 - ⚠️ pytest / run_regression **必须** `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug → 假 `url_quote ImportError`）。判据：`test_` 改动=0 却 import 错 ⇒ 环境问题。
 - ⚠️ **全量 `pytest tests`（串行）实测基线（2026-09-12）＝ 2078 passed / 7 skipped / 6 failed，且 6 failed 全为预存在**（用 `git stash push -- apps/backend` 回退后跑同一文件、结果逐字相同，双向实证）：`test_security_core`+`test_security_utils`::`test_is_strong_password`、`test_regression_20260817`::`test_ota_failed_statuses_mapped`+`test_export_has_class_scope`、`test_query_optimizer`::`test_invalidate_user_cache`+`test_invalidate_all_cache`。**判回归：只要失败集合 ⊆ 这 6 个即零回归**；多出任何一项才算引入问题。
   - ⚠️ 全量**勿用 `-n 4` xdist**：会额外挂 2 个 `test_nlp_performance`（warmup 计时/成功率阈值，并行干扰）假失败，表现为 8 failed / 2076 passed。串行约 **22 分钟**；PowerShell 工具单次上限 10 分钟 → 要么分批跑，要么先跑受影响子集再用这 6 项清单比对。
+  - ✅ **实测可行的分批法**：`Get-ChildItem tests -Filter "test_*.py" | Sort-Object Name` 后按数量均分 **3 组**（实测 165 个文件 → 55/55/55，各组 4m48s / 6m54s / 5m04s，均 <10 分钟上限），三批求和与串行基数一致（2078 passed / 7 skipped / 6 failed）。分批后**失败集合仍须 ⊆ 上述 6 项清单**。
 - 前端四闸门用 managed Node 22.22.2，**勿用 `node_modules/.bin/*`**（bash 包装被当 JS 跑）：tsc→`typescript/bin/tsc`；eslint→`eslint/bin/eslint.js`；prettier→`bin-prettier.js`；vitest→`vitest/vitest.mjs`（全量**勿加** `--pool=forks`）。基线 38 文件 / **276 passed / 3 skipped**。
 - ⚠️ 单测三要素：①退出码=0 ②无 `Errors`/`failed` ③**报告文件数==磁盘文件数**（崩溃 worker 的文件会静默消失）。
 - ⚠️ push 后核实 `git ls-remote origin refs/heads/main`（`git status -sb` 的远端 ref 会陈旧）。**禁 commit 除非用户显式要求**。
 
 ## ruff 口径（2026-09-11 重新校准）
 - 唯一口径 = `ruff check apps/backend`（**含 tests/scripts/tools/migrations**）；C901 同口径加 `--select C901`。
-- **当前基线（2026-09-12 #119/#120 + #121 四项 + #122 mqtt 派发/websocket handlers 收口后）：默认 2258 / C901 51**。旧记录 2261/67、2259/66、2258/60、2258/58、2258/57、2258/56、2258/55、2258/53 均已作废；**口径变了必须重测**，勿沿用旧值。
+- **当前基线（2026-09-12 #119/#120/#121/#122 + #123 init_scheduler 收口后）：默认 2258 / C901 50**。旧记录 2261/67、2259/66、2258/60、2258/58、2258/57、2258/56、2258/55、2258/53、2258/51 均已作废；**口径变了必须重测**，勿沿用旧值。
 - ⚠️ **run_regression.sh 被沙箱拦**（报 `Bash/CallMsi/E_ACCESSDENIED`，REG_EXIT=1 但无任何闸门输出）时的兜底：用 PowerShell 直跑其 5 道内部闸门（venv python）——RBAC `verify_rbac_consistency.py --check-only` / OpenAPI `--strict`（EXIT=2=后端未起跳过）/ `pytest tests/test_api_envelope.py`（2 passed）/ 四路由 pytest（33 passed）/ `scripts/verify_indexes.py`（[OK]）。基准：契约 2 + 关键路由 33 + 索引 OK。
 - ⚠️ 回归日志常含 null 字节（Read/Grep 判为二进制）→ 用 `[System.IO.File]::ReadAllBytes` 剔除 `\0` 再 UTF8 解码；**结果文件用 `Out-File -Encoding utf8` 或 `WriteAllText`+无 BOM UTF8 写**，否则 Read 报 binary。
 - ⚠️ #120（21+ 桶）19 项经全量扫描审定：**仅 `_validate_course_import_item`(22) 为纯校验可机械收口**；其余 18 项全属写路径/DB 事务（users_routes.post 45/25、execute_subject_import 37、import_devices 31、subject_routes.post 23、resolve_relations 22、execute_scoring 21）、NLP 语义（parse 36/extract_behavior 29/parse_without_correction 28/extract_name 26/deep_semantic_match 24/determine_intent 22）、安全（security.validate 35、configure_rate_limits 26）、测试/工具/脚本（tests.run_tests 27、collect_security_metrics 24、verify_rbac.run_check 22）——**按宁跳不强推纪律整体跳过，均待用户单独拍板**。
-- ⚠️ **C901「可安全机械收口」子集已全数收口（2026-09-12）**：#119 两项 + #120 一项 + #121 两项 + #122 两项（`mqtt.handle_mqtt_message` 派发表 / `websocket.register_handlers` helper 外提）＝ 7 个函数，C901 **58 → 51**。剩余 **51 项**全属写路径/DB 事务、NLP 语义、安全 RBAC、测试脚本工具——**动前必须用户逐项拍板，勿自动推进**。
+- ⚠️ **C901「机械收口」进展（2026-09-12）**：#119(2)+#120(1)+#121(2)+#122(2)+#123(1) ＝ 8 个函数，C901 **58 → 50**。剩余 **50 项**多数属写路径/DB 事务、NLP 语义、安全 RBAC、测试脚本工具——**动前须用户逐项拍板**。
+  - ✅ **新确认的可安全收口类别：注册/初始化型函数**（`init_scheduler` 已验证 c=11→2）。特征：函数体主要是「定义若干闭包 + 注册/调度」，闭包内是 try/except + if/else 的业务体。手法＝**保留嵌套 def 与注册语句原样，把闭包体逐字搬到模块级 helper（捕获变量改显式参数）**。同类候选：`init_cache_warmup`、`_try_auto_start_redis`(14)、`start_celery.main`(12)。
+  - ⚠️ 这类函数的 harness 关键：闭包体常用**函数内 `from x import y`** → 必须 `sys.modules` 注入假模块（含父包）；且 **`exec` 出的函数 `__globals__` 绑定 exec 时的字典**，stub 必须写回同一 dict（复制成新 dict 再注入 → NameError）。
 - ruff 用默认 `ll=88`（仅 black 是 100）；**black 只对 `--check` 已过的文件跑**。
 
 ## 后端铁律
