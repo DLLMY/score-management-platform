@@ -8,12 +8,12 @@ import threading
 import importlib
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_warning
 
 
 class ConfigLoader:
-    _instance = None  # noqa: F841
-    _lock = threading.Lock()  # noqa: F841
+    _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
@@ -139,12 +139,15 @@ class ConfigLoader:
 
         current_mtime = os.path.getmtime(path)
 
-        if path in self._config_cache and path in self._config_mtime:
-            if self._config_mtime[path] == current_mtime:
-                return self._config_cache[path]
+        if (
+            path in self._config_cache
+            and path in self._config_mtime
+            and self._config_mtime[path] == current_mtime
+        ):
+            return self._config_cache[path]
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
                 self._config_cache[path] = data
                 self._config_mtime[path] = current_mtime

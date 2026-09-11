@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 from enum import Enum
 
 # \nNLP智能评分算法优化配置\n
@@ -20,7 +19,7 @@ class IntentClassifierConfig:
     """意图分类器配置"""
 
     tfidf_max_features: int = 1000
-    tfidf_ngram_range: Tuple[int, int] = (1, 4)
+    tfidf_ngram_range: tuple[int, int] = (1, 4)
     tfidf_analyzer: str = "char_wb"
     tfidf_min_df: int = 2
     tfidf_max_df: float = 0.95
@@ -49,7 +48,7 @@ class BM25Config:
     length_normalization: str = "BM25"
 
     @property
-    def params(self) -> Dict[str, float]:
+    def params(self) -> dict[str, float]:
         return {"k1": self.k1, "b": self.b, "epsilon": self.epsilon, "delta": self.delta}
 
 
@@ -130,7 +129,7 @@ class AccuracyConfig:
     error_analysis_enabled: bool = True
     error_threshold: float = 0.1
     ensemble_enabled: bool = True
-    ensemble_methods: List[str] = field(
+    ensemble_methods: list[str] = field(
         default_factory=lambda: ["logistic", "svm", "random_forest"]
     )
     ensemble_voting: str = "soft"
@@ -170,7 +169,7 @@ class NLPAlgorithmOptimizer:
             self.bm25 = BM25Config()
             self.performance = PerformanceConfig()
 
-    def get_config_summary(self) -> Dict:
+    def get_config_summary(self) -> dict:
         """获取配置摘要"""
         return {
             "strategy": self.strategy.value,
@@ -185,11 +184,11 @@ class NLPAlgorithmOptimizer:
                 "lr_class_weight": self.intent_classifier.lr_class_weight,
                 "lr_C": self.intent_classifier.lr_C,
             },
-        }  # noqa: E501
+        }
 
     def optimize_parameters(
-        self, current_params: Dict, performance_metrics: Dict, target_metric: str = "accuracy"
-    ) -> Dict:
+        self, current_params: dict, performance_metrics: dict, target_metric: str = "accuracy"
+    ) -> dict:
         """
         根据性能指标自动优化参数
         :param current_params: 当前参数
@@ -204,14 +203,13 @@ class NLPAlgorithmOptimizer:
                     optimized_params.get("tfidf_max_features", 1000) + 200, 2000
                 )
                 optimized_params["lr_C"] = min(optimized_params.get("lr_C", 15) + 2, 30)
-        elif target_metric == "speed":
-            if performance_metrics.get("latency", 0) > 100:
-                optimized_params["tfidf_max_features"] = max(
-                    optimized_params.get("tfidf_max_features", 1000) - 100, 300
-                )
-                optimized_params["cache_ttl"] = min(
-                    optimized_params.get("cache_ttl", 300) + 60, 600
-                )
+        elif target_metric == "speed" and performance_metrics.get("latency", 0) > 100:
+            optimized_params["tfidf_max_features"] = max(
+                optimized_params.get("tfidf_max_features", 1000) - 100, 300
+            )
+            optimized_params["cache_ttl"] = min(
+                optimized_params.get("cache_ttl", 300) + 60, 600
+            )
         return optimized_params
 
 
@@ -223,7 +221,7 @@ OPTIMIZATION_PRESETS = {
 }
 
 
-def get_optimizer(preset: Optional[str] = None) -> NLPAlgorithmOptimizer:
+def get_optimizer(preset: str | None = None) -> NLPAlgorithmOptimizer:
     """获取优化器实例"""
     if preset and preset in OPTIMIZATION_PRESETS:
         return OPTIMIZATION_PRESETS[preset]
@@ -231,7 +229,7 @@ def get_optimizer(preset: Optional[str] = None) -> NLPAlgorithmOptimizer:
 
 
 def create_custom_optimizer(
-    strategy: OptimizationStrategy, custom_config: Optional[Dict] = None
+    strategy: OptimizationStrategy, custom_config: dict | None = None
 ) -> NLPAlgorithmOptimizer:
     """创建自定义优化器"""
     optimizer = NLPAlgorithmOptimizer(strategy)

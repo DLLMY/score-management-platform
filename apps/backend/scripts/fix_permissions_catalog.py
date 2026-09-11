@@ -25,9 +25,9 @@ DB_PATH = os.path.join(INSTANCE_DIR, "score_management.db")
 def main():
     # 自动备份
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    bak = os.path.join(INSTANCE_DIR, "score_management.db.bak_perms_catalog_%s" % ts)
+    bak = os.path.join(INSTANCE_DIR, f"score_management.db.bak_perms_catalog_{ts}")
     shutil.copy2(DB_PATH, bak)
-    print("[backup] %s" % bak)
+    print(f"[backup] {bak}")
 
     app = create_app(lightweight=True)
     with app.app_context():
@@ -35,7 +35,7 @@ def main():
         init_default_permissions()
         after = {p.code for p in Permission.query.all()}
         inserted = sorted(after - before)
-        print("[catalog] before=%d after=%d inserted=%d" % (len(before), len(after), len(inserted)))
+        print(f"[catalog] before={len(before)} after={len(after)} inserted={len(inserted)}")
         if inserted:
             print("[inserted] " + ", ".join(inserted))
         else:

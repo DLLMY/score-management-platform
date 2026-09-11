@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """幂等迁移脚本（R3 修复）：scores 表加 (exam_id, student_id, subject_id) 唯一索引。
 
 SQLite 通过 CREATE UNIQUE INDEX 实现（与 SQLAlchemy __table_args__ UniqueConstraint 命名一致，
@@ -39,17 +38,17 @@ def main():
             HAVING c > 1
             """).fetchall()
         if dups:
-            print("[migrate] 发现 %d 组重复成绩（不自动删除，请人工处理）:" % len(dups))
+            print(f"[migrate] 发现 {len(dups)} 组重复成绩（不自动删除，请人工处理）:")
             for d in dups[:10]:
-                print("  exam=%s student=%s subject=%s x%d" % d)
+                print(f"  exam={d[0]} student={d[1]} subject={d[2]} x{d[3]}")
             if "--force" not in sys.argv:
                 print(
                     "[migrate] 已中止。处理重复数据后重跑，或使用 --force（重复会致建索引失败）。"
                 )
                 sys.exit(1)
-        cur.execute("CREATE UNIQUE INDEX %s ON scores(exam_id, student_id, subject_id)" % IDX_NAME)
+        cur.execute(f"CREATE UNIQUE INDEX {IDX_NAME} ON scores(exam_id, student_id, subject_id)")
         conn.commit()
-        print("[migrate] 唯一索引 %s 创建成功" % IDX_NAME)
+        print(f"[migrate] 唯一索引 {IDX_NAME} 创建成功")
     except sqlite3.IntegrityError as e:
         print("[migrate] 创建失败（存在重复数据）:", e)
         sys.exit(1)

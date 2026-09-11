@@ -179,7 +179,8 @@ class QueryOptimizer:
             total_score = (
                 db.session.query(func.coalesce(func.sum(ScoreRecord.score_change), 0)).scalar() or 0
             )
-        except Exception:
+        except Exception as e:
+            logger.warning("获取积分统计失败，降级返回空统计: %s", e, exc_info=True)
             total_users, total_records, total_score = 0, 0, 0
         return {
             "total_users": total_users,
@@ -218,7 +219,8 @@ class QueryOptimizer:
         try:
             total = Device.query.count()
             online = sum(1 for d in Device.query.all() if d.is_online)
-        except Exception:
+        except Exception as e:
+            logger.warning("获取设备状态汇总失败，降级返回空: %s", e, exc_info=True)
             total, online = 0, 0
         return {"total": total, "online": online, "offline": total - online}
 
@@ -455,13 +457,13 @@ class CachedQueries:
     def invalidate_user_cache(self, user_id):
         """失效指定用户的查询缓存。"""
         target = f":user:{user_id}"
-        for k in self.cache_manager.keys():
+        for k in self.cache_manager:
             if target in k:
                 self.cache_manager.delete(k)
 
     def invalidate_all_cache(self):
         """失效全部查询缓存。"""
-        for k in self.cache_manager.keys():
+        for k in self.cache_manager:
             if k.startswith(self.prefix):
                 self.cache_manager.delete(k)
 

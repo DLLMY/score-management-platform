@@ -1,6 +1,6 @@
 import argparse
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any
 
 """
 数据库迁移脚本
@@ -57,16 +57,15 @@ class DatabaseMigrator:
         self.source_engine = None
         self.target_engine = None
         self.metadata = MetaData()
-        self.migration_log: List[Dict[str, Any]] = []
+        self.migration_log: list[dict[str, Any]] = []
 
     def build_target_uri(self) -> str:
         """构建目标数据库URI"""
         if self.target_type == "mysql":
-            return f"mysql+pymysql://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}?charset=utf8mb4"  # noqa: E501
-        elif self.target_type == "postgresql":
-            return f"postgresql+psycopg2://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}"  # noqa: E501
-        else:
-            raise ValueError(f"不支持的目标数据库类型: {self.target_type}")
+            return f"mysql+pymysql://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}?charset=utf8mb4"
+        if self.target_type == "postgresql":
+            return f"postgresql+psycopg2://{self.target_user}:{self.target_password}@{self.target_host}:{self.target_port}/{self.target_database}"
+        raise ValueError(f"不支持的目标数据库类型: {self.target_type}")
 
     def connect_source(self) -> bool:
         """连接源数据库"""
@@ -99,7 +98,7 @@ class DatabaseMigrator:
             print(f"[迁移] 目标数据库连接失败: {e}")
             return False
 
-    def get_table_list(self) -> List[str]:
+    def get_table_list(self) -> list[str]:
         """获取源数据库表列表"""
         inspector = inspect(self.source_engine)
         tables = inspector.get_table_names()
@@ -114,7 +113,7 @@ class DatabaseMigrator:
             self.metadata.reflect(bind=self.source_engine)
             # 为目标数据库创建表
             # 注意：需要处理不同数据库的类型差异
-            for table_name in self.metadata.tables.keys():
+            for table_name in self.metadata.tables:
                 table = self.metadata.tables[table_name]
                 print(f"[迁移] 创建表: {table_name}")
                 # 验证表名安全性

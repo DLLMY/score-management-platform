@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 P0-4 审批合并迁移脚本（幂等 / 单事务 / 可逆）
 

@@ -1,4 +1,3 @@
-from typing import List, Dict
 import os
 
 from utils.logger import log_error, log_info, log_warning
@@ -8,8 +7,8 @@ class ConfigValidator:
     """配置验证工具"""
 
     def __init__(self):
-        self.warnings: List[Dict[str, str]] = []
-        self.errors: List[Dict[str, str]] = []
+        self.warnings: list[dict[str, str]] = []
+        self.errors: list[dict[str, str]] = []
         self.flask_env = os.getenv("FLASK_ENV", "development").lower()
 
     def _add_warning(self, category: str, message: str):
@@ -108,7 +107,7 @@ class ConfigValidator:
         except ValueError:
             self._add_error("rate_limit", "限流配置值必须为整数")
 
-    def validate_all(self) -> Dict[str, List[Dict[str, str]]]:
+    def validate_all(self) -> dict[str, list[dict[str, str]]]:
         self.warnings.clear()
         self.errors.clear()
 

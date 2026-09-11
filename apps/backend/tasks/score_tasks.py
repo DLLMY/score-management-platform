@@ -25,11 +25,11 @@ def recalc_user_score(self, user_id):
 
             CompositeScoreService.recalculate_user_score(user_id)
             return {"success": True, "user_id": user_id}
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.error("[CompositeScore] 异步重算综合分失败 user_id=%s: %s", user_id, e)
             try:
                 # 轻量重试，便于 broker 抖动后自愈；超出重试次数后落入 finally 返回失败
                 self.retry(exc=e, countdown=5, max_retries=2)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:
+                logger.exception("重算综合分重试耗尽，返回失败 user_id=%s", user_id)
             return {"success": False, "user_id": user_id, "error": str(e)}

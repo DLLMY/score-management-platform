@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """幂等增量迁移：把 class.edit 授予「班主任(teacher)」角色。
 
 背景
@@ -37,13 +36,13 @@ NEW_PERMS = [
 
 def main():
     if not os.path.exists(DB):
-        print("数据库不存在: %s" % DB)
+        print(f"数据库不存在: {DB}")
         return 1
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup = "%s.bak_class_edit_%s" % (DB, stamp)
+    backup = f"{DB}.bak_class_edit_{stamp}"
     shutil.copy2(DB, backup)
-    print("已备份 -> %s" % backup)
+    print(f"已备份 -> {backup}")
 
     conn = sqlite3.connect(DB)
     cur = conn.cursor()
@@ -52,14 +51,14 @@ def main():
     for code, name, category in NEW_PERMS:
         cur.execute("SELECT 1 FROM permissions WHERE code=?", (code,))
         if cur.fetchone():
-            print("目录已存在，跳过: %s" % code)
+            print(f"目录已存在，跳过: {code}")
         else:
             cur.execute(
                 "INSERT INTO permissions (code, name, category, description, is_active, created_at)"
                 " VALUES (?,?,?,?,1,datetime('now'))",
                 (code, name, category, name),
             )
-            print("目录新增: %s" % code)
+            print(f"目录新增: {code}")
 
     # --- 2. role_permission_mappings（CSV 冗余列已废弃，仅维护映射） ---
     for code, _, _ in NEW_PERMS:
@@ -68,14 +67,14 @@ def main():
             (ROLE, code),
         )
         if cur.fetchone():
-            print("映射已存在，跳过: %s -> %s" % (ROLE, code))
+            print(f"映射已存在，跳过: {ROLE} -> {code}")
         else:
             cur.execute(
                 "INSERT INTO role_permission_mappings (role_code, permission_code, created_at)"
                 " VALUES (?,?,datetime('now'))",
                 (ROLE, code),
             )
-            print("映射新增: %s -> %s" % (ROLE, code))
+            print(f"映射新增: {ROLE} -> {code}")
 
     conn.commit()
 
@@ -86,9 +85,9 @@ def main():
     )
     perms = [r[0] for r in cur.fetchall()]
     print("\n=== 校验 ===")
-    print("%s 映射权限总数 = %d" % (ROLE, len(perms)))
+    print(f"{ROLE} 映射权限总数 = {len(perms)}")
     for code, _, _ in NEW_PERMS:
-        print("  %s: %s" % (code, "OK" if code in perms else "缺失"))
+        print("  {}: {}".format(code, "OK" if code in perms else "缺失"))
     conn.close()
     return 0
 

@@ -12,7 +12,7 @@ def run_bandit():
 
     result = subprocess.run(
         cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(__file__))
-    )  # noqa: F841
+    )
 
     print("\n扫描结果摘要:")
     print("-" * 60)
@@ -27,7 +27,7 @@ def run_bandit():
         return
 
     if os.path.exists("bandit-report.json"):
-        with open("bandit-report.json", "r") as f:
+        with open("bandit-report.json") as f:
             report = json.load(f)
 
         issues = report.get("results", [])

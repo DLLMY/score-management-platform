@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 MQTT 端到端真机验证（设备 <-> EMQX Cloud Broker <-> 后端）。
 
@@ -75,7 +74,7 @@ SANDBOX_CARD = "E2ECARD999001"
 
 RUN_TS = int(time.time())
 # 本运行唯一 box_id，避开 card_not_found 洪流且不被上轮残留设备命中
-E2E_BOX = "E2EZ%d" % RUN_TS
+E2E_BOX = f"E2EZ{RUN_TS}"
 
 _lock = threading.Lock()
 _sub_mid = {}  # mid -> topic，用于关联 SUBACK
@@ -88,7 +87,7 @@ def _on_connect(c, userdata, flags, rc):
     print(f"[DEVICE] connected rc={rc}")
     for t in (
         "score/rules/result",
-        "phonebox/unlock/%s" % E2E_BOX,
+        f"phonebox/unlock/{E2E_BOX}",
         "score/add/result/#",
         "score/undo/result/#",
     ):
@@ -102,7 +101,7 @@ def _on_connect(c, userdata, flags, rc):
 
 
 def _on_subscribe(c, userdata, mid, granted_qos):
-    topic = _sub_mid.get(mid, "<未知 mid=%s>" % mid)
+    topic = _sub_mid.get(mid, f"<未知 mid={mid}>")
     gq = list(granted_qos) if isinstance(granted_qos, (list, tuple)) else [granted_qos]
     status = "OK" if all(q == 1 for q in gq) else "WARN(授予QoS非1)"
     print(f"[DEVICE][SUBACK] topic={topic} granted_qos={gq} -> {status} (mid={mid})")
@@ -214,7 +213,7 @@ def main():
     results = []
 
     # ---- Test A: score/rules/query -> score/rules/result ----
-    mark_a = "E2EA_%d" % RUN_TS
+    mark_a = f"E2EA_{RUN_TS}"
     pl_a = _request_response(
         "score/rules/query",
         {"request_id": mark_a},
@@ -240,23 +239,23 @@ def main():
     # ---- Test B: phonebox/query (真实用户 2026001) -> phonebox/unlock/<唯一box> ----
     # 注意：后端 publish_unlock_result 回包 result 为字符串 "true"/"false"（非布尔），
     # 故判定以"在精确订阅 topic 上收到含 result 字段的回包"为准，证明端到端链路通。
-    mark_b = "E2EB_%d" % RUN_TS
+    mark_b = f"E2EB_{RUN_TS}"
     pl_b = _request_response(
         "phonebox/query",
         {"box_id": E2E_BOX, "card_id": "2026001", "_mark": mark_b},
-        "phonebox/unlock/%s" % E2E_BOX,
+        f"phonebox/unlock/{E2E_BOX}",
         predicate=lambda p: isinstance(p, dict) and "result" in p,
     )
     ok_b = bool(pl_b)
     detail_b = (
-        ("result=%s reason=%s" % (pl_b.get("result"), pl_b.get("reason")))
+        ("result={} reason={}".format(pl_b.get("result"), pl_b.get("reason")))
         if pl_b
         else "no response"
     )
-    results.append(("B.phonebox/query->unlock/%s" % E2E_BOX, ok_b, detail_b))
+    results.append((f"B.phonebox/query->unlock/{E2E_BOX}", ok_b, detail_b))
 
     # ---- Test C1: score/add 不存在用户 -> score/add/result/e2eC1 ----
-    mark_c1 = "e2eC1_%d" % RUN_TS
+    mark_c1 = f"e2eC1_{RUN_TS}"
     pl_c1 = _request_response(
         "score/add",
         {"msg_id": mark_c1, "client_id": "e2eC1", "user_id": 999999, "score_change": 5},
@@ -265,14 +264,14 @@ def main():
     )
     ok_c1 = bool(pl_c1) and (pl_c1.get("success") is False)
     detail_c1 = (
-        ("success=%s msg=%s" % (pl_c1.get("success"), pl_c1.get("message")))
+        ("success={} msg={}".format(pl_c1.get("success"), pl_c1.get("message")))
         if pl_c1
         else "no response"
     )
     results.append(("C1.score/add(bogus)->result", ok_c1, detail_c1))
 
     # ---- Test C2: score/add 沙箱用户 -> undo 往返 ----
-    mark_c2 = "e2eC2_%d" % RUN_TS
+    mark_c2 = f"e2eC2_{RUN_TS}"
     _cleanup_sandbox()  # 起始硬清理，保证基线纯净
     con = sqlite3.connect(DB, timeout=30)
     con.execute("PRAGMA busy_timeout=30000")

@@ -1,7 +1,7 @@
 from celery_app import celery_app
 import json
 from datetime import datetime
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_warning, log_debug
 
 
 @celery_app.task(bind=True, name="tasks.mqtt_tasks.process_message", queue="mqtt")
@@ -89,11 +89,13 @@ def process_phonebox_telemetry(self, topic, payload):
                     )
                 )
                 db.session.commit()
-            except Exception:
+            except Exception as e:
+                log_warning(f"[MQTT Task] 接收日志记录失败: {e}", exception=e)
                 db.session.rollback()
             try:
                 data = json.loads(payload) if isinstance(payload, str) else payload
-            except Exception:
+            except Exception as e:
+                log_warning(f"[MQTT Task] 消息解析失败: {e}", exception=e)
                 data = None
             if topic == "phonebox/heartbeat" and isinstance(data, dict):
                 try:

@@ -3,7 +3,7 @@ import json
 import zipfile
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import Any
 from pathlib import Path
 import sqlite3
 
@@ -42,7 +42,7 @@ class BackupManager:
         """获取数据库文件路径"""
         return Path(__file__).parent.parent / "instance" / "score_management.db"
 
-    def create_backup(self, backup_type: str = "full") -> Dict[str, Any]:
+    def create_backup(self, backup_type: str = "full") -> dict[str, Any]:
         """
         创建数据备份
 
@@ -113,10 +113,11 @@ class BackupManager:
             version = cursor.fetchone()[0]
             conn.close()
             return version
-        except Exception:
+        except Exception as e:
+            logger.warning("获取数据库版本失败: %s", e, exc_info=True)
             return "unknown"
 
-    def restore_backup(self, backup_filename: str) -> Dict[str, Any]:
+    def restore_backup(self, backup_filename: str) -> dict[str, Any]:
         """
         恢复备份
 
@@ -149,7 +150,7 @@ class BackupManager:
                 # 检查备份信息
                 info_path = temp_dir / "backup_info.json"
                 if info_path.exists():
-                    with open(info_path, "r", encoding="utf-8") as f:
+                    with open(info_path, encoding="utf-8") as f:
                         backup_info = json.load(f)
 
                 # 恢复数据库
@@ -181,7 +182,7 @@ class BackupManager:
         except Exception as e:
             return {"success": False, "message": f"恢复失败: {str(e)}"}
 
-    def list_backups(self) -> List[Dict[str, Any]]:
+    def list_backups(self) -> list[dict[str, Any]]:
         """
         获取备份文件列表
 
@@ -207,7 +208,7 @@ class BackupManager:
             backups.sort(key=lambda x: x["created_at"], reverse=True)
         except Exception as e:
             # 列举备份失败（目录权限/磁盘异常）不应让调用方崩溃，但需留痕（T9 日志化）。
-            logger.warning(f"列举备份文件失败: {e}")
+            logger.warning(f"列举备份文件失败: {e}", exc_info=True)
 
         return backups
 
@@ -215,13 +216,13 @@ class BackupManager:
         """解析备份类型"""
         if "_full_" in filename:
             return "完整备份"
-        elif "_incremental_" in filename:
+        if "_incremental_" in filename:
             return "增量备份"
-        elif "_data_only_" in filename:
+        if "_data_only_" in filename:
             return "数据备份"
         return "未知"
 
-    def clean_old_backups(self, max_count: int = None) -> Dict[str, Any]:
+    def clean_old_backups(self, max_count: int = None) -> dict[str, Any]:
         """
         清理过期备份文件
 
@@ -267,7 +268,7 @@ class BackupManager:
                 "message": f"清理失败: {str(e)}",
             }
 
-    def get_backup_stats(self) -> Dict[str, Any]:
+    def get_backup_stats(self) -> dict[str, Any]:
         """
         获取备份统计信息
 
@@ -321,7 +322,7 @@ class BackupScheduler:
 
         return False
 
-    def run_scheduled_backup(self) -> Dict[str, Any]:
+    def run_scheduled_backup(self) -> dict[str, Any]:
         """执行定时备份"""
         if not self.should_run():
             return {"success": False, "message": "未到备份时间或已在今天运行过"}

@@ -91,7 +91,7 @@ class HealthChecker:
             free_percent = (free_space / total_space) * 100
             if free_percent < 10:
                 return {"status": "critical", "message": f"磁盘空间不足: {free_percent:.1f}%"}
-            elif free_percent < 20:
+            if free_percent < 20:
                 return {"status": "warning", "message": f"磁盘空间较低: {free_percent:.1f}%"}
             return {"status": "healthy", "message": f"磁盘空间正常: {free_percent:.1f}%"}
         except Exception as e:
@@ -106,7 +106,7 @@ class HealthChecker:
             used_percent = memory.percent
             if used_percent > 90:
                 return {"status": "critical", "message": f"内存使用率过高: {used_percent}%"}
-            elif used_percent > 80:
+            if used_percent > 80:
                 return {"status": "warning", "message": f"内存使用率较高: {used_percent}%"}
             return {"status": "healthy", "message": f"内存使用率正常: {used_percent}%"}
         except Exception as e:
@@ -120,7 +120,7 @@ class HealthChecker:
             cpu_percent = psutil.cpu_percent(interval=0.1)  # 缩短检查时间
             if cpu_percent > 95:
                 return {"status": "critical", "message": f"CPU使用率过高: {cpu_percent}%"}
-            elif cpu_percent > 80:
+            if cpu_percent > 80:
                 return {"status": "warning", "message": f"CPU使用率较高: {cpu_percent}%"}
             return {"status": "healthy", "message": f"CPU使用率正常: {cpu_percent}%"}
         except Exception as e:
@@ -139,7 +139,7 @@ class HealthChecker:
         # 自定义检查
         for check in self.checks:
             try:
-                result = check["check"]()  # noqa: F841
+                result = check["check"]()
                 results["checks"][check["name"]] = result
             except Exception as e:
                 results["checks"][check["name"]] = {
@@ -147,7 +147,7 @@ class HealthChecker:
                     "message": f"检查执行失败: {str(e)}",
                 }
         # 确定整体状态
-        for check_name, check_result in results["checks"].items():
+        for _check_name, check_result in results["checks"].items():
             status = check_result.get("status", "unknown")
             if status in ["critical", "unhealthy"]:
                 results["status"] = "unhealthy"
@@ -166,7 +166,7 @@ class HealthChecker:
             # 根据状态返回不同HTTP状态码
             if results["status"] == "unhealthy":
                 return jsonify(results), 503
-            elif results["status"] == "degraded":
+            if results["status"] == "degraded":
                 return jsonify(results), 206
             return jsonify(results), 200
 
@@ -181,7 +181,7 @@ class HealthChecker:
                 "cpu": self.check_cpu_usage,
             }
             if check_name in check_methods:
-                result = check_methods[check_name]()  # noqa: F841
+                result = check_methods[check_name]()
                 status_code = 200 if result["status"] == "healthy" else 503
                 return jsonify(result), status_code
             return jsonify({"error": "Unknown check"}), 404
@@ -368,7 +368,7 @@ def timing_decorator(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         try:
-            result = func(*args, **kwargs)  # noqa: F841
+            result = func(*args, **kwargs)
             return result
         finally:
             duration = time.time() - start_time
@@ -398,7 +398,7 @@ def get_system_info():
             "boot_time": datetime.fromtimestamp(psutil.boot_time()).isoformat(),
         }
     except Exception as e:
-        logger.error(f"获取系统信息失败: {e}")
+        logger.error(f"获取系统信息失败: {e}", exc_info=True)
         return {"error": str(e)}
 
 
@@ -422,7 +422,7 @@ def get_process_info():
             "create_time": datetime.fromtimestamp(process.create_time()).isoformat(),
         }
     except Exception as e:
-        logger.error(f"获取进程信息失败: {e}")
+        logger.error(f"获取进程信息失败: {e}", exc_info=True)
         return {"error": str(e)}
 
 

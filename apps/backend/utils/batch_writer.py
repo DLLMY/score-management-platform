@@ -2,7 +2,8 @@ import logging
 import threading
 import time
 from datetime import datetime
-from typing import Any, Callable, Dict, List
+from typing import Any
+from collections.abc import Callable
 from models import db
 import atexit
 from collections import deque
@@ -65,7 +66,7 @@ class BatchWriter:
         }
         self._stats_lock = threading.Lock()
         # 处理器
-        self._handlers: List[Callable] = []
+        self._handlers: list[Callable] = []
         self._handler_lock = threading.Lock()
         # 后台线程
         self._worker_thread = None
@@ -104,7 +105,7 @@ class BatchWriter:
             if handler in self._handlers:
                 self._handlers.remove(handler)
 
-    def enqueue(self, message: Dict[str, Any], priority: int = 10):
+    def enqueue(self, message: dict[str, Any], priority: int = 10):
         """
         添加消息到队列
         Args:
@@ -130,7 +131,7 @@ class BatchWriter:
         self._check_flush()
         return True
 
-    def enqueue_batch(self, messages: List[Dict[str, Any]], priority: int = 10):
+    def enqueue_batch(self, messages: list[dict[str, Any]], priority: int = 10):
         """
         批量添加消息
         Args:
@@ -191,7 +192,7 @@ class BatchWriter:
             self._is_processing = False
         return processed_count
 
-    def _process_batch(self, batch: List[Dict]) -> bool:
+    def _process_batch(self, batch: list[dict]) -> bool:
         """
         处理一批消息
         Args:
@@ -208,7 +209,7 @@ class BatchWriter:
                 return True
             for handler in self._handlers:
                 try:
-                    result = handler(messages)  # noqa: F841
+                    result = handler(messages)
                     if not result:
                         logger.warning(f"[BatchWriter] 处理器 {handler.__name__} 返回失败")
                         return False
@@ -217,7 +218,7 @@ class BatchWriter:
                     return False
         return True
 
-    def _retry_batch(self, batch: List[Dict]):
+    def _retry_batch(self, batch: list[dict]):
         """重试处理失败的批次"""
         for msg in batch:
             msg["retry_count"] += 1
@@ -272,7 +273,7 @@ class BatchWriter:
         with self._stats_lock:
             self._stats["total_failed"] += 1
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取统计信息"""
         with self._stats_lock:
             stats = self._stats.copy()
@@ -320,7 +321,7 @@ class MQTTLogBatchWriter(BatchWriter):
         # 添加MQTT日志处理器
         self.add_handler(self._handle_mqtt_logs)
 
-    def _handle_mqtt_logs(self, messages: List[Dict]) -> bool:
+    def _handle_mqtt_logs(self, messages: list[dict]) -> bool:
         """处理MQTT日志消息"""
         try:
             from app import db
@@ -362,7 +363,7 @@ class OperationLogBatchWriter(BatchWriter):
         # 添加操作日志处理器
         self.add_handler(self._handle_operation_logs)
 
-    def _handle_operation_logs(self, messages: List[Dict]) -> bool:
+    def _handle_operation_logs(self, messages: list[dict]) -> bool:
         """处理操作日志消息"""
         try:
             from models import OperationLog
@@ -398,7 +399,7 @@ def get_mqtt_log_writer() -> MQTTLogBatchWriter:
     """获取MQTT日志写入器实例"""
     global _mqtt_log_writer
     if _mqtt_log_writer is None:
-        _mqtt_log_writer = MQTTLogBatchWriter()  # noqa: F841
+        _mqtt_log_writer = MQTTLogBatchWriter()
         _mqtt_log_writer.start()
     return _mqtt_log_writer
 
@@ -407,7 +408,7 @@ def get_operation_log_writer() -> OperationLogBatchWriter:
     """获取操作日志写入器实例"""
     global _operation_log_writer
     if _operation_log_writer is None:
-        _operation_log_writer = OperationLogBatchWriter()  # noqa: F841
+        _operation_log_writer = OperationLogBatchWriter()
         _operation_log_writer.start()
     return _operation_log_writer
 
@@ -417,10 +418,10 @@ def shutdown_all_writers():
     global _mqtt_log_writer, _operation_log_writer
     if _mqtt_log_writer:
         _mqtt_log_writer.stop()
-        _mqtt_log_writer = None  # noqa: F841
+        _mqtt_log_writer = None
     if _operation_log_writer:
         _operation_log_writer.stop()
-        _operation_log_writer = None  # noqa: F841
+        _operation_log_writer = None
     logger.info("[BatchWriter] 所有批量写入器已关闭")
 
 
@@ -444,7 +445,7 @@ atexit.register(shutdown_all_writers)
     writer.enqueue({'data': 'test'}, priority=10)
     writer.enqueue_batch([{'data': 'test1'}, {'data': 'test2'}], priority=8)
     stats = writer.get_stats()
-    print(f"处理了 {stats['total_processed']} 条消息")
+    logger.info(f"处理了 {stats['total_processed']} 条消息")
     writer.flush()
     writer.stop()
 """

@@ -44,7 +44,7 @@ def safe_handle(default_status=500, log_trace=True, message=None):
             except HTTPException:
                 # 401/403/404 等交给 Flask 错误处理器，维持既有语义（含鉴权中间件）
                 raise
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 name = getattr(func, "__qualname__", getattr(func, "__name__", "?"))
                 if log_trace:
                     logger.exception("路由 %s 执行异常", name)

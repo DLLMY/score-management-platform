@@ -5,7 +5,7 @@ from flask_wtf.csrf import CSRFProtect
 from utils.rate_limit import RateLimitStrategy, get_rate_limit_config
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info
 
 
 def init_cors(app):
@@ -181,16 +181,7 @@ def configure_csrf_exemptions(app, csrf, limiter):
         if rule.endpoint in app.view_functions:
             view_func = app.view_functions[rule.endpoint]
 
-            if rule.rule in exempt_rules:
-                csrf.exempt(view_func)
-                log_info(f"已为 {rule.rule} 添加CSRF豁免")
-            elif rule.rule == "/api/devices/<int:id>/remote-control":
-                csrf.exempt(view_func)
-                log_info(f"已为 {rule.rule} 添加CSRF豁免")
-            elif rule.rule == "/api/box/verify":
-                csrf.exempt(view_func)
-                log_info(f"已为 {rule.rule} 添加CSRF豁免")
-            elif rule.rule.startswith("/api/devices/device/") and rule.rule.endswith("/heartbeats"):
+            if rule.rule in exempt_rules or rule.rule == "/api/devices/<int:id>/remote-control" or rule.rule == "/api/box/verify" or rule.rule.startswith("/api/devices/device/") and rule.rule.endswith("/heartbeats"):
                 csrf.exempt(view_func)
                 log_info(f"已为 {rule.rule} 添加CSRF豁免")
             elif rule.rule.startswith("/api/mqtt/"):
@@ -199,17 +190,8 @@ def configure_csrf_exemptions(app, csrf, limiter):
                 if limiter:
                     limiter.exempt(view_func)
                     log_info(f"已为 {rule.rule} 添加限流豁免")
-            elif rule.rule.startswith("/api/nlp/"):
-                csrf.exempt(view_func)
-                log_info(f"已为 {rule.rule} 添加CSRF豁免")
-            elif rule.rule.startswith("/api/scheduled_notify/") and (
+            elif rule.rule.startswith("/api/nlp/") or rule.rule.startswith("/api/scheduled_notify/") and (
                 rule.rule.endswith("/trigger") or rule.rule.endswith("/cancel")
-            ):
-                csrf.exempt(view_func)
-                log_info(f"已为 {rule.rule} 添加CSRF豁免")
-            elif rule.rule == "/api/remote_notify/test":
-                csrf.exempt(view_func)
-                log_info(f"已为 {rule.rule} 添加CSRF豁免")
-            elif rule.rule.startswith("/api/admin_notifications/"):
+            ) or rule.rule == "/api/remote_notify/test" or rule.rule.startswith("/api/admin_notifications/"):
                 csrf.exempt(view_func)
                 log_info(f"已为 {rule.rule} 添加CSRF豁免")

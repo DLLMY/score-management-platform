@@ -166,6 +166,14 @@ class TestBuildClassSummary:
         assert any("风险" in l for l in labels)
         assert any("归因" in l or "波动" in l for l in labels)
 
+        # 内容插值守卫：等级分布行不得残留未替换的 {} 占位（防 f-string 前缀丢失回归）
+        dist_rows = [r for r in rows if "等级分布" in r[0]]
+        assert dist_rows, "缺少参与度等级分布行"
+        dist_content = dist_rows[0][1]
+        assert "{" not in dist_content and "}" not in dist_content, (
+            f"等级分布行存在未插值占位符: {dist_content!r}"
+        )
+
 
 class TestSemesterReportWithSummary:
     def test_export_excel_contains_summary_sheet(

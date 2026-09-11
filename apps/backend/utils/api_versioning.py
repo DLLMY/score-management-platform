@@ -6,14 +6,15 @@ API版本管理模块
 
 from functools import wraps
 from flask import request, jsonify, Blueprint
-from typing import Dict, Callable, Any
+from typing import Any
+from collections.abc import Callable
 import semver
 
 
 class APIVersionManager:
     def __init__(self):
-        self.versions: Dict[str, Dict[str, Callable]] = {"v1": {}, "v2": {}}
-        self.deprecated_endpoints: Dict[str, str] = {}
+        self.versions: dict[str, dict[str, Callable]] = {"v1": {}, "v2": {}}
+        self.deprecated_endpoints: dict[str, str] = {}
         self.current_version = "v2"
 
     def register_endpoint(self, version: str, endpoint: str, handler: Callable):

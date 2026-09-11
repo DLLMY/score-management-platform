@@ -1,6 +1,5 @@
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional, List
 import smtplib
 from utils.logger import log_warning
 
@@ -33,8 +32,8 @@ class EmailService:
         to_email: str,
         subject: str,
         body: str,
-        from_email: Optional[str] = None,
-        cc: Optional[List[str]] = None,
+        from_email: str | None = None,
+        cc: list[str] | None = None,
     ) -> bool:
         """发送邮件"""
         if not self.enabled:

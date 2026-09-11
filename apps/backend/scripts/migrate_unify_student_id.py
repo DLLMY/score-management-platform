@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 P0-1 字段统一化迁移：将 7 张表中指向「学生」的 user_id 列统一重命名为 student_id，
 并对原本缺少 FK 的 4 张表补上 student_id REFERENCES user(id)。
@@ -67,7 +66,7 @@ def rebuild_table_add_fk(conn, table, nullable):
 
     # 建新表 DDL
     ddl = []
-    for cid, name, ctype, notnull, dflt, pk in cols:
+    for _cid, name, ctype, notnull, dflt, pk in cols:
         if name == "user_id":
             name = "student_id"
             ctype = "INTEGER"
@@ -118,7 +117,7 @@ def rebuild_table_add_fk(conn, table, nullable):
     # 重建索引（含 user_id→student_id 重命名）
     cur.execute(f"PRAGMA index_list({q(table)})")
     indexes = cur.fetchall()  # seq,name,unique,origin,partial
-    for seq, idx_name, unique, origin, partial in indexes:
+    for _seq, idx_name, unique, origin, _partial in indexes:
         if origin == "pk":
             continue
         cur.execute(f"PRAGMA index_info({q(idx_name)})")

@@ -36,7 +36,7 @@ def main():
 
     # 1) role_permission_mappings（has_permission 实际查的表；CSV 冗余列已废弃）
     cur.execute("SELECT permission_code FROM role_permission_mappings WHERE role_code=?", (ROLE,))
-    mapped = set(r[0] for r in cur.fetchall())
+    mapped = {r[0] for r in cur.fetchall()}
     inserted = []
     for perm in NEW_PERMS:
         if perm not in mapped:
@@ -53,7 +53,7 @@ def main():
     # 3) 确保 culture.view/edit 存在于 permissions 目录表（权限管理 UI 完整性）
     try:
         cur.execute("SELECT code FROM permissions WHERE code IN (?, ?)", NEW_PERMS)
-        have = set(r[0] for r in cur.fetchall())
+        have = {r[0] for r in cur.fetchall()}
         names = {"culture.view": "查看班级文化", "culture.edit": "编辑班级文化"}
         for perm in NEW_PERMS:
             if perm not in have:
@@ -69,7 +69,7 @@ def main():
 
     # 校验
     cur.execute("SELECT permission_code FROM role_permission_mappings WHERE role_code=?", (ROLE,))
-    final = sorted(set(r[0] for r in cur.fetchall()))
+    final = sorted({r[0] for r in cur.fetchall()})
     print(f"[verify] teacher 映射权限总数={len(final)}")
     for p in NEW_PERMS:
         print(f'  {p}: {"OK" if p in final else "MISSING"}')

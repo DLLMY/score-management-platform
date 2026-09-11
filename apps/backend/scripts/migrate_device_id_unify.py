@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 F5: device_id 全项目统一 String(100)（语义迁移）。
 

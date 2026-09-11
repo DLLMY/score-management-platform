@@ -3,7 +3,6 @@
 """
 
 import os
-from typing import Dict
 
 from utils.logger import log_warning
 
@@ -51,7 +50,7 @@ class SecurityConfig:
         "(OR|AND)\\s+\\d+\\s*=\\s*\\d+",
         "\\'\\s*(OR|AND)\\s*\\'",
         "1\\s*=\\s*1",
-    ]  # noqa: E501
+    ]
     XSS_PATTERNS = ["<script[^>]*>.*?</script>", "javascript:", "onerror=", "onload=", "onclick="]
     FORBIDDEN_FILENAMES = ["..", ".htaccess", ".htpasswd", "web.config", "httpd.conf"]
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
@@ -59,7 +58,7 @@ class SecurityConfig:
     MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
     @classmethod
-    def get_cors_config(cls) -> Dict:
+    def get_cors_config(cls) -> dict:
         """获取CORS配置"""
         return {
             "origins": cls.CORS_ORIGINS,
@@ -69,7 +68,7 @@ class SecurityConfig:
         }
 
     @classmethod
-    def get_security_headers(cls) -> Dict[str, str]:
+    def get_security_headers(cls) -> dict[str, str]:
         """获取安全响应头"""
         return {
             "X-Content-Type-Options": "nosnif",
@@ -86,7 +85,7 @@ class SecurityConfig:
     @classmethod
     def validate_file_upload(cls, filename: str, content_type: str, size: int) -> tuple[bool, str]:
         """验证文件上传"""
-        if any((pattern in filename for pattern in cls.FORBIDDEN_FILENAMES)):
+        if any(pattern in filename for pattern in cls.FORBIDDEN_FILENAMES):
             return (False, "文件名包含非法字符")
         if content_type not in cls.ALLOWED_IMAGE_TYPES:
             return (False, "不支持的文件类型")
@@ -95,7 +94,7 @@ class SecurityConfig:
         return (True, "")
 
     @classmethod
-    def get_password_requirements(cls) -> Dict:
+    def get_password_requirements(cls) -> dict:
         """获取密码要求"""
         return {
             "min_length": cls.PASSWORD_MIN_LENGTH,

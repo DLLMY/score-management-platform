@@ -557,3 +557,32 @@ def test_parse_degrades_gracefully_when_parser_raises(client, app, auth_headers,
     assert resp.status_code == 500
     body = _json(resp)
     assert body["success"] is False, "解析失败不得包装成成功返回（拒绝假绿）"
+
+
+def test_model_evaluate_endpoint(client, app, auth_headers):
+    """GET /api/nlp/model/evaluate 契约（薄路由收尾后，raw-SQL 已下沉 service）。
+
+    P0-1 诚信：nlp_match_results 无样本时四项指标须为 null，不得伪造 0.85。
+    """
+    with app.app_context():
+        resp = client.get("/api/nlp/model/evaluate", headers=auth_headers)
+    assert resp.status_code == 200
+    body = _json(resp)
+    assert body["success"] is True
+    data = body["data"]
+    for key in (
+        "accuracy_rate",
+        "precision",
+        "recall",
+        "f1_score",
+        "total_samples",
+        "correct_count",
+        "incorrect_count",
+    ):
+        assert key in data
+    # 测试库通常无匹配样本 → total_count==0 → 全部 null，且不得伪造数值
+    if data["total_samples"] == 0:
+        assert data["accuracy_rate"] is None
+        assert data["precision"] is None
+        assert data["recall"] is None
+        assert data["f1_score"] is None

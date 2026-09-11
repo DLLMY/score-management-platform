@@ -14,7 +14,7 @@ from models import (
     db,
 )
 from utils.security import validate_token
-from utils.logger import log_access_denied
+from utils.logger import log_access_denied, log_warning
 from utils.response import APIResponse
 
 # 角色定义
@@ -112,7 +112,8 @@ def requires_admin(f):
             if not admin:
                 log_access_denied(request.path, reason="管理员不存在")
                 return {"success": False, "message": "管理员不存在"}, 401
-        except Exception:
+        except Exception as e:
+            log_warning("认证失败（已拒绝访问）", exception=e)
             log_access_denied(request.path, reason="认证失败")
             return {"success": False, "message": "认证失败"}, 401
 
@@ -211,7 +212,8 @@ def requires_permission(permission):
                 scope_deny = _check_class_scope(permission)
                 if scope_deny is not None:
                     return scope_deny
-            except Exception:
+            except Exception as e:
+                log_warning("认证失败（已拒绝访问）", exception=e)
                 log_access_denied(request.path, reason="认证失败")
                 return {"success": False, "message": "认证失败"}, 401
 
@@ -265,7 +267,8 @@ def requires_role(allowed_roles):
                 if admin.role not in allowed_roles:
                     log_access_denied(request.path, reason=f"角色{admin.role}不允许访问此资源")
                     return {"success": False, "message": "权限不足"}, 403
-            except Exception:
+            except Exception as e:
+                log_warning("认证失败（已拒绝访问）", exception=e)
                 log_access_denied(request.path, reason="认证失败")
                 return {"success": False, "message": "认证失败"}, 401
 
@@ -407,7 +410,8 @@ def get_current_admin():
         if payload:
             return Admin.query.filter_by(id=int(payload["sub"])).first()
         return None
-    except Exception:
+    except Exception as e:
+        log_warning("认证令牌校验失败（降级为未认证）", exception=e)
         return None
 
 
@@ -424,7 +428,7 @@ def get_allowed_classes(admin_id):
     class_ids = [link.class_info_id for link in class_links]
     classes = ClassInfo.query.filter(
         ClassInfo.id.in_(class_ids), ClassInfo.is_active == True
-    ).all()  # noqa: E712
+    ).all()
 
     return [c.name for c in classes]
 

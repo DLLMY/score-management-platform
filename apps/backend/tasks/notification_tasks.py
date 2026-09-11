@@ -1,7 +1,7 @@
 from celery_app import celery_app
 import json
 import time
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info
 
 
 @celery_app.task(
@@ -72,17 +72,16 @@ def broadcast_notify(self, message, device_ids=None, urgent=False):
                     count += 1
             log_info(f"[Notification Task] 定向广播通知完成: {count}/{total} 台设备")
             return {"success": count > 0, "message": message, "device_count": count, "total": total}
-        else:
-            notify_data = {
-                "type": "broadcast_notify",
-                "message": message,
-                "urgent": urgent,
-                "timestamp": time.time(),
-            }
-            topic = "phonebox/notify/broadcast"
-            ok = publish_mqtt(topic, json.dumps(notify_data, ensure_ascii=False), qos=1)
-            log_info(f"[Notification Task] 已发布广播通知到 {topic} (success={ok})")
-            return {"success": ok, "message": message, "device_count": "all", "topic": topic}
+        notify_data = {
+            "type": "broadcast_notify",
+            "message": message,
+            "urgent": urgent,
+            "timestamp": time.time(),
+        }
+        topic = "phonebox/notify/broadcast"
+        ok = publish_mqtt(topic, json.dumps(notify_data, ensure_ascii=False), qos=1)
+        log_info(f"[Notification Task] 已发布广播通知到 {topic} (success={ok})")
+        return {"success": ok, "message": message, "device_count": "all", "topic": topic}
     except Exception as e:
         self.retry(exc=e, countdown=3, max_retries=3)
         return {"success": False, "error": str(e)}

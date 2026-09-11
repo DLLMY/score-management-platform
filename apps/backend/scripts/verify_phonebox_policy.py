@@ -101,7 +101,7 @@ def main():
                         )
                     else:
                         print("  >> 回退判定    : 非上课时间，再看全局 TimeRule 与积分门槛")
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     print(f"  >> 回退判定    : 课表反查异常（{e}），按放行处理")
 
         print("\n说明：ALLOW_* 会跳过上课硬拦截直达积分扣减，但积分 <60 仍会被拒（score_low）。")

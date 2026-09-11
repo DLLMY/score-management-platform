@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """幂等迁移脚本（R2 修复）：user 表加 weekly_unlock_count / week_start_date 列。
 
 UnlockValidator 的周开锁限额此前依赖内存属性（模型无对应列）→ 周限额从不持久化。

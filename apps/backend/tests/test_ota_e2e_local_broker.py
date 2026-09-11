@@ -122,7 +122,7 @@ class TestOTAE2ELocalBroker:
             s.close()
         except OSError:
             pytest.skip(
-                "MQTT Broker 不可达 %s（本地可用 `docker compose -f docker-compose.mqtt.yml up -d`"
+                "MQTT Broker 不可达 %s（本地可用 `docker compose -f ops/infra/docker-compose.mqtt.yml up -d`"
                 " 或设 OTA_E2E_BROKER=127.0.0.1:1883）" % self.BROKER
             )
         yield host, port

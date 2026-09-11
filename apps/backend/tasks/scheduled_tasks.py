@@ -7,7 +7,7 @@ from services.redis_cache_service import get_cache_service
 
 from models import db
 from redis import Redis
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_info, log_warning
 
 
 @celery_app.task(name="tasks.scheduled_tasks.clean_expired_results")
@@ -94,7 +94,7 @@ def daily_summary():
         total_subtract = abs(sum(r.score_change for r in records if r.score_change < 0))
         total_count = len(records)
         # 统计活跃用户数
-        active_users = set(r.student_id for r in records)
+        active_users = {r.student_id for r in records}
         summary_data = {
             "date": yesterday.strftime("%Y-%m-%d"),
             "total_records": total_count,

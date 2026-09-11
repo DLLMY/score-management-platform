@@ -112,9 +112,7 @@ with app.app_context():
                         col_type = "DATETIME"
                     elif col in ["text", "template", "tags"]:
                         col_type = "TEXT"
-                    elif col in ["bg_color", "text_color", "color"]:
-                        col_type = "VARCHAR(20)"
-                    elif col in ["language"]:
+                    elif col in ["bg_color", "text_color", "color"] or col in ["language"]:
                         col_type = "VARCHAR(20)"
                     elif col in ["icon"]:
                         col_type = "VARCHAR(50)"

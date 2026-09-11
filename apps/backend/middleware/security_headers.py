@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 安全响应头中间件（第十次评估 P2-1 加固）
 ----------------------------------------
@@ -13,7 +12,6 @@
 仅在 HTML/API 响应上附加；对已设置同头的响应不覆盖（幂等）。
 """
 
-from flask import request
 
 # 注意：script-src 不开放 'unsafe-eval'；dev 模式 vite HMR 需要 ws://127.0.0.1:3000，
 # 生产部署由同源反向代理提供时 connect-src 'self' ws: wss: 足够。

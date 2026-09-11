@@ -25,13 +25,13 @@ def get_rate_limit_config(limit_name: str, default_value: str) -> str:
         if "per minute" in default_value:
             num = int(default_value.split()[0])
             return f"{num * 5} per minute"
-        elif "per second" in default_value:
+        if "per second" in default_value:
             num = int(default_value.split()[0])
             return f"{num * 5} per second"
-        elif "per hour" in default_value:
+        if "per hour" in default_value:
             num = int(default_value.split()[0])
             return f"{num * 5} per hour"
-        elif "per day" in default_value:
+        if "per day" in default_value:
             num = int(default_value.split()[0])
             return f"{num * 5} per day"
     return default_value

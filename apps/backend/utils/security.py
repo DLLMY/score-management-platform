@@ -5,7 +5,7 @@ import jwt
 import bcrypt
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any, List
+from typing import Any
 import json
 import os
 from flask import request
@@ -61,7 +61,7 @@ def generate_tokens(admin_id: int, username: str, role: str):
     }
 
 
-def decode_token(token: str) -> Optional[Dict]:
+def decode_token(token: str) -> dict | None:
     """解码JWT令牌"""
     try:
         return jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
@@ -71,7 +71,7 @@ def decode_token(token: str) -> Optional[Dict]:
         return None
 
 
-def validate_token(token: str, token_type: str = "access") -> Optional[Dict]:
+def validate_token(token: str, token_type: str = "access") -> dict | None:
     """验证JWT令牌"""
     payload = decode_token(token)
     if payload is None:
@@ -297,7 +297,7 @@ class InputValidator:
     def __init__(self):
         self.errors = []
 
-    def validate(self, field: str, value: Any, rules: List[Dict[str, Any]]) -> bool:
+    def validate(self, field: str, value: Any, rules: list[dict[str, Any]]) -> bool:
         """验证字段"""
         self.errors = []
 
@@ -337,38 +337,33 @@ class InputValidator:
                 elif rule == "datetime":
                     if value and not validate_datetime(value):
                         self.errors.append(f"{field} 日期格式不正确")
-                elif rule == "json":
-                    if value and not validate_json(value):
-                        self.errors.append(f"{field} JSON格式不正确")
+                elif rule == "json" and value and not validate_json(value):
+                    self.errors.append(f"{field} JSON格式不正确")
 
             elif isinstance(rule, dict):
                 # 参数化规则
-                if "min" in rule:
-                    if value is not None:
-                        try:
-                            val = int(value) if isinstance(value, (int, str)) else value
-                            if val < rule["min"]:
-                                self.errors.append(f"{field} 不能小于 {rule['min']}")
-                        except (ValueError, TypeError):
-                            self.errors.append(f"{field} 必须是数字")
-                if "max" in rule:
-                    if value is not None:
-                        try:
-                            val = int(value) if isinstance(value, (int, str)) else value
-                            if val > rule["max"]:
-                                self.errors.append(f"{field} 不能大于 {rule['max']}")
-                        except (ValueError, TypeError):
-                            self.errors.append(f"{field} 必须是数字")
-                if "minLength" in rule:
-                    if value and len(str(value).strip()) < rule["minLength"]:
-                        self.errors.append(f"{field} 至少需要 {rule['minLength']} 个字符")
-                if "maxLength" in rule:
-                    if value and len(str(value).strip()) > rule["maxLength"]:
-                        self.errors.append(f"{field} 最多允许 {rule['maxLength']} 个字符")
+                if "min" in rule and value is not None:
+                    try:
+                        val = int(value) if isinstance(value, (int, str)) else value
+                        if val < rule["min"]:
+                            self.errors.append(f"{field} 不能小于 {rule['min']}")
+                    except (ValueError, TypeError):
+                        self.errors.append(f"{field} 必须是数字")
+                if "max" in rule and value is not None:
+                    try:
+                        val = int(value) if isinstance(value, (int, str)) else value
+                        if val > rule["max"]:
+                            self.errors.append(f"{field} 不能大于 {rule['max']}")
+                    except (ValueError, TypeError):
+                        self.errors.append(f"{field} 必须是数字")
+                if "minLength" in rule and value and len(str(value).strip()) < rule["minLength"]:
+                    self.errors.append(f"{field} 至少需要 {rule['minLength']} 个字符")
+                if "maxLength" in rule and value and len(str(value).strip()) > rule["maxLength"]:
+                    self.errors.append(f"{field} 最多允许 {rule['maxLength']} 个字符")
 
         return len(self.errors) == 0
 
-    def get_errors(self) -> List[str]:
+    def get_errors(self) -> list[str]:
         """获取错误列表"""
         return self.errors
 
@@ -435,7 +430,7 @@ def is_safe_redirect_url(url: str) -> bool:
 # ==================== 请求参数提取 ====================
 
 
-def get_request_data() -> Dict[str, Any]:
+def get_request_data() -> dict[str, Any]:
     """从请求中提取数据，支持JSON和表单"""
     data = {}
 
@@ -445,7 +440,7 @@ def get_request_data() -> Dict[str, Any]:
             data = request.get_json() or {}
         except Exception as e:
             # 解析失败降级为空 dict（交给表单/默认值兜底），但需留痕便于排查畸形请求。
-            logger.warning(f"解析请求 JSON 失败，降级为空数据: {e}")
+            logger.warning(f"解析请求 JSON 失败，降级为空数据: {e}", exc_info=True)
 
     # 如果JSON为空，从表单获取
     if not data and request and request.form:

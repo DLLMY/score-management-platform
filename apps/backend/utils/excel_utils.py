@@ -1,7 +1,8 @@
 import io
 import csv
+import logging
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 from flask import send_file
 
@@ -13,12 +14,14 @@ try:
 except ImportError:
     OPENPYXL_AVAILABLE = False
 
+logger = logging.getLogger(__name__)
+
 
 class ExcelUtils:
     """Excel文件处理工具类"""
 
     @staticmethod
-    def create_workbook(sheets: List[Dict[str, Any]]) -> Workbook:
+    def create_workbook(sheets: list[dict[str, Any]]) -> Workbook:
         """
         创建Excel工作簿
 
@@ -51,7 +54,7 @@ class ExcelUtils:
         return wb
 
     @staticmethod
-    def _apply_header_style(ws, headers: List[str], row_num: int):
+    def _apply_header_style(ws, headers: list[str], row_num: int):
         """应用表头样式"""
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
@@ -80,10 +83,10 @@ class ExcelUtils:
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except Exception:
+                except Exception as e:
                     # 逐单元格列宽计算的热循环：失败（如 formula/error cell）仅跳过该列宽估算，
-                    # 属可预期降级。若改为 logger 会在大表下刷屏，故保留静默并显式说明（T9 评估结论）。
-                    pass
+                    # 属可预期降级。记录 debug（含 traceback），默认不输出不刷屏（T9 评估结论）。
+                    logger.debug("自动调整列宽跳过单元格: %s", e, exc_info=True)
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column].width = adjusted_width
 
@@ -96,7 +99,7 @@ class ExcelUtils:
         return output.getvalue()
 
     @staticmethod
-    def export_to_excel(sheets: List[Dict[str, Any]], filename: str = None) -> bytes:
+    def export_to_excel(sheets: list[dict[str, Any]], filename: str = None) -> bytes:
         """
         导出数据到Excel文件
 
@@ -108,7 +111,7 @@ class ExcelUtils:
         return ExcelUtils.workbook_to_bytes(wb)
 
     @staticmethod
-    def export_to_csv(data: List[List[Any]], headers: List[str]) -> bytes:
+    def export_to_csv(data: list[list[Any]], headers: list[str]) -> bytes:
         """
         导出数据到CSV文件
 
@@ -124,7 +127,7 @@ class ExcelUtils:
         return output.getvalue().encode("utf-8-sig")
 
     @staticmethod
-    def read_excel(file_bytes: bytes, sheet_name: str = None) -> Dict[str, Any]:
+    def read_excel(file_bytes: bytes, sheet_name: str = None) -> dict[str, Any]:
         """
         读取Excel文件
 
@@ -154,10 +157,10 @@ class ExcelUtils:
 
             return {"headers": headers, "data": data, "sheet_name": ws.title}
         except Exception as e:
-            raise ValueError(f"读取Excel文件失败: {str(e)}")
+            raise ValueError(f"读取Excel文件失败: {str(e)}") from e
 
     @staticmethod
-    def read_csv(file_bytes: bytes) -> Dict[str, Any]:
+    def read_csv(file_bytes: bytes) -> dict[str, Any]:
         """
         读取CSV文件
 
@@ -177,7 +180,7 @@ class ExcelUtils:
 
             return {"headers": headers, "data": data}
         except Exception as e:
-            raise ValueError(f"读取CSV文件失败: {str(e)}")
+            raise ValueError(f"读取CSV文件失败: {str(e)}") from e
 
     @staticmethod
     def detect_file_type(file_bytes: bytes, filename: str) -> str:
@@ -192,15 +195,15 @@ class ExcelUtils:
 
         if lower_name.endswith(".xlsx"):
             return "xlsx"
-        elif lower_name.endswith(".xls"):
+        if lower_name.endswith(".xls"):
             return "xls"
-        elif lower_name.endswith(".csv"):
+        if lower_name.endswith(".csv"):
             return "csv"
 
         # 尝试通过内容检测
         if file_bytes[:4] == b"PK\x03\x04":
             return "xlsx"
-        elif file_bytes[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+        if file_bytes[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
             return "xls"
 
         return None
@@ -298,8 +301,8 @@ class ExcelTemplateGenerator:
 
     @staticmethod
     def validate_import_data(
-        template_type: str, headers: List[str], data: List[List[Any]]
-    ) -> Dict[str, Any]:
+        template_type: str, headers: list[str], data: list[list[Any]]
+    ) -> dict[str, Any]:
         """
         验证导入数据格式
 

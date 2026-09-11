@@ -88,7 +88,7 @@ API_MODULES = {
 
 def extract_api_info(file_path):
     """从路由文件提取API信息"""
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         content = f.read()
     # 提取namespace定义
     ns_match = re.findall(r"(\w+)\s*=\s*Namespace\([\'\"]([^\'\"]+)[\'\"]", content)

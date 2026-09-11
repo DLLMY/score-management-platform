@@ -35,7 +35,7 @@ def cleanup_stale_training_records(app, max_running_minutes=5):
                 NLPModelTraining.status == "running",
                 NLPModelTraining.created_at < threshold,
             ).all()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.error("扫描悬挂训练记录失败: %s", e, exc_info=True)
             return 0
 
@@ -58,7 +58,7 @@ def cleanup_stale_training_records(app, max_running_minutes=5):
         if count:
             try:
                 db.session.commit()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.error("提交清理失败: %s", e, exc_info=True)
                 db.session.rollback()
                 return 0

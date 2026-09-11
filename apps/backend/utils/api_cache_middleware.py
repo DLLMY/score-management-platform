@@ -117,7 +117,7 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
             except Exception as e:
                 # 缓存不可用不应影响业务，降级为回源；但必须留痕，否则 Redis 故障期
                 # 表现为"缓存命中率归零"却无任何线索（T9 基础设施层日志化）。
-                logger.warning(f"读取API缓存失败，降级回源 key={cache_key}: {e}")
+                logger.warning(f"读取API缓存失败，降级回源 key={cache_key}: {e}", exc_info=True)
                 cached_response = None
             if cached_response is not None:
                 # 返回缓存的响应
@@ -143,7 +143,7 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
                     cache.set(cache_key, response_data, ttl=cache_ttl)
                 except Exception as e:
                     # 写缓存失败同样只降级不阻断响应，但要留痕（T9 基础设施层日志化）。
-                    logger.warning(f"写入API缓存失败 key={cache_key}: {e}")
+                    logger.warning(f"写入API缓存失败 key={cache_key}: {e}", exc_info=True)
             # 返回响应
             response = make_response(jsonify(response_data), status_code)
             response.headers["X-Cache"] = "MISS"
@@ -224,7 +224,6 @@ def setup_cache_middleware(app):
     def before_request_cache():
         """请求前处理"""
         # 可以在这里添加缓存预热逻辑
-        pass
 
     @app.after_request
     def after_request_cache(response):

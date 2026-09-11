@@ -48,7 +48,7 @@ def collect_code_metrics():
             file_path = os.path.join(root, fname)
             rel_dir = os.path.relpath(root, PROJECT_ROOT)
             try:
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
                     lines = f.readlines()
                 file_lines = len(lines)
                 code_lines = 0
@@ -62,9 +62,7 @@ def collect_code_metrics():
                         stripped.startswith("#")
                         or stripped.startswith("//")
                         or stripped.startswith("--")
-                    ):
-                        comment_lines += 1
-                    elif (
+                    ) or (
                         stripped.startswith('"""')
                         or stripped.startswith("'''")
                         or stripped.startswith("/**")
@@ -132,7 +130,7 @@ def collect_test_metrics():
     test_metrics["test_files"] = len(test_files_found)
     for test_file in test_files_found:
         try:
-            with open(test_file, "r", encoding="utf-8", errors="ignore") as f:
+            with open(test_file, encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             tree = ast.parse(content, filename=test_file)
             funcs = [
@@ -154,7 +152,7 @@ def collect_test_metrics():
             logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 估算覆盖率：测试文件数 vs 源文件数
     py_files = 0
-    for root, dirs, files in os.walk(BACKEND_DIR):
+    for _, dirs, files in os.walk(BACKEND_DIR):
         dirs[:] = [d for d in dirs if d not in ("__pycache__", "instance", "logs")]
         for fname in files:
             if fname.endswith(".py") and not fname.startswith("test_"):
@@ -196,7 +194,7 @@ def collect_security_metrics():
     for cf in config_files:
         if os.path.exists(cf):
             try:
-                with open(cf, "r", encoding="utf-8") as f:
+                with open(cf, encoding="utf-8") as f:
                     content = f.read()
                 # 检查JWT密钥长度
                 secret_match = re.search(r'JWT_SECRET_KEY\s*=\s*["\']([^"\']+)["\']', content)
@@ -213,7 +211,7 @@ def collect_security_metrics():
                 logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 2. 检查CSRF
     try:
-        with open(os.path.join(BACKEND_DIR, "app", "config.py"), "r", encoding="utf-8") as f:
+        with open(os.path.join(BACKEND_DIR, "app", "config.py"), encoding="utf-8") as f:
             content = f.read()
         sec_metrics["csrf_config"]["enabled"] = "CSRF" in content and "True" in content
     except Exception:
@@ -222,12 +220,12 @@ def collect_security_metrics():
     perm_decorators = 0
     perm_files_checked = []
     api_dir = os.path.join(BACKEND_DIR, "api")
-    for root, dirs, files in os.walk(api_dir):
+    for root, _, files in os.walk(api_dir):
         for fname in files:
             if fname.endswith(".py"):
                 fpath = os.path.join(root, fname)
                 try:
-                    with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                    with open(fpath, encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                     count = content.count("@requires_permission")
                     if count > 0:
@@ -251,7 +249,7 @@ def collect_security_metrics():
             if fname.endswith(".py"):
                 fpath = os.path.join(root, fname)
                 try:
-                    with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                    with open(fpath, encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                     for pattern, risk_name in patterns_to_check:
                         matches = re.findall(pattern, content, re.IGNORECASE)
@@ -273,13 +271,13 @@ def collect_security_metrics():
             if fname.endswith(".py"):
                 fpath = os.path.join(root, fname)
                 try:
-                    with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                    with open(fpath, encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                     # 检查字符串拼接的SQL
                     sql_concat = re.findall(
                         r'(?:execute|raw)\s*\(\s*[f"\'].*\{.*\}.*[f"\']', content
                     )
-                    for match in sql_concat:
+                    for _match in sql_concat:
                         sec_metrics["sql_injection_risks"].append(
                             {
                                 "file": os.path.basename(fpath),
@@ -320,7 +318,7 @@ def collect_api_coverage():
                 continue
             fpath = os.path.join(root, fname)
             try:
-                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                with open(fpath, encoding="utf-8", errors="ignore") as f:
                     content = f.read()
                 # 找namespace
                 ns_match = re.finditer(r"(\w+)\s*=\s*Namespace\([\'\"]([^\'\"]+)[\'\"]", content)
@@ -354,7 +352,7 @@ def collect_api_coverage():
     if os.path.exists(swagger_path):
         api_metrics["swagger_docs_available"] = True
         try:
-            with open(swagger_path, "r", encoding="utf-8") as f:
+            with open(swagger_path, encoding="utf-8") as f:
                 swagger = json.load(f)
             swagger_paths = swagger.get("paths", {})
             swagger_endpoints = sum(
@@ -392,7 +390,7 @@ def collect_dependency_metrics():
     }
     req_path = os.path.join(BACKEND_DIR, "requirements.txt")
     if os.path.exists(req_path):
-        with open(req_path, "r", encoding="utf-8") as f:
+        with open(req_path, encoding="utf-8") as f:
             lines = [l.strip() for l in f.readlines() if l.strip() and not l.startswith("#")]
         dep_metrics["total_dependencies"] = len(lines)
         dep_metrics["direct_dependencies"] = len(lines)
@@ -446,7 +444,7 @@ def collect_architecture_metrics():
     models_path = os.path.join(BACKEND_DIR, "models")
     if os.path.exists(models_path):
         try:
-            with open(models_path, "r", encoding="utf-8") as f:
+            with open(models_path, encoding="utf-8") as f:
                 content = f.read()
             model_classes = re.findall(r"class\s+(\w+)\s*\(", content)
             arch_metrics["model_count"] = len(model_classes)
@@ -464,7 +462,7 @@ def collect_architecture_metrics():
     # 统计路由文件
     api_dir = os.path.join(BACKEND_DIR, "api")
     route_files = 0
-    for root, dirs, files in os.walk(api_dir):
+    for _, _, files in os.walk(api_dir):
         for fname in files:
             if fname.endswith(".py") and not fname.startswith("__"):
                 route_files += 1
@@ -479,7 +477,7 @@ def collect_architecture_metrics():
                 continue
             fpath = os.path.join(root, fname)
             try:
-                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                with open(fpath, encoding="utf-8", errors="ignore") as f:
                     content = f.read()
                 if (
                     re.search(r"class\s+\w+Service", content)

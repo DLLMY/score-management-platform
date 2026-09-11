@@ -36,7 +36,7 @@ def db_session_scope(auto_commit=True, detach=True):
             ):
                 session.remove()
         except Exception as e:
-            logger.debug("session.remove 清理失败（可忽略）: %s", e)
+            logger.debug("session.remove 清理失败（可忽略）: %s", e, exc_info=True)
 
 
 @contextmanager

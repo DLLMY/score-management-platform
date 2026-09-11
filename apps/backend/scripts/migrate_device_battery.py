@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """幂等迁移脚本（R7/F8）：device 表加 battery_level / temperature 列。
 
 此前 heartbeat_service 对设备上报的 battery_level/temperature 直接赋值，

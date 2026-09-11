@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Optional, TypeVar, Dict
+from typing import Any, TypeVar
+from collections.abc import Callable
 from functools import wraps
 from datetime import datetime
 from sqlalchemy import text
@@ -18,22 +19,22 @@ class QueryMetrics:
 
     def __init__(self, query_name: str):
         self.query_name = query_name
-        self.start_time: Optional[float] = None
-        self.end_time: Optional[float] = None
-        self.duration: Optional[float] = None
+        self.start_time: float | None = None
+        self.end_time: float | None = None
+        self.duration: float | None = None
         self.row_count: int = 0
-        self.error: Optional[str] = None
+        self.error: str | None = None
 
     def start(self):
         self.start_time = time.time()
 
-    def end(self, row_count: int = 0, error: Optional[str] = None):
+    def end(self, row_count: int = 0, error: str | None = None):
         self.end_time = time.time()
         self.duration = self.end_time - self.start_time
         self.row_count = row_count
         self.error = error
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "query_name": self.query_name,
             "duration": self.duration,
@@ -46,15 +47,15 @@ class QueryMetrics:
 class QueryProfiler:
     """查询分析器"""
 
-    _instance = None  # noqa: F841
-    _lock = __import__("threading").Lock()  # noqa: F841
+    _instance = None
+    _lock = __import__("threading").Lock()
 
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._metrics: List[QueryMetrics] = []
+                    cls._instance._metrics: list[QueryMetrics] = []
                     cls._instance._max_metrics = 1000
         return cls._instance
 
@@ -65,7 +66,7 @@ class QueryProfiler:
         if len(self._metrics) > self._max_metrics:
             self._metrics = self._metrics[-self._max_metrics :]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取统计信息"""
         if not self._metrics:
             return {
@@ -85,7 +86,7 @@ class QueryProfiler:
             "avg_rows": sum(row_counts) / len(row_counts) if row_counts else 0,
         }
 
-    def get_slow_queries(self, threshold: float = 1.0) -> List[QueryMetrics]:
+    def get_slow_queries(self, threshold: float = 1.0) -> list[QueryMetrics]:
         """获取慢查询"""
         return [m for m in self._metrics if m.duration and m.duration > threshold]
 
@@ -111,7 +112,7 @@ def profile_query(query_name: str = None):
             metrics = QueryMetrics(name)
             metrics.start()
             try:
-                result = func(*args, **kwargs)  # noqa: F841
+                result = func(*args, **kwargs)
                 row_count = (
                     len(result)
                     if isinstance(result, (list, tuple))
@@ -131,8 +132,8 @@ def profile_query(query_name: str = None):
 
 
 def batch_query(
-    query_func: Callable[[List[int]], List[T]], ids: List[int], batch_size: int = 100
-) -> List[T]:
+    query_func: Callable[[list[int]], list[T]], ids: list[int], batch_size: int = 100
+) -> list[T]:
     """
     批量查询优化
     将大量 ID 查询拆分成小批次，减少数据库压力
@@ -154,7 +155,7 @@ def batch_query(
 
 
 def batch_update(
-    model_class, updates: List[Dict[str, Any]], id_field: str = "id", batch_size: int = 100
+    model_class, updates: list[dict[str, Any]], id_field: str = "id", batch_size: int = 100
 ) -> int:
     """
     批量更新优化
@@ -182,16 +183,17 @@ def batch_update(
     return total_updated
 
 
-def get_query_explain(query: Query) -> List[Dict[str, Any]]:
+def get_query_explain(query: Query) -> list[dict[str, Any]]:
     """
     获取 SQL 查询执行计划
     用于分析查询性能
     """
     sql = str(query.statement.compile(compile_kwargs={"literal_binds": True}))
     try:
-        result = db.session.execute(text(f"EXPLAIN QUERY PLAN {sql}"))  # noqa: F841
+        result = db.session.execute(text(f"EXPLAIN QUERY PLAN {sql}"))
         return [dict(row) for row in result]
     except Exception:
+        logger.warning("EXPLAIN QUERY PLAN 失败，返回空", exc_info=True)
         return []
 
 
@@ -199,7 +201,7 @@ class IndexSuggestion:
     """索引建议"""
 
     @staticmethod
-    def analyze_table_access() -> Dict[str, List[str]]:
+    def analyze_table_access() -> dict[str, list[str]]:
         """
         分析表访问模式，返回可能需要索引的字段
         这是一个基于规则的简单分析，实际生产环境可能需要更复杂的分析
@@ -222,7 +224,7 @@ class ConnectionPoolOptimizer:
     """连接池优化器"""
 
     @staticmethod
-    def get_pool_stats() -> Dict[str, Any]:
+    def get_pool_stats() -> dict[str, Any]:
         """获取连接池统计"""
         pool = db.engine.pool
         return {

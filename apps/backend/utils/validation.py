@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 from functools import wraps
 from flask import request, jsonify
 
@@ -475,7 +476,7 @@ def validate_request(*validators: Callable) -> Callable:
 
             for validator in validators:
                 try:
-                    result = validator(json_data, query_params)  # noqa: F841
+                    result = validator(json_data, query_params)
                     if isinstance(result, tuple) and len(result) == 2:
                         is_valid, error_msg = result
                         if not is_valid:

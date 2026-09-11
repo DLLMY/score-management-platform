@@ -12,7 +12,7 @@ admin-classes）。各端点保留的手动 invalidate_cache 仍生效（双保�
 
 from flask import request
 
-logger = None  # 延迟导入避免循环
+from utils.logger import logger
 
 
 # 写端点影响的关联集合（防止跨域残留）。宽匹配多清无害、漏清有害。
@@ -101,5 +101,5 @@ def register_cache_invalidation(app):
                 invalidate_cache(p)
         except Exception:
             # 失效失败不影响请求主流程（下次 GET 走 skip_cache 或 TTL 过期自愈）
-            pass
+            logger.debug("缓存自动失效异常（已忽略，下次 GET 自愈）", exc_info=True)
         return response

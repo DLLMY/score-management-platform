@@ -129,7 +129,7 @@ def check_python_compile():
             if file.endswith(".py"):
                 filepath = os.path.join(root, file)
                 try:
-                    with open(filepath, "r", encoding="utf-8") as f:
+                    with open(filepath, encoding="utf-8") as f:
                         source = f.read()
                     compile(source, filepath, "exec")
                 except SyntaxError as e:
@@ -185,7 +185,7 @@ def check_bandit():
     try:
         report_path = os.path.join(REPORT_DIR, "bandit_report.json")
         if os.path.exists(report_path):
-            with open(report_path, "r", encoding="utf-8") as f:
+            with open(report_path, encoding="utf-8") as f:
                 import json as j
 
                 data = j.load(f)
@@ -266,9 +266,7 @@ def main():
 
     overall_passed = generate_report(flake8_result, syntax_result, compile_result, bandit_result)
 
-    if fail_on_error and not overall_passed:
-        sys.exit(1)
-    elif not syntax_result["passed"] or not compile_result["passed"] or not bandit_result["passed"]:
+    if fail_on_error and not overall_passed or not syntax_result["passed"] or not compile_result["passed"] or not bandit_result["passed"]:
         sys.exit(1)
     elif not flake8_result["passed"]:
         sys.exit(2)

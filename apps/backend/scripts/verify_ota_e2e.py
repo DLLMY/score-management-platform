@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 无缝 OTA 端到端验证（设备 <-> Broker <-> 后端）。
 
 默认对接「生产云端 Broker」(nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883, TLS)，
-也可通过环境变量切到本地 Broker（docker-compose.mqtt.yml 起的 eclipse-mosquitto）。
+也可通过环境变量切到本地 Broker（ops/infra/docker-compose.mqtt.yml 起的 eclipse-mosquitto）。
 用 paho 模拟一台「设备」，验证 P2 落地后的
 「后端 -> Broker -> 设备 -> Broker -> 后端」无缝 OTA 全链路：
 
@@ -81,7 +80,7 @@ SECRET = os.getenv("OTA_SIGNING_SECRET", "")  # 设备侧验签密钥（须与�
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:5000").rstrip("/")
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS = os.getenv("ADMIN_PASS", "123456")
-DEVICE_ID = os.getenv("DEVICE_ID") or ("E2E_OTA_%d" % int(time.time()))
+DEVICE_ID = os.getenv("DEVICE_ID") or (f"E2E_OTA_{int(time.time())}")
 FIRMWARE_ID = os.getenv("FIRMWARE_ID")  # 可选，缺省取首个 active
 
 RUN_TS = int(time.time())
@@ -99,7 +98,7 @@ pub_client = None  # 发包连接
 def _on_connect(c, userdata, flags, rc):
     print(f"[DEVICE] connected rc={rc}")
     # 专属 topic + 广播 topic + 状态回报回执（验证后端收到状态）
-    for t in ("phonebox/ota/%s" % DEVICE_ID, "phonebox/ota", "phonebox/ota/%s/status" % DEVICE_ID):
+    for t in (f"phonebox/ota/{DEVICE_ID}", "phonebox/ota", f"phonebox/ota/{DEVICE_ID}/status"):
         try:
             _res, mid = c.subscribe(t, qos=1)
         except Exception as e:
@@ -110,7 +109,7 @@ def _on_connect(c, userdata, flags, rc):
 
 
 def _on_subscribe(c, userdata, mid, granted_qos):
-    topic = _sub_mid.get(mid, "<未知 mid=%s>" % mid)
+    topic = _sub_mid.get(mid, f"<未知 mid={mid}>")
     gq = list(granted_qos) if isinstance(granted_qos, (list, tuple)) else [granted_qos]
     status = "OK" if all(q == 1 for q in gq) else "WARN(授予QoS非1)"
     print(f"[DEVICE][SUBACK] topic={topic} granted_qos={gq} -> {status} (mid={mid})")
@@ -138,7 +137,7 @@ def _verify_signature(payload):
         )
     if not sig:
         return False, "缺少签名(可能被伪造/广播)"
-    msg = f"{fw_id}:{version}:{url}".encode("utf-8")
+    msg = f"{fw_id}:{version}:{url}".encode()
     expect = hmac.new(SECRET.encode("utf-8"), msg, hashlib.sha256).hexdigest()
     ok = hmac.compare_digest(sig, expect)
     return ok, ("签名匹配" if ok else "签名不匹配(指令伪造)")
@@ -174,21 +173,21 @@ def _login():
         "POST", "/api/auth/login", data={"username": ADMIN_USER, "password": ADMIN_PASS}
     )
     if st != 200 or not body.get("success"):
-        raise RuntimeError("登录失败 HTTP %s: %s" % (st, body.get("message")))
+        raise RuntimeError("登录失败 HTTP {}: {}".format(st, body.get("message")))
     return body["access_token"]
 
 
 def _get_active_firmware(token):
     if FIRMWARE_ID:
-        st, body = _http("GET", "/api/firmware/%s" % FIRMWARE_ID, token=token)
+        st, body = _http("GET", f"/api/firmware/{FIRMWARE_ID}", token=token)
         if st == 200 and body.get("data"):
             f = body["data"]
             return f.get("id"), f.get("version")
-        raise RuntimeError("指定 FIRMWARE_ID=%s 不存在" % FIRMWARE_ID)
+        raise RuntimeError(f"指定 FIRMWARE_ID={FIRMWARE_ID} 不存在")
     # 取首个 active 固件
     st, body = _http("GET", "/api/firmware", token=token)
     if st != 200:
-        raise RuntimeError("获取固件列表失败 HTTP %s" % st)
+        raise RuntimeError(f"获取固件列表失败 HTTP {st}")
     fw_list = (body.get("data") or {}).get("items") or body.get("data") or body.get("items") or []
     for f in fw_list:
         if f.get("is_active"):
@@ -211,8 +210,8 @@ def main():
     print(f"[SETUP] 选用 active 固件 id={fid} version={fver}")
 
     # 收包 / 发包 双连接（收发分离，根治高延迟收包饿死）
-    client = mqtt.Client(client_id="e2e_ota_recv_%d" % RUN_TS, clean_session=True)
-    pub_client = mqtt.Client(client_id="e2e_ota_pub_%d" % RUN_TS, clean_session=True)
+    client = mqtt.Client(client_id=f"e2e_ota_recv_{RUN_TS}", clean_session=True)
+    pub_client = mqtt.Client(client_id=f"e2e_ota_pub_{RUN_TS}", clean_session=True)
     if USER:
         client.username_pw_set(USER, PASS)
         pub_client.username_pw_set(USER, PASS)
@@ -251,7 +250,7 @@ def main():
 
     # 触发 OTA 推送（force=True，绕过版本/auto_update 检查）
     st, body = _http(
-        "POST", "/api/firmware/%s/ota-upgrade" % fid, token=token, data={"device_ids": [DEVICE_ID]}
+        "POST", f"/api/firmware/{fid}/ota-upgrade", token=token, data={"device_ids": [DEVICE_ID]}
     )
     if st != 200 or not (body.get("success") or body.get("data", {}).get("success")):
         print(f"[FAIL] 触发 OTA 推送失败 HTTP {st}: {body}")
@@ -271,11 +270,11 @@ def main():
 
     if cmd is None:
         results.append(
-            ("1.设备收到OTA指令", False, "30s 内未在 phonebox/ota/%s 收到指令" % DEVICE_ID)
+            ("1.设备收到OTA指令", False, f"30s 内未在 phonebox/ota/{DEVICE_ID} 收到指令")
         )
     else:
         topic, pl = cmd
-        ok_topic = topic in ("phonebox/ota/%s" % DEVICE_ID, "phonebox/ota")
+        ok_topic = topic in (f"phonebox/ota/{DEVICE_ID}", "phonebox/ota")
         sig_ok, sig_msg = _verify_signature(pl)
         recv_ok = ok_topic and sig_ok and bool(pl.get("url")) and bool(pl.get("version"))
         detail = (
@@ -288,7 +287,7 @@ def main():
         # ---- 设备回报状态：started -> success ----
         if recv_ok:
             _publish(
-                "phonebox/ota/%s/status" % DEVICE_ID,
+                f"phonebox/ota/{DEVICE_ID}/status",
                 {
                     "device_id": DEVICE_ID,
                     "status": "started",
@@ -299,7 +298,7 @@ def main():
             )
             time.sleep(1)
             _publish(
-                "phonebox/ota/%s/status" % DEVICE_ID,
+                f"phonebox/ota/{DEVICE_ID}/status",
                 {
                     "device_id": DEVICE_ID,
                     "status": "success",
@@ -314,7 +313,7 @@ def main():
     completed = False
     deadline = time.time() + 30
     while time.time() < deadline:
-        st, body = _http("GET", "/api/firmware/ota-status?device_id=%s" % DEVICE_ID, token=token)
+        st, body = _http("GET", f"/api/firmware/ota-status?device_id={DEVICE_ID}", token=token)
         if st == 200:
             recent = body.get("recent") or []
             for r in recent:

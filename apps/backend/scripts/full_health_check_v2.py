@@ -76,7 +76,7 @@ def check():
 
     headers = {"Authorization": f"Bearer {token}"} if token else {}
 
-    for method, ep, label in endpoints:
+    for _method, ep, label in endpoints:
         try:
             t0 = time.time()
             r = requests.get(f"{BASE}{ep}", headers=headers, timeout=10)

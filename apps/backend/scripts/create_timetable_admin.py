@@ -33,9 +33,9 @@ def main():
 
     # 自动备份
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    bak = os.path.join(INSTANCE_DIR, "score_management.db.bak_create_timetable_admin_%s" % ts)
+    bak = os.path.join(INSTANCE_DIR, f"score_management.db.bak_create_timetable_admin_{ts}")
     shutil.copy2(DB_PATH, bak)
-    print("[backup] %s" % bak)
+    print(f"[backup] {bak}")
 
     app = create_app(lightweight=True)
     with app.app_context():
@@ -52,19 +52,18 @@ def main():
             )
             db.session.add(u)
             db.session.flush()
-            print("[create] new admin username=%s id=%s" % (args.username, u.id))
+            print(f"[create] new admin username={args.username} id={u.id}")
         else:
             print(
-                "[skip] admin username=%s already exists (id=%s), keep password unchanged"
-                % (args.username, u.id)
+                f"[skip] admin username={args.username} already exists (id={u.id}), keep password unchanged"
             )
 
         link = AdminRole.query.filter_by(admin_id=u.id, role_code=ROLE_CODE).first()
         if link is None:
             db.session.add(AdminRole(admin_id=u.id, role_code=ROLE_CODE))
-            print("[bind] role %s -> admin %s" % (ROLE_CODE, u.id))
+            print(f"[bind] role {ROLE_CODE} -> admin {u.id}")
         else:
-            print("[skip] role %s already bound to admin %s" % (ROLE_CODE, u.id))
+            print(f"[skip] role {ROLE_CODE} already bound to admin {u.id}")
 
         db.session.commit()
 
@@ -75,12 +74,12 @@ def main():
         perm_force = has_permission(u, "notification.force_send")
         perm_all = has_permission(u, "all")
         print("[verify] has_permission:")
-        print("  timetable.rule.manage: %s" % perm_timetable)
-        print("  period.manage: %s" % perm_period)
-        print("  schedule.manage: %s" % perm_schedule)
-        print("  student.view: %s" % perm_student)
-        print("  notification.force_send (应为 False): %s" % perm_force)
-        print("  all (应为 False): %s" % perm_all)
+        print(f"  timetable.rule.manage: {perm_timetable}")
+        print(f"  period.manage: {perm_period}")
+        print(f"  schedule.manage: {perm_schedule}")
+        print(f"  student.view: {perm_student}")
+        print(f"  notification.force_send (应为 False): {perm_force}")
+        print(f"  all (应为 False): {perm_all}")
 
         ok = (
             perm_timetable

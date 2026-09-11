@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
 from app import create_app
 import os
 import sys
@@ -22,7 +22,7 @@ class PerformanceBenchmark:
     def __init__(self):
         self.app = create_app()
         self.client = self.app.test_client()
-        self.results: Dict[str, Dict[str, Any]] = {}
+        self.results: dict[str, dict[str, Any]] = {}
         self.start_time = None
 
     def run_benchmark(
@@ -30,12 +30,12 @@ class PerformanceBenchmark:
         endpoint: str,
         method: str = "GET",
         iterations: int = 100,
-        data: Dict = None,
-        headers: Dict = None,
-    ) -> Dict[str, Any]:
+        data: dict = None,
+        headers: dict = None,
+    ) -> dict[str, Any]:
         """运行单个端点的基准测试"""
         results = []
-        for i in range(iterations):
+        for _i in range(iterations):
             start = time.perf_counter()
             try:
                 if method == "GET":
@@ -64,8 +64,8 @@ class PerformanceBenchmark:
         return self._analyze_results(endpoint, method, iterations, results)
 
     def _analyze_results(
-        self, endpoint: str, method: str, iterations: int, results: List[Dict]
-    ) -> Dict[str, Any]:
+        self, endpoint: str, method: str, iterations: int, results: list[dict]
+    ) -> dict[str, Any]:
         """分析测试结果"""
         response_times = [r["response_time"] for r in results]
         successes = [r for r in results if r["success"]]
@@ -96,7 +96,7 @@ class PerformanceBenchmark:
             "total_time": round(sum(response_times), 2),
         }
 
-    def _calculate_percentile(self, values: List[float], percentile: int) -> float:
+    def _calculate_percentile(self, values: list[float], percentile: int) -> float:
         """计算百分位数"""
         if not values:
             return 0
@@ -105,7 +105,7 @@ class PerformanceBenchmark:
         index = max(0, min(index, len(sorted_values) - 1))
         return sorted_values[index]
 
-    def run_all_benchmarks(self) -> Dict[str, Dict[str, Any]]:
+    def run_all_benchmarks(self) -> dict[str, dict[str, Any]]:
         """运行所有基准测试"""
         print("=" * 70)
         print("🎯 开始性能基准测试")
@@ -124,12 +124,12 @@ class PerformanceBenchmark:
         ]
         for endpoint_config in endpoints:
             print(f"\n📊 测试: {endpoint_config['method']} {endpoint_config['endpoint']}")
-            result = self.run_benchmark(**endpoint_config)  # noqa: F841
+            result = self.run_benchmark(**endpoint_config)
             self.results[endpoint_config["endpoint"]] = result
             self._print_result(result)
         return self.results
 
-    def _print_result(self, result: Dict[str, Any]):
+    def _print_result(self, result: dict[str, Any]):
         """打印测试结果"""
         print(f"   成功率: {result['success_rate']:.1f}%")
         print(f"   平均响应时间: {result['avg_response_time']:.2f}ms")
@@ -159,7 +159,7 @@ class PerformanceBenchmark:
             print(f"\n📄 报告已保存到: {output_file}")
         return report_str
 
-    def _generate_summary(self) -> Dict[str, Any]:
+    def _generate_summary(self) -> dict[str, Any]:
         """生成摘要统计"""
         all_results = list(self.results.values())
         if not all_results:
@@ -180,7 +180,7 @@ class PerformanceBenchmark:
             "worst_throughput": min(all_results, key=lambda x: x["throughput"])["endpoint"],
         }
 
-    def _format_report(self, report: Dict) -> str:
+    def _format_report(self, report: dict) -> str:
         """格式化报告输出"""
         lines = []
         lines.append("=" * 70)

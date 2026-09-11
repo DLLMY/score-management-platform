@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 P1-2 补遗：nlp_scoring_rules / nlp_rule_usages 的 score_change INTEGER -> REAL（幂等）
 
@@ -51,7 +50,7 @@ def retype_table(conn, tbl):
 
     new_create = re.sub(r"\bscore_change\s+INTEGER", "score_change REAL", create_sql, flags=re.I)
     new_create = re.sub(
-        r"CREATE TABLE\s+\"?%s\"?" % re.escape(tbl),
+        rf"CREATE TABLE\s+\"?{re.escape(tbl)}\"?",
         f"CREATE TABLE {tbl}_new",
         new_create,
         flags=re.I,

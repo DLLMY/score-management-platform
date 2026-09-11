@@ -187,25 +187,25 @@ def create_indexes():
                 conn.execute(_db.text(sql))
                 conn.commit()
                 indexes_created.append(f"{table_name}.{index_name}")
-                print("Created index: {0}.{1} ({2})".format(table_name, index_name, columns_str))
+                print(f"Created index: {table_name}.{index_name} ({columns_str})")
             except Exception as e:
-                print("Failed to create index {0}.{1}: {2}".format(table_name, index_name, e))
+                print(f"Failed to create index {table_name}.{index_name}: {e}")
 
     conn.close()
 
     # 输出统计信息
     print("\n" + "=" * 60)
-    print("Index creation completed - {0}".format(datetime.datetime.now()))
+    print(f"Index creation completed - {datetime.datetime.now()}")
     print("=" * 60)
-    print("Created indexes: {0}".format(len(indexes_created)))
+    print(f"Created indexes: {len(indexes_created)}")
     if indexes_created:
         for idx in indexes_created:
-            print("  + {0}".format(idx))
+            print(f"  + {idx}")
 
-    print("\nExisting indexes: {0}".format(len(indexes_already_exist)))
+    print(f"\nExisting indexes: {len(indexes_already_exist)}")
     if indexes_already_exist:
         for idx in indexes_already_exist:
-            print("  - {0}".format(idx))
+            print(f"  - {idx}")
 
     print("\nIndex optimization completed!")
 

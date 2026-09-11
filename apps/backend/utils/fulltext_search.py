@@ -49,7 +49,7 @@ class FullTextSearch:
         try:
             with db.engine.connect() as conn:
                 # 检查FTS表是否存在
-                result = conn.execute(  # noqa: F841
+                result = conn.execute(
                     db.text(
                         "SELECT name FROM sqlite_master WHERE type='table' AND name='user_search_idx'"
                     )
@@ -91,7 +91,7 @@ class FullTextSearch:
             result = conn.execute(
                 db.text(
                     "SELECT id, name, card_id, phone, class_name FROM user WHERE is_active = 1"
-                )  # noqa: F841
+                )
             )
             rows = result.fetchall()
             count = 0
@@ -180,9 +180,9 @@ class FullTextSearch:
         if self._fts_enabled and not _contains_cjk(keyword):
             # FTS5 porter tokenizer 仅支持英文词干，对中文（无空格分词）MATCH 永远 0 结果——
             # 含 CJK 的关键词直接走 LIKE 回退，避免"搜不到"（此前中文搜索恒 0 结果且不回退）
-            result = self._fts_search(keyword, page, per_page, class_filter)  # noqa: F841
+            result = self._fts_search(keyword, page, per_page, class_filter)
         else:
-            result = self._fallback_search(keyword, page, per_page, class_filter)  # noqa: F841
+            result = self._fallback_search(keyword, page, per_page, class_filter)
 
         # 缓存结果
         self._set_cache(cache_key, result)
@@ -254,7 +254,7 @@ class FullTextSearch:
                 }
 
         except Exception as e:
-            logger.warning(f"[FullTextSearch] FTS搜索失败，回退到普通搜索: {e}")
+            logger.warning(f"[FullTextSearch] FTS搜索失败，回退到普通搜索: {e}", exc_info=True)
             return self._fallback_search(keyword, page, per_page, class_filter)
 
     def _fallback_search(self, keyword, page, per_page, class_filter):
@@ -304,8 +304,7 @@ class FullTextSearch:
                 value, timestamp = self._cache[key]
                 if time.time() - timestamp < self._cache_ttl:
                     return value
-                else:
-                    del self._cache[key]
+                del self._cache[key]
         return None
 
     def _set_cache(self, key, value):
@@ -342,5 +341,5 @@ def get_search_engine(app=None):
     """获取全局搜索引擎实例"""
     global _search_engine
     if _search_engine is None:
-        _search_engine = FullTextSearch(app)  # noqa: F841
+        _search_engine = FullTextSearch(app)
     return _search_engine

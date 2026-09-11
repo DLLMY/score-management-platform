@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 上课时间拦截 - 手动验证脚本
 
@@ -29,7 +28,7 @@ BASEDIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 if BASEDIR not in sys.path:
     sys.path.insert(0, BASEDIR)
 
-from datetime import datetime  # noqa: E402
+from datetime import datetime
 
 
 def _boot_app():
@@ -43,13 +42,13 @@ def _boot_app():
     except Exception as e:
         logger.warning("加载 .env 失败（已忽略）: %s", e)
     os.environ.setdefault("FLASK_ENV", "development")
-    from app import app  # noqa: E402
+    from app import app
 
     return app
 
 
 def verify(app, class_info_id=None):
-    from services.class_time_checker import ClassTimeChecker  # noqa: E402
+    from services.class_time_checker import ClassTimeChecker
 
     print("=" * 64)
     print("  上课时间拦截 - 决策验证")

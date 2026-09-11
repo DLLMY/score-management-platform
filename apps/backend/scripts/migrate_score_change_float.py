@@ -71,7 +71,7 @@ def retype_table(conn, tbl):
     # 替换 score_change 类型为 REAL，并改表名为 _new
     new_create = re.sub(r"\bscore_change\s+INTEGER", "score_change REAL", create_sql, flags=re.I)
     new_create = re.sub(
-        r"CREATE TABLE\s+\"?%s\"?" % re.escape(tbl),
+        rf"CREATE TABLE\s+\"?{re.escape(tbl)}\"?",
         f"CREATE TABLE {tbl}_new",
         new_create,
         flags=re.I,

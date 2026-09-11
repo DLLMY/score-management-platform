@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """班主任工作台 12 模块「写操作」冒烟测试。
 
 只验证创建接口能否走通（权限 + 必填字段 + service 层），
@@ -151,7 +150,7 @@ CASES = [
 
 def run(account, password):
     token = login(account, password)
-    print("\n########## %s ##########" % account)
+    print(f"\n########## {account} ##########")
     if not token:
         print("  登录失败")
         return 0, 0
@@ -165,14 +164,14 @@ def run(account, password):
                 created_id = d.get("id")
         if st in (200, 201):
             ok += 1
-            print("  OK   %-16s %s" % (label, st))
+            print(f"  OK   {label:<16} {st}")
             if del_tpl and created_id:
                 call("DELETE", del_tpl.format(id=created_id), token)
         else:
             fail += 1
             msg = res.get("message") or res.get("error") or res.get("raw") or ""
-            print("  FAIL %-16s %s  %s" % (label, st, str(msg)[:90]))
-    print("  --- 通过 %d / 失败 %d ---" % (ok, fail))
+            print(f"  FAIL {label:<16} {st}  {str(msg)[:90]}")
+    print(f"  --- 通过 {ok} / 失败 {fail} ---")
     return ok, fail
 
 

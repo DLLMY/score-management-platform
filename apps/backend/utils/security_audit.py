@@ -128,7 +128,7 @@ class SecurityLogger:
                 self.logger.info(json.dumps(event_data, ensure_ascii=False))
             return True
         except Exception as e:
-            logging.error(f"记录安全事件失败: {e}")
+            logging.error(f"记录安全事件失败: {e}", exc_info=True)
             return False
 
     def _save_to_database(self, event_data):
@@ -148,7 +148,7 @@ class SecurityLogger:
             db.session.add(log)
             db.session.commit()
         except Exception as e:
-            logging.error(f"保存安全事件到数据库失败: {e}")
+            logging.error(f"保存安全事件到数据库失败: {e}", exc_info=True)
 
     def log_authentication(self, event_type, username, success=True, **kwargs):
         """记录认证事件"""

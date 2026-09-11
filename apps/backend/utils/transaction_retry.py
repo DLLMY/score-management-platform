@@ -60,7 +60,7 @@ class TransactionRetry:
         for attempt in range(self.max_retries + 1):
             try:
                 self._stats["total_attempts"] += 1
-                result = func(*args, **kwargs)  # noqa: F841
+                result = func(*args, **kwargs)
                 self._stats["successful"] += 1
                 return result
             except self.retry_on as e:
@@ -252,7 +252,7 @@ def safe_bulk_insert(records, batch_size=100, max_retries=3):
             logger.info(f"批量插入: 已插入 {total_inserted}/{len(records)} 条")
         except Exception as e:
             db.session.rollback()
-            logger.error(f"批量插入失败: {str(e)}")
+            logger.error(f"批量插入失败: {str(e)}", exc_info=True)
             raise
 
     return total_inserted
@@ -289,7 +289,7 @@ def safe_bulk_update(updates, batch_size=100, max_retries=3):
             total_updated += updated
         except Exception as e:
             db.session.rollback()
-            logger.error(f"批量更新失败: {str(e)}")
+            logger.error(f"批量更新失败: {str(e)}", exc_info=True)
             raise
 
     return total_updated
@@ -330,9 +330,8 @@ class ConcurrentImportGuard:
                 self._active_imports[import_id] = time.time()
             logger.info(f"获取导入许可: {import_id}")
             return True, import_id
-        else:
-            logger.warning("获取导入许可超时: 队列已满")
-            return False, None
+        logger.warning("获取导入许可超时: 队列已满")
+        return False, None
 
     def release(self, import_id):
         """
@@ -372,5 +371,5 @@ def get_import_guard(max_concurrent=5):
     """获取全局导入守卫实例"""
     global _import_guard
     if _import_guard is None:
-        _import_guard = ConcurrentImportGuard(max_concurrent)  # noqa: F841
+        _import_guard = ConcurrentImportGuard(max_concurrent)
     return _import_guard

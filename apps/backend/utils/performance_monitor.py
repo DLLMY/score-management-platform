@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
-from typing import Dict, List
 from flask import request, g
 import time
 import logging
@@ -127,7 +126,7 @@ class PerformanceMetrics:
         with self.lock:
             self.cache_metrics["deletes"] += 1
 
-    def get_summary(self) -> Dict:
+    def get_summary(self) -> dict:
         """获取性能摘要"""
         with self.lock:
             uptime = time.time() - self.start_time
@@ -202,7 +201,7 @@ class PerformanceMetrics:
                 "slow_query_count": len(self.slow_queries),
             }
 
-    def get_slow_requests(self, limit: int = 20) -> List[Dict]:
+    def get_slow_requests(self, limit: int = 20) -> list[dict]:
         """获取慢请求列表（timestamp 归一为 isoformat，保证可 JSON 序列化）"""
         with self.lock:
             items = sorted(self.slow_requests, key=lambda x: x["duration"], reverse=True)[:limit]
@@ -211,7 +210,7 @@ class PerformanceMetrics:
                 for it in items
             ]
 
-    def get_slow_queries(self, limit: int = 20) -> List[Dict]:
+    def get_slow_queries(self, limit: int = 20) -> list[dict]:
         """获取慢查询列表（timestamp 归一为 isoformat，保证可 JSON 序列化）"""
         with self.lock:
             items = sorted(self.slow_queries, key=lambda x: x["duration"], reverse=True)[:limit]
@@ -241,9 +240,11 @@ class PerformanceMetrics:
         """添加告警"""
         now = time.time()
         alert_key = f"{alert_type}:{message[:50]}"
-        if alert_key in self.last_alert_time:
-            if now - self.last_alert_time[alert_key] < self.alert_cooldown:
-                return
+        if (
+            alert_key in self.last_alert_time
+            and now - self.last_alert_time[alert_key] < self.alert_cooldown
+        ):
+            return
         self.last_alert_time[alert_key] = now
         alert = PerformanceAlert(alert_type, message, severity, **details)
         self.alerts.append(alert)
@@ -301,7 +302,7 @@ class PerformanceMetrics:
         with self.lock:
             self._check_cache_hit_rate_alert()
 
-    def get_alerts(self, limit: int = 20, acknowledged: bool = None) -> List[Dict]:
+    def get_alerts(self, limit: int = 20, acknowledged: bool = None) -> list[dict]:
         """获取告警列表"""
         with self.lock:
             alerts = list(self.alerts)
@@ -317,7 +318,7 @@ class PerformanceMetrics:
                 return True
         return False
 
-    def get_optimization_suggestions(self) -> List[str]:
+    def get_optimization_suggestions(self) -> list[str]:
         """获取性能优化建议"""
         suggestions = []
         summary = self.get_summary()
@@ -349,7 +350,7 @@ class PerformanceMetrics:
 class PerformanceMonitor:
     """性能监控器"""
 
-    _instance = None  # noqa: F841
+    _instance = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -412,7 +413,7 @@ def log_performance_summary():
         try:
             performance_monitor.log_summary()
         except Exception as e:
-            logger.error(f"记录性能摘要失败: {e}")
+            logger.error(f"记录性能摘要失败: {e}", exc_info=True)
         time.sleep(300)
 
 

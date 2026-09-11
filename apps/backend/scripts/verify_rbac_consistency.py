@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 RBAC 一致性校验 + 幂等补齐脚本（P1 改进项：RBAC 自动 seed / 校验脚本化）。
 

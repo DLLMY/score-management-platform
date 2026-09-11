@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """幂等迁移：P0-3 收尾 —— 删除 RolePermission.permissions 冗余 CSV 列 + 废弃 role 旧表。
 
 背景

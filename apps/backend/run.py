@@ -10,6 +10,7 @@ import sys
 import atexit
 import socket
 import re
+import traceback
 from dotenv import load_dotenv
 
 
@@ -60,16 +61,17 @@ def maybe_start_celery(basedir, env):
         )
         procs.append(subprocess.Popen(common + ["beat", "--loglevel=info"], cwd=basedir))
         print(f"[Celery] 已启动 worker + beat（共 {len(procs)} 个进程）")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"[Celery] 启动失败，跳过（不影响 Web 服务）: {e}")
+        traceback.print_exc()
         return []
 
     def _stop():
         for p in procs:
             try:
                 p.terminate()
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:
+                traceback.print_exc()
 
     atexit.register(_stop)
     return procs
@@ -126,8 +128,9 @@ def main():
         cleaned = cleanup_stale_training_records(app, max_running_minutes=5)
         if cleaned:
             print(f"[启动清理] {cleaned} 条悬挂训练记录已置为 error", flush=True)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"[启动清理] 失败（不影响启动）: {e}", flush=True)
+        traceback.print_exc()
     if args.env == "production":
         print("使用 Flask-SocketIO 服务器启动（支持WebSocket）...")
         print()

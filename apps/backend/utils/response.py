@@ -38,7 +38,7 @@ class APIResponse:
             if request:
                 response["path"] = request.path
         except Exception as e:
-            logger.warning("构造响应元数据失败: %s", e)
+            logger.warning("构造响应元数据失败: %s", e, exc_info=True)
 
         response.update(kwargs)
         return response, status_code

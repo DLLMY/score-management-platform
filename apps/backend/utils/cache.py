@@ -1,10 +1,14 @@
-from typing import Any, Callable, Optional, Dict
+from typing import Any
+from collections.abc import Callable
 from functools import wraps
 import time
 import json
 import threading
 
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 """
 响应缓存工具模块
@@ -41,7 +45,7 @@ class ResponseCache:
     """响应缓存"""
 
     def __init__(self, max_size: int = 1000, default_ttl: int = 300):
-        self._cache: Dict[str, CacheEntry] = {}
+        self._cache: dict[str, CacheEntry] = {}
         self._lock = threading.RLock()
         self._max_size = max_size
         self._default_ttl = default_ttl
@@ -57,7 +61,7 @@ class ResponseCache:
         key_str = json.dumps(key_data, sort_keys=True, default=str)
         return hashlib.sha256(key_str.encode()).hexdigest()
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """获取缓存"""
         with self._lock:
             entry = self._cache.get(key)
@@ -71,7 +75,7 @@ class ResponseCache:
             self._stats["hits"] += 1
             return entry.access()
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """设置缓存"""
         with self._lock:
             # 如果缓存已满，删除最老的条目
@@ -116,7 +120,7 @@ class ResponseCache:
                 del self._cache[key]
             return len(expired_keys)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取缓存统计"""
         with self._lock:
             total = self._stats["hits"] + self._stats["misses"]
@@ -134,7 +138,7 @@ class ResponseCache:
             return len(self._cache)
 
 
-_default_cache: Optional[ResponseCache] = None
+_default_cache: ResponseCache | None = None
 _cache_lock = threading.Lock()
 
 
@@ -144,11 +148,11 @@ def get_default_cache() -> ResponseCache:
     if _default_cache is None:
         with _cache_lock:
             if _default_cache is None:
-                _default_cache = ResponseCache(max_size=1000, default_ttl=300)  # noqa: F841
+                _default_cache = ResponseCache(max_size=1000, default_ttl=300)
     return _default_cache
 
 
-def cached(ttl: int = 300, cache: Optional[ResponseCache] = None):
+def cached(ttl: int = 300, cache: ResponseCache | None = None):
     """
     缓存装饰器
     Args:
@@ -162,7 +166,7 @@ def cached(ttl: int = 300, cache: Optional[ResponseCache] = None):
     """
 
     def decorator(func: Callable) -> Callable:
-        _cache = cache or get_default_cache()  # noqa: F841
+        _cache = cache or get_default_cache()
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -175,7 +179,7 @@ def cached(ttl: int = 300, cache: Optional[ResponseCache] = None):
             if cached_value is not None:
                 return cached_value
             # 执行函数
-            result = func(*args, **kwargs)  # noqa: F841
+            result = func(*args, **kwargs)
             # 存入缓存（注意：结果应该是可序列化的）
             try:
                 _cache.set(cache_key, result, ttl)
@@ -200,35 +204,35 @@ def cached(ttl: int = 300, cache: Optional[ResponseCache] = None):
     return decorator
 
 
-def invalidate_cache(func_name: str, cache: Optional[ResponseCache] = None) -> None:
+def invalidate_cache(func_name: str, cache: ResponseCache | None = None) -> None:
     """
     使指定函数的缓存失效
     注意：这需要配合缓存装饰器使用
     """
     # 实现依赖于缓存键的生成规则
     # 这里提供简化版本
-    pass
 
 
 class CacheWarmer:
     """缓存预热器"""
 
-    def __init__(self, cache: Optional[ResponseCache] = None):
+    def __init__(self, cache: ResponseCache | None = None):
         self._cache = cache or get_default_cache()
-        self._warmup_tasks: Dict[str, Callable] = {}
+        self._warmup_tasks: dict[str, Callable] = {}
 
     def register(self, name: str, func: Callable, *args, **kwargs) -> None:
         """注册预热任务"""
         self._warmup_tasks[name] = lambda: func(*args, **kwargs)
 
-    def warmup(self) -> Dict[str, Any]:
+    def warmup(self) -> dict[str, Any]:
         """执行所有预热任务"""
         results = {}
         for name, task in self._warmup_tasks.items():
             try:
-                result = task()  # noqa: F841
+                result = task()
                 results[name] = {"status": "success", "result": result}
             except Exception as e:
+                logger.warning(f"缓存预热任务失败: {name}", exc_info=True)
                 results[name] = {"status": "error", "error": str(e)}
         return results
 
@@ -238,7 +242,7 @@ def clear_cache() -> int:
     return get_default_cache().clear()
 
 
-def get_cache_stats() -> Dict[str, Any]:
+def get_cache_stats() -> dict[str, Any]:
     """获取缓存统计"""
     return get_default_cache().get_stats()
 

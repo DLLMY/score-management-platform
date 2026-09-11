@@ -74,7 +74,7 @@ def _backup(db_path: str) -> str | None:
                 shutil.copy2(aux, bak + suffix)
         print(f"[ok] backup -> {bak}")
         return bak
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"[warn] backup failed: {e}")
         return None
 

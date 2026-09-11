@@ -48,11 +48,11 @@ class Config:
     FLASK_PORT = int(os.getenv("FLASK_PORT", "5000"))
     # ========== 数据库配置 ==========
     _default_db_path = os.path.join(basedir, "instance", "score_management.db")
-    _db_uri_from_env = os.getenv("DATABASE_URI")  # noqa: F841
+    _db_uri_from_env = os.getenv("DATABASE_URI")
     if _db_uri_from_env and _db_uri_from_env.startswith("sqlite:///"):
-        _db_path = _db_uri_from_env.replace("sqlite:///", "")  # noqa: F841
+        _db_path = _db_uri_from_env.replace("sqlite:///", "")
         if not os.path.isabs(_db_path):
-            _db_path = os.path.join(basedir, _db_path)  # noqa: F841
+            _db_path = os.path.join(basedir, _db_path)
         DATABASE_URI = f"sqlite:///{_db_path}"
     else:
         DATABASE_URI = _db_uri_from_env or f"sqlite:///{_default_db_path}"

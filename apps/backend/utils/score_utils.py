@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """积分原子更新工具（R5 修复）。
 
 原实现均为 Python 读-改-写（`user.current_score = user.current_score + Δ`），

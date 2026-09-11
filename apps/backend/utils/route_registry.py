@@ -1,5 +1,4 @@
 from flask import Flask
-from typing import Dict, List, Tuple
 
 from utils.logger import log_error, log_info, log_warning
 
@@ -7,8 +6,8 @@ from utils.logger import log_error, log_info, log_warning
 class RouteRegistry:
 
     def __init__(self):
-        self.registered_endpoints: Dict[str, List[str]] = {}
-        self.registered_rules: Dict[str, List[str]] = {}
+        self.registered_endpoints: dict[str, list[str]] = {}
+        self.registered_rules: dict[str, list[str]] = {}
 
     def register(self, endpoint: str, rule: str, view_func_name: str):
         if endpoint not in self.registered_endpoints:
@@ -19,7 +18,7 @@ class RouteRegistry:
             self.registered_rules[rule] = []
         self.registered_rules[rule].append((endpoint, view_func_name))
 
-    def check_duplicates(self) -> Tuple[List[Dict], List[Dict]]:
+    def check_duplicates(self) -> tuple[list[dict], list[dict]]:
         duplicate_endpoints = []
         duplicate_rules = []
 

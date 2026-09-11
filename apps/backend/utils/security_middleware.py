@@ -35,9 +35,9 @@ class SecurityMiddleware:
             "X-Frame-Options": "SAMEORIGIN",
             "X-XSS-Protection": "1; mode=block",
             "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:;",  # noqa: E501
+            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:;",
             "Referrer-Policy": "strict-origin-when-cross-origin",
-            "Permissions-Policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",  # noqa: E501
+            "Permissions-Policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
         }
 
         for header, value in security_headers.items():
@@ -62,7 +62,7 @@ class SecurityMiddleware:
 
                         log_error(f"无效的JSON请求体: {request.data[:200]}")
                 except Exception as e:
-                    logger.warning("请求体JSON解析失败: %s", e)
+                    logger.warning("请求体JSON解析失败: %s", e, exc_info=True)
 
         return None
 

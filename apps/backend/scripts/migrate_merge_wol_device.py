@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 F10: WOLDevice 并入 Device（数据迁移 + 建列；WOLDevice 模型类已删除）。
 

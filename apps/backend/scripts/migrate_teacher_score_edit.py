@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 S1 修复：teacher 角色补授 score.edit（成绩录入闭环）。
 

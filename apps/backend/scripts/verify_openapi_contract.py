@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 OpenAPI 契约漂移校验脚本（P1 改进项：建立前后端 API 契约）。
 
@@ -50,7 +49,7 @@ def _method_set(path_item):
     """提取路径下的 HTTP 方法集合（去 head/options）。"""
     return {
         m.upper()
-        for m in path_item.keys()
+        for m in path_item
         if m.upper() in ("GET", "POST", "PUT", "DELETE", "PATCH")
     }
 
@@ -67,7 +66,7 @@ def main():
 
     try:
         live = _load_live(args.live_url)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(
             f"[错误] 无法拉取实时 swagger.json（{args.live_url}）: {e}\n"
             f"        请确认后端已启动（python run.py --env development --host 127.0.0.1 --port 5000）"

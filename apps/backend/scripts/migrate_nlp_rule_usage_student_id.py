@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 P0-1 补遗迁移：nlp_rule_usages.user_id → student_id（幂等）
 

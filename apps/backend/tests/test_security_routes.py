@@ -67,3 +67,34 @@ def test_log_security_event_persists(client, app):
     with app.app_context():
         log_security_event("test_event", "info", details="test-detail")
         assert SecurityAudit.query.filter_by(event_type="test_event").first() is not None
+
+
+def test_audit_stats_endpoint(client, app, auth_headers):
+    """GET /api/security/audit-stats 契约（薄路由收尾后，聚合已下沉 service）。"""
+    with app.app_context():
+        resp = client.get("/api/security/audit-stats", headers=auth_headers)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert isinstance(body, dict)
+    for key in ("total", "last_24h", "last_7d", "by_severity", "by_type", "top_ips"):
+        assert key in body
+    assert isinstance(body["by_severity"], dict)
+    assert isinstance(body["by_type"], dict)
+    assert isinstance(body["top_ips"], list)
+
+
+def test_suspicious_ips_endpoint(client, app, auth_headers):
+    """GET /api/security/suspicious-ips 契约（薄路由收尾后，分页聚合已下沉 service）。"""
+    with app.app_context():
+        resp = client.get(
+            "/api/security/suspicious-ips",
+            query_string={"threshold": 99999},
+            headers=auth_headers,
+        )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert isinstance(body["ips"], list)
+    assert "total" in body
+    assert isinstance(body["pagination"], dict)
+    for key in ("page", "per_page", "total", "pages"):
+        assert key in body["pagination"]
