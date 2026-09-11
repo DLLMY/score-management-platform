@@ -174,8 +174,7 @@ class BertNLPService:
             )
             with torch.no_grad():
                 outputs = self.model(**inputs)
-            embedding = outputs.last_hidden_state.mean(dim=1).cpu().numpy()[0]
-            return embedding
+            return outputs.last_hidden_state.mean(dim=1).cpu().numpy()[0]
         except Exception as e:
             log_warning(f"获取向量失败: {e}", exception=e)
             return None

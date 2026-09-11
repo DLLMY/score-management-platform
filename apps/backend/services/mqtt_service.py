@@ -159,10 +159,7 @@ def publish_ota_command(device_id, payload):
     """
     import time
 
-    if device_id:
-        topic = f"phonebox/ota/{device_id}"
-    else:
-        topic = OTA_TOPIC
+    topic = f"phonebox/ota/{device_id}" if device_id else OTA_TOPIC
 
     ota_payload = {"action": "update", "timestamp": int(time.time())}
     ota_payload.update(payload)

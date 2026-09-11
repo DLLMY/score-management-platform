@@ -439,13 +439,13 @@ class AcademicsService:
                                 "message": f'验证失败: {", ".join(errors)}',
                                 "row_data": item,
                                 "error_fields": list(
-                                    set(
-                                        [
+                                    {
+                                        
                                             rule["field"]
                                             for rule in validation_rules
                                             if item.get(rule["field"]) is None
-                                        ]
-                                    )
+                                        
+                                    }
                                 ),
                             }
                         )

@@ -462,10 +462,7 @@ def can_access_device(admin, device_id):
     if device.class_info_id in class_ids:
         return True
 
-    if device.admin_id == admin.id:
-        return True
-
-    return False
+    return device.admin_id == admin.id
 
 
 def can_access_student(user_id):

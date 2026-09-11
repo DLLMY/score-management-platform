@@ -141,10 +141,7 @@ class ExcelUtils:
         try:
             wb = load_workbook(filename=io.BytesIO(file_bytes), read_only=True)
 
-            if sheet_name:
-                ws = wb[sheet_name]
-            else:
-                ws = wb.active
+            ws = wb[sheet_name] if sheet_name else wb.active
 
             headers = []
             data = []
@@ -153,7 +150,7 @@ class ExcelUtils:
                 if row_idx == 0:
                     headers = [str(cell) if cell is not None else "" for cell in row]
                 else:
-                    data.append([cell for cell in row])
+                    data.append(list(row))
 
             return {"headers": headers, "data": data, "sheet_name": ws.title}
         except Exception as e:

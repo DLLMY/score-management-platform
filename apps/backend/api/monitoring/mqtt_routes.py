@@ -426,10 +426,7 @@ class MQTTCommand(Resource):
         if params:
             message["params"] = params
 
-        if device_id:
-            topic = f"phonebox/command/{device_id}"
-        else:
-            topic = "phonebox/command"
+        topic = f"phonebox/command/{device_id}" if device_id else "phonebox/command"
 
         result = publish_mqtt(topic, json.dumps(message))
         if result:

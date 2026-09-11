@@ -240,7 +240,7 @@ class NLPService:
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(texts))) as executor:
             futures = [executor.submit(self.parse, text, parser_type) for text in texts]
             concurrent.futures.wait(futures, timeout=60)
-            results = [
+            return [
                 (
                     f.result()
                     if f.done()
@@ -254,7 +254,6 @@ class NLPService:
                 )
                 for f in futures
             ]
-            return results
 
     def optimize(self, text: str) -> dict[str, Any]:
         try:

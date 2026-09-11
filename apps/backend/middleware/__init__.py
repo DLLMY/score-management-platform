@@ -28,7 +28,7 @@ def init_cors(app):
 
 
 def init_limiter(app, redis_url):
-    limiter = Limiter(
+    return Limiter(
         get_remote_address,
         app=app,
         default_limits=[
@@ -39,7 +39,6 @@ def init_limiter(app, redis_url):
         storage_uri=redis_url,
         key_prefix="rate_limit:",
     )
-    return limiter
 
 
 def configure_rate_limits(app, limiter):

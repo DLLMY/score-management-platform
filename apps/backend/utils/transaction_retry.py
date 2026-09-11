@@ -205,9 +205,7 @@ class OptimisticLock:
         """
         current_version = getattr(instance, self.version_field, 0)
         fresh = self.model_class.query.get(instance.id)
-        if fresh and getattr(fresh, self.version_field, 0) == current_version:
-            return True
-        return False
+        return bool(fresh and getattr(fresh, self.version_field, 0) == current_version)
 
     def release(self, instance):
         """

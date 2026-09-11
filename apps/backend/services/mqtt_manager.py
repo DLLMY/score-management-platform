@@ -981,10 +981,7 @@ class MQTTManager:
         if payload is None:
             payload = {}
 
-        if device_id:
-            topic = f"phonebox/ota/{device_id}"
-        else:
-            topic = "phonebox/ota"
+        topic = f"phonebox/ota/{device_id}" if device_id else "phonebox/ota"
 
         ota_payload = {"action": "update", "timestamp": int(time.time())}
         ota_payload.update(payload)

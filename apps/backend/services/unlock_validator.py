@@ -236,10 +236,7 @@ class UnlockValidator:
             return {"exists": False}
 
         today = date.today()
-        if user.last_unlock_date != today:
-            unlock_count = 0
-        else:
-            unlock_count = user.today_unlock_count
+        unlock_count = 0 if user.last_unlock_date != today else user.today_unlock_count
 
         return {
             "exists": True,

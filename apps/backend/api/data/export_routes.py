@@ -491,7 +491,7 @@ class ExportErrors(Resource):
             if isinstance(error.get("row_data"), dict):
                 all_keys.update(error["row_data"].keys())
         base_columns = ["行号", "错误字段", "错误信息"]
-        data_columns = sorted(list(all_keys))
+        data_columns = sorted(all_keys)
         headers = base_columns + data_columns
         for col_idx, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_idx, value=header)

@@ -1663,9 +1663,8 @@ class EnhancedNLPParserService:
         if total_score == 0:
             return 0.0
 
-        sentiment = (positive_score - negative_score) / total_score
+        return (positive_score - negative_score) / total_score
 
-        return sentiment
 
     def _resolve_referral(self, text):
         for referral, _gender in self.referral_words.items():
@@ -3568,10 +3567,7 @@ class EnhancedNLPParserService:
             return [self.parse(text) for text in texts]
 
     def analyze_sentiment(self, text):
-        if self.jieba_initialized:
-            words = jieba.lcut(text)
-        else:
-            words = [text]
+        words = jieba.lcut(text) if self.jieba_initialized else [text]
 
         # positive_count / negative_count 保持原始词频统计语义（前端透出原始命中数）
         positive_count = sum(1 for word in words if word in self.positive_keywords)

@@ -172,9 +172,7 @@ def is_strong_password(password: str) -> bool:
         return False
     if not re.search(r"[a-z]", password):
         return False
-    if not re.search(r"\d", password):
-        return False
-    return True
+    return re.search(r"\d", password)
 
 
 # ==================== 输入验证 ====================
@@ -222,9 +220,7 @@ def validate_integer(value: Any, min_val: int = None, max_val: int = None) -> bo
         val = int(value)
         if min_val is not None and val < min_val:
             return False
-        if max_val is not None and val > max_val:
-            return False
-        return True
+        return not (max_val is not None and val > max_val)
     except (ValueError, TypeError):
         return False
 
@@ -421,10 +417,7 @@ def is_safe_redirect_url(url: str) -> bool:
         return False
 
     # 禁止data协议
-    if url.lower().startswith("data:"):
-        return False
-
-    return True
+    return not url.lower().startswith("data:")
 
 
 # ==================== 请求参数提取 ====================

@@ -152,14 +152,13 @@ class WarningService:
         today = datetime.now().date()
         # 注意：.count() 已返回整数，不能再套 len()（原实现如此，会抛
         # TypeError: object of type 'int' has no len()，导致 evaluate_risk 整体 500）
-        unlock_count = (
+        return (
             ScoreRecord.query.filter(
                 ScoreRecord.student_id == user_id, ScoreRecord.description.like("%开锁%")
             )
             .filter(ScoreRecord.created_at >= datetime(today.year, today.month, today.day))
             .count()
         )
-        return unlock_count
 
     @staticmethod
     def _get_student_avg_score(user_id):

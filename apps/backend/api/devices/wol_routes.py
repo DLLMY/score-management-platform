@@ -442,9 +442,8 @@ class WOLDeviceResource(Resource):
                 return APIResponse.error(message="MAC address already exists", status_code=409)
 
         # 字段写入路径收口至防腐层 service（F17）：应用已通过校验的字段 + 提交
-        updated = update_wol_device(device, data)
+        return update_wol_device(device, data)
 
-        return updated
 
     @requires_permission("manage_devices")
     def delete(self, device_id):

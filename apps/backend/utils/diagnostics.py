@@ -152,7 +152,7 @@ class HealthChecker:
             if status in ["critical", "unhealthy"]:
                 results["status"] = "unhealthy"
                 break
-            elif status == "warning":
+            if status == "warning":
                 if results["status"] == "healthy":
                     results["status"] = "degraded"
         return results
@@ -368,8 +368,7 @@ def timing_decorator(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         try:
-            result = func(*args, **kwargs)
-            return result
+            return func(*args, **kwargs)
         finally:
             duration = time.time() - start_time
             logger.debug(f"Function {func.__name__} took {duration:.3f}s")

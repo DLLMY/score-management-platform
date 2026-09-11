@@ -167,9 +167,8 @@ class ClassService:
                 User.query.filter_by(class_name=old_name).update({"class_name": class_info.name})
 
             # Build response inside session to avoid DetachedInstanceError
-            response = self._build_class_response(class_info)
+            return self._build_class_response(class_info)
 
-        return response
 
     def delete_class(self, class_id, admin=None):
         class_info = ClassInfo.query.get_or_404(class_id)
@@ -561,13 +560,13 @@ class ClassService:
                                 "message": (f'验证失败: {", ".join(errors)}'),
                                 "row_data": item,
                                 "error_fields": list(
-                                    set(
-                                        [
+                                    {
+                                        
                                             rule["field"]
                                             for rule in validation_rules
                                             if item.get(rule["field"]) is None
-                                        ]
-                                    )
+                                        
+                                    }
                                 ),
                             }
                         )

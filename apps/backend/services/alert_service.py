@@ -65,9 +65,7 @@ class AlertService:
         last_time = self.last_alert_time.get(key, 0)
         suppression_time = self.alert_suppression.get(alert_type, 60)
 
-        if time.time() - last_time < suppression_time:
-            return True
-        return False
+        return time.time() - last_time < suppression_time
 
     def _update_last_alert_time(self, alert_type: str, device_id: str | None = None):
         """更新最后告警时间"""
