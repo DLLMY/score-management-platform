@@ -60,6 +60,34 @@ def get_ttl_for_path(path):
     return DEFAULT_CACHE_TTL
 
 
+def _extract_response_data(result):
+    # 统一提取 data 与 status_code，兼容多种返回约定
+    if hasattr(result, "get_json"):
+        return result.get_json(), result.status_code
+    if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+        # 本项目 APIResponse 约定：(data_dict, status_code)
+        return result
+    return result, 200
+
+
+def _safe_cache_get(cache, cache_key):
+    """读取缓存，失败仅降级回源并留痕（T9 基础设施层日志化）。"""
+    try:
+        return cache.get(cache_key)
+    except Exception as e:
+        logger.warning(f"读取API缓存失败，降级回源 key={cache_key}: {e}", exc_info=True)
+        return None
+
+
+def _safe_cache_set(cache, cache_key, response_data, cache_ttl):
+    """写入缓存，失败仅降级不阻断响应，但留痕（T9 基础设施层日志化）。"""
+    try:
+        cache.set(cache_key, response_data, ttl=cache_ttl)
+    except Exception as e:
+        logger.warning(f"写入API缓存失败 key={cache_key}: {e}", exc_info=True)
+
+
+
 def cached_api(ttl=None, key_prefix="api", unless=None):
     """
     API缓存装饰器
@@ -89,17 +117,7 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
             # 跳过缓存：前端显式传 skip_cache=true 时（如写操作后 reload）
             if request.args.get("skip_cache", "").lower() == "true":
                 result = f(*args, **kwargs)
-                if hasattr(result, "get_json"):
-                    return result
-                response_data, status_code = (
-                    (result, 200)
-                    if not (
-                        isinstance(result, tuple)
-                        and len(result) == 2
-                        and isinstance(result[1], int)
-                    )
-                    else result
-                )
+                response_data, status_code = _extract_response_data(result)
                 response = make_response(jsonify(response_data), status_code)
                 response.headers["X-Cache"] = "BYPASS"
                 return response
@@ -111,14 +129,7 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
             cache_key = generate_cache_key(key_prefix)
             # 确定TTL
             cache_ttl = ttl if ttl is not None else get_ttl_for_path(request.path)
-            # 尝试从缓存获取
-            try:
-                cached_response = cache.get(cache_key)
-            except Exception as e:
-                # 缓存不可用不应影响业务，降级为回源；但必须留痕，否则 Redis 故障期
-                # 表现为"缓存命中率归零"却无任何线索（T9 基础设施层日志化）。
-                logger.warning(f"读取API缓存失败，降级回源 key={cache_key}: {e}", exc_info=True)
-                cached_response = None
+            cached_response = _safe_cache_get(cache, cache_key)
             if cached_response is not None:
                 # 返回缓存的响应
                 response = make_response(jsonify(cached_response))
@@ -128,22 +139,10 @@ def cached_api(ttl=None, key_prefix="api", unless=None):
             # 执行原函数
             result = f(*args, **kwargs)
             # 统一提取 data 与 status_code，兼容多种返回约定
-            if hasattr(result, "get_json"):
-                response_data = result.get_json()
-                status_code = result.status_code
-            elif isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
-                # 本项目 APIResponse 约定：(data_dict, status_code)
-                response_data, status_code = result
-            else:
-                response_data = result
-                status_code = 200
+            response_data, status_code = _extract_response_data(result)
             # 只缓存成功的响应，且避免缓存空响应
             if status_code == 200 and response_data:
-                try:
-                    cache.set(cache_key, response_data, ttl=cache_ttl)
-                except Exception as e:
-                    # 写缓存失败同样只降级不阻断响应，但要留痕（T9 基础设施层日志化）。
-                    logger.warning(f"写入API缓存失败 key={cache_key}: {e}", exc_info=True)
+                _safe_cache_set(cache, cache_key, response_data, cache_ttl)
             # 返回响应
             response = make_response(jsonify(response_data), status_code)
             response.headers["X-Cache"] = "MISS"

@@ -187,3 +187,4 @@ tools/tmp/
 # 前端临时排查输出
 apps/frontend/_tsc*.txt
 apps/frontend/_bash_marker.txt
+.workbuddy/tmp_scan/

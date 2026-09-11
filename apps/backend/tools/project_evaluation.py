@@ -102,6 +102,31 @@ def collect_code_metrics():
     return metrics
 
 
+def _collect_test_files(test_dirs):
+    """遍历指定目录收集所有测试文件路径。"""
+    test_files_found = []
+    for test_dir in test_dirs:
+        if not os.path.isdir(test_dir):
+            continue
+        for root, dirs, files in os.walk(test_dir):
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
+            for fname in files:
+                if fname.startswith("test_") or fname.endswith("_test.py"):
+                    test_files_found.append(os.path.join(root, fname))
+    return test_files_found
+
+
+def _count_source_modules():
+    """统计后端源模块数（非测试 .py）。"""
+    py_files = 0
+    for _, dirs, files in os.walk(BACKEND_DIR):
+        dirs[:] = [d for d in dirs if d not in ("__pycache__", "instance", "logs")]
+        for fname in files:
+            if fname.endswith(".py") and not fname.startswith("test_"):
+                py_files += 1
+    return py_files
+
+
 def collect_test_metrics():
     """收集测试覆盖指标"""
     print("\n" + "=" * 60)
@@ -118,15 +143,7 @@ def collect_test_metrics():
         os.path.join(BACKEND_DIR, "tests"),
         PROJECT_ROOT,  # 根目录可能有测试
     ]
-    test_files_found = []
-    for test_dir in test_dirs:
-        if not os.path.isdir(test_dir):
-            continue
-        for root, dirs, files in os.walk(test_dir):
-            dirs[:] = [d for d in dirs if not d.startswith(".")]
-            for fname in files:
-                if fname.startswith("test_") or fname.endswith("_test.py"):
-                    test_files_found.append(os.path.join(root, fname))
+    test_files_found = _collect_test_files(test_dirs)
     test_metrics["test_files"] = len(test_files_found)
     for test_file in test_files_found:
         try:
@@ -151,12 +168,7 @@ def collect_test_metrics():
         except Exception as e:
             logger.warning("项目评估采集异常（已跳过该项）: %s", e)
     # 估算覆盖率：测试文件数 vs 源文件数
-    py_files = 0
-    for _, dirs, files in os.walk(BACKEND_DIR):
-        dirs[:] = [d for d in dirs if d not in ("__pycache__", "instance", "logs")]
-        for fname in files:
-            if fname.endswith(".py") and not fname.startswith("test_"):
-                py_files += 1
+    py_files = _count_source_modules()
     test_metrics["source_modules"] = py_files
     test_metrics["coverage_ratio"] = test_metrics["test_files"] / max(py_files, 1)
     print(f"  源模块数: {py_files}")
@@ -316,38 +328,63 @@ def collect_api_coverage():
         for fname in files:
             if not fname.endswith(".py"):
                 continue
-            fpath = os.path.join(root, fname)
-            try:
-                with open(fpath, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                # 找namespace
-                ns_match = re.finditer(r"(\w+)\s*=\s*Namespace\([\'\"]([^\'\"]+)[\'\"]", content)
-                ns_names = [(m.group(1), m.group(2)) for m in ns_match]
-                # 找路由
-                route_matches = re.finditer(
-                    r"@(\w+)\.route\([\'\"]([^\'\"]*)[\r'\]\)[\\s\S]*?class\\s+(\\w+)(?:\\s*\(.*?\))?\\s*:",
-                    content,
-                )
-                for rm in route_matches:
-                    ns_var = rm.group(1)
-                    # 查找对应的namespace描述
-                    ns_desc = ""
-                    for nv, nd in ns_names:
-                        if nv == ns_var:
-                            ns_desc = nd
-                            break
-                    # 找出这个类中的HTTP方法
-                    methods = re.findall(
-                        r"def\s+(get|post|put|delete|patch)\s*\(self[,\)]", content
-                    )
-                    for method in methods:
-                        api_metrics["total_endpoints"] += 1
-                        api_metrics["by_method"][method.upper()] += 1
-                        if ns_desc:
-                            api_metrics["by_namespace"][ns_desc] += 1
-            except Exception as e:
-                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
+            _scan_route_file(os.path.join(root, fname), api_metrics)
     # 检查已生成的Swagger文档
+    _collect_swagger_metrics(api_metrics)
+    print(f'  总端点数 (源文件扫描): {api_metrics["total_endpoints"]}')
+    print(f'  Swagger端点数: {api_metrics.get("swagger_endpoints", "N/A")}')
+    print(f'  Swagger文档可用: {api_metrics["swagger_docs_available"]}')
+    print("\n  按方法:")
+    for method, count in sorted(api_metrics["by_method"].items()):
+        print(f"    {method}: {count}")
+    print("\n  按分类(前15):")
+    for ns, count in sorted(api_metrics["by_namespace"].items(), key=lambda x: x[1], reverse=True)[
+        :15
+    ]:
+        print(f"    {ns}: {count}")
+    return api_metrics
+
+
+def _scan_route_file(fpath, api_metrics):
+    """扫描单个路由文件并累加端点指标"""
+    try:
+        with open(fpath, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        # 找namespace
+        ns_match = re.finditer(r"(\w+)\s*=\s*Namespace\([\'\"]([^\'\"]+)[\'\"]", content)
+        ns_names = [(m.group(1), m.group(2)) for m in ns_match]
+        # 找路由
+        route_matches = re.finditer(
+            r"@(\w+)\.route\([\'\"]([^\'\"]*)[\r'\]\)[\\s\S]*?class\\s+(\\w+)(?:\\s*\(.*?\))?\\s*:",
+            content,
+        )
+        for rm in route_matches:
+            ns_var = rm.group(1)
+            # 查找对应的namespace描述
+            ns_desc = _match_namespace_desc(ns_var, ns_names)
+            # 找出这个类中的HTTP方法
+            methods = re.findall(
+                r"def\s+(get|post|put|delete|patch)\s*\(self[,\)]", content
+            )
+            for method in methods:
+                api_metrics["total_endpoints"] += 1
+                api_metrics["by_method"][method.upper()] += 1
+                if ns_desc:
+                    api_metrics["by_namespace"][ns_desc] += 1
+    except Exception as e:
+        logger.warning("项目评估采集异常（已跳过该项）: %s", e)
+
+
+def _match_namespace_desc(ns_var, ns_names):
+    """按变量名查找对应的 namespace 描述"""
+    for nv, nd in ns_names:
+        if nv == ns_var:
+            return nd
+    return ""
+
+
+def _collect_swagger_metrics(api_metrics):
+    """读取已生成的 Swagger 文档，补充端点统计"""
     swagger_path = os.path.join(PROJECT_ROOT, "docs", "api", "openapi.json")
     if os.path.exists(swagger_path):
         api_metrics["swagger_docs_available"] = True
@@ -364,18 +401,6 @@ def collect_api_coverage():
             api_metrics["swagger_endpoints"] = swagger_endpoints
         except Exception as e:
             logger.warning("项目评估采集异常（已跳过该项）: %s", e)
-    print(f'  总端点数 (源文件扫描): {api_metrics["total_endpoints"]}')
-    print(f'  Swagger端点数: {api_metrics.get("swagger_endpoints", "N/A")}')
-    print(f'  Swagger文档可用: {api_metrics["swagger_docs_available"]}')
-    print("\n  按方法:")
-    for method, count in sorted(api_metrics["by_method"].items()):
-        print(f"    {method}: {count}")
-    print("\n  按分类(前15):")
-    for ns, count in sorted(api_metrics["by_namespace"].items(), key=lambda x: x[1], reverse=True)[
-        :15
-    ]:
-        print(f"    {ns}: {count}")
-    return api_metrics
 
 
 def collect_dependency_metrics():
@@ -432,62 +457,16 @@ def collect_architecture_metrics():
         "design_patterns": [],
     }
     # 统计分层
-    backend_dirs = ["api", "services", "models", "utils", "middleware"]
-    for d in backend_dirs:
-        full_path = os.path.join(BACKEND_DIR, d)
-        if os.path.isdir(full_path):
-            py_files = [
-                f for f in os.listdir(full_path) if f.endswith(".py") and not f.startswith("__")
-            ]
-            arch_metrics["layers"].append({"layer": d, "files": len(py_files)})
+    _collect_layers(arch_metrics)
     # 统计模型
-    models_path = os.path.join(BACKEND_DIR, "models")
-    if os.path.exists(models_path):
-        try:
-            with open(models_path, encoding="utf-8") as f:
-                content = f.read()
-            model_classes = re.findall(r"class\s+(\w+)\s*\(", content)
-            arch_metrics["model_count"] = len(model_classes)
-            print(f"  ORM模型数: {len(model_classes)}")
-        except Exception as e:
-            logger.warning("项目评估采集异常（已跳过该项）: %s", e)
+    _collect_model_count(arch_metrics)
     # 统计服务
-    services_path = os.path.join(BACKEND_DIR, "services")
-    if os.path.isdir(services_path):
-        service_files = [
-            f for f in os.listdir(services_path) if f.endswith(".py") and not f.startswith("__")
-        ]
-        arch_metrics["service_count"] = len(service_files)
-        print(f"  服务类文件: {len(service_files)}")
+    _collect_service_count(arch_metrics)
     # 统计路由文件
-    api_dir = os.path.join(BACKEND_DIR, "api")
-    route_files = 0
-    for _, _, files in os.walk(api_dir):
-        for fname in files:
-            if fname.endswith(".py") and not fname.startswith("__"):
-                route_files += 1
-    arch_metrics["route_count"] = route_files
-    print(f"  路由文件: {route_files}")
+    arch_metrics["route_count"] = _count_route_files()
+    print(f'  路由文件: {arch_metrics["route_count"]}')
     # 设计模式检查
-    patterns_found = []
-    for root, dirs, files in os.walk(BACKEND_DIR):
-        dirs[:] = [d for d in dirs if d not in ("__pycache__", "instance", "logs")]
-        for fname in files:
-            if not fname.endswith(".py"):
-                continue
-            fpath = os.path.join(root, fname)
-            try:
-                with open(fpath, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                if (
-                    re.search(r"class\s+\w+Service", content)
-                    or "class " in content
-                    and "Service" in content
-                ):
-                    patterns_found.append("Service Layer")
-                    break
-            except Exception as e:
-                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
+    patterns_found = _detect_service_layer_pattern()
     if "Service Layer" not in patterns_found:
         patterns_found.append("Service Layer")
     patterns_found.extend(
@@ -510,6 +489,78 @@ def collect_architecture_metrics():
     for layer in arch_metrics["layers"]:
         print(f'    {layer["layer"]}: {layer["files"]} 文件')
     return arch_metrics
+
+
+def _collect_layers(arch_metrics):
+    """统计后端分层目录的 Python 文件数"""
+    backend_dirs = ["api", "services", "models", "utils", "middleware"]
+    for d in backend_dirs:
+        full_path = os.path.join(BACKEND_DIR, d)
+        if os.path.isdir(full_path):
+            py_files = [
+                f for f in os.listdir(full_path) if f.endswith(".py") and not f.startswith("__")
+            ]
+            arch_metrics["layers"].append({"layer": d, "files": len(py_files)})
+
+
+def _collect_model_count(arch_metrics):
+    """统计 ORM 模型数量"""
+    models_path = os.path.join(BACKEND_DIR, "models")
+    if os.path.exists(models_path):
+        try:
+            with open(models_path, encoding="utf-8") as f:
+                content = f.read()
+            model_classes = re.findall(r"class\s+(\w+)\s*\(", content)
+            arch_metrics["model_count"] = len(model_classes)
+            print(f"  ORM模型数: {len(model_classes)}")
+        except Exception as e:
+            logger.warning("项目评估采集异常（已跳过该项）: %s", e)
+
+
+def _collect_service_count(arch_metrics):
+    """统计服务层文件数量"""
+    services_path = os.path.join(BACKEND_DIR, "services")
+    if os.path.isdir(services_path):
+        service_files = [
+            f for f in os.listdir(services_path) if f.endswith(".py") and not f.startswith("__")
+        ]
+        arch_metrics["service_count"] = len(service_files)
+        print(f"  服务类文件: {len(service_files)}")
+
+
+def _count_route_files():
+    """统计路由文件数量"""
+    api_dir = os.path.join(BACKEND_DIR, "api")
+    route_files = 0
+    for _, _, files in os.walk(api_dir):
+        for fname in files:
+            if fname.endswith(".py") and not fname.startswith("__"):
+                route_files += 1
+    return route_files
+
+
+def _detect_service_layer_pattern():
+    """扫描后端目录判断是否存在 Service Layer 模式"""
+    patterns_found = []
+    for root, dirs, files in os.walk(BACKEND_DIR):
+        dirs[:] = [d for d in dirs if d not in ("__pycache__", "instance", "logs")]
+        for fname in files:
+            if not fname.endswith(".py"):
+                continue
+            fpath = os.path.join(root, fname)
+            try:
+                with open(fpath, encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                if (
+                    re.search(r"class\s+\w+Service", content)
+                    or "class " in content
+                    and "Service" in content
+                ):
+                    patterns_found.append("Service Layer")
+                    break
+            except Exception as e:
+                logger.warning("项目评估采集异常（已跳过该项）: %s", e)
+    return patterns_found
 
 
 def run_evaluation():

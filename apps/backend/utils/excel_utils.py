@@ -334,27 +334,7 @@ class ExcelTemplateGenerator:
 
         # 逐行验证
         for row_idx, row in enumerate(data, start=2):
-            row_errors = []
-
-            if template_type == "user":
-                # 验证必填字段
-                if not row[0] or str(row[0]).strip() == "":
-                    row_errors.append("姓名不能为空")
-                if row[1] and str(row[1]).strip() not in ["男", "女"]:
-                    row_errors.append('性别必须为"男"或"女"')
-                if row[3] and len(str(row[3]).strip()) != 11:
-                    row_errors.append("联系电话必须是11位")
-
-            elif template_type == "rule":
-                if not row[0] or str(row[0]).strip() == "":
-                    row_errors.append("规则名称不能为空")
-                if row[3] and not ExcelTemplateGenerator._is_number(row[3]):
-                    row_errors.append("分数必须是数字")
-
-            elif template_type == "category":
-                if not row[0] or str(row[0]).strip() == "":
-                    row_errors.append("分类名称不能为空")
-
+            row_errors = _validate_row_by_type(template_type, row)
             if row_errors:
                 errors.append(f'第{row_idx}行: {", ".join(row_errors)}')
 
@@ -368,6 +348,27 @@ class ExcelTemplateGenerator:
             return True
         except (ValueError, TypeError):
             return False
+
+
+def _validate_row_by_type(template_type, row):
+    """按模板类型校验单行数据，返回错误列表（空列表表示通过）。"""
+    row_errors = []
+    if template_type == "user":
+        if not row[0] or str(row[0]).strip() == "":
+            row_errors.append("姓名不能为空")
+        if row[1] and str(row[1]).strip() not in ["男", "女"]:
+            row_errors.append('性别必须为"男"或"女"')
+        if row[3] and len(str(row[3]).strip()) != 11:
+            row_errors.append("联系电话必须是11位")
+    elif template_type == "rule":
+        if not row[0] or str(row[0]).strip() == "":
+            row_errors.append("规则名称不能为空")
+        if row[3] and not ExcelTemplateGenerator._is_number(row[3]):
+            row_errors.append("分数必须是数字")
+    elif template_type == "category":
+        if not row[0] or str(row[0]).strip() == "":
+            row_errors.append("分类名称不能为空")
+    return row_errors
 
 
 # ============================================================

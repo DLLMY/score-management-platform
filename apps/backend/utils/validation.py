@@ -453,6 +453,18 @@ def validate_name(name: str) -> tuple[bool, str]:
 # ==================== 装饰器式校验器 ====================
 
 
+def _interpret_validator_result(result, errors):
+    """解释单个校验器的返回结果，累积错误信息到 errors。"""
+    if isinstance(result, tuple) and len(result) == 2:
+        is_valid, error_msg = result
+        if not is_valid:
+            errors.append(error_msg)
+    elif isinstance(result, dict):
+        # 返回字典表示多个错误
+        for field, error in result.items():
+            if error:
+                errors.append(f"{field}: {error}")
+
 def validate_request(*validators: Callable) -> Callable:
     """
     请求参数校验装饰器
@@ -477,15 +489,7 @@ def validate_request(*validators: Callable) -> Callable:
             for validator in validators:
                 try:
                     result = validator(json_data, query_params)
-                    if isinstance(result, tuple) and len(result) == 2:
-                        is_valid, error_msg = result
-                        if not is_valid:
-                            errors.append(error_msg)
-                    elif isinstance(result, dict):
-                        # 返回字典表示多个错误
-                        for field, error in result.items():
-                            if error:
-                                errors.append(f"{field}: {error}")
+                    _interpret_validator_result(result, errors)
                 except Exception as e:
                     errors.append(f"校验异常: {str(e)}")
 
