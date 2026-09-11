@@ -129,7 +129,7 @@ gunicorn --bind 0.0.0.0:5000 --workers=4 --threads=2 wsgi:application
 ### 方式三：Docker Compose
 
 ```bash
-docker-compose up -d
+docker-compose -f ops/infra/docker-compose.yml up -d
 # 包含后端、前端、Redis 容器
 ```
 

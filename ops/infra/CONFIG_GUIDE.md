@@ -2,8 +2,8 @@
 
 ## 一、配置文件位置清单
 
-### 1. 部署配置 (`ops/deploy/config.json`)
-**位置**: `ops/deploy/config.json`
+### 1. 部署配置 (`ops/infra/config.json`)
+**位置**: `ops/infra/config.json`
 **用途**: 控制服务端口、启动延迟、部署模式参数
 
 ```json
@@ -81,8 +81,8 @@ REACT_APP_MQTT_PORT=8083
 REACT_APP_MQTT_USE_TLS=true
 ```
 
-### 4. ngrok外网穿透配置 (`ops/deploy/ngrok/ngrok.yml`)
-**位置**: `ops/deploy/ngrok/ngrok.yml`
+### 4. ngrok外网穿透配置 (`ops/infra/ngrok/ngrok.yml`)
+**位置**: `ops/infra/ngrok/ngrok.yml`
 **用途**: 外网穿透隧道配置
 
 **配置步骤**:
@@ -105,8 +105,8 @@ tunnels:
         host_header: localhost:3001
 ```
 
-### 5. Redis配置 (`ops/deploy/redis/redis.windows.conf`)
-**位置**: `ops/deploy/redis/redis.windows.conf`
+### 5. Redis配置 (`ops/infra/redis/redis.windows.conf`)
+**位置**: `ops/infra/redis/redis.windows.conf`
 **用途**: Redis服务器配置
 
 **关键配置**:
@@ -121,7 +121,7 @@ maxmemory 256mb
 ## 二、一键启动脚本
 
 ### 服务器模式启动
-**脚本**: `ops/deploy/start_server.bat`
+**脚本**: `ops/infra/start_server.bat`
 **特点**:
 - 生产模式运行 (Waitress + 静态文件服务)
 - 后台最小化运行
@@ -129,7 +129,7 @@ maxmemory 256mb
 - 适合长期运行的服务器
 
 ### 笔记本模式启动
-**脚本**: `ops/deploy/start_server.bat`
+**脚本**: `ops/infra/start_server.bat`
 **特点**:
 - 开发模式运行 (热重载)
 - 自动打开浏览器
@@ -137,7 +137,7 @@ maxmemory 256mb
 - 适合教学现场快速部署
 
 ### 停止所有服务
-**脚本**: `ops/deploy/stop_all.bat`
+**脚本**: `ops/infra/stop_all.bat`
 **功能**: 停止所有端口上的服务进程
 
 ---
@@ -147,7 +147,7 @@ maxmemory 256mb
 ### 步骤1: 环境安装
 ```bash
 # 运行环境安装脚本 (自动安装Python/Node.js/Redis/ngrok)
-双击 ops/deploy/deploy.ps1 → 选择 [3] 仅安装依赖
+双击 ops/infra/deploy.ps1 → 选择 [3] 仅安装依赖
 ```
 
 ### 步骤2: 配置密钥
@@ -173,10 +173,10 @@ ngrok.exe authtoken <your_authtoken>
 ### 步骤4: 启动服务
 ```bash
 # 服务器模式
-双击 ops/deploy/start_server.bat
+双击 ops/infra/start_server.bat
 
 # 笔记本模式
-双击 ops/deploy/start_server.bat
+双击 ops/infra/start_server.bat
 ```
 
 ---
@@ -198,7 +198,7 @@ print(secrets.token_urlsafe(32))
 
 ## 五、端口冲突处理
 
-如果默认端口被占用，修改 `ops/deploy/config.json`:
+如果默认端口被占用，修改 `ops/infra/config.json`:
 
 ```json
 {
@@ -217,9 +217,9 @@ FLASK_PORT=5001
 
 ## 六、日志位置
 
-- **服务管理日志**: `ops/deploy/logs/service_manager.log`
-- **后端运行日志**: `ops/deploy/logs/backend.log`
-- **前端运行日志**: `ops/deploy/logs/frontend.log`
+- **服务管理日志**: `ops/infra/logs/service_manager.log`
+- **后端运行日志**: `ops/infra/logs/backend.log`
+- **前端运行日志**: `ops/infra/logs/frontend.log`
 
 ---
 
@@ -259,4 +259,4 @@ where node
 1. **密钥安全**: 所有SECRET_KEY必须使用强随机字符串
 2. **生产环境**: 使用HTTPS，不要暴露5000端口到公网
 3. **数据库备份**: 定期备份 `apps/backend/instance/score_management.db`
-4. **日志清理**: 定期清理 `ops/deploy/logs/` 目录
+4. **日志清理**: 定期清理 `ops/infra/logs/` 目录

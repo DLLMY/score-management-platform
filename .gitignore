@@ -59,21 +59,21 @@ env/
 
 # ================ 部署相关 ================
 # ngrok 日志文件（运行时生成）
-ops/deploy/ngrok/*.log
+ops/infra/ngrok/*.log
 
 # ngrok 可执行文件和配置（可上传，方便离线部署）
 # authtoken 通过 "ngrok config add-authtoken" 命令配置，不存储在 ngrok.yml 中
-# ops/deploy/ngrok/ngrok.exe
-# ops/deploy/ngrok/ngrok.yml
+# ops/infra/ngrok/ngrok.exe
+# ops/infra/ngrok/ngrok.yml
 
 # Redis 服务器（上传到仓库，方便离线部署）
 # redis/  # 已取消忽略，允许上传
 
 # 服务管理器日志
-ops/deploy/service_manager.log
+ops/infra/service_manager.log
 
 # 部署检查脚本（可上传）
-# ops/deploy/check_deploy.py
+# ops/infra/check_deploy.py
 
 # 压缩包（一律忽略，避免仓库体积膨胀；部署时另行分发）
 *.zip
@@ -180,3 +180,10 @@ apps/frontend/test-results/
 
 # OpenAPI 快照自动备份（verify_openapi_contract.py --update 生成）
 docs/api/*.bak_*
+
+# ===== 2026-09-11 增补 =====
+# 临时工具脚本与拆分前备份（重构作业产生，用完即清，不入库）
+tools/tmp/
+# 前端临时排查输出
+apps/frontend/_tsc*.txt
+apps/frontend/_bash_marker.txt

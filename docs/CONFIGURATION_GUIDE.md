@@ -218,7 +218,7 @@
 | **前端静态部署** | 生产前端 | `npm run build` 产出 `dist/`；由 `start_server.bat`（http.server）或 nginx 托管；`/api`、`/ws` 反代到后端 |
 | **HTTPS 生产** | Cookie Secure / 安全头完整生效 | 部署在 HTTPS 后：`SESSION_COOKIE_SECURE=true`、`CORS_ORIGINS` 限前端域名 |
 | **Gunicorn（Linux）** | 生产 WSGI | `gunicorn --config gunicorn_config.py wsgi:application`（worker gevent，支持 WebSocket 需额外配置） |
-| **Docker** | 容器化部署 | `docker-compose.yml`（见 infra/）；`.env` 通过环境变量注入 |
+| **Docker** | 容器化部署 | `docker-compose.yml`（见 ops/infra/）；`.env` 通过环境变量注入 |
 | **CSRF 豁免端点** | 前端错误上报等免 CSRF | 已内置（`/api/system/frontend-error`、`/api/nlp/analysis/errors`），无需手动配置 |
 
 ---

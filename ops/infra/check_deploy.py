@@ -111,9 +111,8 @@ def check_directory_structure():
     project_dir = os.path.dirname(os.path.dirname(script_dir))
     
     required_dirs = [
-        'backend',
-        'frontend',
-        'deploy'
+        'apps/backend',
+        'apps/frontend',
     ]
     
     all_exists = True
@@ -137,8 +136,8 @@ def check_config_files():
     config_files = [
         ('apps/backend/.env.example', True),
         ('apps/frontend/.env.example', True),
-        ('ops/deploy/one_click_deploy.py', True),
-        ('ops/deploy/download_deps.py', True),
+        ('ops/infra/one_click_deploy.py', True),
+        ('ops/infra/download_deps.py', True),
         ('apps/frontend/setupProxy.js', True)
     ]
     
@@ -215,7 +214,7 @@ def main():
         print("[OK] 所有检查通过！")
         print(f"\n已通过: {passed}/{total_checks}")
         print("\n可以运行一键部署脚本开始部署:")
-        print("  cd deploy")
+        print("  cd ops/infra")
         print("  python one_click_deploy.py")
         return 0
     else:

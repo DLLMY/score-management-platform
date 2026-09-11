@@ -31,7 +31,7 @@
 > # Linux/Mac
 > cp apps/backend/.env.example apps/backend/.env
 > ```
-> 一键部署（`ops/deploy/one_click_deploy.py` / `deploy.ps1`）会自动基于模板生成 `.env`，无需手动复制。
+> 一键部署（`ops/infra/one_click_deploy.py` / `deploy.ps1`）会自动基于模板生成 `.env`，无需手动复制。
 
 #### Flask 基础
 

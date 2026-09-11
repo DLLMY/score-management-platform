@@ -63,7 +63,7 @@
 | **CICD_GUIDE.md** | CI/CD 流水线说明（ci.yml / deploy.yml） |
 | **CHANGELOG.md** | 更新记录（位于仓库根目录） |
 
-### 🗝️ 后端环境变量模板（在 `apps/backend/`，不在 `ops/deploy/`）
+### 🗝️ 后端环境变量模板（在 `apps/backend/`，不在 `ops/infra/`）
 | 文件 | 说明 |
 |------|------|
 | **apps/backend/.env.example** | 后端环境变量模板的"单一来源"，含全部配置键与注释（Flask/JWT/Cookie/MQTT/OTA/备份/CORS/Celery 等）。部署时复制为 `apps/backend/.env`，一键部署脚本会自动生成 |

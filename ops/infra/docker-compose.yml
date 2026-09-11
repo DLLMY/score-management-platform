@@ -22,14 +22,14 @@ services:
   # Backend API
   backend:
     build:
-      context: .
-      dockerfile: ops/infra/Dockerfile
+      context: ../..
+      dockerfile: ./Dockerfile
     container_name: score-management-backend
     ports:
       - "5000:5000"
     volumes:
       - backend-data:/app/backend/instance
-      - ./apps/backend/.env:/app/backend/.env
+      - ../../apps/backend/.env:/app/backend/.env
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=false
@@ -50,13 +50,13 @@ services:
   # Celery Worker（消费 notification/mqtt/export/default 队列，此前仅配置未启动 → 定时任务与异步任务永不执行）
   celery-worker:
     build:
-      context: .
-      dockerfile: ops/infra/Dockerfile
+      context: ../..
+      dockerfile: ./Dockerfile
     container_name: score-management-celery-worker
     command: celery -A celery_app worker -Q default,notification,mqtt,export -c 4 --loglevel=info
     volumes:
       - backend-data:/app/backend/instance
-      - ./apps/backend/.env:/app/backend/.env
+      - ../../apps/backend/.env:/app/backend/.env
     environment:
       - FLASK_ENV=production
       - REDIS_HOST=redis
@@ -73,13 +73,13 @@ services:
   # Celery Beat（按 CELERY_BEAT_SCHEDULE 周期触发 archive_operation_logs / clean_api_cache / warmup_cache / daily_summary / health_check / sync_device_status / clean_expired_results）
   celery-beat:
     build:
-      context: .
-      dockerfile: ops/infra/Dockerfile
+      context: ../..
+      dockerfile: ./Dockerfile
     container_name: score-management-celery-beat
     command: celery -A celery_app beat --loglevel=info
     volumes:
       - backend-data:/app/backend/instance
-      - ./apps/backend/.env:/app/backend/.env
+      - ../../apps/backend/.env:/app/backend/.env
     environment:
       - FLASK_ENV=production
       - REDIS_HOST=redis
@@ -100,8 +100,8 @@ services:
     ports:
       - "3000:80"
     volumes:
-      - ./apps/frontend/build:/usr/share/nginx/html
-      - ./apps/frontend/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ../../apps/frontend/build:/usr/share/nginx/html
+      - ../../apps/frontend/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       backend:
         condition: service_healthy

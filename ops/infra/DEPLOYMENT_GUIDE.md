@@ -20,7 +20,7 @@
 |------|------|------|----------|
 | Python | 3.11 | 后端运行环境（含 torch 依赖） | https://www.python.org/downloads/ |
 | Node.js | 18+ | 前端运行环境 | https://nodejs.org/ |
-| ngrok | 3.x | 内网穿透工具（已自带） | 已放在 `ops/deploy/ngrok/` |
+| ngrok | 3.x | 内网穿透工具（已自带） | 已放在 `ops/infra/ngrok/` |
 
 ### 安装步骤
 
@@ -291,7 +291,7 @@ python run.py  # 查看控制台输出
 
 ```
 管理平台设计/
-├── ops/deploy/                    # 部署目录
+├── ops/infra/                    # 部署目录
 │   ├── service_manager.py    # 服务管理器（自恢复）
 │   ├── start_server.bat             # 一键启动脚本
 │   ├── stop_all.bat              # 一键停止脚本

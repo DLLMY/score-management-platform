@@ -13,7 +13,7 @@
 | 开发 | `python run.py --env development` | `npm start` |
 | 生产(Linux/Docker) | `gunicorn -c gunicorn_config.py wsgi:application` | `npm run build` + 静态托管 |
 | 生产(Windows) | `waitress-serve wsgi:application` | `npm run build` + 静态托管 |
-| Docker | `docker-compose up` | `docker-compose up` |
+| Docker | `docker-compose -f ops/infra/docker-compose.yml up` | `docker-compose -f ops/infra/docker-compose.yml up` |
 
 ## 实施步骤
 

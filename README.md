@@ -58,7 +58,7 @@
 
 ### 部署
 - GitHub Actions（CI：后端五步回归 + 前端 vitest/build/lint；CD：Release）
-- Windows 一键部署（`ops/deploy/`：bat / PowerShell / Python 三套脚本）
+- Windows 一键部署（`ops/infra/`：bat / PowerShell / Python 三套脚本）
 - Waitress / Gunicorn / Docker Compose
 
 ## 📦 环境要求
@@ -115,8 +115,8 @@ python scripts/verify_indexes.py             # 校验（缺失会退出码 1）
 python run.py --env production --host 0.0.0.0 --port 5000
 ```
 
-> 📖 完整部署流程（含故障排查/安全加固）见 [ops/deploy/DEPLOYMENT_GUIDE.md](ops/deploy/DEPLOYMENT_GUIDE.md)；
-> 环境变量全量说明见 [ops/deploy/ENV_CONFIG.md](ops/deploy/ENV_CONFIG.md)。
+> 📖 完整部署流程（含故障排查/安全加固）见 [ops/infra/DEPLOYMENT_GUIDE.md](ops/infra/DEPLOYMENT_GUIDE.md)；
+> 环境变量全量说明见 [ops/infra/ENV_CONFIG.md](ops/infra/ENV_CONFIG.md)。
 
 ### 本地开发模式
 
@@ -159,7 +159,7 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 git push origin v1.0.0
 ```
 
-> 部署分支策略（main/develop/feature）见 [ops/deploy/BRANCH_STRATEGY.md](ops/deploy/BRANCH_STRATEGY.md)。
+> 部署分支策略（main/develop/feature）见 [ops/infra/BRANCH_STRATEGY.md](ops/infra/BRANCH_STRATEGY.md)。
 
 ## 📁 项目结构
 
@@ -187,10 +187,9 @@ class-manger-integral/
 │   │   ├── hooks/            # useAutoSave（草稿）/ useSubmitGuard / 键盘快捷键
 │   │   └── tests/            # vitest 用例
 │   └── .env.example
-├── ops/deploy/                   # 部署：一键部署 / 服务器模式 / 服务管理 / 文档
+├── ops/infra/                   # 部署 + 基础设施（Dockerfile / mosquitto / pm2 + 一键部署脚本）
 ├── docs/                     # 启动指南 / MQTT 集成 / 重构评估
 ├── apps/firmware/                 # ESP32 固件工程（设备端）
-├── ops/infra/                    # Dockerfile / mosquitto / pm2 配置
 ├── tools/                    # 独立工具（remote_notify 桌面通知客户端）
 ├── docs/reports/              # 历次项目评估报告（原根 reports/）
 └── scripts/                  # run_regression.sh（五步回归闸门）
@@ -258,12 +257,12 @@ bash scripts/run_regression.sh
 
 | 文档 | 说明 |
 |------|------|
-| [ops/deploy/DEPLOYMENT_GUIDE.md](ops/deploy/DEPLOYMENT_GUIDE.md) | 完整部署指南（含故障排查/安全加固） |
-| [ops/deploy/ENV_CONFIG.md](ops/deploy/ENV_CONFIG.md) | 环境变量全量说明 |
+| [ops/infra/DEPLOYMENT_GUIDE.md](ops/infra/DEPLOYMENT_GUIDE.md) | 完整部署指南（含故障排查/安全加固） |
+| [ops/infra/ENV_CONFIG.md](ops/infra/ENV_CONFIG.md) | 环境变量全量说明 |
 | [docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md) | **配置手册（全量）**：全部手动配置项（后端/前端/数据库/第三方服务/部署脚本），含格式/默认值/必填/示例 |
-| [ops/deploy/QUICK_REFERENCE.md](ops/deploy/QUICK_REFERENCE.md) | 部署快速参考 |
-| [ops/deploy/RELEASE_GUIDE.md](ops/deploy/RELEASE_GUIDE.md) | 版本发布流程 |
-| [ops/deploy/BRANCH_STRATEGY.md](ops/deploy/BRANCH_STRATEGY.md) | 分支策略 |
+| [ops/infra/QUICK_REFERENCE.md](ops/infra/QUICK_REFERENCE.md) | 部署快速参考 |
+| [ops/infra/RELEASE_GUIDE.md](ops/infra/RELEASE_GUIDE.md) | 版本发布流程 |
+| [ops/infra/BRANCH_STRATEGY.md](ops/infra/BRANCH_STRATEGY.md) | 分支策略 |
 | [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | 启动流程指南（开发/测试/生产） |
 | [docs/MQTT_INTEGRATION.md](docs/MQTT_INTEGRATION.md) | MQTT 设备集成 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更日志 |

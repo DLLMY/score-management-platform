@@ -108,7 +108,7 @@ start_server.bat
 ## 📝 部署文件结构
 
 ```
-ops/deploy/
+ops/infra/
 ├── start_server.bat                    ← 一键启动（推荐）
 ├── start_server.bat             ← 手动启动（备用）
 ├── stop_all.bat                     ← 一键停止
