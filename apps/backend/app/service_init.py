@@ -184,45 +184,58 @@ def init_mqtt(app):
     mqtt_init_thread.start()
 
 
+def _scheduled_backup_job():
+    try:
+        from utils.backup_utils import backup_manager
+
+        result = backup_manager.create_backup("full")
+        if result["success"]:
+            log_info(f"数据库定时备份成功: {result['filename']}")
+            backup_manager.clean_old_backups()
+        else:
+            log_error(f"数据库定时备份失败: {result['message']}")
+    except Exception as e:
+        log_error(f"数据库定时备份异常: {e}", exception=e)
+
+
+def _scheduled_cleanup_backups_job():
+    """独立备份保留策略清理（不依赖备份创建是否成功，防止磁盘膨胀）"""
+    try:
+        from utils.backup_utils import backup_manager
+        from config import Config
+
+        result = backup_manager.clean_old_backups(max_count=Config.BACKUP_MAX_COUNT)
+        if result["deleted_count"] > 0:
+            log_info(f"备份保留策略清理: 删除 {result['deleted_count']} 个旧备份")
+    except Exception as e:
+        log_error(f"备份保留策略清理异常: {e}", exception=e)
+
+
+def _scheduled_heartbeat_check_job(app):
+    try:
+        from services.heartbeat_service import check_heartbeat_timeout
+
+        with app.app_context():
+            result = check_heartbeat_timeout()
+            if result and result.get("total_timeout", 0) > 0:
+                log_warning(f"心跳超时检查发现 {result['total_timeout']} 台设备离线")
+            else:
+                log_info("心跳超时检查完成，所有设备正常")
+    except Exception as e:
+        log_error(f"心跳超时检查异常: {e}", exception=e)
+
+
 def init_scheduler(app):
 
     def scheduled_backup():
-        try:
-            from utils.backup_utils import backup_manager
-
-            result = backup_manager.create_backup("full")
-            if result["success"]:
-                log_info(f"数据库定时备份成功: {result['filename']}")
-                backup_manager.clean_old_backups()
-            else:
-                log_error(f"数据库定时备份失败: {result['message']}")
-        except Exception as e:
-            log_error(f"数据库定时备份异常: {e}", exception=e)
+        _scheduled_backup_job()
 
     def scheduled_cleanup_backups():
         """独立备份保留策略清理（不依赖备份创建是否成功，防止磁盘膨胀）"""
-        try:
-            from utils.backup_utils import backup_manager
-            from config import Config
-
-            result = backup_manager.clean_old_backups(max_count=Config.BACKUP_MAX_COUNT)
-            if result["deleted_count"] > 0:
-                log_info(f"备份保留策略清理: 删除 {result['deleted_count']} 个旧备份")
-        except Exception as e:
-            log_error(f"备份保留策略清理异常: {e}", exception=e)
+        _scheduled_cleanup_backups_job()
 
     def scheduled_heartbeat_check():
-        try:
-            from services.heartbeat_service import check_heartbeat_timeout
-
-            with app.app_context():
-                result = check_heartbeat_timeout()
-                if result and result.get("total_timeout", 0) > 0:
-                    log_warning(f"心跳超时检查发现 {result['total_timeout']} 台设备离线")
-                else:
-                    log_info("心跳超时检查完成，所有设备正常")
-        except Exception as e:
-            log_error(f"心跳超时检查异常: {e}", exception=e)
+        _scheduled_heartbeat_check_job(app)
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(scheduled_backup, "cron", hour=2, minute=0)
