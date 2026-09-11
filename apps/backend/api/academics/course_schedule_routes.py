@@ -24,6 +24,8 @@ from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+import logging
+logger = logging.getLogger(__name__)
 
 ns_course_schedule = Namespace("course-schedules", description="课程表相关操作")
 

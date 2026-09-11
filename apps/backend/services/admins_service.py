@@ -17,6 +17,8 @@ from models import (
     cascade_delete_related_records,
 )
 from utils.security import hash_password
+import logging
+logger = logging.getLogger(__name__)
 
 ROLE_MAPPING = {
     "admin": "admin",

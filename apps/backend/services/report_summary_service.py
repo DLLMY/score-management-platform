@@ -17,6 +17,8 @@ from datetime import datetime
 from services.engagement_service import batch_rank
 from services.risk_predict_service import RiskPredictService
 from services.attribution_service import AttributionService
+import logging
+logger = logging.getLogger(__name__)
 
 
 def build_class_summary(class_name: str, days: int = 30) -> dict:

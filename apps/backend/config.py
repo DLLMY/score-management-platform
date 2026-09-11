@@ -408,38 +408,4 @@ __all__ = [
     "Config",
     "config",
     "get_config",
-    # Flask配置
-    "FLASK_APP",
-    "FLASK_ENV",
-    "FLASK_DEBUG",
-    "FLASK_SECRET_KEY",
-    "FLASK_HOST",
-    "FLASK_PORT",
-    # 数据库配置
-    "DATABASE_URI",
-    # Redis配置
-    "REDIS_HOST",
-    "REDIS_PORT",
-    "REDIS_DB",
-    "REDIS_URL",
-    "REDIS_AUTO_START",
-    "REDIS_SERVER_COMMAND",
-    "REDIS_AUTO_START_TIMEOUT",
-    "REDIS_SERVER_LOG",
-    # Celery配置
-    "CELERY_BROKER_URL",
-    "CELERY_RESULT_BACKEND",
-    # MQTT配置
-    "MQTT_BROKER",
-    "MQTT_PORT",
-    "MQTT_TOPIC_PREFIX",
-    # JWT配置
-    "JWT_SECRET_KEY",
-    "JWT_ACCESS_TOKEN_EXPIRES",
-    # 安全配置
-    "CSRF_SECRET_KEY",
-    "CORS_ORIGINS",
-    # 缓存配置
-    "CACHE_TTL",
-    "API_CACHE_TTL",
 ]

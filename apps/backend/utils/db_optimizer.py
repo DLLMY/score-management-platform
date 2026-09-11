@@ -6,6 +6,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Query
 from models import db
 import time
+import logging
+logger = logging.getLogger(__name__)
 
 """
 数据库查询优化工具模块

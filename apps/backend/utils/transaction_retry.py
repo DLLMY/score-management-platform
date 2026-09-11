@@ -241,7 +241,7 @@ def safe_bulk_insert(records, batch_size=100, max_retries=3):
     for i in range(0, len(records), batch_size):
         batch = records[i : i + batch_size]
 
-        def _insert_batch():
+        def _insert_batch(batch=batch):
             db.session.add_all(batch)
             db.session.commit()
             return len(batch)
@@ -277,7 +277,7 @@ def safe_bulk_update(updates, batch_size=100, max_retries=3):
     for i in range(0, len(updates), batch_size):
         batch = updates[i : i + batch_size]
 
-        def _update_batch():
+        def _update_batch(batch=batch):
             for model, data in batch:
                 for key, value in data.items():
                     setattr(model, key, value)

@@ -19,7 +19,8 @@ from utils.logger import log_info, log_debug
 
 class TextCNNClassifier:
 
-    def __init__(self, embedding_dim=128, max_len=32, num_filters=64, filter_sizes=[2, 3, 4]):
+    def __init__(self, embedding_dim=128, max_len=32, num_filters=64, filter_sizes=None):
+        filter_sizes = filter_sizes or [2, 3, 4]
         self.embedding_dim = embedding_dim
         self.max_len = max_len
         self.num_filters = num_filters

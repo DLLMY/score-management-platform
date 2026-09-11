@@ -447,7 +447,6 @@ class NLPParserService:
             )
 
             with db_session_scope():
-                from models import db
 
                 db.session.add(usage_record)
                 db.session.add(match_result)

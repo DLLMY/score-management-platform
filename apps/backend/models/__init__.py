@@ -260,6 +260,7 @@ __all__ = [
     "CultureItem",
     "StudyGuide",
     "ImprovementPlan",
+    "TeacherComment",
     "NotificationConfig",
     "User",
     "Admin",

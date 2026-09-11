@@ -9,6 +9,8 @@ from sqlalchemy import func
 import numpy as np
 
 import pandas as pd
+import logging
+logger = logging.getLogger(__name__)
 
 """
 算法核心服务模块
