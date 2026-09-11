@@ -38,6 +38,31 @@ def _teacher_policy_reason(decision):
     return "PHONEBOX_TEACHER_WINDOW", "班主任预设时段内，允许开箱"
 
 
+# MQTT topic -> 处理方法名 的派发表（与 handle_mqtt_message 原分支链等价）
+_MQTT_TOPIC_HANDLERS = {
+    "phonebox/query": "handle_query_message",
+    "phonebox/heartbeat": "handle_heartbeat_message",
+    "phonebox/points/query": "handle_points_query",
+    "phonebox/points/add": "handle_points_add",
+    "phonebox/points/sub": "handle_points_sub",
+    "score/add": "handle_score_add",
+    "score/undo": "handle_score_undo",
+    "score/rules/query": "handle_score_rules_query",
+}
+
+
+def _dispatch_mqtt_topic(service, topic, data):
+    """按 topic 派发到对应处理方法（分支抽离，零行为变更）。"""
+    if topic == "phonebox/unlock" or topic.startswith("phonebox/unlock/"):
+        # 订阅是 phonebox/unlock/+（实际主题 phonebox/unlock/{device_id}），
+        # 此前精确匹配 topic == "phonebox/unlock" 永远不命中 → 开锁请求静默丢弃
+        service.handle_unlock_message(data)
+        return
+    handler_name = _MQTT_TOPIC_HANDLERS.get(topic)
+    if handler_name:
+        getattr(service, handler_name)(data)
+
+
 class MQTTMessageService:
 
     def __init__(self):
@@ -901,27 +926,7 @@ class MQTTMessageService:
             )
             return
 
-        if topic == "phonebox/query":
-            self.handle_query_message(data)
-        elif topic == "phonebox/unlock" or topic.startswith("phonebox/unlock/"):
-            # 订阅是 phonebox/unlock/+（实际主题 phonebox/unlock/{device_id}），
-            # 此前精确匹配 topic == "phonebox/unlock" 永远不命中 → 开锁请求静默丢弃
-            self.handle_unlock_message(data)
-        elif topic == "phonebox/heartbeat":
-            self.handle_heartbeat_message(data)
-        elif topic == "phonebox/points/query":
-            self.handle_points_query(data)
-        elif topic == "phonebox/points/add":
-            self.handle_points_add(data)
-        elif topic == "phonebox/points/sub":
-            self.handle_points_sub(data)
-        elif topic == "score/add":
-            self.handle_score_add(data)
-        elif topic == "score/undo":
-            self.handle_score_undo(data)
-        elif topic == "score/rules/query":
-            # 设备查询积分规则（此前订阅了 score/rules/query 但无处理分支 → 设备请求无响应）
-            self.handle_score_rules_query(data)
+        _dispatch_mqtt_topic(self, topic, data)
 
 
 mqtt_message_service = MQTTMessageService()

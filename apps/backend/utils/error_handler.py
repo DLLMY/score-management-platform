@@ -112,88 +112,84 @@ def make_error_response(message, status_code=400, error_code=None, details=None)
 # ==================== 异常处理器注册 ====================
 
 
+def _handle_api_error(e):
+    """处理API自定义异常"""
+    logger.error(f"API错误: {e.message} (状态码: {e.status_code}, 错误码: {e.error_code})")
+    return make_error_response(
+        message=e.message, status_code=e.status_code, error_code=e.error_code, details=e.details
+    )
+
+def _handle_not_found_error(e):
+    """处理资源不存在异常"""
+    logger.warning(f"资源不存在: {e.message}")
+    return make_error_response(message=e.message, status_code=404, error_code=e.error_code)
+
+def _handle_unauthorized_error(e):
+    """处理未授权异常"""
+    logger.warning(f"未授权访问: {e.message}")
+    return make_error_response(message=e.message, status_code=401, error_code=e.error_code)
+
+def _handle_forbidden_error(e):
+    """处理禁止访问异常"""
+    logger.warning(f"禁止访问: {e.message}")
+    return make_error_response(message=e.message, status_code=403, error_code=e.error_code)
+
+def _handle_validation_error(e):
+    """处理参数验证异常"""
+    logger.warning(f"参数验证失败: {e.message}")
+    return make_error_response(
+        message=e.message, status_code=400, error_code=e.error_code, details=e.details
+    )
+
+def _handle_bad_request(e):
+    """处理400错误"""
+    logger.warning(f"请求参数错误: {e}")
+    return make_error_response(
+        message="请求参数错误", status_code=400, error_code="BAD_REQUEST"
+    )
+
+def _handle_not_found(e):
+    """处理404错误"""
+    logger.warning(f"资源不存在: {request.path}")
+    return make_error_response(message="资源不存在", status_code=404, error_code="NOT_FOUND")
+
+def _handle_method_not_allowed(e):
+    """处理405错误"""
+    logger.warning(f"方法不允许: {request.method} {request.path}")
+    return make_error_response(
+        message=f"{request.method} 方法不允许", status_code=405, error_code="METHOD_NOT_ALLOWED"
+    )
+
+def _handle_internal_error(e):
+    """处理500错误"""
+    error_trace = traceback.format_exc()
+    logger.error(f"服务器内部错误: {e}\n{error_trace}")
+    _record_server_error("INTERNAL_ERROR", e, error_trace)
+    return make_error_response(
+        message="服务器内部错误", status_code=500, error_code="INTERNAL_ERROR"
+    )
+
+def _handle_uncaught_exception(e):
+    """处理未捕获的异常"""
+    error_trace = traceback.format_exc()
+    logger.error(f"未捕获异常: {e}\n{error_trace}")
+    _record_server_error("UNCAUGHT_EXCEPTION", e, error_trace)
+    return make_error_response(
+        message="服务器内部错误", status_code=500, error_code="UNCAUGHT_EXCEPTION"
+    )
+
 def register_error_handlers(app):
     """注册全局异常处理器"""
-
-    @app.errorhandler(APIError)
-    def handle_api_error(e):
-        """处理API自定义异常"""
-        logger.error(f"API错误: {e.message} (状态码: {e.status_code}, 错误码: {e.error_code})")
-        return make_error_response(
-            message=e.message, status_code=e.status_code, error_code=e.error_code, details=e.details
-        )
-
-    @app.errorhandler(NotFoundError)
-    def handle_not_found_error(e):
-        """处理资源不存在异常"""
-        logger.warning(f"资源不存在: {e.message}")
-        return make_error_response(message=e.message, status_code=404, error_code=e.error_code)
-
-    @app.errorhandler(UnauthorizedError)
-    def handle_unauthorized_error(e):
-        """处理未授权异常"""
-        logger.warning(f"未授权访问: {e.message}")
-        return make_error_response(message=e.message, status_code=401, error_code=e.error_code)
-
-    @app.errorhandler(ForbiddenError)
-    def handle_forbidden_error(e):
-        """处理禁止访问异常"""
-        logger.warning(f"禁止访问: {e.message}")
-        return make_error_response(message=e.message, status_code=403, error_code=e.error_code)
-
-    @app.errorhandler(ValidationError)
-    def handle_validation_error(e):
-        """处理参数验证异常"""
-        logger.warning(f"参数验证失败: {e.message}")
-        return make_error_response(
-            message=e.message, status_code=400, error_code=e.error_code, details=e.details
-        )
-
-    @app.errorhandler(400)
-    def handle_bad_request(e):
-        """处理400错误"""
-        logger.warning(f"请求参数错误: {e}")
-        return make_error_response(
-            message="请求参数错误", status_code=400, error_code="BAD_REQUEST"
-        )
-
-    @app.errorhandler(404)
-    def handle_not_found(e):
-        """处理404错误"""
-        logger.warning(f"资源不存在: {request.path}")
-        return make_error_response(message="资源不存在", status_code=404, error_code="NOT_FOUND")
-
-    @app.errorhandler(405)
-    def handle_method_not_allowed(e):
-        """处理405错误"""
-        logger.warning(f"方法不允许: {request.method} {request.path}")
-        return make_error_response(
-            message=f"{request.method} 方法不允许", status_code=405, error_code="METHOD_NOT_ALLOWED"
-        )
-
-    @app.errorhandler(500)
-    def handle_internal_error(e):
-        """处理500错误"""
-        error_trace = traceback.format_exc()
-        logger.error(f"服务器内部错误: {e}\n{error_trace}")
-        _record_server_error("INTERNAL_ERROR", e, error_trace)
-
-        # 生产环境不返回详细错误信息
-        return make_error_response(
-            message="服务器内部错误", status_code=500, error_code="INTERNAL_ERROR"
-        )
-
-    @app.errorhandler(Exception)
-    def handle_uncaught_exception(e):
-        """处理未捕获的异常"""
-        error_trace = traceback.format_exc()
-        logger.error(f"未捕获异常: {e}\n{error_trace}")
-        _record_server_error("UNCAUGHT_EXCEPTION", e, error_trace)
-
-        return make_error_response(
-            message="服务器内部错误", status_code=500, error_code="UNCAUGHT_EXCEPTION"
-        )
-
+    app.errorhandler(APIError)(_handle_api_error)
+    app.errorhandler(NotFoundError)(_handle_not_found_error)
+    app.errorhandler(UnauthorizedError)(_handle_unauthorized_error)
+    app.errorhandler(ForbiddenError)(_handle_forbidden_error)
+    app.errorhandler(ValidationError)(_handle_validation_error)
+    app.errorhandler(400)(_handle_bad_request)
+    app.errorhandler(404)(_handle_not_found)
+    app.errorhandler(405)(_handle_method_not_allowed)
+    app.errorhandler(500)(_handle_internal_error)
+    app.errorhandler(Exception)(_handle_uncaught_exception)
     logger.info("全局异常处理器已注册")
 
 

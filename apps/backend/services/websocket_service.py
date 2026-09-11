@@ -20,6 +20,48 @@ SYSTEM_EVENT = "system"
 from utils.logger import log_info, log_debug
 
 
+def _ws_handle_connect():
+    client_id = request.sid
+    log_debug(f"Client connected: {client_id}")
+    emit("connected", {"sid": client_id, "message": "Connected to WebSocket server"})
+
+
+def _ws_handle_disconnect(svc):
+    client_id = request.sid
+    with svc._client_lock:
+        if client_id in svc.client_rooms:
+            for room in svc.client_rooms[client_id]:
+                leave_room(room)
+            del svc.client_rooms[client_id]
+    log_debug(f"Client disconnected: {client_id}")
+
+
+def _ws_handle_subscribe(svc, data):
+    room = data.get("room")
+    if room:
+        join_room(room)
+        with svc._client_lock:
+            if request.sid not in svc.client_rooms:
+                svc.client_rooms[request.sid] = set()
+            svc.client_rooms[request.sid].add(room)
+        emit("subscribed", {"room": room})
+        log_debug(f"Client {request.sid} subscribed to {room}")
+
+
+def _ws_handle_unsubscribe(svc, data):
+    room = data.get("room")
+    if room:
+        leave_room(room)
+        with svc._client_lock:
+            if request.sid in svc.client_rooms and room in svc.client_rooms[request.sid]:
+                svc.client_rooms[request.sid].remove(room)
+        emit("unsubscribed", {"room": room})
+
+
+def _ws_handle_ping():
+    emit("pong", {"timestamp": json.dumps({"server_time": None})})
+
+
 class WebSocketService:
     """WebSocket 服务类（面向对象封装，便于测试与复用）。
 
@@ -41,45 +83,23 @@ class WebSocketService:
 
         @sio.on("connect")
         def handle_connect():
-            client_id = request.sid
-            log_debug(f"Client connected: {client_id}")
-            emit("connected", {"sid": client_id, "message": "Connected to WebSocket server"})
+            _ws_handle_connect()
 
         @sio.on("disconnect")
         def handle_disconnect():
-            client_id = request.sid
-            with self._client_lock:
-                if client_id in self.client_rooms:
-                    for room in self.client_rooms[client_id]:
-                        leave_room(room)
-                    del self.client_rooms[client_id]
-            log_debug(f"Client disconnected: {client_id}")
+            _ws_handle_disconnect(self)
 
         @sio.on("subscribe")
         def handle_subscribe(data):
-            room = data.get("room")
-            if room:
-                join_room(room)
-                with self._client_lock:
-                    if request.sid not in self.client_rooms:
-                        self.client_rooms[request.sid] = set()
-                    self.client_rooms[request.sid].add(room)
-                emit("subscribed", {"room": room})
-                log_debug(f"Client {request.sid} subscribed to {room}")
+            _ws_handle_subscribe(self, data)
 
         @sio.on("unsubscribe")
         def handle_unsubscribe(data):
-            room = data.get("room")
-            if room:
-                leave_room(room)
-                with self._client_lock:
-                    if request.sid in self.client_rooms and room in self.client_rooms[request.sid]:
-                        self.client_rooms[request.sid].remove(room)
-                emit("unsubscribed", {"room": room})
+            _ws_handle_unsubscribe(self, data)
 
         @sio.on("ping")
         def handle_ping():
-            emit("pong", {"timestamp": json.dumps({"server_time": None})})
+            _ws_handle_ping()
 
         log_info("WebSocket事件处理器已注册")
 
