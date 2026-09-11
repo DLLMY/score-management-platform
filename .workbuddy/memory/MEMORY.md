@@ -1,44 +1,46 @@
 # 管理平台设计 — 长期记忆
 
-> SOP 已下沉 `~/.workbuddy/skills/`：backend-pytest-env-restore · black-batch-eol-safe · dirty-worktree-commit-split · frontend-dead-code-removal · frontend-import-barrel-unification · route-try-except-to-decorator · ts-noimplicitany-enable · vitest-crash-triage。本文只留**硬规则与判据**，细节看 `memory/YYYY-MM-DD.md`。
+> SOP 已下沉 `~/.workbuddy/skills/`：backend-pytest-env-restore · black-batch-eol-safe · c901-cyclomatic-refactor · dirty-worktree-commit-split · frontend-dead-code-removal · frontend-import-barrel-unification · route-try-except-to-decorator · ts-noimplicitany-enable。本文只留**硬规则与判据**，细节看 `memory/YYYY-MM-DD.md`。
 
-## 运行 / 测试
-- 后端起：系统 Py3.11 `C:/Users/53527/AppData/Local/Programs/Python/Python311/python.exe`；`cd backend && python run.py --env development --host 127.0.0.1 --port 5000`。⚠️ 改后端须**强杀全部 python 再重启**（SocketIO 不 reload）。MQTT 改 `app/service_init.py::init_mqtt`。
-- ⚠️ **pytest / run_regression 必须用 `apps/backend/.venv/Scripts/python.exe`**：系统 Py3.11 缺 werkzeug/flask_sqlalchemy → 假报 `url_quote ImportError`。正解 `PYTHON_BIN="<repo>/apps/backend/.venv/Scripts/python.exe" bash scripts/run_regression.sh`。判据：`test_` 改动数=0 时 import 错必是环境。基线 **2066 passed / 7 skipped**。
-- 前端四闸门（managed Node 22.22.2；⚠️ 勿用 `node_modules/.bin/*`——bash 包装会被当 JS 执行）：`tsc`→`typescript/bin/tsc`；`eslint`→`eslint/bin/eslint.js`；`prettier`→**bin-prettier.js**；`vitest run`→`vitest/vitest.mjs`（**全量勿加 `--pool=forks`**）。
-- ⚠️ **单测三要素**：① 退出码=0；② 无 `Errors`/`failed`；③ **报告文件数 == 磁盘文件数**（`grep -oE 'src/[^ ]+\.test\.[a-z]+'` vs `find src -name '*.test.*'` 做 `comm -13` 为空）。崩溃 worker 的文件会静默消失。基线 38 文件 / **276 passed / 3 skipped**。
-- ⚠️ push 后核实 **`git ls-remote origin refs/heads/main`**，勿信 `git status -sb`（远端 ref 仅存 packed-refs 且陈旧）。禁 commit 除非用户显式要求。
-- ⚠️ node 脚本勿用 `/tmp/...`（Git Bash 与 node 解析不一致 → MODULE_NOT_FOUND）；一律 `C:/Users/<u>/AppData/Local/Temp/...`。
+## 运行 / 测试（口径固定，勿再重推）
+- 后端起：系统 Py3.11；`cd backend && python run.py --env development --host 127.0.0.1 --port 5000`。改后端须**强杀全部 python 再重启**（SocketIO 不 reload）；MQTT 在 `app/service_init.py::init_mqtt`。
+- ⚠️ pytest / run_regression **必须** `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug → 假 `url_quote ImportError`）。基线 **2066 passed / 7 skipped**。判据：`test_` 改动=0 却 import 错 ⇒ 环境问题。
+- 前端四闸门用 managed Node 22.22.2，**勿用 `node_modules/.bin/*`**（bash 包装被当 JS 跑）：tsc→`typescript/bin/tsc`；eslint→`eslint/bin/eslint.js`；prettier→`bin-prettier.js`；vitest→`vitest/vitest.mjs`（全量**勿加** `--pool=forks`）。基线 38 文件 / **276 passed / 3 skipped**。
+- ⚠️ 单测三要素：①退出码=0 ②无 `Errors`/`failed` ③**报告文件数==磁盘文件数**（崩溃 worker 的文件会静默消失）。
+- ⚠️ push 后核实 `git ls-remote origin refs/heads/main`（`git status -sb` 的远端 ref 会陈旧）。**禁 commit 除非用户显式要求**。
 
-## 前端类型 / 结构规范
-- **tsconfig 全量严格**：`strict` + `noImplicitOverride` + `noUnusedLocals` + `noUnusedParameters`（2026-09-11 全部收口）。新代码 `tsc --noEmit` 必须 0 错误；**禁新增 `any`**；可空/可选显式处理（仅「保持原运行时值不变」处用 `as`，禁 `!` 批量绕过）。
-  - ⚠️ **容器签名铁律**：接收「任意组件」的参数写 `React.ComponentType`（默认泛型 `{}`），**禁写 `ComponentType<unknown>`**——泛型在 props **逆变位**。**判据：同批调用点里只有显式标注 `React.FC` 的组件报错 ⇒ 根因在容器。**
-  - ⚠️ **未用的公共方法 / 回调形参不要删，加 `_` 前缀**（删形参会致调用点报「传参错误」）。`noUnused*` **必须在 tsc 侧兜底**：eslint 覆盖不到类私有成员，且 `react/jsx-uses-react` 会掩盖未使用的 `import React`。
-  - ❌ **不推**（会改运行时语义）：`noUncheckedIndexedAccess`(133) / `exactOptionalPropertyTypes`(157) / `noPropertyAccessFromIndexSignature`(187)。**每格先 `tsc --noEmit --<flag>` 单独量化再决定**。
-- ⚠️ `@types/react-dom` 是显式 devDependency：缺失时 `react-dom/client` 隐式 any（TS7016）。**改 `package.json` 后必须 `npm install` 同步 lockfile**（本仓 lock 曾与 package.json 脱节 → `npm ci` 失败）。
-- **导入一律走 barrel**（见 skill）：hooks→`'.../hooks'`；components→`'.../components'`（双层，根聚合 9 子 barrel）。新增子目录**必须建 `index.ts` 并在根 barrel 聚合**；子 barrel 转发**按真实导出形式**。⚠️ 批量改 import 脚本铁律与**误删恢复 SOP** 见 skill（误删**不用 `git checkout`**，以 tsc TS2304/TS2552 为权威）。
-- ⚠️ **`.map()` 回调返回对象字面量时上下文类型可能不生效**（空数组→`any[]` TS7018，且多余属性查不出）→ 给回调加显式返回类型标注。详见 skill `ts-noimplicitany-enable`。
-- **Context 渲染铁律**：provider `value={{...}}` 内联对象每次渲染新建 → 消费者强制重渲染；新 context 必须 `useMemo` value，含函数先 `useCallback`（会新报 missing-dep，需补 deps）。
-- **DataTable 虚拟化** `virtualThreshold` 默认 200 → 本地分页大列表已自动虚拟化；受控（服务端分页）单页不虚拟化。
-- 前端 `src` 全 LF；`.prettierrc` = 100 / singleQuote / semi / jsxSingleQuote / **endOfLine:"lf"**。
-- hook 复用优先（勿新造）：`useStableToast`/`useSubmitGuard`/`useForm`/`useListFetch`/`useListData`/`useWorkbenchClass`/`useDebouncedValue`/`useModal`/`usePermissions`。
+## ruff 口径（2026-09-11 重新校准）
+- 唯一口径 = `ruff check apps/backend`（**含 tests/scripts/tools/migrations**）；C901 同口径加 `--select C901`。
+- **当前基线（2026-09-12 #119 两函数 + #120 `_validate_course_import_item` 收口后）：默认 2258 / C901 55**。旧记录 2261/67、2259/66、2258/60、2258/58、2258/57、2258/56 均已作废；**口径变了必须重测**，勿沿用旧值。
+- ⚠️ #120（21+ 桶）19 项经全量扫描审定：**仅 `_validate_course_import_item`(22) 为纯校验可机械收口**；其余 18 项全属写路径/DB 事务（users_routes.post 45/25、execute_subject_import 37、import_devices 31、subject_routes.post 23、resolve_relations 22、execute_scoring 21）、NLP 语义（parse 36/extract_behavior 29/parse_without_correction 28/extract_name 26/deep_semantic_match 24/determine_intent 22）、安全（security.validate 35、configure_rate_limits 26）、测试/工具/脚本（tests.run_tests 27、collect_security_metrics 24、verify_rbac.run_check 22）——**按宁跳不强推纪律整体跳过，均待用户单独拍板**。
+- ruff 用默认 `ll=88`（仅 black 是 100）；**black 只对 `--check` 已过的文件跑**。
 
-## 后端架构铁律
+## 后端铁律
 - 路由唯一源 `app/api_versioning.py::register_v1_routes`；信封 `{success,code,data}`；create 双元组 `[env,201]` 勿改。
-- **提取/重构必跑回归**：后端 `run_regression.sh` + 被改模块补 pytest；前端四闸门。**未跑回归 = 重构未完成**。
-- ⚠️ 新建后端工具前先 Glob 确认不存在（excel_utils / query_optimizer 曾误覆盖）。
-- ✅ 已收口（勿再排期）：F17 防腐层 · B3 `to_dict(fields=None)` 五实体 · E 系 E1–E6 · E4 broad-except 566→425 · NLP 四塔 P0–P1 · components/hooks barrel。
-- 重构范式：**E6a**（`columns.tsx` 工厂 / `useXxxLogic.tsx` 薄装配 / `XxxView.tsx`）· **D2 视图拆分**（主渲染 >150 行 → 抽 View + 显式 props）。坑：hook 含 JSX 必须 `.tsx`；interface/const 搬 `types.ts` 要 `export`；早退分支与 columns 图标留在逻辑层；复合类型用 `ReturnType<typeof useXxx>`。
-- **忠实度验证**：`git show HEAD:<file>` vs 新文件，**括号配平**抽取完整语句后 strip 缩进/空行/注释逐行 diff（简易 `\n  );` 截断遇嵌套括号必错位 → 假 DIFF）。
-- 派 subagent 前**必须先用脚本核对文件真实存在**（曾因臆测致 21/29 路径不存在白跑）。
+- **未跑回归 = 重构未完成**。新建工具前先 Glob 确认不存在。
+- ✅ 已收口勿再排期：F17 防腐层 · B3 `to_dict(fields=None)` · E 系 E1–E6 · E4 broad-except 566→425 · NLP 四塔 P0–P1 · components/hooks barrel。
+- 前端重构范式 **E6a**/`D2`：hook 含 JSX 必 `.tsx`；搬 `types.ts` 的 interface/const 要 `export`；复合类型用 `ReturnType<typeof useXxx>`。
+- 派 subagent 前**先用脚本核对文件真实存在**（曾臆测致 21/29 路径不存在白跑）。
+- ⚠️ `%`→f-string 批量转换须双守卫：① AST 全扫「非 f 串含 `{identifier` 占位」② 内容级断言。
 
-## 分页 / top-N（`backend/utils/pagination.py`）
-- 翻页型 `get_pagination(default=20, max_per_page=200)` → `(page, per_page)`；top-N 型 `get_limit(default=50, max_limit=200)`，**恒不引入 page**。
+## 前端类型规范
+- tsconfig 严格档已全收口：`strict`+`noImplicitOverride`+`noUnusedLocals`+`noUnusedParameters`；**禁新增 `any`**；仅「保持原运行时值」用 `as`，禁 `!` 批量绕过。
+  - ⚠️ 容器接收「任意组件」写 `React.ComponentType`，**禁 `ComponentType<unknown>`**。判据：仅显式标 `React.FC` 的组件报错 ⇒ 根因在容器。
+  - ⚠️ 未用的公共方法 / 回调形参**加 `_` 前缀勿删**（删形参致调用点报「传参错误」）。`noUnused*` 必须在 tsc 兜底（eslint 覆盖不到类私有成员）。
+  - ❌ 不推（会改运行时语义）：`noUncheckedIndexedAccess`/`exactOptionalPropertyTypes`/`noPropertyAccessFromIndexSignature`。**每格先单独量化再决定**。
+- **导入一律走 barrel**（hook/components 双层）；新增子目录**必须建 `index.ts` 并在根 barrel 聚合**。误删**不用 `git checkout`**，以 tsc TS2304/TS2552 为权威。
+- ⚠️ `.map()` 回调返回对象字面量时上下文类型可能失效（空数组→TS7018）→ 加显式返回类型标注。
+- **Context**：provider `value` 必须 `useMemo`（含函数先 `useCallback`）。
+- 前端 `src` 全 LF；prettier = 100/singleQuote/semi/jsxSingleQuote/`endOfLine:"lf"`。
+- hook 复用优先：`useStableToast`/`useSubmitGuard`/`useForm`/`useListFetch`/`useListData`/`useWorkbenchClass`/`useDebouncedValue`/`useModal`/`usePermissions`。A 轨：服务端分页→`useListFetch`；全量下拉→`useListData`。
+
+## 分页 / top-N（`utils/pagination.py`）
+- 翻页型 `get_pagination(default=20,max_per_page=200)`→`(page,per_page)`；top-N 型 `get_limit(default=50,max_limit=200)`，**恒不引入 page**。
 - ⚠️ `/rank/student`、`/rank/class` 保持 limit 语义；喂 ORM `.limit()` 的 request 参数**必须钳制**；导出上限 **10000**。M9 已闭环。
 
-## RBAC / 双 JWT / db_session
+## RBAC / db_session
 - 改 RBAC 必跑 `verify_rbac_consistency.py --check-only`（G2 68 / DB 70 / seed 66 / teacher 30）；teacher 含 `notification.send`、无 `score.manage`；`/api/roles` 已下线。
-- ✅ **班级归属隔离已内置 `requires_permission`**（`utils/permission.py:212` → `_check_class_scope`）：`_CLASS_SCOPE_PREFIXES` 12 词根（committee/duty/seating/parent/homework/attendance/study_group/mental_health/activity/culture/study_guide/comment）自动 `ensure_class_access`/`ensure_student_access` → 403。**新增班级模块必须加词根**。`ALL_CLASSES=0` 哨兵放行（判 `if not class_id`）。冒烟 `tests/test_workbench_isolation_smoke.py`。
+- ✅ 班级隔离内置 `requires_permission`（`utils/permission.py` → `_check_class_scope`）：`_CLASS_SCOPE_PREFIXES` 12 词根自动 `ensure_class_access`/`ensure_student_access`→403。**新增班级模块必须加词根**。`ALL_CLASSES=0` 哨兵放行（判 `if not class_id`）。冒烟 `tests/test_workbench_isolation_smoke.py`。
 - `db_session_scope(detach=True)` finally `session.remove()`：**请求链 service 写路径须 `detach=False`**，否则 DetachedInstanceError。
 - 前端：菜单 == 路由守卫 == 后端域权限三方一致；前端只 gate `view` 级。
 
@@ -48,20 +50,20 @@
 - run.py 只 `load_dotenv(.env)`，`--env development` **不切** `.env.development`；外部签 JWT 用 `.env` 的 `JWT_SECRET_KEY`。
 - conftest 动态注册 Namespace 须自带 `path="/mental-health"` 否则 404。
 - sandbox torch 段错误：主线程先 `import services.nlp_ml_service` 预热再 import app。
-- ⚠️ **EOL 铁律**（见 skill）：backend 大量 `.py` 为 CRLF，**禁 Edit 直改**（整文件转 LF → 噪音 diff），须 python 二进制读改写。**判据 = `b.count(b"\r\n")` 字节计数**（勿信 `grep -c $'\r'`），逐文件判。
-- ⚠️ **ruff 用默认 ll=88**（仅 black 是 100）→ 折行类自动修受门控；**black 仅对 `--check` 已过的文件跑**。
-- ⚠️ **`%` → f-string 批量转换须双守卫**：① AST 全扫「非 f 字符串含 `{identifier` 占位」；② 内容级测试断言。
+- ⚠️ **EOL 铁律**：backend 大量 `.py` 为 CRLF，**禁 Edit 直改**（整文件转 LF → 噪音 diff），须 python 二进制读改写。**判据 = `b.count(b"\r\n")` 字节计数**（勿信 `grep -c $'\r'`），**逐文件判不按目录猜**（`phonebox_policy.py` 是纯 LF）。
 
-## 业务模块
-- **NLP**（✅ 2026-08-29）：链路 `api/nlp/nlp_routes.py::_get_parser()` → `services/nlp_enhanced_service.get_nlp_parser()`；torch 懒加载。G5 OpenAPI 469 零漂移。
-- **班主任工作台**（✅ 全闭环 2026-09-11）：`useWorkbenchClass`（store + `useSyncExternalStore`，12 子页共享班级）；评语 `TeacherComment` → `/api/teacher-comments`。4 硬要求：字段命名统一 / 权限体系 / **字段·权限·业务变更须用户审核** / 优化交互。聚合首页已落地（`/workbench` → `WorkbenchOverview`）。**无待办。**
+## 工具链避坑（通用）
+- ⚠️ **Edit 对同一文件多次编辑放同一并行批次会静默丢写**（报 success 未落盘）→ 同文件多次编辑**串行 + 回读核验**，或改用带「命中次数==1」断言的 python 脚本。
+- ⚠️ **`&&` 链断会致假绿**（前段 exit≠0 跳过后段仍读到旧值）→ 校验段用 `;` 并 `echo "EXIT=$?"` 显式报码（曾因硬编码 `echo "All checks passed"` 把 SyntaxError 文件误判为通过）。
+- ⚠️ **快照 diff 前先证明被测代码确定性**：含 `list(set(...))`/无序迭代的输出**先自证「同码两次不同」**，再 pin `PYTHONHASHSEED=0`；dump 里的 `datetime.now()` 必须正则抹平。
+- ⚠️ 用 before/after 输出快照证明等价前，**harness 必须先自检**（断言一个必然成立的期望值，如 all-valid 必 imported=1），否则 harness bug 会让所有用例退化而 diff 照样「一致」。
+- ✅ Python 函数改写 / C901 抽取细则（二进制保行尾、按行号切片、dedent 公式、I001、RUF059、class 中间禁插顶层 def、观测噪声、差分法、isinstance 链顺序）**已全部下沉** skill `c901-cyclomatic-refactor` —— 动手前先读它，别凭记忆。
 
-## ⚠️ 审计文档引用铁律（2026-09-11）
+## ⚠️ 审计文档引用铁律
 - 引用 `docs/` 历史审计文档前**必须实测复核**（生成日期 ≠ 当前状态）。**grep 权限词根必须带 `-A3`**，前端 `requiredPermission` ↔ 后端 `@requires_permission("X")` 逐路由比对。
-- **判「某属性无消费者」须按类型归属逐一核对**（同名属性常分散在多个实体上）。
+- 判「某属性无消费者」须**按类型归属逐一核对**（同名属性常分散在多个实体上）。
 - `班主任工作台优化方案-待审核.md` / `班主任页拆分方案-铁律③待审.md` / `M9分页复核-缺口清单.md` 已加顶部状态横幅（勿再按待办引用）。
 
-## 工具链避坑
-- ⚠️ **Edit 对同一文件多次编辑放同一并行批次会静默丢写**（报 success 未落盘）→ 同文件多次编辑**串行 + 回读核验**，或改用带「命中次数==1」断言的 Python 脚本。
-- ⚠️ **`&&` 链断会致假绿**（前段 exit≠0 跳过后段仍读到旧值）→ 校验段用 `;` 并复核原始输出。
-- A 轨：服务端分页 → `useListFetch`；全量下拉 → `useListData`。已迁 13 页（见 `memory/2026-09-05.md`）。
+## 业务模块
+- **NLP**：链路 `api/nlp/nlp_routes.py::_get_parser()` → `services/nlp_enhanced_service.get_nlp_parser()`；torch 懒加载。G5 OpenAPI 469 零漂移。
+- **班主任工作台**（✅ 全闭环 2026-09-11）：`useWorkbenchClass`（store + `useSyncExternalStore`，12 子页共享班级）；评语 `TeacherComment` → `/api/teacher-comments`。4 硬要求：字段命名统一 / 权限体系 / **字段·权限·业务变更须用户审核** / 优化交互。聚合首页已落地（`/workbench` → `WorkbenchOverview`）。**无待办。**
