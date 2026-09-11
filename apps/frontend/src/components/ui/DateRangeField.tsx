@@ -40,7 +40,9 @@ function DateRangeField({
   const inputBase = `w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border rounded-xl focus:outline-none focus:ring-2 ${focusColor} text-slate-800 dark:text-slate-100 ${alwaysClass}`;
 
   const inputClass = (error?: string | null) =>
-    `${inputBase} ${error ? 'border-red-500' : `border-slate-200 dark:border-slate-600 ${okClass}`}`;
+    `${inputBase} ${
+      error ? 'border-red-500' : `border-slate-200 dark:border-slate-600 ${okClass}`
+    }`;
 
   return (
     <div className='grid grid-cols-2 gap-4'>

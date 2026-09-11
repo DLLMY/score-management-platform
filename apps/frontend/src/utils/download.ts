@@ -71,10 +71,7 @@ export async function fetchAndDownload(
  * 从响应头 Content-Disposition 解析服务端建议的文件名（兼容 UTF-8'' 与 ASCII 两种编码）。
  * 解析失败回退到调用方传入的 fallback。
  */
-export function resolveFilenameFromResponse(
-  response: Response,
-  fallback: string
-): string {
+export function resolveFilenameFromResponse(response: Response, fallback: string): string {
   const contentDisposition = response.headers.get('Content-Disposition');
   if (!contentDisposition) return fallback;
 

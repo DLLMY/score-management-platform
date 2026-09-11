@@ -7,7 +7,7 @@
 import { screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import React from 'react';
-import ScoreChart from '../../components/charts/ScoreChart';
+import { ScoreChart } from '../../components/charts';
 import { renderWithProviders } from '../utils/test-utils';
 
 vi.mock('recharts', () => {
@@ -43,7 +43,12 @@ describe('ScoreChart numeric display', () => {
   test('upward trend shows positive percent with "+"', () => {
     // 10 -> 20 => +100%
     renderWithProviders(
-      <ScoreChart data={[{ date: 'd1', score: 10 }, { date: 'd2', score: 20 }]} />
+      <ScoreChart
+        data={[
+          { date: 'd1', score: 10 },
+          { date: 'd2', score: 20 },
+        ]}
+      />
     );
     expect(screen.getByText(/\+100%/)).toBeInTheDocument();
   });
@@ -51,7 +56,12 @@ describe('ScoreChart numeric display', () => {
   test('downward trend shows negative percent without "+"', () => {
     // 20 -> 10 => -50%
     renderWithProviders(
-      <ScoreChart data={[{ date: 'd1', score: 20 }, { date: 'd2', score: 10 }]} />
+      <ScoreChart
+        data={[
+          { date: 'd1', score: 20 },
+          { date: 'd2', score: 10 },
+        ]}
+      />
     );
     expect(screen.getByText(/-50%/)).toBeInTheDocument();
     expect(screen.queryByText(/\+/)).not.toBeInTheDocument();

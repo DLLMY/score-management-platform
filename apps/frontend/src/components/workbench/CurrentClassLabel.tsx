@@ -1,4 +1,4 @@
-import { useWorkbenchClass, ALL_CLASSES } from '../../hooks/useWorkbenchClass';
+import { useWorkbenchClass, ALL_CLASSES } from '../../hooks';
 import { useClassOptions } from '../form/EntitySelect';
 
 /**

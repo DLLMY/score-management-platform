@@ -10,7 +10,7 @@ import { vi } from 'vitest';
 // ---- jsdom 缺失 API 标准 stub（同类问题兜底：matchMedia/ResizeObserver/IntersectionObserver/
 //      scrollIntoView 在 jsdom 未实现，组件无 guard 时直接崩；fetch 相对 URL 解析失败刷 ErrorMonitor 噪音） ----
 
-// matchMedia（ThemeContext/usePWA 主题与 PWA 判定）
+// matchMedia（ThemeContext 主题判定等）
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,

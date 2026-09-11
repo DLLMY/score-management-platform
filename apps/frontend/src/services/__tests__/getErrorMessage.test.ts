@@ -6,30 +6,34 @@ describe('getErrorMessage (M2 错误文案优先级)', () => {
     expect(
       getErrorMessage(400, { success: false, message: 'raw', error_code: 'BAD_REQUEST' })
     ).toBe('请求参数错误，请检查输入内容');
-    expect(
-      getErrorMessage(403, { success: false, message: 'raw', error_code: 'FORBIDDEN' })
-    ).toBe('您没有权限执行此操作');
+    expect(getErrorMessage(403, { success: false, message: 'raw', error_code: 'FORBIDDEN' })).toBe(
+      '您没有权限执行此操作'
+    );
     expect(
       getErrorMessage(500, { success: false, message: 'raw', error_code: 'INTERNAL_ERROR' })
     ).toBe('服务器内部错误，请稍后重试');
   });
 
   it('error_code 未知但 message 为业务文案 → 透传 message', () => {
-    expect(
-      getErrorMessage(400, { success: false, message: '该学号已注册，请检查后重试' })
-    ).toBe('该学号已注册，请检查后重试');
+    expect(getErrorMessage(400, { success: false, message: '该学号已注册，请检查后重试' })).toBe(
+      '该学号已注册，请检查后重试'
+    );
     expect(getErrorMessage(400, { message: '设备不存在' })).toBe('设备不存在');
   });
 
   it('message 为技术性报错（Python 异常/SQL）→ 屏蔽，用状态码兜底', () => {
-    expect(getErrorMessage(500, { message: 'sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed' })).toBe(
-      '服务器内部错误，请稍后重试'
-    );
+    expect(
+      getErrorMessage(500, {
+        message: 'sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed',
+      })
+    ).toBe('服务器内部错误，请稍后重试');
     expect(getErrorMessage(400, { message: 'TypeError: string indices must be integers' })).toBe(
       '请求参数错误，请检查输入内容'
     );
     expect(
-      getErrorMessage(500, { message: 'File "/backend/api/algorithm/algorithm_routes.py", line 47, in get' })
+      getErrorMessage(500, {
+        message: 'File "/backend/api/algorithm/algorithm_routes.py", line 47, in get',
+      })
     ).toBe('服务器内部错误，请稍后重试');
   });
 

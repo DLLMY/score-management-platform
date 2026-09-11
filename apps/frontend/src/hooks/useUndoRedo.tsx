@@ -145,4 +145,3 @@ function ToastNotification({ operation, onUndo, onDismiss }: ToastNotificationPr
 }
 
 export { ToastNotification };
-export default useUndoRedo;

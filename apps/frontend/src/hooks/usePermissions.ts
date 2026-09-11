@@ -71,5 +71,3 @@ export function usePermissions() {
     reload,
   };
 }
-
-export default usePermissions;

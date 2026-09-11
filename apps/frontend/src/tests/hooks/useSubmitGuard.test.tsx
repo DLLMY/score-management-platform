@@ -7,7 +7,7 @@
  */
 import { renderHook, act } from '@testing-library/react';
 import { vi } from 'vitest';
-import { useSubmitGuard } from '../../hooks/useSubmitGuard';
+import { useSubmitGuard } from '../../hooks';
 
 describe('useSubmitGuard', () => {
   test('run executes fn once and toggles submitting back to false', async () => {

@@ -32,14 +32,14 @@ export const WebSocketProvider = ({ children, url = '' }) => {
     });
 
     socketInstance.on('device_status', (data) => {
-      setDeviceStatuses(prev => ({
+      setDeviceStatuses((prev) => ({
         ...prev,
         [data.device_id]: data.status,
       }));
     });
 
     socketInstance.on('alert', (data) => {
-      setAlerts(prev => [data, ...prev].slice(0, 100));
+      setAlerts((prev) => [data, ...prev].slice(0, 100));
     });
 
     socketInstance.on('score_update', (data) => {
@@ -71,11 +71,7 @@ export const WebSocketProvider = ({ children, url = '' }) => {
     unsubscribe,
   };
 
-  return (
-    <WebSocketContext.Provider value={value}>
-      {children}
-    </WebSocketContext.Provider>
-  );
+  return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 };
 
 export const useWebSocketContext = () => {

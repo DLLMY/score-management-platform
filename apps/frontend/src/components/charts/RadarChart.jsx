@@ -15,22 +15,13 @@ import {
  */
 export default function RadarPlot({ data, title }) {
   return (
-    <div className="w-full h-full min-h-[300px]">
-      {title && (
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">{title}</h4>
-      )}
-      <ResponsiveContainer width="100%" height="100%" minHeight={280}>
+    <div className='w-full h-full min-h-[300px]'>
+      {title && <h4 className='text-sm font-semibold text-gray-700 mb-3'>{title}</h4>}
+      <ResponsiveContainer width='100%' height='100%' minHeight={280}>
         <RadarChart data={data}>
-          <PolarGrid stroke="#E5E7EB" />
-          <PolarAngleAxis
-            dataKey="dimension"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
-          />
-          <PolarRadiusAxis
-            angle={90}
-            domain={[0, 100]}
-            tick={{ fill: '#9CA3AF', fontSize: 10 }}
-          />
+          <PolarGrid stroke='#E5E7EB' />
+          <PolarAngleAxis dataKey='dimension' tick={{ fill: '#6B7280', fontSize: 12 }} />
+          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#9CA3AF', fontSize: 10 }} />
           <Tooltip
             contentStyle={{
               backgroundColor: '#FFFFFF',
@@ -42,10 +33,10 @@ export default function RadarPlot({ data, title }) {
           />
           <Legend />
           <Radar
-            name="综合表现"
-            dataKey="score"
-            stroke="#3B82F6"
-            fill="#3B82F6"
+            name='综合表现'
+            dataKey='score'
+            stroke='#3B82F6'
+            fill='#3B82F6'
             fillOpacity={0.5}
             strokeWidth={2}
           />
@@ -67,22 +58,13 @@ export function MultiRadarChart({ data, title }) {
   const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
 
   return (
-    <div className="w-full h-full min-h-[300px]">
-      {title && (
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">{title}</h4>
-      )}
-      <ResponsiveContainer width="100%" height="100%" minHeight={280}>
+    <div className='w-full h-full min-h-[300px]'>
+      {title && <h4 className='text-sm font-semibold text-gray-700 mb-3'>{title}</h4>}
+      <ResponsiveContainer width='100%' height='100%' minHeight={280}>
         <RadarChart data={dimensions.map((dim) => ({ dimension: dim }))}>
-          <PolarGrid stroke="#E5E7EB" />
-          <PolarAngleAxis
-            dataKey="dimension"
-            tick={{ fill: '#6B7280', fontSize: 12 }}
-          />
-          <PolarRadiusAxis
-            angle={90}
-            domain={[0, 100]}
-            tick={{ fill: '#9CA3AF', fontSize: 10 }}
-          />
+          <PolarGrid stroke='#E5E7EB' />
+          <PolarAngleAxis dataKey='dimension' tick={{ fill: '#6B7280', fontSize: 12 }} />
+          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#9CA3AF', fontSize: 10 }} />
           <Tooltip
             contentStyle={{
               backgroundColor: '#FFFFFF',
@@ -126,17 +108,12 @@ export function CompositeScoreRadar({ scores, title }) {
   ];
 
   return (
-    <div className="w-full h-full min-h-[250px]">
-      {title && (
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">{title}</h4>
-      )}
-      <ResponsiveContainer width="100%" height="100%" minHeight={220}>
+    <div className='w-full h-full min-h-[250px]'>
+      {title && <h4 className='text-sm font-semibold text-gray-700 mb-3'>{title}</h4>}
+      <ResponsiveContainer width='100%' height='100%' minHeight={220}>
         <RadarChart data={data}>
-          <PolarGrid stroke="#E5E7EB" />
-          <PolarAngleAxis
-            dataKey="dimension"
-            tick={{ fill: '#6B7280', fontSize: 11 }}
-          />
+          <PolarGrid stroke='#E5E7EB' />
+          <PolarAngleAxis dataKey='dimension' tick={{ fill: '#6B7280', fontSize: 11 }} />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 100]}
@@ -153,10 +130,10 @@ export function CompositeScoreRadar({ scores, title }) {
             formatter={(value) => [value != null ? `${value}分` : '--', '得分']}
           />
           <Radar
-            name="综合评分"
-            dataKey="score"
-            stroke="#8B5CF6"
-            fill="#8B5CF6"
+            name='综合评分'
+            dataKey='score'
+            stroke='#8B5CF6'
+            fill='#8B5CF6'
             fillOpacity={0.5}
             strokeWidth={2}
           />

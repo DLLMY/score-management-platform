@@ -54,5 +54,3 @@ export function useListData<T = unknown>({
     refetch,
   };
 }
-
-export default useListData;

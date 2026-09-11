@@ -64,7 +64,7 @@ export function setWorkbenchClassId(classId: number): void {
   } catch {
     // 忽略存储失败，内存态仍然生效
   }
-  listeners.forEach(listener => listener());
+  listeners.forEach((listener) => listener());
 }
 
 /**
@@ -81,5 +81,3 @@ export function useWorkbenchClass(): [number, (classId: number) => void] {
   const setClassId = useCallback((next: number) => setWorkbenchClassId(next), []);
   return [classId, setClassId];
 }
-
-export default useWorkbenchClass;

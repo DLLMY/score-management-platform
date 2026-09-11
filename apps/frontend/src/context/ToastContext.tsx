@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from 'react';
 import {
   Undo2,
   X,
@@ -45,28 +53,31 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [expandedToasts, setExpandedToasts] = useState<Set<number>>(new Set());
 
-  const showToast = (
-    type: 'success' | 'error' | 'warning' | 'info',
-    message: string,
-    options?: {
-      undoAction?: () => void;
-      undoLabel?: string;
-      details?: string;
-      errorFields?: string[];
-    }
-  ) => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type, ...options }]);
-  };
+  const showToast = useCallback(
+    (
+      type: 'success' | 'error' | 'warning' | 'info',
+      message: string,
+      options?: {
+        undoAction?: () => void;
+        undoLabel?: string;
+        details?: string;
+        errorFields?: string[];
+      }
+    ) => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, message, type, ...options }]);
+    },
+    []
+  );
 
-  const removeToast = (id: number) => {
+  const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
     setExpandedToasts((prev) => {
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
     });
-  };
+  }, []);
 
   const handleUndo = (toast: ToastItem) => {
     if (toast.undoAction) {
@@ -98,7 +109,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     return () => {
       timers.forEach(clearTimeout);
     };
-  }, [toasts]);
+  }, [toasts, removeToast]);
 
   const getToastStyles = (type: string) => {
     const styles = {
@@ -134,8 +145,15 @@ export function ToastProvider({ children }: ToastProviderProps) {
     return styles[type as keyof typeof styles] || styles.info;
   };
 
+  // memo 化 context value：showToast/removeToast 已 useCallback 稳定化，
+  // 使展开/收起单条 toast（expandedToasts 变化）不再触发全部 useToast 消费者重渲染。
+  const contextValue = useMemo(
+    () => ({ toasts, showToast, removeToast }),
+    [toasts, showToast, removeToast]
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className='fixed bottom-6 right-6 z-50 flex flex-col gap-3 max-w-sm'>
         {toasts.map((toast) => {

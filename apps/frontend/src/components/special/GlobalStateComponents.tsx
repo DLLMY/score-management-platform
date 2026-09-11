@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 
@@ -89,10 +90,22 @@ export function GlobalStateProvider({ children }: GlobalStateProviderProps) {
     setErrorState({ hasError: false, error: null });
   }, []);
 
+  // memo 化三个 context value：避免任一 state 变化时三个 provider 的 value 全部新建，
+  // 导致无关节点的消费者（GlobalLoading/GlobalErrorBoundary/NetworkStatusIndicator）被连带重渲染。
+  const loadingContextValue = useMemo(
+    () => ({ state: loadingState, show: showLoading, hide: hideLoading }),
+    [loadingState, showLoading, hideLoading]
+  );
+  const errorContextValue = useMemo(
+    () => ({ state: errorState, clear: clearError }),
+    [errorState, clearError]
+  );
+  const networkContextValue = useMemo(() => networkState, [networkState]);
+
   return (
-    <LoadingContext.Provider value={{ state: loadingState, show: showLoading, hide: hideLoading }}>
-      <ErrorContext.Provider value={{ state: errorState, clear: clearError }}>
-        <NetworkContext.Provider value={networkState}>{children}</NetworkContext.Provider>
+    <LoadingContext.Provider value={loadingContextValue}>
+      <ErrorContext.Provider value={errorContextValue}>
+        <NetworkContext.Provider value={networkContextValue}>{children}</NetworkContext.Provider>
       </ErrorContext.Provider>
     </LoadingContext.Provider>
   );

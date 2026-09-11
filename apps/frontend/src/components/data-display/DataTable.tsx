@@ -142,7 +142,7 @@ function DataTable<T>(props: DataTableProps<T>) {
   const sortFieldEff = onSortChange ? sortField ?? '' : innerSortField;
   const sortOrderEff = onSortChange ? sortOrder ?? null : innerSortOrder;
   const selectedKeys = useMemo(
-    () => (selectable ? (selectedRowKeys ?? innerSelected) : []),
+    () => (selectable ? selectedRowKeys ?? innerSelected : []),
     [selectable, selectedRowKeys, innerSelected]
   );
 
@@ -161,7 +161,7 @@ function DataTable<T>(props: DataTableProps<T>) {
     (record: T, index: number): string | number =>
       typeof rowKey === 'function'
         ? rowKey(record, index)
-        : (record as Record<string, unknown>)[rowKey as string] as string | number,
+        : ((record as Record<string, unknown>)[rowKey as string] as string | number),
     [rowKey]
   );
 
@@ -189,7 +189,7 @@ function DataTable<T>(props: DataTableProps<T>) {
   const useVirtual = virtualThreshold > 0 && !isControlled && dataSource.length >= virtualThreshold;
 
   const maxLocalPage = Math.max(1, Math.ceil(dataSource.length / size));
-  const effectivePage = isControlled ? (page ?? 1) : Math.min(innerPage, maxLocalPage);
+  const effectivePage = isControlled ? page ?? 1 : Math.min(innerPage, maxLocalPage);
 
   const pagedData = useMemo(() => {
     if (isControlled || useVirtual) return sortedSource;
@@ -221,7 +221,8 @@ function DataTable<T>(props: DataTableProps<T>) {
     [selectedKeys, getKey, emitSelection]
   );
 
-  const allChecked = pageRows.length > 0 && pageRows.every((r, i) => selectedKeys.includes(getKey(r, i)));
+  const allChecked =
+    pageRows.length > 0 && pageRows.every((r, i) => selectedKeys.includes(getKey(r, i)));
 
   const toggleAll = useCallback(() => {
     let next: Array<string | number>;
@@ -321,21 +322,18 @@ function DataTable<T>(props: DataTableProps<T>) {
       sortable ? 'cursor-pointer select-none hover:text-slate-700' : ''
     }`;
   const bodyCellCls = (col: ColumnType<T>) =>
-    `px-3 py-3 text-sm text-slate-600 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${
-      col.ellipsis ? 'truncate' : ''
-    } ${col.className ?? ''}`;
+    `px-3 py-3 text-sm text-slate-600 ${
+      col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+    } ${col.ellipsis ? 'truncate' : ''} ${col.className ?? ''}`;
 
-  const tableMinWidth = scroll?.x != null ? (typeof scroll.x === 'number' ? `${scroll.x}px` : scroll.x) : undefined;
+  const tableMinWidth =
+    scroll?.x != null ? (typeof scroll.x === 'number' ? `${scroll.x}px` : scroll.x) : undefined;
 
   const headerRow = (
     <tr>
       {selectable && (
         <th className='w-11 px-3 py-3'>
-          <Checkbox
-            checked={allChecked}
-            onChange={toggleAll}
-            disabled={pageRows.length === 0}
-          />
+          <Checkbox checked={allChecked} onChange={toggleAll} disabled={pageRows.length === 0} />
         </th>
       )}
       {columns.map((col) => {
@@ -356,7 +354,15 @@ function DataTable<T>(props: DataTableProps<T>) {
             scope='col'
             style={colWidthStyle(col)}
             className={headerCellCls(sortable)}
-            aria-sort={sortable ? (active ? (sortOrderEff === 'ascend' ? 'ascending' : 'descending') : 'none') : undefined}
+            aria-sort={
+              sortable
+                ? active
+                  ? sortOrderEff === 'ascend'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+                : undefined
+            }
             onClick={sortable ? () => handleSort(col) : undefined}
           >
             <span className='inline-flex items-center gap-1'>
@@ -380,7 +386,10 @@ function DataTable<T>(props: DataTableProps<T>) {
     >
       {selectable && (
         <td className='w-11 px-3 py-3' onClick={(e) => e.stopPropagation()}>
-          <Checkbox checked={selectedKeys.includes(getKey(record, i))} onChange={() => toggleRow(record, i)} />
+          <Checkbox
+            checked={selectedKeys.includes(getKey(record, i))}
+            onChange={() => toggleRow(record, i)}
+          />
         </td>
       )}
       {columns.map((col) => (
@@ -398,13 +407,21 @@ function DataTable<T>(props: DataTableProps<T>) {
       (selectable ? 44 : 0) + columns.reduce((s, c) => s + pxWidth(c), 0) + (rowActions ? 120 : 0);
     return (
       <div className={wrapperCls}>
-        {title && <div className='px-4 py-3 border-b border-gray-200 font-medium text-slate-700'>{title}</div>}
+        {title && (
+          <div className='px-4 py-3 border-b border-gray-200 font-medium text-slate-700'>
+            {title}
+          </div>
+        )}
         <div className='overflow-x-auto'>
           <div style={{ minWidth: virtualMinWidth }}>
             <div className='flex border-b border-gray-200 bg-gray-50'>
               {selectable && (
                 <div style={{ width: 44, flexShrink: 0 }} className='flex items-center px-3 py-3'>
-                  <Checkbox checked={allChecked} onChange={toggleAll} disabled={pageRows.length === 0} />
+                  <Checkbox
+                    checked={allChecked}
+                    onChange={toggleAll}
+                    disabled={pageRows.length === 0}
+                  />
                 </div>
               )}
               {columns.map((col) => (
@@ -413,7 +430,15 @@ function DataTable<T>(props: DataTableProps<T>) {
                   role='columnheader'
                   style={{ width: pxWidth(col), flexShrink: 0 }}
                   className={headerCellCls(!!col.sorter)}
-                  aria-sort={col.sorter ? (sortFieldEff === col.key ? (sortOrderEff === 'ascend' ? 'ascending' : 'descending') : 'none') : undefined}
+                  aria-sort={
+                    col.sorter
+                      ? sortFieldEff === col.key
+                        ? sortOrderEff === 'ascend'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                      : undefined
+                  }
                   onClick={col.sorter ? () => handleSort(col) : undefined}
                 >
                   <span className='inline-flex items-center gap-1'>
@@ -432,7 +457,10 @@ function DataTable<T>(props: DataTableProps<T>) {
                 </div>
               ))}
               {rowActions && (
-                <div style={{ width: 120, flexShrink: 0 }} className='px-3 py-3 text-xs font-medium text-slate-500'>
+                <div
+                  style={{ width: 120, flexShrink: 0 }}
+                  className='px-3 py-3 text-xs font-medium text-slate-500'
+                >
                   操作
                 </div>
               )}
@@ -443,9 +471,9 @@ function DataTable<T>(props: DataTableProps<T>) {
               overscan={6}
               renderItem={(record, index) => (
                 <div
-                  className={`flex border-b border-gray-100 transition-colors ${index % 2 === 1 ? 'bg-slate-50/40 ' : ''}hover:bg-slate-100 ${
-                    rowClassName ? rowClassName(record, index) : ''
-                  }`}
+                  className={`flex border-b border-gray-100 transition-colors ${
+                    index % 2 === 1 ? 'bg-slate-50/40 ' : ''
+                  }hover:bg-slate-100 ${rowClassName ? rowClassName(record, index) : ''}`}
                   style={{ height: rowHeight }}
                   onClick={onRowClick ? () => onRowClick(record, index) : undefined}
                 >
@@ -465,15 +493,18 @@ function DataTable<T>(props: DataTableProps<T>) {
                         col.align === 'right'
                           ? 'justify-end'
                           : col.align === 'center'
-                            ? 'justify-center'
-                            : 'justify-start'
+                          ? 'justify-center'
+                          : 'justify-start'
                       } ${col.className ?? ''}`}
                     >
                       {renderCell(col, record, index)}
                     </div>
                   ))}
                   {rowActions && (
-                    <div style={{ width: 120, flexShrink: 0 }} className='flex items-center px-3 text-sm'>
+                    <div
+                      style={{ width: 120, flexShrink: 0 }}
+                      className='flex items-center px-3 text-sm'
+                    >
                       {rowActions(record, index)}
                     </div>
                   )}
@@ -492,7 +523,9 @@ function DataTable<T>(props: DataTableProps<T>) {
   // ---- 普通表格态 ----
   return (
     <div className={wrapperCls}>
-      {title && <div className='px-4 py-3 border-b border-gray-200 font-medium text-slate-700'>{title}</div>}
+      {title && (
+        <div className='px-4 py-3 border-b border-gray-200 font-medium text-slate-700'>{title}</div>
+      )}
       <div className='overflow-x-auto'>
         <table className='w-full' style={tableMinWidth ? { minWidth: tableMinWidth } : undefined}>
           <thead className='bg-gray-50'>{headerRow}</thead>

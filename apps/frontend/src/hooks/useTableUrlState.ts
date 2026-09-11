@@ -105,5 +105,3 @@ export function useTableUrlState(key?: string): UseTableUrlStateResult {
     [page, pageSize, sortField, sortOrder, setPage, setPageSize, setSort, reset]
   );
 }
-
-export default useTableUrlState;

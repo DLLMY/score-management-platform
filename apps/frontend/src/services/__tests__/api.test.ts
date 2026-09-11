@@ -49,7 +49,7 @@ describe('API Service', () => {
   it('should send credentials include (cookie 认证轨) without Authorization header', async () => {
     // 十评 P2-1 完全 cookie 化：token 走 HttpOnly cookie，请求凭 credentials: include 携带，
     // 不再从 localStorage 读取 token 注入 Authorization 头
-    localStorage.setItem('access_token', 'legacy-token');  // 旧残留也不应被读取
+    localStorage.setItem('access_token', 'legacy-token'); // 旧残留也不应被读取
 
     // api.ts 会读 response.headers.get('ETag')，mock 需提供 headers
     mockFetch.mockResolvedValue({
@@ -71,9 +71,9 @@ describe('API Service', () => {
     // 用 POST 端点：GET 会命中 api.ts 内存缓存导致 fetch 不被调用
     mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(
-      api.users.create({ name: '测试', card_id: '12345678' })
-    ).rejects.toThrow('网络连接失败，请检查网络或服务器是否可用');
+    await expect(api.users.create({ name: '测试', card_id: '12345678' })).rejects.toThrow(
+      '网络连接失败，请检查网络或服务器是否可用'
+    );
   });
 
   it('should handle HTTP errors', async () => {
@@ -84,9 +84,9 @@ describe('API Service', () => {
       json: () => Promise.resolve({ message: '请求失败' }),
     });
 
-    await expect(
-      api.users.create({ name: '测试', card_id: '12345678' })
-    ).rejects.toThrow('请求失败');
+    await expect(api.users.create({ name: '测试', card_id: '12345678' })).rejects.toThrow(
+      '请求失败'
+    );
   });
 
   // ===== 信封归一化（报告 P0：services/api.ts 信封归一化） =====
@@ -95,8 +95,7 @@ describe('API Service', () => {
       ok: true,
       status: 200,
       headers: { get: () => null },
-      json: () =>
-        Promise.resolve({ success: true, code: 0, data: [{ id: 1, name: '张三' }] }),
+      json: () => Promise.resolve({ success: true, code: 0, data: [{ id: 1, name: '张三' }] }),
     });
 
     const res = await api.users.getAll({ skipCache: true });
@@ -108,13 +107,12 @@ describe('API Service', () => {
       ok: true,
       status: 200,
       headers: { get: () => null },
-      json: () =>
-        Promise.resolve({ success: false, message: '该卡号已存在，请勿重复录入' }),
+      json: () => Promise.resolve({ success: false, message: '该卡号已存在，请勿重复录入' }),
     });
 
-    await expect(
-      api.users.create({ name: '测试', card_id: '12345678' })
-    ).rejects.toThrow('该卡号已存在，请勿重复录入');
+    await expect(api.users.create({ name: '测试', card_id: '12345678' })).rejects.toThrow(
+      '该卡号已存在，请勿重复录入'
+    );
   });
 });
 
@@ -126,7 +124,9 @@ describe('unwrapEnvelope', () => {
 
   it('throws ApiError on business failure (success:false at HTTP 200)', () => {
     // 业务失败必须抛错，绝不能当成功透出（假成功根因）
-    expect(() => unwrapEnvelope({ success: false, message: '该卡号已存在' })).toThrow('该卡号已存在');
+    expect(() => unwrapEnvelope({ success: false, message: '该卡号已存在' })).toThrow(
+      '该卡号已存在'
+    );
   });
 
   it('returns raw payload when skipDataExtract is set', () => {
@@ -148,7 +148,9 @@ describe('unwrapEnvelope', () => {
 
 describe('parseEnvelopeSafe', () => {
   it('returns unwrapped data on success', () => {
-    expect(parseEnvelopeSafe<{ id: number }>({ success: true, data: { id: 2 } })).toEqual({ id: 2 });
+    expect(parseEnvelopeSafe<{ id: number }>({ success: true, data: { id: 2 } })).toEqual({
+      id: 2,
+    });
   });
 
   it('returns null on business failure instead of throwing', () => {
@@ -170,8 +172,12 @@ describe('parseEnvelopeSafe', () => {
 describe('getErrorMessage', () => {
   it('prefers friendly text mapped from error_code', () => {
     expect(getErrorMessage(500, { error_code: 'FORBIDDEN' })).toBe('您没有权限执行此操作');
-    expect(getErrorMessage(401, { error_code: 'TOKEN_EXPIRED' })).toBe('登录状态已过期，请重新登录');
-    expect(getErrorMessage(409, { error_code: 'DUPLICATE_RECORD' })).toBe('记录已存在，请勿重复提交');
+    expect(getErrorMessage(401, { error_code: 'TOKEN_EXPIRED' })).toBe(
+      '登录状态已过期，请重新登录'
+    );
+    expect(getErrorMessage(409, { error_code: 'DUPLICATE_RECORD' })).toBe(
+      '记录已存在，请勿重复提交'
+    );
   });
 
   it('passes through non-technical business message from backend', () => {
@@ -185,9 +191,11 @@ describe('getErrorMessage', () => {
     expect(
       getErrorMessage(500, { message: 'sqlalchemy.exc.IntegrityError: duplicate key value' })
     ).toBe('服务器内部错误，请稍后重试');
-    expect(getErrorMessage(500, { message: 'Traceback (most recent call last):\n  File "x.py", line 10' })).toBe(
-      '服务器内部错误，请稍后重试'
-    );
+    expect(
+      getErrorMessage(500, {
+        message: 'Traceback (most recent call last):\n  File "x.py", line 10',
+      })
+    ).toBe('服务器内部错误，请稍后重试');
   });
 
   it('falls back to HTTP status text when no message/error_code', () => {

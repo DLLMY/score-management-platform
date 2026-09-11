@@ -91,7 +91,12 @@ export function useListFetch<T = unknown>({
     [fetcher, params]
   );
 
-  const { data, loading, error, refetch: baseRefetch } = useOptimizedFetch<{
+  const {
+    data,
+    loading,
+    error,
+    refetch: baseRefetch,
+  } = useOptimizedFetch<{
     items: T[];
     total: number;
   }>(fetcherForHook, dependencies, {
@@ -137,5 +142,3 @@ export function useListFetch<T = unknown>({
     mutate,
   };
 }
-
-export default useListFetch;

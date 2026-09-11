@@ -25,5 +25,3 @@ export function useClientFilter<T>(
     [items, ...deps]
   );
 }
-
-export default useClientFilter;

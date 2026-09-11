@@ -134,5 +134,3 @@ export function useClassNowStatus(
 
   return { status, loading, error, blocked, label, refresh: fetchStatus };
 }
-
-export default useClassNowStatus;

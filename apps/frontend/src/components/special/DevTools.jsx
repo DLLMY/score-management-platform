@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Activity, Zap, MemoryStick, Clock } from 'lucide-react';
 import { getVitals, observeVitals } from '../../utils/webVitals';
-import { useMemoryUsage } from '../../hooks/usePerformance';
+import { useMemoryUsage } from '../../hooks';
 import { config } from '../../config';
 
 const DevTools = () => {

@@ -34,13 +34,7 @@ export function useOptimizedFetch<T = unknown>(
   dependencies: unknown[],
   options: UseOptimizedFetchOptions = {}
 ): UseOptimizedFetchResult<T> {
-  const {
-    debounceDelay = 300,
-    initialData = null,
-    onError,
-    onSuccess,
-    enabled = true,
-  } = options;
+  const { debounceDelay = 300, initialData = null, onError, onSuccess, enabled = true } = options;
 
   const [data, setData] = useState<T | null>(initialData as T | null);
   const [loading, setLoading] = useState(false);

@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { AlertTriangle, Info, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 export type ConfirmType = 'danger' | 'warning' | 'info' | 'success';
@@ -25,16 +33,26 @@ export function useConfirm(): (options: ConfirmOptions) => Promise<boolean> {
   const ctx = useContext(ConfirmContext);
   if (!ctx) {
     return (options: ConfirmOptions) =>
-      Promise.resolve(window.confirm(typeof options.message === 'string' ? options.message : '确认操作？'));
+      Promise.resolve(
+        window.confirm(typeof options.message === 'string' ? options.message : '确认操作？')
+      );
   }
   return ctx.confirm;
 }
 
 const typeMeta: Record<ConfirmType, { icon: typeof Info; accent: string; confirmBg: string }> = {
   danger: { icon: AlertCircle, accent: 'text-red-500', confirmBg: 'bg-red-500 hover:bg-red-600' },
-  warning: { icon: AlertTriangle, accent: 'text-amber-500', confirmBg: 'bg-amber-500 hover:bg-amber-600' },
+  warning: {
+    icon: AlertTriangle,
+    accent: 'text-amber-500',
+    confirmBg: 'bg-amber-500 hover:bg-amber-600',
+  },
   info: { icon: Info, accent: 'text-blue-500', confirmBg: 'bg-blue-500 hover:bg-blue-600' },
-  success: { icon: CheckCircle2, accent: 'text-green-500', confirmBg: 'bg-green-500 hover:bg-green-600' },
+  success: {
+    icon: CheckCircle2,
+    accent: 'text-green-500',
+    confirmBg: 'bg-green-500 hover:bg-green-600',
+  },
 };
 
 function ConfirmDialogUI({
@@ -75,12 +93,8 @@ function ConfirmDialogUI({
             <Icon className='h-7 w-7' />
           </div>
           <div className='flex-1'>
-            <h3 className='text-lg font-semibold text-slate-800'>
-              {options.title ?? '确认操作'}
-            </h3>
-            <div className='mt-1.5 text-sm leading-relaxed text-slate-600'>
-              {options.message}
-            </div>
+            <h3 className='text-lg font-semibold text-slate-800'>{options.title ?? '确认操作'}</h3>
+            <div className='mt-1.5 text-sm leading-relaxed text-slate-600'>{options.message}</div>
           </div>
           <button
             onClick={onCancel}
@@ -125,15 +139,22 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const close = useCallback((result: boolean) => {
-    resolver?.(result);
-    setIsOpen(false);
-    setOptions(null);
-    setResolver(null);
-  }, [resolver]);
+  const close = useCallback(
+    (result: boolean) => {
+      resolver?.(result);
+      setIsOpen(false);
+      setOptions(null);
+      setResolver(null);
+    },
+    [resolver]
+  );
+
+  // memo 化 context value：confirm 为稳定引用（useCallback []），
+  // 避免每次开关确认框时因 value 新建对象而导致全部 useConfirm 消费者重渲染。
+  const contextValue = useMemo(() => ({ confirm }), [confirm]);
 
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={contextValue}>
       {children}
       {isOpen && options && (
         <ConfirmDialogUI

@@ -627,9 +627,7 @@ const looksLikeTechnicalError = (message: string): boolean =>
   TECHNICAL_ERROR_PATTERNS.some((pattern) => pattern.test(message));
 
 export const getErrorMessage = (status: number, errorData: unknown): string => {
-  const error = errorData as
-    | { message?: string; error?: string; error_code?: string }
-    | null;
+  const error = errorData as { message?: string; error?: string; error_code?: string } | null;
   // 1) error_code 命中友好文案表 → 直接展示（最高优先级）
   if (error?.error_code && errorCodeMessages[error.error_code]) {
     return errorCodeMessages[error.error_code];
@@ -2368,7 +2366,10 @@ export interface Api {
     validateMac: (
       mac: string
     ) => Promise<{ mac_address: string; valid: boolean; normalized: string | null }>;
-    getDevices: (params?: { page?: number; per_page?: number }) => Promise<WOLDevicePaginatedResponse>;
+    getDevices: (params?: {
+      page?: number;
+      per_page?: number;
+    }) => Promise<WOLDevicePaginatedResponse>;
     addDevice: (data: {
       name: string;
       mac_address: string;
@@ -2659,10 +2660,16 @@ export interface Api {
   };
   // 值日生表
   duty: {
-    getAll: (class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'groups', DutyGroup>>;
+    getAll: (
+      class_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'groups', DutyGroup>>;
     createGroup: (data: DutyGroupCreateInput) => Promise<DutyGroup>;
     deleteGroup: (id: number) => Promise<void>;
-    getAssignments: (group_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'assignments', DutyAssignment>>;
+    getAssignments: (
+      group_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'assignments', DutyAssignment>>;
     assignDuty: (data: DutyAssignment) => Promise<DutyAssignment>;
     markComplete: (assignmentId: number) => Promise<void>;
     rotate: (class_id: number, period?: string) => Promise<{ rotated_count: number }>;
@@ -2678,11 +2685,18 @@ export interface Api {
   };
   // 家长联系
   parent: {
-    getAll: (student_id?: number, class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'contacts', ParentContact>>;
+    getAll: (
+      student_id?: number,
+      class_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'contacts', ParentContact>>;
     create: (data: ParentContactCreateInput) => Promise<ParentContact>;
     update: (id: number, data: Partial<ParentContactCreateInput>) => Promise<ParentContact>;
     delete: (id: number) => Promise<void>;
-    getContactLogs: (parentId: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'logs', ContactLog>>;
+    getContactLogs: (
+      parentId: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'logs', ContactLog>>;
     addContactLog: (
       parentId: number,
       data: { contact_type: string; content?: string }
@@ -2691,7 +2705,11 @@ export interface Api {
   };
   // 作业检查
   homework: {
-    getAll: (class_id?: number, subjectId?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'assignments', HomeworkAssignment>>;
+    getAll: (
+      class_id?: number,
+      subjectId?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'assignments', HomeworkAssignment>>;
     getById: (id: number) => Promise<HomeworkAssignment>;
     create: (data: HomeworkCreateInput) => Promise<HomeworkAssignment>;
     update: (id: number, data: HomeworkCreateInput) => Promise<HomeworkAssignment>;
@@ -2701,11 +2719,20 @@ export interface Api {
   };
   // 考勤管理
   attendance: {
-    getAll: (class_id?: number, student_id?: number, date?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'records', Attendance>>;
+    getAll: (
+      class_id?: number,
+      student_id?: number,
+      date?: string,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'records', Attendance>>;
     record: (data: AttendanceRecordInput) => Promise<Attendance>;
     batchRecord: (records: AttendanceRecordInput[]) => Promise<{ count: number }>;
     getStats: (class_id: number, startDate?: string, endDate?: string) => Promise<AttendanceStats>;
-    getLeaves: (student_id?: number, status?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'leaves', LeaveApplication>>;
+    getLeaves: (
+      student_id?: number,
+      status?: string,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'leaves', LeaveApplication>>;
     applyLeave: (data: LeaveApplyInput) => Promise<LeaveApplication>;
     approveLeave: (leaveId: number, approve?: boolean) => Promise<void>;
   };
@@ -2722,21 +2749,39 @@ export interface Api {
   };
   // 心理健康
   mentalHealth: {
-    getRecords: (student_id?: number, class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'records', MentalHealthRecord>>;
+    getRecords: (
+      student_id?: number,
+      class_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'records', MentalHealthRecord>>;
     createRecord: (data: MentalHealthRecordCreateInput) => Promise<MentalHealthRecord>;
-    getAlerts: (student_id?: number, isResolved?: boolean, class_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'alerts', MentalHealthAlert>>;
+    getAlerts: (
+      student_id?: number,
+      isResolved?: boolean,
+      class_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'alerts', MentalHealthAlert>>;
     resolveAlert: (alertId: number) => Promise<void>;
   };
   // 班主任评语
   teacherComment: {
-    getAll: (class_id?: number, student_id?: number, term?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'comments', TeacherComment>>;
+    getAll: (
+      class_id?: number,
+      student_id?: number,
+      term?: string,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'comments', TeacherComment>>;
     create: (data: TeacherCommentCreateInput) => Promise<TeacherComment>;
     update: (id: number, data: Partial<TeacherCommentCreateInput>) => Promise<TeacherComment>;
     delete: (id: number) => Promise<void>;
   };
   // 文体活动
   activity: {
-    getAll: (class_id?: number, isPublished?: boolean, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'activities', Activity>>;
+    getAll: (
+      class_id?: number,
+      isPublished?: boolean,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'activities', Activity>>;
     getById: (id: number) => Promise<Activity>;
     create: (data: ActivityCreateInput) => Promise<Activity>;
     update: (id: number, data: Partial<ActivityCreateInput>) => Promise<Activity>;
@@ -2746,18 +2791,29 @@ export interface Api {
   };
   // 班级文化
   culture: {
-    getAll: (class_id?: number, category?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'records', CultureRecord>>;
+    getAll: (
+      class_id?: number,
+      category?: string,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'records', CultureRecord>>;
     create: (data: CultureCreateInput) => Promise<CultureRecord>;
     update: (id: number, data: Partial<CultureCreateInput>) => Promise<CultureRecord>;
     delete: (id: number) => Promise<void>;
   };
   // 学法指导
   studyGuide: {
-    getGuides: (class_id?: number, guideType?: string, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'guides', StudyGuide>>;
+    getGuides: (
+      class_id?: number,
+      guideType?: string,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'guides', StudyGuide>>;
     createGuide: (data: StudyGuideCreateInput) => Promise<StudyGuide>;
     updateGuide: (id: number, data: StudyGuideCreateInput) => Promise<StudyGuide>;
     deleteGuide: (id: number) => Promise<void>;
-    getPlans: (student_id?: number, params?: { page?: number; per_page?: number }) => Promise<ResourceList<'plans', ImprovementPlan>>;
+    getPlans: (
+      student_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => Promise<ResourceList<'plans', ImprovementPlan>>;
     createPlan: (data: ImprovementPlanCreateInput) => Promise<ImprovementPlan>;
     updatePlan: (id: number, data: ImprovementPlanCreateInput) => Promise<ImprovementPlan>;
     deletePlan: (id: number) => Promise<void>;
@@ -3005,10 +3061,7 @@ export interface NLPCorrection {
 
 interface NLP {
   parse: (text: string) => Promise<NLPParsedResult>;
-  execute: (data: {
-    text: string;
-    manual_correction?: unknown;
-  }) => Promise<unknown>;
+  execute: (data: { text: string; manual_correction?: unknown }) => Promise<unknown>;
   batchParse: (texts: string[]) => Promise<unknown>;
   sentiment: (text: string) => Promise<unknown>;
   getRules: (params?: {
@@ -3020,10 +3073,7 @@ interface NLP {
     sort_order?: string;
   }) => Promise<BackendPaginatedResult<NLPScoringRule>>;
   createRule: (data: NLPScoringRuleInput) => Promise<NLPScoringRule>;
-  updateRule: (
-    id: number,
-    data: Partial<NLPScoringRuleInput>
-  ) => Promise<NLPScoringRule>;
+  updateRule: (id: number, data: Partial<NLPScoringRuleInput>) => Promise<NLPScoringRule>;
   deleteRule: (id: number) => Promise<unknown>;
   suggestRules: (keyword: string) => Promise<NLPScoringRule[]>;
   getRuleStatistics: () => Promise<NLPStatistics>;
@@ -3039,15 +3089,10 @@ interface NLP {
     algorithm?: string;
     use_cross_validation?: boolean;
   }) => Promise<NLPMLTrainingResult>;
-  trainAllModels: (data: {
-    trained_by?: number;
-  }) => Promise<NLPMLTrainAllResult>;
+  trainAllModels: (data: { trained_by?: number }) => Promise<NLPMLTrainAllResult>;
   getAlgorithms: () => Promise<NLPAlgorithm[]>;
   evaluateAllModels: () => Promise<NLPMLEvaluationAllResult>;
-  predictRule: (data: {
-    text: string;
-    algorithm?: string;
-  }) => Promise<NLPPredictResult>;
+  predictRule: (data: { text: string; algorithm?: string }) => Promise<NLPPredictResult>;
   getTrainingHistory: (params?: {
     page?: number;
     per_page?: number;
@@ -3080,9 +3125,7 @@ interface NLP {
   getAnalysisPerformance: () => Promise<{ code: number; data: unknown }>;
   getAnalysisSuggestions: () => Promise<{ code: number; data: unknown }>;
   resetAnalysis: () => Promise<{ code: number; data: unknown }>;
-  benchmarkIntentClassifier: (params?: {
-    iterations?: number;
-  }) => Promise<unknown>;
+  benchmarkIntentClassifier: (params?: { iterations?: number }) => Promise<unknown>;
   getOptimizationConfig: () => Promise<{ code: number; data: unknown }>;
   setOptimizationConfig: (data: { strategy?: string }) => Promise<unknown>;
   autoTuneOptimization: (data?: { target_metric?: string }) => Promise<unknown>;
@@ -3275,14 +3318,14 @@ const normalizeEngagementRank = (raw?: RawAlg): EngagementRankResult => {
           },
         }))
       : [],
-  failed_students: Array.isArray(raw?.failed_students)
-    ? (raw.failed_students as RawJson[]).map((f: RawAlg) => ({
-        user_id: toNumSafe(f?.user_id) || 0,
-        name: f?.name ?? '',
-        class_name: f?.class_name ?? '',
-        error: f?.error ?? '',
-      }))
-    : [],
+    failed_students: Array.isArray(raw?.failed_students)
+      ? (raw.failed_students as RawJson[]).map((f: RawAlg) => ({
+          user_id: toNumSafe(f?.user_id) || 0,
+          name: f?.name ?? '',
+          class_name: f?.class_name ?? '',
+          error: f?.error ?? '',
+        }))
+      : [],
   };
 };
 
@@ -3368,7 +3411,8 @@ const normalizeUserEngagement = (raw?: RawAlg): EngagementResult => {
     weight: toNumSafe(f?.weight),
     contribution: toNumSafe(f?.contribution),
   }));
-  const comp = raw && raw.components && typeof raw.components === 'object' ? (raw.components as RawAlg) : {};
+  const comp =
+    raw && raw.components && typeof raw.components === 'object' ? (raw.components as RawAlg) : {};
   const levelRaw = (raw?.level ?? 'low') as string;
   const level: 'high' | 'medium' | 'low' =
     levelRaw === 'high' || levelRaw === 'medium' || levelRaw === 'low' ? levelRaw : 'low';
@@ -4380,7 +4424,9 @@ const api: Api = {
       return normalizeBatchAnomaly(raw);
     },
     getSuddenChange: async (userId: number, days = 30) => {
-      const raw = (await request(`/api/algorithm/anomaly/sudden/${userId}?days=${days}`)) as RawJson;
+      const raw = (await request(
+        `/api/algorithm/anomaly/sudden/${userId}?days=${days}`
+      )) as RawJson;
       return normalizeSuddenChange(raw);
     },
     getTrendAnomaly: async (userId: number, days = 30) => {
@@ -4757,9 +4803,9 @@ const api: Api = {
       if (params?.page) qp.append('page', String(params.page));
       qp.append('per_page', String(params?.per_page ?? 500));
       const qs = qp.toString();
-      return request(
-        `/api/classes/${encodeURIComponent(className)}/students?${qs}`
-      ) as Promise<User[]>;
+      return request(`/api/classes/${encodeURIComponent(className)}/students?${qs}`) as Promise<
+        User[]
+      >;
     },
     create: (data) =>
       request('/api/classes', {
@@ -4787,7 +4833,10 @@ const api: Api = {
           return res.blob();
         })
         .then((blob) => {
-          downloadBlob(blob, `班级列表_${keyword || '全部'}.${format === 'json' ? 'json' : 'xlsx'}`);
+          downloadBlob(
+            blob,
+            `班级列表_${keyword || '全部'}.${format === 'json' ? 'json' : 'xlsx'}`
+          );
         });
     },
     import: (data: FormData, customUrl?: string) =>
@@ -4821,9 +4870,7 @@ const api: Api = {
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
-      return request(
-        `/api/permission-logs${query ? '?' + query : ''}`
-      ) as Promise<{
+      return request(`/api/permission-logs${query ? '?' + query : ''}`) as Promise<{
         logs: PermissionLog[];
         pagination: { page: number; per_page: number; total: number; pages: number };
       }>;
@@ -4961,9 +5008,7 @@ const api: Api = {
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
-      return request(
-        `/api/scheduled_notify${query ? '?' + query : ''}`
-      ) as Promise<{
+      return request(`/api/scheduled_notify${query ? '?' + query : ''}`) as Promise<{
         items: ScheduledNotify[];
         total: number;
         page: number;
@@ -5131,7 +5176,9 @@ const api: Api = {
       // 远程开机设备量通常较小，显式拉满 M9 上限（200）避免列表被截断；大批量自动分页。
       queryParams.append('per_page', params.per_page ? params.per_page.toString() : '200');
       const qs = queryParams.toString();
-      return request(`/api/wol/devices${qs ? '?' + qs : ''}`) as Promise<WOLDevicePaginatedResponse>;
+      return request(
+        `/api/wol/devices${qs ? '?' + qs : ''}`
+      ) as Promise<WOLDevicePaginatedResponse>;
     },
     addDevice: (data: {
       name: string;
@@ -5263,9 +5310,7 @@ const api: Api = {
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
       const query = queryParams.toString();
-      return request(
-        `/api/firmware/versions${query ? '?' + query : ''}`
-      ) as Promise<{
+      return request(`/api/firmware/versions${query ? '?' + query : ''}`) as Promise<{
         versions: Firmware[];
         total: number;
         page: number;
@@ -5602,7 +5647,10 @@ const api: Api = {
           return res.blob();
         })
         .then((blob) => {
-          downloadBlob(blob, `课程表_${classInfoId || '全部'}.${format === 'json' ? 'json' : 'xlsx'}`);
+          downloadBlob(
+            blob,
+            `课程表_${classInfoId || '全部'}.${format === 'json' ? 'json' : 'xlsx'}`
+          );
         });
     },
     import: (data: FormData, customUrl?: string) =>
@@ -5709,22 +5757,20 @@ const api: Api = {
       }) as Promise<unknown>,
     suggestRules: (keyword) =>
       request(`/api/nlp/rules/suggest?keyword=${encodeURIComponent(keyword)}`) as Promise<
-        NLPScoringRule[]>,
-    getRuleStatistics: () =>
-      request('/api/nlp/rules/statistics') as Promise<NLPStatistics>,
-    getRuleUsage: (ruleId) =>
-      request(`/api/nlp/rules/${ruleId}/usage`) as Promise<unknown>,
+        NLPScoringRule[]
+      >,
+    getRuleStatistics: () => request('/api/nlp/rules/statistics') as Promise<NLPStatistics>,
+    getRuleUsage: (ruleId) => request(`/api/nlp/rules/${ruleId}/usage`) as Promise<unknown>,
     batchImportRules: (rules) =>
       request('/api/nlp/rules/batch-import', {
         method: 'POST',
         body: JSON.stringify({ rules }),
-      }) as Promise<
-        {
-          success: boolean;
-          imported_count: number;
-          skipped_count: number;
-          message: string;
-        }>,
+      }) as Promise<{
+        success: boolean;
+        imported_count: number;
+        skipped_count: number;
+        message: string;
+      }>,
     trainModel: async (data) => {
       // #912 实机修复：单算法训练 + 调参/交叉验证同样分钟级，30s fetch 必超时。
       // 后端已异步化（POST 返回 task_id），此处提交后轮询 /model/train/status。
@@ -5742,7 +5788,7 @@ const api: Api = {
       const deadline = Date.now() + 30 * 60 * 1000;
       for (;;) {
         const st = (await request(
-          `/api/nlp/model/train/status?task_id=${encodeURIComponent(taskId)}`,
+          `/api/nlp/model/train/status?task_id=${encodeURIComponent(taskId)}`
         )) as {
           status: 'running' | 'done' | 'error';
           result?: NLPMLTrainingResult | null;
@@ -5772,7 +5818,7 @@ const api: Api = {
       const deadline = Date.now() + 30 * 60 * 1000; // 全量训练可能超 10 分钟，放宽到 30 分钟
       for (;;) {
         const st = (await request(
-          `/api/nlp/model/train-all/status?task_id=${encodeURIComponent(taskId)}`,
+          `/api/nlp/model/train-all/status?task_id=${encodeURIComponent(taskId)}`
         )) as {
           status: 'running' | 'done' | 'error';
           result?: NLPMLTrainAllResult | null;
@@ -5786,11 +5832,9 @@ const api: Api = {
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     },
-    getAlgorithms: () =>
-      request('/api/nlp/model/algorithms') as Promise<NLPAlgorithm[]>,
+    getAlgorithms: () => request('/api/nlp/model/algorithms') as Promise<NLPAlgorithm[]>,
     evaluateAllModels: () =>
-      request('/api/nlp/model/evaluate-all') as Promise<
-        NLPMLEvaluationAllResult>,
+      request('/api/nlp/model/evaluate-all') as Promise<NLPMLEvaluationAllResult>,
     predictRule: (data) =>
       request('/api/nlp/model/predict', {
         method: 'POST',
@@ -5805,11 +5849,9 @@ const api: Api = {
         BackendPaginatedResult<NLPTrainingRecord>
       >;
     },
-    evaluateModel: () =>
-      request('/api/nlp/model/evaluate') as Promise<NLPEvaluationResult>,
+    evaluateModel: () => request('/api/nlp/model/evaluate') as Promise<NLPEvaluationResult>,
     // 算法分析相关
-    getAnalysisComprehensive: () =>
-      request('/api/nlp/analysis/comprehensive') as Promise<unknown>,
+    getAnalysisComprehensive: () => request('/api/nlp/analysis/comprehensive') as Promise<unknown>,
     getAnalysisIntent: () =>
       request('/api/nlp/analysis/intent') as Promise<{ code: number; data: unknown }>,
     getAnalysisPerformance: () =>
@@ -5817,7 +5859,10 @@ const api: Api = {
     getAnalysisSuggestions: () =>
       request('/api/nlp/analysis/suggestions') as Promise<{ code: number; data: unknown }>,
     resetAnalysis: () =>
-      request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<{ code: number; data: unknown }>,
+      request('/api/nlp/analysis/reset', { method: 'POST' }) as Promise<{
+        code: number;
+        data: unknown;
+      }>,
     benchmarkIntentClassifier: (params) =>
       request('/api/nlp/benchmark/intent-classifier', {
         method: 'POST',
@@ -5901,7 +5946,9 @@ const api: Api = {
       if (class_id) sp.append('class_id', String(class_id));
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/duty/groups?${sp.toString()}`) as Promise<ResourceList<'groups', DutyGroup>>;
+      return request(`/api/duty/groups?${sp.toString()}`) as Promise<
+        ResourceList<'groups', DutyGroup>
+      >;
     },
     createGroup: (data) =>
       request('/api/duty/groups', {
@@ -5965,13 +6012,19 @@ const api: Api = {
     delete: (id) => request(`/api/committee/members/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   parent: {
-    getAll: (student_id?: number, class_id?: number, params?: { page?: number; per_page?: number }) => {
+    getAll: (
+      student_id?: number,
+      class_id?: number,
+      params?: { page?: number; per_page?: number }
+    ) => {
       const sp = new URLSearchParams();
       if (student_id) sp.append('student_id', String(student_id));
       if (class_id) sp.append('class_id', String(class_id));
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/parent/contacts?${sp.toString()}`) as Promise<ResourceList<'contacts', ParentContact>>;
+      return request(`/api/parent/contacts?${sp.toString()}`) as Promise<
+        ResourceList<'contacts', ParentContact>
+      >;
     },
     create: (data) =>
       request('/api/parent/contacts', {
@@ -6001,7 +6054,11 @@ const api: Api = {
       }) as Promise<void>,
   },
   homework: {
-    getAll: (class_id?: number, subjectId?: number, params?: { page?: number; per_page?: number }) => {
+    getAll: (
+      class_id?: number,
+      subjectId?: number,
+      params?: { page?: number; per_page?: number }
+    ) => {
       const sp = new URLSearchParams();
       if (class_id) sp.append('class_id', String(class_id));
       if (subjectId) sp.append('subject_id', String(subjectId));
@@ -6043,7 +6100,9 @@ const api: Api = {
       if (date) sp.append('date', date);
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/attendance/records?${sp.toString()}`) as Promise<ResourceList<'records', Attendance>>;
+      return request(`/api/attendance/records?${sp.toString()}`) as Promise<
+        ResourceList<'records', Attendance>
+      >;
     },
     record: (data) =>
       request('/api/attendance/records', {
@@ -6068,7 +6127,9 @@ const api: Api = {
       if (status) sp.append('status', status);
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/attendance/leaves?${sp.toString()}`) as Promise<ResourceList<'leaves', LeaveApplication>>;
+      return request(`/api/attendance/leaves?${sp.toString()}`) as Promise<
+        ResourceList<'leaves', LeaveApplication>
+      >;
     },
     applyLeave: (data) =>
       request('/api/attendance/leaves', {
@@ -6131,7 +6192,12 @@ const api: Api = {
         method: 'POST',
         body: JSON.stringify(data),
       }) as Promise<MentalHealthRecord>,
-    getAlerts: (student_id?, isResolved?, class_id?, params?: { page?: number; per_page?: number }) => {
+    getAlerts: (
+      student_id?,
+      isResolved?,
+      class_id?,
+      params?: { page?: number; per_page?: number }
+    ) => {
       const sp = new URLSearchParams();
       if (student_id) sp.append('student_id', String(student_id));
       if (isResolved !== undefined) sp.append('is_resolved', String(isResolved));
@@ -6155,7 +6221,9 @@ const api: Api = {
       if (term) sp.append('term', term);
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/teacher-comments?${sp.toString()}`) as Promise<ResourceList<'comments', TeacherComment>>;
+      return request(`/api/teacher-comments?${sp.toString()}`) as Promise<
+        ResourceList<'comments', TeacherComment>
+      >;
     },
     create: (data) =>
       request('/api/teacher-comments', {
@@ -6167,8 +6235,7 @@ const api: Api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }) as Promise<TeacherComment>,
-    delete: (id) =>
-      request(`/api/teacher-comments/${id}`, { method: 'DELETE' }) as Promise<void>,
+    delete: (id) => request(`/api/teacher-comments/${id}`, { method: 'DELETE' }) as Promise<void>,
   },
   activity: {
     getAll: (class_id?, isPublished?, params?: { page?: number; per_page?: number }) => {
@@ -6177,7 +6244,9 @@ const api: Api = {
       if (isPublished !== undefined) sp.append('is_published', String(isPublished));
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/activity?${sp.toString()}`) as Promise<ResourceList<'activities', Activity>>;
+      return request(`/api/activity?${sp.toString()}`) as Promise<
+        ResourceList<'activities', Activity>
+      >;
     },
     getById: (id) => request(`/api/activity/${id}`) as Promise<Activity>,
     create: (data) =>
@@ -6209,7 +6278,9 @@ const api: Api = {
       if (category) sp.append('category', category);
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/culture/records?${sp.toString()}`) as Promise<ResourceList<'records', CultureRecord>>;
+      return request(`/api/culture/records?${sp.toString()}`) as Promise<
+        ResourceList<'records', CultureRecord>
+      >;
     },
     create: (data) =>
       request('/api/culture/records', {
@@ -6230,7 +6301,9 @@ const api: Api = {
       if (guideType) sp.append('guide_type', guideType);
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/study-guide/guides?${sp.toString()}`) as Promise<ResourceList<'guides', StudyGuide>>;
+      return request(`/api/study-guide/guides?${sp.toString()}`) as Promise<
+        ResourceList<'guides', StudyGuide>
+      >;
     },
     createGuide: (data) =>
       request('/api/study-guide/guides', {
@@ -6249,7 +6322,9 @@ const api: Api = {
       if (student_id) sp.append('student_id', String(student_id));
       if (params?.page) sp.append('page', String(params.page));
       if (params?.per_page) sp.append('per_page', String(params.per_page));
-      return request(`/api/study-guide/plans?${sp.toString()}`) as Promise<ResourceList<'plans', ImprovementPlan>>;
+      return request(`/api/study-guide/plans?${sp.toString()}`) as Promise<
+        ResourceList<'plans', ImprovementPlan>
+      >;
     },
     createPlan: (data) =>
       request('/api/study-guide/plans', {

@@ -487,7 +487,12 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
             permission: 'attendance.view',
           },
           { path: '/study-groups', label: '学习小组', icon: Users, permission: 'study_group.view' },
-          { path: '/mental-health', label: '心理健康', icon: Heart, permission: 'mental_health.view' },
+          {
+            path: '/mental-health',
+            label: '心理健康',
+            icon: Heart,
+            permission: 'mental_health.view',
+          },
           { path: '/activity', label: '文体活动', icon: PartyPopper, permission: 'activity.view' },
           { path: '/culture', label: '班级文化', icon: Palette, permission: 'culture.view' },
           {

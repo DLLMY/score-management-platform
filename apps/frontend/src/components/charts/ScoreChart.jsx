@@ -64,7 +64,9 @@ const ScoreChart = ({ data, title = '积分趋势', showLegend = true }) => {
               ) : (
                 <TrendingDown className='w-5 h-5 text-red-400' />
               )}
-              <span className={`text-sm font-medium ${trend.isUp ? 'text-green-400' : 'text-red-400'}`}>
+              <span
+                className={`text-sm font-medium ${trend.isUp ? 'text-green-400' : 'text-red-400'}`}
+              >
                 {trend.isUp ? '+' : ''}
                 {trend.value}%
               </span>

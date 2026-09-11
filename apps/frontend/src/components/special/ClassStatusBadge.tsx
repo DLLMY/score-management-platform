@@ -7,8 +7,8 @@ import {
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react';
-import { usePermissions } from '../../hooks/usePermissions';
-import type { ClassNowStatusResult } from '../../hooks/useClassNowStatus';
+import { usePermissions } from '../../hooks';
+import type { ClassNowStatusResult } from '../../hooks';
 
 export interface ClassStatusBadgeProps {
   /** useClassNowStatus() 的返回值 */

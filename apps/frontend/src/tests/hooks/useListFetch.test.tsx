@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useListFetch } from '../../hooks/useListFetch';
+import { useListFetch } from '../../hooks';
 
 describe('useListFetch', () => {
   test('fetches paginated items and exposes total', async () => {
@@ -65,7 +65,12 @@ describe('useListFetch', () => {
     );
 
     await waitFor(() =>
-      expect(fetcher).toHaveBeenCalledWith({ page: 2, pageSize: 25, keyword: '张', skipCache: false })
+      expect(fetcher).toHaveBeenCalledWith({
+        page: 2,
+        pageSize: 25,
+        keyword: '张',
+        skipCache: false,
+      })
     );
   });
 

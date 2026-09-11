@@ -1,12 +1,10 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useListData } from '../../hooks/useListData';
+import { useListData } from '../../hooks';
 
 describe('useListData', () => {
   test('fetches data on mount and exposes loading lifecycle', async () => {
     const fetcher = jest.fn().mockResolvedValue([{ id: 1 }]);
-    const { result } = renderHook(() =>
-      useListData<{ id: number }>({ fetcher, debounceDelay: 0 })
-    );
+    const { result } = renderHook(() => useListData<{ id: number }>({ fetcher, debounceDelay: 0 }));
 
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -33,8 +31,7 @@ describe('useListData', () => {
   test('does not refetch when deps unchanged', async () => {
     const fetcher = jest.fn().mockResolvedValue([1, 2, 3]);
     const { rerender } = renderHook(
-      ({ deps }: { deps: unknown[] }) =>
-        useListData<number>({ fetcher, deps, debounceDelay: 0 }),
+      ({ deps }: { deps: unknown[] }) => useListData<number>({ fetcher, deps, debounceDelay: 0 }),
       { initialProps: { deps: [1] } }
     );
 
@@ -60,9 +57,7 @@ describe('useListData', () => {
 
   test('refetch manually triggers a new fetch', async () => {
     const fetcher = jest.fn().mockResolvedValue([1, 2]);
-    const { result } = renderHook(() =>
-      useListData<number>({ fetcher, debounceDelay: 0 })
-    );
+    const { result } = renderHook(() => useListData<number>({ fetcher, debounceDelay: 0 }));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(fetcher).toHaveBeenCalledTimes(1);

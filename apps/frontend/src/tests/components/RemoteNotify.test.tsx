@@ -12,7 +12,7 @@ describe('RemoteNotify Module', () => {
   });
 
   test('AppState hooks可以导入', async () => {
-    const hooks = await import('../../hooks/useAppState');
+    const hooks = await import('../../hooks');
     expect(hooks).toBeDefined();
   });
 });

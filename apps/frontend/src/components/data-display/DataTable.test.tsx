@@ -15,12 +15,17 @@ const columns: ColumnType<Row>[] = [
 ];
 
 function makeData(n: number): Row[] {
-  return Array.from({ length: n }, (_, i) => ({ id: i + 1, name: `Item ${String.fromCharCode(65 + (i % 26))}${i}` }));
+  return Array.from({ length: n }, (_, i) => ({
+    id: i + 1,
+    name: `Item ${String.fromCharCode(65 + (i % 26))}${i}`,
+  }));
 }
 
 describe('DataTable', () => {
   test('loading 态渲染骨架屏且不渲染数据', () => {
-    const { container } = render(<DataTable columns={columns} dataSource={makeData(5)} loading rowKey='id' />);
+    const { container } = render(
+      <DataTable columns={columns} dataSource={makeData(5)} loading rowKey='id' />
+    );
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
     expect(screen.queryByText('Item A0')).toBeNull();
   });
@@ -68,7 +73,9 @@ describe('DataTable', () => {
   });
 
   test('大数据量自动切换虚拟滚动（无 <table>、显示虚拟滚动脚注）', () => {
-    const { container } = render(<DataTable columns={columns} dataSource={makeData(250)} rowKey='id' />);
+    const { container } = render(
+      <DataTable columns={columns} dataSource={makeData(250)} rowKey='id' />
+    );
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByText(/共 250 条记录（虚拟滚动）/)).toBeInTheDocument();
   });

@@ -64,7 +64,8 @@ const DEFAULT_LABEL: Record<StatusTone, string> = {
 };
 
 export function StatusTag({ tone, label, toneKey, className = '' }: StatusTagProps) {
-  const resolvedTone: StatusTone = tone ?? (toneKey ? STATUS_TONE_MAP[toneKey] ?? 'neutral' : 'neutral');
+  const resolvedTone: StatusTone =
+    tone ?? (toneKey ? STATUS_TONE_MAP[toneKey] ?? 'neutral' : 'neutral');
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${STATUS_TAG_CLASS[resolvedTone]} ${className}`}

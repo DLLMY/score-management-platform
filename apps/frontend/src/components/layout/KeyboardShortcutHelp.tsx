@@ -58,17 +58,21 @@ const KeyboardShortcutHelp: React.FC = () => {
                 className='rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-700'
                 aria-label='关闭帮助'
               >
-                <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+                <svg
+                  width='16'
+                  height='16'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2'
+                >
                   <path d='M18 6L6 18M6 6l12 12' />
                 </svg>
               </button>
             </div>
             <div className='divide-y divide-gray-100 dark:divide-slate-700'>
               {SHORTCUTS.map((s) => (
-                <div
-                  key={s.keys}
-                  className='flex items-center justify-between gap-4 py-2.5'
-                >
+                <div key={s.keys} className='flex items-center justify-between gap-4 py-2.5'>
                   <span className='text-sm text-gray-600 dark:text-slate-300'>{s.desc}</span>
                   <kbd className='shrink-0 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200'>
                     {s.keys}

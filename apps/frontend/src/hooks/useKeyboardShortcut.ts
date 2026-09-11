@@ -96,5 +96,3 @@ export function useGlobalKeyboardShortcuts(): void {
     },
   ]);
 }
-
-export default useKeyboardShortcut;

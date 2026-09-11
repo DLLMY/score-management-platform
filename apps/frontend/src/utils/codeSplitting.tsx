@@ -81,8 +81,8 @@ export const preloadComponent = (
   if (typeof window !== 'undefined') {
     // 使用 requestIdleCallback 在浏览器空闲时预加载
     const idleCallback =
-      (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback ||
-      setTimeout;
+      (window as unknown as { requestIdleCallback?: (cb: () => void) => void })
+        .requestIdleCallback || setTimeout;
     idleCallback(() => {
       importFn();
     });

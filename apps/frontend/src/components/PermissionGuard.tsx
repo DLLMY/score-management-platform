@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { usePermissions } from '../hooks/usePermissions';
+import { usePermissions } from '../hooks';
 import Button from './ui/Button';
 import { ADMIN_ROLES } from '../config/permissions';
 
@@ -99,15 +99,11 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
             <div className='text-amber-400 text-5xl mb-4' aria-hidden='true'>
               ⚠️
             </div>
-            <h2 className='text-xl font-bold text-gray-800 dark:text-white mb-2'>
-              权限加载未完成
-            </h2>
+            <h2 className='text-xl font-bold text-gray-800 dark:text-white mb-2'>权限加载未完成</h2>
             <p className='text-gray-500 dark:text-slate-400 mb-1'>
               当前账号未获取到有效权限，可能是本地缓存异常或接口返回为空。
             </p>
-            {error && (
-              <p className='text-xs text-red-400 mb-4 break-words'>{error.message}</p>
-            )}
+            {error && <p className='text-xs text-red-400 mb-4 break-words'>{error.message}</p>}
             <div className='flex justify-center gap-2'>
               <button
                 onClick={() => reload()}

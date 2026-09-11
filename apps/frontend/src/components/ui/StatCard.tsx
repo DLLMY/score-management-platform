@@ -66,7 +66,9 @@ function StatCard({
       />
       <div className={`relative flex items-center ${s.gap}`}>
         <div
-          className={`bg-gradient-to-br ${iconGradient} flex items-center justify-center ${s.iconBox} ${s.shadow} ${glowClass || ''}`}
+          className={`bg-gradient-to-br ${iconGradient} flex items-center justify-center ${
+            s.iconBox
+          } ${s.shadow} ${glowClass || ''}`}
         >
           {icon}
         </div>
