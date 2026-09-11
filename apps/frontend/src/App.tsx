@@ -76,7 +76,9 @@ const HomeRedirect: React.FC = () => {
 };
 
 const createLazyComponent = (
-  importFn: () => Promise<{ default: React.ComponentType<unknown> }>,
+  // 注意：此处不可写 ComponentType<unknown> —— 泛型参数位于 props 逆变位，
+  // unknown 不能赋给页面的 {} props，会使所有 React.FC 页面报 TS2322。
+  importFn: () => Promise<{ default: React.ComponentType }>,
   preload: boolean = false
 ): React.FC & LazyComponentProps => {
   const LazyComponent = lazy(importFn);

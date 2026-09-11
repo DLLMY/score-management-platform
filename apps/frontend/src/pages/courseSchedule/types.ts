@@ -1,4 +1,4 @@
-import type { RefObject, Dispatch, SetStateAction, FormEvent } from 'react';
+import type { RefObject, Dispatch, SetStateAction, FormEvent, ChangeEvent } from 'react';
 import type { CourseSchedule, ClassPeriod, ClassInfo, Subject } from '../../services/api';
 import type { ID } from '../../types';
 import type { ColumnType } from '../../components';
@@ -83,7 +83,7 @@ export interface CourseScheduleViewProps {
     field: keyof FormData,
     value: string | number | boolean | null | undefined
   ) => void;
-  handleSubjectChange: (e: { target: { value: string } }) => void;
+  handleSubjectChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   subjects: Subject[];
   weekDays: WeekDay[];
   getPeriodTime: (periodNumber: number) => string;
@@ -100,7 +100,7 @@ export interface CourseScheduleViewProps {
   conflictStrategy: 'skip' | 'update' | 'error';
   setConflictStrategy: Dispatch<SetStateAction<'skip' | 'update' | 'error'>>;
   fileInputRef: RefObject<HTMLInputElement>;
-  handleFileChange: (e: { target: { files: FileList | null } }) => void;
+  handleFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   importFile: File | null;
   setImportFile: Dispatch<SetStateAction<File | null>>;
   importResult: ImportResult | null;

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Approval, CreateForm, FailedBatch } from './useApprovalsLogic';
-import type { ColumnType } from '../../components';
+import type { ColumnType, SortOrder } from '../../components';
 import type { UseListFetchResult } from '../../hooks';
 
 export interface ApprovalsViewProps {
@@ -12,7 +12,7 @@ export interface ApprovalsViewProps {
   pageSize: number;
   sortField: string;
   sortOrder: string | null;
-  setSort: (field: string, order: string | null) => void;
+  setSort: (field: string, order: SortOrder) => void;
   handlePageChange: (newPage: number, newPageSize: number) => void;
 
   // 列表

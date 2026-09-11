@@ -9,9 +9,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "strict": false,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
+    // 全量严格模式。逐格推进收口（2026-09-11）：
+    // noImplicitAny → strictNullChecks → strictFunctionTypes → 其余 strict 子项一次清零
+    "strict": true,
+    // strict 之外已开启项：强制 class 覆盖父类成员时显式写 override
+    "noImplicitOverride": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
