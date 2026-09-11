@@ -16,7 +16,7 @@
 - ⚠️ node `-e` / require 脚本勿用 `/tmp/...`（Git Bash 与 node 解析不一致，报 MODULE_NOT_FOUND）；一律写 `C:/Users/<u>/AppData/Local/Temp/...`。
 
 ## 前端类型 / 结构规范
-- **`tsconfig.json`：`strict:false` + `noImplicitAny:true`（2026-09-11 #109 开启）**。新代码必须类型干净（`tsc --noEmit` 必须 0 错误）；**禁新增 `any`**。
+- **`tsconfig.json`：`strict:false` + `noImplicitAny:true`（#109）+ `strictNullChecks:true`（#110），均 2026-09-11**。新代码必须类型干净（`tsc --noEmit` 必须 0 错误）；**禁新增 `any`**；可空/可选字段须显式处理（仅允许在「保持原运行时值不变」处用 `as`，禁靠 `!` 批量绕过）。下一格候选：`strictFunctionTypes`/`strictBindCallApply`/`strictPropertyInitialization`/`noImplicitThis`/`alwaysStrict`/`useUnknownInCatchVariables` —— **每个都先单独 CLI 量化再决定**（#110 实测量化后仅 42 处，远低于预估「高一个量级」）。
 - ⚠️ `@types/react-dom`（`^18.3.7`）是**显式 devDependency**（2026-09-11 补）：缺失时 `react-dom/client` 隐式 any（TS7016），过去仅因 `noImplicitAny:false` 而静默。**改 `package.json` 依赖后必须跑 `npm install` 同步 `package-lock.json`**（本仓 lockfile 曾长期与 package.json 脱节：残留 `web-vitals`/`eslint-config-react-app` → `npm ci` 会失败）。
 - **导入一律走 barrel**：hooks → `'.../hooks'`（`index.ts` 必须覆盖全部 hook 模块**及其类型**）；components → `'.../components'`（**双层 barrel**：根从 9 个子 barrel 聚合 ui/data-display/feedback/form/layout/image/lazy/special/workbench）。**新增子目录必须建 `index.ts` 并在根 barrel 同步聚合**；依赖重的子目录（charts/recharts）保留独立子入口。子 barrel 转发**必须按文件真实导出形式**（default vs 命名），不可统一写 `default as X`。
 - ⚠️ **批量改 import 脚本铁律**：① 匹配条件须同时含**已有 barrel import**；② 替换段**只吃匹配语句本身**，绝不能用 `raw[:a]+raw[b:]` 跨越删除（会吃掉中间所有其他 import → tsc 爆 TS2304）；③ 先 dry-run；④ 动态 `import()` 用 `grep "from '"` 查不到，须单独扫 `import\(`。
@@ -61,11 +61,12 @@
 
 ## 业务模块
 - **NLP**（✅ P0–P1 全修 2026-08-29）：活跃链路 `api/nlp/nlp_routes.py::_get_parser()` → `services/nlp_enhanced_service.get_nlp_parser()`；`services/nlp_service.py`(FastNLPParser) 仅预热。torch 懒加载（首次 `ml_predict` 才 import）。G5 OpenAPI 路径数 469 零漂移。
-- **班主任工作台**（✅ P0/P1/P2 + 三页拆分 **全部闭环**，2026-09-11 实测复核）：`useWorkbenchClass`（store + `useSyncExternalStore`，12 子页共享当前班级、sessionStorage 持久）；评语模型 TeacherComment → `/api/teacher-comments` 权限 `comment.view/edit`。4 条硬要求：字段命名统一 / 权限体系 / **字段调整·权限变更·业务逻辑不确定性须经用户审核** / 优化交互与展示。遗留可选项：12 项条目无聚合首页/概览页（指标卡下钻 C-1/C-2 已落地）。
+- **班主任工作台**（✅ P0/P1/P2 + 三页拆分 **全部闭环**，2026-09-11 实测复核）：`useWorkbenchClass`（store + `useSyncExternalStore`，12 子页共享当前班级、sessionStorage 持久）；评语模型 TeacherComment → `/api/teacher-comments` 权限 `comment.view/edit`。4 条硬要求：字段命名统一 / 权限体系 / **字段调整·权限变更·业务逻辑不确定性须经用户审核** / 优化交互与展示。聚合首页**已落地**（`/workbench` → `pages/WorkbenchOverview` + `workbenchOverview/WorkbenchOverviewView`；菜单「工作台总览」；未匹配路径默认重定向至此；`ENTRIES` 13 项 + `GLOBAL_ENTRIES` 4 项）；指标卡下钻 C-1/C-2 已落地。**至此班主任工作台无待办开发项。**
 
 ## ⚠️ 审计文档引用铁律（2026-09-11 教训）
 - **引用 `docs/` 下任何历史审计 / 待审文档前，必须先做一次实测复核**——文档生成日期 ≠ 当前状态。曾直接采信 `docs/班主任工作台优化方案-待审核.md`(08-29) + `grep class.view` 的**行号**（未核对行号所属路由），错误输出"P0 权限词根未修 / P1 越权未修"，实际两者早已闭环。
 - **grep 权限词根必须带上下文（`-A3` 看 `path=`）**，并把前端 `requiredPermission` 与后端 `@requires_permission("X")` 逐路由对齐比对；只看"某文件出现过 X"完全不可作判据。
+- **判断「某属性/字段无消费者」同样必须按类型归属逐一核对**：`grep "\.rule_id"` 命中 8 处，却分别属于 `Suggestion` / `MatchedRule` / 误加在 `Rule` 上者 —— 只看命中数会得出相反结论。**判据 = 该属性所属接口上的全部读取点**。
 - 已给 `班主任工作台优化方案-待审核.md` / `班主任页拆分方案-铁律③待审.md` / `M9分页复核-缺口清单.md` 加顶部状态横幅（已闭环，勿再按待办引用）。
 
 ## 工具链避坑（2026-09-11 #109 新增）

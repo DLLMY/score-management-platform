@@ -138,22 +138,23 @@ export function useNLPManagementLogic(): NLPDeps & {
         (s: Suggestion): s is Suggestion & { rule_id: number } => typeof s?.rule_id === 'number'
       );
       if (ruleLikeSuggestions.length > 0) {
-        const mapped: Rule[] = ruleLikeSuggestions.map((s): Rule & { rule_id: number } => ({
-          id: s.rule_id,
-          rule_id: s.rule_id,
-          behavior_keyword: s.description || '',
-          behavior_description: s.description || '',
-          score_value: s.score_value,
-          score_type: s.intent,
-          behavior_tags: [],
-          match_pattern: '',
-          priority: 0,
-          is_active: true,
-          usage_count: 0,
-          accuracy_rate: s.similarity ?? 0,
-          created_at: '',
-          updated_at: '',
-        }));
+        const mapped: Rule[] = ruleLikeSuggestions.map(
+          (s): Rule => ({
+            id: s.rule_id,
+            behavior_keyword: s.description || '',
+            behavior_description: s.description || '',
+            score_value: s.score_value,
+            score_type: s.intent,
+            behavior_tags: [],
+            match_pattern: '',
+            priority: 0,
+            is_active: true,
+            usage_count: 0,
+            accuracy_rate: s.similarity ?? 0,
+            created_at: '',
+            updated_at: '',
+          })
+        );
         setSuggestedRules(mapped);
       } else {
         setSuggestedRules([]);
