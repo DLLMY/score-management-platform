@@ -37,7 +37,13 @@
 
 ## RBAC/双JWT/db_session
 - 改 RBAC 必跑 `verify_rbac_consistency.py --check-only`(G2 68/DB70/seed66/teacher30)；teacher 含 notification.send 无 score.manage；`/api/roles` 已下线。Admin=access+requires_permission；学生=student+requires_student。
+- ✅ **班级归属隔离已内置在 `requires_permission`（2026-09-11 核实）**：`utils/permission.py:212` 调 `_check_class_scope(permission)`，对 `_CLASS_SCOPE_PREFIXES` 12 个词根（committee/duty/seating/parent/homework/attendance/study_group/mental_health/activity/culture/study_guide/comment）自动 `ensure_class_access`/`ensure_student_access` → 越权 403。**class_management 全部路由无需逐个挂装饰器**；新增班级管理模块**必须把词根加入 `_CLASS_SCOPE_PREFIXES`**，否则隔离失效。`ALL_CLASSES=0` 哨兵必须放行（`ensure_class_access` 用 `if not class_id` 而非 `is None`）。冒烟：`tests/test_workbench_isolation_smoke.py`（12 passed）。
 - `db_session_scope(detach=True)` finally `session.remove()`：**请求链 service 写路径须 detach=False**，否则 DetachedInstanceError 500。
+
+## ⚠️ 审计文档引用铁律（2026-09-11 教训）
+- **引用 `docs/` 下任何历史审计/待审文档前，必须先做一次实测复核**——文档生成日期 ≠ 当前状态。本次曾直接采信 `docs/班主任工作台优化方案-待审核.md`(08-29) + `grep class.view` 的**行号**（未核对行号所属路由），错误输出"P0 权限词根仍未修 / P1 越权仍未修"，实际两者早已闭环。
+- **grep 权限词根必须带上下文**（`-A3` 看 `path=`），并把前端 `requiredPermission` 与后端 `@requires_permission("X")` 逐路由对齐比对；只看"某文件出现过 class.view"完全不可作判据。
+- 已给 `班主任工作台优化方案-待审核.md` / `班主任页拆分方案-铁律③待审.md` / `M9分页复核-缺口清单.md` 加顶部状态横幅（已闭环）。
 
 ## 关键坑
 - MQTT 双连接（控制 QoS1 / 遥测 QoS0）；生产 EMQX `nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883`。
