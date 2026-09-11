@@ -47,7 +47,7 @@ except ImportError:
         logging.getLogger(__name__).warning(
             "admin_notifications_routes 导入失败，成绩变动相关的管理员通知被静默丢弃"
         )
-        return None
+        return
 
 
 def check_rule_limits(user_id, rule_id):

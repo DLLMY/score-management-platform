@@ -42,7 +42,7 @@ def update_rule(rule, data):
     rule.min_interval = data.get("min_interval", rule.min_interval)
     rule.updated_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def delete_rule(rule):
@@ -54,7 +54,7 @@ def delete_rule(rule):
         logger.warning(f"解除规则历史流水引用失败（跳过）rule_id={rule.id}: {e}", exc_info=True)
     db.session.delete(rule)
     db.session.commit()
-    return None
+    return
 
 
 def import_rules(rules_data):

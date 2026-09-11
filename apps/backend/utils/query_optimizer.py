@@ -8,6 +8,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 import time
 import logging
+from datetime import UTC
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +196,7 @@ class QueryOptimizer:
         from sqlalchemy import func
         from datetime import datetime, timedelta, timezone
 
-        since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+        since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
         rows = (
             db.session.query(
                 func.date(ScoreRecord.created_at),

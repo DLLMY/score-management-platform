@@ -48,14 +48,14 @@ def update_device(device, data):
     device.name = data.get("name", device.name)
     device.updated_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def delete_device(device):
     """删除设备并提交。"""
     db.session.delete(device)
     db.session.commit()
-    return None
+    return
 
 
 def bind_device_class(device, class_info_id):
@@ -66,7 +66,7 @@ def bind_device_class(device, class_info_id):
     device.class_info_id = class_info_id
     device.updated_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def bind_device_admin(device, admin_id):
@@ -77,7 +77,7 @@ def bind_device_admin(device, admin_id):
     device.admin_id = admin_id
     device.updated_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def resolve_device_alert(alert):
@@ -85,7 +85,7 @@ def resolve_device_alert(alert):
     alert.is_resolved = True
     alert.resolved_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def update_device_settings(device, data):
@@ -389,7 +389,7 @@ def delete_wol_device(device):
     device.is_active = False
     device.updated_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 # ============ DeviceGroup 实体事务 ============
@@ -436,7 +436,7 @@ def update_device_group(group, data):
 
     group.updated_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def delete_device_group(group):
@@ -444,7 +444,7 @@ def delete_device_group(group):
     DeviceGroupMapping.query.filter_by(group_id=group.id).delete()
     db.session.delete(group)
     db.session.commit()
-    return None
+    return
 
 
 def add_devices_to_group(group_id, device_ids):

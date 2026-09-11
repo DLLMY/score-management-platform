@@ -60,14 +60,14 @@ def update_firmware_version(firmware, data):
     if "is_active" in data:
         firmware.is_active = data["is_active"]
     db.session.commit()
-    return None
+    return
 
 
 def delete_firmware_version(firmware):
     """删除固件版本记录并提交（文件删除由路由负责，仅落库）。"""
     db.session.delete(firmware)
     db.session.commit()
-    return None
+    return
 
 
 def report_ota_status(
@@ -188,7 +188,7 @@ def log_batch_upgrade(firmware_id, device_count, target_version):
         firmware_id,
         f"Batch upgrade firmware: {device_count} devices -> {target_version}",
     )
-    return None
+    return
 
 
 def log_ota_upgrade(firmware_id, device_count, version):
@@ -199,4 +199,4 @@ def log_ota_upgrade(firmware_id, device_count, version):
         firmware_id,
         f"OTA upgrade firmware: {device_count} devices -> {version}",
     )
-    return None
+    return

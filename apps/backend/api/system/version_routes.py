@@ -47,6 +47,7 @@ def check_api_version():
             status_code=400,
             data={"supported_versions": version_manager.get_versions()},
         )
+    return None
 
 
 def require_api_version(version: str):

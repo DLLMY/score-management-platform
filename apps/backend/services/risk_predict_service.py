@@ -2,7 +2,7 @@ import json
 import os
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, UTC
 
 from models import User, ScoreRecord, get_by_id, db
 import numpy as np
@@ -957,7 +957,7 @@ class RiskPredictService:
             {
                 "risk_type_weights": weights,
                 "optimal_thresholds": optimal_thresholds,
-                "trained_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+                "trained_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
                 "training_data_days": days,
                 "valid_students": valid_users,
             }

@@ -485,7 +485,7 @@ class AcademicsService:
                                 }
                             )
                             continue
-                        elif conflict_strategy == "update":
+                        if conflict_strategy == "update":
                             existing.code = resolved_item.get("code", existing.code)
                             existing.grade = resolved_item.get("grade", existing.grade)
                             existing.description = resolved_item.get(
@@ -606,7 +606,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             exam = get_by_id(Exam, exam_id)
             if exam is None:
-                return
+                return None
             for key in [
                 "name",
                 "description",
@@ -641,7 +641,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             exam = get_by_id(Exam, exam_id)
             if exam is None:
-                return
+                return None
             exam.status = "published"
             exam.updated_at = datetime.now()
             return exam.id
@@ -651,7 +651,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             exam = get_by_id(Exam, exam_id)
             if exam is None:
-                return
+                return None
             exam.status = "closed"
             exam.updated_at = datetime.now()
             return exam.id
@@ -706,7 +706,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             score = get_by_id(Score, score_id)
             if score is None:
-                return
+                return None
             for key in ["score", "full_score", "rank", "status", "remark"]:
                 if key in data:
                     setattr(score, key, data[key])
@@ -775,7 +775,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             schedule = get_by_id(CourseSchedule, schedule_id)
             if schedule is None:
-                return
+                return None
             schedule.class_info_id = data["class_info_id"]
             schedule.subject_id = data["subject_id"]
             schedule.day_of_week = data["day_of_week"]
@@ -868,7 +868,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             config = get_by_id(ImportConfig, config_id)
             if config is None:
-                return
+                return None
             if "config_name" in data:
                 config.config_name = data["config_name"]
             if "field_mappings" in data:
@@ -904,7 +904,7 @@ class AcademicsService:
         with db_session_scope(detach=False):
             config = get_by_id(ImportConfig, config_id)
             if config is None:
-                return
+                return None
             ImportConfig.query.filter_by(module_name=config.module_name, is_default=True).update(
                 {"is_default": False}
             )

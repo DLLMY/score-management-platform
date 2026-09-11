@@ -47,7 +47,7 @@ def update_approval(approval, data):
     except Exception:
         db.session.rollback()
         raise
-    return None
+    return
 
 
 def delete_approval(approval):
@@ -58,7 +58,7 @@ def delete_approval(approval):
     except Exception:
         db.session.rollback()
         raise
-    return None
+    return
 
 
 def approve_approval(approval, data):

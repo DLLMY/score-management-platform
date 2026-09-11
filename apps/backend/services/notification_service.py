@@ -4,7 +4,7 @@ import logging
 import time
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from flask import current_app
 from models import db, Notification
 
@@ -175,7 +175,7 @@ class NotificationService:
 
             import hashlib
 
-            timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             params_str = json.dumps(params)
             sorted_params = sorted(
@@ -409,14 +409,14 @@ def update_notification(notification, data):
     if notification.status == "sent" and not notification.sent_at:
         notification.sent_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def delete_notification(notification):
     """删除通知并提交。"""
     db.session.delete(notification)
     db.session.commit()
-    return None
+    return
 
 
 def mark_notification_read(notification):
@@ -425,7 +425,7 @@ def mark_notification_read(notification):
     notification.is_read = True
     notification.read_at = datetime.now()
     db.session.commit()
-    return None
+    return
 
 
 def send_notification(data):

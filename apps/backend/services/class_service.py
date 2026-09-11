@@ -605,7 +605,7 @@ class ClassService:
                                 }
                             )
                             continue
-                        elif conflict_strategy == "update":
+                        if conflict_strategy == "update":
                             existing.grade = resolved_item.get("grade", existing.grade)
                             existing.description = resolved_item.get(
                                 "description", existing.description

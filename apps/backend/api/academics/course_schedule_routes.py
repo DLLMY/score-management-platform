@@ -980,7 +980,7 @@ class CourseScheduleImport(Resource):
                             }
                         )
                         continue
-                    elif conflict_strategy == "update":
+                    if conflict_strategy == "update":
                         updates.append(
                             (
                                 existing.id,

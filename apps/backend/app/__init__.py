@@ -26,6 +26,7 @@ def create_app(lightweight=False):
             if not request.is_secure:
                 url = request.url.replace("http://", "https://", 1)
                 return redirect(url, code=301)
+            return None
 
     from app.db_init import init_database
 

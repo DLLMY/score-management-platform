@@ -4,7 +4,7 @@ import re
 import jwt
 import bcrypt
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, UTC
 from typing import Any
 import json
 import os
@@ -41,14 +41,14 @@ def generate_tokens(admin_id: int, username: str, role: str):
         "username": username,
         "role": role,
         "type": "access",
-        "exp": datetime.now(timezone.utc).replace(tzinfo=None) + JWT_ACCESS_TOKEN_EXPIRES,
+        "exp": datetime.now(UTC).replace(tzinfo=None) + JWT_ACCESS_TOKEN_EXPIRES,
     }
 
     refresh_payload = {
         "admin_id": str(admin_id),  # 统一使用字符串
         "username": username,
         "type": "refresh",
-        "exp": datetime.now(timezone.utc).replace(tzinfo=None) + JWT_REFRESH_TOKEN_EXPIRES,
+        "exp": datetime.now(UTC).replace(tzinfo=None) + JWT_REFRESH_TOKEN_EXPIRES,
     }
 
     access_token = jwt.encode(access_payload, JWT_SECRET_KEY, algorithm="HS256")
@@ -95,7 +95,7 @@ def generate_subaccount_token(
         "role_type": role_type,
         "parent_admin_id": parent_admin_id,
         "type": "subaccount",
-        "exp": datetime.now(timezone.utc).replace(tzinfo=None) + SUBACCOUNT_TOKEN_EXPIRES,
+        "exp": datetime.now(UTC).replace(tzinfo=None) + SUBACCOUNT_TOKEN_EXPIRES,
     }
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
     return {"token": token, "expires_in": int(SUBACCOUNT_TOKEN_EXPIRES.total_seconds())}
@@ -108,7 +108,7 @@ def generate_student_token(user_id: int, username: str, card_id: str):
         "username": username,
         "card_id": card_id,
         "type": "student",
-        "exp": datetime.now(timezone.utc).replace(tzinfo=None) + STUDENT_TOKEN_EXPIRES,
+        "exp": datetime.now(UTC).replace(tzinfo=None) + STUDENT_TOKEN_EXPIRES,
     }
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
     return {"token": token, "expires_in": int(STUDENT_TOKEN_EXPIRES.total_seconds())}

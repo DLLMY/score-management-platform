@@ -1,5 +1,6 @@
 import time
 import threading
+import contextlib
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from utils.logger import log_error, log_info, log_warning
@@ -246,10 +247,8 @@ def init_scheduler(app):
     scheduler.start()
     # 设为守护线程：测试等场景下即使未显式 shutdown，也不会因非守护线程阻塞
     # pytest 进程退出（此前表现为“用例跑完后卡死”）。生产环境主进程常驻，不受影响。
-    try:
+    with contextlib.suppress(Exception):
         scheduler._thread.daemon = True
-    except Exception:
-        pass
     app.scheduler = scheduler
     _ACTIVE_SCHEDULERS.append(scheduler)
     log_info("定时备份任务已启动，每天凌晨2:00执行")
@@ -259,10 +258,8 @@ def init_scheduler(app):
 def shutdown_all_schedulers():
     """关闭所有由 init_scheduler 启动的调度器（供测试 teardown 调用，避免残留线程挂起进程）。"""
     for sched in list(_ACTIVE_SCHEDULERS):
-        try:
+        with contextlib.suppress(Exception):
             sched.shutdown(wait=False)
-        except Exception:
-            pass
     _ACTIVE_SCHEDULERS.clear()
 
 

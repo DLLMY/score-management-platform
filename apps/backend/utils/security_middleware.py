@@ -64,7 +64,7 @@ class SecurityMiddleware:
                 except Exception as e:
                     logger.warning("请求体JSON解析失败: %s", e, exc_info=True)
 
-        return None
+        return
 
 
 def rate_limit_exempt(f):

@@ -102,7 +102,7 @@ def start_sampler(app, interval=SAMPLING_INTERVAL):
     """启动采样守护线程（幂等：重复调用不会起多个线程）。"""
     global _started
     if _started:
-        return
+        return None
     _started = True
 
     def loop():

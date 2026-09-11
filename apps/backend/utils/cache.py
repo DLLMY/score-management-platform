@@ -4,6 +4,7 @@ from functools import wraps
 import time
 import json
 import threading
+import contextlib
 
 import hashlib
 import logging
@@ -181,11 +182,8 @@ def cached(ttl: int = 300, cache: ResponseCache | None = None):
             # 执行函数
             result = func(*args, **kwargs)
             # 存入缓存（注意：结果应该是可序列化的）
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 _cache.set(cache_key, result, ttl)
-            except (TypeError, ValueError):
-                # 如果结果不可序列化，跳过缓存
-                pass
             return result
 
         # 添加缓存控制方法

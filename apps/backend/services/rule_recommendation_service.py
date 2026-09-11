@@ -580,7 +580,7 @@ class RuleRecommendationService:
 
         for record in records:
             category = (
-                getattr(record, "category", None) or record.description or "未分类" or "未分类"
+                getattr(record, "category", None) or record.description or "未分类"
             )
             category_usage[category]["count"] += 1
             category_usage[category]["users"].add(record.student_id)
@@ -686,7 +686,7 @@ class RuleRecommendationService:
 
         for record in records:
             category = (
-                getattr(record, "category", None) or record.description or "未分类" or "未分类"
+                getattr(record, "category", None) or record.description or "未分类"
             )
             category_stats[category]["record_count"] += 1
             category_stats[category]["user_count"] += 1
