@@ -13,7 +13,8 @@
 ## 前端类型 / 结构规范
 - **`tsconfig.json` 全量严格（2026-09-11）：`"strict": true` + `"noImplicitOverride": true`**（原逐项 flag 已删）。新代码 `tsc --noEmit` 必须 0 错误；**禁新增 `any`**；可空/可选显式处理（仅「保持原运行时值不变」处用 `as`，禁 `!` 批量绕过）。
   - ⚠️ **容器签名铁律**：接收「任意组件」的参数写 `React.ComponentType`（默认泛型 `{}`），**禁写 `ComponentType<unknown>`** —— 泛型在 props **逆变位**，`unknown` 不能赋给页面 `{}`。**判据：只有显式标注 `React.FC` 的组件报错 ⇒ 根因在容器。**
-  - ❌ **明确不推**（会改运行时语义）：`noUncheckedIndexedAccess`(133) / `exactOptionalPropertyTypes`(157) / `noPropertyAccessFromIndexSignature`(187)。`noUnusedLocals`(13)/`noUnusedParameters`(7) 与 eslint `no-unused-vars` 重叠 → 走 eslint 而非 tsc。
+  - ✅ `noUnusedLocals` + `noUnusedParameters` **已开**（2026-09-11，清 20 处无用符号）—— **必须在 tsc 侧兜底**：eslint 覆盖不到类私有成员，且 `react/jsx-uses-react` 会把未使用的 `import React` 标记为已用（「与 eslint 重叠所以不推」是错误判据）。未用的公共方法/回调形参一律加 `_` 前缀（删形参会致调用点报「传参错误」）。
+  - ❌ **明确不推**（会改运行时语义）：`noUncheckedIndexedAccess`(133) / `exactOptionalPropertyTypes`(157) / `noPropertyAccessFromIndexSignature`(187)。
   - **每格先 `tsc --noEmit --<flag>` 单独量化再决定**（#112 实测代价 100% 在 `strictFunctionTypes`(18)，其余 5 格全 0）。
 - ⚠️ `@types/react-dom` 是**显式 devDependency**（2026-09-11 补）：缺失时 `react-dom/client` 隐式 any（TS7016）。**改 `package.json` 后必须 `npm install` 同步 lockfile**（本仓 lock 曾与 package.json 脱节 → `npm ci` 失败）。
 - **导入一律走 barrel**（见 skill）：hooks→`'.../hooks'`；components→`'.../components'`（**双层**：根聚合 9 子 barrel）。新增子目录**必须建 `index.ts` 并在根 barrel 聚合**；子 barrel 转发**必须按真实导出形式**，不可统一 `default as X`。
