@@ -37,17 +37,13 @@ export function StatisticsTab({ deps }: { deps: AlgorithmAnalysisDeps }): React.
         <div className='bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700'>
           <div className='text-sm text-gray-500 dark:text-slate-400'>平均行为积分</div>
           <div className='text-3xl font-bold text-blue-600 mt-1'>
-            {statistics.avg_behavior_score != null
-              ? statistics.avg_behavior_score.toFixed(1)
-              : '—'}
+            {statistics.avg_behavior_score != null ? statistics.avg_behavior_score.toFixed(1) : '—'}
           </div>
         </div>
         <div className='bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700'>
           <div className='text-sm text-gray-500 dark:text-slate-400'>平均学业成绩</div>
           <div className='text-3xl font-bold text-green-600 mt-1'>
-            {statistics.avg_academic_score != null
-              ? statistics.avg_academic_score.toFixed(1)
-              : '—'}
+            {statistics.avg_academic_score != null ? statistics.avg_academic_score.toFixed(1) : '—'}
           </div>
         </div>
         <div className='bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700'>

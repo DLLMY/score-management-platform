@@ -44,7 +44,9 @@ export function RuleRecommendTab({ deps }: { deps: AlgorithmAnalysisDeps }): Rea
             <Sparkles className='w-4 h-4 text-purple-500' />
             总推荐数
           </div>
-          <div className='text-3xl font-bold text-purple-600'>{safeSummary.total_recommendations}</div>
+          <div className='text-3xl font-bold text-purple-600'>
+            {safeSummary.total_recommendations}
+          </div>
           <div className='text-xs text-gray-400 mt-1'>智能推荐</div>
         </div>
         <div className='bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700'>
@@ -62,7 +64,9 @@ export function RuleRecommendTab({ deps }: { deps: AlgorithmAnalysisDeps }): Rea
             <Target className='w-4 h-4 text-blue-500' />
             预计影响
           </div>
-          <div className='text-3xl font-bold text-blue-600'>{safeSummary.estimated_total_impact}</div>
+          <div className='text-3xl font-bold text-blue-600'>
+            {safeSummary.estimated_total_impact}
+          </div>
           <div className='text-xs text-gray-400 mt-1'>积分变化</div>
         </div>
       </div>

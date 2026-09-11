@@ -10,9 +10,8 @@ import {
   Shield,
 } from 'lucide-react';
 import { request } from '../services/api';
-import { useStableToast } from '../hooks/useStableToast';
-import { PermissionButton } from '../components';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useStableToast } from '../hooks';
+import { PermissionButton, useConfirm } from '../components';
 
 interface ConsistencyStats {
   classes: { total: number; used_by_users: number; used_by_admins: number; missing: number };

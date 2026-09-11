@@ -63,8 +63,8 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                   intentAnalysis?.summary?.accuracy == null
                     ? 'text-gray-400'
                     : intentAnalysis.summary.accuracy >= 0.9
-                      ? 'text-green-600'
-                      : 'text-yellow-600'
+                    ? 'text-green-600'
+                    : 'text-yellow-600'
                 }`}
               >
                 {intentAnalysis?.summary?.accuracy != null
@@ -79,8 +79,8 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                   performanceAnalysis?.summary?.cache_hit_rate == null
                     ? 'text-gray-400'
                     : performanceAnalysis.summary.cache_hit_rate >= 0.6
-                      ? 'text-green-600'
-                      : 'text-yellow-600'
+                    ? 'text-green-600'
+                    : 'text-yellow-600'
                 }`}
               >
                 {performanceAnalysis?.summary?.cache_hit_rate != null
@@ -134,9 +134,9 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
             {optimizerConfig && (
               <div className='mt-4 p-3 bg-gray-50 rounded-lg'>
                 <p className='text-sm text-gray-600'>
-                  当前配置: TF-IDF特征数={optimizerConfig.intent_classifier?.tfidf_max_features}
-                  , N-gram范围=(1,{' '}
-                  {optimizerConfig.intent_classifier?.tfidf_ngram_range?.[1] || 4}), 缓存TTL=
+                  当前配置: TF-IDF特征数={optimizerConfig.intent_classifier?.tfidf_max_features},
+                  N-gram范围=(1, {optimizerConfig.intent_classifier?.tfidf_ngram_range?.[1] || 4}),
+                  缓存TTL=
                   {optimizerConfig.performance?.cache_ttl}s
                 </p>
               </div>
@@ -157,25 +157,23 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                             intent === 'add'
                               ? 'bg-green-100 text-green-600'
                               : intent === 'deduct'
-                                ? 'bg-red-100 text-red-600'
-                                : 'bg-gray-100 text-gray-600'
+                              ? 'bg-red-100 text-red-600'
+                              : 'bg-gray-100 text-gray-600'
                           }`}
                         >
                           {intent === 'add'
                             ? '加分'
                             : intent === 'deduct'
-                              ? '扣分'
-                              : intent === 'query'
-                                ? '查询'
-                                : intent === 'reset'
-                                  ? '重置'
-                                  : '未知'}
+                            ? '扣分'
+                            : intent === 'query'
+                            ? '查询'
+                            : intent === 'reset'
+                            ? '重置'
+                            : '未知'}
                         </span>
                         <span className='text-sm text-gray-500'>
                           准确率:{' '}
-                          {stats.accuracy != null
-                            ? `${(stats.accuracy * 100).toFixed(1)}%`
-                            : '--'}{' '}
+                          {stats.accuracy != null ? `${(stats.accuracy * 100).toFixed(1)}%` : '--'}{' '}
                           ({stats.correct ?? '--'}/{stats.total ?? '--'})
                         </span>
                       </div>
@@ -185,10 +183,10 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                             stats.accuracy == null
                               ? 'bg-gray-300'
                               : stats.accuracy >= 0.9
-                                ? 'bg-green-500'
-                                : stats.accuracy >= 0.7
-                                  ? 'bg-yellow-500'
-                                  : 'bg-red-500'
+                              ? 'bg-green-500'
+                              : stats.accuracy >= 0.7
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
                           }`}
                           style={{
                             width:
@@ -211,9 +209,10 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
               columns={performanceColumns}
               dataSource={
                 performanceAnalysis?.components
-                  ? Object.entries(performanceAnalysis.components).map(
-                      ([name, stats]) => ({ name, stats })
-                    )
+                  ? Object.entries(performanceAnalysis.components).map(([name, stats]) => ({
+                      name,
+                      stats,
+                    }))
                   : []
               }
               rowKey='name'
@@ -266,8 +265,8 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                       suggestion.priority === 'high'
                         ? 'bg-red-50 border-red-500'
                         : suggestion.priority === 'medium'
-                          ? 'bg-yellow-50 border-yellow-500'
-                          : 'bg-blue-50 border-blue-500'
+                        ? 'bg-yellow-50 border-yellow-500'
+                        : 'bg-blue-50 border-blue-500'
                     }`}
                   >
                     <div className='flex items-start gap-3'>
@@ -276,8 +275,8 @@ export function AnalysisTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                           suggestion.priority === 'high'
                             ? 'text-red-500'
                             : suggestion.priority === 'medium'
-                              ? 'text-yellow-500'
-                              : 'text-blue-500'
+                            ? 'text-yellow-500'
+                            : 'text-blue-500'
                         }`}
                       />
                       <div>

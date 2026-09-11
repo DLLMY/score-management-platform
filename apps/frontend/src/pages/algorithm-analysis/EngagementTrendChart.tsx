@@ -45,11 +45,7 @@ export function EngagementTrendChart({
         </div>
         <div className='text-xs text-gray-400'>共 {series.length} 周有效数据</div>
       </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className='w-full h-auto'
-        preserveAspectRatio='xMidYMid meet'
-      >
+      <svg viewBox={`0 0 ${W} ${H}`} className='w-full h-auto' preserveAspectRatio='xMidYMid meet'>
         {/* 网格线 */}
         {[0, 25, 50, 75, 100].map((g) => {
           const y = yOf(g);

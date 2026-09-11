@@ -296,8 +296,8 @@ export function StudentProfileTab({ deps }: { deps: AlgorithmAnalysisDeps }): Re
                               <div className='flex items-center justify-between text-xs mb-1'>
                                 <span className='text-gray-600 dark:text-slate-300'>{s.name}</span>
                                 <span className={`font-medium ${labelColor}`}>
-                                  {s.level === 'high' ? '高' : s.level === 'medium' ? '中' : '低'}{' '}
-                                  · {s.score.toFixed(2)}
+                                  {s.level === 'high' ? '高' : s.level === 'medium' ? '中' : '低'} ·{' '}
+                                  {s.score.toFixed(2)}
                                 </span>
                               </div>
                               <div className='h-2 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden'>
@@ -419,9 +419,7 @@ export function StudentProfileTab({ deps }: { deps: AlgorithmAnalysisDeps }): Re
                           );
                         })}
                     </div>
-                    {eng.description && (
-                      <p className='text-xs text-gray-400'>{eng.description}</p>
-                    )}
+                    {eng.description && <p className='text-xs text-gray-400'>{eng.description}</p>}
                   </div>
                 );
               })()
@@ -481,7 +479,9 @@ export function StudentProfileTab({ deps }: { deps: AlgorithmAnalysisDeps }): Re
                     净变化 {attr.total_change >= 0 ? '+' : ''}
                     {attr.total_change.toFixed(1)}
                   </span>
-                  <span className='text-gray-400'>置信度 {(attr.confidence * 100).toFixed(0)}%</span>
+                  <span className='text-gray-400'>
+                    置信度 {(attr.confidence * 100).toFixed(0)}%
+                  </span>
                 </div>
                 <div className='space-y-3 mt-4'>
                   {attr.factors.map((f) => {

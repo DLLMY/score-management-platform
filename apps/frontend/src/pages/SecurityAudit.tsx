@@ -8,20 +8,16 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
+import { Shield, RefreshCw, AlertTriangle, XCircle, Info, Filter, Clock } from 'lucide-react';
 import {
-  Shield,
-  RefreshCw,
-  AlertTriangle,
-  XCircle,
-  Info,
-  Filter,
-  Clock,
-} from 'lucide-react';
-import { PermissionButton, DataTable } from '../components';
-import StatusBadge, { StatusBadgeEntry } from '../components/ui/StatusBadge';
+  PermissionButton,
+  DataTable,
+  StatusBadge,
+  StatusBadgeEntry,
+  type ColumnType,
+} from '../components';
+import { fetchJson } from '../hooks';
 import { formatDateTime } from '../utils/format';
-import type { ColumnType } from '../components/data-display/DataTable';
-import { fetchJson } from '../hooks/useApiFetch';
 
 interface AuditLog {
   id: number;
@@ -48,7 +44,7 @@ interface AuditStats {
 // 通用 fetch 封装已收敛至 src/hooks/useApiFetch.ts（fetchJson<T>），本页不再保留抄本。
 
 const SeverityBadge: React.FC<{ severity?: string }> = ({ severity }) => {
-    const map: Record<string, StatusBadgeEntry> = {
+  const map: Record<string, StatusBadgeEntry> = {
     info: { color: 'bg-blue-100 text-blue-600', icon: Info, label: '信息' },
     debug: { color: 'bg-gray-100 text-gray-600', icon: Info, label: '调试' },
     warning: { color: 'bg-orange-100 text-orange-600', icon: AlertTriangle, label: '警告' },
@@ -56,7 +52,13 @@ const SeverityBadge: React.FC<{ severity?: string }> = ({ severity }) => {
     critical: { color: 'bg-red-100 text-red-700', icon: XCircle, label: '严重' },
   };
   return (
-    <StatusBadge status={severity || 'info'} statusMap={map} fallbackKey='info' as='span' size='xs' />
+    <StatusBadge
+      status={severity || 'info'}
+      statusMap={map}
+      fallbackKey='info'
+      as='span'
+      size='xs'
+    />
   );
 };
 
@@ -143,12 +145,9 @@ export const SecurityAuditPage: React.FC = () => {
 
   const severityOptions = ['', 'info', 'debug', 'warning', 'error', 'critical'];
 
-  const handlePageChange = useCallback(
-    (page: number, perPage: number) => {
-      setPagination((prev) => ({ ...prev, page, per_page: perPage }));
-    },
-    []
-  );
+  const handlePageChange = useCallback((page: number, perPage: number) => {
+    setPagination((prev) => ({ ...prev, page, per_page: perPage }));
+  }, []);
 
   const columns = useMemo<ColumnType<AuditLog>[]>(
     () => [

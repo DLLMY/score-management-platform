@@ -91,7 +91,7 @@ export function HistoryPanel({ deps }: { deps: RemoteNotifyDeps }) {
         <div className='overflow-x-auto overflow-y-auto max-h-[400px]'>
           {' '}
           {/* L4: 窄屏横向滚动 */}
-          <DataTable<typeof historyData[number]>
+          <DataTable<(typeof historyData)[number]>
             columns={historyColumns}
             dataSource={historyData}
             loading={isLoadingHistory}

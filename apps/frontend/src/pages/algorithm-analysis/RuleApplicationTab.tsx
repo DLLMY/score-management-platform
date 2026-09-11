@@ -308,9 +308,7 @@ export function RuleApplicationTab({ deps }: { deps: AlgorithmAnalysisDeps }): R
                   className='bg-yellow-50/50 dark:bg-yellow-500/10 rounded-lg p-3'
                 >
                   <div className='flex justify-between items-center'>
-                    <span className='font-medium text-gray-800 dark:text-white'>
-                      {reward.name}
-                    </span>
+                    <span className='font-medium text-gray-800 dark:text-white'>{reward.name}</span>
                     <span className='text-yellow-600 dark:text-yellow-400 font-bold'>
                       {reward.cost}分
                     </span>

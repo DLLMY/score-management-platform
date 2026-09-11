@@ -45,9 +45,7 @@ export function ScheduledPanel({ deps }: { deps: RemoteNotifyDeps }) {
           forceSendLabel='强制发送（跳过上课时间限制，作用于「立即发送」，将记入审计）'
         />
         {scheduledNotifications.length === 0 ? (
-          <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>
-            暂无定时通知
-          </p>
+          <p className='text-sm text-gray-500 dark:text-slate-400 text-center py-4'>暂无定时通知</p>
         ) : (
           <div className='space-y-2 max-h-60 overflow-y-auto'>
             {scheduledNotifications.map((item) => (
@@ -218,27 +216,29 @@ export function ScheduledPanel({ deps }: { deps: RemoteNotifyDeps }) {
                         选择星期
                       </label>
                       <div className='flex flex-wrap gap-2'>
-                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((day, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              const dayNum = index;
-                              setScheduledForm((prev) => ({
-                                ...prev,
-                                repeat_day_of_week: prev.repeat_day_of_week.includes(dayNum)
-                                  ? prev.repeat_day_of_week.filter((d) => d !== dayNum)
-                                  : [...prev.repeat_day_of_week, dayNum].sort(),
-                              }));
-                            }}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              scheduledForm.repeat_day_of_week.includes(index)
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
+                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map(
+                          (day, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                const dayNum = index;
+                                setScheduledForm((prev) => ({
+                                  ...prev,
+                                  repeat_day_of_week: prev.repeat_day_of_week.includes(dayNum)
+                                    ? prev.repeat_day_of_week.filter((d) => d !== dayNum)
+                                    : [...prev.repeat_day_of_week, dayNum].sort(),
+                                }));
+                              }}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                scheduledForm.repeat_day_of_week.includes(index)
+                                  ? 'bg-primary-500 text-white'
+                                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
                   )}

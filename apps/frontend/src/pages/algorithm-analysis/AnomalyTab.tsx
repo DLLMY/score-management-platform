@@ -81,8 +81,7 @@ export function AnomalyTab({ deps }: { deps: AlgorithmAnalysisDeps }): React.Rea
                 const aColor = SEVERITY_COLORS[aSev] || { bg: '', text: '', light: '' };
                 const aDesc = anomaly?.description ?? '';
                 const aScoreNum =
-                  typeof anomaly?.score_change === 'number' &&
-                  Number.isFinite(anomaly.score_change)
+                  typeof anomaly?.score_change === 'number' && Number.isFinite(anomaly.score_change)
                     ? anomaly.score_change
                     : 0;
                 const aDetected = anomaly?.detected_at ?? '';
@@ -106,11 +105,7 @@ export function AnomalyTab({ deps }: { deps: AlgorithmAnalysisDeps }): React.Rea
                           aColor.light ?? ''
                         } ${aColor.text ?? ''}`}
                       >
-                        {aSev === 'high'
-                          ? '高严重度'
-                          : aSev === 'medium'
-                          ? '中严重度'
-                          : '低严重度'}
+                        {aSev === 'high' ? '高严重度' : aSev === 'medium' ? '中严重度' : '低严重度'}
                       </span>
                     </div>
 

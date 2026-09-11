@@ -101,7 +101,9 @@ export function PredictionTab({ deps }: { deps: AlgorithmAnalysisDeps }): React.
                       }`}
                     />
                     <div>
-                      <div className='font-medium text-gray-800 dark:text-white'>{student.name}</div>
+                      <div className='font-medium text-gray-800 dark:text-white'>
+                        {student.name}
+                      </div>
                       <div className='text-sm text-gray-500 dark:text-slate-400'>
                         {student.class_name}
                       </div>

@@ -86,9 +86,7 @@ export function StatisticsTab({ deps }: { deps: NLPDeps }): React.ReactElement {
               <div>
                 <div className='flex justify-between text-sm mb-1'>
                   <span className='text-gray-600'>召回率</span>
-                  <span className='font-medium'>
-                    {(modelEvaluation.recall * 100).toFixed(1)}%
-                  </span>
+                  <span className='font-medium'>{(modelEvaluation.recall * 100).toFixed(1)}%</span>
                 </div>
                 <div className='w-full bg-gray-200 rounded-full h-2'>
                   <div
@@ -113,8 +111,8 @@ export function StatisticsTab({ deps }: { deps: NLPDeps }): React.ReactElement {
               </div>
               <div className='pt-4 border-t border-gray-100'>
                 <p className='text-sm text-gray-500'>
-                  样本总数: {modelEvaluation.total_samples} | 正确:{' '}
-                  {modelEvaluation.correct_count} | 错误: {modelEvaluation.incorrect_count}
+                  样本总数: {modelEvaluation.total_samples} | 正确: {modelEvaluation.correct_count}{' '}
+                  | 错误: {modelEvaluation.incorrect_count}
                 </p>
               </div>
             </div>

@@ -16,14 +16,20 @@ export function CorrectionModal({ deps }: { deps: NLPDeps }): React.ReactElement
   } = deps;
 
   // #912 手动修正接管学生：弹窗内加载全量活跃学生，下拉选择真实学生覆盖 NLP 误识
-  const [students, setStudents] = useState<Array<{ id: number; name: string; class_name?: string }>>([]);
+  const [students, setStudents] = useState<
+    Array<{ id: number; name: string; class_name?: string }>
+  >([]);
   useEffect(() => {
     let cancelled = false;
     api.users
       .getAll({ per_page: 200, skipCache: true } as never)
       .then((res: unknown) => {
         if (cancelled) return;
-        const list = (res as { data?: unknown[] })?.data || (res as { items?: unknown[] })?.items || (res as unknown[]) || [];
+        const list =
+          (res as { data?: unknown[] })?.data ||
+          (res as { items?: unknown[] })?.items ||
+          (res as unknown[]) ||
+          [];
         const arr = (Array.isArray(list) ? list : []).map((u) => {
           const o = u as { id: number; name: string; class_name?: string };
           return { id: o.id, name: o.name, class_name: o.class_name };
@@ -72,7 +78,9 @@ export function CorrectionModal({ deps }: { deps: NLPDeps }): React.ReactElement
               onChange={(e) => {
                 const v = e.target.value;
                 // 允许自由输入（按名兜底）；若匹配下拉项则写入 user_id
-                const m = students.find((s) => `${s.name}（${s.class_name || ''}）` === v || s.name === v);
+                const m = students.find(
+                  (s) => `${s.name}（${s.class_name || ''}）` === v || s.name === v
+                );
                 setManualCorrection({
                   ...manualCorrection,
                   user_id: m?.id,
@@ -90,7 +98,8 @@ export function CorrectionModal({ deps }: { deps: NLPDeps }): React.ReactElement
             {selectedStudent && (
               <p className='mt-1 text-xs text-gray-500'>
                 已选：{selectedStudent.name}
-                {selectedStudent.class_name ? ` · ${selectedStudent.class_name}` : ''}（id={selectedStudent.id}）
+                {selectedStudent.class_name ? ` · ${selectedStudent.class_name}` : ''}（id=
+                {selectedStudent.id}）
               </p>
             )}
           </div>

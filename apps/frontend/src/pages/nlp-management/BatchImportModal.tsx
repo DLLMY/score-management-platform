@@ -65,9 +65,7 @@ export function BatchImportModal({ deps }: { deps: NLPDeps }): React.ReactElemen
 
           <div>
             <div className='flex items-center justify-between mb-2'>
-              <label className='block text-sm font-medium text-gray-700'>
-                直接输入JSON数据
-              </label>
+              <label className='block text-sm font-medium text-gray-700'>直接输入JSON数据</label>
               <button
                 onClick={handleDownloadTemplate}
                 className='text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1'

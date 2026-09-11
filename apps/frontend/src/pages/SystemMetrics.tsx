@@ -27,7 +27,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { PermissionButton, EmptyState } from '../components';
-import { fetchJson } from '../hooks/useApiFetch';
+import { fetchJson } from '../hooks';
 
 interface MetricRow {
   id: number;

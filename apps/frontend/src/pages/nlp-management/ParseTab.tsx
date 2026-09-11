@@ -80,22 +80,20 @@ export function ParseTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                   parseResult.intent === 'add'
                     ? 'text-green-600'
                     : parseResult.intent === 'deduct'
-                      ? 'text-red-600'
-                      : 'text-gray-500'
+                    ? 'text-red-600'
+                    : 'text-gray-500'
                 }`}
               >
                 {parseResult.intent === 'add'
                   ? '加分'
                   : parseResult.intent === 'deduct'
-                    ? '扣分'
-                    : '未知'}
+                  ? '扣分'
+                  : '未知'}
               </p>
             </div>
             <div className='p-4 bg-gray-50 rounded-lg'>
               <p className='text-sm text-gray-500 mb-1'>置信度</p>
-              <p className='text-lg font-semibold text-blue-600'>
-                {parseResult.confidence * 100}%
-              </p>
+              <p className='text-lg font-semibold text-blue-600'>{parseResult.confidence * 100}%</p>
             </div>
           </div>
 
@@ -113,12 +111,11 @@ export function ParseTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                     key={index}
                     onClick={() => setSelectedRuleId(rule.rule_id || index)}
                     className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                      rule.rule_id === selectedRuleId ||
-                      (selectedRuleId === null && index === 0)
+                      rule.rule_id === selectedRuleId || (selectedRuleId === null && index === 0)
                         ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
                         : rule.score_type === 'add'
-                          ? 'border-green-200 bg-green-50 hover:border-green-300'
-                          : 'border-red-200 bg-red-50 hover:border-red-300'
+                        ? 'border-green-200 bg-green-50 hover:border-green-300'
+                        : 'border-red-200 bg-red-50 hover:border-red-300'
                     }`}
                   >
                     <div className='flex items-center gap-3'>
@@ -218,8 +215,7 @@ export function ParseTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                             </div>
                             <p className='text-sm text-gray-500'>
                               规则 #{suggestion.rule_id} · 建议
-                              {suggestion.intent === 'add' ? '加' : '扣'}分{' '}
-                              {suggestion.score_value}
+                              {suggestion.intent === 'add' ? '加' : '扣'}分 {suggestion.score_value}
                             </p>
                           </div>
                           <PermissionButton
@@ -242,9 +238,7 @@ export function ParseTab({ deps }: { deps: NLPDeps }): React.ReactElement {
 
           {suggestedRules.length > 0 && !parseResult.matched_rules.length && (
             <div className='mb-6'>
-              <h3 className='text-sm font-medium text-gray-600 mb-3'>
-                相似规则推荐（库内匹配）
-              </h3>
+              <h3 className='text-sm font-medium text-gray-600 mb-3'>相似规则推荐（库内匹配）</h3>
               <div className='space-y-2'>
                 {suggestedRules.map((rule) => (
                   <div
@@ -263,8 +257,7 @@ export function ParseTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                   >
                     <p className='font-medium text-gray-800'>{rule.behavior_description}</p>
                     <p className='text-sm text-gray-500'>
-                      关键词: {rule.behavior_keyword} | 分数:{' '}
-                      {rule.score_type === 'add' ? '+' : ''}
+                      关键词: {rule.behavior_keyword} | 分数: {rule.score_type === 'add' ? '+' : ''}
                       {rule.score_value}
                     </p>
                   </div>

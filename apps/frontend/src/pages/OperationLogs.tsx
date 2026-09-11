@@ -1,17 +1,8 @@
 import { useState, useCallback, useMemo, ChangeEvent } from 'react';
-import {
-  Clock,
-  Filter,
-  RefreshCw,
-  User,
-  Database,
-  Settings,
-  Activity,
-} from 'lucide-react';
+import { Clock, Filter, RefreshCw, User, Database, Settings, Activity } from 'lucide-react';
 import api from '../services/api';
 import { formatDateTime } from '../utils/format';
-import { PermissionButton, DataTable } from '../components';
-import type { ColumnType } from '../components/data-display/DataTable';
+import { PermissionButton, DataTable, type ColumnType } from '../components';
 import { useDebouncedValue, useTableUrlState, useListFetch } from '../hooks';
 import type { ListFetchParams } from '../hooks';
 
@@ -57,21 +48,33 @@ const OperationLogs: React.FC = () => {
       : {}),
   };
 
-  const { items: logs, total, loading, error, refetch } = useListFetch<OperationLog>({
+  const {
+    items: logs,
+    total,
+    loading,
+    error,
+    refetch,
+  } = useListFetch<OperationLog>({
     fetcher: (p) =>
       api.operationLogs.getAll(p).then((r) => ({ items: r.data ?? [], total: r.total ?? 0 })),
     params,
   });
 
-  const handleFilterChange = useCallback((key: keyof Filters, value: string): void => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
-  }, [setPage]);
+  const handleFilterChange = useCallback(
+    (key: keyof Filters, value: string): void => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+      setPage(1);
+    },
+    [setPage]
+  );
 
-  const handlePageChange = useCallback((newPage: number, newPageSize: number): void => {
-    setPage(newPage);
-    if (newPageSize !== pageSize) setPageSize(newPageSize);
-  }, [pageSize, setPage, setPageSize]);
+  const handlePageChange = useCallback(
+    (newPage: number, newPageSize: number): void => {
+      setPage(newPage);
+      if (newPageSize !== pageSize) setPageSize(newPageSize);
+    },
+    [pageSize, setPage, setPageSize]
+  );
 
   const getOperationIcon = useMemo(() => {
     return (type: string) => {
@@ -164,9 +167,7 @@ const OperationLogs: React.FC = () => {
         width: 180,
         sorter: true,
         render: (value) => (
-          <span className='text-sm text-gray-500'>
-            {formatDateTime(value as string)}
-          </span>
+          <span className='text-sm text-gray-500'>{formatDateTime(value as string)}</span>
         ),
       },
     ],

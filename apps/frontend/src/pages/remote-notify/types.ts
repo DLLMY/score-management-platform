@@ -2,8 +2,13 @@
 // 拆分模式与 NLPManagement 一致：主壳 RemoteNotify.tsx 保留全部 state/loader/useMemo，
 // 组装强类型 deps 透传给各子模块；子模块仅负责渲染并调用 deps 中的回调，行为逐字节等价。
 import type { Dispatch, SetStateAction } from 'react';
-import type { NotifyTemplate, ScheduledNotify, NotifyHistory, RemoteNotifyPreview } from '../../services/api';
-import type { ColumnType } from '../../components/data-display/DataTable';
+import type {
+  NotifyTemplate,
+  ScheduledNotify,
+  NotifyHistory,
+  RemoteNotifyPreview,
+} from '../../services/api';
+import type { ColumnType } from '../../components';
 import { useClassNowStatus } from '../../hooks';
 
 // ---------- 接口（原 RemoteNotify.tsx 内联定义迁移） ----------

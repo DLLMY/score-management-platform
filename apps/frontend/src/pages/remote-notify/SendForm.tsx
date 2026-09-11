@@ -235,9 +235,7 @@ export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
                 <input
                   type='text'
                   value={scoreForm.device_id}
-                  onChange={(e) =>
-                    setScoreForm((prev) => ({ ...prev, device_id: e.target.value }))
-                  }
+                  onChange={(e) => setScoreForm((prev) => ({ ...prev, device_id: e.target.value }))}
                   placeholder='设备ID（不填则广播）'
                   className='w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-slate-600/80 bg-white dark:bg-slate-700/50 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all'
                 />
@@ -482,11 +480,7 @@ export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
           </div>
         )}
 
-        <ClassStatusBadge
-          state={classNow}
-          forceSend={forceSend}
-          onForceSendChange={setForceSend}
-        />
+        <ClassStatusBadge state={classNow} forceSend={forceSend} onForceSendChange={setForceSend} />
 
         <div className='flex gap-3 pt-2'>
           <PermissionButton
@@ -553,8 +547,8 @@ export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
                       设备总数{' '}
                       <span className='font-semibold'>{previewConfirm.preview.total_devices}</span>{' '}
                       台 · 当前在线{' '}
-                      <span className='font-semibold'>{previewConfirm.preview.online_count}</span> 台
-                      （{previewConfirm.preview.cutoff_minutes} 分钟内心跳）
+                      <span className='font-semibold'>{previewConfirm.preview.online_count}</span>{' '}
+                      台 （{previewConfirm.preview.cutoff_minutes} 分钟内心跳）
                     </p>
                     {previewConfirm.preview.online_count > 0 &&
                       previewConfirm.preview.online_sample.length > 0 && (

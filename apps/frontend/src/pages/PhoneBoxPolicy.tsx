@@ -2,13 +2,18 @@ import { getErrMsg } from '../utils/getErrMsg';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Clock, Save, Zap, XCircle, Smartphone, AlertCircle } from 'lucide-react';
 import api, { PhoneBoxPolicy as PhoneBoxPolicyType, UnlockWindow } from '../services/api';
-import { Button, Card, Input, Select, Switch, Badge } from '../components';
-import { PermissionGuard } from '../components/PermissionGuard';
-import { useStableToast } from '../hooks/useStableToast';
-import { useSubmitGuard } from '../hooks/useSubmitGuard';
-import { usePermissions } from '../hooks/usePermissions';
+import {
+  Button,
+  Card,
+  Input,
+  Select,
+  Switch,
+  Badge,
+  PermissionGuard,
+  WorkbenchBreadcrumb,
+} from '../components';
 import { formatHourMinute } from '../utils/format';
-import WorkbenchBreadcrumb from '../components/workbench/WorkbenchBreadcrumb';
+import { usePermissions, useStableToast, useSubmitGuard } from '../hooks';
 
 const weekDays = [
   { value: '-1', label: '每天' },
@@ -232,11 +237,19 @@ const PhoneBoxPolicyInner: React.FC = () => {
                   className='w-32'
                 />
               </div>
-              <Button variant='primary' onClick={() => runSubmit(handleOverride)} disabled={overriding || submitting}>
+              <Button
+                variant='primary'
+                onClick={() => runSubmit(handleOverride)}
+                disabled={overriding || submitting}
+              >
                 <Zap className='w-4 h-4 mr-1' /> 立即允许本班开箱
               </Button>
               {policy?.override_active && (
-                <Button variant='outline' onClick={() => runSubmit(handleCancelOverride)} disabled={submitting}>
+                <Button
+                  variant='outline'
+                  onClick={() => runSubmit(handleCancelOverride)}
+                  disabled={submitting}
+                >
                   <XCircle className='w-4 h-4 mr-1' /> 取消放行
                 </Button>
               )}
@@ -331,7 +344,11 @@ const PhoneBoxPolicyInner: React.FC = () => {
             )}
 
             <div className='mt-4'>
-              <Button variant='primary' onClick={() => runSubmit(handleSaveBase)} disabled={saving || submitting}>
+              <Button
+                variant='primary'
+                onClick={() => runSubmit(handleSaveBase)}
+                disabled={saving || submitting}
+              >
                 <Save className='w-4 h-4 mr-1' /> 保存总开关与时段
               </Button>
             </div>

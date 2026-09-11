@@ -190,7 +190,11 @@ export function TrainingTab({ deps }: { deps: NLPDeps }): React.ReactElement {
               rowClassName={(result) =>
                 trainAllResult?.best_algorithm === result.algorithm ? 'bg-green-50' : ''
               }
-              empty={{ icon: 'data', title: '暂无对比数据', description: '训练或评估后即可查看算法对比' }}
+              empty={{
+                icon: 'data',
+                title: '暂无对比数据',
+                description: '训练或评估后即可查看算法对比',
+              }}
             />
           </div>
         )}
@@ -217,19 +221,19 @@ export function TrainingTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                       record.training_status === 'completed'
                         ? 'bg-green-100 text-green-600'
                         : record.training_status === 'failed'
-                          ? 'bg-red-100 text-red-600'
-                          : record.training_status
-                            ? 'bg-yellow-100 text-yellow-600'
-                            : 'bg-gray-100 text-gray-500'
+                        ? 'bg-red-100 text-red-600'
+                        : record.training_status
+                        ? 'bg-yellow-100 text-yellow-600'
+                        : 'bg-gray-100 text-gray-500'
                     }`}
                   >
                     {record.training_status === 'completed'
                       ? '已完成'
                       : record.training_status === 'failed'
-                        ? '失败'
-                        : record.training_status
-                          ? '进行中'
-                          : '未知'}
+                      ? '失败'
+                      : record.training_status
+                      ? '进行中'
+                      : '未知'}
                   </span>
                 </div>
               </div>
@@ -240,8 +244,7 @@ export function TrainingTab({ deps }: { deps: NLPDeps }): React.ReactElement {
                   {record.accuracy != null ? `${(record.accuracy * 100).toFixed(1)}%` : 'N/A'}
                 </span>
                 <span>
-                  F1:{' '}
-                  {record.f1_score != null ? (record.f1_score * 100).toFixed(1) + '%' : 'N/A'}
+                  F1: {record.f1_score != null ? (record.f1_score * 100).toFixed(1) + '%' : 'N/A'}
                 </span>
               </div>
             </div>

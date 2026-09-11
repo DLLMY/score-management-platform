@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Trophy, Users, GraduationCap, RefreshCw } from 'lucide-react';
 import api, { StudentRankItem, ClassRankItem } from '../services/api';
-import { DataTable } from '../components';
-import type { ColumnType } from '../components/data-display/DataTable';
+import { DataTable, type ColumnType } from '../components';
 
 type TabKey = 'class' | 'student';
 

@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { ColumnType } from '../../components/data-display/DataTable';
+import type { ColumnType } from '../../components';
 
 // —— 业务接口定义（原 NLPManagement.tsx 内联，拆分后统一收敛到此）——
 export interface ParseResult {

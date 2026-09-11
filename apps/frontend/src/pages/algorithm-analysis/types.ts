@@ -16,7 +16,7 @@ import type {
   EngagementTrendResult,
   BatchAttributionResult,
 } from '../../types';
-import type { ColumnType } from '../../components/data-display/DataTable';
+import type { ColumnType } from '../../components';
 
 export interface ModelTrainingState {
   ruleRecommend?: { status: string; message: string; model_info?: unknown };
