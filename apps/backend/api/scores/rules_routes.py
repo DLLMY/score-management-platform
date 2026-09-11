@@ -73,6 +73,70 @@ rule_list_response = ns_rules.model(
 )
 
 
+def _validate_rule_create_payload(data):
+    """校验创建积分规则的请求体（含分类存在性），返回错误信息列表。"""
+    errors = []
+    _validate_rule_name(data, errors)
+    _validate_rule_score(data, errors)
+    _validate_rule_category(data, errors)
+    _validate_rule_limits(data, errors)
+    return errors
+
+
+def _validate_rule_name(data, errors):
+    # 规则名称必填校验
+    if not data.get("name") or not data.get("name").strip():
+        errors.append("规则名称不能为空")
+    # 规则名称长度校验
+    if data.get("name") and len(data.get("name")) > ValidationRules.NAME_MAX_LEN:
+        errors.append(f"规则名称长度不能超过{ValidationRules.NAME_MAX_LEN}个字符")
+    # 描述长度校验
+    description = data.get("description")
+    if description and len(description) > ValidationRules.DESCRIPTION_MAX_LEN:
+        errors.append(f"规则描述长度不能超过{ValidationRules.DESCRIPTION_MAX_LEN}个字符")
+
+
+def _validate_rule_score(data, errors):
+    # 分数校验
+    score = data.get("score")
+    if score is None:
+        errors.append("分数不能为空")
+    else:
+        is_valid, error_msg = validate_score(score)
+        if not is_valid:
+            errors.append(f"分数: {error_msg}")
+
+
+def _validate_rule_category(data, errors):
+    # 分类ID校验
+    category_id = data.get("category_id")
+    if category_id is not None:
+        is_valid, error_msg = validate_id(category_id)
+        if not is_valid:
+            errors.append(f"分类ID: {error_msg}")
+        else:
+            # 检查分类是否存在
+            category = get_by_id(ScoreCategory, category_id)
+            if not category:
+                errors.append(f"分类ID {category_id} 不存在")
+
+
+def _validate_rule_limits(data, errors):
+    # 每日上限校验（兼容旧字段 max_per_day）
+    daily_limit = data.get("daily_limit", data.get("max_per_day", 0))
+    if daily_limit is not None:
+        is_valid, _error_msg = validate_positive_int(daily_limit)
+        if not is_valid and daily_limit != 0:
+            errors.append("每日上限必须为正整数或0")
+    # 最小间隔校验
+    min_interval = data.get("min_interval", 0)
+    if min_interval is not None:
+        is_valid, _error_msg = validate_positive_int(min_interval)
+        if not is_valid and min_interval != 0:
+            errors.append("最小间隔必须为正整数或0")
+
+
+
 @ns_rules.route("/")
 class RuleList(Resource):
     @ns_rules.doc(
@@ -124,48 +188,7 @@ class RuleList(Resource):
         """
         data = ns_rules.payload
         # 参数校验
-        errors = []
-        # 规则名称必填校验
-        if not data.get("name") or not data.get("name").strip():
-            errors.append("规则名称不能为空")
-        # 规则名称长度校验
-        if data.get("name") and len(data.get("name")) > ValidationRules.NAME_MAX_LEN:
-            errors.append(f"规则名称长度不能超过{ValidationRules.NAME_MAX_LEN}个字符")
-        # 描述长度校验
-        description = data.get("description")
-        if description and len(description) > ValidationRules.DESCRIPTION_MAX_LEN:
-            errors.append(f"规则描述长度不能超过{ValidationRules.DESCRIPTION_MAX_LEN}个字符")
-        # 分数校验
-        score = data.get("score")
-        if score is None:
-            errors.append("分数不能为空")
-        else:
-            is_valid, error_msg = validate_score(score)
-            if not is_valid:
-                errors.append(f"分数: {error_msg}")
-        # 分类ID校验
-        category_id = data.get("category_id")
-        if category_id is not None:
-            is_valid, error_msg = validate_id(category_id)
-            if not is_valid:
-                errors.append(f"分类ID: {error_msg}")
-            else:
-                # 检查分类是否存在
-                category = get_by_id(ScoreCategory, category_id)
-                if not category:
-                    errors.append(f"分类ID {category_id} 不存在")
-        # 每日上限校验（兼容旧字段 max_per_day）
-        daily_limit = data.get("daily_limit", data.get("max_per_day", 0))
-        if daily_limit is not None:
-            is_valid, error_msg = validate_positive_int(daily_limit)
-            if not is_valid and daily_limit != 0:
-                errors.append("每日上限必须为正整数或0")
-        # 最小间隔校验
-        min_interval = data.get("min_interval", 0)
-        if min_interval is not None:
-            is_valid, error_msg = validate_positive_int(min_interval)
-            if not is_valid and min_interval != 0:
-                errors.append("最小间隔必须为正整数或0")
+        errors = _validate_rule_create_payload(data)
         if errors:
             return validation_error_response(errors)
         rule = create_rule(data)

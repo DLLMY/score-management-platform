@@ -769,65 +769,55 @@ class DeviceRemoteControl(Resource):
             return APIResponse.bad_request(message="设备不在线，无法执行远程操作")
 
         if action == "restart":
-            restart_topic = "phonebox/control/restart"
-            result = publish_mqtt(restart_topic, '{"command": "restart"}')
-            if result:
-                return APIResponse.success(
-                    message="重启指令已发送", data={"action": action, "device_id": device.device_id}
-                )
-            return APIResponse.server_error(message="MQTT发送失败，请检查连接")
+            return _send_device_restart(device, action)
 
-        if action == "unlock_a":
-            # 智能开锁：增加重试机制，确保指令能被设备接收
-            # ESP32设备只在IDLE状态时响应A箱开锁指令
-            # 通过多次发送指令，覆盖设备状态转换的时间窗口
-
-            def smart_unlock_a():
-                unlock_topic = "phonebox/unlock/A"
-
-                # 多次发送开锁指令，确保设备在可接收状态时能收到
-                for attempt in range(3):
-                    publish_mqtt(unlock_topic, "")
-                    if attempt < 2:
-                        time.sleep(0.5)  # 等待500ms后重试
-
-            # 在后台线程执行智能开锁流程，避免阻塞响应
-            thread = threading.Thread(target=smart_unlock_a)
-            thread.daemon = True
-            thread.start()
-
-            return APIResponse.success(
-                message="A箱智能开锁指令已发送（后台执行，共发送3次）",
-                data={"action": action, "device_id": device.device_id},
-            )
-
-        if action == "unlock_b":
-            # 智能开锁：增加重试机制，确保指令能被设备接收
-            # ESP32设备只在IDLE或SHOWING_CARD状态时响应开锁指令
-            # 通过多次发送指令，覆盖设备状态转换的时间窗口
-
-            def smart_unlock_b():
-                unlock_topic = "phonebox/unlock/B"
-                payload = '{"result": "true", "reason": "manual", "current_score": 999}'
-
-                # 多次发送开锁指令，确保设备在可接收状态时能收到
-                # 发送间隔：500ms，共发送3次
-                for attempt in range(3):
-                    publish_mqtt(unlock_topic, payload)
-                    if attempt < 2:
-                        time.sleep(0.5)  # 等待500ms后重试
-
-            # 在后台线程执行智能开锁流程，避免阻塞响应
-            thread = threading.Thread(target=smart_unlock_b)
-            thread.daemon = True
-            thread.start()
-
-            return APIResponse.success(
-                message="B箱智能开锁指令已发送（后台执行，共发送3次）",
-                data={"action": action, "device_id": device.device_id},
-            )
+        if action in _UNLOCK_SPECS:
+            return _start_smart_unlock(device, action)
 
         return APIResponse.bad_request(message=f"不支持的操作类型: {action}")
+
+
+# 开锁指令：action -> (MQTT 主题, 载荷)
+_UNLOCK_SPECS = {
+    "unlock_a": ("phonebox/unlock/A", ""),
+    "unlock_b": (
+        "phonebox/unlock/B",
+        '{"result": "true", "reason": "manual", "current_score": 999}',
+    ),
+}
+
+
+def _send_device_restart(device, action):
+    """发送重启指令并返回对应的响应。"""
+    restart_topic = "phonebox/control/restart"
+    result = publish_mqtt(restart_topic, '{"command": "restart"}')
+    if result:
+        return APIResponse.success(
+            message="重启指令已发送", data={"action": action, "device_id": device.device_id}
+        )
+    return APIResponse.server_error(message="MQTT发送失败，请检查连接")
+
+
+def _publish_unlock_retry(topic, payload):
+    """多次发送开锁指令，确保设备在可接收状态时能收到。"""
+    for attempt in range(3):
+        publish_mqtt(topic, payload)
+        if attempt < 2:
+            time.sleep(0.5)  # 等待500ms后重试
+
+
+def _start_smart_unlock(device, action):
+    """在后台线程执行智能开锁流程，避免阻塞响应。"""
+    unlock_topic, payload = _UNLOCK_SPECS[action]
+    thread = threading.Thread(target=_publish_unlock_retry, args=(unlock_topic, payload))
+    thread.daemon = True
+    thread.start()
+
+    box = "A" if action == "unlock_a" else "B"
+    return APIResponse.success(
+        message=f"{box}箱智能开锁指令已发送（后台执行，共发送3次）",
+        data={"action": action, "device_id": device.device_id},
+    )
 
 
 @ns_devices.route("/advanced-stats")

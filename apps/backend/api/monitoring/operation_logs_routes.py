@@ -10,6 +10,25 @@ from services.operation_log_service import get_stats
 ns_operation_logs = Namespace("operation-logs", description="操作日志相关操作")
 
 
+def _apply_operation_log_filters(query, operation_type, target_type, start_time, end_time, operator, device_id, event_type):
+    """按查询参数对 OperationLog 查询应用统一过滤条件（保持原语义）。"""
+    if operation_type:
+        query = query.filter(OperationLog.operation_type == operation_type)
+    if target_type:
+        query = query.filter(OperationLog.target_type == target_type)
+    if start_time:
+        query = query.filter(OperationLog.created_at >= datetime.fromisoformat(start_time))
+    if end_time:
+        query = query.filter(OperationLog.created_at <= datetime.fromisoformat(end_time))
+    if operator:
+        query = query.filter(OperationLog.operator.ilike(f"%{operator}%"))
+    if device_id:
+        query = query.filter(OperationLog.description.ilike(f"%{device_id}%"))
+    if event_type:
+        query = query.filter(OperationLog.description.ilike(f"%{event_type}%"))
+    return query
+
+
 @ns_operation_logs.route("/")
 class OperationLogList(Resource):
 
@@ -28,21 +47,11 @@ class OperationLogList(Resource):
         page, per_page = get_pagination(default=20)
 
         query = OperationLog.query.order_by(OperationLog.created_at.desc())
+        query = _apply_operation_log_filters(
+            query, operation_type, target_type, start_time, end_time,
+            operator, device_id, event_type,
+        )
 
-        if operation_type:
-            query = query.filter(OperationLog.operation_type == operation_type)
-        if target_type:
-            query = query.filter(OperationLog.target_type == target_type)
-        if start_time:
-            query = query.filter(OperationLog.created_at >= datetime.fromisoformat(start_time))
-        if end_time:
-            query = query.filter(OperationLog.created_at <= datetime.fromisoformat(end_time))
-        if operator:
-            query = query.filter(OperationLog.operator.ilike(f"%{operator}%"))
-        if device_id:
-            query = query.filter(OperationLog.description.ilike(f"%{device_id}%"))
-        if event_type:
-            query = query.filter(OperationLog.description.ilike(f"%{event_type}%"))
         if result:
             if result == "success":
                 query = query.filter(OperationLog.description.ilike("%成功%"))

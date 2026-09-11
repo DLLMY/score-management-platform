@@ -108,100 +108,130 @@ class ExportData(Resource):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         try:
             if export_type == "users":
-                # S3 修复: 班主任仅可导出自己班级（原全校含电话/卡号 → 越权）
-                _cn, _ci = _admin_scope()
-                users_q = User.query
-                if _cn is not None:
-                    users_q = users_q.filter(User.class_name.in_(_cn))
-                users = users_q.all()
-                user_data = [u.to_dict(EXPORT_USER_FIELDS) for u in users]
-                if export_format == "excel":
-                    output = export_service.export_users_to_excel(user_data)
-                    filename = f"users_{timestamp}.xlsx"
-                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                else:
-                    output = export_service.export_users_to_pdf(user_data, "学生列表报告")
-                    filename = f"users_{timestamp}.pdf"
-                    mimetype = "application/pdf"
+                output, filename, mimetype = _export_users_data(export_format, timestamp)
             elif export_type == "rules":
-                rules = ScoreRule.query.all()
-                rule_data = [r.to_dict(RULE_EXPORT_FIELDS) for r in rules]
-                if export_format == "excel":
-                    output = export_service.export_rules_to_excel(rule_data)
-                    filename = f"rules_{timestamp}.xlsx"
-                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                else:
-                    output = export_service.export_rules_to_pdf(rule_data, "积分规则报告")
-                    filename = f"rules_{timestamp}.pdf"
-                    mimetype = "application/pdf"
+                output, filename, mimetype = _export_rules_data(export_format, timestamp)
             elif export_type == "devices":
-                # S3 修复: 班主任仅可导出本班设备
-                _cn, _ci = _admin_scope()
-                devices_q = Device.query
-                if _ci is not None:
-                    devices_q = devices_q.filter(Device.class_info_id.in_(_ci))
-                devices = devices_q.all()
-                device_data = [
-                    {
-                        "id": d.id,
-                        "device_id": d.device_id,
-                        "name": d.name,
-                        "status": d.status,
-                        "is_online": is_device_online(d),
-                        "wifi_signal": d.wifi_signal,
-                        "class_name": d.class_info.name if d.class_info else None,
-                        "admin_name": d.admin.real_name if d.admin else None,
-                        "created_at": d.created_at.isoformat() if d.created_at else None,
-                    }
-                    for d in devices
-                ]
-                if export_format == "excel":
-                    output = export_service.export_devices_to_excel(device_data)
-                    filename = f"devices_{timestamp}.xlsx"
-                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                else:
-                    output = export_service.export_devices_to_pdf(device_data, "设备列表报告")
-                    filename = f"devices_{timestamp}.pdf"
-                    mimetype = "application/pdf"
+                output, filename, mimetype = _export_devices_data(export_format, timestamp)
             elif export_type == "records":
-                # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
-                # S3 修复: 班主任仅可导出自己班级的积分记录
-                _cn, _ci = _admin_scope()
-                records_q = ScoreRecord.query.options(
-                    joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule)
-                )
-                if _cn is not None:
-                    records_q = records_q.join(User, ScoreRecord.student_id == User.id).filter(
-                        User.class_name.in_(_cn)
-                    )
-                records = records_q.order_by(ScoreRecord.created_at.desc()).all()
-                record_data = [r.to_dict(RECORD_EXPORT_FIELDS) for r in records]
-                if export_format == "excel":
-                    output = export_service.export_records_to_excel(record_data)
-                    filename = f"records_{timestamp}.xlsx"
-                    mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                else:
-                    output = export_service.export_records_to_pdf(record_data, "积分记录报告")
-                    filename = f"records_{timestamp}.pdf"
-                    mimetype = "application/pdf"
+                output, filename, mimetype = _export_records_data(export_format, timestamp)
             elif export_type == "summary":
-                users_count = User.query.count()
-                rules_count = ScoreRule.query.count()
-                devices_count = Device.query.count()
-                online_devices = Device.query.filter(
-                    Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
-                ).count()
-                records_count = ScoreRecord.query.count()
-                output = export_service.export_summary_report(
-                    users_count, rules_count, devices_count, online_devices, records_count
-                )
-                filename = f"summary_{timestamp}.pdf"
-                mimetype = "application/pdf"
+                output, filename, mimetype = _export_summary_data(timestamp)
             return build_attachment_response(output, filename, mimetype)
         except Exception:
             # S8 修复: 不直返异常细节（泄露路径/实现）
             logger.exception("[Export] 导出失败")
             return APIResponse.server_error(message="导出失败，请稍后重试或联系管理员")
+
+
+def _export_users_data(export_format, timestamp):
+    """users 导出（S3 班级隔离）：返回 (output, filename, mimetype)。"""
+    # S3 修复: 班主任仅可导出自己班级（原全校含电话/卡号 → 越权）
+    _cn, _ci = _admin_scope()
+    users_q = User.query
+    if _cn is not None:
+        users_q = users_q.filter(User.class_name.in_(_cn))
+    users = users_q.all()
+    user_data = [u.to_dict(EXPORT_USER_FIELDS) for u in users]
+    if export_format == "excel":
+        output = export_service.export_users_to_excel(user_data)
+        filename = f"users_{timestamp}.xlsx"
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        output = export_service.export_users_to_pdf(user_data, "学生列表报告")
+        filename = f"users_{timestamp}.pdf"
+        mimetype = "application/pdf"
+    return output, filename, mimetype
+
+
+def _export_rules_data(export_format, timestamp):
+    """rules 导出：返回 (output, filename, mimetype)。"""
+    rules = ScoreRule.query.all()
+    rule_data = [r.to_dict(RULE_EXPORT_FIELDS) for r in rules]
+    if export_format == "excel":
+        output = export_service.export_rules_to_excel(rule_data)
+        filename = f"rules_{timestamp}.xlsx"
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        output = export_service.export_rules_to_pdf(rule_data, "积分规则报告")
+        filename = f"rules_{timestamp}.pdf"
+        mimetype = "application/pdf"
+    return output, filename, mimetype
+
+
+def _export_devices_data(export_format, timestamp):
+    """devices 导出（S3 班级隔离）：返回 (output, filename, mimetype)。"""
+    # S3 修复: 班主任仅可导出本班设备
+    _cn, _ci = _admin_scope()
+    devices_q = Device.query
+    if _ci is not None:
+        devices_q = devices_q.filter(Device.class_info_id.in_(_ci))
+    devices = devices_q.all()
+    device_data = [
+        {
+            "id": d.id,
+            "device_id": d.device_id,
+            "name": d.name,
+            "status": d.status,
+            "is_online": is_device_online(d),
+            "wifi_signal": d.wifi_signal,
+            "class_name": d.class_info.name if d.class_info else None,
+            "admin_name": d.admin.real_name if d.admin else None,
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+        }
+        for d in devices
+    ]
+    if export_format == "excel":
+        output = export_service.export_devices_to_excel(device_data)
+        filename = f"devices_{timestamp}.xlsx"
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        output = export_service.export_devices_to_pdf(device_data, "设备列表报告")
+        filename = f"devices_{timestamp}.pdf"
+        mimetype = "application/pdf"
+    return output, filename, mimetype
+
+
+def _export_records_data(export_format, timestamp):
+    """records 导出（S3 班级隔离 + joinedload 消除 N+1）：返回 (output, filename, mimetype)。"""
+    # 性能优化：使用 joinedload 预加载关联数据，消除 N+1 查询
+    # S3 修复: 班主任仅可导出自己班级的积分记录
+    _cn, _ci = _admin_scope()
+    records_q = ScoreRecord.query.options(
+        joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule)
+    )
+    if _cn is not None:
+        records_q = records_q.join(User, ScoreRecord.student_id == User.id).filter(
+            User.class_name.in_(_cn)
+        )
+    records = records_q.order_by(ScoreRecord.created_at.desc()).all()
+    record_data = [r.to_dict(RECORD_EXPORT_FIELDS) for r in records]
+    if export_format == "excel":
+        output = export_service.export_records_to_excel(record_data)
+        filename = f"records_{timestamp}.xlsx"
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        output = export_service.export_records_to_pdf(record_data, "积分记录报告")
+        filename = f"records_{timestamp}.pdf"
+        mimetype = "application/pdf"
+    return output, filename, mimetype
+
+
+def _export_summary_data(timestamp):
+    """summary 导出（固定 PDF）：返回 (output, filename, mimetype)。"""
+    users_count = User.query.count()
+    rules_count = ScoreRule.query.count()
+    devices_count = Device.query.count()
+    online_devices = Device.query.filter(
+        Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
+    ).count()
+    records_count = ScoreRecord.query.count()
+    output = export_service.export_summary_report(
+        users_count, rules_count, devices_count, online_devices, records_count
+    )
+    filename = f"summary_{timestamp}.pdf"
+    mimetype = "application/pdf"
+    return output, filename, mimetype
 
 
 @ns_export.route("/users")

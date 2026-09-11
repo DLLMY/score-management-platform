@@ -45,16 +45,9 @@ class ClassSemesterReport(Resource):
         if not class_info:
             return APIResponse.not_found(message="班级不存在")
 
-        # S3 修复: 非超管仅可导出自己关联班级的报表（原任意 class_id → 越权）
-        from utils.permission import get_current_admin, get_admin_class_ids
-
-        _admin = get_current_admin()
-        if _admin and _admin.role not in ("admin", "super_admin"):
-            _allowed_ids = get_admin_class_ids(_admin.id)
-            if _allowed_ids and class_id not in _allowed_ids:
-                return APIResponse.error(message="无权导出该班级报表", status_code=403)
-            if not _allowed_ids:
-                return APIResponse.error(message="未关联任何班级，无权导出报表", status_code=403)
+        scope_error = _check_report_class_scope(class_id)
+        if scope_error is not None:
+            return scope_error
 
         try:
             students = (
@@ -67,75 +60,124 @@ class ClassSemesterReport(Resource):
             scores = Score.query.filter(Score.exam_id.in_(exam_ids)).all() if exam_ids else []
 
             # (student_id, exam_id) -> 该考试跨科目总分
-            score_map = {}
-            for s in scores:
-                score_map[(s.student_id, s.exam_id)] = score_map.get(
-                    (s.student_id, s.exam_id), 0
-                ) + (s.score or 0)
+            score_map = _build_report_score_map(scores)
 
-            headers = ["姓名", "学号", "性别", "当前积分"]
-            for e in exams:
-                headers.append(e.name)
-            headers += ["总分", "平均分"]
-
-            rows = []  # 与 headers 顺序一致的二维数组
-            for stu in students:
-                row = [stu.name, stu.card_id, stu.gender or "", stu.current_score or 0]
-                total = 0.0
-                for e in exams:
-                    v = score_map.get((stu.id, e.id))
-                    if v is None:
-                        row.append("")
-                    else:
-                        row.append(round(v, 1))
-                        total += v
-                avg = round(total / len(exams), 1) if exams else 0
-                row.append(round(total, 1))
-                row.append(avg)
-                rows.append(row)
+            headers = _build_report_headers(exams)
+            rows = _build_report_rows(students, exams, score_map)
 
             safe_name = (class_info.name or "班级").replace("/", "_")
             filename = f"{safe_name}_学期报告"
 
             # 算法摘要（参与度 / 风险 / 归因）：三维各自隔离，失败不影响主表格
-            try:
-                summary = build_class_summary(class_info.name or "", 30)
-                summary_rows = summary_to_rows(summary)
-            except Exception as e:
-                logger.warning("班级算法摘要生成失败（不影响主表格导出）: %s", e, exc_info=True)
-                summary_rows = []
+            summary_rows = _build_report_summary_rows(class_info)
 
             if fmt == "csv":
-                body = ExcelUtils.export_to_csv(rows, headers)
-                if summary_rows:
-                    meta_text = "\n".join(
-                        "# " + ",".join(str(c) for c in row) for row in summary_rows
-                    )
-                    # BOM 放文件最开头；meta 用无 BOM UTF-8；正文剥离自带 BOM 后拼接
-                    body_text = body.decode("utf-8-sig")
-                    content = ("\ufeff" + meta_text + "\n\n" + body_text).encode("utf-8")
-                else:
-                    content = body
-                return send_file(
-                    BytesIO(content),
-                    mimetype="text/csv",
-                    as_attachment=True,
-                    download_name=f"{filename}.csv",
-                )
-
-            sheets = [
-                {"name": "学期报告", "headers": headers, "data": rows},
-            ]
-            if summary_rows:
-                sheets.append(
-                    {"name": "算法摘要", "headers": ["项目", "内容"], "data": summary_rows}
-                )
-            content = ExcelUtils.export_to_excel(sheets)
-            return send_file(
-                BytesIO(content),
-                mimetype=EXCEL_MIME,
-                as_attachment=True,
-                download_name=f"{filename}.xlsx",
-            )
+                return _render_csv_report(rows, headers, summary_rows, filename)
+            return _render_excel_report(rows, headers, summary_rows, filename)
         except Exception as exc:
             return APIResponse.error(message=f"生成报表失败: {exc}", status_code=500)
+
+
+def _check_report_class_scope(class_id):
+    """S3 修复: 非超管仅可导出自己关联班级的报表（原任意 class_id → 越权）。
+
+    返回 None 表示放行；否则返回应直接返回的 403 响应对象。
+    """
+    from utils.permission import get_current_admin, get_admin_class_ids
+
+    _admin = get_current_admin()
+    if _admin and _admin.role not in ("admin", "super_admin"):
+        _allowed_ids = get_admin_class_ids(_admin.id)
+        if _allowed_ids and class_id not in _allowed_ids:
+            return APIResponse.error(message="无权导出该班级报表", status_code=403)
+        if not _allowed_ids:
+            return APIResponse.error(message="未关联任何班级，无权导出报表", status_code=403)
+    return None
+
+
+def _build_report_score_map(scores):
+    """(student_id, exam_id) -> 该考试跨科目总分。"""
+    score_map = {}
+    for s in scores:
+        score_map[(s.student_id, s.exam_id)] = score_map.get(
+            (s.student_id, s.exam_id), 0
+        ) + (s.score or 0)
+    return score_map
+
+
+def _build_report_headers(exams):
+    """表头 = 固定列 + 各考试名 + 总分/平均分。"""
+    headers = ["姓名", "学号", "性别", "当前积分"]
+    for e in exams:
+        headers.append(e.name)
+    headers += ["总分", "平均分"]
+    return headers
+
+
+def _build_report_rows(students, exams, score_map):
+    """与 headers 顺序一致的二维数据行。"""
+    rows = []  # 与 headers 顺序一致的二维数组
+    for stu in students:
+        row = [stu.name, stu.card_id, stu.gender or "", stu.current_score or 0]
+        total = 0.0
+        for e in exams:
+            v = score_map.get((stu.id, e.id))
+            if v is None:
+                row.append("")
+            else:
+                row.append(round(v, 1))
+                total += v
+        avg = round(total / len(exams), 1) if exams else 0
+        row.append(round(total, 1))
+        row.append(avg)
+        rows.append(row)
+    return rows
+
+
+def _build_report_summary_rows(class_info):
+    # 算法摘要（参与度 / 风险 / 归因）：三维各自隔离，失败不影响主表格
+    try:
+        summary = build_class_summary(class_info.name or "", 30)
+        summary_rows = summary_to_rows(summary)
+    except Exception as e:
+        logger.warning("班级算法摘要生成失败（不影响主表格导出）: %s", e, exc_info=True)
+        summary_rows = []
+    return summary_rows
+
+
+def _render_csv_report(rows, headers, summary_rows, filename):
+    """CSV 导出；有算法摘要时以注释行前置，BOM 只放文件最开头。"""
+    body = ExcelUtils.export_to_csv(rows, headers)
+    if summary_rows:
+        meta_text = "\n".join(
+            "# " + ",".join(str(c) for c in row) for row in summary_rows
+        )
+        # BOM 放文件最开头；meta 用无 BOM UTF-8；正文剥离自带 BOM 后拼接
+        body_text = body.decode("utf-8-sig")
+        content = ("\ufeff" + meta_text + "\n\n" + body_text).encode("utf-8")
+    else:
+        content = body
+    return send_file(
+        BytesIO(content),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=f"{filename}.csv",
+    )
+
+
+def _render_excel_report(rows, headers, summary_rows, filename):
+    """Excel 导出；有算法摘要时追加独立 sheet。"""
+    sheets = [
+        {"name": "学期报告", "headers": headers, "data": rows},
+    ]
+    if summary_rows:
+        sheets.append(
+            {"name": "算法摘要", "headers": ["项目", "内容"], "data": summary_rows}
+        )
+    content = ExcelUtils.export_to_excel(sheets)
+    return send_file(
+        BytesIO(content),
+        mimetype=EXCEL_MIME,
+        as_attachment=True,
+        download_name=f"{filename}.xlsx",
+    )
