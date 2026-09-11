@@ -11,9 +11,12 @@ export const getSystemStateText = (state: number | undefined): string => {
   return states[state || 0] || `未知(${state})`;
 };
 
+/** 信号强度档位（与 signalDistribution 的四个计数字段一一对应） */
+export type SignalLevel = 'excellent' | 'good' | 'fair' | 'poor';
+
 export const getSignalStrength = (
   signal: number | null
-): { text: string; color: string; level: string } => {
+): { text: string; color: string; level: SignalLevel } => {
   if (!signal) return { text: '-', color: 'bg-gray-500', level: 'poor' };
   if (signal >= -50) return { text: '强', color: 'bg-green-500', level: 'excellent' };
   if (signal >= -70) return { text: '中', color: 'bg-yellow-500', level: 'good' };

@@ -184,13 +184,13 @@ class PerformanceReportingService {
           headers,
           body: JSON.stringify(metricsToSend[0]),
           // 静默失败：上报失败不应影响用户使用
-        }).catch(() => null);
+        }).catch((): null => null);
       } else {
         resp = await fetch(`${API_BASE_URL}/api/system/frontend-performance/batch`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ metrics: metricsToSend }),
-        }).catch(() => null);
+        }).catch((): null => null);
       }
 
       if (resp && resp.status === 429) {
@@ -233,7 +233,7 @@ class PerformanceReportingService {
           method: 'POST',
           headers,
           body: JSON.stringify(error),
-        }).catch(() => null);
+        }).catch((): null => null);
         if (resp && resp.ok) okCount++;
       }
 

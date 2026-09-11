@@ -9,6 +9,7 @@ import type {
   ParseResult,
   ManualCorrectionData,
   Rule,
+  Suggestion,
   Statistics,
   ModelEvaluation,
   TrainingRecord,
@@ -134,10 +135,10 @@ export function useNLPManagementLogic(): NLPDeps & {
       // 从后端 suggestions 中提取带 rule_id 的相似规则作为可一键应用项
       // （后端 _generate_suggestions 已包含数据库相似规则，含 rule_id + similarity）
       const ruleLikeSuggestions = (response.suggestions || []).filter(
-        (s): s is typeof s & { rule_id: number } => typeof s?.rule_id === 'number'
+        (s: Suggestion): s is Suggestion & { rule_id: number } => typeof s?.rule_id === 'number'
       );
       if (ruleLikeSuggestions.length > 0) {
-        const mapped: Rule[] = ruleLikeSuggestions.map((s) => ({
+        const mapped: Rule[] = ruleLikeSuggestions.map((s): Rule & { rule_id: number } => ({
           id: s.rule_id,
           rule_id: s.rule_id,
           behavior_keyword: s.description || '',

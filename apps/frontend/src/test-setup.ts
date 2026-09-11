@@ -12,7 +12,7 @@ import { vi } from 'vitest';
 
 // matchMedia（ThemeContext 主题判定等）
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
+  window.matchMedia = ((query: string): MediaQueryList => ({
     matches: false,
     media: query,
     onchange: null,
@@ -37,13 +37,13 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 // IntersectionObserver（LazyImage/OptimizedImage 懒加载）
 if (typeof globalThis.IntersectionObserver === 'undefined') {
   class IntersectionObserverStub {
-    root = null;
+    root: Element | null = null;
     rootMargin = '';
     thresholds = [0];
     observe() {}
     unobserve() {}
     disconnect() {}
-    takeRecords() {
+    takeRecords(): IntersectionObserverEntry[] {
       return [];
     }
   }

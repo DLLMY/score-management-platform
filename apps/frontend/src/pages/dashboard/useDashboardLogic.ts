@@ -265,9 +265,9 @@ export function useDashboardLogic(): DashboardViewProps {
     try {
       const params = selectedClass ? { class_name: selectedClass } : {};
       const [statsRes, clusterRes, warningRes] = await Promise.all([
-        api.algorithm.getStatistics(params).catch(() => null),
-        api.algorithm.getClusters(params).catch(() => null),
-        api.algorithm.getWarnings(params).catch(() => null),
+        api.algorithm.getStatistics(params).catch((): null => null),
+        api.algorithm.getClusters(params).catch((): null => null),
+        api.algorithm.getWarnings(params).catch((): null => null),
       ]);
 
       return {
@@ -305,7 +305,7 @@ export function useDashboardLogic(): DashboardViewProps {
   const fetchHighPriorityData = useCallback(async (): Promise<void> => {
     try {
       const [dashboardData, usersList, deviceList] = await Promise.all([
-        api.dashboard.getData().catch(() => null),
+        api.dashboard.getData().catch((): null => null),
         fetchUsers(),
         fetchDevices(),
       ]);

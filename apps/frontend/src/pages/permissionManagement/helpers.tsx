@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle } from 'lucide-react';
 import type { ColumnType } from '../../components';
 import { formatDateTime } from '../../utils/format';
-import type { Admin } from '../../types';
+import type { Admin, ID } from '../../types';
 import type { ClassInfo } from '../../services/api';
 import type { Permission, RoleWithPermissions } from '../../services/rbacApi';
 import type { PermissionLog } from './types';
@@ -57,7 +57,7 @@ export const PERMISSION_CATEGORIES: { value: string; label: string }[] = [
 ];
 
 export const createAdminColumns = (
-  adminRolesMap: Record<number, string[]>,
+  adminRolesMap: Record<ID, string[]>,
   roles: RoleWithPermissions[]
 ): ColumnType<Admin>[] => [
   {

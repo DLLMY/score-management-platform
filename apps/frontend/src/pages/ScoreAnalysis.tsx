@@ -79,9 +79,9 @@ function ScoreAnalysis(): React.ReactElement {
     const params = selectedClass ? { class_name: selectedClass } : {};
     try {
       const [clusterRes, compositeRes, warningRes] = await Promise.all([
-        api.algorithm.getClusters(params).catch(() => null),
-        api.algorithm.getCompositeScores(params).catch(() => null),
-        api.algorithm.getWarnings(params).catch(() => null),
+        api.algorithm.getClusters(params).catch((): null => null),
+        api.algorithm.getCompositeScores(params).catch((): null => null),
+        api.algorithm.getWarnings(params).catch((): null => null),
       ]);
 
       setAlgorithmData({

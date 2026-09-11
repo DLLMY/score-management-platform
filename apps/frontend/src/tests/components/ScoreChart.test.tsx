@@ -14,12 +14,12 @@ vi.mock('recharts', () => {
   const Passthrough = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   return {
     LineChart: Passthrough,
-    Line: () => null,
-    XAxis: () => null,
-    YAxis: () => null,
-    CartesianGrid: () => null,
-    Tooltip: () => null,
-    Legend: () => null,
+    Line: (): null => null,
+    XAxis: (): null => null,
+    YAxis: (): null => null,
+    CartesianGrid: (): null => null,
+    Tooltip: (): null => null,
+    Legend: (): null => null,
     ResponsiveContainer: Passthrough,
   };
 });

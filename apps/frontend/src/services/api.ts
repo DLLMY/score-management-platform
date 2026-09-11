@@ -875,7 +875,7 @@ const executeRequest = async (
         }
         return cached.data;
       }
-      const persistentCache = null; // 持久化缓存已废弃（幽灵数据根源），304 仅依赖内存缓存
+      const persistentCache: { data: unknown } | null = null; // 持久化缓存已废弃（幽灵数据根源），304 仅依赖内存缓存
       if (persistentCache) {
         if (isDev) {
           logger.log(`[API] ${method} ${url} - 304 Not Modified (使用持久化缓存)`);

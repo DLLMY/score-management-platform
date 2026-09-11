@@ -400,7 +400,7 @@ function defaultPermissionsForRoles(roles: string[]): string[] {
 
 export const usePermissionStore = create<PermissionState>()(
   persist(
-    (set, get) => ({
+    (set, get): PermissionState => ({
       permissions: [],
       roles: [],
       isLoading: true,

@@ -55,7 +55,7 @@ describe('API Service', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      headers: { get: () => null },
+      headers: { get: (): string | null => null },
       json: () => Promise.resolve({ data: [] }),
     });
 
@@ -80,7 +80,7 @@ describe('API Service', () => {
     mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
-      headers: { get: () => null },
+      headers: { get: (): string | null => null },
       json: () => Promise.resolve({ message: '请求失败' }),
     });
 
@@ -94,7 +94,7 @@ describe('API Service', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      headers: { get: () => null },
+      headers: { get: (): string | null => null },
       json: () => Promise.resolve({ success: true, code: 0, data: [{ id: 1, name: '张三' }] }),
     });
 
@@ -106,7 +106,7 @@ describe('API Service', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      headers: { get: () => null },
+      headers: { get: (): string | null => null },
       json: () => Promise.resolve({ success: false, message: '该卡号已存在，请勿重复录入' }),
     });
 

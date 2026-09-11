@@ -1,5 +1,6 @@
 import type { RefObject, Dispatch, SetStateAction, FormEvent } from 'react';
 import type { CourseSchedule, ClassPeriod, ClassInfo, Subject } from '../../services/api';
+import type { ID } from '../../types';
 import type { ColumnType } from '../../components';
 
 export interface FormData {
@@ -50,7 +51,7 @@ export interface ImportResult {
   }>;
 }
 
-export type TeacherItem = { id: number; name: string };
+export type TeacherItem = { id: ID; name: string };
 
 export interface CourseScheduleViewProps {
   schedulesError: boolean;

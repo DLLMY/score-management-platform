@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { preloadService } from '../services/preloadService';
 
-export function PreloadProvider() {
+export function PreloadProvider(): null {
   const location = useLocation();
 
   useEffect(() => {

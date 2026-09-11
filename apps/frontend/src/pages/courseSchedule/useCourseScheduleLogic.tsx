@@ -10,7 +10,7 @@ import api, { CourseSchedule, ClassPeriod, ClassInfo, Subject } from '../../serv
 import { useStableToast, useForm, useModal, useSubmitGuard, usePermissions } from '../../hooks';
 import { useConfirm, type ColumnType } from '../../components';
 import { formatHourMinute } from '../../utils/format';
-import type { FormData, ConflictResult, WeekDay } from './types';
+import type { FormData, ConflictResult, WeekDay, TeacherItem } from './types';
 import type { CourseScheduleViewProps } from './types';
 import { buildCourseColumns } from './columns';
 
@@ -31,7 +31,7 @@ export function useCourseScheduleLogic(): CourseScheduleViewProps {
   const [periods, setPeriods] = useState<ClassPeriod[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teachers, setTeachers] = useState<Array<{ id: number; name: string }>>([]);
+  const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [selectedClass, setSelectedClass] = useState<number>(0);
   const [showClassDropdown, setShowClassDropdown] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -146,8 +146,8 @@ export function useCourseScheduleLogic(): CourseScheduleViewProps {
         api.courseSchedules.getAll({ skipCache }),
         api.classPeriods.getAll(),
         api.classes.getAll(),
-        api.subjects.getAll().catch(() => []),
-        api.admins.getAll().catch(() => []),
+        api.subjects.getAll().catch((): Subject[] => []),
+        api.admins.getAll().catch((): TeacherItem[] => []),
       ]);
       setSchedules(scheduleData);
       setPeriods(periodData.periods || []);

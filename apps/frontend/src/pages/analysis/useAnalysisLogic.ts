@@ -49,9 +49,9 @@ export function useAnalysisLogic() {
   const fetchAlgorithmData = useCallback(async () => {
     try {
       const [statsRes, clusterRes, warningRes] = await Promise.all([
-        api.algorithm.getStatistics().catch(() => null), // 算法子模块加载失败不影响主面板，置 null 由各区块空态兜底
-        api.algorithm.getClusters().catch(() => null),
-        api.algorithm.getWarnings().catch(() => null),
+        api.algorithm.getStatistics().catch((): null => null), // 算法子模块加载失败不影响主面板，置 null 由各区块空态兜底
+        api.algorithm.getClusters().catch((): null => null),
+        api.algorithm.getWarnings().catch((): null => null),
       ]);
 
       setAlgorithmData({
