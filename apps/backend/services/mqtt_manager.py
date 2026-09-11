@@ -461,6 +461,20 @@ class MQTTManager:
         except Exception as e:
             logger.error(f"[OTA] 处理设备注册失败: {e}")
 
+    # S5-A-P1-1 修复: 固件失败状态码全集映射（原仅 failed/error → 其余失败码不落 failed、
+    # device.ota_status 停 upgrading、can_auto_push 永久拒绝 → 自动推送死锁）
+    _OTA_FAILURE_STATUSES = (
+        "failed",
+        "error",
+        "download_failed",
+        "space_insufficient",
+        "begin_failed",
+        "signature_failed",
+        "version_check_failed",
+        "resume_exhausted",
+        "incomplete",
+    )
+
     def _process_ota_status(self, topic, message):
         """处理OTA状态消息
 
@@ -481,121 +495,31 @@ class MQTTManager:
             )
 
             from app import app
-            from models import db, Device, DeviceFirmwareUpdate, OperationLog
+            from models import db, Device
 
             with app.app_context():
                 device = Device.query.filter_by(device_id=device_id).first()
                 device_ota_status = None
 
                 if status == "started":
-                    record = DeviceFirmwareUpdate(
-                        device_id=device_id,
-                        from_version=from_version,
-                        to_version=to_version,
-                        status="in_progress",
-                        started_at=datetime.now(),
+                    device_ota_status = self._handle_ota_started(
+                        device, device_id, from_version, to_version
                     )
-                    db.session.add(record)
-                    db.session.commit()
-                    logger.info(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
-                    if device:
-                        device_ota_status = "upgrading"
 
                 elif status == "downloading" or status == "updating":
-                    record = (
-                        DeviceFirmwareUpdate.query.filter_by(
-                            device_id=device_id, to_version=to_version, status="in_progress"
-                        )
-                        .order_by(DeviceFirmwareUpdate.started_at.desc())
-                        .first()
+                    device_ota_status = self._handle_ota_progress(
+                        device, device_id, from_version, to_version, progress
                     )
-
-                    if record:
-                        logger.info(f"[OTA] 设备 {device_id} 升级进度: {progress}%")
-                    if device:
-                        device_ota_status = "upgrading"
-                    else:
-                        record = DeviceFirmwareUpdate(
-                            device_id=device_id,
-                            from_version=from_version,
-                            to_version=to_version,
-                            status="in_progress",
-                            started_at=datetime.now(),
-                        )
-                        db.session.add(record)
-                        db.session.commit()
 
                 elif status == "success" or status == "completed":
-                    record = (
-                        DeviceFirmwareUpdate.query.filter_by(
-                            device_id=device_id, to_version=to_version, status="in_progress"
-                        )
-                        .order_by(DeviceFirmwareUpdate.started_at.desc())
-                        .first()
+                    device_ota_status = self._handle_ota_success(
+                        device, device_id, from_version, to_version
                     )
 
-                    if record:
-                        record.status = "completed"
-                        record.completed_at = datetime.now()
-                        db.session.commit()
-                        logger.info(
-                            f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}"
-                        )
-                    if device:
-                        device_ota_status = "idle"
-                        if to_version:
-                            device.fw_version = to_version
-                        device.last_ota_push_at = None
-
-                    log = OperationLog(
-                        operation_type="firmware_upgrade_success",
-                        target_type="device",
-                        target_id=device_id,
-                        operator="OTA System",
-                        description=f"设备 {device_id} 固件升级成功: {from_version} -> {to_version}",
+                elif status in self._OTA_FAILURE_STATUSES:
+                    device_ota_status = self._handle_ota_failure(
+                        device, device_id, from_version, to_version, error_message
                     )
-                    db.session.add(log)
-                    db.session.commit()
-
-                # S5-A-P1-1 修复: 固件失败状态码全集映射（原仅 failed/error → 其余失败码不落 failed、
-                # device.ota_status 停 upgrading、can_auto_push 永久拒绝 → 自动推送死锁）
-                elif status in (
-                    "failed",
-                    "error",
-                    "download_failed",
-                    "space_insufficient",
-                    "begin_failed",
-                    "signature_failed",
-                    "version_check_failed",
-                    "resume_exhausted",
-                    "incomplete",
-                ):
-                    record = (
-                        DeviceFirmwareUpdate.query.filter_by(
-                            device_id=device_id, to_version=to_version, status="in_progress"
-                        )
-                        .order_by(DeviceFirmwareUpdate.started_at.desc())
-                        .first()
-                    )
-
-                    if record:
-                        record.status = "failed"
-                        record.completed_at = datetime.now()
-                        record.error_message = error_message
-                        db.session.commit()
-                        logger.error(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
-                    if device:
-                        device_ota_status = "failed"
-
-                    log = OperationLog(
-                        operation_type="firmware_upgrade_failed",
-                        target_type="device",
-                        target_id=device_id,
-                        operator="OTA System",
-                        description=f"设备 {device_id} 固件升级失败: {from_version} -> {to_version}, 错误: {error_message}",
-                    )
-                    db.session.add(log)
-                    db.session.commit()
 
                 # 回写设备 OTA 状态（无缝闭环自愈：升级成功/失败/进行中）
                 if device is not None and device_ota_status is not None:
@@ -604,6 +528,117 @@ class MQTTManager:
 
         except Exception as e:
             logger.error(f"[OTA] 处理OTA状态消息失败: {e}")
+
+    def _find_in_progress_firmware_update(self, device_id, to_version):
+        """查找该设备指定目标版本进行中的固件升级记录。"""
+        from models import DeviceFirmwareUpdate
+
+        return (
+            DeviceFirmwareUpdate.query.filter_by(
+                device_id=device_id, to_version=to_version, status="in_progress"
+            )
+            .order_by(DeviceFirmwareUpdate.started_at.desc())
+            .first()
+        )
+
+    def _handle_ota_started(self, device, device_id, from_version, to_version):
+        """开始升级：落一条 in_progress 记录，设备在线时置为 upgrading。"""
+        from models import DeviceFirmwareUpdate, db
+
+        record = DeviceFirmwareUpdate(
+            device_id=device_id,
+            from_version=from_version,
+            to_version=to_version,
+            status="in_progress",
+            started_at=datetime.now(),
+        )
+        db.session.add(record)
+        db.session.commit()
+        logger.info(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
+
+        if device:
+            return "upgrading"
+        return None
+
+    def _handle_ota_progress(self, device, device_id, from_version, to_version, progress):
+        """升级进度：记录进度日志；设备不存在时补一条 in_progress 记录。"""
+        from models import DeviceFirmwareUpdate, db
+
+        record = self._find_in_progress_firmware_update(device_id, to_version)
+
+        if record:
+            logger.info(f"[OTA] 设备 {device_id} 升级进度: {progress}%")
+        if device:
+            return "upgrading"
+
+        record = DeviceFirmwareUpdate(
+            device_id=device_id,
+            from_version=from_version,
+            to_version=to_version,
+            status="in_progress",
+            started_at=datetime.now(),
+        )
+        db.session.add(record)
+        db.session.commit()
+        return None
+
+    def _handle_ota_success(self, device, device_id, from_version, to_version):
+        """升级成功：关闭 in_progress 记录，回写设备版本并落操作日志。"""
+        from models import OperationLog, db
+
+        record = self._find_in_progress_firmware_update(device_id, to_version)
+
+        if record:
+            record.status = "completed"
+            record.completed_at = datetime.now()
+            db.session.commit()
+            logger.info(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
+
+        device_ota_status = None
+        if device:
+            device_ota_status = "idle"
+            if to_version:
+                device.fw_version = to_version
+            device.last_ota_push_at = None
+
+        log = OperationLog(
+            operation_type="firmware_upgrade_success",
+            target_type="device",
+            target_id=device_id,
+            operator="OTA System",
+            description=f"设备 {device_id} 固件升级成功: {from_version} -> {to_version}",
+        )
+        db.session.add(log)
+        db.session.commit()
+        return device_ota_status
+
+    def _handle_ota_failure(self, device, device_id, from_version, to_version, error_message):
+        """升级失败：标记记录为 failed，落操作日志，设备在线时置为 failed。"""
+        from models import OperationLog, db
+
+        record = self._find_in_progress_firmware_update(device_id, to_version)
+
+        if record:
+            record.status = "failed"
+            record.completed_at = datetime.now()
+            record.error_message = error_message
+            db.session.commit()
+            logger.error(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
+
+        log = OperationLog(
+            operation_type="firmware_upgrade_failed",
+            target_type="device",
+            target_id=device_id,
+            operator="OTA System",
+            description=f"设备 {device_id} 固件升级失败: {from_version} -> {to_version}, 错误: {error_message}",
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        device_ota_status = None
+        if device:
+            device_ota_status = "failed"
+        return device_ota_status
 
     def _process_heartbeat(self, topic, message):
         """处理心跳消息，更新设备状态"""

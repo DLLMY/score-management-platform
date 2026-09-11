@@ -53,6 +53,22 @@ class ExcelExportService:
         """统一类型转换，确保值可安全写入Excel"""
         if value is None:
             return ""
+        if isinstance(value, str):
+            # S8 修复: Excel 公式注入（= + - @ 开头 → 打开即执行公式/外链）
+            return ExcelExportService._escape_formula_injection(value)
+        return ExcelExportService._convert_non_str_value(value)
+
+    @staticmethod
+    def _escape_formula_injection(value: str) -> str:
+        """S8 修复: Excel 公式注入（= + - @ 开头 → 打开即执行公式/外链）。"""
+        stripped = value.lstrip()
+        if stripped.startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
+
+    @staticmethod
+    def _convert_non_str_value(value: Any) -> Any:
+        """非字符串 / 非 None 值的统一类型转换（判断顺序与原实现一致）。"""
         if isinstance(value, datetime):
             return value.strftime("%Y-%m-%d %H:%M:%S")
         if isinstance(value, date):
@@ -67,11 +83,6 @@ class ExcelExportService:
             return str(value)
         if isinstance(value, float):
             return round(value, 10)
-        if isinstance(value, str):
-            # S8 修复: Excel 公式注入（= + - @ 开头 → 打开即执行公式/外链）
-            stripped = value.lstrip()
-            if stripped.startswith(("=", "+", "-", "@")):
-                return "'" + value
         return value
 
     @staticmethod
@@ -104,6 +115,19 @@ class ExcelExportService:
         wb = Workbook()
         ws = wb.active
         ws.title = sheet_name[:31]
+        ExcelExportService._style_header(ws, headers)
+        ExcelExportService._write_large_dataset_rows(
+            ws, headers, data_getter, total_count, progress_callback
+        )
+        ExcelExportService._compute_column_widths(ws, headers, data_getter, total_count)
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return output
+
+    @staticmethod
+    def _style_header(ws, headers):
+        """创建带样式的表头（两导出方法共用，保持视觉一致）。"""
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center")
@@ -119,7 +143,11 @@ class ExcelExportService:
             cell.fill = header_fill
             cell.alignment = center_align
             cell.border = thin_border
-        # 追加数据行
+
+    @staticmethod
+    def _write_large_dataset_rows(ws, headers, data_getter, total_count, progress_callback):
+        """分批流式写入数据行，返回最后写入行号。"""
+        center_align = Alignment(horizontal="center", vertical="center")
         current_row = 2
         total_batches = math.ceil(total_count / BATCH_SIZE)
         exported = 0
@@ -138,20 +166,38 @@ class ExcelExportService:
             exported += len(batch_data)
             if progress_callback:
                 progress_callback(exported, total_count)
-        # 设置列宽
+        return current_row
+
+    @staticmethod
+    def _compute_column_widths(ws, headers, data_getter, total_count):
+        """基于前100行采样计算列宽（上限50）。"""
         for col, header in enumerate(headers, 1):
             max_len = len(str(header)) + 2
-            for row_data in data_getter(1, min(100, total_count)):  # 采样前100行计算列宽
+            for row_data in data_getter(1, min(100, total_count)):
                 value = row_data.get(header, "")
                 converted = ExcelExportService._convert_value(value)
                 cell_len = len(str(converted)) + 2
                 if cell_len > max_len:
                     max_len = cell_len
             ws.column_dimensions[get_column_letter(col)].width = min(max_len, 50)
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        return output
+
+    @staticmethod
+    def _write_small_dataset_rows(ws, headers, data):
+        """写入小数据量数据行（通用导出复用同一套样式）。"""
+        center_align = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+        for row_idx, row_data in enumerate(data, start=2):
+            for col, header in enumerate(headers, 1):
+                value = row_data.get(header, "")
+                converted = ExcelExportService._convert_value(value)
+                cell = ws.cell(row=row_idx, column=col, value=converted)
+                cell.alignment = center_align
+                cell.border = thin_border
 
     @staticmethod
     def export_to_excel(
@@ -167,28 +213,8 @@ class ExcelExportService:
         wb = Workbook()
         ws = wb.active
         ws.title = sheet_name[:31]
-        header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
-        center_align = Alignment(horizontal="center", vertical="center")
-        thin_border = Border(
-            left=Side(style="thin"),
-            right=Side(style="thin"),
-            top=Side(style="thin"),
-            bottom=Side(style="thin"),
-        )
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = center_align
-            cell.border = thin_border
-        for row_idx, row_data in enumerate(data, start=2):
-            for col, header in enumerate(headers, 1):
-                value = row_data.get(header, "")
-                converted = ExcelExportService._convert_value(value)
-                cell = ws.cell(row=row_idx, column=col, value=converted)
-                cell.alignment = center_align
-                cell.border = thin_border
+        ExcelExportService._style_header(ws, headers)
+        ExcelExportService._write_small_dataset_rows(ws, headers, data)
         for col, header in enumerate(headers, 1):
             max_len = len(str(header)) + 2
             for row_data in data:

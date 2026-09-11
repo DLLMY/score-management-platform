@@ -130,6 +130,13 @@ def _parse_hhmm(s):
     return h * 60 + mi
 
 
+def _hit_window(cur, start, end):
+    """判断分钟数 cur 是否落在窗口 [start, end) 内；支持跨午夜（start > end）。"""
+    if start <= end:
+        return start <= cur < end
+    return cur >= start or cur < end
+
+
 def in_quiet_window(now=None):
     """是否处于 OTA 静默时段（不自动推送）。
 
@@ -159,12 +166,8 @@ def in_quiet_window(now=None):
             start, end = _parse_hhmm(a), _parse_hhmm(b)
             if start is None or end is None:
                 continue
-            if start <= end:
-                if start <= cur < end:
-                    return True
-            else:  # 跨午夜，如 22:00-06:00
-                if cur >= start or cur < end:
-                    return True
+            if _hit_window(cur, start, end):
+                return True
     return False
 
 

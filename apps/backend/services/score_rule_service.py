@@ -57,6 +57,120 @@ def delete_rule(rule):
     return
 
 
+def _validate_rule_name(name, existing_names):
+    """校验规则名称，返回错误项列表（保持原分支顺序与可叠加性）。"""
+    row_errors = []
+    if not name:
+        row_errors.append({"field": "name", "message": "规则名称不能为空"})
+    elif not isinstance(name, str) or len(str(name).strip()) == 0:
+        row_errors.append({"field": "name", "message": "规则名称格式无效，必须为非空字符串"})
+    elif len(str(name).strip()) > 100:
+        row_errors.append({"field": "name", "message": "规则名称长度超过限制（最大100字符）"})
+    if name:
+        name_str = str(name).strip()
+        if name_str in existing_names:
+            row_errors.append({"field": "name", "message": f'规则名称"{name_str}"已存在'})
+    return row_errors
+
+
+def _validate_rule_score(score):
+    """校验分数，返回错误项列表。"""
+    row_errors = []
+    if score is None:
+        row_errors.append({"field": "score", "message": "分数不能为空"})
+    else:
+        try:
+            float(score)
+        except (ValueError, TypeError):
+            row_errors.append({"field": "score", "message": f'分数"{score}"不是有效的数值'})
+    return row_errors
+
+
+def _validate_rule_category_id(category_id):
+    """校验分类ID 存在性，返回错误项列表。"""
+    row_errors = []
+    if category_id is not None:
+        try:
+            category_id_int = int(category_id)
+            if category_id_int > 0:
+                category = get_by_id(ScoreCategory, category_id_int)
+                if not category:
+                    row_errors.append(
+                        {"field": "category_id", "message": f'分类ID"{category_id_int}"不存在'}
+                    )
+        except (ValueError, TypeError):
+            row_errors.append(
+                {"field": "category_id", "message": f'分类ID"{category_id}"不是有效的整数'}
+            )
+    return row_errors
+
+
+def _validate_rule_non_negative_int(value, field, label):
+    """校验非负整数字段（每日上限 / 最小间隔共用），返回错误项列表。"""
+    row_errors = []
+    try:
+        value_int = int(value)
+        if value_int < 0:
+            row_errors.append({"field": field, "message": f"{label}不能为负数"})
+    except (ValueError, TypeError):
+        row_errors.append({"field": field, "message": f'{label}"{value}"不是有效的整数'})
+    return row_errors
+
+
+def _build_rule_import_failure(idx, row_errors, row_data, name):
+    """构造失败行（业务校验）的 (errors 条目, messages 条目)。"""
+    error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
+    error_fields = [err["field"] for err in row_errors]
+    errors = {
+        "row": idx + 1,
+        "message": error_msg,
+        "row_data": row_data,
+        "error_fields": error_fields,
+    }
+    messages = {
+        "name": str(name) if name else "未知",
+        "action": "failed",
+        "message": error_msg,
+        "row_data": row_data,
+        "error_fields": error_fields,
+    }
+    return errors, messages
+
+
+def _build_rule_import_system_failure(idx, rule_data, exc):
+    """构造失败行（系统异常）的 (errors 条目, messages 条目)。"""
+    error_msg = str(exc)
+    errors = {
+        "row": idx + 1,
+        "message": error_msg,
+        "row_data": rule_data,
+        "error_fields": ["system"],
+    }
+    messages = {
+        "name": rule_data.get("name", "未知"),
+        "action": "failed",
+        "message": error_msg,
+        "row_data": rule_data,
+        "error_fields": ["system"],
+    }
+    return errors, messages
+
+
+def _build_rule_from_row(
+    rule_data, name_str, score_float, category_id_int, daily_limit_int, min_interval_int
+):
+    """按已校验字段构造 ScoreRule 实例（不写 session）。"""
+    return ScoreRule(
+        name=name_str,
+        description=str(rule_data.get("description", "")).strip(),
+        category_id=category_id_int,
+        score=score_float,
+        is_active=bool(rule_data.get("is_active", True)),
+        daily_limit=daily_limit_int,
+        min_interval=min_interval_int,
+    )
+
+
 def import_rules(rules_data):
     """批量导入规则，单事务提交。返回与原路由一致的汇总 dict。
 
@@ -70,100 +184,34 @@ def import_rules(rules_data):
     existing_names = {r.name for r in ScoreRule.query.all()}
     for idx, rule_data in enumerate(rules_data):
         try:
-            row_errors = []
             row_data = rule_data.copy()
             name = rule_data.get("name")
-            if not name:
-                row_errors.append({"field": "name", "message": "规则名称不能为空"})
-            elif not isinstance(name, str) or len(str(name).strip()) == 0:
-                row_errors.append(
-                    {"field": "name", "message": "规则名称格式无效，必须为非空字符串"}
-                )
-            elif len(str(name).strip()) > 100:
-                row_errors.append(
-                    {"field": "name", "message": "规则名称长度超过限制（最大100字符）"}
-                )
-            if name:
-                name_str = str(name).strip()
-                if name_str in existing_names:
-                    row_errors.append({"field": "name", "message": f'规则名称"{name_str}"已存在'})
             score = rule_data.get("score")
-            if score is None:
-                row_errors.append({"field": "score", "message": "分数不能为空"})
-            else:
-                try:
-                    score_float = float(score)
-                except (ValueError, TypeError):
-                    row_errors.append({"field": "score", "message": f'分数"{score}"不是有效的数值'})
             category_id = rule_data.get("category_id")
-            if category_id is not None:
-                try:
-                    category_id_int = int(category_id)
-                    if category_id_int > 0:
-                        category = get_by_id(ScoreCategory, category_id_int)
-                        if not category:
-                            row_errors.append(
-                                {
-                                    "field": "category_id",
-                                    "message": f'分类ID"{category_id_int}"不存在',
-                                }
-                            )
-                except (ValueError, TypeError):
-                    row_errors.append(
-                        {"field": "category_id", "message": f'分类ID"{category_id}"不是有效的整数'}
-                    )
             daily_limit = rule_data.get("daily_limit", 0)
-            try:
-                daily_limit_int = int(daily_limit)
-                if daily_limit_int < 0:
-                    row_errors.append({"field": "daily_limit", "message": "每日上限不能为负数"})
-            except (ValueError, TypeError):
-                row_errors.append(
-                    {"field": "daily_limit", "message": f'每日上限"{daily_limit}"不是有效的整数'}
-                )
             min_interval = rule_data.get("min_interval", 0)
-            try:
-                min_interval_int = int(min_interval)
-                if min_interval_int < 0:
-                    row_errors.append({"field": "min_interval", "message": "最小间隔不能为负数"})
-            except (ValueError, TypeError):
-                row_errors.append(
-                    {"field": "min_interval", "message": f'最小间隔"{min_interval}"不是有效的整数'}
-                )
+
+            row_errors = []
+            row_errors += _validate_rule_name(name, existing_names)
+            row_errors += _validate_rule_score(score)
+            row_errors += _validate_rule_category_id(category_id)
+            row_errors += _validate_rule_non_negative_int(daily_limit, "daily_limit", "每日上限")
+            row_errors += _validate_rule_non_negative_int(min_interval, "min_interval", "最小间隔")
+
             if row_errors:
                 error_count += 1
-                error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
-                errors.append(
-                    {
-                        "row": idx + 1,
-                        "message": error_msg,
-                        "row_data": row_data,
-                        "error_fields": [err["field"] for err in row_errors],
-                    }
-                )
-                messages.append(
-                    {
-                        "name": str(name) if name else "未知",
-                        "action": "failed",
-                        "message": error_msg,
-                        "row_data": row_data,
-                        "error_fields": [err["field"] for err in row_errors],
-                    }
-                )
+                error_entry, message_entry = _build_rule_import_failure(idx, row_errors, row_data, name)
+                errors.append(error_entry)
+                messages.append(message_entry)
                 continue
+
             name_str = str(name).strip()
             score_float = float(score)
             category_id_int = int(category_id) if category_id is not None else None
             daily_limit_int = int(daily_limit)
             min_interval_int = int(min_interval)
-            rule = ScoreRule(
-                name=name_str,
-                description=str(rule_data.get("description", "")).strip(),
-                category_id=category_id_int,
-                score=score_float,
-                is_active=bool(rule_data.get("is_active", True)),
-                daily_limit=daily_limit_int,
-                min_interval=min_interval_int,
+            rule = _build_rule_from_row(
+                rule_data, name_str, score_float, category_id_int, daily_limit_int, min_interval_int
             )
             db.session.add(rule)
             imported_count += 1
@@ -173,24 +221,9 @@ def import_rules(rules_data):
             )
         except Exception as e:
             error_count += 1
-            error_msg = str(e)
-            errors.append(
-                {
-                    "row": idx + 1,
-                    "message": error_msg,
-                    "row_data": rule_data,
-                    "error_fields": ["system"],
-                }
-            )
-            messages.append(
-                {
-                    "name": rule_data.get("name", "未知"),
-                    "action": "failed",
-                    "message": error_msg,
-                    "row_data": rule_data,
-                    "error_fields": ["system"],
-                }
-            )
+            error_entry, message_entry = _build_rule_import_system_failure(idx, rule_data, e)
+            errors.append(error_entry)
+            messages.append(message_entry)
     db.session.commit()
     return {
         "total": len(rules_data),

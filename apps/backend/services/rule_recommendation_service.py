@@ -332,36 +332,37 @@ class RuleRecommendationService:
         if not records:
             return []
 
-        # 统计用户的规则使用组合
-        user_rule_combinations = defaultdict(lambda: defaultdict(int))
+        combinations, user_count = RuleRecommendationService._find_frequent_combinations(records)
+        rule_names = {rule.id: rule.name for rule in ScoreRule.query.all()}
+        return RuleRecommendationService._build_combination_suggestions(
+            combinations, rule_names, user_count
+        )
 
+    @staticmethod
+    def _find_frequent_combinations(records):
+        """从评分记录中找出频繁共现的规则对（使用次数>=3的规则对计数）。"""
+        user_rule_combinations = defaultdict(lambda: defaultdict(int))
         for record in records:
             if record.rule_id:
                 user_rule_combinations[record.student_id][record.rule_id] += 1
 
-        # 找出频繁组合
         combinations = defaultdict(int)
-
         for _user_id, rule_counts in user_rule_combinations.items():
             rules = sorted(rule_counts.keys())
-            # 找出使用次数超过3次的规则对
             for i in range(len(rules)):
                 for j in range(i + 1, len(rules)):
                     min_count = min(rule_counts[rules[i]], rule_counts[rules[j]])
                     if min_count >= 3:
                         combinations[(rules[i], rules[j])] += 1
+        return combinations, len(user_rule_combinations)
 
-        # 获取规则名称
-        rule_names = {}
-        for rule in ScoreRule.query.all():
-            rule_names[rule.id] = rule.name
-
-        # 生成组合建议
+    @staticmethod
+    def _build_combination_suggestions(combinations, rule_names, user_count):
+        """将频繁规则对转换为前端组合建议，按频率截断前 10。"""
         suggestions = []
         for (rule1_id, rule2_id), count in combinations.items():
             rule1_name = rule_names.get(rule1_id, f"规则{rule1_id}")
             rule2_name = rule_names.get(rule2_id, f"规则{rule2_id}")
-
             suggestions.append(
                 {
                     "type": "combination",
@@ -370,15 +371,12 @@ class RuleRecommendationService:
                         {"id": rule2_id, "name": rule2_name},
                     ],
                     "frequency": count,
-                    "confidence": min(count / len(user_rule_combinations), 0.95),
+                    "confidence": min(count / user_count, 0.95) if user_count else 0.0,
                     "description": f"发现'{rule1_name}'和'{rule2_name}'经常被同一学生触发",
                     "suggestion": "建议将这两个规则组合使用，可能存在行为关联",
                 }
             )
-
-        # 按频率排序
         suggestions.sort(key=lambda x: x["frequency"], reverse=True)
-
         return suggestions[:10]
 
     @staticmethod

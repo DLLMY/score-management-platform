@@ -69,6 +69,110 @@ def create_score_category_row(name, description, color):
     return new_category
 
 
+def _append_user_name_error(name, row_errors):
+    """姓名校验（错误项顺序第 1 项）。"""
+    if not name:
+        row_errors.append({"field": "name", "message": "姓名不能为空"})
+        return
+    is_valid, msg = validate_name(name)
+    if not is_valid:
+        row_errors.append({"field": "name", "message": msg})
+
+
+def _append_user_class_error(class_name, row_errors):
+    """班级存在性校验（错误项顺序第 3 项）。"""
+    if not class_name:
+        return
+    class_info = ClassInfo.query.filter_by(name=class_name).first()
+    if not class_info:
+        row_errors.append({"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'})
+
+
+def _append_user_card_id_error(card_id, row_errors):
+    """学号非空 / 格式 / 唯一性校验（错误项顺序第 5 项）。"""
+    if not card_id:
+        row_errors.append({"field": "card_id", "message": "学号不能为空"})
+        return
+    is_valid, msg = validate_student_id(card_id)
+    if not is_valid:
+        row_errors.append({"field": "card_id", "message": msg})
+    elif User.query.filter_by(card_id=card_id).first():
+        row_errors.append({"field": "card_id", "message": f"学号 {card_id} 已存在"})
+
+
+def _validate_user_row(name, gender, class_name, phone, card_id):
+    """逐字段校验一行用户数据。
+
+    ⚠️ 错误项顺序必须保持 姓名→性别→班级→手机号→学号，否则错误摘要字符串会变。
+    """
+    row_errors = []
+    _append_user_name_error(name, row_errors)
+
+    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
+        row_errors.append({"field": "gender", "message": "性别值无效"})
+
+    _append_user_class_error(class_name, row_errors)
+
+    if phone and not re.match(r"^1[3-9]\d{9}$", phone):
+        row_errors.append({"field": "phone", "message": "手机号格式无效，应为11位数字"})
+
+    _append_user_card_id_error(card_id, row_errors)
+    return row_errors
+
+
+def _record_user_row_failure(row_idx, row_errors, row_data, errors, messages, name):
+    """记录校验失败行：errors + messages 各追加一条。"""
+    error_msg = "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors])
+    error_fields = [err["field"] for err in row_errors]
+    errors.append(
+        {
+            "row": row_idx,
+            "message": error_msg,
+            "row_data": row_data,
+            "error_fields": error_fields,
+        }
+    )
+    messages.append(
+        {
+            "name": name or "未知",
+            "action": "failed",
+            "message": error_msg,
+            "row_data": row_data,
+            "error_fields": error_fields,
+        }
+    )
+
+
+def _record_user_row_exception(row_idx, exc, row_data, errors, messages, name):
+    """记录行级异常：errors + messages 各追加一条（error_fields 固定为 system）。"""
+    error_msg = str(exc)
+    errors.append(
+        {"row": row_idx, "message": error_msg, "row_data": row_data, "error_fields": ["system"]}
+    )
+    messages.append(
+        {
+            "name": name or "未知",
+            "action": "failed",
+            "message": error_msg,
+            "row_data": row_data,
+            "error_fields": ["system"],
+        }
+    )
+
+
+def _commit_imported_rows(imported_count, failed_count):
+    """存在成功行时带重试提交；提交失败 rollback 并抛 ImportCommitError。"""
+    if imported_count <= 0:
+        return
+    retry = TransactionRetry(max_retries=5, base_delay=0.1)
+    try:
+        retry.execute(db.session.commit)
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"数据提交失败（已重试{retry.retry_count}次）: {str(e)}")
+        raise ImportCommitError(str(e), imported_count, failed_count) from e
+
+
 def bulk_import_users(rows):
     """复刻 ImportUsers 写入事务：逐行校验 + 建模 + add，末尾统一提交（带重试）。
 
@@ -82,7 +186,6 @@ def bulk_import_users(rows):
     try:
         for row_idx, row in enumerate(rows, start=2):
             try:
-                row_errors = []
                 row_data = {}
 
                 name = str(row[0]).strip() if row[0] else ""
@@ -92,66 +195,12 @@ def bulk_import_users(rows):
                 card_id = str(row[4]).strip() if row[4] else ""
                 str(row[5]).strip() if row[5] else ""  # 与原路由一致：保留第6列占位（无副作用）
 
-                # 验证姓名
-                if not name:
-                    row_errors.append({"field": "name", "message": "姓名不能为空"})
-                else:
-                    is_valid, msg = validate_name(name)
-                    if not is_valid:
-                        row_errors.append({"field": "name", "message": msg})
-
-                # 验证性别
-                if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
-                    row_errors.append({"field": "gender", "message": "性别值无效"})
-
-                # 验证班级是否存在
-                if class_name:
-                    class_info = ClassInfo.query.filter_by(name=class_name).first()
-                    if not class_info:
-                        row_errors.append(
-                            {
-                                "field": "class_name",
-                                "message": f'班级 "{class_name}" 在系统中不存在',
-                            }
-                        )
-
-                # 验证手机号
-                if phone and not re.match(r"^1[3-9]\d{9}$", phone):
-                    row_errors.append(
-                        {"field": "phone", "message": "手机号格式无效，应为11位数字"}
-                    )
-
-                # 验证学号/饭卡号
-                if not card_id:
-                    row_errors.append({"field": "card_id", "message": "学号不能为空"})
-                else:
-                    is_valid, msg = validate_student_id(card_id)
-                    if not is_valid:
-                        row_errors.append({"field": "card_id", "message": msg})
-                    elif User.query.filter_by(card_id=card_id).first():
-                        row_errors.append({"field": "card_id", "message": f"学号 {card_id} 已存在"})
+                row_errors = _validate_user_row(name, gender, class_name, phone, card_id)
 
                 if row_errors:
                     failed_count += 1
-                    error_msg = "; ".join(
-                        [f'{err["field"]}: {err["message"]}' for err in row_errors]
-                    )
-                    errors.append(
-                        {
-                            "row": row_idx,
-                            "message": error_msg,
-                            "row_data": row_data,
-                            "error_fields": [err["field"] for err in row_errors],
-                        }
-                    )
-                    messages.append(
-                        {
-                            "name": name or "未知",
-                            "action": "failed",
-                            "message": error_msg,
-                            "row_data": row_data,
-                            "error_fields": [err["field"] for err in row_errors],
-                        }
+                    _record_user_row_failure(
+                        row_idx, row_errors, row_data, errors, messages, name
                     )
                     continue
 
@@ -163,33 +212,9 @@ def bulk_import_users(rows):
 
             except Exception as e:
                 failed_count += 1
-                error_msg = str(e)
-                errors.append(
-                    {
-                        "row": row_idx,
-                        "message": error_msg,
-                        "row_data": {},
-                        "error_fields": ["system"],
-                    }
-                )
-                messages.append(
-                    {
-                        "name": name if name else "未知",
-                        "action": "failed",
-                        "message": error_msg,
-                        "row_data": {},
-                        "error_fields": ["system"],
-                    }
-                )
+                _record_user_row_exception(row_idx, e, row_data, errors, messages, name)
 
-        if imported_count > 0:
-            retry = TransactionRetry(max_retries=5, base_delay=0.1)
-            try:
-                retry.execute(db.session.commit)
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f"数据提交失败（已重试{retry.retry_count}次）: {str(e)}")
-                raise ImportCommitError(str(e), imported_count, failed_count) from e
+        _commit_imported_rows(imported_count, failed_count)
 
     except ImportCommitError:
         raise

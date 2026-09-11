@@ -49,61 +49,88 @@ def normalize_windows(windows):
     if not isinstance(windows, list):
         return None, "unlock_windows 必须是数组"
 
-    def _parse_hm(item, prefix):
-        """返回 (hour, minute, err)。prefix 为 'start' / 'end'。"""
-        hour_key, min_key = f"{prefix}_hour", f"{prefix}_minute"
-        if hour_key in item or min_key in item:
-            try:
-                return int(item.get(hour_key, 0)), int(item.get(min_key, 0)), None
-            except (TypeError, ValueError):
-                return None, None, f"{hour_key}/{min_key} 必须是整数"
-        # 兼容 "HH:MM" 字符串
-        raw = item.get(prefix)
-        if isinstance(raw, str) and ":" in raw:
-            try:
-                h, m = raw.split(":")[:2]
-                return int(h), int(m), None
-            except (TypeError, ValueError):
-                return None, None, f"{prefix} 格式应为 HH:MM"
-        return None, None, f"缺少 {hour_key}/{min_key}（或 {prefix}='HH:MM'）"
-
     normalized = []
     for idx, item in enumerate(windows):
-        if not isinstance(item, dict):
-            return None, f"第 {idx + 1} 个时段格式错误，应为对象"
-        try:
-            day = int(item.get("day", -1))
-        except (TypeError, ValueError):
-            return None, f"第 {idx + 1} 个时段 day 必须是整数"
-        if day != -1 and not (0 <= day <= 6):
-            return None, f"第 {idx + 1} 个时段 day 应为 -1(每天) 或 0~6"
-
-        sh, sm, err = _parse_hm(item, "start")
+        entry, err = _normalize_window_item(item, idx)
         if err:
-            return None, f"第 {idx + 1} 个时段：{err}"
-        eh, em, err = _parse_hm(item, "end")
-        if err:
-            return None, f"第 {idx + 1} 个时段：{err}"
-
-        for label, h, m in (("开始", sh, sm), ("结束", eh, em)):
-            if not (0 <= h <= 23):
-                return None, f"第 {idx + 1} 个时段{label}小时应在 0~23"
-            if not (0 <= m <= 59):
-                return None, f"第 {idx + 1} 个时段{label}分钟应在 0~59"
-
-        if (sh, sm) > (eh, em):
-            return None, f"第 {idx + 1} 个时段的结束时间不能早于开始时间"
-
-        normalized.append(
-            {
-                "day": day,
-                "start_hour": sh,
-                "start_minute": sm,
-                "end_hour": eh,
-                "end_minute": em,
-            }
-        )
+            return None, err
+        normalized.append(entry)
     return normalized, None
+
+
+def _parse_hm_string(raw, prefix, hour_key, min_key):
+    """兼容 "HH:MM" 字符串写法，返回 (hour, minute, err)。"""
+    if isinstance(raw, str) and ":" in raw:
+        try:
+            h, m = raw.split(":")[:2]
+            return int(h), int(m), None
+        except (TypeError, ValueError):
+            return None, None, f"{prefix} 格式应为 HH:MM"
+    return None, None, f"缺少 {hour_key}/{min_key}（或 {prefix}='HH:MM'）"
+
+
+def _parse_hm(item, prefix):
+    """返回 (hour, minute, err)。prefix 为 'start' / 'end'。"""
+    hour_key, min_key = f"{prefix}_hour", f"{prefix}_minute"
+    if hour_key in item or min_key in item:
+        try:
+            return int(item.get(hour_key, 0)), int(item.get(min_key, 0)), None
+        except (TypeError, ValueError):
+            return None, None, f"{hour_key}/{min_key} 必须是整数"
+    return _parse_hm_string(item.get(prefix), prefix, hour_key, min_key)
+
+
+def _parse_day(item, idx):
+    """解析并校验 day 字段，返回 (day, error_message or None)。"""
+    try:
+        day = int(item.get("day", -1))
+    except (TypeError, ValueError):
+        return None, f"第 {idx + 1} 个时段 day 必须是整数"
+    if day != -1 and not (0 <= day <= 6):
+        return None, f"第 {idx + 1} 个时段 day 应为 -1(每天) 或 0~6"
+    return day, None
+
+
+def _check_hm_range(idx, sh, sm, eh, em):
+    """校验起止时分取值范围，返回错误信息或 None。"""
+    for label, h, m in (("开始", sh, sm), ("结束", eh, em)):
+        if not (0 <= h <= 23):
+            return f"第 {idx + 1} 个时段{label}小时应在 0~23"
+        if not (0 <= m <= 59):
+            return f"第 {idx + 1} 个时段{label}分钟应在 0~59"
+    return None
+
+
+def _normalize_window_item(item, idx):
+    """校验并归一化单个时段，返回 (normalized_dict, error_message or None)。"""
+    if not isinstance(item, dict):
+        return None, f"第 {idx + 1} 个时段格式错误，应为对象"
+
+    day, err = _parse_day(item, idx)
+    if err:
+        return None, err
+
+    sh, sm, err = _parse_hm(item, "start")
+    if err:
+        return None, f"第 {idx + 1} 个时段：{err}"
+    eh, em, err = _parse_hm(item, "end")
+    if err:
+        return None, f"第 {idx + 1} 个时段：{err}"
+
+    err = _check_hm_range(idx, sh, sm, eh, em)
+    if err:
+        return None, err
+
+    if (sh, sm) > (eh, em):
+        return None, f"第 {idx + 1} 个时段的结束时间不能早于开始时间"
+
+    return {
+        "day": day,
+        "start_hour": sh,
+        "start_minute": sm,
+        "end_hour": eh,
+        "end_minute": em,
+    }, None
 
 
 def _now_in_windows(windows, now):

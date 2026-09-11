@@ -139,61 +139,12 @@ class NLPParserService:
         else:
             text_no_name = text
 
-        behavior_keywords = NLPBehaviorKeyword.query.all()
-        matched_keywords = []
-        for kw in behavior_keywords:
-            if kw.keyword in text_no_name:
-                matched_keywords.append(
-                    (
-                        kw.keyword,
-                        kw.keyword_type,
-                        kw.score_type,
-                        kw.default_score,
-                    )
-                )
-                for synonym in kw.synonyms:
-                    if synonym in text_no_name and synonym not in [k[0] for k in matched_keywords]:
-                        matched_keywords.append(
-                            (
-                                synonym,
-                                kw.keyword_type,
-                                kw.score_type,
-                                kw.default_score,
-                            )
-                        )
+        matched_keywords = self._match_behavior_keywords(text_no_name)
 
         if self.jieba_initialized:
-            words = jieba.lcut(text_no_name)
-            for word in words:
-                if len(word) >= 2:
-                    kw = NLPBehaviorKeyword.query.filter_by(keyword=word).first()
-                    if kw and word not in [k[0] for k in matched_keywords]:
-                        matched_keywords.append(
-                            (
-                                word,
-                                kw.keyword_type,
-                                kw.score_type,
-                                kw.default_score,
-                            )
-                        )
+            self._match_words_by_jieba(text_no_name, matched_keywords)
 
-        positive_count = 0
-        negative_count = 0
-
-        if self.jieba_initialized:
-            words = jieba.lcut(text_no_name)
-            for word in words:
-                if word in self.positive_keywords:
-                    positive_count += 1
-                if word in self.negative_keywords:
-                    negative_count += 1
-        else:
-            for kw in self.positive_keywords:
-                if kw in text_no_name:
-                    positive_count += 1
-            for kw in self.negative_keywords:
-                if kw in text_no_name:
-                    negative_count += 1
+        positive_count, negative_count = self._count_sentiment(text_no_name)
 
         return {
             "keywords": matched_keywords,
@@ -201,6 +152,60 @@ class NLPParserService:
             "negative_count": negative_count,
             "text": text_no_name.strip(),
         }
+
+    def _match_behavior_keywords(self, text_no_name):
+        """按关键词及其同义词匹配行为，返回匹配列表。"""
+        matched_keywords = []
+        for kw in NLPBehaviorKeyword.query.all():
+            if kw.keyword in text_no_name:
+                matched_keywords.append(
+                    (kw.keyword, kw.keyword_type, kw.score_type, kw.default_score)
+                )
+                for synonym in kw.synonyms:
+                    if synonym in text_no_name and synonym not in [k[0] for k in matched_keywords]:
+                        matched_keywords.append(
+                            (synonym, kw.keyword_type, kw.score_type, kw.default_score)
+                        )
+        return matched_keywords
+
+    def _match_words_by_jieba(self, text_no_name, matched_keywords):
+        """用 jieba 分词补充匹配（原地追加到 matched_keywords）。"""
+        for word in jieba.lcut(text_no_name):
+            if len(word) >= 2:
+                kw = NLPBehaviorKeyword.query.filter_by(keyword=word).first()
+                if kw and word not in [k[0] for k in matched_keywords]:
+                    matched_keywords.append(
+                        (word, kw.keyword_type, kw.score_type, kw.default_score)
+                    )
+
+    def _count_sentiment(self, text_no_name):
+        """统计正/负向情感词数量，返回 (positive_count, negative_count)。"""
+        if self.jieba_initialized:
+            return self._count_sentiment_words(jieba.lcut(text_no_name))
+        return self._count_sentiment_by_substring(text_no_name)
+
+    def _count_sentiment_words(self, words):
+        """按分词统计正/负向情感词。"""
+        positive_count = 0
+        negative_count = 0
+        for word in words:
+            if word in self.positive_keywords:
+                positive_count += 1
+            if word in self.negative_keywords:
+                negative_count += 1
+        return positive_count, negative_count
+
+    def _count_sentiment_by_substring(self, text_no_name):
+        """按子串统计正/负向情感词（无 jieba 时的回退）。"""
+        positive_count = 0
+        negative_count = 0
+        for kw in self.positive_keywords:
+            if kw in text_no_name:
+                positive_count += 1
+        for kw in self.negative_keywords:
+            if kw in text_no_name:
+                negative_count += 1
+        return positive_count, negative_count
 
     def determine_intent(self, text, behavior_result):
         """确定评分意图（加分/扣分）"""
@@ -224,15 +229,22 @@ class NLPParserService:
             return "deduct"
         if positive_count > negative_count:
             return "add"
-        keywords = behavior_result["keywords"]
-        if keywords:
-            for kw in keywords:
-                if kw[2] == "deduct":
-                    return "deduct"
-                if kw[2] == "add":
-                    return "add"
+        keyword_intent = self._intent_from_keywords(behavior_result.get("keywords"))
+        if keyword_intent:
+            return keyword_intent
 
         return "unknown"
+
+    def _intent_from_keywords(self, keywords):
+        """从行为关键词序列推断加减分意图，无匹配返回 None。"""
+        if not keywords:
+            return None
+        for kw in keywords:
+            if kw[2] == "deduct":
+                return "deduct"
+            if kw[2] == "add":
+                return "add"
+        return None
 
     def match_rule(self, text, intent, name=None):
         """匹配评分规则"""

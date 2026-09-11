@@ -154,6 +154,17 @@ class FastNLPParser:
             if len(candidate) >= 2:
                 return candidate
 
+        stripped = self._strip_intent_keywords(name, intent_keywords)
+        if stripped is not None:
+            return stripped
+
+        if self._trailing_is_invalid(text, end_pos, intent_keywords):
+            return None
+
+        return name
+
+    def _strip_intent_keywords(self, name: str, intent_keywords: set[str]) -> str | None:
+        """剔除姓名首尾的行为关键词（保留首个匹配结果）"""
         for kw in intent_keywords:
             if kw in name and len(kw) > 1:
                 if name.endswith(kw):
@@ -164,20 +175,20 @@ class FastNLPParser:
                     new_name = name[len(kw) :]
                     if len(new_name) >= 2:
                         return new_name
+        return None
 
-        if end_pos < len(text):
-            next_char = text[end_pos]
-            if next_char in "\u4e00-\u9fa5" and next_char not in "，。！？、 的":
-                remaining_text = text[end_pos:]
-                matched_behavior = False
-                for kw in intent_keywords:
-                    if remaining_text.startswith(kw):
-                        matched_behavior = True
-                        break
-                if not matched_behavior:
-                    return None
-
-        return name
+    def _trailing_is_invalid(self, text: str, end_pos: int, intent_keywords: set[str]) -> bool:
+        """判断姓名后字符是否属于非行为类中文续接（是则返回 True 触发剔除）"""
+        if end_pos >= len(text):
+            return False
+        next_char = text[end_pos]
+        if next_char not in "\u4e00-\u9fa5" or next_char in "，。！？、 的":
+            return False
+        remaining_text = text[end_pos:]
+        for kw in intent_keywords:
+            if remaining_text.startswith(kw):
+                return False
+        return True
 
     def _extract_score(self, text: str) -> float | None:
         """从文本中提取分数"""

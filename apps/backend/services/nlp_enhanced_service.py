@@ -1627,36 +1627,28 @@ class EnhancedNLPParserService:
         )
         _CTX = 3  # 关键词左侧上下文窗口长度（字符）
 
-        def _occurrences(word):
-            # 返回每个命中词的局部权重（含程度副词加权 / 否定翻转）
-            results = []
-            for m in re.finditer(re.escape(word), text):
-                left = text[max(0, m.start() - _CTX) : m.start()]
-                deg = 1.0
-                for _d, _w in _DEGREE_WEIGHTS.items():
-                    if left.endswith(_d):
-                        deg = max(deg, _w)
-                negated = any(left.endswith(_n) for _n in _NEG_WORDS)
-                base = len(word) * 0.5
-                results.append(base * deg * (-1 if negated else 1))
-            return results
-
         positive_score = 0.0
         negative_score = 0.0
-        for word in self.positive_keywords:
-            if word in text:
-                for v in _occurrences(word):
-                    if v >= 0:
-                        positive_score += v
-                    else:
-                        negative_score += -v
-        for word in self.negative_keywords:
-            if word in text:
-                for v in _occurrences(word):
-                    if v >= 0:
-                        negative_score += v
-                    else:
-                        positive_score += -v
+        positive_score, negative_score = self._accumulate_keyword_scores(
+            text,
+            self.positive_keywords,
+            _DEGREE_WEIGHTS,
+            _NEG_WORDS,
+            _CTX,
+            positive_score,
+            negative_score,
+            True,
+        )
+        positive_score, negative_score = self._accumulate_keyword_scores(
+            text,
+            self.negative_keywords,
+            _DEGREE_WEIGHTS,
+            _NEG_WORDS,
+            _CTX,
+            positive_score,
+            negative_score,
+            False,
+        )
 
         total_score = positive_score + negative_score
 
@@ -1664,6 +1656,48 @@ class EnhancedNLPParserService:
             return 0.0
 
         return (positive_score - negative_score) / total_score
+
+    @staticmethod
+    def _occurrence_weights(word, text, degree_weights, neg_words, ctx):
+        # 返回每个命中词的局部权重（含程度副词加权 / 否定翻转）
+        results = []
+        for m in re.finditer(re.escape(word), text):
+            left = text[max(0, m.start() - ctx) : m.start()]
+            deg = 1.0
+            for _d, _w in degree_weights.items():
+                if left.endswith(_d):
+                    deg = max(deg, _w)
+            negated = any(left.endswith(_n) for _n in neg_words)
+            base = len(word) * 0.5
+            results.append(base * deg * (-1 if negated else 1))
+        return results
+
+    def _accumulate_keyword_scores(
+        self,
+        text,
+        keywords,
+        degree_weights,
+        neg_words,
+        ctx,
+        positive_score,
+        negative_score,
+        to_positive,
+    ):
+        # 原位累加（保持与原实现的浮点累加顺序完全一致）。
+        for word in keywords:
+            if word in text:
+                for v in self._occurrence_weights(word, text, degree_weights, neg_words, ctx):
+                    if v >= 0:
+                        if to_positive:
+                            positive_score += v
+                        else:
+                            negative_score += v
+                    else:
+                        if to_positive:
+                            negative_score += -v
+                        else:
+                            positive_score += -v
+        return positive_score, negative_score
 
 
     def _resolve_referral(self, text):
@@ -2180,21 +2214,7 @@ class EnhancedNLPParserService:
         if not rules:
             return []
 
-        rule_texts = []
-        rule_ids = []
-
-        for rule in rules:
-            texts = []
-            if rule.behavior_keyword:
-                texts.append(rule.behavior_keyword)
-            if rule.behavior_description:
-                texts.append(rule.behavior_description)
-            if rule.match_pattern:
-                texts.append(rule.match_pattern)
-            if rule.behavior_tags:
-                texts.extend(rule.behavior_tags)
-            rule_texts.append(" ".join(texts))
-            rule_ids.append(rule.id)
+        rule_texts, rule_ids = self._build_rule_texts(rules)
 
         X_rules = self.vectorizer.transform(rule_texts)
 
@@ -2212,16 +2232,42 @@ class EnhancedNLPParserService:
             X_text = self.vectorizer.transform([text])
             final_similarities = cosine_similarity(X_text, X_rules)[0]
 
+        matched_rules = self._collect_matched_rules(final_similarities, rule_ids, text)
+
+        matched_rules.sort(key=lambda x: x[1], reverse=True)
+
+        return matched_rules[:5]
+
+    @staticmethod
+    def _build_rule_texts(rules):
+        rule_texts = []
+        rule_ids = []
+
+        for rule in rules:
+            texts = []
+            if rule.behavior_keyword:
+                texts.append(rule.behavior_keyword)
+            if rule.behavior_description:
+                texts.append(rule.behavior_description)
+            if rule.match_pattern:
+                texts.append(rule.match_pattern)
+            if rule.behavior_tags:
+                texts.extend(rule.behavior_tags)
+            rule_texts.append(" ".join(texts))
+            rule_ids.append(rule.id)
+
+        return rule_texts, rule_ids
+
+    def _collect_matched_rules(self, final_similarities, rule_ids, text):
         matched_rules = []
+
         for i, similarity in enumerate(final_similarities):
             if similarity > 0.15:
                 rule = get_by_id(NLPScoringRule, rule_ids[i])
                 if rule and not self._has_antonym_conflict(text, rule):
                     matched_rules.append((rule, similarity))
 
-        matched_rules.sort(key=lambda x: x[1], reverse=True)
-
-        return matched_rules[:5]
+        return matched_rules
 
     def _get_bert_service_safe(self):
         """获取可用的 BERT 服务；不可用/未初始化/异常一律返回 None（绝不抛出）。
@@ -2599,6 +2645,25 @@ class EnhancedNLPParserService:
 
     def match_rule(self, text, intent, name=None):
         behavior_result = self.extract_behavior(text, name)
+        matched_rules = self._collect_keyword_rule_matches(behavior_result, intent)
+
+        semantic_matches = self.semantic_match(text, intent)
+        self._append_semantic_matches(matched_rules, semantic_matches)
+
+        ml_rule, ml_confidence = self.ml_predict(text)
+        self._append_rule_if_new(matched_rules, ml_rule, "ml", ml_confidence)
+
+        ensemble_rule, ensemble_confidence, ensemble_details = self.ensemble_predict(text)
+        self._append_rule_if_new(matched_rules, ensemble_rule, "ensemble", ensemble_confidence)
+
+        matched_rules.sort(key=lambda x: x[2], reverse=True)
+
+        if not matched_rules and intent != "unknown":
+            matched_rules.extend(self._build_fallback_matches(behavior_result, intent))
+
+        return [(rule, score) for rule, method, score in matched_rules[:5]]
+
+    def _collect_keyword_rule_matches(self, behavior_result, intent):
         matched_rules = []
 
         for kw, kw_type, _, _ in behavior_result["keywords"]:
@@ -2622,45 +2687,74 @@ class EnhancedNLPParserService:
                         keyword_score += 0.15
                     matched_rules.append((rule, "keyword", min(keyword_score, 0.95)))
 
-        semantic_matches = self.semantic_match(text, intent)
+        return matched_rules
+
+    @staticmethod
+    def _append_semantic_matches(matched_rules, semantic_matches):
         for rule, similarity in semantic_matches:
             if rule not in [r[0] for r in matched_rules]:
                 matched_rules.append((rule, "semantic", similarity))
 
-        ml_rule, ml_confidence = self.ml_predict(text)
-        if ml_rule and ml_rule not in [r[0] for r in matched_rules]:
-            matched_rules.append((ml_rule, "ml", ml_confidence))
+    @staticmethod
+    def _append_rule_if_new(matched_rules, rule, method, score):
+        if rule and rule not in [r[0] for r in matched_rules]:
+            matched_rules.append((rule, method, score))
 
-        ensemble_rule, ensemble_confidence, ensemble_details = self.ensemble_predict(text)
-        if ensemble_rule and ensemble_rule not in [r[0] for r in matched_rules]:
-            matched_rules.append((ensemble_rule, "ensemble", ensemble_confidence))
-
-        matched_rules.sort(key=lambda x: x[2], reverse=True)
-
-        if not matched_rules and intent != "unknown":
-            keywords = behavior_result["keywords"]
-            if keywords:
-                for kw, kw_type, kw_score_type, default_score in keywords:
-                    if kw_score_type == intent:
-                        rule = NLPScoringRule(
-                            behavior_keyword=kw,
-                            behavior_description=f"{kw}行为",
-                            score_value=default_score or (5 if intent == "add" else -5),
-                            score_type=intent,
-                            behavior_tags=[kw_type],
-                            match_pattern=kw,
-                            priority=0,
-                        )
-                        matched_rules.append((rule, "fallback", 0.5))
-
-        return [(rule, score) for rule, method, score in matched_rules[:5]]
+    def _build_fallback_matches(self, behavior_result, intent):
+        matched_rules = []
+        keywords = behavior_result["keywords"]
+        if keywords:
+            for kw, kw_type, kw_score_type, default_score in keywords:
+                if kw_score_type == intent:
+                    rule = NLPScoringRule(
+                        behavior_keyword=kw,
+                        behavior_description=f"{kw}行为",
+                        score_value=default_score or (5 if intent == "add" else -5),
+                        score_type=intent,
+                        behavior_tags=[kw_type],
+                        match_pattern=kw,
+                        priority=0,
+                    )
+                    matched_rules.append((rule, "fallback", 0.5))
+        return matched_rules
 
     def _check_corrections(self, text):
-        from models import NLPCorrection
-
         text_lower = text.lower().strip()
 
-        corrections = []
+        corrections = self._load_approved_corrections(text, text_lower)
+        if not corrections:
+            return None
+
+        # 提取所有需要的属性，避免 DetachedInstanceError
+        correction_data = self._extract_correction_data(corrections)
+        correction_map = self._build_correction_map(correction_data)
+
+        if not correction_map:
+            return None
+
+        base_result = self.parse_without_correction(text)
+
+        self._apply_correction_map(base_result, correction_map)
+
+        # 修复：原 `with db_session_scope(): pass` 空提交——finally 的 session.remove()
+        # 既没提交上面的学习/修正状态修改（corr.status="learned" 等全部回滚），又销毁请求级
+        # session。改为显式 commit 持久化修改。
+        db.session.commit()
+
+        self._trigger_inductive_learning([c["obj"] for c in correction_data])
+
+        cache_key = text.lower().strip()
+        if len(self._parse_cache) >= self._parse_cache_max_size:
+            oldest_key = next(iter(self._parse_cache))
+            del self._parse_cache[oldest_key]
+        self._parse_cache[cache_key] = base_result
+
+        return base_result
+
+    def _load_approved_corrections(self, text, text_lower):
+        """按原文精确 / 小写两种形式依次查询已确认纠错；异常降级为空列表。"""
+        from models import NLPCorrection
+
         try:
             corrections = (
                 NLPCorrection.query.filter(
@@ -2680,16 +2774,17 @@ class EnhancedNLPParserService:
                     .order_by(NLPCorrection.learn_count.desc())
                     .all()
                 )
+            return corrections
         except Exception:
             logging.getLogger(__name__).warning(
                 "NLP best-effort operation failed; exception previously swallowed silently",
                 exc_info=True,
             )
+            return []
 
-        if not corrections:
-            return None
-
-        # 提取所有需要的属性，避免 DetachedInstanceError
+    @staticmethod
+    def _extract_correction_data(corrections):
+        """提取纠错记录属性快照，避免 DetachedInstanceError。"""
         correction_data = []
         for corr in corrections:
             correction_data.append(
@@ -2702,17 +2797,19 @@ class EnhancedNLPParserService:
                     "obj": corr,
                 }
             )
+        return correction_data
 
+    @staticmethod
+    def _build_correction_map(correction_data):
+        """按 field_type 取首条（列表已按 learn_count 降序，重复类型首条优先）。"""
         correction_map = {}
         for corr_data in correction_data:
             if corr_data["field_type"] not in correction_map:
                 correction_map[corr_data["field_type"]] = corr_data
+        return correction_map
 
-        if not correction_map:
-            return None
-
-        base_result = self.parse_without_correction(text)
-
+    def _apply_correction_map(self, base_result, correction_map):
+        """按 name / intent / score 应用纠正结果并累加学习计数。"""
         if "name" in correction_map:
             corr_data = correction_map["name"]
             name_to_id = self._get_name_to_id()
@@ -2732,21 +2829,6 @@ class EnhancedNLPParserService:
             base_result["score"] = float(corr_data["corrected_value"])
             corr_data["obj"].learn_count = corr_data["learn_count"] + 1
             corr_data["obj"].last_learned_at = datetime.now()
-
-        # 修复：原 `with db_session_scope(): pass` 空提交——finally 的 session.remove()
-        # 既没提交上面的学习/修正状态修改（corr.status="learned" 等全部回滚），又销毁请求级
-        # session。改为显式 commit 持久化修改。
-        db.session.commit()
-
-        self._trigger_inductive_learning([c["obj"] for c in correction_data])
-
-        cache_key = text.lower().strip()
-        if len(self._parse_cache) >= self._parse_cache_max_size:
-            oldest_key = next(iter(self._parse_cache))
-            del self._parse_cache[oldest_key]
-        self._parse_cache[cache_key] = base_result
-
-        return base_result
 
     def parse_without_correction(self, text):
         name, user_id = self.extract_name(text)
@@ -2912,40 +2994,10 @@ class EnhancedNLPParserService:
         for corr in corrections:
             if corr.learn_count >= LEARN_THRESHOLD and corr.status == "approved":
                 if corr.field_type == "name":
-                    if corr.original_value and corr.original_value not in self.invalid_names:
-                        self.invalid_names.add(corr.original_value)
-
-                    text = corr.original_text
-                    corrected_name = corr.corrected_value
-                    original_name = corr.original_value
-                    if corrected_name and original_name:
-                        original_pos = text.find(original_name)
-                        corrected_pos = text.find(corrected_name)
-
-                        if (
-                            original_pos != -1
-                            and corrected_pos != -1
-                            and original_pos < corrected_pos
-                        ):
-                            prefix = text[:original_pos]
-                            if len(prefix) >= 2:
-                                prefix_pattern = re.escape(prefix) + r"[\u4e00-\u9fa5]{2}"
-                                found_existing = False
-                                for pattern in self.name_patterns:
-                                    if prefix_pattern in pattern.pattern:
-                                        found_existing = True
-                                        break
-                                if not found_existing and len(prefix) <= 8:
-                                    new_pattern = re.compile(prefix_pattern + r"(?:的)?")
-                                    self.name_patterns.insert(1, new_pattern)
+                    self._learn_name_pattern(corr)
 
                 elif corr.field_type == "intent":
-                    if corr.corrected_value in self.intent_keywords:
-                        text = corr.original_text
-                        verbs = re.findall(r"([\u4e00-\u9fa5]{2})的", text)
-                        for verb in verbs:
-                            if verb not in self.intent_keywords[corr.corrected_value]:
-                                self.intent_keywords[corr.corrected_value].append(verb)
+                    self._learn_intent_keywords(corr)
 
                 elif corr.field_type == "score":
                     pass
@@ -2955,6 +3007,50 @@ class EnhancedNLPParserService:
 
         # 修复：同 2417 行——原空 scope 既不提交又销毁请求级 session，改为显式 commit
         db.session.commit()
+
+    def _learn_name_pattern(self, corr):
+        """从姓名纠错推导「前缀 + 2 个汉字」的人名模式并登记到匹配表。"""
+        if corr.original_value and corr.original_value not in self.invalid_names:
+            self.invalid_names.add(corr.original_value)
+
+        text = corr.original_text
+        corrected_name = corr.corrected_value
+        original_name = corr.original_value
+        if not (corrected_name and original_name):
+            return
+
+        original_pos = text.find(original_name)
+        corrected_pos = text.find(corrected_name)
+        if not (original_pos != -1 and corrected_pos != -1 and original_pos < corrected_pos):
+            return
+
+        prefix = text[:original_pos]
+        if len(prefix) < 2:
+            return
+
+        prefix_pattern = re.escape(prefix) + r"[\u4e00-\u9fa5]{2}"
+        self._register_name_pattern(prefix_pattern, len(prefix))
+
+    def _register_name_pattern(self, prefix_pattern, prefix_len):
+        """模式不存在且前缀不超过 8 字时，插入到匹配表第 2 位。"""
+        for pattern in self.name_patterns:
+            if prefix_pattern in pattern.pattern:
+                return
+
+        if prefix_len <= 8:
+            new_pattern = re.compile(prefix_pattern + r"(?:的)?")
+            self.name_patterns.insert(1, new_pattern)
+
+    def _learn_intent_keywords(self, corr):
+        """从意图纠错补充「XX的」形式的动词关键词。"""
+        if corr.corrected_value not in self.intent_keywords:
+            return
+
+        text = corr.original_text
+        verbs = re.findall(r"([\u4e00-\u9fa5]{2})的", text)
+        for verb in verbs:
+            if verb not in self.intent_keywords[corr.corrected_value]:
+                self.intent_keywords[corr.corrected_value].append(verb)
 
     def parse(self, text, context_history=None):
         cache_key = text.strip().lower()

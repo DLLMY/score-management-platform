@@ -98,49 +98,20 @@ def calculate_engagement(user_id, days=30, end_date=None):
         Attendance.student_id == user_id,
         Attendance.date >= cutoff,
     ).all()
-    att_total = len(attendances)
-    attendance_rate = None
-    if att_total > 0:
-        weighted = 0.0
-        for a in attendances:
-            st = (a.status or "present").lower()
-            weighted += ATTENDANCE_WEIGHT.get(st, DEFAULT_ATTENDANCE_WEIGHT)
-        attendance_rate = weighted / att_total
+    attendance_rate = _calc_attendance_rate(attendances)
 
     # ---- 作业 ----
     assignments = HomeworkAssignment.query.filter(
         HomeworkAssignment.assigned_date >= cutoff,
     ).all()
-    hw_total = len(assignments)
-    homework_rate = None
-    if hw_total > 0:
-        sub_map = {}
-        if assignments:
-            subs = HomeworkSubmission.query.filter(
-                HomeworkSubmission.student_id == user_id,
-                HomeworkSubmission.assignment_id.in_([a.id for a in assignments]),
-            ).all()
-            for s in subs:
-                sub_map[s.assignment_id] = s
-        submitted = 0
-        late = 0
-        for a in assignments:
-            s = sub_map.get(a.id)
-            if s and s.is_submitted:
-                submitted += 1
-                if s.is_late:
-                    late += 1
-        # 迟交按半价计入，最少 0
-        homework_rate = max(0.0, (submitted - 0.5 * late) / hw_total)
+    homework_rate = _calc_homework_rate(assignments, user_id)
 
     # ---- 积分活跃度（无积分行为记录时记为缺失，参与权重重归一化）----
     records = ScoreRecord.query.filter(
         ScoreRecord.student_id == user_id,
         ScoreRecord.created_at >= cutoff_dt,
     ).all()
-    event_count = len(records)
-    expected = max(1, days // ACTIVITY_EXPECTED_PER_DAYS)
-    activity_rate = None if event_count == 0 else min(1.0, event_count / expected)
+    activity_rate = _calc_activity_rate(records, days)
 
     # ---- 请假 ----
     leave_days = _count_leave_days(user_id, cutoff, now)
@@ -233,6 +204,48 @@ def calculate_engagement(user_id, days=30, end_date=None):
         "description": description,
         "has_data": True,
     }
+
+
+def _calc_attendance_rate(attendances):
+    """计算出勤率（无记录返回 None）。逐字节复刻权重累加逻辑。"""
+    if not attendances:
+        return None
+    weighted = 0.0
+    for a in attendances:
+        st = (a.status or "present").lower()
+        weighted += ATTENDANCE_WEIGHT.get(st, DEFAULT_ATTENDANCE_WEIGHT)
+    return weighted / len(attendances)
+
+
+def _calc_homework_rate(assignments, user_id):
+    """计算作业提交率（迟交半价；无作业返回 None）。"""
+    if not assignments:
+        return None
+    sub_map = {}
+    subs = HomeworkSubmission.query.filter(
+        HomeworkSubmission.student_id == user_id,
+        HomeworkSubmission.assignment_id.in_([a.id for a in assignments]),
+    ).all()
+    for s in subs:
+        sub_map[s.assignment_id] = s
+    submitted = 0
+    late = 0
+    for a in assignments:
+        s = sub_map.get(a.id)
+        if s and s.is_submitted:
+            submitted += 1
+            if s.is_late:
+                late += 1
+    return max(0.0, (submitted - 0.5 * late) / len(assignments))
+
+
+def _calc_activity_rate(records, days):
+    """计算积分活跃度（无记录返回 None，封顶 1）。"""
+    if not records:
+        return None
+    event_count = len(records)
+    expected = max(1, days // ACTIVITY_EXPECTED_PER_DAYS)
+    return min(1.0, event_count / expected)
 
 
 def weekly_trend(user_id, weeks=8):

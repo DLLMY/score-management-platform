@@ -869,28 +869,32 @@ class AcademicsService:
             config = get_by_id(ImportConfig, config_id)
             if config is None:
                 return None
-            if "config_name" in data:
-                config.config_name = data["config_name"]
-            if "field_mappings" in data:
-                config.field_mappings = data["field_mappings"]
-            if "validation_rules" in data:
-                config.validation_rules = data["validation_rules"]
-            if "conflict_strategy" in data:
-                config.conflict_strategy = data["conflict_strategy"]
-            if "default_values" in data:
-                config.default_values = data["default_values"]
-            if "is_active" in data:
-                config.is_active = data["is_active"]
-            if "is_default" in data and data["is_default"] and not config.is_default:
+            self._apply_import_config_fields(config, data)
+            config.updated_at = datetime.now()
+            return config.id
+
+    @staticmethod
+    def _apply_import_config_fields(config, data):
+        """逐字段复刻导入配置更新（与 update_import_config 行为一致）。
+        is_default 带同模块互斥清理：置为 True 时先清同模块其他默认。"""
+        _IMPORT_CONFIG_SIMPLE_FIELDS = (
+            "config_name",
+            "field_mappings",
+            "validation_rules",
+            "conflict_strategy",
+            "default_values",
+            "is_active",
+            "description",
+        )
+        for _field in _IMPORT_CONFIG_SIMPLE_FIELDS:
+            if _field in data:
+                setattr(config, _field, data[_field])
+        if "is_default" in data:
+            if data["is_default"] and not config.is_default:
                 ImportConfig.query.filter_by(
                     module_name=config.module_name, is_default=True
                 ).update({"is_default": False})
-            if "is_default" in data:
-                config.is_default = data["is_default"]
-            if "description" in data:
-                config.description = data["description"]
-            config.updated_at = datetime.now()
-            return config.id
+            config.is_default = data["is_default"]
 
     def delete_import_config(self, config_id):
         """删除导入配置。is_default 禁删校验（请求级 400）由路由层完成；404 语义由路由层 get_or_404 保证。"""

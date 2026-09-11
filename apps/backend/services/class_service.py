@@ -9,6 +9,59 @@ import re
 import io
 
 
+def _lookup_admin_by_name(head_teacher_name):
+    """按姓名解析班主任 admin，返回 (admin, error)；error 非 None 表示解析失败。"""
+    if not isinstance(head_teacher_name, str) or len(head_teacher_name.strip()) == 0:
+        return None, "班主任姓名格式无效，必须为非空字符串"
+    if len(head_teacher_name.strip()) > 50:
+        return None, "班主任姓名长度超过限制（最大50字符）"
+    admin = Admin.query.filter(Admin.real_name == head_teacher_name.strip()).first()
+    if not admin:
+        admin = Admin.query.filter(Admin.username == head_teacher_name.strip()).first()
+    if not admin:
+        return None, f'班主任 "{head_teacher_name}" 在系统中不存在'
+    if admin.role not in ["admin", "teacher"]:
+        return None, f'用户 "{head_teacher_name}" 的角色不是管理员或教师，无法担任班主任'
+    return admin, None
+
+
+def _lookup_admin_by_id(head_teacher_id):
+    """按 ID 解析班主任 admin，返回 (admin, error)；error 非 None 表示解析失败。"""
+    if not isinstance(head_teacher_id, (int, str)):
+        return None, "班主任ID格式无效，必须为数字"
+    try:
+        admin_id = int(head_teacher_id)
+        admin = get_by_id(Admin, admin_id)
+        if not admin:
+            return None, f'班主任ID "{head_teacher_id}" 在系统中不存在'
+        if admin.role not in ["admin", "teacher"]:
+            return None, f'用户ID "{head_teacher_id}" 的角色不是管理员或教师，无法担任班主任'
+        return admin, None
+    except ValueError:
+        return None, "班主任ID格式无效，必须为有效数字"
+
+
+def _resolve_admin_relation(head_teacher_name, head_teacher_id):
+    """解析班主任 admin 关联，返回 (resolved_head_teacher_id, errors)。"""
+    errors = []
+    if head_teacher_name and head_teacher_id:
+        errors.append("不能同时提供班主任姓名和班主任ID")
+        return None, errors
+    if head_teacher_name:
+        admin, err = _lookup_admin_by_name(head_teacher_name)
+        if err:
+            errors.append(err)
+            return None, errors
+        return admin.id, errors
+    if head_teacher_id:
+        admin, err = _lookup_admin_by_id(head_teacher_id)
+        if err:
+            errors.append(err)
+            return None, errors
+        return admin.id, errors
+    return None, errors
+
+
 class ClassService:
 
     def __init__(self):
@@ -464,93 +517,10 @@ class ClassService:
         failed_count = 0
         messages = []
 
-        def validate_item(item):
-            errors = []
-            for rule in validation_rules:
-                field = rule["field"]
-                rule_type = rule["rule_type"]
-                params = rule.get("params", {})
-                message = rule.get("message", f"{field}验证失败")
-                value = item.get(field)
-
-                if rule_type == "required" and value is None or (
-                    rule_type == "max_length" and value and len(str(value)) > params.get("max", 100)
-                ) or rule_type == "min_length" and value and len(str(value)) < params.get("min", 1) or (
-                    rule_type == "regex"
-                    and value
-                    and not re.match(params.get("pattern", ""), str(value))
-                ):
-                    errors.append(message)
-            return errors
-
-        def resolve_relations(item):
-            resolved = item.copy()
-            validation_errors = []
-
-            for mapping in field_mappings:
-                relation = mapping.get("relation")
-
-                if relation == "admin":
-                    head_teacher_name = item.get("head_teacher_name")
-                    head_teacher_id = item.get("head_teacher_id")
-
-                    if head_teacher_name and head_teacher_id:
-                        validation_errors.append("不能同时提供班主任姓名和班主任ID")
-                    elif head_teacher_name:
-                        if (
-                            not isinstance(head_teacher_name, str)
-                            or len(head_teacher_name.strip()) == 0
-                        ):
-                            validation_errors.append("班主任姓名格式无效，必须为非空字符串")
-                        elif len(head_teacher_name.strip()) > 50:
-                            validation_errors.append("班主任姓名长度超过限制（最大50字符）")
-                        else:
-                            admin = Admin.query.filter(
-                                Admin.real_name == head_teacher_name.strip()
-                            ).first()
-                            if not admin:
-                                admin = Admin.query.filter(
-                                    Admin.username == head_teacher_name.strip()
-                                ).first()
-                            if not admin:
-                                validation_errors.append(
-                                    f'班主任 "{head_teacher_name}" 在系统中不存在'
-                                )
-                            else:
-                                if admin.role not in ["admin", "teacher"]:
-                                    validation_errors.append(
-                                        f'用户 "{head_teacher_name}" 的角色不是'
-                                        "管理员或教师，无法担任班主任"
-                                    )
-                                resolved["head_teacher_id"] = admin.id
-                    elif head_teacher_id:
-                        if not isinstance(head_teacher_id, (int, str)):
-                            validation_errors.append("班主任ID格式无效，必须为数字")
-                        else:
-                            try:
-                                admin_id = int(head_teacher_id)
-                                admin = get_by_id(Admin, admin_id)
-                                if not admin:
-                                    validation_errors.append(
-                                        f'班主任ID "{head_teacher_id}" 在系统中不存在'
-                                    )
-                                else:
-                                    if admin.role not in ["admin", "teacher"]:
-                                        validation_errors.append(
-                                            f'用户ID "{head_teacher_id}" 的角色不是'
-                                            "管理员或教师，无法担任班主任"
-                                        )
-                                    resolved["head_teacher_id"] = admin.id
-                            except ValueError:
-                                validation_errors.append("班主任ID格式无效，必须为有效数字")
-
-            resolved["_validation_errors"] = validation_errors
-            return resolved
-
         with db_session_scope(detach=False):
             for item in import_list:
                 try:
-                    errors = validate_item(item)
+                    errors = _validate_import_item(item, validation_rules)
                     if errors:
                         failed_count += 1
                         messages.append(
@@ -561,20 +531,16 @@ class ClassService:
                                 "row_data": item,
                                 "error_fields": list(
                                     {
-                                        
-                                            rule["field"]
-                                            for rule in validation_rules
-                                            if item.get(rule["field"]) is None
-                                        
+                                        rule["field"]
+                                        for rule in validation_rules
+                                        if item.get(rule["field"]) is None
                                     }
                                 ),
                             }
                         )
                         continue
 
-                    resolved_item = resolve_relations(item)
-
-                    relation_errors = resolved_item.get("_validation_errors", [])
+                    resolved_item, relation_errors = _resolve_import_relations(item, field_mappings)
                     if relation_errors:
                         failed_count += 1
                         messages.append(
@@ -592,80 +558,11 @@ class ClassService:
                         )
                         continue
 
-                    existing = ClassInfo.query.filter_by(name=resolved_item["name"]).first()
-
-                    if existing:
-                        if conflict_strategy == "skip":
-                            messages.append(
-                                {
-                                    "name": resolved_item["name"],
-                                    "action": "skipped",
-                                    "message": (f'班级 "{resolved_item["name"]}" 已存在，已跳过'),
-                                }
-                            )
-                            continue
-                        if conflict_strategy == "update":
-                            existing.grade = resolved_item.get("grade", existing.grade)
-                            existing.description = resolved_item.get(
-                                "description", existing.description
-                            )
-                            existing.is_active = resolved_item.get("is_active", existing.is_active)
-                            existing.updated_at = datetime.now()
-
-                            if "head_teacher_id" in resolved_item:
-                                existing.head_teacher_id = resolved_item["head_teacher_id"]
-                                if resolved_item["head_teacher_id"]:
-                                    admin_link = AdminClass.query.filter_by(
-                                        admin_id=resolved_item["head_teacher_id"],
-                                        class_info_id=existing.id,
-                                    ).first()
-                                    if admin_link:
-                                        admin_link.is_primary = True
-                                    else:
-                                        admin_link = AdminClass(
-                                            admin_id=resolved_item["head_teacher_id"],
-                                            class_info_id=existing.id,
-                                            is_primary=True,
-                                            assigned_at=datetime.now(),
-                                        )
-                                        db.session.add(admin_link)
-
-                            messages.append(
-                                {
-                                    "name": resolved_item["name"],
-                                    "action": "updated",
-                                    "message": (f'班级 "{resolved_item["name"]}" 已更新'),
-                                }
-                            )
-                    else:
-                        new_class = ClassInfo(
-                            name=resolved_item["name"],
-                            grade=resolved_item.get("grade"),
-                            description=resolved_item.get("description"),
-                            head_teacher_id=resolved_item.get("head_teacher_id"),
-                            is_active=resolved_item.get("is_active", True),
-                        )
-                        db.session.add(new_class)
-                        db.session.flush()
-
-                        if resolved_item.get("head_teacher_id"):
-                            admin_link = AdminClass(
-                                admin_id=resolved_item["head_teacher_id"],
-                                class_info_id=new_class.id,
-                                is_primary=True,
-                                assigned_at=datetime.now(),
-                            )
-                            db.session.add(admin_link)
-
-                        messages.append(
-                            {
-                                "name": resolved_item["name"],
-                                "action": "created",
-                                "message": f'班级 "{resolved_item["name"]}" 已创建',
-                            }
-                        )
-
-                    success_count += 1
+                    action, msg = _process_single_class(resolved_item, conflict_strategy)
+                    if msg is not None:
+                        messages.append(msg)
+                    if action != "skipped":
+                        success_count += 1
                 except Exception as e:
                     failed_count += 1
                     messages.append(
@@ -683,6 +580,123 @@ class ClassService:
             "failed_count": failed_count,
             "messages": messages,
         }
+
+
+_HEAD_TEACHER_MISSING = object()
+
+
+def _rule_failed(rule_type, value, params):
+    """判断单条校验规则是否失败（与原始 import_classes.validate_item 的复合条件等价）。"""
+    if rule_type == "required":
+        return value is None
+    if rule_type == "max_length":
+        return bool(value) and len(str(value)) > params.get("max", 100)
+    if rule_type == "min_length":
+        return bool(value) and len(str(value)) < params.get("min", 1)
+    if rule_type == "regex":
+        return bool(value) and not re.match(params.get("pattern", ""), str(value))
+    return False
+
+
+def _validate_import_item(item, validation_rules):
+    """校验单条导入记录（自 ClassService.import_classes 抽出，行为等价）。"""
+    errors = []
+    for rule in validation_rules:
+        field = rule["field"]
+        rule_type = rule["rule_type"]
+        params = rule.get("params", {})
+        message = rule.get("message", f"{field}验证失败")
+        value = item.get(field)
+        if _rule_failed(rule_type, value, params):
+            errors.append(message)
+    return errors
+
+
+def _resolve_import_relations(item, field_mappings):
+    """解析导入记录的关联字段（如班主任），返回 (resolved_item, errors)。"""
+    resolved = item.copy()
+    validation_errors = []
+
+    for mapping in field_mappings:
+        relation = mapping.get("relation")
+        if relation == "admin":
+            head_teacher_name = item.get("head_teacher_name")
+            head_teacher_id = item.get("head_teacher_id")
+            resolved_id, errs = _resolve_admin_relation(head_teacher_name, head_teacher_id)
+            validation_errors.extend(errs)
+            if resolved_id is not None:
+                resolved["head_teacher_id"] = resolved_id
+
+    return resolved, validation_errors
+
+
+def _process_single_class(resolved_item, conflict_strategy):
+    """处理单条班级记录的冲突策略（跳过/更新/新建），返回 (action, message)。
+
+    action 取值: skipped / updated / created / noop。
+    message 为 None 时表示无需向结果追加消息（noop 兜底，保持原实现语义）。
+    """
+    existing = ClassInfo.query.filter_by(name=resolved_item["name"]).first()
+    if existing:
+        if conflict_strategy == "skip":
+            return "skipped", {
+                "name": resolved_item["name"],
+                "action": "skipped",
+                "message": (f'班级 "{resolved_item["name"]}" 已存在，已跳过'),
+            }
+        if conflict_strategy == "update":
+            existing.grade = resolved_item.get("grade", existing.grade)
+            existing.description = resolved_item.get("description", existing.description)
+            existing.is_active = resolved_item.get("is_active", existing.is_active)
+            existing.updated_at = datetime.now()
+            _ht = resolved_item.get("head_teacher_id", _HEAD_TEACHER_MISSING)
+            if _ht is not _HEAD_TEACHER_MISSING:
+                existing.head_teacher_id = _ht
+                if _ht:
+                    admin_link = AdminClass.query.filter_by(
+                        admin_id=_ht,
+                        class_info_id=existing.id,
+                    ).first()
+                    if admin_link:
+                        admin_link.is_primary = True
+                    else:
+                        admin_link = AdminClass(
+                            admin_id=_ht,
+                            class_info_id=existing.id,
+                            is_primary=True,
+                            assigned_at=datetime.now(),
+                        )
+                        db.session.add(admin_link)
+            return "updated", {
+                "name": resolved_item["name"],
+                "action": "updated",
+                "message": (f'班级 "{resolved_item["name"]}" 已更新'),
+            }
+        # 已知策略之外的兜底：保持原实现「不写消息、仍计成功」语义
+        return "noop", None
+
+    new_class = ClassInfo(
+        name=resolved_item["name"],
+        grade=resolved_item.get("grade"),
+        description=resolved_item.get("description"),
+        head_teacher_id=resolved_item.get("head_teacher_id"),
+        is_active=resolved_item.get("is_active", True),
+    )
+    db.session.add(new_class)
+    db.session.flush()
+    if resolved_item.get("head_teacher_id"):
+        admin_link = AdminClass(
+            admin_id=resolved_item["head_teacher_id"],
+            class_info_id=new_class.id,
+            is_primary=True,
+            assigned_at=datetime.now(),
+        )
+        db.session.add(admin_link)
+    return "created", {
+        "name": resolved_item["name"],
+        "action": "created",
+        "message": f'班级 "{resolved_item["name"]}" 已创建',
+    }
 
 
 class_service = ClassService()

@@ -33,29 +33,31 @@ class SystemConfigService:
                 config = SystemConfig()
                 session.add(config)
 
-            if "system_name" in data:
-                config.system_name = data["system_name"]
-            if "system_logo" in data:
-                config.system_logo = data["system_logo"]
-            if "default_score" in data:
-                config.default_score = data["default_score"]
-            if "min_score" in data:
-                config.min_score = data["min_score"]
-            if "max_score" in data:
-                config.max_score = data["max_score"]
-            if "enable_notifications" in data:
-                config.enable_notifications = data["enable_notifications"]
-            if "notification_sound" in data:
-                config.notification_sound = data["notification_sound"]
-            if "auto_save" in data:
-                config.auto_save = data["auto_save"]
-            if "theme" in data:
-                config.theme = data["theme"]
-            if "language" in data:
-                config.language = data["language"]
+            SystemConfigService._apply_config_fields(config, data)
 
             session.commit()
             return SystemConfigService.get_config()
+
+    _CONFIG_FIELDS = (
+        "system_name",
+        "system_logo",
+        "default_score",
+        "min_score",
+        "max_score",
+        "enable_notifications",
+        "notification_sound",
+        "auto_save",
+        "theme",
+        "language",
+    )
+
+    @staticmethod
+    def _apply_config_fields(config, data):
+        """将 data 中存在的已知配置字段应用到 config 实例（缺失字段不覆盖）。"""
+        for field in SystemConfigService._CONFIG_FIELDS:
+            if field in data:
+                setattr(config, field, data[field])
+
 
     @staticmethod
     def get_default_score():

@@ -466,23 +466,8 @@ class AnomalyService:
                 else:
                     results["summary"]["low_severity_count"] += 1
 
-                # A18 归因补全：sudden_change 用 z_score；trend 用连续同向总变化
-                # （total_change 带符号）；group 用与班级均值的标准差偏差（deviation）。
-                # 全部 int() 归一，前端 .toFixed() 不会 NaN。
-                score_change = 0
-                if atype == "sudden_change":
-                    score_change = int(a.get("z_score", 0) or 0)
-                elif atype == "trend_anomaly":
-                    score_change = int(a.get("total_change", 0) or 0)
-                elif atype == "group_anomaly":
-                    score_change = int(a.get("deviation", 0) or 0)
-
-                # detected_at：仅 sudden_change 带 date，其它用当前时间。
-                detected_at = a.get("date")
-                if isinstance(detected_at, datetime):
-                    detected_at_str = detected_at.strftime("%Y-%m-%d %H:%M")
-                else:
-                    detected_at_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+                score_change = AnomalyService._compute_score_change(atype, a)
+                detected_at_str = AnomalyService._format_detected_at(a)
 
                 results["anomalies"].append(
                     {
@@ -507,3 +492,25 @@ class AnomalyService:
             )
         )
         return results
+
+    @staticmethod
+    def _compute_score_change(atype, anomaly):
+        # A18 归因补全：sudden_change 用 z_score；trend 用连续同向总变化
+        # （total_change 带符号）；group 用与班级均值的标准差偏差（deviation）。
+        # 全部 int() 归一，前端 .toFixed() 不会 NaN。
+        if atype == "sudden_change":
+            return int(anomaly.get("z_score", 0) or 0)
+        if atype == "trend_anomaly":
+            return int(anomaly.get("total_change", 0) or 0)
+        if atype == "group_anomaly":
+            return int(anomaly.get("deviation", 0) or 0)
+        return 0
+
+    @staticmethod
+    def _format_detected_at(anomaly):
+        # detected_at：仅 sudden_change 带 date，其它用当前时间。
+        detected_at = anomaly.get("date")
+        if isinstance(detected_at, datetime):
+            return detected_at.strftime("%Y-%m-%d %H:%M")
+        return datetime.now().strftime("%Y-%m-%d %H:%M")
+

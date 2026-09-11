@@ -19,6 +19,25 @@ logger = logging.getLogger(__name__)
 from utils.logger import log_warning
 
 
+def _build_policy_check_time(hour, minute):
+    """按 hour/minute 构造策略判定时刻；缺参或非法值返回 None。"""
+    if hour is None or minute is None:
+        return None
+    try:
+        return datetime.now().replace(
+            hour=int(hour), minute=int(minute), second=0, microsecond=0
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+def _teacher_policy_reason(decision):
+    """班主任策略放行的审计原因码与说明。"""
+    if decision == POLICY_ALLOW_OVERRIDE:
+        return "PHONEBOX_TEACHER_OVERRIDE", "班主任一键放行，跳过上课时间拦截"
+    return "PHONEBOX_TEACHER_WINDOW", "班主任预设时段内，允许开箱"
+
+
 class MQTTMessageService:
 
     def __init__(self):
@@ -148,19 +167,31 @@ class MQTTMessageService:
             self.publish_unlock_result(box_id, False, "card_not_found")
             return
 
-        # 班主任自助开箱策略：按班级由班主任自由决定（总开关 / 预设时段 / 一键放行）。
-        # 优先级高于全局 TimeRule 与上课硬拦截：一键放行/预设时段内可直接开箱；
-        # 班主任关闭本班时硬拒；无策略/未命中时回退到原有全局+课表逻辑（DEFER）。
+        if self._apply_teacher_unlock_policy(box_id, card_id, user, hour, minute):
+            return
+
+        # 全局 TimeRule 时段门禁（保留原有逻辑：allow_unlock 窗口外一律拒绝）
+        if not self.check_time_valid(box_id, hour, minute):
+            self.publish_unlock_result(box_id, False, "not_in_time")
+            return
+
+        # 新增：按班级课表反查，上课 / 自习时间禁止学生自助开箱（硬拦截，无 force_send）
+        if self._blocked_by_class_schedule(box_id, card_id, user, hour, minute):
+            return
+
+        # 积分门槛与扣减统一由 _deduct_and_unlock 处理（内部已含 <60 → score_low），
+        # 与班主任策略放行路径共用同一出口，避免两处判断漂移。
+        self._deduct_and_unlock(box_id, user, card_id)
+
+    def _apply_teacher_unlock_policy(self, box_id, card_id, user, hour, minute):
+        """班主任自助开箱策略判定（优先级高于全局 TimeRule 与上课硬拦截）。
+
+        返回 True 表示已处理（已下发结果，调用方应直接 return）；
+        返回 False 表示无策略/未命中/判定异常，调用方回退到原有全局+课表逻辑（DEFER）。
+        """
         try:
             class_info_id = getattr(user, "class_info_id", None)
-            check_time = None
-            if hour is not None and minute is not None:
-                try:
-                    check_time = datetime.now().replace(
-                        hour=int(hour), minute=int(minute), second=0, microsecond=0
-                    )
-                except (ValueError, TypeError):
-                    check_time = None
+            check_time = _build_policy_check_time(hour, minute)
             if class_info_id:
                 result = phonebox_policy.evaluate(class_info_id, check_time)
                 decision = result.get("decision")
@@ -175,18 +206,9 @@ class MQTTMessageService:
                         force_send=False,
                     )
                     self.publish_unlock_result(box_id, False, "teacher_disabled")
-                    return
+                    return True
                 if decision in (POLICY_ALLOW_OVERRIDE, POLICY_ALLOW_WINDOW):
-                    if decision == POLICY_ALLOW_OVERRIDE:
-                        reason_code, reason_msg = (
-                            "PHONEBOX_TEACHER_OVERRIDE",
-                            "班主任一键放行，跳过上课时间拦截",
-                        )
-                    else:
-                        reason_code, reason_msg = (
-                            "PHONEBOX_TEACHER_WINDOW",
-                            "班主任预设时段内，允许开箱",
-                        )
+                    reason_code, reason_msg = _teacher_policy_reason(decision)
                     ClassTimeChecker.log_notify_audit(
                         "unlock",
                         class_info_id,
@@ -198,28 +220,22 @@ class MQTTMessageService:
                     )
                     # 跳过全局门禁与上课硬拦截，直接进入积分扣减
                     self._deduct_and_unlock(box_id, user, card_id)
-                    return
+                    return True
         except Exception as e:
             # 策略判定异常不影响主流程，回退到原有全局门禁逻辑
             log_warning(f"[Unlock] 班主任策略判定异常，回退全局逻辑: {e}", exception=e)
+        return False
 
-        # 全局 TimeRule 时段门禁（保留原有逻辑：allow_unlock 窗口外一律拒绝）
-        if not self.check_time_valid(box_id, hour, minute):
-            self.publish_unlock_result(box_id, False, "not_in_time")
-            return
+    def _blocked_by_class_schedule(self, box_id, card_id, user, hour, minute):
+        """按班级课表反查：上课 / 自习时间禁止学生自助开箱（硬拦截，无 force_send）。
 
-        # 新增：按班级课表反查，上课 / 自习时间禁止学生自助开箱（硬拦截，无 force_send）
+        返回 True 表示已下发拒绝结果（调用方应直接 return）；
+        课表反查异常不影响主流程（全局门禁已校验），默认放行。
+        """
         try:
             class_info_id = getattr(user, "class_info_id", None)
             if class_info_id:
-                check_time = None
-                if hour is not None and minute is not None:
-                    try:
-                        check_time = datetime.now().replace(
-                            hour=int(hour), minute=int(minute), second=0, microsecond=0
-                        )
-                    except (ValueError, TypeError):
-                        check_time = None
+                check_time = _build_policy_check_time(hour, minute)
                 in_session, info = ClassTimeChecker.check_class_in_session(
                     class_info_id, check_time
                 )
@@ -238,14 +254,11 @@ class MQTTMessageService:
                         force_send=False,
                     )
                     self.publish_unlock_result(box_id, False, "class_in_session")
-                    return
+                    return True
         except Exception as e:
             # 课表反查异常不影响主流程（全局门禁已校验），默认放行
             log_warning(f"[Unlock] 课表反查异常，放行: {e}", exception=e)
-
-        # 积分门槛与扣减统一由 _deduct_and_unlock 处理（内部已含 <60 → score_low），
-        # 与班主任策略放行路径共用同一出口，避免两处判断漂移。
-        self._deduct_and_unlock(box_id, user, card_id)
+        return False
 
     def _deduct_and_unlock(self, box_id, user, card_id):
         """学生自助开箱统一出口：限额/黑名单/分数门槛校验（R2 统一 UnlockValidator）→ 扣分记账 → 下发开箱成功结果。
@@ -502,13 +515,10 @@ class MQTTMessageService:
 
         response_topic = f"score/add/result/{client_id}" if client_id else "score/add/result"
 
-        from models import ProcessedMessage, db
+        from models import ProcessedMessage
 
         record = ProcessedMessage.query.filter_by(message_id=msg_id).first() if msg_id else None
         if record:
-            # 幂等回包也回显 undo_code，使客户端在任意一次重发都能取到撤销码
-            # （否则洪流下首次回包未穿透时，后续重发只回 "already processed" 且无 undo_code，
-            #  客户端将永远拿不到 undo_code、无法完成撤销往返）
             response = {
                 "success": True,
                 "message": "Message already processed (idempotent)",
@@ -528,195 +538,19 @@ class MQTTMessageService:
                 "msg_id": msg_id,
             }
             publish_mqtt(response_topic, json.dumps(response))
-        elif rule_id:
-            rule = get_by_id(ScoreRule, rule_id)
-            if not rule or not rule.is_active:
-                response = {
-                    "success": False,
-                    "message": "Rule is invalid or not enabled",
-                    "msg_id": msg_id,
-                }
-                publish_mqtt(response_topic, json.dumps(response))
-            else:
-                limit_check = self.check_rule_limit(user_id, rule_id)
-                if not limit_check["allow"]:
-                    response = {
-                        "success": False,
-                        "message": limit_check["message"],
-                        "msg_id": msg_id,
-                    }
-                    publish_mqtt(response_topic, json.dumps(response))
-                else:
-                    with db_session_scope():
-                        # R5: SQL 原子累加 + 钳制（原 Python 读改写有并发竞态；钳制语义与 apply_score_limit 一致）
-                        from models import SystemConfig as _SysConfig
-                        from utils.score_utils import atomic_score_update
-
-                        _cfg = _SysConfig.query.first()
-                        _min_s = _cfg.min_score if _cfg else 0
-                        _max_s = _cfg.max_score if _cfg else 100
-                        _ok, new_score = atomic_score_update(
-                            user_id, rule.score, min_score=_min_s, max_score=_max_s
-                        )
-                        if not _ok:
-                            new_score = user.current_score or 0
-                        actual_change = new_score - (user.current_score or 0)
-
-                        record = ScoreRecord(
-                            student_id=user_id,
-                            rule_id=rule_id,
-                            score_change=actual_change,
-                            description=description or rule.name,
-                            operator=operator,
-                        )
-                        user.current_score = new_score
-                        db.session.add(record)
-                        db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
-
-                        if self._try_insert_processed(
-                            msg_id, record.id, new_score, client_id, response_topic
-                        ):
-                            return
-
-                    # R4: MQTT 加分后触发综合评分重算（低频卡片操作，单学生聚合查询，失败不影响主流程）
-                    try:
-                        from services.score_recalc import enqueue_or_recalc_user_score
-
-                        enqueue_or_recalc_user_score(user_id)
-                    except Exception as e:
-                        logger.error(
-                            "[CompositeScore] MQTT 加分重算综合分失败 user_id=%s: %s",
-                            user_id,
-                            e,
-                        )
-
-                    response = {
-                        "success": True,
-                        "message": (f"Score added: {rule.name} " f"(+{actual_change} points)"),
-                        "msg_id": msg_id,
-                        "new_score": new_score,
-                        "record_id": record.id,
-                        "undo_code": f"UNDO_{record.id}",
-                    }
-                    publish_mqtt(response_topic, json.dumps(response))
+            return
+        if rule_id:
+            self._handle_score_by_rule_id(
+                user, rule_id, msg_id, client_id, response_topic, operator, description
+            )
         elif rule_name:
-            rule = ScoreRule.query.filter(
-                ScoreRule.name.like(f"%{rule_name}%"), ScoreRule.is_active
-            ).first()
-            if not rule:
-                matching_rules = ScoreRule.query.filter(ScoreRule.name.like(f"%{rule_name}%")).all()
-                if matching_rules:
-                    rule_names = [r.name for r in matching_rules]
-                    response = {
-                        "success": False,
-                        "message": (
-                            f'No enabled rule matching "{rule_name}". ' f"Available: {rule_names}"
-                        ),
-                        "msg_id": msg_id,
-                    }
-                else:
-                    response = {
-                        "success": False,
-                        "message": f'No rule found containing "{rule_name}"',
-                        "msg_id": msg_id,
-                    }
-                publish_mqtt(response_topic, json.dumps(response))
-            else:
-                limit_check = self.check_rule_limit(user_id, rule.id)
-                if not limit_check["allow"]:
-                    response = {
-                        "success": False,
-                        "message": limit_check["message"],
-                        "msg_id": msg_id,
-                    }
-                    publish_mqtt(response_topic, json.dumps(response))
-                else:
-                    with db_session_scope():
-                        actual_change = rule.score
-                        # R5 补漏: SQL 原子累加 + 钳制（与 rule_id 路径一致）
-                        from models import SystemConfig as _SysCfg2
-                        from utils.score_utils import atomic_score_update
-
-                        _cfg2 = _SysCfg2.query.first()
-                        _min2 = _cfg2.min_score if _cfg2 else 0
-                        _max2 = _cfg2.max_score if _cfg2 else 100
-                        _ok2, new_score = atomic_score_update(
-                            user_id, actual_change, min_score=_min2, max_score=_max2
-                        )
-                        if not _ok2:
-                            new_score = user.current_score or 0
-                        actual_change = new_score - (user.current_score or 0)
-
-                        record = ScoreRecord(
-                            student_id=user_id,
-                            rule_id=rule.id,
-                            score_change=actual_change,
-                            description=description or rule.name,
-                            operator=operator,
-                        )
-                        user.current_score = new_score
-                        db.session.add(record)
-                        db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
-
-                        if self._try_insert_processed(
-                            msg_id, record.id, new_score, client_id, response_topic
-                        ):
-                            return
-
-                    response = {
-                        "success": True,
-                        "message": (f"Score added: {rule.name} " f"(+{actual_change} points)"),
-                        "msg_id": msg_id,
-                        "new_score": new_score,
-                        "rule_name": rule.name,
-                        "record_id": record.id,
-                        "undo_code": f"UNDO_{record.id}",
-                    }
-                    publish_mqtt(response_topic, json.dumps(response))
+            self._handle_score_by_rule_name(
+                user, rule_name, msg_id, client_id, response_topic, operator, description
+            )
         elif score_change is not None:
-            with db_session_scope():
-                try:
-                    actual_change = float(score_change)
-                except (TypeError, ValueError):
-                    actual_change = 0
-                # R5 补漏: SQL 原子累加 + 钳制
-                from models import SystemConfig as _SysCfg3
-                from utils.score_utils import atomic_score_update
-
-                _cfg3 = _SysCfg3.query.first()
-                _min3 = _cfg3.min_score if _cfg3 else 0
-                _max3 = _cfg3.max_score if _cfg3 else 100
-                _ok3, new_score = atomic_score_update(
-                    user_id, actual_change, min_score=_min3, max_score=_max3
-                )
-                if not _ok3:
-                    new_score = user.current_score or 0
-                actual_change = new_score - (user.current_score or 0)
-
-                record = ScoreRecord(
-                    student_id=user_id,
-                    score_change=actual_change,
-                    description=description or "MQTT score adjustment",
-                    operator=operator,
-                )
-                user.current_score = new_score
-                db.session.add(record)
-                db.session.flush()  # 先 flush 让自增主键 record.id 生成，否则 ProcessedMessage.record_id 会存成 None
-
-                if self._try_insert_processed(
-                    msg_id, record.id, new_score, client_id, response_topic
-                ):
-                    return
-
-            response = {
-                "success": True,
-                "message": (f"Score adjusted ({actual_change:+d} points)"),
-                "msg_id": msg_id,
-                "new_score": new_score,
-                "record_id": record.id,
-                "undo_code": f"UNDO_{record.id}",
-            }
-            publish_mqtt(response_topic, json.dumps(response))
+            self._handle_score_by_score_change(
+                user, score_change, msg_id, client_id, response_topic, operator, description
+            )
         else:
             response = {
                 "success": False,
@@ -725,6 +559,176 @@ class MQTTMessageService:
             }
             publish_mqtt(response_topic, json.dumps(response))
 
+
+    def _apply_score_in_session(
+        self, user, score_to_add, record_description, rule_id_value,
+        msg_id, client_id, response_topic, operator,
+    ):
+        """在事务内原子累加并落库 ScoreRecord，返回 (early_return, actual_change, record_id, new_score)。
+
+        early_return 为 True 表示 _try_insert_processed 命中并发重试、已回发幂等响应，
+        调用方应直接 return（与原实现在 with 块内 return 等价）。
+        rule_id_value 为 None 时表示无需写入 rule_id（如 score_change 路径）。
+        """
+        from models import SystemConfig as _SysCfg
+        from models import db
+        from utils.score_utils import atomic_score_update
+
+        _cfg = _SysCfg.query.first()
+        _min_s = _cfg.min_score if _cfg else 0
+        _max_s = _cfg.max_score if _cfg else 100
+        _ok, new_score = atomic_score_update(
+            user.id, score_to_add, min_score=_min_s, max_score=_max_s
+        )
+        if not _ok:
+            new_score = user.current_score or 0
+        actual_change = new_score - (user.current_score or 0)
+
+        if rule_id_value is not None:
+            record = ScoreRecord(
+                student_id=user.id,
+                rule_id=rule_id_value,
+                score_change=actual_change,
+                description=record_description,
+                operator=operator,
+            )
+        else:
+            record = ScoreRecord(
+                student_id=user.id,
+                score_change=actual_change,
+                description=record_description,
+                operator=operator,
+            )
+        user.current_score = new_score
+        with db_session_scope():
+            db.session.add(record)
+            db.session.flush()
+            if self._try_insert_processed(msg_id, record.id, new_score, client_id, response_topic):
+                return True, actual_change, record.id, new_score
+        return False, actual_change, record.id, new_score
+
+    def _handle_score_by_rule_id(
+        self, user, rule_id, msg_id, client_id, response_topic, operator, description
+    ):
+        rule = get_by_id(ScoreRule, rule_id)
+        if not rule or not rule.is_active:
+            response = {
+                "success": False,
+                "message": "Rule is invalid or not enabled",
+                "msg_id": msg_id,
+            }
+            publish_mqtt(response_topic, json.dumps(response))
+            return
+        limit_check = self.check_rule_limit(user.id, rule_id)
+        if not limit_check["allow"]:
+            response = {
+                "success": False,
+                "message": limit_check["message"],
+                "msg_id": msg_id,
+            }
+            publish_mqtt(response_topic, json.dumps(response))
+            return
+        early, actual_change, record_id, new_score = self._apply_score_in_session(
+            user, rule.score, description or rule.name, rule_id,
+            msg_id, client_id, response_topic, operator,
+        )
+        if early:
+            return
+        try:
+            from services.score_recalc import enqueue_or_recalc_user_score
+
+            enqueue_or_recalc_user_score(user.id)
+        except Exception as e:
+            logger.error(
+                "[CompositeScore] MQTT 加分重算综合分失败 user_id=%s: %s",
+                user.id,
+                e,
+            )
+        response = {
+            "success": True,
+            "message": (f"Score added: {rule.name} " f"(+{actual_change} points)"),
+            "msg_id": msg_id,
+            "new_score": new_score,
+            "record_id": record_id,
+            "undo_code": f"UNDO_{record_id}",
+        }
+        publish_mqtt(response_topic, json.dumps(response))
+
+    def _handle_score_by_rule_name(
+        self, user, rule_name, msg_id, client_id, response_topic, operator, description
+    ):
+        rule = ScoreRule.query.filter(
+            ScoreRule.name.like(f"%{rule_name}%"), ScoreRule.is_active
+        ).first()
+        if not rule:
+            matching_rules = ScoreRule.query.filter(
+                ScoreRule.name.like(f"%{rule_name}%")
+            ).all()
+            if matching_rules:
+                rule_names = [r.name for r in matching_rules]
+                response = {
+                    "success": False,
+                    "message": (
+                        f'No enabled rule matching "{rule_name}". ' f"Available: {rule_names}"
+                    ),
+                    "msg_id": msg_id,
+                }
+            else:
+                response = {
+                    "success": False,
+                    "message": f'No rule found containing "{rule_name}"',
+                    "msg_id": msg_id,
+                }
+            publish_mqtt(response_topic, json.dumps(response))
+            return
+        limit_check = self.check_rule_limit(user.id, rule.id)
+        if not limit_check["allow"]:
+            response = {
+                "success": False,
+                "message": limit_check["message"],
+                "msg_id": msg_id,
+            }
+            publish_mqtt(response_topic, json.dumps(response))
+            return
+        early, actual_change, record_id, new_score = self._apply_score_in_session(
+            user, rule.score, description or rule.name, rule.id,
+            msg_id, client_id, response_topic, operator,
+        )
+        if early:
+            return
+        response = {
+            "success": True,
+            "message": (f"Score added: {rule.name} " f"(+{actual_change} points)"),
+            "msg_id": msg_id,
+            "new_score": new_score,
+            "rule_name": rule.name,
+            "record_id": record_id,
+            "undo_code": f"UNDO_{record_id}",
+        }
+        publish_mqtt(response_topic, json.dumps(response))
+
+    def _handle_score_by_score_change(
+        self, user, score_change, msg_id, client_id, response_topic, operator, description
+    ):
+        try:
+            score_to_add = float(score_change)
+        except (TypeError, ValueError):
+            score_to_add = 0
+        early, actual_change, record_id, new_score = self._apply_score_in_session(
+            user, score_to_add, description or "MQTT score adjustment", None,
+            msg_id, client_id, response_topic, operator,
+        )
+        if early:
+            return
+        response = {
+            "success": True,
+            "message": (f"Score adjusted ({actual_change:+d} points)"),
+            "msg_id": msg_id,
+            "new_score": new_score,
+            "record_id": record_id,
+            "undo_code": f"UNDO_{record_id}",
+        }
+        publish_mqtt(response_topic, json.dumps(response))
     def _try_insert_processed(self, msg_id, record_id, new_score, client_id, response_topic):
         """事务内写入 ProcessedMessage；若 msg_id 唯一约束冲突（并发重发绕过外层检查），
 

@@ -532,95 +532,15 @@ class RiskPredictService:
         Returns:
             dict: 出勤风险检测结果
         """
-        risk_score = 0.0
-        factors = []
-
         attendance_rate = features.get("attendance_rate")
         if attendance_rate is not None:
-            # —— 真实考勤路径 ——
-            if attendance_rate < 0.6:
-                risk_score += 0.5
-                factors.append(
-                    {
-                        "factor": "attendance_rate",
-                        "score": attendance_rate,
-                        "description": "出勤率偏低，存在出勤问题",
-                    }
-                )
-                if attendance_rate < 0.4:
-                    risk_score += 0.2
-                    factors.append(
-                        {
-                            "factor": "attendance_rate_severe",
-                            "score": attendance_rate,
-                            "description": "出勤率极低，存在严重出勤问题",
-                        }
-                    )
-            elif attendance_rate < 0.8:
-                risk_score += 0.4
-                factors.append(
-                    {
-                        "factor": "attendance_rate",
-                        "score": attendance_rate,
-                        "description": "出勤率偏低",
-                    }
-                )
-
-            if features.get("attendance_absent_count", 0) >= 5:
-                risk_score += 0.2
-                factors.append(
-                    {
-                        "factor": "attendance_absent_count",
-                        "score": features["attendance_absent_count"],
-                        "description": "缺勤次数较多",
-                    }
-                )
-
-            if features.get("attendance_leave_days", 0) >= 10:
-                risk_score += 0.1
-                factors.append(
-                    {
-                        "factor": "attendance_leave_days",
-                        "score": features["attendance_leave_days"],
-                        "description": "请假天数较多",
-                    }
-                )
+            risk_score, factors = RiskPredictService._attendance_risk_real(
+                attendance_rate,
+                features.get("attendance_absent_count", 0),
+                features.get("attendance_leave_days", 0),
+            )
         else:
-            # —— 代理回退路径（无真实考勤数据时，与原逻辑一致）——
-            # 活跃度低可能意味着出勤问题
-            if features["daily_record_count"] < 0.3:
-                risk_score += 0.4
-                factors.append(
-                    {
-                        "factor": "daily_record_count",
-                        "score": features["daily_record_count"],
-                        "description": "活跃度极低，可能存在出勤问题",
-                    }
-                )
-            elif features["daily_record_count"] < 0.5:
-                risk_score += 0.2
-
-            # 积分波动大可能意味着出勤不稳定
-            if features["score_volatility"] > 5:
-                risk_score += 0.2
-                factors.append(
-                    {
-                        "factor": "score_volatility",
-                        "score": features["score_volatility"],
-                        "description": "积分波动大，出勤可能不稳定",
-                    }
-                )
-
-            # 近期无活动
-            if features["total_records"] == 0:
-                risk_score += 0.3
-                factors.append(
-                    {
-                        "factor": "total_records",
-                        "score": 0,
-                        "description": "近期无任何活动记录",
-                    }
-                )
+            risk_score, factors = RiskPredictService._attendance_risk_proxy(features)
 
         # RP2：risk_score 裁剪到 [0,1]，与各 detect 的 0.7/0.4 阈值及综合加权口径一致
         risk_score = min(1.0, max(0.0, risk_score))
@@ -641,6 +561,94 @@ class RiskPredictService:
             "factors": factors,
             "description": RiskPredictService.RISK_TYPES["attendance"]["description"],
         }
+
+    @staticmethod
+    def _attendance_risk_real(attendance_rate, absent_count, leave_days):
+        """真实考勤路径：返回 (risk_score, factors)，与 detect_attendance_risk 历史口径一致。"""
+        risk_score = 0.0
+        factors = []
+        if attendance_rate < 0.6:
+            risk_score += 0.5
+            factors.append(
+                {
+                    "factor": "attendance_rate",
+                    "score": attendance_rate,
+                    "description": "出勤率偏低，存在出勤问题",
+                }
+            )
+            if attendance_rate < 0.4:
+                risk_score += 0.2
+                factors.append(
+                    {
+                        "factor": "attendance_rate_severe",
+                        "score": attendance_rate,
+                        "description": "出勤率极低，存在严重出勤问题",
+                    }
+                )
+        elif attendance_rate < 0.8:
+            risk_score += 0.4
+            factors.append(
+                {
+                    "factor": "attendance_rate",
+                    "score": attendance_rate,
+                    "description": "出勤率偏低",
+                }
+            )
+        if absent_count >= 5:
+            risk_score += 0.2
+            factors.append(
+                {
+                    "factor": "attendance_absent_count",
+                    "score": absent_count,
+                    "description": "缺勤次数较多",
+                }
+            )
+        if leave_days >= 10:
+            risk_score += 0.1
+            factors.append(
+                {
+                    "factor": "attendance_leave_days",
+                    "score": leave_days,
+                    "description": "请假天数较多",
+                }
+            )
+        return risk_score, factors
+
+    @staticmethod
+    def _attendance_risk_proxy(features):
+        """代理回退路径（无真实考勤数据时，与原逻辑一致）：返回 (risk_score, factors)。"""
+        risk_score = 0.0
+        factors = []
+        if features["daily_record_count"] < 0.3:
+            risk_score += 0.4
+            factors.append(
+                {
+                    "factor": "daily_record_count",
+                    "score": features["daily_record_count"],
+                    "description": "活跃度极低，可能存在出勤问题",
+                }
+            )
+        elif features["daily_record_count"] < 0.5:
+            risk_score += 0.2
+        if features["score_volatility"] > 5:
+            risk_score += 0.2
+            factors.append(
+                {
+                    "factor": "score_volatility",
+                    "score": features["score_volatility"],
+                    "description": "积分波动大，出勤可能不稳定",
+                }
+            )
+        if features["total_records"] == 0:
+            risk_score += 0.3
+            factors.append(
+                {
+                    "factor": "total_records",
+                    "score": 0,
+                    "description": "近期无任何活动记录",
+                }
+            )
+        return risk_score, factors
 
     @staticmethod
     def predict_risk(user_id, days=30):

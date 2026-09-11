@@ -1042,6 +1042,17 @@ class NLPMLTrainingService:
         labels = []
         rule_id_map = {rule.id: rule for rule in rules}
         match_results = NLPMatchResult.query.all()
+        self._collect_match_result_samples(match_results, texts, labels)
+        self._collect_rule_samples(rules, texts, labels)
+        augmented_texts, augmented_labels = self._apply_text_augmentation(texts, labels)
+        texts = augmented_texts
+        labels = augmented_labels
+        if not texts:
+            return None, None, None
+        return texts, labels, rule_id_map
+
+    @staticmethod
+    def _collect_match_result_samples(match_results, texts, labels):
         for result in match_results:
             if result.input_text and result.matched_rule_id:
                 texts.append(result.input_text)
@@ -1049,6 +1060,8 @@ class NLPMLTrainingService:
                 if result.behavior_description:
                     texts.append(result.behavior_description)
                     labels.append(result.matched_rule_id)
+
+    def _collect_rule_samples(self, rules, texts, labels):
         for rule in rules:
             if rule.behavior_description:
                 texts.append(rule.behavior_description)
@@ -1069,12 +1082,6 @@ class NLPMLTrainingService:
                         labels.append(rule.id)
                         texts.append(f"{tag} {rule.behavior_keyword}")
                         labels.append(rule.id)
-        augmented_texts, augmented_labels = self._apply_text_augmentation(texts, labels)
-        texts = augmented_texts
-        labels = augmented_labels
-        if not texts:
-            return None, None, None
-        return texts, labels, rule_id_map
 
     def _generate_text_variants(self, text):
         variants = []

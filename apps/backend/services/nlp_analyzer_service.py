@@ -239,73 +239,93 @@ class NLPAlgorithmAnalyzer:
         """在全局锁内应用单个缓冲事件（原 record_* 逻辑的内联）。"""
         etype = ev.get("type")
         if etype == "intent":
-            self.intent_metrics.total_predictions += 1
-            true_intent = ev.get("true")
-            predicted = ev.get("predicted")
-            confidence = ev.get("confidence", 0.0)
-            if true_intent is not None:
-                if predicted == true_intent:
-                    self.intent_metrics.correct_predictions += 1
-                if true_intent not in self.intent_metrics.intent_stats:
-                    self.intent_metrics.intent_stats[true_intent] = {
-                        "total": 0,
-                        "correct": 0,
-                        "avg_confidence": 0.0,
-                        "confidences": [],
-                    }
-                stats = self.intent_metrics.intent_stats[true_intent]
-                stats["total"] += 1
-                if predicted == true_intent:
-                    stats["correct"] += 1
-                stats["confidences"].append(confidence)
-                if len(stats["confidences"]) > 100:
-                    stats["confidences"].pop(0)
-                stats["avg_confidence"] = sum(stats["confidences"]) / len(stats["confidences"])
+            self._apply_intent_event(ev)
         elif etype == "performance":
-            processing_time = ev.get("processing_time", 0.0)
-            cache_hit = ev.get("cache_hit", False)
-            components = ev.get("components")
-            self.performance_metrics.total_requests += 1
-            self.performance_metrics.total_processing_time += processing_time
-            if cache_hit:
-                self.performance_metrics.cache_hits += 1
-            else:
-                self.performance_metrics.cache_misses += 1
-            if processing_time > 0.5:  # 超过500ms
-                self.performance_metrics.slow_requests.append(
-                    {
-                        "timestamp": datetime.now().isoformat(),
-                        "processing_time": processing_time,
-                    }
-                )
-                if len(self.performance_metrics.slow_requests) > 100:
-                    self.performance_metrics.slow_requests.pop(0)
-            if components:
-                for name, time_cost in components.items():
-                    self.component_stats[name]["calls"] += 1
-                    self.component_stats[name]["total_time"] += time_cost
+            self._apply_performance_event(ev)
         elif etype == "error":
-            self.error_analysis.add_error(
-                ev.get("error_type", "unknown"),
-                {
-                    "input": ev.get("input_text"),
-                    "expected": ev.get("expected"),
-                    "predicted": ev.get("predicted"),
-                    "detail": ev.get("error_detail"),
-                },
-            )
+            self._apply_error_event(ev)
         elif etype == "component":
-            stats = self.component_stats[ev.get("component_name")]
-            stats["calls"] += 1
-            stats["total_time"] += ev.get("duration", 0.0)
-            if not ev.get("success", True):
-                stats["errors"] += 1
+            self._apply_component_event(ev)
         elif etype == "history":
-            self.request_history.append(
-                {"timestamp": datetime.now().isoformat(), **ev.get("request_data", {})}
+            self._apply_history_event(ev)
+
+    def _apply_intent_event(self, ev: dict):
+        """应用 intent 类型事件。"""
+        self.intent_metrics.total_predictions += 1
+        true_intent = ev.get("true")
+        predicted = ev.get("predicted")
+        confidence = ev.get("confidence", 0.0)
+        if true_intent is not None:
+            if predicted == true_intent:
+                self.intent_metrics.correct_predictions += 1
+            if true_intent not in self.intent_metrics.intent_stats:
+                self.intent_metrics.intent_stats[true_intent] = {
+                    "total": 0,
+                    "correct": 0,
+                    "avg_confidence": 0.0,
+                    "confidences": [],
+                }
+            stats = self.intent_metrics.intent_stats[true_intent]
+            stats["total"] += 1
+            if predicted == true_intent:
+                stats["correct"] += 1
+            stats["confidences"].append(confidence)
+            if len(stats["confidences"]) > 100:
+                stats["confidences"].pop(0)
+            stats["avg_confidence"] = sum(stats["confidences"]) / len(stats["confidences"])
+
+    def _apply_performance_event(self, ev: dict):
+        """应用 performance 类型事件。"""
+        processing_time = ev.get("processing_time", 0.0)
+        cache_hit = ev.get("cache_hit", False)
+        components = ev.get("components")
+        self.performance_metrics.total_requests += 1
+        self.performance_metrics.total_processing_time += processing_time
+        if cache_hit:
+            self.performance_metrics.cache_hits += 1
+        else:
+            self.performance_metrics.cache_misses += 1
+        if processing_time > 0.5:  # 超过500ms
+            self.performance_metrics.slow_requests.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "processing_time": processing_time,
+                }
             )
-            if len(self.request_history) > self.max_history_size:
-                self.request_history.pop(0)
+            if len(self.performance_metrics.slow_requests) > 100:
+                self.performance_metrics.slow_requests.pop(0)
+        if components:
+            for name, time_cost in components.items():
+                self.component_stats[name]["calls"] += 1
+                self.component_stats[name]["total_time"] += time_cost
+
+    def _apply_error_event(self, ev: dict):
+        """应用 error 类型事件。"""
+        self.error_analysis.add_error(
+            ev.get("error_type", "unknown"),
+            {
+                "input": ev.get("input_text"),
+                "expected": ev.get("expected"),
+                "predicted": ev.get("predicted"),
+                "detail": ev.get("error_detail"),
+            },
+        )
+
+    def _apply_component_event(self, ev: dict):
+        """应用 component 类型事件。"""
+        stats = self.component_stats[ev.get("component_name")]
+        stats["calls"] += 1
+        stats["total_time"] += ev.get("duration", 0.0)
+        if not ev.get("success", True):
+            stats["errors"] += 1
+
+    def _apply_history_event(self, ev: dict):
+        """应用 history 类型事件。"""
+        self.request_history.append(
+            {"timestamp": datetime.now().isoformat(), **ev.get("request_data", {})}
+        )
+        if len(self.request_history) > self.max_history_size:
+            self.request_history.pop(0)
 
     def get_intent_analysis(self) -> dict:
         """获取意图分析报告"""
