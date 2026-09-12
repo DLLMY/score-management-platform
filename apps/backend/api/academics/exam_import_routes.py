@@ -328,14 +328,16 @@ class DownloadTemplate(Resource):
 
         # 获取学生列表
         if class_id:
-            # 如果指定了班级，获取该班级所有学生
             students = (
-                User.query.filter_by(class_id=class_id, role="student").order_by(User.card_id).all()
+                User.query.filter_by(class_id=class_id, role="student")
+                .order_by(User.card_id)
+                .all()
             )
         else:
-            # 如果没有指定班级，获取所有学生（用于全校考试）
             students = (
-                User.query.filter_by(role="student").order_by(User.class_name, User.card_id).all()
+                User.query.filter_by(role="student")
+                .order_by(User.class_name, User.card_id)
+                .all()
             )
 
         wb = openpyxl.Workbook()
@@ -347,131 +349,8 @@ class DownloadTemplate(Resource):
         # 2. 创建说明表
         sheet_notes = wb.create_sheet(title="填写说明")
 
-        # --- 填写说明表 ---
-        notes_header_style = openpyxl.styles.Font(bold=True, size=12, color="FFFFFF")
-        notes_header_fill = openpyxl.styles.PatternFill(
-            start_color="4A90D9", end_color="4A90D9", fill_type="solid"
-        )
-        notes_header_alignment = openpyxl.styles.Alignment(horizontal="center", vertical="center")
-
-        notes_data = [
-            ["列名", "说明", "填写方式", "示例"],
-            ["学号", "学生的学号，系统自动填入，请勿修改", "系统自动", "202401001"],
-            ["姓名", "学生姓名，系统自动填入，仅作参考", "系统自动", "张三"],
-            ["班级", "班级名称，系统自动填入", "系统自动", "高一(1)班"],
-            ["科目", "科目名称，系统自动填入对应考试科目", "系统自动", "语文"],
-            ["分数", "学生成绩，教师必须填写，必须为数字", "教师填写", "85"],
-            ["满分", "科目满分，默认100，可修改", "默认100", "100"],
-            ["备注", "成绩备注信息，可选填写", "可选", "进步明显"],
-        ]
-
-        for row_idx, row_data in enumerate(notes_data, 1):
-            for col_idx, cell_value in enumerate(row_data, 1):
-                cell = sheet_notes.cell(row=row_idx, column=col_idx, value=cell_value)
-                if row_idx == 1:
-                    cell.font = notes_header_style
-                    cell.fill = notes_header_fill
-                    cell.alignment = notes_header_alignment
-
-        # 设置列宽
-        sheet_notes.column_dimensions["A"].width = 20
-        sheet_notes.column_dimensions["B"].width = 40
-        sheet_notes.column_dimensions["C"].width = 10
-        sheet_notes.column_dimensions["D"].width = 20
-
-        # 添加考试信息
-        if exam:
-            sheet_notes.cell(row=10, column=1, value="考试信息")
-            sheet_notes.cell(row=10, column=1).font = openpyxl.styles.Font(bold=True)
-            sheet_notes.cell(row=11, column=1, value=f"考试名称: {exam.name}")
-            sheet_notes.cell(row=12, column=1, value=f'考试科目: {", ".join(exam.subjects)}')
-            if exam.start_time:
-                sheet_notes.cell(
-                    row=13,
-                    column=1,
-                    value=f'开始时间: {exam.start_time.strftime("%Y-%m-%d %H:%M")}',
-                )
-            if exam.end_time:
-                sheet_notes.cell(
-                    row=14, column=1, value=f'结束时间: {exam.end_time.strftime("%Y-%m-%d %H:%M")}'
-                )
-
-        # --- 成绩导入表 ---
-        header_style = openpyxl.styles.Font(bold=True, size=11, color="FFFFFF")
-        header_fill = openpyxl.styles.PatternFill(
-            start_color="4A90D9", end_color="4A90D9", fill_type="solid"
-        )
-        header_alignment = openpyxl.styles.Alignment(horizontal="center", vertical="center")
-
-        headers = ["学号", "姓名", "班级", "科目", "分数", "满分", "备注"]
-        sheet_data.append(headers)
-
-        # 应用样式
-        for col_idx in range(1, len(headers) + 1):
-            cell = sheet_data.cell(row=1, column=col_idx)
-            cell.font = header_style
-            cell.fill = header_fill
-            cell.alignment = header_alignment
-
-        # 设置列宽
-        col_widths = [15, 12, 15, 12, 10, 10, 20]
-        for col_idx, width in enumerate(col_widths, 1):
-            sheet_data.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
-
-        # 添加学生数据 - 为每个学生生成所有科目的成绩行
-        for student in students:
-            for subject in subjects:
-                sheet_data.append(
-                    [
-                        student.card_id,  # 学号（已填入）
-                        student.name,  # 姓名（已填入）
-                        student.class_name or "",  # 班级（已填入）
-                        subject,  # 科目（已填入）
-                        "",  # 分数（教师填写）
-                        100,  # 满分（默认100）
-                        "",  # 备注（可选填写）
-                    ]
-                )
-
-        # 添加数据验证 - 确保分数是数字
-        from openpyxl.worksheet.datavalidation import DataValidation
-
-        score_validation = DataValidation(
-            type="decimal",
-            operator="between",
-            formula1="0",
-            formula2="200",
-            allow_blank=True,
-            errorTitle="分数无效",
-            error="请输入有效的分数（0-200之间）",
-        )
-        sheet_data.add_data_validation(score_validation)
-        score_validation.add("E2:E1000")
-
-        # 冻结首行
-        sheet_data.freeze_panes = "A2"
-
-        # 添加自动筛选
-        sheet_data.auto_filter.ref = sheet_data.dimensions
-
-        # 添加条件格式 - 分数列
-        from openpyxl.formatting.rule import CellIsRule
-        from openpyxl.styles import Font, PatternFill
-
-        # 红色 - 不及格（假设满分100，60分以下）
-        red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        red_font = Font(color="9C0006")
-        red_rule = CellIsRule(operator="lessThan", formula=["60"], fill=red_fill, font=red_font)
-
-        # 绿色 - 优秀（90分以上）
-        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        green_font = Font(color="006100")
-        green_rule = CellIsRule(
-            operator="greaterThan", formula=["90"], fill=green_fill, font=green_font
-        )
-
-        sheet_data.conditional_formatting.add("E2:E1000", red_rule)
-        sheet_data.conditional_formatting.add("E2:E1000", green_rule)
+        _build_notes_sheet(sheet_notes, exam)
+        _build_data_sheet(sheet_data, students, subjects)
 
         output = BytesIO()
         wb.save(output)
@@ -486,8 +365,6 @@ class DownloadTemplate(Resource):
             as_attachment=True,
             download_name=filename,
         )
-
-
 @ns_exam_import.route("/history")
 class ImportHistory(Resource):
 
@@ -501,3 +378,133 @@ class ImportHistory(Resource):
         page, per_page = get_pagination(default=20)
         result = get_import_history_view(exam_id=exam_id, page=page, per_page=per_page)
         return APIResponse.success(data=result)
+
+def _build_notes_sheet(sheet_notes, exam):
+    notes_header_style = openpyxl.styles.Font(bold=True, size=12, color="FFFFFF")
+    notes_header_fill = openpyxl.styles.PatternFill(
+        start_color="4A90D9", end_color="4A90D9", fill_type="solid"
+    )
+    notes_header_alignment = openpyxl.styles.Alignment(horizontal="center", vertical="center")
+
+    notes_data = [
+        ["列名", "说明", "填写方式", "示例"],
+        ["学号", "学生的学号，系统自动填入，请勿修改", "系统自动", "202401001"],
+        ["姓名", "学生姓名，系统自动填入，仅作参考", "系统自动", "张三"],
+        ["班级", "班级名称，系统自动填入", "系统自动", "高一(1)班"],
+        ["科目", "科目名称，系统自动填入对应考试科目", "系统自动", "语文"],
+        ["分数", "学生成绩，教师必须填写，必须为数字", "教师填写", "85"],
+        ["满分", "科目满分，默认100，可修改", "默认100", "100"],
+        ["备注", "成绩备注信息，可选填写", "可选", "进步明显"],
+    ]
+
+    for row_idx, row_data in enumerate(notes_data, 1):
+        for col_idx, cell_value in enumerate(row_data, 1):
+            cell = sheet_notes.cell(row=row_idx, column=col_idx, value=cell_value)
+            if row_idx == 1:
+                cell.font = notes_header_style
+                cell.fill = notes_header_fill
+                cell.alignment = notes_header_alignment
+
+    # 设置列宽
+    sheet_notes.column_dimensions["A"].width = 20
+    sheet_notes.column_dimensions["B"].width = 40
+    sheet_notes.column_dimensions["C"].width = 10
+    sheet_notes.column_dimensions["D"].width = 20
+
+    # 添加考试信息
+    if exam:
+        sheet_notes.cell(row=10, column=1, value="考试信息")
+        sheet_notes.cell(row=10, column=1).font = openpyxl.styles.Font(bold=True)
+        sheet_notes.cell(row=11, column=1, value=f"考试名称: {exam.name}")
+        sheet_notes.cell(row=12, column=1, value=f'考试科目: {", ".join(exam.subjects)}')
+        if exam.start_time:
+            sheet_notes.cell(
+                row=13,
+                column=1,
+                value=f'开始时间: {exam.start_time.strftime("%Y-%m-%d %H:%M")}',
+            )
+        if exam.end_time:
+            sheet_notes.cell(
+                row=14,
+                column=1,
+                value=f'结束时间: {exam.end_time.strftime("%Y-%m-%d %H:%M")}',
+            )
+
+
+def _build_data_sheet(sheet_data, students, subjects):
+    header_style = openpyxl.styles.Font(bold=True, size=11, color="FFFFFF")
+    header_fill = openpyxl.styles.PatternFill(
+        start_color="4A90D9", end_color="4A90D9", fill_type="solid"
+    )
+    header_alignment = openpyxl.styles.Alignment(horizontal="center", vertical="center")
+
+    headers = ["学号", "姓名", "班级", "科目", "分数", "满分", "备注"]
+    sheet_data.append(headers)
+
+    # 应用样式
+    for col_idx in range(1, len(headers) + 1):
+        cell = sheet_data.cell(row=1, column=col_idx)
+        cell.font = header_style
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+
+    # 设置列宽
+    col_widths = [15, 12, 15, 12, 10, 10, 20]
+    for col_idx, width in enumerate(col_widths, 1):
+        sheet_data.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+    # 添加学生数据 - 为每个学生生成所有科目的成绩行
+    for student in students:
+        for subject in subjects:
+            sheet_data.append(
+                [
+                    student.card_id,
+                    student.name,
+                    student.class_name or "",
+                    subject,
+                    "",
+                    100,
+                    "",
+                ]
+            )
+
+    # 添加数据验证 - 确保分数是数字
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    score_validation = DataValidation(
+        type="decimal",
+        operator="between",
+        formula1="0",
+        formula2="200",
+        allow_blank=True,
+        errorTitle="分数无效",
+        error="请输入有效的分数（0-200之间）",
+    )
+    sheet_data.add_data_validation(score_validation)
+    score_validation.add("E2:E1000")
+
+    # 冻结首行
+    sheet_data.freeze_panes = "A2"
+
+    # 添加自动筛选
+    sheet_data.auto_filter.ref = sheet_data.dimensions
+
+    # 添加条件格式 - 分数列
+    from openpyxl.formatting.rule import CellIsRule
+    from openpyxl.styles import Font, PatternFill
+
+    # 红色 - 不及格（假设满分100，60分以下）
+    red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    red_font = Font(color="9C0006")
+    red_rule = CellIsRule(operator="lessThan", formula=["60"], fill=red_fill, font=red_font)
+
+    # 绿色 - 优秀（90分以上）
+    green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    green_font = Font(color="006100")
+    green_rule = CellIsRule(
+        operator="greaterThan", formula=["90"], fill=green_fill, font=green_font
+    )
+
+    sheet_data.conditional_formatting.add("E2:E1000", red_rule)
+    sheet_data.conditional_formatting.add("E2:E1000", green_rule)
+
