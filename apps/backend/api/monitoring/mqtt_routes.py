@@ -210,98 +210,92 @@ class MQTTConnect(Resource):
     @ns_mqtt.response(200, "Success")
     @ns_mqtt.response(500, "Connection failed")
     @requires_permission("manage_devices")
+    @safe_handle(default_status=500, message="MQTT connection failed")
     def post(self):
         logger.info("=== MQTT connect API called ===")
-        try:
-            if mqtt_manager.is_connected:
-                logger.info("MQTT already connected, no need to reconnect")
-                return APIResponse.success(
-                    data={"status": "connected"}, message="MQTT already connected"
-                )
-
-            config_dict = None
-
-            with get_flask_app().app_context():
-                from models import MQTTConfig
-
-                config = MQTTConfig.query.first()
-                if config:
-                    config_dict = {
-                        "broker": config.broker,
-                        "port": config.port,
-                        "client_id": config.client_id,
-                        "username": config.username,
-                        "password": config.password,
-                        "ssl": config.ssl,
-                        "timeout": config.timeout,
-                        "keepalive": config.keepalive,
-                    }
-
-            data = None
-            try:
-                data = ns_mqtt.payload
-            except Exception as e:
-                # payload 解析失败（body 为空/畸形）仅降级为"沿用 DB 配置"，但需留痕（T9 日志化）。
-                logger.warning(f"读取 MQTT 请求 payload 失败，降级使用 DB 配置: {e}", exc_info=True)
-
-            if data:
-                # P2-7 修复: username/password 不再回退硬编码 "phoneboxtest"/"123456"，缺省置空
-                config_dict = {
-                    "broker": data.get(
-                        "broker",
-                        (
-                            config_dict["broker"]
-                            if config_dict
-                            else "nc5233fc.ala.cn-hangzhou.emqxsl.cn"
-                        ),
-                    ),
-                    "port": data.get("port", config_dict["port"] if config_dict else 8883),
-                    "client_id": data.get(
-                        "client_id", config_dict["client_id"] if config_dict else "score_backend"
-                    ),
-                    "username": data.get(
-                        "username", config_dict["username"] if config_dict else ""
-                    ),
-                    "password": data.get(
-                        "password", config_dict["password"] if config_dict else ""
-                    ),
-                    "ssl": data.get("ssl", config_dict["ssl"] if config_dict else True),
-                    "timeout": data.get("timeout", config_dict["timeout"] if config_dict else 10),
-                    "keepalive": data.get(
-                        "keepalive", config_dict["keepalive"] if config_dict else 60
-                    ),
-                    "transport": data.get("transport", "tcp"),
-                    "ws_path": data.get("ws_path", "/mqtt"),
-                }
-            else:
-                if not config_dict:
-                    # P2-7 修复: 无 DB 配置且无请求参数时明确报错，不再用硬编码弱口令连接生产 Broker
-                    return APIResponse.error(
-                        message="MQTT 未配置：请先在系统 MQTT 配置中填写 Broker 地址与凭据，再发起连接",
-                        status_code=400,
-                    )
-                config_dict["transport"] = "tcp"
-                config_dict["ws_path"] = "/mqtt"
-
-            logger.info(
-                f"Using config: broker={config_dict['broker']}, "
-                f"port={config_dict['port']}, "
-                f"transport={config_dict['transport']}"
+        if mqtt_manager.is_connected:
+            logger.info("MQTT already connected, no need to reconnect")
+            return APIResponse.success(
+                data={"status": "connected"}, message="MQTT already connected"
             )
 
-            result = connect_mqtt(config_dict)
+        config_dict = None
 
-            if result:
-                logger.info("MQTT connection successful!")
-                return APIResponse.success(message="MQTT connection successful")
-            logger.warning("MQTT connection failed")
-            return APIResponse.error(message="MQTT connection failed", status_code=500)
+        with get_flask_app().app_context():
+            from models import MQTTConfig
 
+            config = MQTTConfig.query.first()
+            if config:
+                config_dict = {
+                    "broker": config.broker,
+                    "port": config.port,
+                    "client_id": config.client_id,
+                    "username": config.username,
+                    "password": config.password,
+                    "ssl": config.ssl,
+                    "timeout": config.timeout,
+                    "keepalive": config.keepalive,
+                }
+
+        data = None
+        try:
+            data = ns_mqtt.payload
         except Exception as e:
-            logger.warning(f"MQTT connection failed: {type(e).__name__}: {e}")
+            # payload 解析失败（body 为空/畸形）仅降级为"沿用 DB 配置"，但需留痕（T9 日志化）。
+            logger.warning(f"读取 MQTT 请求 payload 失败，降级使用 DB 配置: {e}", exc_info=True)
 
-            logger.error("%s: %s", "MQTT connection failed", e, exc_info=True)
-            return APIResponse.error(message="MQTT connection failed", status_code=500)
+        if data:
+            # P2-7 修复: username/password 不再回退硬编码 "phoneboxtest"/"123456"，缺省置空
+            config_dict = {
+                "broker": data.get(
+                    "broker",
+                    (
+                        config_dict["broker"]
+                        if config_dict
+                        else "nc5233fc.ala.cn-hangzhou.emqxsl.cn"
+                    ),
+                ),
+                "port": data.get("port", config_dict["port"] if config_dict else 8883),
+                "client_id": data.get(
+                    "client_id", config_dict["client_id"] if config_dict else "score_backend"
+                ),
+                "username": data.get(
+                    "username", config_dict["username"] if config_dict else ""
+                ),
+                "password": data.get(
+                    "password", config_dict["password"] if config_dict else ""
+                ),
+                "ssl": data.get("ssl", config_dict["ssl"] if config_dict else True),
+                "timeout": data.get("timeout", config_dict["timeout"] if config_dict else 10),
+                "keepalive": data.get(
+                    "keepalive", config_dict["keepalive"] if config_dict else 60
+                ),
+                "transport": data.get("transport", "tcp"),
+                "ws_path": data.get("ws_path", "/mqtt"),
+            }
+        else:
+            if not config_dict:
+                # P2-7 修复: 无 DB 配置且无请求参数时明确报错，不再用硬编码弱口令连接生产 Broker
+                return APIResponse.error(
+                    message="MQTT 未配置：请先在系统 MQTT 配置中填写 Broker 地址与凭据，再发起连接",
+                    status_code=400,
+                )
+            config_dict["transport"] = "tcp"
+            config_dict["ws_path"] = "/mqtt"
+
+        logger.info(
+            f"Using config: broker={config_dict['broker']}, "
+            f"port={config_dict['port']}, "
+            f"transport={config_dict['transport']}"
+        )
+
+        result = connect_mqtt(config_dict)
+
+        if result:
+            logger.info("MQTT connection successful!")
+            return APIResponse.success(message="MQTT connection successful")
+        logger.warning("MQTT connection failed")
+        return APIResponse.error(message="MQTT connection failed", status_code=500)
 
 
 @ns_mqtt.route("/disconnect")
