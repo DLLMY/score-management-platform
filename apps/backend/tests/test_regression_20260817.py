@@ -216,11 +216,16 @@ class TestS12345678910Regression:
         assert "hashlib.md5()" in src, "固件上传必须使用 hashlib.md5"
 
     def test_ota_failed_statuses_mapped(self):
-        """S5: mqtt_manager OTA 失败状态须包含固件全部失败码（防自动推送死锁）"""
+        """S5: mqtt_manager OTA 失败状态须包含固件全部失败码（防自动推送死锁）
+
+        #C901 重构（6db27da）后失败码映射表已下沉为类常量
+        MQTTManager._OTA_FAILURE_STATUSES，故改为对常量对象断言（比源码文本
+        断言更强，防表存在却漏项），并校验 _process_ota_status 实际引用该常量。
+        """
         import inspect
         from services.mqtt_manager import MQTTManager
 
-        src = inspect.getsource(MQTTManager._process_ota_status)
+        failure_statuses = MQTTManager._OTA_FAILURE_STATUSES
         for code in (
             "download_failed",
             "space_insufficient",
@@ -228,7 +233,10 @@ class TestS12345678910Regression:
             "version_check_failed",
             "incomplete",
         ):
-            assert code in src, f"OTA 失败码 {code} 未映射"
+            assert code in failure_statuses, f"OTA 失败码 {code} 未映射"
+        assert "_OTA_FAILURE_STATUSES" in inspect.getsource(MQTTManager._process_ota_status), (
+            "_process_ota_status 必须实际使用失败码集合（防表存在却未被使用）"
+        )
 
     def test_nlp_scoring_writes_score_record(self):
         """S2: NLP execute_scoring 必须写 ScoreRecord（原直接改 current_score 无流水）"""
@@ -274,12 +282,26 @@ class TestS12345678910Regression:
         assert "_NEG_PREFIXES" in src, "determine_intent 必须处理否定前缀"
 
     def test_export_has_class_scope(self):
-        """S3: 导出端点必须按班级隔离（班主任不得导出全校）"""
-        import inspect
-        from api.data.export_routes import ExportData
+        """S3: 导出端点必须按班级隔离（班主任不得导出全校）
 
-        src = inspect.getsource(ExportData.post)
-        assert "_admin_scope" in src, "导出端点必须调用班级隔离"
+        #C901 重构（64828e8）后 ExportData.post 仅做分派，班级隔离已下沉到
+        _export_users_data / _export_devices_data / _export_records_data 三个
+        helper。故改为对三个 helper 逐个断言（覆盖所有班级敏感导出类型），
+        并校验 post 确实分派到它们（防 helper 存在却未被调用）。
+        """
+        import inspect
+        from api.data import export_routes
+
+        scoped_helpers = (
+            export_routes._export_users_data,
+            export_routes._export_devices_data,
+            export_routes._export_records_data,
+        )
+        for fn in scoped_helpers:
+            assert "_admin_scope" in inspect.getsource(fn), f"{fn.__name__} 必须调用班级隔离"
+        post_src = inspect.getsource(export_routes.ExportData.post)
+        for name in ("_export_users_data", "_export_devices_data", "_export_records_data"):
+            assert name in post_src, f"ExportData.post 必须分派到 {name}"
 
     def test_excel_formula_injection_guard(self):
         """S8: Excel 导出必须防公式注入（= + - @ 前缀清洗）"""

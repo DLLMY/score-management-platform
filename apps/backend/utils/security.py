@@ -172,7 +172,7 @@ def is_strong_password(password: str) -> bool:
         return False
     if not re.search(r"[a-z]", password):
         return False
-    return re.search(r"\d", password)
+    return re.search(r"\d", password) is not None
 
 
 # ==================== 输入验证 ====================

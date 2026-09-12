@@ -458,13 +458,13 @@ class CachedQueries:
     def invalidate_user_cache(self, user_id):
         """失效指定用户的查询缓存。"""
         target = f":user:{user_id}"
-        for k in self.cache_manager:
+        for k in list(self.cache_manager.keys()):
             if target in k:
                 self.cache_manager.delete(k)
 
     def invalidate_all_cache(self):
         """失效全部查询缓存。"""
-        for k in self.cache_manager:
+        for k in list(self.cache_manager.keys()):
             if k.startswith(self.prefix):
                 self.cache_manager.delete(k)
 
