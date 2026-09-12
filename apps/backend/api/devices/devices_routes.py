@@ -10,6 +10,7 @@ from models import Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
 from sqlalchemy.orm import joinedload
 from utils.permission import requires_permission, get_current_admin, get_admin_class_ids
 from utils.response import APIResponse
+from utils.decorators import safe_handle
 from utils.pagination import get_pagination
 from services.mqtt_service import publish_mqtt
 from services.heartbeat_service import is_device_online
@@ -1080,6 +1081,7 @@ class DeviceImport(Resource):
 
     @ns_devices.doc("device_import", description="批量导入设备", security="Bearer")
     @requires_permission("device.edit")
+    @safe_handle(message="设备操作失败，请稍后重试", default_status=500, error_code="INTERNAL_ERROR")
     def post(self):
         """
         批量导入设备
@@ -1098,13 +1100,8 @@ class DeviceImport(Resource):
         if not file.filename.endswith((".xlsx", ".xls")):
             return APIResponse.bad_request(message="仅支持Excel文件格式")
 
-        try:
-            result = import_devices(file)
-            return APIResponse.success(data=result)
-
-        except Exception:
-            logger.exception("设备操作失败")
-            return APIResponse.server_error(message="设备操作失败，请稍后重试")
+        result = import_devices(file)
+        return APIResponse.success(data=result)
 
 
 @ns_devices.route("/export")
@@ -1112,6 +1109,7 @@ class DeviceExport(Resource):
 
     @ns_devices.doc("device_export", description="导出设备数据", security="Bearer")
     @requires_permission("device.view")
+    @safe_handle(message="设备操作失败，请稍后重试", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出设备数据
@@ -1123,120 +1121,115 @@ class DeviceExport(Resource):
 
         返回设备数据文件下载。
         """
-        try:
-            format_type = request.args.get("format", "excel")
+        format_type = request.args.get("format", "excel")
 
-            devices = Device.query.all()
+        devices = Device.query.all()
 
-            if format_type == "json":
-                device_list = []
-                for device in devices:
-                    device_data = {
-                        "id": device.id,
-                        "device_id": device.device_id,
-                        "name": device.name,
-                        "status": device.status,
-                        "is_online": is_device_online(device),
-                        "last_heartbeat": (
-                            device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
-                            if device.last_heartbeat
-                            else ""
-                        ),
-                        "wifi_signal": device.wifi_signal,
-                        "uptime": device.uptime,
-                        "box_a_status": device.box_a_status,
-                        "box_b_status": device.box_b_status,
-                        "system_state": device.system_state,
-                        "class_info_id": device.class_info_id,
-                        "class_name": device.class_info.name if device.class_info else "",
-                        "admin_id": device.admin_id,
-                        "admin_name": device.admin.name if device.admin else "",
-                        "created_at": (
-                            device.created_at.strftime("%Y-%m-%d %H:%M:%S")
-                            if device.created_at
-                            else ""
-                        ),
-                        "updated_at": (
-                            device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
-                            if device.updated_at
-                            else ""
-                        ),
-                    }
-                    device_list.append(device_data)
-
-                json_str = json.dumps(device_list, ensure_ascii=False, indent=2)
-                return Response(
-                    json_str,
-                    mimetype="application/json",
-                    headers={
-                        "Content-Disposition": f'attachment; filename=devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-                    },
-                )
-
-            wb = openpyxl.Workbook()
-            sheet = wb.active
-            sheet.title = "设备数据"
-
-            headers = [
-                "设备标识",
-                "设备名称",
-                "状态",
-                "是否在线",
-                "最后心跳",
-                "WiFi信号",
-                "班级名称",
-                "管理员姓名",
-                "创建时间",
-                "更新时间",
-            ]
-            sheet.append(headers)
-
-            header_font = openpyxl.styles.Font(bold=True, color="FFFFFF")
-            header_fill = openpyxl.styles.PatternFill(
-                start_color="4A5568", end_color="4A5568", fill_type="solid"
-            )
-            for col in range(1, len(headers) + 1):
-                cell = sheet.cell(row=1, column=col)
-                cell.font = header_font
-                cell.fill = header_fill
-
+        if format_type == "json":
+            device_list = []
             for device in devices:
-                row_data = [
-                    device.device_id,
-                    device.name,
-                    device.status,
-                    "是" if is_device_online(device) else "否",
-                    (
+                device_data = {
+                    "id": device.id,
+                    "device_id": device.device_id,
+                    "name": device.name,
+                    "status": device.status,
+                    "is_online": is_device_online(device),
+                    "last_heartbeat": (
                         device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
                         if device.last_heartbeat
                         else ""
                     ),
-                    device.wifi_signal,
-                    device.class_info.name if device.class_info else "",
-                    device.admin.name if device.admin else "",
-                    (
+                    "wifi_signal": device.wifi_signal,
+                    "uptime": device.uptime,
+                    "box_a_status": device.box_a_status,
+                    "box_b_status": device.box_b_status,
+                    "system_state": device.system_state,
+                    "class_info_id": device.class_info_id,
+                    "class_name": device.class_info.name if device.class_info else "",
+                    "admin_id": device.admin_id,
+                    "admin_name": device.admin.name if device.admin else "",
+                    "created_at": (
                         device.created_at.strftime("%Y-%m-%d %H:%M:%S")
                         if device.created_at
                         else ""
                     ),
-                    (
+                    "updated_at": (
                         device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
                         if device.updated_at
                         else ""
                     ),
-                ]
-                sheet.append(row_data)
+                }
+                device_list.append(device_data)
 
-            output = io.BytesIO()
-            wb.save(output)
-            output.seek(0)
-
-            return send_file(
-                output,
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                download_name=f'devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx',
+            json_str = json.dumps(device_list, ensure_ascii=False, indent=2)
+            return Response(
+                json_str,
+                mimetype="application/json",
+                headers={
+                    "Content-Disposition": f'attachment; filename=devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+                },
             )
 
-        except Exception:
-            logger.exception("设备操作失败")
-            return APIResponse.server_error(message="设备操作失败，请稍后重试")
+        wb = openpyxl.Workbook()
+        sheet = wb.active
+        sheet.title = "设备数据"
+
+        headers = [
+            "设备标识",
+            "设备名称",
+            "状态",
+            "是否在线",
+            "最后心跳",
+            "WiFi信号",
+            "班级名称",
+            "管理员姓名",
+            "创建时间",
+            "更新时间",
+        ]
+        sheet.append(headers)
+
+        header_font = openpyxl.styles.Font(bold=True, color="FFFFFF")
+        header_fill = openpyxl.styles.PatternFill(
+            start_color="4A5568", end_color="4A5568", fill_type="solid"
+        )
+        for col in range(1, len(headers) + 1):
+            cell = sheet.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+
+        for device in devices:
+            row_data = [
+                device.device_id,
+                device.name,
+                device.status,
+                "是" if is_device_online(device) else "否",
+                (
+                    device.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S")
+                    if device.last_heartbeat
+                    else ""
+                ),
+                device.wifi_signal,
+                device.class_info.name if device.class_info else "",
+                device.admin.name if device.admin else "",
+                (
+                    device.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if device.created_at
+                    else ""
+                ),
+                (
+                    device.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if device.updated_at
+                    else ""
+                ),
+            ]
+            sheet.append(row_data)
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            download_name=f'devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx',
+        )

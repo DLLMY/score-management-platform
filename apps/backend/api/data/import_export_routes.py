@@ -3,6 +3,7 @@ from flask import request, send_file
 from models import User, ScoreRule, ScoreCategory, ScoreRecord
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.decorators import safe_handle
 from utils.excel_utils import ExcelUtils, ExcelTemplateGenerator
 from utils.backup_utils import BackupManager, BackupScheduler
 from utils.transaction_retry import get_import_guard
@@ -651,20 +652,17 @@ class DeleteBackup(Resource):
 
     @ns_import_export.doc("delete_backup")
     @requires_permission("system.settings")
+    @safe_handle(message="删除失败", default_status=500, error_code="INTERNAL_ERROR")
     def delete(self, filename):
         """删除备份文件"""
         # S8 修复: 路径穿越防护——只允许备份目录内文件名（原 filename="../.." 可越权删除任意文件）
         if filename != os.path.basename(filename) or not filename:
             return APIResponse.error(message="备份文件名非法", status_code=400)
-        try:
-            backup_path = backup_manager.backup_dir / os.path.basename(filename)
-            if backup_path.exists():
-                backup_path.unlink()
-                return APIResponse.success(message="备份文件已删除")
-            return APIResponse.not_found(message="备份文件不存在")
-        except Exception:
-            logger.exception("删除失败")
-            return APIResponse.server_error(message="删除失败")
+        backup_path = backup_manager.backup_dir / os.path.basename(filename)
+        if backup_path.exists():
+            backup_path.unlink()
+            return APIResponse.success(message="备份文件已删除")
+        return APIResponse.not_found(message="备份文件不存在")
 
 
 @ns_import_export.route("/backup/stats")

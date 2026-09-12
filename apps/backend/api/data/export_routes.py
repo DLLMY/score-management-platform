@@ -5,6 +5,7 @@ from flask_restx import Namespace, Resource, fields
 from models import User, ScoreRule, Device, ScoreRecord, ScoreCategory
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.decorators import safe_handle
 from utils.excel_utils import build_attachment_response
 from utils.pagination import get_limit
 from services.export_service import export_service
@@ -89,6 +90,7 @@ class ExportData(Resource):
     @ns_export.response(200, "导出成功")
     @ns_export.response(400, "参数错误")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败，请稍后重试或联系管理员", default_status=500, error_code="INTERNAL_ERROR")
     def post(self):
         """
         导出数据
@@ -106,22 +108,17 @@ class ExportData(Resource):
         if export_type not in ["users", "rules", "devices", "records", "summary"]:
             return APIResponse.bad_request(message="不支持的导出类型")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        try:
-            if export_type == "users":
-                output, filename, mimetype = _export_users_data(export_format, timestamp)
-            elif export_type == "rules":
-                output, filename, mimetype = _export_rules_data(export_format, timestamp)
-            elif export_type == "devices":
-                output, filename, mimetype = _export_devices_data(export_format, timestamp)
-            elif export_type == "records":
-                output, filename, mimetype = _export_records_data(export_format, timestamp)
-            elif export_type == "summary":
-                output, filename, mimetype = _export_summary_data(timestamp)
-            return build_attachment_response(output, filename, mimetype)
-        except Exception:
-            # S8 修复: 不直返异常细节（泄露路径/实现）
-            logger.exception("[Export] 导出失败")
-            return APIResponse.server_error(message="导出失败，请稍后重试或联系管理员")
+        if export_type == "users":
+            output, filename, mimetype = _export_users_data(export_format, timestamp)
+        elif export_type == "rules":
+            output, filename, mimetype = _export_rules_data(export_format, timestamp)
+        elif export_type == "devices":
+            output, filename, mimetype = _export_devices_data(export_format, timestamp)
+        elif export_type == "records":
+            output, filename, mimetype = _export_records_data(export_format, timestamp)
+        elif export_type == "summary":
+            output, filename, mimetype = _export_summary_data(timestamp)
+        return build_attachment_response(output, filename, mimetype)
 
 
 def _export_users_data(export_format, timestamp):
