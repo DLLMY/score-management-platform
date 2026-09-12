@@ -516,42 +516,12 @@ class ExportErrors(Resource):
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
         header_alignment = Alignment(horizontal="center", vertical="center")
-        all_keys = set()
-        for error in errors:
-            if isinstance(error.get("row_data"), dict):
-                all_keys.update(error["row_data"].keys())
         base_columns = ["行号", "错误字段", "错误信息"]
-        data_columns = sorted(all_keys)
+        data_columns = _collect_error_data_columns(errors)
         headers = base_columns + data_columns
-        for col_idx, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col_idx, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = header_alignment
-        for row_idx, error in enumerate(errors, 2):
-            row_num = error.get("row", "")
-            error_fields = ", ".join(error.get("error_fields", []))
-            message = error.get("message", "")
-            ws.cell(row=row_idx, column=1, value=row_num)
-            ws.cell(row=row_idx, column=2, value=error_fields)
-            ws.cell(row=row_idx, column=3, value=message)
-            row_data = error.get("row_data", {})
-            if isinstance(row_data, dict):
-                for col_idx, key in enumerate(data_columns, 4):
-                    ws.cell(row=row_idx, column=col_idx, value=row_data.get(key, ""))
-        for col in ws.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except Exception:
-                    # 与 utils/excel_utils.py 同理：逐单元格列宽热循环，失败仅跳过该列估算，
-                    # 属可预期降级。改为 logger 会刷屏，保留静默并显式说明（T9 评估结论）。
-                    logger.debug("列宽估算失败（跳过该列）", exc_info=True)
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column].width = adjusted_width
+        _write_error_headers(ws, headers, header_font, header_fill, header_alignment)
+        _write_error_rows(ws, errors, data_columns)
+        _autosize_worksheet_columns(ws)
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
@@ -563,3 +533,53 @@ class ExportErrors(Resource):
             as_attachment=True,
             download_name=filename,
         )
+
+
+def _collect_error_data_columns(errors):
+    """汇总所有错误行的 row_data 字段名并排序（原 post 内联逻辑，零行为变更）。"""
+    all_keys = set()
+    for error in errors:
+        if isinstance(error.get("row_data"), dict):
+            all_keys.update(error["row_data"].keys())
+    return sorted(all_keys)
+
+
+def _write_error_headers(ws, headers, header_font, header_fill, header_alignment):
+    """写入表头并设置样式（原 post 内联逻辑，零行为变更）。"""
+    for col_idx, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+
+
+def _write_error_rows(ws, errors, data_columns):
+    """写入错误数据行（原 post 内联逻辑，零行为变更）。"""
+    for row_idx, error in enumerate(errors, 2):
+        row_num = error.get("row", "")
+        error_fields = ", ".join(error.get("error_fields", []))
+        message = error.get("message", "")
+        ws.cell(row=row_idx, column=1, value=row_num)
+        ws.cell(row=row_idx, column=2, value=error_fields)
+        ws.cell(row=row_idx, column=3, value=message)
+        row_data = error.get("row_data", {})
+        if isinstance(row_data, dict):
+            for col_idx, key in enumerate(data_columns, 4):
+                ws.cell(row=row_idx, column=col_idx, value=row_data.get(key, ""))
+
+
+def _autosize_worksheet_columns(ws):
+    """按单元格内容估算列宽（原 post 内联逻辑，零行为变更）。"""
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except Exception:
+                # 与 utils/excel_utils.py 同理：逐单元格列宽热循环，失败仅跳过该列估算，
+                # 属可预期降级。改为 logger 会刷屏，保留静默并显式说明（T9 评估结论）。
+                logger.debug("列宽估算失败（跳过该列）", exc_info=True)
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column].width = adjusted_width
