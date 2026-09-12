@@ -122,8 +122,31 @@ class RedisCache:
                 return c
         return None
 
+    def _open_redis_log(self, log_path):
+        if not log_path:
+            return subprocess.DEVNULL, None
+        try:
+            opened = open(log_path, "ab", buffering=0)
+            return opened, opened
+        except Exception as e:
+            logger.warning(f"打开 Redis 日志文件失败，降级为丢弃输出: {e}", exc_info=True)
+            return subprocess.DEVNULL, None
+
+    def _wait_redis_ready(self, host, port, db, timeout):
+        deadline = time.time() + timeout
+        probe_url = f"redis://{host}:{port}/{db}"
+        while time.time() < deadline:
+            try:
+                probe = redis.from_url(probe_url, socket_connect_timeout=2, socket_timeout=2)
+                if probe.ping():
+                    return True
+            except Exception:
+                logger.debug("Redis 就绪探测失败（未就绪，0.5s 后重试）", exc_info=True)
+            time.sleep(0.5)
+        logger.error("Redis 子进程启动后超时未就绪")
+        return False
+
     def _try_auto_start_redis(self, app):
-        """在本地自动启动一个 redis-server 子进程并等待就绪。成功返回 True。"""
         global _auto_start_attempted
         if _auto_start_attempted:
             return False
@@ -149,17 +172,7 @@ class RedisCache:
             log_path = (app.config.get("REDIS_SERVER_LOG") or "").strip()
             args = [exe, "--port", str(port), "--save", "", "--appendonly", "no"]
 
-            logf = subprocess.DEVNULL
-            opened = None
-            if log_path:
-                try:
-                    opened = open(log_path, "ab", buffering=0)
-                    logf = opened
-                except Exception as e:
-                    logger.warning(f"打开 Redis 日志文件失败，降级为丢弃输出: {e}", exc_info=True)
-                    logf = subprocess.DEVNULL
-                    opened = None
-
+            logf, opened = self._open_redis_log(log_path)
             spawn_kwargs = {"stdout": logf, "stderr": logf, "stdin": subprocess.DEVNULL}
             if os.name == "nt":
                 flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
@@ -185,19 +198,7 @@ class RedisCache:
                         logger.debug(f"关闭 Redis 日志文件句柄失败: {e}", exc_info=True)
 
             timeout = int(app.config.get("REDIS_AUTO_START_TIMEOUT", 15))
-            deadline = time.time() + timeout
-            probe_url = f"redis://{host}:{port}/{db}"
-            while time.time() < deadline:
-                try:
-                    probe = redis.from_url(probe_url, socket_connect_timeout=2, socket_timeout=2)
-                    if probe.ping():
-                        return True
-                except Exception:
-                    # 就绪探测轮询：未就绪属预期（0.5s 后重试），无需告警刷日志
-                    logger.debug("Redis 就绪探测失败（未就绪，0.5s 后重试）", exc_info=True)
-                time.sleep(0.5)
-            logger.error("Redis 子进程启动后超时未就绪")
-            return False
+            return self._wait_redis_ready(host, port, db, timeout)
 
     def _get_key(self, key: str) -> str:
         """兼容旧测试：_key 的别名。"""

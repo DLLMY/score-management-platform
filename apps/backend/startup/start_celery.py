@@ -71,10 +71,7 @@ def start_beat():
         return None
 
 
-def main():
-    print("\n" + "=" * 60)
-    print("    Celery Task Manager")
-    print("=" * 60)
+def _build_parser():
     parser = argparse.ArgumentParser(description="Start Celery workers and beat")
     parser.add_argument("--worker", action="store_true", help="Start Celery worker")
     parser.add_argument("--beat", action="store_true", help="Start Celery beat")
@@ -88,7 +85,10 @@ def main():
     parser.add_argument(
         "-c", "--concurrency", type=int, default=4, help="Number of worker processes"
     )
-    args = parser.parse_args()
+    return parser
+
+
+def _launch_processes(args):
     processes = []
     if args.worker or args.all:
         worker_proc = start_worker(args.queues, args.concurrency)
@@ -98,6 +98,16 @@ def main():
         beat_proc = start_beat()
         if beat_proc:
             processes.append(("beat", beat_proc))
+    return processes
+
+
+def main():
+    print("\n" + "=" * 60)
+    print("    Celery Task Manager")
+    print("=" * 60)
+    parser = _build_parser()
+    args = parser.parse_args()
+    processes = _launch_processes(args)
     if not processes:
         print_error("No processes to start. Use --worker, --beat, or --all")
         parser.print_help()
@@ -120,7 +130,6 @@ def main():
             proc.terminate()
             proc.wait()
         print_success("All processes stopped")
-
 
 if __name__ == "__main__":
     main()
