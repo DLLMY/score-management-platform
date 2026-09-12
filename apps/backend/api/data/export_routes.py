@@ -241,6 +241,7 @@ class ExportUsers(Resource):
     )
     @ns_export.response(200, "导出成功")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出学生数据
@@ -259,19 +260,15 @@ class ExportUsers(Resource):
         users = users_q.all()
         user_data = [u.to_dict(EXPORT_USER_FIELDS) for u in users]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        try:
-            if export_format == "excel":
-                output = export_service.export_users_to_excel(user_data)
-                filename = f"users_{timestamp}.xlsx"
-                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            else:
-                output = export_service.export_users_to_pdf(user_data, "学生列表报告")
-                filename = f"users_{timestamp}.pdf"
-                mimetype = "application/pdf"
-            return build_attachment_response(output, filename, mimetype)
-        except Exception:
-            logger.exception("导出失败")
-            return APIResponse.server_error(message="导出失败")
+        if export_format == "excel":
+            output = export_service.export_users_to_excel(user_data)
+            filename = f"users_{timestamp}.xlsx"
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            output = export_service.export_users_to_pdf(user_data, "学生列表报告")
+            filename = f"users_{timestamp}.pdf"
+            mimetype = "application/pdf"
+        return build_attachment_response(output, filename, mimetype)
 
 
 @ns_export.route("/rules")
@@ -284,6 +281,7 @@ class ExportRules(Resource):
     )
     @ns_export.response(200, "导出成功")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出积分规则
@@ -297,19 +295,15 @@ class ExportRules(Resource):
         rules = ScoreRule.query.all()
         rule_data = [r.to_dict(RULE_EXPORT_FIELDS) for r in rules]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        try:
-            if export_format == "excel":
-                output = export_service.export_rules_to_excel(rule_data)
-                filename = f"rules_{timestamp}.xlsx"
-                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            else:
-                output = export_service.export_rules_to_pdf(rule_data, "积分规则报告")
-                filename = f"rules_{timestamp}.pdf"
-                mimetype = "application/pdf"
-            return build_attachment_response(output, filename, mimetype)
-        except Exception:
-            logger.exception("导出失败")
-            return APIResponse.server_error(message="导出失败")
+        if export_format == "excel":
+            output = export_service.export_rules_to_excel(rule_data)
+            filename = f"rules_{timestamp}.xlsx"
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            output = export_service.export_rules_to_pdf(rule_data, "积分规则报告")
+            filename = f"rules_{timestamp}.pdf"
+            mimetype = "application/pdf"
+        return build_attachment_response(output, filename, mimetype)
 
 
 @ns_export.route("/devices")
@@ -322,6 +316,7 @@ class ExportDevices(Resource):
     )
     @ns_export.response(200, "导出成功")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出设备数据
@@ -348,19 +343,15 @@ class ExportDevices(Resource):
             for d in devices
         ]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        try:
-            if export_format == "excel":
-                output = export_service.export_devices_to_excel(device_data)
-                filename = f"devices_{timestamp}.xlsx"
-                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            else:
-                output = export_service.export_devices_to_pdf(device_data, "设备列表报告")
-                filename = f"devices_{timestamp}.pdf"
-                mimetype = "application/pdf"
-            return build_attachment_response(output, filename, mimetype)
-        except Exception:
-            logger.exception("导出失败")
-            return APIResponse.server_error(message="导出失败")
+        if export_format == "excel":
+            output = export_service.export_devices_to_excel(device_data)
+            filename = f"devices_{timestamp}.xlsx"
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            output = export_service.export_devices_to_pdf(device_data, "设备列表报告")
+            filename = f"devices_{timestamp}.pdf"
+            mimetype = "application/pdf"
+        return build_attachment_response(output, filename, mimetype)
 
 
 @ns_export.route("/records")
@@ -373,6 +364,7 @@ class ExportRecords(Resource):
     )
     @ns_export.response(200, "导出成功")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出积分记录
@@ -390,19 +382,15 @@ class ExportRecords(Resource):
         records = ScoreRecord.query.order_by(ScoreRecord.created_at.desc()).limit(limit).all()
         record_data = [r.to_dict(RECORD_EXPORT_FIELDS) for r in records]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        try:
-            if export_format == "excel":
-                output = export_service.export_records_to_excel(record_data)
-                filename = f"records_{timestamp}.xlsx"
-                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            else:
-                output = export_service.export_records_to_pdf(record_data, "积分记录报告")
-                filename = f"records_{timestamp}.pdf"
-                mimetype = "application/pdf"
-            return build_attachment_response(output, filename, mimetype)
-        except Exception:
-            logger.exception("导出失败")
-            return APIResponse.server_error(message="导出失败")
+        if export_format == "excel":
+            output = export_service.export_records_to_excel(record_data)
+            filename = f"records_{timestamp}.xlsx"
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            output = export_service.export_records_to_pdf(record_data, "积分记录报告")
+            filename = f"records_{timestamp}.pdf"
+            mimetype = "application/pdf"
+        return build_attachment_response(output, filename, mimetype)
 
 
 @ns_export.route("/categories")
@@ -415,6 +403,7 @@ class ExportCategories(Resource):
     )
     @ns_export.response(200, "导出成功")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出分类数据
@@ -438,19 +427,15 @@ class ExportCategories(Resource):
         ]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         headers = ["ID", "名称", "描述", "颜色", "创建时间"]
-        try:
-            if export_format == "excel":
-                output = export_service.export_to_excel(category_data, headers)
-                filename = f"categories_{timestamp}.xlsx"
-                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            else:
-                output = export_service.export_to_pdf("积分分类报告", category_data, headers)
-                filename = f"categories_{timestamp}.pdf"
-                mimetype = "application/pdf"
-            return build_attachment_response(output, filename, mimetype)
-        except Exception:
-            logger.exception("导出失败")
-            return APIResponse.server_error(message="导出失败")
+        if export_format == "excel":
+            output = export_service.export_to_excel(category_data, headers)
+            filename = f"categories_{timestamp}.xlsx"
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            output = export_service.export_to_pdf("积分分类报告", category_data, headers)
+            filename = f"categories_{timestamp}.pdf"
+            mimetype = "application/pdf"
+        return build_attachment_response(output, filename, mimetype)
 
 
 @ns_export.route("/summary")
@@ -458,6 +443,7 @@ class ExportSummary(Resource):
     @ns_export.doc("export_summary", description="导出系统数据汇总报告", security="Bearer")
     @ns_export.response(200, "导出成功")
     @requires_permission("report.export")
+    @safe_handle(message="导出失败", default_status=500, error_code="INTERNAL_ERROR")
     def get(self):
         """
         导出系统数据汇总报告（PDF格式）
@@ -471,17 +457,13 @@ class ExportSummary(Resource):
         ).count()
         records_count = ScoreRecord.query.count()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        try:
-            output = export_service.export_summary_report(
-                users_count, rules_count, devices_count, online_devices, records_count
-            )
-            filename = f"summary_{timestamp}.pdf"
-            return send_file(
-                output, mimetype="application/pdf", as_attachment=True, download_name=filename
-            )
-        except Exception:
-            logger.exception("导出失败")
-            return APIResponse.server_error(message="导出失败")
+        output = export_service.export_summary_report(
+            users_count, rules_count, devices_count, online_devices, records_count
+        )
+        filename = f"summary_{timestamp}.pdf"
+        return send_file(
+            output, mimetype="application/pdf", as_attachment=True, download_name=filename
+        )
 
 
 @ns_export.route("/errors")
