@@ -5,6 +5,7 @@ from flask import request, send_file
 from models import ImportConfig, get_by_id
 from services.academics_service import academics_service
 from utils.permission import requires_permission
+from utils.decorators import safe_handle
 from utils.api_cache_middleware import cached_api
 from utils.excel_utils import ExcelTemplateGenerator
 
@@ -290,6 +291,7 @@ class ImportTemplate(Resource):
 
     @ns_import.doc("download_import_template", description="下载导入模板")
     @requires_permission("report.import")
+    @safe_handle(message="生成模板失败", default_status=500)
     def get(self, template_type):
         """下载指定类型的Excel导入模板"""
         template_type_map = {
@@ -303,24 +305,20 @@ class ImportTemplate(Resource):
         if not internal_type:
             return APIResponse.error(message="不支持的模板类型", status_code=400)
 
-        try:
-            excel_bytes = ExcelTemplateGenerator.generate_template(internal_type)
+        excel_bytes = ExcelTemplateGenerator.generate_template(internal_type)
 
-            template_names = {
-                "class": "班级导入模板",
-                "subject": "科目导入模板",
-                "course_schedule": "课程表导入模板",
-                "exam": "考试导入模板",
-            }
+        template_names = {
+            "class": "班级导入模板",
+            "subject": "科目导入模板",
+            "course_schedule": "课程表导入模板",
+            "exam": "考试导入模板",
+        }
 
-            filename = f"{template_names[internal_type]}.xlsx"
+        filename = f"{template_names[internal_type]}.xlsx"
 
-            return send_file(
-                io.BytesIO(excel_bytes),
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=filename,
-            )
-        except Exception:
-            logger.exception("生成模板失败")
-            return APIResponse.error(message="生成模板失败", status_code=500)
+        return send_file(
+            io.BytesIO(excel_bytes),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename,
+        )

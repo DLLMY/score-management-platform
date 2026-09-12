@@ -7,6 +7,7 @@ from utils.response import APIResponse
 from utils.pagination import get_pagination
 from models import Exam, Score, User, get_by_id
 from utils.permission import requires_permission
+from utils.decorators import safe_handle
 from io import BytesIO
 from services.excel_service import excel_import_service
 from services.academics_service import academics_service
@@ -43,6 +44,7 @@ class ValidateImportFile(Resource):
 
     @ns_exam_import.doc("validate_import_file", description="验证导入文件格式")
     @requires_permission("score.entry")
+    @safe_handle(message="验证失败", default_status=500)
     def post(self):
         """
         验证导入文件格式
@@ -58,62 +60,57 @@ class ValidateImportFile(Resource):
         if not exam_id:
             return APIResponse.error(message="缺少考试ID"), 400
 
-        try:
-            exam = get_by_id(Exam, exam_id)
-            if not exam:
-                return APIResponse.error(message="考试不存在"), 404
+        exam = get_by_id(Exam, exam_id)
+        if not exam:
+            return APIResponse.error(message="考试不存在"), 404
 
-            file_content = file.read()
-            parsed = _parse_score_excel(file_content)
-            headers = parsed["headers"]
-            parsed_rows = parsed["parsed_rows"]
-            total_count = parsed["total_count"]
+        file_content = file.read()
+        parsed = _parse_score_excel(file_content)
+        headers = parsed["headers"]
+        parsed_rows = parsed["parsed_rows"]
+        total_count = parsed["total_count"]
 
-            validation = ScoreImportHelper.validate_headers(headers)
+        validation = ScoreImportHelper.validate_headers(headers)
 
-            if not validation["valid"]:
-                return APIResponse.error(
-                    message="文件格式验证失败", errors=validation["errors"], status_code=400
-                )
-
-            data_preview = []
-            card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
-            subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
-            score_idx = ScoreImportHelper.find_column_index(headers, "score")
-
-            for i, row_data in enumerate(parsed_rows[:5]):
-                card_id = row_data.get(headers[card_id_idx]) if card_id_idx >= 0 else None
-                subject = (
-                    row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
-                )
-                score_val = row_data.get(headers[score_idx]) if score_idx >= 0 else None
-
-                student = User.query.filter_by(card_id=str(card_id)).first() if card_id else None
-
-                data_preview.append(
-                    {
-                        "row": i + 2,
-                        "card_id": str(card_id) if card_id else None,
-                        "student_name": student.name if student else "未找到",
-                        "subject": subject,
-                        "score": score_val,
-                        "status": "ready" if student else "student_not_found",
-                    }
-                )
-
-            return APIResponse.success(
-                message="文件格式验证通过",
-                data={
-                    "exam_name": exam.name,
-                    "subjects": exam.subjects,
-                    "preview": data_preview,
-                    "total_rows": total_count,
-                },
+        if not validation["valid"]:
+            return APIResponse.error(
+                message="文件格式验证失败", errors=validation["errors"], status_code=400
             )
 
-        except Exception:
-            logger.exception("验证失败")
-            return APIResponse.error(message="验证失败", status_code=500)
+        data_preview = []
+        card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
+        subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
+        score_idx = ScoreImportHelper.find_column_index(headers, "score")
+
+        for i, row_data in enumerate(parsed_rows[:5]):
+            card_id = row_data.get(headers[card_id_idx]) if card_id_idx >= 0 else None
+            subject = (
+                row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
+            )
+            score_val = row_data.get(headers[score_idx]) if score_idx >= 0 else None
+
+            student = User.query.filter_by(card_id=str(card_id)).first() if card_id else None
+
+            data_preview.append(
+                {
+                    "row": i + 2,
+                    "card_id": str(card_id) if card_id else None,
+                    "student_name": student.name if student else "未找到",
+                    "subject": subject,
+                    "score": score_val,
+                    "status": "ready" if student else "student_not_found",
+                }
+            )
+
+        return APIResponse.success(
+            message="文件格式验证通过",
+            data={
+                "exam_name": exam.name,
+                "subjects": exam.subjects,
+                "preview": data_preview,
+                "total_rows": total_count,
+            },
+        )
 
 
 @ns_exam_import.route("/preview")
@@ -121,6 +118,7 @@ class PreviewImportData(Resource):
 
     @ns_exam_import.doc("preview_import_data", description="预览导入数据")
     @requires_permission("score.entry")
+    @safe_handle(message="预览失败", default_status=500)
     def post(self):
         """
         预览导入数据
@@ -136,115 +134,110 @@ class PreviewImportData(Resource):
         if not exam_id:
             return APIResponse.error(message="缺少考试ID"), 400
 
-        try:
-            exam = get_by_id(Exam, exam_id)
-            if not exam:
-                return APIResponse.error(message="考试不存在"), 404
+        exam = get_by_id(Exam, exam_id)
+        if not exam:
+            return APIResponse.error(message="考试不存在"), 404
 
-            file_content = file.read()
-            parsed = _parse_score_excel(file_content)
-            headers = parsed["headers"]
-            parsed_rows = parsed["parsed_rows"]
-            total_count = parsed["total_count"]
+        file_content = file.read()
+        parsed = _parse_score_excel(file_content)
+        headers = parsed["headers"]
+        parsed_rows = parsed["parsed_rows"]
+        total_count = parsed["total_count"]
 
-            validation = ScoreImportHelper.validate_headers(headers)
-            if not validation["valid"]:
-                return APIResponse.error(
-                    message="文件格式错误", errors=validation["errors"], status_code=400
-                )
-
-            card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
-            subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
-            score_idx = ScoreImportHelper.find_column_index(headers, "score")
-            full_score_idx = ScoreImportHelper.find_column_index(headers, "full_score")
-            remark_idx = ScoreImportHelper.find_column_index(headers, "remark")
-
-            results = []
-            errors = []
-
-            for i, row_data in enumerate(parsed_rows):
-                card_id = (
-                    str(row_data.get(headers[card_id_idx], "")).strip()
-                    if card_id_idx >= 0 and row_data.get(headers[card_id_idx])
-                    else None
-                )
-                subject = (
-                    row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
-                )
-                score_val = (
-                    ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
-                    if score_idx >= 0
-                    else None
-                )
-                full_score = (
-                    ScoreImportHelper.parse_score_value(row_data.get(headers[full_score_idx]))
-                    if full_score_idx >= 0
-                    else 100
-                )
-                remark = (
-                    str(row_data.get(headers[remark_idx], "")).strip()
-                    if remark_idx >= 0 and row_data.get(headers[remark_idx])
-                    else None
-                )
-
-                if not card_id:
-                    errors.append(f"行{i+2}: 学号为空")
-                    continue
-
-                student = User.query.filter_by(card_id=card_id).first()
-                if not student:
-                    errors.append(f"行{i+2}: 学号{card_id}不存在")
-                    continue
-
-                if not subject:
-                    errors.append(f"行{i+2}: 科目为空")
-                    continue
-                # F2 修复: preview 此前未解析 subject_id → NameError 恒 500；与 execute 保持一致
-                subject_id = _resolve_subject_id(subject, None)
-                if subject_id is None:
-                    errors.append(f"行{i+2}: 科目「{subject}」未配置")
-                    continue
-
-                is_valid, msg = ScoreImportHelper.validate_score_range(score_val, full_score)
-                if not is_valid:
-                    errors.append(f"行{i+2}: {student.name}-{subject} - {msg}")
-
-                existing_score = Score.query.filter_by(
-                    exam_id=exam_id, student_id=student.id, subject_id=subject_id
-                ).first()
-
-                results.append(
-                    {
-                        "row": i + 2,
-                        "card_id": card_id,
-                        "student_name": student.name,
-                        "class_name": student.class_name,
-                        "subject": subject,
-                        "score": score_val,
-                        "full_score": full_score,
-                        "remark": remark,
-                        "will_update": existing_score is not None,
-                        "will_insert": existing_score is None,
-                    }
-                )
-
-            return APIResponse.success(
-                message=f"预览完成，共{total_count}行",
-                data={
-                    "results": results[:50],
-                    "errors": errors[:20],
-                    "summary": {
-                        "total": len(results),
-                        "will_insert": sum(1 for r in results if r["will_insert"]),
-                        "will_update": sum(1 for r in results if r["will_update"]),
-                        "error_count": len(errors),
-                    },
-                },
+        validation = ScoreImportHelper.validate_headers(headers)
+        if not validation["valid"]:
+            return APIResponse.error(
+                message="文件格式错误", errors=validation["errors"], status_code=400
             )
 
-        except Exception:
-            logger.exception("预览失败")
-            return APIResponse.error(message="预览失败", status_code=500)
+        card_id_idx = ScoreImportHelper.find_column_index(headers, "card_id")
+        subject_idx = ScoreImportHelper.find_column_index(headers, "subject")
+        score_idx = ScoreImportHelper.find_column_index(headers, "score")
+        full_score_idx = ScoreImportHelper.find_column_index(headers, "full_score")
+        remark_idx = ScoreImportHelper.find_column_index(headers, "remark")
+
+        results = []
+        errors = []
+
+        for i, row_data in enumerate(parsed_rows):
+            card_id = (
+                str(row_data.get(headers[card_id_idx], "")).strip()
+                if card_id_idx >= 0 and row_data.get(headers[card_id_idx])
+                else None
+            )
+            subject = (
+                row_data.get(headers[subject_idx]) if subject_idx >= 0 else None
+            )
+            score_val = (
+                ScoreImportHelper.parse_score_value(row_data.get(headers[score_idx]))
+                if score_idx >= 0
+                else None
+            )
+            full_score = (
+                ScoreImportHelper.parse_score_value(row_data.get(headers[full_score_idx]))
+                if full_score_idx >= 0
+                else 100
+            )
+            remark = (
+                str(row_data.get(headers[remark_idx], "")).strip()
+                if remark_idx >= 0 and row_data.get(headers[remark_idx])
+                else None
+            )
+
+            if not card_id:
+                errors.append(f"行{i+2}: 学号为空")
+                continue
+
+            student = User.query.filter_by(card_id=card_id).first()
+            if not student:
+                errors.append(f"行{i+2}: 学号{card_id}不存在")
+                continue
+
+            if not subject:
+                errors.append(f"行{i+2}: 科目为空")
+                continue
+            # F2 修复: preview 此前未解析 subject_id → NameError 恒 500；与 execute 保持一致
+            subject_id = _resolve_subject_id(subject, None)
+            if subject_id is None:
+                errors.append(f"行{i+2}: 科目「{subject}」未配置")
+                continue
+
+            is_valid, msg = ScoreImportHelper.validate_score_range(score_val, full_score)
+            if not is_valid:
+                errors.append(f"行{i+2}: {student.name}-{subject} - {msg}")
+
+            existing_score = Score.query.filter_by(
+                exam_id=exam_id, student_id=student.id, subject_id=subject_id
+            ).first()
+
+            results.append(
+                {
+                    "row": i + 2,
+                    "card_id": card_id,
+                    "student_name": student.name,
+                    "class_name": student.class_name,
+                    "subject": subject,
+                    "score": score_val,
+                    "full_score": full_score,
+                    "remark": remark,
+                    "will_update": existing_score is not None,
+                    "will_insert": existing_score is None,
+                }
+            )
+
+        return APIResponse.success(
+            message=f"预览完成，共{total_count}行",
+            data={
+                "results": results[:50],
+                "errors": errors[:20],
+                "summary": {
+                    "total": len(results),
+                    "will_insert": sum(1 for r in results if r["will_insert"]),
+                    "will_update": sum(1 for r in results if r["will_update"]),
+                    "error_count": len(errors),
+                },
+            },
+        )
 
 
 @ns_exam_import.route("/execute")
@@ -252,6 +245,7 @@ class ExecuteImport(Resource):
 
     @ns_exam_import.doc("execute_import", description="执行成绩导入")
     @requires_permission("score.entry")
+    @safe_handle(message="导入失败", default_status=500)
     def post(self):
         """
         执行成绩导入
@@ -270,42 +264,37 @@ class ExecuteImport(Resource):
         if not exam_id:
             return APIResponse.error(message="缺少考试ID"), 400
 
-        try:
-            exam = get_by_id(Exam, exam_id)
-            if not exam:
-                return APIResponse.error(message="考试不存在"), 404
+        exam = get_by_id(Exam, exam_id)
+        if not exam:
+            return APIResponse.error(message="考试不存在"), 404
 
-            if exam.status != "published":
-                return APIResponse.error(message="考试未发布，无法导入成绩"), 400
+        if exam.status != "published":
+            return APIResponse.error(message="考试未发布，无法导入成绩"), 400
 
-            file_content = file.read()
-            parsed = _parse_score_excel(file_content)
-            headers = parsed["headers"]
-            parsed_rows = parsed["parsed_rows"]
+        file_content = file.read()
+        parsed = _parse_score_excel(file_content)
+        headers = parsed["headers"]
+        parsed_rows = parsed["parsed_rows"]
 
-            validation = ScoreImportHelper.validate_headers(headers)
-            if not validation["valid"]:
-                return APIResponse.error(
-                    message="文件格式错误", errors=validation["errors"], status_code=400
-                )
-
-            result = academics_service.execute_score_import(
-                exam_id=exam_id,
-                entered_by=entered_by,
-                update_existing=update_existing,
-                validate_score=validate_score,
-                parsed_rows=parsed_rows,
-                headers=headers,
+        validation = ScoreImportHelper.validate_headers(headers)
+        if not validation["valid"]:
+            return APIResponse.error(
+                message="文件格式错误", errors=validation["errors"], status_code=400
             )
 
-            return APIResponse.success(
-                message="导入完成",
-                data=result,
-            )
+        result = academics_service.execute_score_import(
+            exam_id=exam_id,
+            entered_by=entered_by,
+            update_existing=update_existing,
+            validate_score=validate_score,
+            parsed_rows=parsed_rows,
+            headers=headers,
+        )
 
-        except Exception:
-            logger.exception("导入失败")
-            return APIResponse.error(message="导入失败", status_code=500)
+        return APIResponse.success(
+            message="导入完成",
+            data=result,
+        )
 
 
 @ns_exam_import.route("/template")

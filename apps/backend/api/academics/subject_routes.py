@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
 from models import Subject, SubjectClass, ClassInfo, Admin, ImportConfig, get_by_id
 from utils.permission import requires_permission
+from utils.decorators import safe_handle
 from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime
@@ -645,15 +646,12 @@ class SubjectImport(Resource):
 class SubjectOrder(Resource):
     @ns_subjects.doc("update_subject_order", description="更新科目排列顺序")
     @requires_permission("score.manage")
+    @safe_handle(message="操作失败，请稍后重试", default_status=400)
     def put(self):
         """批量更新科目排序"""
         data = request.get_json()
         if not data or not isinstance(data, list):
             return APIResponse.error(message="无效数据: 应为 [{id, order}] 列表", status_code=400)
-        try:
-            academics_service.update_subject_order(data)
-            invalidate_cache("api:/api/subjects/*")
-            return APIResponse.success(message="排序更新成功")
-        except Exception as e:
-            logger.error("subject_routes.py: %s", e)
-            return APIResponse.error(message="操作失败，请稍后重试")
+        academics_service.update_subject_order(data)
+        invalidate_cache("api:/api/subjects/*")
+        return APIResponse.success(message="排序更新成功")

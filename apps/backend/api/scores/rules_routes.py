@@ -4,6 +4,7 @@ from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
 from models import ScoreRule, ScoreCategory, get_by_id
 from utils.permission import requires_permission
+from utils.decorators import safe_handle
 from utils.logger import log_info, log_operation
 from utils.response import APIResponse
 from utils.pagination import get_pagination
@@ -582,6 +583,7 @@ class ApplyRuleTemplate(Resource):
     @ns_rules.expect(apply_template_model)
     @ns_rules.response(200, "成功")
     @requires_permission("rule.manage")
+    @safe_handle(message="应用模板失败", default_status=500)
     def post(self):
         """
         应用预设规则模板
@@ -596,21 +598,17 @@ class ApplyRuleTemplate(Resource):
         template = next((t for t in RULE_TEMPLATES if t["id"] == template_id), None)
         if not template:
             return APIResponse.error(message="模板不存在", status_code=404)
-        try:
-            result, err = apply_rule_template(template, category_id)
-            if err:
-                return APIResponse.error(message=err, status_code=400)
-            # 清除所有rules相关缓存
-            invalidated_count = get_cache_service().invalidate_by_tag("rules")
-            log_info(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
-            invalidate_cache("api:/api/rules/*")
-            return APIResponse.success(
-                data=result,
-                message=f"成功应用模板，创建了 {result['created_count']} 条规则",
-            )
-        except Exception as e:
-            logger.error("%s: %s", "应用模板失败", e, exc_info=True)
-            return APIResponse.error(message="应用模板失败", status_code=500)
+        result, err = apply_rule_template(template, category_id)
+        if err:
+            return APIResponse.error(message=err, status_code=400)
+        # 清除所有rules相关缓存
+        invalidated_count = get_cache_service().invalidate_by_tag("rules")
+        log_info(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
+        invalidate_cache("api:/api/rules/*")
+        return APIResponse.success(
+            data=result,
+            message=f"成功应用模板，创建了 {result['created_count']} 条规则",
+        )
 
 
 @ns_rules.route("/statistics")

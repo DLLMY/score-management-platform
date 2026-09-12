@@ -4,7 +4,7 @@ import json
 import io
 import openpyxl
 from flask import Blueprint, request, send_file
-from utils.response import APIResponse
+from utils.decorators import safe_handle
 
 logger = logging.getLogger(__name__)
 
@@ -26,27 +26,24 @@ def download_score_template():
     from utils.permission import requires_permission
 
     @requires_permission("system.settings")
+    @safe_handle(message="生成模板失败", default_status=500)
     def generate_template():
-        try:
-            exam_id = request.args.get("exam_id", type=int)
-            class_name = request.args.get("class_name")
-            class_id = request.args.get("class_id", type=int)
-            exam = None
-            if exam_id:
-                exam = get_by_id(Exam, exam_id)
-            subjects = _resolve_template_subjects(exam)
-            students = _query_template_students(User, class_id, class_name)
-            output = _build_score_template_workbook(subjects, students)
-            filename = f"score_import_template_{class_name or 'all'}.xlsx"
-            return send_file(
-                output,
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=filename,
-            )
-        except Exception:
-            logger.exception("生成模板失败")
-            return APIResponse.error(message="生成模板失败", status_code=500)
+        exam_id = request.args.get("exam_id", type=int)
+        class_name = request.args.get("class_name")
+        class_id = request.args.get("class_id", type=int)
+        exam = None
+        if exam_id:
+            exam = get_by_id(Exam, exam_id)
+        subjects = _resolve_template_subjects(exam)
+        students = _query_template_students(User, class_id, class_name)
+        output = _build_score_template_workbook(subjects, students)
+        filename = f"score_import_template_{class_name or 'all'}.xlsx"
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename,
+        )
 
     return generate_template()
 
