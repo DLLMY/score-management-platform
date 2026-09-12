@@ -14,7 +14,7 @@
 
 ## ruff 口径（2026-09-11 重新校准）
 - 唯一口径 = `ruff check apps/backend`（**含 tests/scripts/tools/migrations**）；C901 同口径加 `--select C901`。
-- **当前基线（2026-09-12 #119/#120/#121/#122 + #123 init_scheduler 收口后）：默认 2258 / C901 50**。旧记录 2261/67、2259/66、2258/60、2258/58、2258/57、2258/56、2258/55、2258/53、2258/51 均已作废；**口径变了必须重测**，勿沿用旧值。
+- **当前基线（2026-09-12 #119/#120/#121/#122 + #123 init_scheduler + #124 export_routes.post 收口后）：默认 2258 / C901 49**。旧记录 2261/67、2259/66、2258/60、2258/58、2258/57、2258/56、2258/55、2258/53、2258/51、2258/50 均已作废；**口径变了必须重测**，勿沿用旧值。
 - ⚠️ **run_regression.sh 被沙箱拦**（报 `Bash/CallMsi/E_ACCESSDENIED`，REG_EXIT=1 但无任何闸门输出）时的兜底：用 PowerShell 直跑其 5 道内部闸门（venv python）——RBAC `verify_rbac_consistency.py --check-only` / OpenAPI `--strict`（EXIT=2=后端未起跳过）/ `pytest tests/test_api_envelope.py`（2 passed）/ 四路由 pytest（33 passed）/ `scripts/verify_indexes.py`（[OK]）。基准：契约 2 + 关键路由 33 + 索引 OK。
 - ⚠️ 回归日志常含 null 字节（Read/Grep 判为二进制）→ 用 `[System.IO.File]::ReadAllBytes` 剔除 `\0` 再 UTF8 解码；**结果文件用 `Out-File -Encoding utf8` 或 `WriteAllText`+无 BOM UTF8 写**，否则 Read 报 binary。
 - ⚠️ #120（21+ 桶）19 项经全量扫描审定：**仅 `_validate_course_import_item`(22) 为纯校验可机械收口**；其余 18 项全属写路径/DB 事务（users_routes.post 45/25、execute_subject_import 37、import_devices 31、subject_routes.post 23、resolve_relations 22、execute_scoring 21）、NLP 语义（parse 36/extract_behavior 29/parse_without_correction 28/extract_name 26/deep_semantic_match 24/determine_intent 22）、安全（security.validate 35、configure_rate_limits 26）、测试/工具/脚本（tests.run_tests 27、collect_security_metrics 24、verify_rbac.run_check 22）——**按宁跳不强推纪律整体跳过，均待用户单独拍板**。
