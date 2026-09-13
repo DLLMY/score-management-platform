@@ -147,28 +147,8 @@ class ScheduledTrigger(Resource):
             "urgent": notify.urgent,
             "timestamp": datetime.now().isoformat(),
         }
-        topics = []
-        if notify.send_mode == "broadcast":
-            topics = ["phonebox/remote/notify", "phonebox/remote/notify/all"]
-        elif notify.send_mode == "device" and notify.device_id:
-            topics = [f"phonebox/remote/notify/{notify.device_id}"]
-        else:
-            topics = ["phonebox/remote/notify"]
-        # 上课时间拦截（广播按全校+任意班级；指定设备按班级课表反查）
-        cls_id = (
-            _resolve_class_from_device(notify.device_id)
-            if (notify.send_mode == "device" and notify.device_id)
-            else None
-        )
-        if cls_id:
-            allowed, check_message, reason_code, _ = ClassTimeChecker.is_notification_allowed(
-                target_class_info_id=cls_id, force_send=force_send
-            )
-        else:
-            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(
-                force_send=force_send
-            )
-            allowed = not blocked
+        topics = _st_build_notify_topics(notify)
+        cls_id, allowed, check_message, reason_code = _st_check_notify_allowed(notify, force_send)
         if not allowed:
             ClassTimeChecker.log_notify_audit(
                 "scheduled_notify",
@@ -192,15 +172,7 @@ class ScheduledTrigger(Resource):
             )
 
         try:
-            # publish 结果校验：MQTT 断连时返回 False。此前忽略返回值 →
-            # 失败也提示"通知已发送"+ 标 sent（假状态）。任一 topic 失败即诚实报错。
-            publish_results = []
-            for topic in topics:
-                try:
-                    ok = publish_mqtt(topic, json.dumps(message))
-                except Exception:
-                    ok = False
-                publish_results.append((topic, bool(ok)))
+            publish_results = _st_publish_notify_topics(topics, message)
             if not all(ok for _, ok in publish_results):
                 rollback_scheduled_session()
                 failed_topics = [t for t, ok in publish_results if not ok]
@@ -213,8 +185,6 @@ class ScheduledTrigger(Resource):
             rollback_scheduled_session()  # 失败回滚，避免脏 session 污染后续请求
             logger.error("%s: %s", "发送失败", e, exc_info=True)
             return APIResponse.error(message="发送失败")
-
-
 def process_scheduled_notifications():
     """处理到期的定时通知（定时任务调用）"""
     now = datetime.now()
@@ -287,3 +257,44 @@ def process_scheduled_notifications():
             rollback_scheduled_session()  # 单条失败回滚，避免脏 session 影响下一条与最终 commit
             notify.status = "failed"
     commit_scheduled_session()
+
+
+
+def _st_build_notify_topics(notify):
+    """根据发送模式构造 MQTT topic 列表（保留原分支语义）。"""
+    if notify.send_mode == "broadcast":
+        return ["phonebox/remote/notify", "phonebox/remote/notify/all"]
+    if notify.send_mode == "device" and notify.device_id:
+        return [f"phonebox/remote/notify/{notify.device_id}"]
+    return ["phonebox/remote/notify"]
+
+
+def _st_check_notify_allowed(notify, force_send):
+    """上课时间拦截判定（广播按全校；指定设备按班级课表反查）。"""
+    cls_id = (
+        _resolve_class_from_device(notify.device_id)
+        if (notify.send_mode == "device" and notify.device_id)
+        else None
+    )
+    if cls_id:
+        allowed, check_message, reason_code, _ = ClassTimeChecker.is_notification_allowed(
+            target_class_info_id=cls_id, force_send=force_send
+        )
+    else:
+        blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(
+            force_send=force_send
+        )
+        allowed = not blocked
+    return cls_id, allowed, check_message, reason_code
+
+
+def _st_publish_notify_topics(topics, message):
+    """逐 topic 发布通知，任一失败即记录 False（MQTT 断连诚实报错）。"""
+    publish_results = []
+    for topic in topics:
+        try:
+            ok = publish_mqtt(topic, json.dumps(message))
+        except Exception:
+            ok = False
+        publish_results.append((topic, bool(ok)))
+    return publish_results

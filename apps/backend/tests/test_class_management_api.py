@@ -154,6 +154,280 @@ def validate_response(data, endpoint):
     return errors
 
 
+TEST_CASES = [
+    {
+        "module": "座次表管理",
+        "code_endpoint": "GET /api/seating/charts",
+        "user_endpoint": "GET /api/seating/charts",
+        "url": "/api/seating/charts",
+        "expected_status": 200,
+        "description": "座次表列表",
+    },
+    {
+        "module": "值日生组管理",
+        "code_endpoint": "GET /api/duty/groups",
+        "user_endpoint": "GET /api/duty/groups",
+        "url": "/api/duty/groups",
+        "expected_status": 200,
+        "description": "值日生组列表",
+    },
+    {
+        "module": "班委名单管理",
+        "code_endpoint": "GET /api/committee/members",
+        "user_endpoint": "GET /api/committee/list",
+        "url": "/api/committee/members",
+        "expected_status": 200,
+        "alt_url": "/api/committee/list",
+        "description": "班委列表 (代码: /members, 用户指定: /list)",
+    },
+    {
+        "module": "家长联系管理",
+        "code_endpoint": "GET /api/parent/contacts",
+        "user_endpoint": "GET /api/parent/contacts",
+        "url": "/api/parent/contacts",
+        "expected_status": 200,
+        "description": "家长联系人列表",
+    },
+    {
+        "module": "作业检查管理",
+        "code_endpoint": "GET /api/homework/assignments",
+        "user_endpoint": "GET /api/homework/assignments",
+        "url": "/api/homework/assignments",
+        "expected_status": 200,
+        "description": "作业列表",
+    },
+    {
+        "module": "考勤管理",
+        "code_endpoint": "GET /api/attendance/records",
+        "user_endpoint": "GET /api/attendance/records",
+        "url": "/api/attendance/records",
+        "expected_status": 200,
+        "description": "考勤记录",
+    },
+    {
+        "module": "学习小组管理",
+        "code_endpoint": "GET /api/study-group/groups",
+        "user_endpoint": "GET /api/study-group/list",
+        "url": "/api/study-group/groups",
+        "expected_status": 200,
+        "alt_url": "/api/study-group/list",
+        "description": "学习小组列表 (代码: /groups, 用户指定: /list)",
+    },
+    {
+        "module": "心理健康管理",
+        "code_endpoint": "GET /api/mental-health/records",
+        "user_endpoint": "GET /api/mental-health/records",
+        "url": "/api/mental-health/records",
+        "expected_status": 200,
+        "description": "心理健康记录",
+    },
+    {
+        "module": "文体活动管理",
+        "code_endpoint": "GET /api/activity",
+        "user_endpoint": "GET /api/activity/list",
+        "url": "/api/activity",
+        "expected_status": 200,
+        "alt_url": "/api/activity/list",
+        "description": "文体活动列表 (代码: /, 用户指定: /list)",
+    },
+    {
+        "module": "班级文化管理",
+        "code_endpoint": "GET /api/culture/records",
+        "user_endpoint": "GET /api/culture/list",
+        "url": "/api/culture/records",
+        "expected_status": 200,
+        "alt_url": "/api/culture/list",
+        "description": "班级文化列表 (代码: /records, 用户指定: /list)",
+    },
+    {
+        "module": "学法指导管理",
+        "code_endpoint": "GET /api/study-guide/guides",
+        "user_endpoint": "GET /api/study-guide/guides",
+        "url": "/api/study-guide/guides",
+        "expected_status": 200,
+        "description": "学法指导列表",
+    },
+
+]
+
+def _handle_success(response, case, test_result, results, elapsed):
+    """处理状态码匹配的成功分支（原逐字搬运）。"""
+    data = json.loads(response.data)
+    test_result["response_valid"] = True
+
+    format_errors = validate_response(data, case["url"])
+    if format_errors:
+        test_result["response_format_valid"] = False
+        test_result["warnings"].extend(format_errors)
+        results["warnings"] += 1
+        print(f"  ⚠ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有警告")
+        for err in format_errors:
+            print(f"    警告: {err}")
+    else:
+        test_result["response_format_valid"] = True
+        print(f"  ✓ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有效")
+
+    if "success" in data:
+        data_info = f"success={data['success']}"
+        if isinstance(data.get("data"), list):
+            data_info += f", 记录数={len(data['data'])}"
+        elif isinstance(data.get("data"), dict):
+            data_info += f", 字段={list(data['data'].keys())}"
+        print(f"    响应: {data_info}")
+    else:
+        print(f"    响应字段: {list(data.keys())}")
+
+    test_result["status"] = "passed"
+    results["passed"] += 1
+
+
+def _try_alt_url(client, case, test_result, results):
+    """状态码不匹配时尝试用户指定备用路径（原逐字搬运）。"""
+    if not case.get("alt_url"):
+        return
+    print(f"  尝试用户指定路径: {case['alt_url']}")
+    alt_response = client.get(case["alt_url"])
+    print(f"    用户指定路径状态码: {alt_response.status_code}")
+    if alt_response.status_code == case["expected_status"]:
+        test_result["status"] = "passed (用户指定路径)"
+        test_result["alt_url_used"] = True
+        results["passed"] += 1
+        test_result["error"] = None
+        print("    ✓ 用户指定路径成功!")
+    else:
+        print(f"    ✗ 用户指定路径也返回 {alt_response.status_code}")
+        test_result["warnings"].append(
+            f"代码路径({case['url']})和用户指定路径({case['alt_url']})均不可用"
+        )
+        results["warnings"] += 1
+
+
+def _run_single_case(client, case, results):
+    """执行单个 API 用例，把结果写入 results（原 run_tests 循环体逐字搬运）。"""
+    results["total"] += 1
+    test_result = {
+        "module": case["module"],
+        "code_endpoint": case["code_endpoint"],
+        "user_endpoint": case["user_endpoint"],
+        "status": "failed",
+        "status_code": None,
+        "response_time": None,
+        "response_valid": False,
+        "response_format_valid": False,
+        "warnings": [],
+        "error": None,
+    }
+
+    print(f"\n[{results['total']}/11] 测试: {case['module']}")
+    print(f"  描述: {case['description']}")
+
+    if case["code_endpoint"] != case["user_endpoint"]:
+        print(f"  代码路径: {case['code_endpoint']}")
+        print(f"  用户指定路径: {case['user_endpoint']}")
+
+    try:
+        start_time = datetime.now()
+        response = client.get(case["url"])
+        elapsed = (datetime.now() - start_time).total_seconds()
+        test_result["response_time"] = f"{elapsed:.3f}s"
+        test_result["status_code"] = response.status_code
+
+        if response.status_code == case["expected_status"]:
+            try:
+                _handle_success(response, case, test_result, results, elapsed)
+            except json.JSONDecodeError as e:
+                test_result["error"] = f"JSON解析失败: {e}"
+                results["failed"] += 1
+                print(f"  ✗ JSON解析失败: {e}")
+        else:
+            test_result["error"] = (
+                f"期望状态码 {case['expected_status']}, 实际 {response.status_code}"
+            )
+            results["failed"] += 1
+            print(
+                f"  ✗ 状态码不匹配: 期望 {case['expected_status']}, 实际 {response.status_code}"
+            )
+            _try_alt_url(client, case, test_result, results)
+
+    except Exception as e:
+        test_result["error"] = str(e)
+        results["failed"] += 1
+        results["errors"].append(
+            {
+                "module": case["module"],
+                "endpoint": case["url"],
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+            }
+        )
+        print(f"  ✗ 异常: {e}")
+        traceback.print_exc()
+
+    results["details"].append(test_result)
+
+
+def _print_details(results):
+    """打印逐用例明细（原 _print_summary 尾段逐字搬运）。"""
+    print("\n" + "=" * 80)
+    print("详细测试结果")
+    print("=" * 80)
+    for detail in results["details"]:
+        if "passed" in detail["status"]:
+            icon = "✓"
+        else:
+            icon = "✗"
+        print(f"\n{icon} [{detail['status'].upper()}] {detail['module']}")
+        print(f"   代码路径: {detail['code_endpoint']}")
+        print(f"   用户指定路径: {detail['user_endpoint']}")
+        print(f"   状态码: {detail['status_code']}")
+        print(f"   响应时间: {detail['response_time']}")
+        print(f"   JSON有效: {detail['response_valid']}")
+        print(f"   格式合规: {detail['response_format_valid']}")
+        if detail.get("alt_url_used"):
+            print("   注: 使用了备用路径")
+        for warning in detail.get("warnings", []):
+            print(f"   ⚠ {warning}")
+        if detail.get("error"):
+            print(f"   错误: {detail['error']}")
+
+
+def _print_summary(results):
+    """打印汇总/警告/错误报告（原 run_tests 尾段逐字搬运）。"""
+    print("\n" + "=" * 80)
+    print("测试结果汇总")
+    print("=" * 80)
+    print(f"总测试数: {results['total']}")
+    print(f"通过: {results['passed']}")
+    print(f"失败: {results['failed']}")
+    print(f"警告: {results['warnings']}")
+    pass_rate = results["passed"] / results["total"] * 100 if results["total"] > 0 else 0
+    print(f"通过率: {pass_rate:.1f}%")
+
+    if results["warnings"] > 0:
+        print("\n" + "-" * 80)
+        print("⚠ 警告信息")
+        print("-" * 80)
+        for detail in results["details"]:
+            for warning in detail.get("warnings", []):
+                print(f"  [{detail['module']}] {warning}")
+
+    if results["errors"]:
+        print("\n" + "=" * 80)
+        print("✗ 错误详情")
+        print("=" * 80)
+        for err in results["errors"]:
+            print(f"\n模块: {err['module']}")
+            print(f"端点: {err['endpoint']}")
+            print(f"错误: {err['error']}")
+            print(f"堆栈:\n{err['traceback']}")
+
+    _print_details(results)
+
+    print("\n" + "=" * 80)
+    print("测试完成!")
+    print("=" * 80)
+
+
 def run_tests():
     results = {
         "total": 0,
@@ -199,263 +473,10 @@ def run_tests():
         print("\n[4/4] 执行 API 端点测试...")
         print()
 
-        test_cases = [
-            {
-                "module": "座次表管理",
-                "code_endpoint": "GET /api/seating/charts",
-                "user_endpoint": "GET /api/seating/charts",
-                "url": "/api/seating/charts",
-                "expected_status": 200,
-                "description": "座次表列表",
-            },
-            {
-                "module": "值日生组管理",
-                "code_endpoint": "GET /api/duty/groups",
-                "user_endpoint": "GET /api/duty/groups",
-                "url": "/api/duty/groups",
-                "expected_status": 200,
-                "description": "值日生组列表",
-            },
-            {
-                "module": "班委名单管理",
-                "code_endpoint": "GET /api/committee/members",
-                "user_endpoint": "GET /api/committee/list",
-                "url": "/api/committee/members",
-                "expected_status": 200,
-                "alt_url": "/api/committee/list",
-                "description": "班委列表 (代码: /members, 用户指定: /list)",
-            },
-            {
-                "module": "家长联系管理",
-                "code_endpoint": "GET /api/parent/contacts",
-                "user_endpoint": "GET /api/parent/contacts",
-                "url": "/api/parent/contacts",
-                "expected_status": 200,
-                "description": "家长联系人列表",
-            },
-            {
-                "module": "作业检查管理",
-                "code_endpoint": "GET /api/homework/assignments",
-                "user_endpoint": "GET /api/homework/assignments",
-                "url": "/api/homework/assignments",
-                "expected_status": 200,
-                "description": "作业列表",
-            },
-            {
-                "module": "考勤管理",
-                "code_endpoint": "GET /api/attendance/records",
-                "user_endpoint": "GET /api/attendance/records",
-                "url": "/api/attendance/records",
-                "expected_status": 200,
-                "description": "考勤记录",
-            },
-            {
-                "module": "学习小组管理",
-                "code_endpoint": "GET /api/study-group/groups",
-                "user_endpoint": "GET /api/study-group/list",
-                "url": "/api/study-group/groups",
-                "expected_status": 200,
-                "alt_url": "/api/study-group/list",
-                "description": "学习小组列表 (代码: /groups, 用户指定: /list)",
-            },
-            {
-                "module": "心理健康管理",
-                "code_endpoint": "GET /api/mental-health/records",
-                "user_endpoint": "GET /api/mental-health/records",
-                "url": "/api/mental-health/records",
-                "expected_status": 200,
-                "description": "心理健康记录",
-            },
-            {
-                "module": "文体活动管理",
-                "code_endpoint": "GET /api/activity",
-                "user_endpoint": "GET /api/activity/list",
-                "url": "/api/activity",
-                "expected_status": 200,
-                "alt_url": "/api/activity/list",
-                "description": "文体活动列表 (代码: /, 用户指定: /list)",
-            },
-            {
-                "module": "班级文化管理",
-                "code_endpoint": "GET /api/culture/records",
-                "user_endpoint": "GET /api/culture/list",
-                "url": "/api/culture/records",
-                "expected_status": 200,
-                "alt_url": "/api/culture/list",
-                "description": "班级文化列表 (代码: /records, 用户指定: /list)",
-            },
-            {
-                "module": "学法指导管理",
-                "code_endpoint": "GET /api/study-guide/guides",
-                "user_endpoint": "GET /api/study-guide/guides",
-                "url": "/api/study-guide/guides",
-                "expected_status": 200,
-                "description": "学法指导列表",
-            },
-        ]
+        for case in TEST_CASES:
+            _run_single_case(client, case, results)
 
-        for case in test_cases:
-            results["total"] += 1
-            test_result = {
-                "module": case["module"],
-                "code_endpoint": case["code_endpoint"],
-                "user_endpoint": case["user_endpoint"],
-                "status": "failed",
-                "status_code": None,
-                "response_time": None,
-                "response_valid": False,
-                "response_format_valid": False,
-                "warnings": [],
-                "error": None,
-            }
-
-            print(f"\n[{results['total']}/11] 测试: {case['module']}")
-            print(f"  描述: {case['description']}")
-
-            if case["code_endpoint"] != case["user_endpoint"]:
-                print(f"  代码路径: {case['code_endpoint']}")
-                print(f"  用户指定路径: {case['user_endpoint']}")
-
-            try:
-                start_time = datetime.now()
-                response = client.get(case["url"])
-                elapsed = (datetime.now() - start_time).total_seconds()
-                test_result["response_time"] = f"{elapsed:.3f}s"
-                test_result["status_code"] = response.status_code
-
-                if response.status_code == case["expected_status"]:
-                    try:
-                        data = json.loads(response.data)
-                        test_result["response_valid"] = True
-
-                        format_errors = validate_response(data, case["url"])
-                        if format_errors:
-                            test_result["response_format_valid"] = False
-                            test_result["warnings"].extend(format_errors)
-                            results["warnings"] += 1
-                            print(
-                                f"  ⚠ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有警告"
-                            )
-                            for err in format_errors:
-                                print(f"    警告: {err}")
-                        else:
-                            test_result["response_format_valid"] = True
-                            print(
-                                f"  ✓ 状态码: {response.status_code} | 响应时间: {elapsed:.3f}s | JSON格式: 有效"
-                            )
-
-                        if "success" in data:
-                            data_info = f"success={data['success']}"
-                            if isinstance(data.get("data"), list):
-                                data_info += f", 记录数={len(data['data'])}"
-                            elif isinstance(data.get("data"), dict):
-                                data_info += f", 字段={list(data['data'].keys())}"
-                            print(f"    响应: {data_info}")
-                        else:
-                            print(f"    响应字段: {list(data.keys())}")
-
-                        test_result["status"] = "passed"
-                        results["passed"] += 1
-
-                    except json.JSONDecodeError as e:
-                        test_result["error"] = f"JSON解析失败: {e}"
-                        results["failed"] += 1
-                        print(f"  ✗ JSON解析失败: {e}")
-                else:
-                    test_result["error"] = (
-                        f"期望状态码 {case['expected_status']}, 实际 {response.status_code}"
-                    )
-                    results["failed"] += 1
-                    print(
-                        f"  ✗ 状态码不匹配: 期望 {case['expected_status']}, 实际 {response.status_code}"
-                    )
-
-                    if case.get("alt_url"):
-                        print(f"  尝试用户指定路径: {case['alt_url']}")
-                        alt_response = client.get(case["alt_url"])
-                        print(f"    用户指定路径状态码: {alt_response.status_code}")
-                        if alt_response.status_code == case["expected_status"]:
-                            test_result["status"] = "passed (用户指定路径)"
-                            test_result["alt_url_used"] = True
-                            results["passed"] += 1
-                            test_result["error"] = None
-                            print("    ✓ 用户指定路径成功!")
-                        else:
-                            print(f"    ✗ 用户指定路径也返回 {alt_response.status_code}")
-                            test_result["warnings"].append(
-                                f"代码路径({case['url']})和用户指定路径({case['alt_url']})均不可用"
-                            )
-                            results["warnings"] += 1
-
-            except Exception as e:
-                test_result["error"] = str(e)
-                results["failed"] += 1
-                results["errors"].append(
-                    {
-                        "module": case["module"],
-                        "endpoint": case["url"],
-                        "error": str(e),
-                        "traceback": traceback.format_exc(),
-                    }
-                )
-                print(f"  ✗ 异常: {e}")
-                traceback.print_exc()
-
-            results["details"].append(test_result)
-
-        print("\n" + "=" * 80)
-        print("测试结果汇总")
-        print("=" * 80)
-        print(f"总测试数: {results['total']}")
-        print(f"通过: {results['passed']}")
-        print(f"失败: {results['failed']}")
-        print(f"警告: {results['warnings']}")
-        pass_rate = results["passed"] / results["total"] * 100 if results["total"] > 0 else 0
-        print(f"通过率: {pass_rate:.1f}%")
-
-        if results["warnings"] > 0:
-            print("\n" + "-" * 80)
-            print("⚠ 警告信息")
-            print("-" * 80)
-            for detail in results["details"]:
-                for warning in detail.get("warnings", []):
-                    print(f"  [{detail['module']}] {warning}")
-
-        if results["errors"]:
-            print("\n" + "=" * 80)
-            print("✗ 错误详情")
-            print("=" * 80)
-            for err in results["errors"]:
-                print(f"\n模块: {err['module']}")
-                print(f"端点: {err['endpoint']}")
-                print(f"错误: {err['error']}")
-                print(f"堆栈:\n{err['traceback']}")
-
-        print("\n" + "=" * 80)
-        print("详细测试结果")
-        print("=" * 80)
-        for detail in results["details"]:
-            if "passed" in detail["status"]:
-                icon = "✓"
-            else:
-                icon = "✗"
-            print(f"\n{icon} [{detail['status'].upper()}] {detail['module']}")
-            print(f"   代码路径: {detail['code_endpoint']}")
-            print(f"   用户指定路径: {detail['user_endpoint']}")
-            print(f"   状态码: {detail['status_code']}")
-            print(f"   响应时间: {detail['response_time']}")
-            print(f"   JSON有效: {detail['response_valid']}")
-            print(f"   格式合规: {detail['response_format_valid']}")
-            if detail.get("alt_url_used"):
-                print("   注: 使用了备用路径")
-            for warning in detail.get("warnings", []):
-                print(f"   ⚠ {warning}")
-            if detail.get("error"):
-                print(f"   错误: {detail['error']}")
-
-        print("\n" + "=" * 80)
-        print("测试完成!")
-        print("=" * 80)
+        _print_summary(results)
 
         return results
 

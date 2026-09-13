@@ -1,79 +1,51 @@
 # 管理平台设计 — 长期记忆
 
-> SOP 已下沉 `~/.workbuddy/skills/`：backend-pytest-env-restore · black-batch-eol-safe · c901-cyclomatic-refactor · dirty-worktree-commit-split · frontend-dead-code-removal · frontend-import-barrel-unification · route-try-except-to-decorator · ts-noimplicitany-enable。细节看 `memory/YYYY-MM-DD.md`。
+> SOP 已下沉 `~/.workbuddy/skills/`（backend-pytest-env-restore · black-batch-eol-safe · c901-cyclomatic-refactor · dirty-worktree-commit-split · frontend-dead-code-removal · frontend-import-barrel-unification · route-try-except-to-decorator · ts-noimplicitany-enable · react-page-split）。细节看 `memory/YYYY-MM-DD.md`。
 
 ## 运行 / 测试（口径固定）
-- 后端起：系统 Py3.11；`cd backend && python run.py --env development --host 127.0.0.1 --port 5000`。改后端须**强杀全部 python 再重启**（SocketIO 不 reload）；MQTT 在 `app/service_init.py::init_mqtt`。
-- ⚠️ pytest / run_regression **必须** `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug → 假 `url_quote ImportError`）。
-- ⚠️ **全量 `pytest tests`（串行）基线（2026-09-12 更新）＝ 2084 passed / 7 skipped / 0 failed**。原 6 项预存在失败已于 `67f6fd3` 全修（`is_strong_password` 返 Match→`is not None`；`CachedQueries.invalidate_*` 迭代不可迭代对象→`list(cm.keys())`；`test_ota_failed_statuses_mapped`/`test_export_has_class_scope` 系 C901 抽取后滞后的源码文本断言→升级为对象级/helper 级断言）。**判回归：失败项必须为 0**（非空即须逐项定因）。
-  - ⚠️ **C901 抽取后须复扫源码文本类测试**：`inspect.getsource(...)` 断言 `"字符串" in src` 会被搬家的 helper/类常量**静默破坏**，表现为全量多出「预存在失败」。判据：`git log -S "<字符串>" -- <src>` vs `git log -- <test>` 先后；正解=升级为对象级/helper 级断言（更强，防「表存在却未被用」）。详见 skill `c901-cyclomatic-refactor` §9。
-  - 全量**勿用 `-n 4` xdist**（额外挂 2 个 nlp_performance 假失败）。串行 ~22min；PowerShell 10min 上限 → 按文件名均分 **3 批**（55/55/55）。
-- 前端四闸门用 managed Node 22.22.2，**勿用 `node_modules/.bin/*`**：tsc→`typescript/bin/tsc`；eslint→`eslint/bin/eslint.js`；prettier→`prettier/bin-prettier.js`（⚠️ 不是 `node_modules/bin-prettier.js`，2026-09-12 实测 MODULE_NOT_FOUND）；vitest→`vitest/vitest.mjs`（全量勿加 `--pool=forks`）。基线 38 文件 / 276 passed / 3 skipped。
-- ⚠️ 单测三要素：①退出码=0 ②无 `Errors`/`failed` ③**报告文件数==磁盘文件数**。
-- ⚠️ push 后核实 `git ls-remote origin refs/heads/main`。**禁 commit 除非用户显式要求**（C901 收口批次已授权自动 push）。
+- 后端：系统 Py3.11 起 `python run.py --env development --host 127.0.0.1 --port 5000`；改后端**强杀全部 python 再重启**（SocketIO 不 reload）。
+- pytest/run_regression **必须** `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug）。全量串行基线 = **2084 passed / 7 skipped / 0 failed**（判回归：失败必须为 0）；勿用 `-n 4` xdist（2 个 nlp_performance 假失败）；串行 3 批分跑。C901 抽取后须复扫源码文本类测试（`inspect.getsource` 断言会被搬家 helper 静默破坏，正解=对象级断言，见 skill c901 §9）。
+- 前端四闸门 managed Node 22.22.2 **直调二进制**（勿用 `.bin/*`；prettier 是 `bin-prettier.js`）：`typescript/bin/tsc`、`eslint/bin/eslint.js`、`prettier/bin-prettier.js`、`vitest/vitest.mjs run`。基线 38 文件 / **276 passed / 3 skipped**。
+- 单测三要素：退出码=0；无 failed；报告文件数==磁盘文件数。push 后 `git ls-remote` 核实；**禁 commit 除非用户显式要求**。
+- ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）；基线默认 2259 / C901 46（2026-09-12）。run_regression 5 闸门用 PowerShell 直跑（sh 被沙箱拦）；回归日志剔 `\0` 再 UTF8。
 
-## ruff 口径
-- 唯一口径 = `ruff check apps/backend`（含 tests/scripts/tools/migrations）；C901 同口径加 `--select C901`。ruff 二进制 `C:/Users/53527/AppData/Local/Programs/Python/Python311/Scripts/ruff`。
-- **当前基线（2026-09-12，#131 收口后）：默认 2259 / C901 46**。口径变了必须重测。
-- ⚠️ run_regression.sh 被沙箱拦（`E_ACCESSDENIED`）→ 用 PowerShell 直跑 5 闸门（venv python）：RBAC `verify_rbac_consistency.py --check-only`(G2 68/DB 70/seed 66/teacher 30) / OpenAPI `--strict`(EXIT=2=后端未起跳过) / `pytest tests/test_api_envelope.py`(2) / 四路由 pytest(33) / `scripts/verify_indexes.py`([OK])。
-- ⚠️ 回归日志含 null 字节 → 用 `[System.IO.File]::ReadAllBytes` 剔 `\0` 再 UTF8；结果文件用 `Out-File -Encoding utf8` 写。
-- ruff 默认 `ll=88`（black 是 100）；black 只对 `--check` 已过的文件跑。
-
-## C901「机械收口」进展与类别
-- 已收口 #119(2)+#120(1)+#121(2)+#122(2)+#123(1)+#124(1)+#125(1)+#126(2) ＝ 12 个函数，C901 **58 → 46**。剩余 **46 项**全属写路径/DB 事务、NLP 语义、安全 RBAC、测试脚本工具——**动前须用户逐项拍板**（宁跳不强推）。
-- ✅ 可安全收口类别①：**注册/初始化型函数**（如 `init_scheduler` c=11→2）。手法＝保留嵌套 def 与注册语句原样，闭包体逐字搬到模块级 helper（捕获变量改显式参数）。同类候选 `init_cache_warmup`、`_try_auto_start_redis`(14)、`start_celery.main`(12)。harness：闭包内 `from x import y` 须 `sys.modules` 注入假模块；`exec` 出的函数 `__globals__` 绑定 exec 字典，stub 须写回同一 dict。
-- ✅ 可安全收口类别②：**纯序列化/导出构建型函数**（如 `export_routes.ExportErrors.post` c=12→0）。手法＝抽模块级 helper，函数内 `from openpyxl import...` 仍以形参传入（不改启动期 import 行为）。
-- ⚠️ 差分 harness 三坑（#124 实测，已沉淀 skill）：① 注入 `datetime` 须注入**类** `datetime.datetime` 而非模块；② 同文件多 `def post` 须按函数体 marker 定位，勿取 `next(def post)`；③ `column_dimensions` 用 `defaultdict` 复现按需建 Dimension，否则宽度对比被 KeyError 绕过。**harness 必先自检真实路径被走到**。
+## 已收官（勿再排期）
+- C901 收口 12 函数（58→46→**47**，剩 47 项须用户逐项拍板）；safe_handle 收敛 18 处**已收官**（12 项硬拒判据在 skill route-try-except-to-decorator）；**F17 路由服务化已收官**（防腐层 + 路由层写路径下沉:实测 `api/` 内联写=0、写逻辑全在 `services/`;`system memory`「剩余106处写路径」为过时描述,以 `2026-09-12.md:225` 为准）· B3 to_dict · E1–E6 · NLP 四塔 · components/hooks barrel · 班主任工作台（12 子页+聚合首页 `/workbench`）· M9 分页（`utils/pagination.py`）。
+- **06 差异 17 项全量落地已收官**（2026-09-12，详见 `memory/2026-09-12.md`）：含 #1 device_type 维度 / #2 回滚 / #3 心跳统一 / #4 设备认证三阶段 / #5 重启定向 / #6 下载签名 / #7 points 幂等 / #8 日限额 / #9 版本比较统一 / #10 在线判定 / #11 错误告警 / #12 device_type 透传 / #13 在线列表两段式 / #14 unlock payload / #15 device_id 校验 / #16 box 幂等 / #17 reason 常量。全量回归 2084/7/0 + 前端四闸门全绿。
+- **06 收口轮三项已收官**（2026-09-12 晚）：① 旧 `docs/MQTT_INTEGRATION.md` **已归档**至 `docs/archive/doc/MQTT文档/MQTT_INTEGRATION_20260520_已废弃.md`（根 README 引用已改指 `docs/esp32/`）；② **差异 #4 阶段 3 前端 UI 已补齐**（`DeviceSecretPanel.tsx` + `useDeviceSecretDomain.ts`，入口在**设备设置弹窗内**）**并顺带补齐阶段 1 白名单开关**（`Settings` 页新增「设备接入安全」区块）；③ skill 库归置**只出报告未动文件**（`docs/reports/skill库归置报告-20260912.md`）。
+- ⚠️ 过时文档（引用前复核）：`下一步开发计划-20260824.md` T7/T8/T10/T11 已闭环；`班主任工作台优化方案` P3 A 批已闭环。
 
 ## 后端铁律
-- 路由唯一源 `app/api_versioning.py::register_v1_routes`；信封 `{success,code,data}`；create 双元组 `[env,201]` 勿改。
-- **未跑回归 = 重构未完成**。新建工具前先 Glob 确认不存在。
-- ✅ 已收口勿再排期：F17 防腐层 · B3 `to_dict(fields=None)` · E 系 E1–E6 · E4 broad-except 566→425 · NLP 四塔 P0–P1 · components/hooks barrel。
-- `api/` 裸 `except Exception` 收敛 `@safe_handle`：已收 **18 处**（#128 `fe965a3` 7；#129 `03ea4b3` 4 并加 `error_code=None` 尾置默认参透传；#130 `f9dbb7d` 6 处 export GET，**用户批准 pre 含 DB 类的 message 契约差异**；#131 `mqtt_routes.MQTTConnect.post` 1）。**✅ 该线已正式收官（2026-09-12）**：二阶 AST 扫描 13 项候选逐项分类后**仅 1 项可收敛**，12 项硬拒 —— 裸 dict 兜底 5（`remote_notify_routes` 返回非信封字典）、handler 带 `data=` 2（`import_export_routes.ImportRules/ImportCategories`，`if data:` 取值敏感）、pre 含副作用 1（`firmware_routes` 的 `ensure_upload_folder()` 建目录）、pre 含 DB＋f-string 泄漏 2、非整方法体 try 1（`notify_template_routes.TemplateUse.post`：try 只包尾部 publish+落库、pre 含 `query.get_or_404`，收敛会令 status 500↔400 与 message 双漂移）、pre 含 DB＋HTTPException 1。手法全在 skill `route-try-except-to-decorator`（判据要点：handler 复现性必须查「是否返回信封」与 `data=` 参数；pre 含副作用调用一律硬拒；`APIResponse.error` 默认 **400** 而 `safe_handle` 默认 **500**，对齐须显式传；`ast.unparse` 输出单引号，断言勿用双引号整串）。
-- 前端重构范式 E6a/D2：hook 含 JSX 必 `.tsx`；搬 `types.ts` 的 interface/const 要 `export`；复合类型 `ReturnType<typeof useXxx>`。派 subagent 前先脚本核对文件真实存在。
+- 路由唯一源 `app/api_versioning.py::register_v1_routes`（注意在 `app/` 不是 `utils/`）；信封 `{success,code,data}`；create 双元组 `[env,201]` 勿改；**未跑回归=重构未完成**；新建工具前先 Glob。
+- RBAC：改后必跑 `verify_rbac_consistency.py --check-only`（G2 68/DB 70/seed 66/teacher 30）；班级隔离 `_CLASS_SCOPE_PREFIXES` 12 词根自动 403，**新增班级模块必须加词根**；`db_session_scope` 请求链 service 写路径须 `detach=False`。
+- ⚠️ **「统一命名」≠ 改线上取值**：枚举常量化的正确姿势是**只收拢字面量**，绝不做跨语义合并。反例（本轮踩过）：`not_in_time`（派发层，全局 TimeRule）与 `not_in_time_window`（判定层 validate_unlock）是**两个不同语义的独立常量**，合并即破坏设备端/前端匹配。同理 `user_blacklisted` ≠ `user_permanently_blacklisted`。判据：**该值是否已被下游按字面量匹配**？是 → 原样保留。
+- ⚠️ **收紧判据必须留兼容兜底**：把 `device.status == "online"` 换成 `is_device_online()` 会让「有 status 无 last_heartbeat」的既有数据从在线翻转为离线（破坏性）。正解=`is_device_online(device) or device.status == "online"`（两口径取或）。
 
-## 前端类型规范
-- tsconfig 严格档全收口：`strict`+`noImplicitOverride`+`noUnusedLocals`+`noUnusedParameters`；**禁新增 `any`**；仅「保持原运行时值」用 `as`，禁 `!` 批量绕过。
-- 容器接收「任意组件」写 `React.ComponentType`，**禁 `ComponentType<unknown>`**。未用公共方法/回调形参**加 `_` 前缀勿删**。不推：`noUncheckedIndexedAccess`/`exactOptionalPropertyTypes`/`noPropertyAccessFromIndexSignature`。
-- **导入一律走 barrel**（hook/components 双层）；新增子目录必须建 `index.ts` 并在根 barrel 聚合。
-- Context provider `value` 必须 `useMemo`（含函数先 `useCallback`）。前端 `src` 全 LF；prettier 100/singleQuote/semi/jsxSingleQuote/`endOfLine:"lf"`。
-- hook 复用优先：`useStableToast`/`useSubmitGuard`/`useForm`/`useListFetch`/`useListData`/`useWorkbenchClass`/`useDebouncedValue`/`useModal`/`usePermissions`。A 轨：服务端分页→`useListFetch`；全量下拉→`useListData`。
+## 前端规范
+- tsconfig 严格档全收口；禁新增 `any`；`React.ComponentType`（禁 `<unknown>`）；导入走 barrel（新增子目录建 index.ts）；Context value 必须 useMemo；src 全 LF；prettier 100/singleQuote/semi/jsxSingleQuote/lf。
+- hook 复用优先：useStableToast/useSubmitGuard/useForm/useListFetch/useListData/useWorkbenchClass/useDebouncedValue/useModal/usePermissions。
+- 重构范式 E6a/D2：hook 含 JSX 必 `.tsx`；搬 types.ts 要 export；复合类型 `ReturnType<typeof useXxx>`。
 
-## T12 巨型页拆分（2026-09-12 立档，待用户审阅后开工）
-- 方案：`docs/T12-巨型页拆分方案-20260912.md`。判据＝**单文件行数**（**不是**目录总行数）；`pages/` 下 >600 行共 24 个，其中 ≥850 行 9 个（P0）。
-- **既有范式（第一轮已完成，勿重复劳动）**：`pages/Xxx.tsx` 装配层（hook→View props 装配）+ `pages/xxx/` 实现目录。`App.tsx` 用 `createLazyComponent(() => import('./pages/Xxx'))` → **入口壳路径不可改**。
-- 三种拆法：**A** 展示组件按 Panel 切（最低风险，先做 —— `analysis/AnalysisSections.tsx` 已含 9 个自包含 Panel，拆后原文件退化为 re-export 兼容层，入口壳零改动）；**B** 巨型 View 按区块切；**C** god hook 按域切（风险最高，最后做）。
-- 批次：T12-1 `analysis`+`opsCenter` → T12-2 `scoreAnalysis` → T12-3 `ClassManagement.tsx`（**未拆的 691 行单文件**）→ T12-4 `courseSchedule`+`subjectManagement` → T12-5 `permissionManagement` → … → T12-7 起 god hook。
-- 不拆：<600 行单文件页（10 个）、`services/api.ts`(6436)/`types/index.ts`(1612)（属全局基础设施，独立立项）。
+## T12 巨型页拆分（✅ 已收官，判据达成）
+- 判据=单文件行数；**实测 `pages/**` 共 360 个 `.ts/.tsx`，≥600 行者 = 0**（最大 591 examManagement/useExamManagementLogic）。四闸门全项目绿：tsc=0 / eslint 0 error（仅 4 个 `confirmRef` ref 既有 warning）/ prettier --check 全绿 / vitest **276 passed / 3 skipped**。
+- 拆法：**B**（View 型纯搬迁：组件/纯函数/常量/types/列定义外提 + re-export）· **C**（god hook 按域切：组合根持共享原语，SharedDeps 注入子 hook，子 hook 顶部解构出原名、函数体逐字原搬）。
+- 全部批次 commit：T12-1 `e4f05e4` / T12-2 `35bbe51` / T12-3 `7e66874` / T12-4 `025b00e` / T12-5 `f74a0de` / T12-6 `3254750` / T12-7 `67e57fc` / T12-8 `773f3e9` / T12-9a `5152809` / T12-9b `f7751f0` / T12-10a `f9ff191` / T12-10b `f8f28ff` / T12-10c `3be7992` / T12-10d `28e2295` / T12-10e `036146f` / T12-10f `9c22489` / T12-10g `68e8fac` / T12-10h `1095b92` / T12-10i `066485d` / prettier 补格式 `866643e`。
+- 拆分手法定型（7 条坑，含「deps 类型须真源派生」「spread 键完备性须用类型级 `Exclude<Needed, keyof ReturnType<typeof useX>>` + tsc 校验，Python 正则脚本不识别 spread」）见 `memory/2026-09-12.md`「T12 战役收官」段；范式 SOP 在 skill `react-page-split`；脚本沉淀 `.workbuddy/tmp_scan/equiv_t12*.py`。
 
-## 分页 / top-N（`utils/pagination.py`）
-- 翻页 `get_pagination(default=20,max_per_page=200)`；top-N `get_limit(default=50,max_limit=200)`，**恒不引入 page**。`/rank/student`、`/rank/class` 保持 limit；ORM `.limit()` 参数须钳制；导出上限 10000。M9 已闭环。
+## OTA/手机箱唯一真实缺口
+- `FirmwareVersion` 无 `device_type` 维度：`negotiate()`/`/ota/check` 取全局最新 active → doorlock 接入会被误推 phonebox 固件。方案见 `docs/特性任务优化方案-20260912.md`（F1 五阶段）。**OTA 相关用户已明确延期**。
 
-## RBAC / db_session
-- 改 RBAC 必跑 `verify_rbac_consistency.py --check-only`（G2 68/DB 70/seed 66/teacher 30）；teacher 含 `notification.send`、无 `score.manage`；`/api/roles` 已下线。
-- 班级隔离内置 `requires_permission`：`_CLASS_SCOPE_PREFIXES` 12 词根自动 `ensure_class_access`/`ensure_student_access`→403。**新增班级模块必须加词根**。`ALL_CLASSES=0` 哨兵放行。冒烟 `tests/test_workbench_isolation_smoke.py`。
-- `db_session_scope(detach=True)` finally `session.remove()`：**请求链 service 写路径须 `detach=False`**，否则 DetachedInstanceError。前端：菜单==路由守卫==后端域权限三方一致，只 gate `view` 级。
+## ESP32 硬件对接文档（唯一入口 `docs/esp32/`）
+- 7 文件套件：README + 01 MQTT 通信协议 / 02 设备识别与注册认证 / 03 积分逻辑 / 04 OTA 升级设计 / 05 其他对接与多设备管理 / 06 差异同步与优化方案。**硬件对接问题先查这里**；`docs/MQTT_INTEGRATION.md`（旧）已过时，仅作历史参考。
+- 铁律：**后端源码是唯一事实来源**。文档引用的常量/字段名/topic/reason 码必须 grep 溯源后再落笔（本轮曾凭印象写错日限额与 reason 码）。
+- 差异清单 17 项，最高危 = #5 `_send_device_restart` 广播 `phonebox/control/restart` 不含 device_id（单设备重启会引爆全校）。其余见 `06-差异同步与优化方案.md` 排期表。
 
 ## 关键坑
-- MQTT 双连接（控制 QoS1/遥测 QoS0）；生产 EMQX `nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883`。
-- SQLite join User：显式 class_id 与隔离过滤各自 `join(User)` → `ambiguous column name`；须 `is_scoped or class_id` 判断后**单次 join**。
-- run.py 只 `load_dotenv(.env)`，`--env development` **不切** `.env.development`；外部签 JWT 用 `.env` 的 `JWT_SECRET_KEY`。
-- conftest 动态注册 Namespace 须自带 `path="/mental-health"` 否则 404。
-- sandbox torch 段错误：主线程先 `import services.nlp_ml_service` 预热再 import app。
-- ⚠️ **EOL 铁律**：backend 大量 `.py` 为 CRLF，**禁 Edit 直改**，须 python 二进制读改写。判据 `b.count(b"\r\n")` 字节计数，逐文件判（`phonebox_policy.py` 纯 LF）。
-
-## 工具链避坑（通用）
-- ⚠️ **Edit 同文件多次编辑放同一并行批次会静默丢写** → 串行+回读核验，或带「命中==1」断言的 python 脚本。
-- ⚠️ **`&&` 链断致假绿** → 校验段用 `;` 并 `echo "EXIT=$?"`。
-- ⚠️ **快照 diff 前先证确定性**：含 `list(set(...))` 先自证「同码两次不同」再 pin `PYTHONHASHSEED=0`；`datetime.now()` 正则抹平。
-- ⚠️ **harness 必须先自检**（断言必然成立的期望值），否则所有用例退化 diff 仍「一致」。
-- ✅ C901 抽取细则（二进制保行尾、按行号切片、dedent 公式、I001、RUF059、class 中间禁插顶层 def、差分法等）**全在 skill `c901-cyclomatic-refactor`**，别凭记忆。
-
-## 审计文档引用铁律
-- 引用 `docs/` 历史审计文档前**必须实测复核**。**grep 权限词根带 `-A3`**，前端 `requiredPermission` ↔ 后端 `@requires_permission` 逐路由比对。判「属性无消费者」须按类型归属逐一核对。
-
-## 业务模块
-- **NLP**：`api/nlp/nlp_routes.py::_get_parser()` → `services/nlp_enhanced_service.get_nlp_parser()`；torch 懒加载。G5 OpenAPI 469 零漂移。
-- **班主任工作台**（✅ 全闭环 2026-09-11）：`useWorkbenchClass`（store+`useSyncExternalStore`，12 子页共享班级）；评语 `TeacherComment` → `/api/teacher-comments`。聚合首页 `/workbench`→`WorkbenchOverview`。无待办。
-- **OTA/手机箱**：`services/ota_negotiation_service.py`（协商+自动推送+灰度+静默时段+HMAC 签名）；`api/devices/firmware_routes.py`；固件 `apps/firmware/esp32/phonebox/phonebox.ino` 三子模块（类型上报/订阅/验签）已实装。⚠️ **唯一真实缺口 = 多设备类型隔离**：`FirmwareVersion` 无 `device_type` 维度、`negotiate()`/`/ota/check` 取全局最新 active → doorlock 接入会被误推 phonebox 固件。方案见 `docs/特性任务优化方案-20260912.md`（F1 五阶段：模型/协商/路由/固件/前端）。
-- ⚠️ **过时文档清单（引用前必复核，勿当待办）**：`docs/下一步开发计划-20260824.md` 的 T7/T8/T10/T11 实测已闭环；`docs/班主任工作台优化方案-待审核.md` 的 P3 A 批（P3-2/3/4/5/6/7）实测已闭环（仅 P3-1 PageHeader 抽取、P3-8 总览卡补全未做）。
+- SQLite join User 双 join → ambiguous column，单次 join；run.py 只 load `.env`（`--env` 不切文件）；conftest 动态 Namespace 须自带 `path="/mental-health"`；sandbox torch 先 `import services.nlp_ml_service` 预热。
+- ⚠️ **EOL 铁律**：backend 大量 `.py` 为 CRLF，**禁 Edit 直改**，须 python 二进制读改写（字节判据 `b"\r\n"`）。
+- ⚠️ Edit 同文件多次编辑勿放同一并行批次（会静默丢写）；`&&` 链断致假绿 → 校验段用 `;` + `echo EXIT=$?`；快照 diff 先证确定性；harness 必先自检。
+- 引用 `docs/` 审计文档前必须实测复核；grep 权限词根带 `-A3`，前后端权限逐路由比对。
+- ⚠️ **grep 被 SIGTERM 截断 = 假「0 引用」**。长 grep 必须先拆/后台化；**任何删除/归档操作前必须用 `Grep` 工具二次确认引用**（本轮若信了上轮的「0 引用」直接删，根 `README.md` 会留永久断链）。
+- ⚠️ **同名类型/同名对象多处定义是本仓常态**。改前先 grep 全仓定位「真实类型源」——`api.ts` 的 `devices` 有**接口声明（~2378）与实现（~5205）两份**；`SystemConfig` 有 `types/index.ts:310` 与 `api.ts:1551` 两份且 `Settings.tsx` 用后者。`tsc` 报 `TS2353`/`TS2339` 基本就是这个原因 → **两处都要改**。
+- ⚠️ **行尾守恒断言须按「多数风格」写**：先同时看 `crlf` 与 `bare` 两个计数判定风格，再断言该风格计数不变。对纯 LF 文件断言 `bare_lf == 0` 必然失败（本轮踩过）。
+- 前端 `Device.id` 类型是 `ID`（`string | number`），传 REST 接口前须 `Number(...)` 转换。

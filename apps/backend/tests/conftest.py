@@ -40,19 +40,10 @@ except Exception:  # noqa: BLE001
     _API_MODULE_NAMES = []
 
 
-@pytest.fixture(scope="function")
-def app():
-    """创建测试用Flask应用
-
-    改为 function 级隔离：每个测试用例拥有独立的 Flask app 与独立的
-    sqlite:///:memory: 数据库，彻底消除会话级共享 :memory: 会话带来的
-    执行顺序/环境敏感性（此前靠 expunge_all()、唯一 ID、容差加固，
-    理论上对排序与并行敏感）。每个用例结束自动 db.drop_all()。
-    """
+def _build_test_app():
+    """构造测试用 Flask app（内存库 + StaticPool）。"""
     from flask import Flask
-    from flask_restx import Api
     from sqlalchemy.pool import StaticPool
-    from models import db
 
     app = Flask(__name__)
     app.config["TESTING"] = True
@@ -70,16 +61,15 @@ def app():
     app.config["SECRET_KEY"] = "test_secret_key"
     app.config["WTF_CSRF_ENABLED"] = False
     app.url_map.strict_slashes = False
+    return app
 
-    db.init_app(app)
 
-    # 测试环境下禁用请求结束时的 session.remove：client 请求触发的 teardown 会分离
-    # 用例内已加载的实例，使 session.refresh(x) 报 "not persistent within this Session"。
-    # 统一关闭后，所有 .refresh() 用法（admin_routes/data_sync/mqtt 等）恢复正常。
-    try:
-        db.session.remove = lambda *a, **k: None
-    except Exception:  # noqa: BLE001
-        pass
+def _register_api_and_blueprints(app):
+    """注册 api 包下所有 Flask-RESTX 命名空间与独立 Blueprint。"""
+    from flask_restx import Api
+    import importlib
+    import inspect
+    import flask_restx as _frx
 
     # 创建API并注册路由
     api = Api(app, version="1.0", title="测试API", prefix="/api")
@@ -88,10 +78,6 @@ def app():
     # 使路由测试（subjects/users/rules/devices/admin/...）能命中真实端点而非 404。
     # 模块名列表已在模块加载时通过 walk_packages 预先发现并缓存于 _API_MODULE_NAMES，
     # 此处仅做（有缓存的）import + add_namespace，开销极低。
-    import importlib
-    import inspect
-    import flask_restx as _frx
-
     _registered = 0
     for _modname in _API_MODULE_NAMES:
         try:
@@ -116,37 +102,70 @@ def app():
         app.register_blueprint(download_bp)
     except Exception:  # noqa: BLE001
         pass
+    return api
+
+
+def _seed_test_admin():
+    """创建测试管理员并补齐 RBAC（admin 角色拥有 all 权限）。"""
+    from models import Admin
+    from utils.security import hash_password
+
+    existing_admin = Admin.query.filter_by(id=1).first()
+    if not existing_admin:
+        test_admin = Admin(
+            id=1,
+            username="test_admin",
+            password=hash_password("test_password"),
+            role="admin",
+            real_name="测试管理员",
+            phone="13800138000",
+        )
+        from models import db
+
+        db.session.add(test_admin)
+        db.session.commit()
+
+        # 为种子管理员补齐 RBAC：admin 角色拥有 "all" 权限，
+        # 否则 @requires_permission 走 DB-RBAC 查不到任何权限码 → 全部 403。
+        from models import AdminRole, RolePermissionMapping
+
+        if not AdminRole.query.filter_by(admin_id=1, role_code="admin").first():
+            db.session.add(AdminRole(admin_id=1, role_code="admin"))
+        if not RolePermissionMapping.query.filter_by(
+            role_code="admin", permission_code="all"
+        ).first():
+            db.session.add(RolePermissionMapping(role_code="admin", permission_code="all"))
+        db.session.commit()
+
+
+@pytest.fixture(scope="function")
+def app():
+    """创建测试用Flask应用
+
+    改为 function 级隔离：每个测试用例拥有独立的 Flask app 与独立的
+    sqlite:///:memory: 数据库，彻底消除会话级共享 :memory: 会话带来的
+    执行顺序/环境敏感性（此前靠 expunge_all()、唯一 ID、容差加固，
+    理论上对排序与并行敏感）。每个用例结束自动 db.drop_all()。
+    """
+    from models import db
+
+    app = _build_test_app()
+    db.init_app(app)
+
+    # 测试环境下禁用请求结束时的 session.remove：client 请求触发的 teardown 会分离
+    # 用例内已加载的实例，使 session.refresh(x) 报 "not persistent within this Session"。
+    # 统一关闭后，所有 .refresh() 用法（admin_routes/data_sync/mqtt 等）恢复正常。
+    try:
+        db.session.remove = lambda *a, **k: None
+    except Exception:  # noqa: BLE001
+        pass
+
+    _register_api_and_blueprints(app)
 
     with app.app_context():
         db.create_all()
         # 创建测试管理员
-        from models import Admin
-        from utils.security import hash_password
-
-        existing_admin = Admin.query.filter_by(id=1).first()
-        if not existing_admin:
-            test_admin = Admin(
-                id=1,
-                username="test_admin",
-                password=hash_password("test_password"),
-                role="admin",
-                real_name="测试管理员",
-                phone="13800138000",
-            )
-            db.session.add(test_admin)
-            db.session.commit()
-
-            # 为种子管理员补齐 RBAC：admin 角色拥有 "all" 权限，
-            # 否则 @requires_permission 走 DB-RBAC 查不到任何权限码 → 全部 403。
-            from models import AdminRole, RolePermissionMapping
-
-            if not AdminRole.query.filter_by(admin_id=1, role_code="admin").first():
-                db.session.add(AdminRole(admin_id=1, role_code="admin"))
-            if not RolePermissionMapping.query.filter_by(
-                role_code="admin", permission_code="all"
-            ).first():
-                db.session.add(RolePermissionMapping(role_code="admin", permission_code="all"))
-            db.session.commit()
+        _seed_test_admin()
 
         yield app
         db.drop_all()

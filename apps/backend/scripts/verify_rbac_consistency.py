@@ -61,6 +61,89 @@ def _load_literals(path, var_names):
     return found
 
 
+def _check_permission_drift(seed_perm_codes, db_perms, mapped_perm_codes, issues):
+    """检查权限目录漂移：seed 定义缺库 / mappings 引用孤儿。"""
+    missing_perms = seed_perm_codes - db_perms
+    if missing_perms:
+        issues.append(
+            f"permissions 表缺 {len(missing_perms)} 条 seed 定义权限: {sorted(missing_perms)[:10]}"
+        )
+    orphan_mapped = mapped_perm_codes - db_perms
+    if orphan_mapped:
+        issues.append(
+            f"role_permission_mappings 引用 {len(orphan_mapped)} 个不存在的权限码(孤儿): {sorted(orphan_mapped)[:10]}"
+        )
+
+
+def _check_role_consistency(seed_role_map, db_roles, db_map_roles, issues):
+    """检查角色集合一致（role_permission 与 mappings）。"""
+    role_diff = set(seed_role_map) - db_roles
+    if role_diff:
+        issues.append(f"role_permission 缺 seed 定义角色: {sorted(role_diff)}")
+    if db_roles != db_map_roles:
+        issues.append(
+            f"role_permission 与 mappings 角色集合不一致: role_permission={sorted(db_roles)} mappings={sorted(db_map_roles)}"
+        )
+
+
+def _check_teacher_perms(teacher_perms, issues):
+    """teacher 角色关键权限 smoke；返回缺失列表供输出使用。"""
+    missing_teacher = [p for p in KEY_TEACHER_PERMS if p not in teacher_perms]
+    if missing_teacher:
+        issues.append(f"teacher 角色缺关键权限: {missing_teacher}（班主任工作台写操作会 403）")
+    return missing_teacher
+
+
+def _check_admin_roles(admin_roles, issues):
+    """关键账号绑定 smoke。"""
+    missing_admin = [t for t in KEY_ADMIN_ROLES if t not in admin_roles]
+    if missing_admin:
+        issues.append(f"admin_roles 缺关键绑定: {missing_admin}")
+
+
+def _apply_fixes(conn, cur, seed_permissions, seed_role_map, db_perms, db_roles):
+    """--apply：幂等补齐缺失项（INSERT OR IGNORE，绝不删除）。返回补齐计数。"""
+    fixed = 0
+    for code, name, category, desc in seed_permissions:
+        if code not in db_perms:
+            cur.execute(
+                "INSERT OR IGNORE INTO permissions (code, name, category, description, is_active, created_at, updated_at) "
+                'VALUES (?,?,?,?,1,datetime("now"),datetime("now"))',
+                (code, name, category, desc),
+            )
+            fixed += 1
+    for role_code, role in seed_role_map.items():
+        if role_code not in db_roles:
+            _, role_name, desc, csv_perms, active = role
+            cur.execute(
+                "INSERT OR IGNORE INTO role_permission (role_code, role_name, description, is_active, created_at, updated_at) "
+                'VALUES (?,?,?,?,datetime("now"),datetime("now"))',
+                (role_code, role_name, desc, active),
+            )
+            fixed += 1
+        # 补齐该角色的映射（seed csv + 关键 teacher 权限）
+        perms_to_add = set(seed_role_map[role_code][3].split(",")) | (
+            set(KEY_TEACHER_PERMS) if role_code == "teacher" else set()
+        )
+        for pc in perms_to_add:
+            pc = pc.strip()
+            if pc:
+                cur.execute(
+                    'INSERT OR IGNORE INTO role_permission_mappings (role_code, permission_code, created_at) VALUES (?,?,datetime("now"))',
+                    (role_code, pc),
+                )
+                fixed += 1
+    for admin_id, role_code in KEY_ADMIN_ROLES:
+        cur.execute(
+            'INSERT OR IGNORE INTO admin_roles (admin_id, role_code, assigned_at) VALUES (?,?,datetime("now"))',
+            (admin_id, role_code),
+        )
+        fixed += 1
+    conn.commit()
+    print(f"[补齐] 已幂等插入 {fixed} 处缺失项（INSERT OR IGNORE，未删除任何数据）")
+    return fixed
+
+
 def run_check(check_only=True, apply=False):
     """执行 RBAC 一致性校验（可选幂等补齐），返回 (issues, infos, exit_code)。
 
@@ -125,36 +208,11 @@ def run_check(check_only=True, apply=False):
     }
     admin_roles = {tuple(r) for r in cur.execute("SELECT admin_id, role_code FROM admin_roles")}
 
-    # ---- 1. 权限目录漂移 ----
-    missing_perms = seed_perm_codes - db_perms
-    orphan_mapped = mapped_perm_codes - db_perms
-    if missing_perms:
-        issues.append(
-            f"permissions 表缺 {len(missing_perms)} 条 seed 定义权限: {sorted(missing_perms)[:10]}"
-        )
-    if orphan_mapped:
-        issues.append(
-            f"role_permission_mappings 引用 {len(orphan_mapped)} 个不存在的权限码(孤儿): {sorted(orphan_mapped)[:10]}"
-        )
-
-    # ---- 2. 角色集合一致 ----
-    role_diff = set(seed_role_map) - db_roles
-    if role_diff:
-        issues.append(f"role_permission 缺 seed 定义角色: {sorted(role_diff)}")
-    if db_roles != db_map_roles:
-        issues.append(
-            f"role_permission 与 mappings 角色集合不一致: role_permission={sorted(db_roles)} mappings={sorted(db_map_roles)}"
-        )
-
-    # ---- 3. teacher 关键权限 smoke ----
-    missing_teacher = [p for p in KEY_TEACHER_PERMS if p not in teacher_perms]
-    if missing_teacher:
-        issues.append(f"teacher 角色缺关键权限: {missing_teacher}（班主任工作台写操作会 403）")
-
-    # ---- 4. 关键账号绑定 ----
-    missing_admin = [t for t in KEY_ADMIN_ROLES if t not in admin_roles]
-    if missing_admin:
-        issues.append(f"admin_roles 缺关键绑定: {missing_admin}")
+    # ---- 一致性检查（各检查抽为独立 helper，降低圈复杂度）----
+    _check_permission_drift(seed_perm_codes, db_perms, mapped_perm_codes, issues)
+    _check_role_consistency(seed_role_map, db_roles, db_map_roles, issues)
+    missing_teacher = _check_teacher_perms(teacher_perms, issues)
+    _check_admin_roles(admin_roles, issues)
 
     # ---- 输出 ----
     print(f"DB 权限目录: {len(db_perms)} 条, 角色: {sorted(db_roles)}")
@@ -173,48 +231,12 @@ def run_check(check_only=True, apply=False):
 
     # ---- 5. --apply 幂等补齐 ----
     if apply:
-        fixed = 0
-        for code, name, category, desc in seed_permissions:
-            if code not in db_perms:
-                cur.execute(
-                    "INSERT OR IGNORE INTO permissions (code, name, category, description, is_active, created_at, updated_at) "
-                    'VALUES (?,?,?,?,1,datetime("now"),datetime("now"))',
-                    (code, name, category, desc),
-                )
-                fixed += 1
-        for role_code, role in seed_role_map.items():
-            if role_code not in db_roles:
-                _, role_name, desc, csv_perms, active = role
-                cur.execute(
-                    "INSERT OR IGNORE INTO role_permission (role_code, role_name, description, is_active, created_at, updated_at) "
-                    'VALUES (?,?,?,?,datetime("now"),datetime("now"))',
-                    (role_code, role_name, desc, active),
-                )
-                fixed += 1
-            # 补齐该角色的映射（seed csv + 关键 teacher 权限）
-            perms_to_add = set(seed_role_map[role_code][3].split(",")) | (
-                set(KEY_TEACHER_PERMS) if role_code == "teacher" else set()
-            )
-            for pc in perms_to_add:
-                pc = pc.strip()
-                if pc:
-                    cur.execute(
-                        'INSERT OR IGNORE INTO role_permission_mappings (role_code, permission_code, created_at) VALUES (?,?,datetime("now"))',
-                        (role_code, pc),
-                    )
-                    fixed += 1
-        for admin_id, role_code in KEY_ADMIN_ROLES:
-            cur.execute(
-                'INSERT OR IGNORE INTO admin_roles (admin_id, role_code, assigned_at) VALUES (?,?,datetime("now"))',
-                (admin_id, role_code),
-            )
-            fixed += 1
-        conn.commit()
-        print(f"[补齐] 已幂等插入 {fixed} 处缺失项（INSERT OR IGNORE，未删除任何数据）")
+        _apply_fixes(conn, cur, seed_permissions, seed_role_map, db_perms, db_roles)
 
     conn.close()
     # check-only 模式有 issue 时返回非 0（供 CI）
     return issues, infos, (1 if (issues and not apply) else 0)
+
 
 
 def main():

@@ -9,6 +9,7 @@
 
 from flask_restx import Namespace, Resource, fields
 from flask import request, g, make_response
+import json
 import logging
 from datetime import datetime
 from models import User, ScoreRecord, Notification, Approval
@@ -29,6 +30,8 @@ from services.risk_predict_service import RiskPredictService
 from services import phonebox_policy
 from services.mqtt_service import publish_mqtt
 from services.analysis_service import analysis_service
+# 差异 #17：开锁原因码唯一命名来源
+from utils.unlock_reasons import UnlockReason, canonicalize
 
 logger = logging.getLogger(__name__)
 
@@ -294,22 +297,28 @@ class StudentLeaves(Resource):
 
 
 _UNLOCK_REASON_TEXT = {
-    "card_not_found": "未找到该学生",
-    "user_inactive": "账号已停用",
-    "user_blacklisted": "当前处于禁用期",
-    "user_permanently_blacklisted": "已被永久禁用",
-    "score_low": "积分不足",
-    "weekly_limit_exceeded": "本周开箱次数已达上限",
-    "daily_limit_exceeded": "今日开箱次数已达上限",
-    "not_in_time_window": "当前不在允许开箱时段",
+    UnlockReason.CARD_NOT_FOUND: "未找到该学生",
+    UnlockReason.USER_INACTIVE: "账号已停用",
+    UnlockReason.USER_BLACKLISTED: "当前处于禁用期",
+    UnlockReason.USER_PERMANENTLY_BLACKLISTED: "已被永久禁用",
+    UnlockReason.SCORE_LOW: "积分不足",
+    UnlockReason.WEEKLY_LIMIT_EXCEEDED: "本周开箱次数已达上限",
+    UnlockReason.DAILY_LIMIT_EXCEEDED: "今日开箱次数已达上限",
+    UnlockReason.NOT_IN_TIME_WINDOW: "当前不在允许开箱时段",
+    UnlockReason.CLASS_IN_SESSION: "上课时间禁止开箱",
+    UnlockReason.TEACHER_DISABLED: "班主任已关闭本班自助开箱",
 }
 
 
 def _unlock_reason_text(reason):
-    """UnlockValidator 原因码 → 用户可读中文（未知码原样返回）。"""
+    """UnlockValidator 原因码 → 用户可读中文（未知码原样返回）。
+
+    差异 #17：先经 canonicalize 归一化，使历史旧简称
+    （daily_limit / not_in_time）也能命中中文映射。
+    """
     if not reason:
         return "未知原因"
-    return _UNLOCK_REASON_TEXT.get(reason, reason)
+    return _UNLOCK_REASON_TEXT.get(canonicalize(reason), reason)
 
 
 @ns_student.route("/phonebox/unlock")
@@ -350,10 +359,19 @@ class StudentPhoneboxUnlock(Resource):
             else:
                 # 扣分 + 日/周计数 + 流水"开锁扣分"（record_unlock 内部 commit）
                 UnlockValidator.record_unlock(student)
+                # 差异 #14：下行载荷由空字符串改为与 unlock/B 同构的 JSON，设备端只需一套解析。
+                # 空字符串仍被设备端解析为「无附加信息」的兼容分支（见 docs/esp32/01 §6.3）。
+                unlock_payload = json.dumps(
+                    {
+                        "result": "true",
+                        "reason": "student_portal",
+                        "current_score": student.current_score,
+                    }
+                )
                 for box in ("A", "B"):
                     try:
                         # F11 修复: 校验 publish_mqtt 返回值——返回 False（连接不可用但不抛异常）时不得置 dispatched
-                        if publish_mqtt(f"phonebox/unlock/{box}", ""):
+                        if publish_mqtt(f"phonebox/unlock/{box}", unlock_payload):
                             dispatched = True
                     except Exception:
                         # MQTT 不可用时不阻断请求，仅标记未下发

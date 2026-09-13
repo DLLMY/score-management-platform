@@ -21,6 +21,7 @@ function Settings() {
     autoSave: true,
     theme: 'light',
     language: 'zh-CN',
+    deviceWhitelistEnabled: false,
   });
 
   const [saved, setSaved] = useState<boolean>(false);
@@ -57,6 +58,7 @@ function Settings() {
         autoSave: data.auto_save ?? true,
         theme: data.theme || 'light',
         language: data.language || 'zh-CN',
+        deviceWhitelistEnabled: data.device_whitelist_enabled ?? false,
       });
     } catch (error) {
       logger.error('加载配置失败:', error);
@@ -106,6 +108,7 @@ function Settings() {
         auto_save: settings.autoSave,
         theme: settings.theme,
         language: settings.language,
+        device_whitelist_enabled: settings.deviceWhitelistEnabled,
       });
       setSaved(true);
       showToast('success', '配置已保存');
@@ -140,6 +143,7 @@ function Settings() {
       autoSave: true,
       theme: 'light',
       language: 'zh-CN',
+      deviceWhitelistEnabled: false,
     };
     setSettings(defaultSettings);
     try {
@@ -155,6 +159,7 @@ function Settings() {
         auto_save: defaultSettings.autoSave,
         theme: defaultSettings.theme,
         language: defaultSettings.language,
+        device_whitelist_enabled: defaultSettings.deviceWhitelistEnabled,
       });
       showToast('success', '已恢复默认设置');
     } catch (error) {

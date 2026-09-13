@@ -262,64 +262,11 @@ class ScoreBatch(Resource):
         errors = []
         valid = []
         for idx, item in enumerate(items):
-            student_id = item.get("student_id")
-            card_id = item.get("card_id")
-            subject = item.get("subject")
-            subject_id = _resolve_subject_id(subject, item.get("subject_id"))
-            raw_score = item.get("score")
-            if student_id is None and not card_id:
-                errors.append({"index": idx, "message": "缺少 student_id 或 card_id"})
+            err, v = _validate_batch_score_item(idx, item, exam_id, operator_id)
+            if err is not None:
+                errors.append(err)
                 continue
-            if not subject_id:
-                errors.append({"index": idx, "message": "缺少有效的科目（subject 或 subject_id）"})
-                continue
-            try:
-                score_val = float(raw_score) if raw_score is not None else None
-            except (TypeError, ValueError):
-                errors.append({"index": idx, "message": "分数格式非法"})
-                continue
-            # E13 修复: 成绩范围校验（0 ~ full_score）
-            full_val = item.get("full_score", 100)
-            try:
-                full_val = float(full_val) if full_val else 100.0
-            except (TypeError, ValueError):
-                errors.append({"index": idx, "message": "满分格式非法"})
-                continue
-            if score_val is not None and (score_val < 0 or (full_val > 0 and score_val > full_val)):
-                errors.append({"index": idx, "message": f"成绩需在 0 ~ {full_val} 之间"})
-                continue
-            student = (
-                User.query.filter_by(id=student_id, is_active=True).first()
-                if student_id is not None
-                else User.query.filter_by(card_id=card_id, is_active=True).first()
-            )
-            if not student:
-                errors.append({"index": idx, "message": "学生不存在"})
-                continue
-            # F4 修复: 冲突检测——(exam_id, student_id, subject_id) 已存在则跳过，防重复成绩导致统计/排名失真
-            existing = Score.query.filter_by(
-                exam_id=exam_id, student_id=student.id, subject_id=subject_id
-            ).first()
-            if existing:
-                errors.append(
-                    {
-                        "index": idx,
-                        "message": f"学生{student.name}该科目成绩已存在，跳过（可编辑原记录）",
-                    }
-                )
-                continue
-            valid.append(
-                {
-                    "exam_id": exam_id,
-                    "student_id": student.id,
-                    "subject_id": subject_id,
-                    "score": score_val,
-                    "full_score": item.get("full_score", 100),
-                    "status": item.get("status", "pending"),
-                    "remark": item.get("remark"),
-                    "entered_by": operator_id,
-                }
-            )
+            valid.append(v)
             created += 1
         if created:
             try:
@@ -334,8 +281,6 @@ class ScoreBatch(Resource):
             data={"created": created, "errors": errors, "total": len(items)},
             message=f"成功录入 {created} 条，{len(errors)} 条失败",
         )
-
-
 @ns_scores.route("/<int:score_id>")
 @ns_scores.param("score_id", "成绩ID")
 class ScoreResource(Resource):
@@ -509,3 +454,58 @@ class ExamExport(Resource):
             as_attachment=True,
             download_name="exams.xlsx",
         )
+
+
+
+def _validate_batch_score_item(idx, item, exam_id, operator_id):
+    """校验并构造单条批量成绩项；返回 (error_dict_or_None, valid_dict_or_None)。"""
+    student_id = item.get("student_id")
+    card_id = item.get("card_id")
+    subject = item.get("subject")
+    subject_id = _resolve_subject_id(subject, item.get("subject_id"))
+    raw_score = item.get("score")
+    if student_id is None and not card_id:
+        return {"index": idx, "message": "缺少 student_id 或 card_id"}, None
+    if not subject_id:
+        return {"index": idx, "message": "缺少有效的科目（subject 或 subject_id）"}, None
+    try:
+        score_val = float(raw_score) if raw_score is not None else None
+    except (TypeError, ValueError):
+        return {"index": idx, "message": "分数格式非法"}, None
+    full_val = item.get("full_score", 100)
+    try:
+        full_val = float(full_val) if full_val else 100.0
+    except (TypeError, ValueError):
+        return {"index": idx, "message": "满分格式非法"}, None
+    if score_val is not None and (score_val < 0 or (full_val > 0 and score_val > full_val)):
+        return {"index": idx, "message": f"成绩需在 0 ~ {full_val} 之间"}, None
+    student = (
+        User.query.filter_by(id=student_id, is_active=True).first()
+        if student_id is not None
+        else User.query.filter_by(card_id=card_id, is_active=True).first()
+    )
+    if not student:
+        return {"index": idx, "message": "学生不存在"}, None
+    # F4 修复: 冲突检测——(exam_id, student_id, subject_id) 已存在则跳过，防重复成绩导致统计/排名失真
+    existing = Score.query.filter_by(
+        exam_id=exam_id, student_id=student.id, subject_id=subject_id
+    ).first()
+    if existing:
+        return (
+            {
+                "index": idx,
+                "message": f"学生{student.name}该科目成绩已存在，跳过（可编辑原记录）",
+            },
+            None,
+        )
+    valid = {
+        "exam_id": exam_id,
+        "student_id": student.id,
+        "subject_id": subject_id,
+        "score": score_val,
+        "full_score": item.get("full_score", 100),
+        "status": item.get("status", "pending"),
+        "remark": item.get("remark"),
+        "entered_by": operator_id,
+    }
+    return None, valid

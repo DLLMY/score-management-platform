@@ -1,0 +1,1 @@
+export { StudentGrowthTab } from './StudentGrowthTab';

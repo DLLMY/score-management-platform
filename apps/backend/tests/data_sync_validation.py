@@ -57,6 +57,35 @@ def get_db_model_fields(model) -> Dict[str, str]:
     return fields
 
 
+def _normalize_ts_field_type(field_type: str) -> str:
+    """把 TypeScript 字段类型归一化为后端可比对类型（原内联判断逐字搬运）。"""
+    if field_type in ["string", "number", "boolean", "Date"]:
+        return field_type.lower()
+    if field_type == "ID":
+        return "id"
+    if (
+        field_type.startswith("ID")
+        or field_type.startswith("number")
+        or field_type.startswith("string")
+    ):
+        return "id" if "ID" in field_type else ("number" if "number" in field_type.lower() else "string")
+    if field_type.startswith("'") or field_type.startswith('"'):
+        return "string"
+    return field_type
+
+
+def _parse_ts_field_line(line: str):
+    """解析一行 TS 字段声明，返回 (field_name, normalized_type) 或 None。"""
+    parts = line.split(":")
+    if len(parts) < 2:
+        return None
+    field_name = parts[0].strip()
+    field_type = parts[1].strip().rstrip(";").split("|")[0].strip()
+    # 移除可选标记
+    field_name = field_name.rstrip("?")
+    return field_name, _normalize_ts_field_type(field_type)
+
+
 def read_frontend_types() -> Dict[str, Dict[str, str]]:
     """读取前端TypeScript类型定义"""
     type_file = os.path.join(
@@ -87,38 +116,63 @@ def read_frontend_types() -> Dict[str, Dict[str, str]]:
             continue
 
         if current_type and line.endswith(";") and ":" in line:
-            parts = line.split(":")
-            if len(parts) >= 2:
-                field_name = parts[0].strip()
-                field_type = parts[1].strip().rstrip(";").split("|")[0].strip()
-
-                # 移除可选标记
-                field_name = field_name.rstrip("?")
-
-                # 简化类型判断
-                if field_type in ["string", "number", "boolean", "Date"]:
-                    current_fields[field_name] = field_type.lower()
-                elif field_type == "ID":
-                    current_fields[field_name] = "id"
-                elif (
-                    field_type.startswith("ID")
-                    or field_type.startswith("number")
-                    or field_type.startswith("string")
-                ):
-                    current_fields[field_name] = (
-                        "id"
-                        if "ID" in field_type
-                        else ("number" if "number" in field_type.lower() else "string")
-                    )
-                elif field_type.startswith("'") or field_type.startswith('"'):
-                    current_fields[field_name] = "string"
-                else:
-                    current_fields[field_name] = field_type
+            wrapped = _parse_ts_field_line(line)
+            if wrapped is not None:
+                field_name, field_type = wrapped
+                current_fields[field_name] = field_type
 
     if current_type:
         types[current_type] = current_fields
 
     return types
+
+
+def _is_type_compatible(field: str, db_type: str, frontend_type: str) -> bool:
+    """判断单个字段的前后端类型是否兼容（原内联 if-chain 逐字搬运，返回 bool）。"""
+    # ID字段特殊处理（ID类型在前后端都是数字，只是前端用ID类型）
+    if field == "id":
+        return db_type in ["number"] and frontend_type in ["id", "number"]
+
+    # 外键字段特殊处理：以_id结尾的字段（排除业务ID如card_id、device_id、client_id）
+    if field.endswith("_id") and field not in ["card_id", "device_id", "client_id"]:
+        return db_type in ["number"] and frontend_type in ["id", "number"]
+
+    # 日期类型特殊处理：数据库是datetime，前端是string（JSON传输时日期转为字符串）
+    if db_type == "datetime" and frontend_type == "string":
+        return True
+
+    # JSON类型特殊处理：数据库是object，前端可能是string或其他类型
+    if db_type == "object" and frontend_type in ["string"]:
+        return True
+
+    # 枚举类型特殊处理：数据库是string，前端可能是自定义枚举类型
+    if db_type == "string" and frontend_type.endswith("Role"):
+        return True
+
+    # 同类型但名称解析不同的情况（如ID字段在前端被解析为string）
+    if db_type == "string" and frontend_type == "string":
+        return True
+
+    # 简化类型比较
+    db_is_num = db_type in ["number"]
+    db_is_str = db_type in ["string"]
+    db_is_bool = db_type in ["boolean"]
+    db_is_date = db_type in ["datetime"]
+    db_is_obj = db_type in ["object"]
+
+    fe_is_num = frontend_type in ["number"]
+    fe_is_str = frontend_type in ["string"]
+    fe_is_bool = frontend_type in ["boolean"]
+    fe_is_date = frontend_type in ["date"]
+    fe_is_obj = frontend_type in ["object"]
+
+    return (
+        (db_is_num and fe_is_num)
+        or (db_is_str and fe_is_str)
+        or (db_is_bool and fe_is_bool)
+        or (db_is_date and fe_is_date)
+        or (db_is_obj and fe_is_obj)
+    )
 
 
 def compare_models(
@@ -139,65 +193,7 @@ def compare_models(
     for field in common:
         db_type = db_fields[field]
         frontend_type = frontend_fields[field]
-
-        # ID字段特殊处理（ID类型在前后端都是数字，只是前端用ID类型）
-        if field == "id":
-            db_is_id = db_type in ["number"]
-            fe_is_id = frontend_type in ["id", "number"]
-            if not (db_is_id and fe_is_id):
-                type_mismatches.append(
-                    {"field": field, "db_type": db_type, "frontend_type": frontend_type}
-                )
-            continue
-
-        # 外键字段特殊处理：以_id结尾的字段（排除业务ID如card_id、device_id、client_id）
-        if field.endswith("_id") and field not in ["card_id", "device_id", "client_id"]:
-            db_is_num = db_type in ["number"]
-            fe_is_id = frontend_type in ["id", "number"]
-            if not (db_is_num and fe_is_id):
-                type_mismatches.append(
-                    {"field": field, "db_type": db_type, "frontend_type": frontend_type}
-                )
-            continue
-
-        # 日期类型特殊处理：数据库是datetime，前端是string（JSON传输时日期转为字符串）
-        if db_type == "datetime" and frontend_type == "string":
-            continue
-
-        # JSON类型特殊处理：数据库是object，前端可能是string或其他类型
-        if db_type == "object" and frontend_type in ["string"]:
-            continue
-
-        # 枚举类型特殊处理：数据库是string，前端可能是自定义枚举类型
-        if db_type == "string" and frontend_type.endswith("Role"):
-            continue
-
-        # 同类型但名称解析不同的情况（如ID字段在前端被解析为string）
-        if db_type == "string" and frontend_type == "string":
-            continue
-
-        # 简化类型比较
-        db_is_num = db_type in ["number"]
-        db_is_str = db_type in ["string"]
-        db_is_bool = db_type in ["boolean"]
-        db_is_date = db_type in ["datetime"]
-        db_is_obj = db_type in ["object"]
-
-        fe_is_num = frontend_type in ["number"]
-        fe_is_str = frontend_type in ["string"]
-        fe_is_bool = frontend_type in ["boolean"]
-        fe_is_date = frontend_type in ["date"]
-        fe_is_obj = frontend_type in ["object"]
-
-        type_compatible = (
-            (db_is_num and fe_is_num)
-            or (db_is_str and fe_is_str)
-            or (db_is_bool and fe_is_bool)
-            or (db_is_date and fe_is_date)
-            or (db_is_obj and fe_is_obj)
-        )
-
-        if not type_compatible:
+        if not _is_type_compatible(field, db_type, frontend_type):
             type_mismatches.append(
                 {"field": field, "db_type": db_type, "frontend_type": frontend_type}
             )

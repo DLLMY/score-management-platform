@@ -87,105 +87,12 @@ def _execute_approve(approval, data):
     user = result["user"]
     actual_change = result["actual_change"]
 
-    # R4: 审批通过改分后触发综合评分重算（原仅 score-entry 触发 → 两套行为）
-    if user:
-        try:
-            from services.score_recalc import enqueue_or_recalc_user_score
-
-            enqueue_or_recalc_user_score(user.id)
-        except Exception as e:
-            logging.getLogger(__name__).error(
-                "[CompositeScore] 审批通过重算综合分失败 user_id=%s: %s", user.id, e, exc_info=True
-            )
-
-    # D3/R4: 审批结果写入学生通知中心（学生端 /notifications 可见）
-    if user:
-        try:
-            from services.notification_service import create_approval_result_notification
-
-            create_approval_result_notification(
-                user_id=user.id,
-                title="审批通过",
-                content="您的申请「{}」已审批通过{}".format(
-                    approval.title,
-                    f"，积分变动 {actual_change:+g} 分" if actual_change else "",
-                ),
-            )
-        except Exception as e:
-            log_warning(f"[Approval] 审批结果通知写入失败: {e}", exception=e)
-
-    # 更新用户缓存
+    _approve_recalc_composite(user)
+    _approve_notify_result_center(user, approval, actual_change)
     if mqtt_available and user:
         mqtt_manager.set_cached_user(user.card_id, user)
-
-    # 发送审批结果通知到设备端
-    if mqtt_available and user:
-        notification = {
-            "type": "approval_result",
-            "approval_id": approval.id,
-            "user_name": user.name,
-            "card_id": user.card_id,
-            "score_change": approval.score_change,
-            "new_points": user.current_score,
-            "status": "approved",
-            "comment": approval.comment,
-            "timestamp": datetime.now().isoformat(),
-        }
-        publish_mqtt("phonebox/notification", json.dumps(notification))
-        publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
-
-    # 发送积分变动通知到远程客户端（积分窗口显示）
-    if mqtt_available and user:
-        try:
-            score_change_str = (
-                f"{approval.score_change:+g}"
-                if approval.score_change > 0
-                else str(approval.score_change)
-            )
-            score_change_text = (
-                f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
-            )
-
-            allowed, check_message, reason_code, rule_info = (
-                ClassTimeChecker.is_notification_allowed(
-                    target_class_info_id=getattr(user, "class_info_id", None), force_send=False
-                )
-            )
-            if allowed:
-                score_notification = {
-                    "type": "score_change",
-                    "text": score_change_text,
-                    "popup": True,
-                    "timestamp": datetime.now().isoformat(),
-                }
-                publish_mqtt("phonebox/remote/notify", score_notification)
-            else:
-                ClassTimeChecker.log_notify_audit(
-                    "score_change",
-                    getattr(user, "class_info_id", None),
-                    None,
-                    {"text": score_change_text},
-                    reason_code or "GLOBAL_TIME_RULE",
-                    check_message,
-                    force_send=False,
-                )
-
-            create_admin_notification(
-                title="审批通过通知",
-                message=score_change_text,
-                type="success",
-                priority="medium",
-                extra_data={
-                    "approval_id": approval.id,
-                    "user_id": approval.student_id,
-                    "user_name": user.name,
-                    "score_change": approval.score_change,
-                    "title": approval.title,
-                },
-            )
-        except Exception as e:
-            log_warning(f"[ScoreChange] 审批积分变动通知发送失败: {e}", exception=e)
-
+    _approve_publish_device_result(user, approval)
+    _approve_publish_score_change(user, approval)
     invalidate_cache("api:/api/approvals/*")
     return (
         True,
@@ -198,8 +105,6 @@ def _execute_approve(approval, data):
             "notification_sent": mqtt_available,
         },
     )
-
-
 def _execute_reject(approval, data):
     """单条审批拒绝完整链路（单条/批量共用）。返回 (ok, message, detail)。"""
     if not can_access_student(approval.student_id):
@@ -453,3 +358,109 @@ class PendingApprovals(Resource):
         """获取待审批列表。非管理员用户只能查看关联班级的待审批。"""
         page, per_page = get_pagination(default=10)
         return APIResponse.success(data=get_pending_approvals_view(page, per_page))
+
+
+
+def _approve_recalc_composite(user):
+    """R4: 审批通过改分后触发综合评分重算（原仅 score-entry 触发 → 两套行为）。"""
+    if not user:
+        return
+    try:
+        from services.score_recalc import enqueue_or_recalc_user_score
+
+        enqueue_or_recalc_user_score(user.id)
+    except Exception as e:
+        logging.getLogger(__name__).error(
+            "[CompositeScore] 审批通过重算综合分失败 user_id=%s: %s", user.id, e, exc_info=True
+        )
+
+
+def _approve_notify_result_center(user, approval, actual_change):
+    """D3/R4: 审批结果写入学生通知中心（学生端 /notifications 可见）。"""
+    if not user:
+        return
+    try:
+        from services.notification_service import create_approval_result_notification
+
+        create_approval_result_notification(
+            user_id=user.id,
+            title="审批通过",
+            content="您的申请「{}」已审批通过{}".format(
+                approval.title,
+                f"，积分变动 {actual_change:+g} 分" if actual_change else "",
+            ),
+        )
+    except Exception as e:
+        log_warning(f"[Approval] 审批结果通知写入失败: {e}", exception=e)
+
+
+def _approve_publish_device_result(user, approval):
+    """发送审批结果通知到设备端。"""
+    if not (mqtt_available and user):
+        return
+    notification = {
+        "type": "approval_result",
+        "approval_id": approval.id,
+        "user_name": user.name,
+        "card_id": user.card_id,
+        "score_change": approval.score_change,
+        "new_points": user.current_score,
+        "status": "approved",
+        "comment": approval.comment,
+        "timestamp": datetime.now().isoformat(),
+    }
+    publish_mqtt("phonebox/notification", json.dumps(notification))
+    publish_mqtt(f"phonebox/notification/{user.card_id}", json.dumps(notification))
+
+
+def _approve_publish_score_change(user, approval):
+    """积分变动通知到远程客户端（积分窗口显示）+ 管理员通知（含上课时间拦截）。"""
+    if not (mqtt_available and user):
+        return
+    try:
+        score_change_str = (
+            f"{approval.score_change:+g}" if approval.score_change > 0 else str(approval.score_change)
+        )
+        score_change_text = (
+            f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
+        )
+
+        allowed, check_message, reason_code, rule_info = (
+            ClassTimeChecker.is_notification_allowed(
+                target_class_info_id=getattr(user, "class_info_id", None), force_send=False
+            )
+        )
+        if allowed:
+            score_notification = {
+                "type": "score_change",
+                "text": score_change_text,
+                "popup": True,
+                "timestamp": datetime.now().isoformat(),
+            }
+            publish_mqtt("phonebox/remote/notify", score_notification)
+        else:
+            ClassTimeChecker.log_notify_audit(
+                "score_change",
+                getattr(user, "class_info_id", None),
+                None,
+                {"text": score_change_text},
+                reason_code or "GLOBAL_TIME_RULE",
+                check_message,
+                force_send=False,
+            )
+
+        create_admin_notification(
+            title="审批通过通知",
+            message=score_change_text,
+            type="success",
+            priority="medium",
+            extra_data={
+                "approval_id": approval.id,
+                "user_id": approval.student_id,
+                "user_name": user.name,
+                "score_change": approval.score_change,
+                "title": approval.title,
+            },
+        )
+    except Exception as e:
+        log_warning(f"[ScoreChange] 审批积分变动通知发送失败: {e}", exception=e)

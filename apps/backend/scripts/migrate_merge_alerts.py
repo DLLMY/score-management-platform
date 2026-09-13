@@ -62,6 +62,94 @@ def count_source(conn, source):
     return cur.fetchone()[0]
 
 
+def _add_alert_columns(conn):
+    """给 alert 表补齐合并所需列（幂等）。"""
+    for col, ctype in (
+        ("student_id", "INTEGER"),
+        ("risk_level", "VARCHAR(20)"),
+        ("risk_score", "FLOAT"),
+        ("recommended_action", "TEXT"),
+        ("status", "VARCHAR(20)"),
+        ("acknowledged_at", "DATETIME"),
+    ):
+        if not column_exists(conn, "alert", col):
+            conn.execute(f"ALTER TABLE alert ADD COLUMN {col} {ctype}")
+            print(f"[ok] alert 新增列 {col}")
+        else:
+            print(f"[info] alert 列 {col} 已存在，跳过")
+
+
+def _merge_mental(conn, has_mha, has_mha_bak):
+    """合并 mental_health_alert -> alert(source='mental')。"""
+    if not has_mha:
+        return
+    if not has_mha_bak:
+        conn.execute(
+            "CREATE TABLE mental_health_alert_bak AS SELECT * FROM mental_health_alert"
+        )
+        print("[ok] 已建库内备份 mental_health_alert_bak")
+    else:
+        print("[info] mental_health_alert_bak 已存在，跳过备份")
+    if count_source(conn, "mental") == 0:
+        conn.execute("""
+            INSERT INTO alert (
+                student_id, alert_type, severity, message,
+                is_resolved, resolved_at, created_at, source
+            )
+            SELECT
+                student_id, alert_type, CAST(severity AS TEXT), message,
+                is_resolved, resolved_at, created_at, 'mental'
+            FROM mental_health_alert
+            """)
+        copied = conn.execute("SELECT changes()").fetchone()[0]
+        print(f"[ok] 已拷贝 {copied} 条心理预警到 alert(source='mental')")
+    else:
+        print("[info] alert(source='mental') 已有数据，跳过拷贝")
+    conn.execute("DROP TABLE mental_health_alert")
+    conn.commit()
+    print("[ok] 已删除旧表 mental_health_alert")
+
+
+def _merge_risk(conn, has_rw, has_rw_bak):
+    """合并 risk_warnings -> alert(source='risk')。"""
+    if not has_rw:
+        return
+    if not has_rw_bak:
+        conn.execute("CREATE TABLE risk_warnings_bak AS SELECT * FROM risk_warnings")
+        print("[ok] 已建库内备份 risk_warnings_bak")
+    else:
+        print("[info] risk_warnings_bak 已存在，跳过备份")
+    if count_source(conn, "risk") == 0:
+        conn.execute("""
+            INSERT INTO alert (
+                student_id, alert_type, severity, message, is_read,
+                source, is_resolved, resolved_at, created_at,
+                risk_level, risk_score, recommended_action, status, acknowledged_at
+            )
+            SELECT
+                student_id, risk_type, NULL, COALESCE(description, '(风险预警)'), 0,
+                'risk', is_resolved, resolved_at, created_at,
+                risk_level, risk_score, recommended_action, status, acknowledged_at
+            FROM risk_warnings
+            """)
+        copied = conn.execute("SELECT changes()").fetchone()[0]
+        print(f"[ok] 已拷贝 {copied} 条风险预警到 alert(source='risk')")
+    else:
+        print("[info] alert(source='risk') 已有数据，跳过拷贝")
+    conn.execute("DROP TABLE risk_warnings")
+    conn.commit()
+    print("[ok] 已删除旧表 risk_warnings")
+
+
+def _print_pending(has_mha, has_rw):
+    """check-only 模式：打印待合并表后返回。"""
+    pending = []
+    if has_mha:
+        pending.append("mental_health_alert")
+    if has_rw:
+        pending.append("risk_warnings")
+    print(f"[check-only] 检测到待合并表: {pending}，未做任何修改")
+
 def main():
     if not os.path.exists(DB_PATH):
         print(f"[error] 找不到数据库: {DB_PATH}")
@@ -91,84 +179,17 @@ def main():
             return
 
         if CHECK_ONLY:
-            pending = []
-            if has_mha:
-                pending.append("mental_health_alert")
-            if has_rw:
-                pending.append("risk_warnings")
-            print(f"[check-only] 检测到待合并表: {pending}，未做任何修改")
+            _print_pending(has_mha, has_rw)
             return
 
         # 1) 给 alert 加列（若不存在）
-        for col, ctype in (
-            ("student_id", "INTEGER"),
-            ("risk_level", "VARCHAR(20)"),
-            ("risk_score", "FLOAT"),
-            ("recommended_action", "TEXT"),
-            ("status", "VARCHAR(20)"),
-            ("acknowledged_at", "DATETIME"),
-        ):
-            if not column_exists(conn, "alert", col):
-                conn.execute(f"ALTER TABLE alert ADD COLUMN {col} {ctype}")
-                print(f"[ok] alert 新增列 {col}")
-            else:
-                print(f"[info] alert 列 {col} 已存在，跳过")
+        _add_alert_columns(conn)
 
         # 2) 合并 mental_health_alert -> alert(source='mental')
-        if has_mha:
-            if not has_mha_bak:
-                conn.execute(
-                    "CREATE TABLE mental_health_alert_bak AS SELECT * FROM mental_health_alert"
-                )
-                print("[ok] 已建库内备份 mental_health_alert_bak")
-            else:
-                print("[info] mental_health_alert_bak 已存在，跳过备份")
-            if count_source(conn, "mental") == 0:
-                conn.execute("""
-                    INSERT INTO alert (
-                        student_id, alert_type, severity, message,
-                        is_resolved, resolved_at, created_at, source
-                    )
-                    SELECT
-                        student_id, alert_type, CAST(severity AS TEXT), message,
-                        is_resolved, resolved_at, created_at, 'mental'
-                    FROM mental_health_alert
-                    """)
-                copied = conn.execute("SELECT changes()").fetchone()[0]
-                print(f"[ok] 已拷贝 {copied} 条心理预警到 alert(source='mental')")
-            else:
-                print("[info] alert(source='mental') 已有数据，跳过拷贝")
-            conn.execute("DROP TABLE mental_health_alert")
-            conn.commit()
-            print("[ok] 已删除旧表 mental_health_alert")
+        _merge_mental(conn, has_mha, has_mha_bak)
 
         # 3) 合并 risk_warnings -> alert(source='risk')
-        if has_rw:
-            if not has_rw_bak:
-                conn.execute("CREATE TABLE risk_warnings_bak AS SELECT * FROM risk_warnings")
-                print("[ok] 已建库内备份 risk_warnings_bak")
-            else:
-                print("[info] risk_warnings_bak 已存在，跳过备份")
-            if count_source(conn, "risk") == 0:
-                conn.execute("""
-                    INSERT INTO alert (
-                        student_id, alert_type, severity, message, is_read,
-                        source, is_resolved, resolved_at, created_at,
-                        risk_level, risk_score, recommended_action, status, acknowledged_at
-                    )
-                    SELECT
-                        student_id, risk_type, NULL, COALESCE(description, '(风险预警)'), 0,
-                        'risk', is_resolved, resolved_at, created_at,
-                        risk_level, risk_score, recommended_action, status, acknowledged_at
-                    FROM risk_warnings
-                    """)
-                copied = conn.execute("SELECT changes()").fetchone()[0]
-                print(f"[ok] 已拷贝 {copied} 条风险预警到 alert(source='risk')")
-            else:
-                print("[info] alert(source='risk') 已有数据，跳过拷贝")
-            conn.execute("DROP TABLE risk_warnings")
-            conn.commit()
-            print("[ok] 已删除旧表 risk_warnings")
+        _merge_risk(conn, has_rw, has_rw_bak)
 
         remain_mental = count_source(conn, "mental")
         remain_risk = count_source(conn, "risk")

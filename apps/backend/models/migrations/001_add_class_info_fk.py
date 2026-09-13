@@ -7,68 +7,65 @@ from app import app, db
 from sqlalchemy import text
 
 
+def _add_column_with_index(table, column, index_name, label):
+    """添加列 + 建索引，列已存在则跳过（保持原 try/except 语义）。"""
+    try:
+        db.engine.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} INTEGER"))
+        db.engine.execute(
+            text(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})")
+        )
+        print(f"✅ {label} 添加 {column} 字段成功")
+    except Exception as e:
+        msg = str(e).lower()
+        if "duplicate column name" in msg or "already exists" in msg:
+            print(f"⚠️ {label} {column} 字段已存在，跳过")
+        else:
+            print(f"⚠️ {label} 字段添加遇到问题: {e}")
+
+
+def _ensure_user_fk():
+    """外键约束检查块（SQLite 不支持直接加 FK，仅做探测 + commit）。"""
+    try:
+        # SQLite 不支持直接添加外键约束，需要使用 PRAGMA foreign_keys = ON
+        # 并通过重建表的方式添加外键
+        db.session.execute(text("PRAGMA foreign_keys=OFF"))
+
+        # 检查外键约束是否已存在
+        result = db.session.execute(text("PRAGMA foreign_key_list(user)"))  # noqa: F841
+        fk_exists = False
+        for row in result:
+            if row[2] == "class_info_id" and row[3] == "class_info.id":
+                fk_exists = True
+                break
+
+        if not fk_exists:
+            # SQLite 无法直接添加外键约束，需要重建表
+            print("ℹ️ SQLite 不支持直接添加外键约束，将在数据层面保证一致性")
+
+        db.session.commit()
+        db.session.execute(text("PRAGMA foreign_keys=ON"))
+    except Exception as e:
+        print(f"⚠️ 外键约束检查遇到问题: {e}")
+
+
 def migrate():
     with app.app_context():
         print("🚀 开始数据库迁移：添加班级外键关联字段")
         print("-" * 50)
 
         # 添加 User 表的外键字段
-        try:
-            db.engine.execute(text("ALTER TABLE user ADD COLUMN class_info_id INTEGER"))
-            db.engine.execute(text("CREATE INDEX IF NOT EXISTS idx_user_class_info_id ON user(class_info_id)"))
-            print("✅ User 表添加 class_info_id 字段成功")
-        except Exception as e:
-            if "duplicate column name" in str(e).lower() or "already exists" in str(e).lower():
-                print("⚠️ User 表 class_info_id 字段已存在，跳过")
-            else:
-                print(f"⚠️ User 表字段添加遇到问题: {e}")
+        _add_column_with_index("user", "class_info_id", "idx_user_class_info_id", "User 表")
 
         # 添加 Admin 表的主班级外键字段
-        try:
-            db.engine.execute(text("ALTER TABLE admin ADD COLUMN primary_class_id INTEGER"))
-            db.engine.execute(text("CREATE INDEX IF NOT EXISTS idx_admin_primary_class_id ON admin(primary_class_id)"))
-            print("✅ Admin 表添加 primary_class_id 字段成功")
-        except Exception as e:
-            if "duplicate column name" in str(e).lower() or "already exists" in str(e).lower():
-                print("⚠️ Admin 表 primary_class_id 字段已存在，跳过")
-            else:
-                print(f"⚠️ Admin 表字段添加遇到问题: {e}")
+        _add_column_with_index("admin", "primary_class_id", "idx_admin_primary_class_id", "Admin 表")
 
         # 添加 SubAccount 表的班级外键字段
-        try:
-            db.engine.execute(text("ALTER TABLE sub_account ADD COLUMN primary_class_id INTEGER"))
-            db.engine.execute(
-                text("CREATE INDEX IF NOT EXISTS idx_sub_account_primary_class_id ON sub_account(primary_class_id)")
-            )
-            print("✅ SubAccount 表添加 primary_class_id 字段成功")
-        except Exception as e:
-            if "duplicate column name" in str(e).lower() or "already exists" in str(e).lower():
-                print("⚠️ SubAccount 表 primary_class_id 字段已存在，跳过")
-            else:
-                print(f"⚠️ SubAccount 表字段添加遇到问题: {e}")
+        _add_column_with_index(
+            "sub_account", "primary_class_id", "idx_sub_account_primary_class_id", "SubAccount 表"
+        )
 
         # 添加外键约束
-        try:
-            # SQLite 不支持直接添加外键约束，需要使用 PRAGMA foreign_keys = ON
-            # 并通过重建表的方式添加外键
-            db.session.execute(text("PRAGMA foreign_keys=OFF"))
-
-            # 检查外键约束是否已存在
-            result = db.session.execute(text("PRAGMA foreign_key_list(user)"))  # noqa: F841
-            fk_exists = False
-            for row in result:
-                if row[2] == "class_info_id" and row[3] == "class_info.id":
-                    fk_exists = True
-                    break
-
-            if not fk_exists:
-                # SQLite 无法直接添加外键约束，需要重建表
-                print("ℹ️ SQLite 不支持直接添加外键约束，将在数据层面保证一致性")
-
-            db.session.commit()
-            db.session.execute(text("PRAGMA foreign_keys=ON"))
-        except Exception as e:
-            print(f"⚠️ 外键约束检查遇到问题: {e}")
+        _ensure_user_fk()
 
         print("-" * 50)
         print("🎉 数据库迁移完成!")

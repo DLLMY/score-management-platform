@@ -347,34 +347,7 @@ class IntegrationTest:
         for label, ep, data, id_field in crud_tests:
             self._test_crud(label, ep, data, id_field)
 
-    def _test_crud(self, label, endpoint, create_data, id_field):
-        # Create
-        status, body, elapsed, err = self.api("POST", endpoint, data=create_data)
-        if err or (status and status >= 400):
-            self.record(
-                "按钮-新增",
-                f"{label}-新增",
-                "FAIL",
-                f"POST:{status} {str(err or body)[:40]}",
-                elapsed,
-            )
-            return
-
-        item_id = self._extract_id(body)
-        if item_id:
-            self.record("按钮-新增", f"{label}-新增", "PASS", f"ID={item_id}", elapsed)
-        else:
-            self.record("按钮-新增", f"{label}-新增", "PASS", "创建成功(无ID)", elapsed)
-
-        # Read list
-        status, body, elapsed, err = self.api("GET", endpoint)
-        if status and status < 400:
-            self.record("按钮-查询", f"{label}-列表", "PASS", f"{status}", elapsed)
-        else:
-            self.record("按钮-查询", f"{label}-列表", "FAIL", f"{status}", elapsed)
-
-        # Read detail / Update / Delete
-        if item_id:
+    def _test_crud_detail_update_delete(self, label, endpoint, item_id, create_data):
             for op, method, suffix in [
                 ("详情", "GET", ""),
                 ("修改", "PUT", ""),
@@ -410,6 +383,36 @@ class IntegrationTest:
                     self.record(f"按钮-{op}", f"{label}-{op}", "FAIL", str(err)[:40], elapsed)
                 else:
                     self.record(f"按钮-{op}", f"{label}-{op}", "FAIL", f"{status}", elapsed)
+
+    def _test_crud(self, label, endpoint, create_data, id_field):
+        # Create
+        status, body, elapsed, err = self.api("POST", endpoint, data=create_data)
+        if err or (status and status >= 400):
+            self.record(
+                "按钮-新增",
+                f"{label}-新增",
+                "FAIL",
+                f"POST:{status} {str(err or body)[:40]}",
+                elapsed,
+            )
+            return
+
+        item_id = self._extract_id(body)
+        if item_id:
+            self.record("按钮-新增", f"{label}-新增", "PASS", f"ID={item_id}", elapsed)
+        else:
+            self.record("按钮-新增", f"{label}-新增", "PASS", "创建成功(无ID)", elapsed)
+
+        # Read list
+        status, body, elapsed, err = self.api("GET", endpoint)
+        if status and status < 400:
+            self.record("按钮-查询", f"{label}-列表", "PASS", f"{status}", elapsed)
+        else:
+            self.record("按钮-查询", f"{label}-列表", "FAIL", f"{status}", elapsed)
+        if item_id:
+            self._test_crud_detail_update_delete(
+                label, endpoint, item_id, create_data
+            )
 
     def _extract_id(self, body):
         if isinstance(body, dict):

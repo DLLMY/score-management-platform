@@ -11,70 +11,13 @@ import type {
   BatchScorePredictData,
   BatchRiskPredictData,
   RiskStudent,
-  ModelEvaluationResult,
-  PredictionResult,
-  ScorePredictResult,
-  RiskPredictResult,
-  AnomalyResult,
-  ScoreAttributionResult,
-  EngagementResult,
-  EngagementRankResult,
-  EngagementTrendResult,
-  BatchAttributionResult,
 } from '../../types';
 import { TABS, ANALYSIS_CONFIG } from './constants';
 import type { AlgorithmAnalysisViewDeps } from './AlgorithmAnalysisShell';
-
-/** 模型训练结果（三模型共用） */
-export interface ModelTrainingState {
-  ruleRecommend?: { status: string; message: string; model_info?: unknown };
-  scorePredict?: { status: string; message: string; model_info?: unknown };
-  riskPredict?: { status: string; message: string; model_info?: unknown };
-}
-
-/** 模型评估结果（三模型共用） */
-export interface ModelEvalState {
-  ruleRecommend?: ModelEvaluationResult;
-  scorePredict?: ModelEvaluationResult;
-  riskPredict?: ModelEvaluationResult;
-}
-
-/** 智能规则应用数据 */
-export interface RuleApplicationState {
-  scoreDistributionStats?: unknown;
-  earningRules?: unknown;
-  spendingRules?: unknown;
-  rewardTypes?: unknown;
-  applyingRule?: boolean;
-  applyingResult?: unknown;
-  students?: Array<{ id: number; name: string; class_name?: string }>;
-}
-
-/** 学生画像聚合结果（单用户全部算法下钻） */
-export interface StudentProfileState {
-  prediction?: PredictionResult;
-  scorePredict?: ScorePredictResult;
-  riskPredict?: RiskPredictResult;
-  anomaly?: AnomalyResult;
-  sudden?: AnomalyResult;
-  trend?: AnomalyResult;
-  group?: AnomalyResult;
-  attribution?: ScoreAttributionResult;
-  engagement?: EngagementResult;
-}
-
-/** 班级下拉项 */
-export interface ClassOption {
-  id: number;
-  name: string;
-}
-
-/** 学生下拉项 */
-export interface StudentOption {
-  id: number;
-  name: string;
-  class_name?: string;
-}
+import { useModelLogic } from './useModelLogic';
+import { useRuleApplicationLogic } from './useRuleApplicationLogic';
+import { useStudentProfileLogic } from './useStudentProfileLogic';
+import { useEngagementLogic } from './useEngagementLogic';
 
 export interface AlgorithmAnalysisLogicResult extends AlgorithmAnalysisViewDeps {
   /** 当前激活 Tab */
@@ -95,11 +38,12 @@ export interface AlgorithmAnalysisLogicResult extends AlgorithmAnalysisViewDeps 
 }
 
 /**
- * 智能分析增强页的逻辑层 hook。
+ * 智能分析增强页的逻辑层 hook（组合根）。
  *
  * 承接原 AlgorithmAnalysis.tsx 中全部 state / effect / handler / useMemo，
- * 主文件退化为「hook + 视图层」的薄装配。deps 形状与 AlgorithmAnalysisViewDeps 保持一致
- * （列定义仍由 Shell 内部 memo 后合并），故 Shell 与各 Tab 无需改动。
+ * 主文件退化为「全局状态 + 核心加载器 + 跨域 effect」的薄装配，
+ * 域逻辑（模型 / 规则应用 / 学生画像 / 参与度归因导出）下沉到独立子 hook。
+ * deps 形状与 AlgorithmAnalysisViewDeps 保持一致，故 Shell 与各 Tab 无需改动。
  */
 export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
   const { showToast } = useStableToast();
@@ -119,28 +63,12 @@ export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
   }, [activeTab]);
 
   const [selectedClass, setSelectedClass] = useState<string>('');
-  const [batchAttribution, setBatchAttribution] = useState<BatchAttributionResult | null>(null);
-  const [batchAttributionDays, setBatchAttributionDays] = useState<number>(30);
-  const [batchAttributionLoading, setBatchAttributionLoading] = useState<boolean>(false);
-  const [batchAttributionError, setBatchAttributionError] = useState<string | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
-  // 算法结果导出 Excel（正在导出的 tab，null=无）
-  const [exporting, setExporting] = useState<'engagement' | 'attribution' | 'risk' | null>(null);
-
-  // 参与度分析 Tab
-  const [engagementRank, setEngagementRank] = useState<EngagementRankResult | null>(null);
-  const [engagementRankDays, setEngagementRankDays] = useState<number>(30);
-  const [engagementRankLoading, setEngagementRankLoading] = useState<boolean>(false);
-  const [engagementRankError, setEngagementRankError] = useState<string | null>(null);
-  const [engagementTrend, setEngagementTrend] = useState<EngagementTrendResult | null>(null);
-  const [engagementTrendUserId, setEngagementTrendUserId] = useState<number | null>(null);
-  const [engagementTrendWeeks, setEngagementTrendWeeks] = useState<number>(8);
-  const [engagementTrendLoading, setEngagementTrendLoading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   // 统计/班级/趋势加载失败警示（不阻断内容区，仅提示数据可能不完整）
   const [loadWarn, setLoadWarn] = useState<boolean>(false);
-  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   // 原有数据
   const [statistics, setStatistics] = useState<AlgorithmStatistics | null>(null);
@@ -166,21 +94,6 @@ export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
   const [riskPredictData, setRiskPredictData] = useState<BatchRiskPredictData | null>(null);
 
   const [recommendDays, setRecommendDays] = useState<number>(ANALYSIS_CONFIG.defaultDays.recommend);
-
-  // 新增数据：模型管理
-  const [modelTrainingData, setModelTrainingData] = useState<ModelTrainingState>({});
-  const [modelEvaluationData, setModelEvaluationData] = useState<ModelEvalState>({});
-  const [trainingModel, setTrainingModel] = useState<string | null>(null);
-  const [evaluatingModel, setEvaluatingModel] = useState<string | null>(null);
-
-  const [classes, setClasses] = useState<ClassOption[]>([]);
-
-  // 学生画像（单用户算法下钻）
-  const [students, setStudents] = useState<StudentOption[]>([]);
-  const [selectedProfileUserId, setSelectedProfileUserId] = useState<number | null>(null);
-  const [profileLoading, setProfileLoading] = useState<boolean>(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfileState | null>(null);
 
   // 使用 useMemo 优化过滤逻辑
   const filteredPredictions = useMemo(() => {
@@ -294,318 +207,27 @@ export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
     }
   }, [selectedClass, recommendDays, showToast]);
 
-  // 训练规则推荐模型
-  const trainRuleModel = useCallback(
-    async (days: number = 90) => {
-      try {
-        setTrainingModel('ruleRecommend');
-        const data = await api.algorithm.trainRuleRecommendModel(days);
-        setModelTrainingData((prev) => ({ ...prev, ruleRecommend: data }));
-        showToast('success', data.message || '规则推荐模型训练完成');
-      } catch (err) {
-        logger.error('训练规则推荐模型失败:', err);
-        showToast('error', '训练规则推荐模型失败');
-      } finally {
-        setTrainingModel(null);
-      }
-    },
-    [showToast]
-  );
-
-  // 评估规则推荐模型
-  const evaluateRuleModel = useCallback(
-    async (days: number = 30) => {
-      try {
-        setEvaluatingModel('ruleRecommend');
-        const data = await api.algorithm.evaluateRuleRecommendModel(days);
-        setModelEvaluationData((prev) => ({ ...prev, ruleRecommend: data }));
-      } catch (err) {
-        logger.error('评估规则推荐模型失败:', err);
-        showToast('error', '评估规则推荐模型失败');
-      } finally {
-        setEvaluatingModel(null);
-      }
-    },
-    [showToast]
-  );
-
-  // 训练成绩预测模型
-  const trainScoreModel = useCallback(
-    async (days: number = 90) => {
-      try {
-        setTrainingModel('scorePredict');
-        const data = await api.algorithm.trainScorePredictModel(days);
-        setModelTrainingData((prev) => ({ ...prev, scorePredict: data }));
-        showToast('success', data.message || '成绩预测模型训练完成');
-      } catch (err) {
-        logger.error('训练成绩预测模型失败:', err);
-        showToast('error', '训练成绩预测模型失败');
-      } finally {
-        setTrainingModel(null);
-      }
-    },
-    [showToast]
-  );
-
-  // 评估成绩预测模型
-  const evaluateScoreModel = useCallback(
-    async (days: number = 30) => {
-      try {
-        setEvaluatingModel('scorePredict');
-        const data = await api.algorithm.evaluateScorePredictModel(days);
-        setModelEvaluationData((prev) => ({ ...prev, scorePredict: data }));
-      } catch (err) {
-        logger.error('评估成绩预测模型失败:', err);
-        showToast('error', '评估成绩预测模型失败');
-      } finally {
-        setEvaluatingModel(null);
-      }
-    },
-    [showToast]
-  );
-
-  // 训练风险预测模型
-  const trainRiskModel = useCallback(
-    async (days: number = 90) => {
-      try {
-        setTrainingModel('riskPredict');
-        const data = await api.algorithm.trainRiskPredictModel(days);
-        setModelTrainingData((prev) => ({ ...prev, riskPredict: data }));
-        showToast('success', data?.message || '风险预测模型训练完成');
-      } catch (err) {
-        logger.error('训练风险预测模型失败:', err);
-        showToast('error', '训练风险预测模型失败');
-      } finally {
-        setTrainingModel(null);
-      }
-    },
-    [showToast]
-  );
-
-  // 评估风险预测模型
-  const evaluateRiskModel = useCallback(
-    async (days: number = 30) => {
-      try {
-        setEvaluatingModel('riskPredict');
-        const data = await api.algorithm.evaluateRiskPredictModel(days);
-        setModelEvaluationData((prev) => ({ ...prev, riskPredict: data }));
-      } catch (err) {
-        logger.error('评估风险预测模型失败:', err);
-        showToast('error', '评估风险预测模型失败');
-      } finally {
-        setEvaluatingModel(null);
-      }
-    },
-    [showToast]
-  );
-
-  // 加载班级列表
-  const loadClasses = useCallback(async () => {
-    try {
-      const data = (await api.classes.getAll()) as unknown;
-      const classesData = Array.isArray(data)
-        ? data
-        : (data as { classes?: ClassOption[] }).classes || [];
-      setClasses(classesData);
-      setLoadWarn(false);
-    } catch (err) {
-      logger.error('加载班级列表失败:', err);
-      setClasses([]);
-      setLoadWarn(true);
-    }
-  }, []);
-
-  // 加载学生列表（用于学生画像下钻）
-  const loadStudents = useCallback(async () => {
-    if (students.length > 0) return;
-    try {
-      const usersResponse = (await api.users.getAll()) as unknown;
-      const usersList =
-        (
-          usersResponse as {
-            users?: Array<{ id: number | string; name: string; class_name?: string }>;
-          }
-        ).users || [];
-      const studentList = usersList.map((u) => ({
-        id: typeof u.id === 'number' ? u.id : parseInt(String(u.id), 10),
-        name: u.name,
-        class_name: u.class_name || '',
-      }));
-      setStudents(studentList);
-    } catch (err) {
-      logger.error('加载学生列表失败:', err);
-      showToast('error', '加载学生列表失败');
-    }
-  }, [students, showToast]);
-
-  // 加载单个学生画像（并行消费全部单用户算法接口）
-  const loadStudentProfile = useCallback(
-    async (userId: number) => {
-      setProfileLoading(true);
-      setProfileError(null);
-      try {
-        const [
-          prediction,
-          scorePredict,
-          riskPredict,
-          anomaly,
-          sudden,
-          trend,
-          group,
-          attribution,
-          engagement,
-        ] = await Promise.all([
-          api.algorithm.getPrediction(userId, predictionDays),
-          api.algorithm.getScorePredict(userId, recommendDays),
-          api.algorithm.getRiskPredict(userId, recommendDays),
-          api.algorithm.getUserAnomaly(userId, anomalyDays),
-          api.algorithm.getSuddenChange(userId, anomalyDays),
-          api.algorithm.getTrendAnomaly(userId, anomalyDays),
-          api.algorithm.getGroupAnomaly(userId, anomalyDays),
-          api.algorithm.getScoreAttribution(userId, recommendDays),
-          api.algorithm.getEngagement(userId, anomalyDays),
-        ]);
-        setStudentProfile({
-          prediction,
-          scorePredict,
-          riskPredict,
-          anomaly,
-          sudden,
-          trend,
-          group,
-          attribution,
-          engagement,
-        });
-      } catch (err) {
-        logger.error('加载学生画像失败:', err);
-        const msg = err instanceof Error ? err.message : '加载学生画像失败';
-        setProfileError(msg);
-        showToast('error', '加载学生画像失败');
-      } finally {
-        setProfileLoading(false);
-      }
-    },
-    [predictionDays, recommendDays, anomalyDays, showToast]
-  );
-
-  // 批量成绩波动归因：按班级一次性跑全班归因，单生异常由后端隔离
-  const loadBatchAttribution = useCallback(async () => {
-    if (!selectedClass) {
-      showToast('warning', '请先选择班级');
-      return;
-    }
-    setBatchAttributionLoading(true);
-    setBatchAttributionError(null);
-    try {
-      const res = await api.algorithm.getBatchAttribution(selectedClass, batchAttributionDays);
-      setBatchAttribution(res);
-    } catch (err) {
-      logger.error('批量归因失败:', err);
-      const msg = err instanceof Error ? err.message : '批量归因失败';
-      setBatchAttributionError(msg);
-      showToast('error', '批量归因失败');
-    } finally {
-      setBatchAttributionLoading(false);
-    }
-  }, [selectedClass, batchAttributionDays, showToast]);
-
-  // 算法结果导出 Excel（参与度/归因/风险）
-  const handleExport = useCallback(
-    async (tab: 'engagement' | 'attribution' | 'risk', days: number) => {
-      if (!selectedClass && tab !== 'risk') {
-        showToast('warning', '请先选择班级');
-        return;
-      }
-      setExporting(tab);
-      try {
-        await api.algorithm.exportExcel(tab, selectedClass || undefined, days);
-        showToast('success', '导出成功');
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : '导出失败';
-        showToast('error', msg);
-      } finally {
-        setExporting(null);
-      }
-    },
-    [selectedClass, showToast]
-  );
+  // —— 域逻辑子模块（状态 / 回调 / Tab 自动加载 effect 已下沉）——
+  const model = useModelLogic({ showToast });
+  const ruleApp = useRuleApplicationLogic({ showToast, selectedClass, activeTab });
+  const studentProfile = useStudentProfileLogic({
+    showToast,
+    predictionDays,
+    recommendDays,
+    anomalyDays,
+    activeTab,
+    setLoadWarn,
+  });
+  const engagement = useEngagementLogic({ showToast, selectedClass, activeTab, setLoadWarn });
 
   // 初始化加载基础数据
+  const { loadClasses } = studentProfile;
   useEffect(() => {
     const loadBaseData = async () => {
       await Promise.all([loadStatistics(), loadClasses()]);
     };
     loadBaseData();
   }, [selectedClass, loadStatistics, loadClasses]);
-
-  // 进入学生画像 Tab 时加载学生列表
-  useEffect(() => {
-    if (activeTab === 'studentProfile') {
-      loadStudents();
-    }
-  }, [activeTab, loadStudents]);
-
-  // 进入班级归因 Tab 且已选班级时，自动批量归因
-  useEffect(() => {
-    if (activeTab === 'batchAttribution' && selectedClass) {
-      loadBatchAttribution();
-    }
-  }, [activeTab, selectedClass, batchAttributionDays, loadBatchAttribution]);
-
-  // 参与度分析：进入 Tab 且已选班级时加载全班排名
-  const loadEngagementRank = useCallback(async () => {
-    if (!selectedClass) {
-      showToast('warning', '请先选择班级');
-      return;
-    }
-    setEngagementRankLoading(true);
-    setEngagementRankError(null);
-    try {
-      const res = await api.algorithm.getEngagementRank(selectedClass, engagementRankDays);
-      setEngagementRank(res);
-    } catch (err) {
-      logger.error('参与度排名失败:', err);
-      const msg = err instanceof Error ? err.message : '参与度排名失败';
-      setEngagementRankError(msg);
-      showToast('error', '参与度排名失败');
-    } finally {
-      setEngagementRankLoading(false);
-    }
-  }, [selectedClass, engagementRankDays, showToast]);
-
-  // 个人周趋势
-  const loadEngagementTrend = useCallback(async () => {
-    if (!engagementTrendUserId) return;
-    setEngagementTrendLoading(true);
-    try {
-      const res = await api.algorithm.getEngagementTrend(
-        engagementTrendUserId,
-        engagementTrendWeeks
-      );
-      setEngagementTrend(res);
-      setLoadWarn(false);
-    } catch (err) {
-      logger.error('参与度周趋势失败:', err);
-      setEngagementTrend(null);
-      setLoadWarn(true);
-    } finally {
-      setEngagementTrendLoading(false);
-    }
-  }, [engagementTrendUserId, engagementTrendWeeks]);
-
-  // 进入参与度分析 Tab 且已选班级时，自动加载排名
-  useEffect(() => {
-    if (activeTab === 'engagement' && selectedClass) {
-      loadEngagementRank();
-    }
-  }, [activeTab, selectedClass, engagementRankDays, loadEngagementRank]);
-
-  // 选中学生查看周趋势时加载
-  useEffect(() => {
-    if (activeTab === 'engagement' && engagementTrendUserId) {
-      loadEngagementTrend();
-    }
-  }, [activeTab, engagementTrendUserId, engagementTrendWeeks, loadEngagementTrend]);
 
   // 切换标签页时加载对应数据
   useEffect(() => {
@@ -650,70 +272,6 @@ export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
     loadRiskPredict,
   ]);
 
-  const [ruleApplicationData, setRuleApplicationData] = useState<RuleApplicationState>({});
-
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [selectedBehaviorType, setSelectedBehaviorType] = useState<string>('attendance');
-
-  const loadRuleApplicationData = useCallback(async () => {
-    try {
-      const [stats, earningRules, spendingRules, rewardTypes, usersResponse] = await Promise.all([
-        api.algorithm.getScoreDistributionStats(selectedClass || undefined),
-        api.algorithm.getEarningRules(),
-        api.algorithm.getSpendingRules(),
-        api.algorithm.getRewardTypes(),
-        api.users.getAll(),
-      ]);
-      const usersList = usersResponse.users || [];
-      const studentList = usersList.map((u) => ({
-        id: typeof u.id === 'number' ? u.id : parseInt(u.id, 10),
-        name: u.name,
-        class_name: u.class_name || '',
-      }));
-      setRuleApplicationData({
-        scoreDistributionStats: stats,
-        earningRules,
-        spendingRules,
-        rewardTypes,
-        students: studentList,
-      });
-    } catch (error) {
-      showToast('error', '加载规则应用数据失败');
-    }
-  }, [selectedClass, showToast]);
-
-  const handleApplyRule = async () => {
-    if (!selectedUserId) {
-      showToast('error', '请选择学生');
-      return;
-    }
-    setRuleApplicationData((prev) => ({ ...prev, applyingRule: true }));
-    try {
-      const result = await api.algorithm.applyRuleByBehavior(selectedUserId, selectedBehaviorType);
-      setRuleApplicationData((prev) => ({ ...prev, applyingRule: false, applyingResult: result }));
-      showToast('success', '规则应用成功');
-    } catch (error) {
-      setRuleApplicationData((prev) => ({ ...prev, applyingRule: false }));
-      showToast('error', '规则应用失败');
-    }
-  };
-
-  const handleAdjustDistribution = async () => {
-    try {
-      await api.algorithm.adjustScoreDistribution(selectedClass || undefined);
-      showToast('success', '评分分布调整成功');
-      loadRuleApplicationData();
-    } catch (error) {
-      showToast('error', '评分分布调整失败');
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'ruleApplication') {
-      loadRuleApplicationData();
-    }
-  }, [activeTab, loadRuleApplicationData]);
-
   return {
     // —— 选择器 / 全局过滤 ——
     selectedClass,
@@ -738,59 +296,6 @@ export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
     scorePredictData,
     // —— 风险评估 ——
     riskPredictData,
-    // —— 模型管理 ——
-    modelTrainingData,
-    modelEvaluationData,
-    trainingModel,
-    evaluatingModel,
-    trainRuleModel,
-    evaluateRuleModel,
-    trainScoreModel,
-    evaluateScoreModel,
-    trainRiskModel,
-    evaluateRiskModel,
-    // —— 智能规则应用 ——
-    ruleApplicationData,
-    selectedUserId,
-    setSelectedUserId,
-    selectedBehaviorType,
-    setSelectedBehaviorType,
-    handleAdjustDistribution,
-    handleApplyRule,
-    // —— 班级归因 ——
-    batchAttribution,
-    batchAttributionDays,
-    setBatchAttributionDays,
-    batchAttributionLoading,
-    batchAttributionError,
-    loadBatchAttribution,
-    // —— 参与度分析 ——
-    engagementRank,
-    engagementRankDays,
-    setEngagementRankDays,
-    engagementRankLoading,
-    engagementRankError,
-    engagementTrend,
-    engagementTrendUserId,
-    setEngagementTrendUserId,
-    engagementTrendWeeks,
-    setEngagementTrendWeeks,
-    engagementTrendLoading,
-    setEngagementTrend,
-    loadEngagementRank,
-    // —— 学生画像 ——
-    classes,
-    students,
-    selectedProfileUserId,
-    setSelectedProfileUserId,
-    studentProfile,
-    setStudentProfile,
-    profileLoading,
-    profileError,
-    loadStudentProfile,
-    // —— 导出 ——
-    exporting,
-    handleExport,
     // —— 壳层专用 ——
     activeTab,
     setActiveTab,
@@ -804,5 +309,10 @@ export function useAlgorithmAnalysisLogic(): AlgorithmAnalysisLogicResult {
     loadPrediction,
     loadAnomaly,
     loadStatistics,
+    // —— 域子模块 ——
+    ...model,
+    ...ruleApp,
+    ...studentProfile,
+    ...engagement,
   };
 }

@@ -22,6 +22,10 @@ class SystemConfigService:
                 "auto_save": config.auto_save,
                 "theme": config.theme,
                 "language": config.language,
+                # 差异 #4 阶段 1：设备白名单开关（默认关闭，保持历史行为）
+                "device_whitelist_enabled": bool(
+                    getattr(config, "device_whitelist_enabled", False)
+                ),
                 "updated_at": (config.updated_at.isoformat() if config.updated_at else None),
             }
 
@@ -49,6 +53,8 @@ class SystemConfigService:
         "auto_save",
         "theme",
         "language",
+        # 差异 #4 阶段 1：设备白名单开关
+        "device_whitelist_enabled",
     )
 
     @staticmethod
@@ -57,6 +63,14 @@ class SystemConfigService:
         for field in SystemConfigService._CONFIG_FIELDS:
             if field in data:
                 setattr(config, field, data[field])
+        # 差异 #4：开关变更后立即失效进程内缓存，避免最长 10s 的生效延迟
+        if "device_whitelist_enabled" in data:
+            try:
+                from utils.device_auth import reset_whitelist_flag_cache
+
+                reset_whitelist_flag_cache()
+            except Exception:  # pragma: no cover - 缓存失效失败不应阻断配置更新
+                pass
 
 
     @staticmethod

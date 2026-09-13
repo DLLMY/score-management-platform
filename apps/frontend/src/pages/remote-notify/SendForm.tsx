@@ -1,22 +1,19 @@
-// 远程通知 - 右侧「发送表单」（广播/指定设备/测试/积分变化 四模式）+ 发送前预览确认弹窗
+// 远程通知 - 右侧「发送表单」（广播/指定设备/测试/积分变化 四模式）
+// 模式切换（ModeSelector）与发送前预览确认弹窗（PreviewConfirmModal）已外提为独立组件
 import {
   Send,
-  Radio,
-  Monitor,
   Bell,
   Volume2,
   VolumeX,
   AlertTriangle,
-  TestTube,
   CheckCircle,
   Loader2,
-  Bookmark,
   Palette,
-  X,
 } from 'lucide-react';
 import { PermissionButton, ClassStatusBadge } from '../../components';
-import { formatDateTime } from '../../utils/format';
 import { PRESET_COLORS, PRESET_TEXT_COLORS, type RemoteNotifyDeps } from './types';
+import { ModeSelector } from './ModeSelector';
+import { PreviewConfirmModal } from './PreviewConfirmModal';
 
 export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
   const {
@@ -40,52 +37,7 @@ export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
 
   return (
     <div className='lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-200/50 dark:border-slate-700/50 p-6'>
-      <div className='flex gap-4 mb-6'>
-        <button
-          onClick={() => setMode('broadcast')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-            mode === 'broadcast'
-              ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-              : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
-          }`}
-        >
-          <Radio className='w-5 h-5' />
-          广播通知
-        </button>
-        <button
-          onClick={() => setMode('device')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-            mode === 'device'
-              ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-              : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
-          }`}
-        >
-          <Monitor className='w-5 h-5' />
-          指定设备
-        </button>
-        <button
-          onClick={() => setMode('test')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-            mode === 'test'
-              ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-              : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
-          }`}
-        >
-          <TestTube className='w-5 h-5' />
-          测试通知
-        </button>
-        <button
-          onClick={() => setMode('score_change')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-            mode === 'score_change'
-              ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
-              : 'bg-gray-100/80 dark:bg-slate-700/50 text-gray-600 dark:text-slate-300 hover:bg-gray-200/60 dark:hover:bg-slate-600/50'
-          }`}
-        >
-          <Bookmark className='w-5 h-5' />
-          积分变化
-        </button>
-      </div>
+      <ModeSelector mode={mode} setMode={setMode} />
 
       <div className='space-y-5'>
         {mode === 'device' && (
@@ -511,126 +463,12 @@ export function SendForm({ deps }: { deps: RemoteNotifyDeps }) {
 
       {/* M6: 发送前预览确认弹窗（防误发；preview 失败时不含名单仍可发送） */}
       {previewConfirm?.open && (
-        <div
-          className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
-          onClick={() => setPreviewConfirm((p) => (p ? { ...p, open: false } : p))}
-        >
-          <div
-            className='bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg mx-auto flex flex-col'
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className='flex items-center justify-between border-b border-gray-100 dark:border-slate-700 px-6 py-4'>
-              <h3 className='text-lg font-semibold text-gray-800 dark:text-white'>确认发送通知</h3>
-              <button
-                onClick={() => setPreviewConfirm((p) => (p ? { ...p, open: false } : p))}
-                className='rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
-                aria-label='关闭'
-              >
-                <X className='h-5 w-5' />
-              </button>
-            </div>
-
-            <div className='px-6 py-4 space-y-3 overflow-y-auto max-h-[60vh]'>
-              <p className='text-sm text-gray-700 dark:text-slate-300'>
-                将发送到{' '}
-                <span className='font-semibold'>
-                  {previewConfirm.kind === 'broadcast'
-                    ? '全部设备（广播）'
-                    : `设备 ${previewConfirm.deviceId}`}
-                </span>
-              </p>
-
-              {previewConfirm.preview ? (
-                <div className='rounded-xl border border-gray-200 dark:border-slate-600 p-4'>
-                  <div className='flex items-center justify-between gap-3'>
-                    <p className='text-sm text-gray-700 dark:text-slate-300'>
-                      设备总数{' '}
-                      <span className='font-semibold'>{previewConfirm.preview.total_devices}</span>{' '}
-                      台 · 当前在线{' '}
-                      <span className='font-semibold'>{previewConfirm.preview.online_count}</span>{' '}
-                      台 （{previewConfirm.preview.cutoff_minutes} 分钟内心跳）
-                    </p>
-                    {previewConfirm.preview.online_count > 0 &&
-                      previewConfirm.preview.online_sample.length > 0 && (
-                        <button
-                          onClick={() =>
-                            setPreviewConfirm((p) => (p ? { ...p, expanded: !p.expanded } : p))
-                          }
-                          className='shrink-0 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline'
-                        >
-                          {previewConfirm.expanded ? '收起名单' : '展开名单'}
-                        </button>
-                      )}
-                  </div>
-
-                  {previewConfirm.expanded && (
-                    <div className='mt-3 border-t border-gray-100 dark:border-slate-700 pt-3'>
-                      {/* M1 规范：小名单用 div 网格而非原生 table */}
-                      <div className='grid grid-cols-12 gap-2 text-xs'>
-                        <div className='col-span-4 font-medium text-gray-500 dark:text-slate-400'>
-                          设备ID
-                        </div>
-                        <div className='col-span-3 font-medium text-gray-500 dark:text-slate-400'>
-                          班级
-                        </div>
-                        <div className='col-span-5 font-medium text-gray-500 dark:text-slate-400'>
-                          最近心跳
-                        </div>
-                      </div>
-                      {previewConfirm.preview.online_sample.map((item) => (
-                        <div
-                          key={item.device_id}
-                          className='grid grid-cols-12 gap-2 border-t border-gray-50 py-1.5 text-xs dark:border-slate-700/60'
-                        >
-                          <div className='col-span-4 truncate font-mono text-gray-700 dark:text-slate-300'>
-                            {item.device_id}
-                          </div>
-                          <div className='col-span-3 truncate text-gray-600 dark:text-slate-400'>
-                            {item.class_name || '—'}
-                          </div>
-                          <div className='col-span-5 truncate text-gray-500 dark:text-slate-400'>
-                            {formatDateTime(item.last_heartbeat, '—')}
-                          </div>
-                        </div>
-                      ))}
-                      <p className='mt-2 text-xs text-gray-400 dark:text-slate-500'>
-                        仅显示最近活跃前 20 台
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className='text-sm text-gray-400 dark:text-slate-500'>
-                  （在线预览暂不可用，仍可发送）
-                </p>
-              )}
-
-              <p className='text-xs text-amber-600 dark:text-amber-400'>
-                上课时间可能被系统拦截，可在选项勾选强制发送
-              </p>
-            </div>
-
-            <div className='flex justify-end gap-3 border-t border-gray-100 dark:border-slate-700 px-6 py-4'>
-              <button
-                onClick={() => setPreviewConfirm((p) => (p ? { ...p, open: false } : p))}
-                className='rounded-lg border border-gray-200 dark:border-slate-600 px-4 py-2 text-sm font-medium text-gray-600 dark:text-slate-300 transition-colors hover:bg-gray-50 dark:hover:bg-slate-700'
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  const pc = previewConfirm;
-                  setPreviewConfirm(null);
-                  void performSend(pc.notifyData, pc.kind, pc.deviceId);
-                }}
-                disabled={isSending}
-                className='rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:opacity-60'
-              >
-                确认发送
-              </button>
-            </div>
-          </div>
-        </div>
+        <PreviewConfirmModal
+          previewConfirm={previewConfirm}
+          isSending={isSending}
+          setPreviewConfirm={setPreviewConfirm}
+          performSend={performSend}
+        />
       )}
     </div>
   );

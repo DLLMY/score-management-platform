@@ -67,20 +67,48 @@ OTA_SIGNING_SECRET = (os.environ.get("OTA_SIGNING_SECRET", "") or "").strip()
 _ota_timers = {}
 
 
+# 差异 #1/#12：设备类型归一化。设备未上报 device_type 时按 'phonebox' 处理，
+# 与 FirmwareVersion.device_type 的 server_default 保持一致，保证历史数据可用。
+DEFAULT_DEVICE_TYPE = "phonebox"
+
+
+def normalize_device_type(device_type):
+    """把设备/固件的 device_type 归一化为可比较的字符串（None/空 → 'phonebox'）。"""
+    if device_type is None:
+        return DEFAULT_DEVICE_TYPE
+    text = str(device_type).strip()
+    return text or DEFAULT_DEVICE_TYPE
+
+
 def compare_versions(v1, v2):
     """语义化版本比较，返回 1 / -1 / 0。支持 '2.10' > '2.9'。
 
     非数字片段按 0 处理；长度不齐时短侧补 0。
+    差异 #9：本函数是全局唯一的版本比较实现，统一容忍以下输入形态，
+    避免调用方各自实现（历史上 firmware_routes 另有一份 int() 抛 ValueError → 500）：
+      - None / 空串 → 视为最小版本（全部片段 0）
+      - 'v1.2.3' 前缀 v/V → 先剥离
+      - '1.2.3-beta.1' 后缀 → 仅取 '-' 前的版本主体
+      - 非数字片段 → 按 0 处理（不抛异常）
     """
 
     def parse(v):
+        if v is None:
+            return [0]
+        text = str(v).strip()
+        if not text:
+            return [0]
+        # 剥离 v/V 前缀与 -build/-beta 等后缀
+        if text[:1] in ("v", "V"):
+            text = text[1:]
+        text = text.split("-", 1)[0].split("+", 1)[0]
         parts = []
-        for x in str(v).split("."):
+        for x in text.split("."):
             try:
                 parts.append(int(x))
             except ValueError:
                 parts.append(0)
-        return parts
+        return parts or [0]
 
     a, b = parse(v1), parse(v2)
     for i in range(max(len(a), len(b))):
@@ -91,25 +119,123 @@ def compare_versions(v1, v2):
     return 0
 
 
-def get_latest_active_firmware():
-    """返回最新 active 固件（按 created_at 倒序）。无则返回 None。"""
+def get_latest_active_firmware(device_type=None):
+    """返回指定设备类型的最新 active 固件（按 created_at 倒序）。无则返回 None。
+
+    差异 #1：新增 device_type 维度过滤，根治「取全局最新 active」导致
+    doorlock 等新设备类型接入后被误推 phonebox 固件的问题。
+
+    向后兼容：
+      - 不传 device_type（None）→ 保持历史行为：跨类型取全局最新 active。
+        这保证既有调用方（未适配的代码路径、第三方脚本）行为零漂移。
+      - 传入 device_type → 仅匹配该类型；但若该类型下无固件，回退到
+        'phonebox' 类型查询（历史固件 device_type 均为 phonebox），
+        避免存量部署因未补数据而彻底查不到固件。
+    """
     from models import FirmwareVersion
 
-    return (
-        FirmwareVersion.query.filter(FirmwareVersion.is_active)
+    if device_type is None:
+        return (
+            FirmwareVersion.query.filter(FirmwareVersion.is_active)
+            .order_by(FirmwareVersion.created_at.desc())
+            .first()
+        )
+
+    wanted = normalize_device_type(device_type)
+    latest = (
+        FirmwareVersion.query.filter(
+            FirmwareVersion.is_active,
+            FirmwareVersion.device_type == wanted,
+        )
         .order_by(FirmwareVersion.created_at.desc())
         .first()
     )
+    if latest is not None:
+        return latest
+
+    # 该类型无固件 → 回退 phonebox（存量数据兼容），仅当查询类型非 phonebox 时
+    if wanted != DEFAULT_DEVICE_TYPE:
+        return (
+            FirmwareVersion.query.filter(
+                FirmwareVersion.is_active,
+                FirmwareVersion.device_type == DEFAULT_DEVICE_TYPE,
+            )
+            .order_by(FirmwareVersion.created_at.desc())
+            .first()
+        )
+    return None
 
 
-def build_download_url(firmware, request=None):
+# 差异 #6：固件下载 URL 时效签名。默认 3600 秒，0 表示不生成 token（仅当显式配置为 0）。
+try:
+    OTA_DOWNLOAD_URL_TTL_SEC = int(os.environ.get("OTA_DOWNLOAD_URL_TTL_SEC", "3600"))
+except ValueError:
+    OTA_DOWNLOAD_URL_TTL_SEC = 3600
+
+
+def _download_token(firmware, expires_at):
+    """生成下载令牌：HMAC_SHA256(OTA_SIGNING_SECRET, "{id}:{expires_at}")。
+
+    未配置 OTA_SIGNING_SECRET 时返回空串（保持匿名下载，向后兼容）。
+    """
+    if not OTA_SIGNING_SECRET:
+        return ""
+    msg = f"{firmware.id}:{expires_at}"
+    return hmac.new(
+        OTA_SIGNING_SECRET.encode("utf-8"),
+        msg.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def verify_download_token(firmware_id, expires_at, token):
+    """校验下载令牌。返回 True 表示通过。
+
+    未配置 OTA_SIGNING_SECRET 时**始终返回 True**（不启用验签，保持匿名下载），
+    这样存量部署升级后行为零变化，需显式配置密钥才启用强制验签。
+    """
+    if not OTA_SIGNING_SECRET:
+        return True
+    if not token or not expires_at:
+        return False
+    try:
+        exp = int(expires_at)
+    except (TypeError, ValueError):
+        return False
+    if exp < int(datetime.now().timestamp()):
+        return False
+    expected = hmac.new(
+        OTA_SIGNING_SECRET.encode("utf-8"),
+        f"{firmware_id}:{exp}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected, str(token))
+
+
+def build_download_url(firmware, request=None, with_token=None):
     """返回固件绝对下载 URL。
 
     MQTT 线程无 request 对象，使用 OTA_FIRMWARE_BASE_URL；
     REST 调用可传 request 使用 host_url。二者皆无则回退相对路径
     （仅当设备侧已知主机时可用，自动推送会因此中止）。
+
+    差异 #6：配置了 OTA_SIGNING_SECRET 时，URL 自动附带 expire + token 查询参数，
+    使下载端点可校验来源与时效。未配置密钥时 URL 形态与历史完全一致
+    （不带任何查询参数），保证存量设备与存量契约零漂移。
+    with_token 可显式覆盖（True/False），便于灰度与测试。
     """
     rel = f"/api/firmware/download/{firmware.id}"
+
+    use_token = with_token
+    if use_token is None:
+        use_token = bool(OTA_SIGNING_SECRET) and OTA_DOWNLOAD_URL_TTL_SEC > 0
+
+    if use_token:
+        expires_at = int(datetime.now().timestamp()) + OTA_DOWNLOAD_URL_TTL_SEC
+        token = _download_token(firmware, expires_at)
+        if token:
+            rel = f"{rel}?expire={expires_at}&token={token}"
+
     if OTA_FIRMWARE_BASE_URL:
         return f"{OTA_FIRMWARE_BASE_URL}{rel}"
     if request is not None:
@@ -215,7 +341,7 @@ def sign_ota_command(firmware, url):
     ).hexdigest()
 
 
-def negotiate(device, reported_version):
+def negotiate(device, reported_version, device_type=None):
     """版本协商：返回决策 dict。
 
     action 取值：
@@ -223,13 +349,24 @@ def negotiate(device, reported_version):
       - "up_to_date"    设备已是最新
       - "skip_too_old"  设备版本低于最低兼容版本，需先手动中间升级
       - "upgrade"       可升级，附带 firmware
+
+    差异 #1：device_type 未显式传入时自动取 device.device_type（None → 'phonebox'），
+    只与该类型固件比较，避免跨设备类型误推。
     """
-    latest = get_latest_active_firmware()
+    if device_type is None:
+        device_type = getattr(device, "device_type", None)
+    wanted_type = normalize_device_type(device_type)
+
+    latest = get_latest_active_firmware(wanted_type)
     if not latest:
-        return {"action": "no_firmware"}
+        return {"action": "no_firmware", "device_type": wanted_type}
 
     if compare_versions(reported_version or "", latest.version) >= 0:
-        return {"action": "up_to_date", "latest_version": latest.version}
+        return {
+            "action": "up_to_date",
+            "latest_version": latest.version,
+            "device_type": wanted_type,
+        }
 
     if (
         latest.min_compatible_version
@@ -239,9 +376,15 @@ def negotiate(device, reported_version):
             "action": "skip_too_old",
             "latest_version": latest.version,
             "min_compatible_version": latest.min_compatible_version,
+            "device_type": wanted_type,
         }
 
-    return {"action": "upgrade", "firmware": latest, "latest_version": latest.version}
+    return {
+        "action": "upgrade",
+        "firmware": latest,
+        "latest_version": latest.version,
+        "device_type": wanted_type,
+    }
 
 
 def can_auto_push(device):
@@ -350,7 +493,10 @@ def _execute_push(device_id, firmware_id):
                 return
 
             # 二次协商：版本已最新或护栏变化 → 放弃
-            decision = negotiate(device, device.fw_version)
+            # 差异 #1：显式传入 firmware.device_type，确保与调度时的固件同类型比较
+            decision = negotiate(
+                device, device.fw_version, device_type=getattr(firmware, "device_type", None)
+            )
             if decision["action"] != "upgrade":
                 _reset_pending(device, db)
                 return
@@ -492,3 +638,149 @@ def _plan_rollout(eligible, stage_percent, batch_size):
             extra_delay = (i // bs) * OTA_STAGE_BATCH_INTERVAL_SEC
         planned.append((d, fw, extra_delay))
     return planned
+
+
+# ---------------------------------------------------------------------------
+# 差异 #2：设备端回滚机制（后端侧）
+# ---------------------------------------------------------------------------
+def resolve_rollback_target(firmware):
+    """解析给定固件应回滚到的目标固件。
+
+    优先级：
+      1) firmware.rollback_to（管理员显式指定的版本号）
+      2) 同 device_type 下、created_at 早于该固件的最新 active 且 is_stable 的版本
+    找不到返回 None。
+    """
+    from models import FirmwareVersion
+
+    if firmware is None:
+        return None
+
+    if getattr(firmware, "rollback_to", None):
+        target = FirmwareVersion.query.filter_by(version=firmware.rollback_to).first()
+        if target is not None:
+            return target
+
+    wanted = normalize_device_type(getattr(firmware, "device_type", None))
+    return (
+        FirmwareVersion.query.filter(
+            FirmwareVersion.is_active,
+            FirmwareVersion.device_type == wanted,
+            FirmwareVersion.is_stable.is_(True),
+            FirmwareVersion.created_at < firmware.created_at,
+        )
+        .order_by(FirmwareVersion.created_at.desc())
+        .first()
+    )
+
+
+def build_rollback_command(device, target_firmware, reason=None):
+    """构造回滚指令 payload（含签名），设备侧按 action='rollback' 执行。
+
+    与自动推送的区别：force=True（忽略「已是最新」的版本比较，强制降级），
+    并额外带 rollback=True 供设备端区分「升级」与「回滚」两种语义。
+    """
+    url = build_download_url(target_firmware)
+    payload = {
+        "id": target_firmware.id,
+        "url": url,
+        "version": target_firmware.version,
+        "md5": target_firmware.md5,
+        "is_mandatory": True,
+        "force": True,
+        "rollback": True,
+        "action": "rollback",
+        "device_id": getattr(device, "device_id", None),
+        "reason": reason or "manual_rollback",
+    }
+    sig = sign_ota_command(target_firmware, url)
+    if sig:
+        payload["signature"] = sig
+    return payload
+
+
+def rollback_device(device, reason=None):
+    """对单台设备下发回滚指令。
+
+    返回 (ok: bool, message: str, payload: dict | None)。
+    - 设备当前固件不存在 → (False, 'device_firmware_unknown', None)
+    - 找不到回滚目标 → (False, 'no_rollback_target', None)
+    - MQTT 发布失败 → (False, 'mqtt_publish_failed', payload)
+    """
+    from services.mqtt_manager import mqtt_manager
+
+    current = getattr(device, "fw_version", None)
+    if not current:
+        return False, "device_firmware_unknown", None
+
+    from models import FirmwareVersion
+
+    current_fw = FirmwareVersion.query.filter_by(version=current).first()
+    if current_fw is None:
+        return False, "device_firmware_unknown", None
+
+    target = resolve_rollback_target(current_fw)
+    if target is None:
+        return False, "no_rollback_target", None
+
+    payload = build_rollback_command(device, target, reason=reason)
+    ok = mqtt_manager.publish_ota_command(device.device_id, payload)
+    if not ok:
+        return False, "mqtt_publish_failed", payload
+
+    logger.warning(
+        "[OTA回滚] 已向设备 %s 下发回滚指令：%s -> %s（原因：%s）",
+        device.device_id,
+        current,
+        target.version,
+        reason or "manual_rollback",
+    )
+    return True, "rollback_dispatched", payload
+
+
+def rollback_all_devices(device_ids=None, reason=None):
+    """批量回滚：device_ids 为 None 时对所有设备执行。
+
+    返回 {"total", "dispatched", "failed", "results": [...]}。
+    逐台隔离异常，单台失败不影响其余设备。
+    """
+    from app import app
+    from models import Device
+
+    results = []
+    dispatched = 0
+    failed = 0
+
+    with app.app_context():
+        query = Device.query
+        if device_ids:
+            query = query.filter(Device.id.in_(list(device_ids)))
+        devices = query.all()
+
+        for d in devices:
+            try:
+                ok, message, payload = rollback_device(d, reason=reason)
+            except Exception as e:  # 单台异常隔离
+                logger.error("[OTA回滚] 设备 %s 回滚异常: %s", getattr(d, "device_id", "?"), e)
+                ok, message, payload = False, "exception", None
+            if ok:
+                dispatched += 1
+            else:
+                failed += 1
+            results.append(
+                {
+                    "device_id": d.device_id,
+                    "name": d.name,
+                    "current_version": d.fw_version,
+                    "success": ok,
+                    "message": message,
+                    "target_version": (payload or {}).get("version"),
+                }
+            )
+
+    return {
+        "total": len(results),
+        "dispatched": dispatched,
+        "failed": failed,
+        "results": results,
+    }

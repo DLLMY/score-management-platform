@@ -2,6 +2,9 @@ import type React from 'react';
 import type { ColumnType } from '../../components';
 import type { NLPCorrection } from '../../services/api';
 
+// T12-8 拆分：子 hooks 共享的 toast 回调类型（取自 useStableToast 返回值）
+export type ShowToast = ReturnType<typeof import('../../hooks').useStableToast>['showToast'];
+
 // —— 业务接口定义（原 NLPManagement.tsx 内联，拆分后统一收敛到此）——
 export interface ParseResult {
   success: boolean;

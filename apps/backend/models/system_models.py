@@ -28,6 +28,11 @@ class SystemConfig(db.Model):
     auto_save = db.Column(db.Boolean, default=True)
     theme = db.Column(db.String(20), default="light")
     language = db.Column(db.String(20), default="zh-CN")
+    # 差异 #4 阶段 1：设备白名单开关。False（默认）= 允许未登记设备「上报即注册」
+    # （历史行为，零变化）；True = 拒绝未登记设备自动注册，只允许后台预先登记的设备接入。
+    device_whitelist_enabled = db.Column(
+        db.Boolean, default=False, nullable=False, server_default="0"
+    )
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 

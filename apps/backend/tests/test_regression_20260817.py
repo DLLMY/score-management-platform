@@ -239,47 +239,77 @@ class TestS12345678910Regression:
         )
 
     def test_nlp_scoring_writes_score_record(self):
-        """S2: NLP execute_scoring 必须写 ScoreRecord（原直接改 current_score 无流水）"""
-        import inspect
-        from services.nlp_enhanced_service import EnhancedNLPParserService
+        """S2: NLP execute_scoring 必须写 ScoreRecord（原直接改 current_score 无流水）
 
-        src = inspect.getsource(EnhancedNLPParserService.execute_scoring)
-        assert "ScoreRecord(" in src, "NLP 评分必须写积分流水"
-        assert "atomic_score_update" in src, "NLP 评分必须走原子累加"
-
-    def test_nlp_sign_normalized_by_intent(self):
-        """S6: NLP 分数符号按意图归一化（deduct 规则误存正数不得变加分）"""
-        import inspect
-        from services.nlp_enhanced_service import EnhancedNLPParserService
-
-        src = inspect.getsource(EnhancedNLPParserService.execute_scoring)
-        assert 'score_type == "deduct"' in src, "必须按 score_type 归一化分数符号"
-
-    def test_nlp_multi_intent_rejected(self):
-        """#991: 复合句（多意图）须逐子句贯通评分并落库多条记录，而非静默只执行首条/诚实拒绝
-
-        原 S6 仅要求"明确拒绝"（诚实但漏记），#991 升级为"全量贯通+返回列表"：
-        - 源码须包含按子句拆分并循环评分的逻辑（_split_compound_text / for sub in ... / results）
-        - 仍须写积分流水（ScoreRecord）且走原子累加（atomic_score_update）
+        结构重构后 execute_scoring 仅做分派：积分流水写入下沉到
+        _persist_score_records、原子累加下沉到 _compute_final_score。
+        故改为对两个 helper 逐个断言（覆盖落库与原子累加），并校验
+        execute_scoring 确实分派到它们（防 helper 存在却未被调用）。
         """
         import inspect
         from services.nlp_enhanced_service import EnhancedNLPParserService
 
-        src = inspect.getsource(EnhancedNLPParserService.execute_scoring)
-        # 旧逻辑"多条评分指令"逐条确认拒绝须已被逐子句贯通取代
-        assert "_split_compound_text" in src, "复合句须能按子句拆分"
-        assert "for sub in" in src or "results" in src, "复合句须逐子句循环评分并返回结果列表"
-        assert "results" in src and "count" in src, "复合句须返回多条结果及计数"
-        assert "ScoreRecord(" in src, "NLP 评分必须写积分流水"
-        assert "atomic_score_update" in src, "NLP 评分必须走原子累加"
+        persist_src = inspect.getsource(EnhancedNLPParserService._persist_score_records)
+        compute_src = inspect.getsource(EnhancedNLPParserService._compute_final_score)
+        assert "ScoreRecord(" in persist_src, "NLP 评分必须写积分流水"
+        assert "atomic_score_update" in compute_src, "NLP 评分必须走原子累加"
+        post_src = inspect.getsource(EnhancedNLPParserService.execute_scoring)
+        assert "_persist_score_records" in post_src, "execute_scoring 必须分派到 _persist_score_records"
+        assert "_compute_final_score" in post_src, "execute_scoring 必须分派到 _compute_final_score"
 
-    def test_nlp_negation_prefix(self):
-        """S6: 否定词前缀（"不要扣分"）不得误判意图"""
+    def test_nlp_sign_normalized_by_intent(self):
+        """S6: NLP 分数符号按意图归一化（deduct 规则误存正数不得变加分）
+
+        符号归一化已下沉到 _normalize_score_sign（execute_scoring 仅做分派，
+        经 _resolve_manual_rule/_resolve_auto_rule 调用）。
+        """
         import inspect
         from services.nlp_enhanced_service import EnhancedNLPParserService
 
-        src = inspect.getsource(EnhancedNLPParserService.determine_intent)
-        assert "_NEG_PREFIXES" in src, "determine_intent 必须处理否定前缀"
+        norm_src = inspect.getsource(EnhancedNLPParserService._normalize_score_sign)
+        assert 'intent == "deduct"' in norm_src, "必须按意图归一化分数符号"
+        # 校验归一化确实被评分解析链路调用（防 helper 存在却未被使用）
+        resolve_src = (
+            inspect.getsource(EnhancedNLPParserService._resolve_manual_rule)
+            + inspect.getsource(EnhancedNLPParserService._resolve_auto_rule)
+        )
+        assert "_normalize_score_sign" in resolve_src, "符号归一化必须被评分解析调用"
+
+    def test_nlp_multi_intent_rejected(self):
+        """#991: 复合句（多意图）须逐子句贯通评分并落库多条记录，而非静默只执行首条/诚实拒绝
+
+        复合句拆分与逐子句循环评分已下沉到 _try_compound_scoring
+        （execute_scoring 仅做分派）；仍须写积分流水（ScoreRecord，在
+        _persist_score_records）且走原子累加（atomic_score_update，在
+        _compute_final_score）。
+        """
+        import inspect
+        from services.nlp_enhanced_service import EnhancedNLPParserService
+
+        compound_src = inspect.getsource(EnhancedNLPParserService._try_compound_scoring)
+        # 旧逻辑"多条评分指令"逐条确认拒绝须已被逐子句贯通取代
+        assert "_split_compound_text" in compound_src, "复合句须能按子句拆分"
+        assert "for sub in" in compound_src or "results" in compound_src, "复合句须逐子句循环评分并返回结果列表"
+        assert "results" in compound_src and "count" in compound_src, "复合句须返回多条结果及计数"
+        persist_src = inspect.getsource(EnhancedNLPParserService._persist_score_records)
+        compute_src = inspect.getsource(EnhancedNLPParserService._compute_final_score)
+        assert "ScoreRecord(" in persist_src, "NLP 评分必须写积分流水"
+        assert "atomic_score_update" in compute_src, "NLP 评分必须走原子累加"
+        post_src = inspect.getsource(EnhancedNLPParserService.execute_scoring)
+        assert "_try_compound_scoring" in post_src, "execute_scoring 必须分派到 _try_compound_scoring"
+
+    def test_nlp_negation_prefix(self):
+        """S6: 否定词前缀（"不要扣分"）不得误判意图
+
+        否定前缀过滤已下沉到 _collect_intent_rule_hits（determine_intent 仅做分派）。
+        """
+        import inspect
+        from services.nlp_enhanced_service import EnhancedNLPParserService
+
+        collect_src = inspect.getsource(EnhancedNLPParserService._collect_intent_rule_hits)
+        assert "_NEG_PREFIXES" in collect_src, "determine_intent 必须处理否定前缀"
+        det_src = inspect.getsource(EnhancedNLPParserService.determine_intent)
+        assert "_collect_intent_rule_hits" in det_src, "determine_intent 必须分派到 _collect_intent_rule_hits"
 
     def test_export_has_class_scope(self):
         """S3: 导出端点必须按班级隔离（班主任不得导出全校）

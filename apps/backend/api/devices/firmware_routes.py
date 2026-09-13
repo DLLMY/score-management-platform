@@ -8,6 +8,7 @@ from models import FirmwareVersion, DeviceFirmwareUpdate, Device
 from utils.logger import log_info
 
 # 响应序列化字段子集（不含 created_by；OTA 命令 payload 字段集不同，不经由此处）
+# 差异 #1/#2/#12：补充 device_type / is_stable / rollback_to，供管理端展示与筛选
 FIRMWARE_FIELDS = [
     "id",
     "version",
@@ -18,6 +19,9 @@ FIRMWARE_FIELDS = [
     "min_compatible_version",
     "is_mandatory",
     "is_active",
+    "device_type",
+    "is_stable",
+    "rollback_to",
     "created_at",
 ]
 from utils.permission import requires_permission
@@ -29,8 +33,15 @@ import hashlib
 from services.mqtt_service import mqtt_manager
 from services.ota_negotiation_service import (
     build_download_url,
+    compare_versions,
+    get_latest_active_firmware,
     negotiate_all_devices,
+    normalize_device_type,
+    resolve_rollback_target,
+    rollback_all_devices,
+    rollback_device,
     sign_ota_command,
+    verify_download_token,
 )
 
 logger = logging.getLogger(__name__)
@@ -186,6 +197,7 @@ class OTACheck(Resource):
     @ns_firmware.doc("ota_check", description="Check firmware update")
     @ns_firmware.param("device_id", "Device ID")
     @ns_firmware.param("current_version", "Current firmware version")
+    @ns_firmware.param("device_type", "Device type (optional, defaults to the device's own type)")
     @ns_firmware.response(200, "Success")
     @requires_permission("view_devices")
     def get(self):
@@ -194,6 +206,12 @@ class OTACheck(Resource):
 
         Device calls this interface at startup or periodically to check for available updates.
         A valid device ID is required for authentication.
+
+        差异 #1：只返回与该设备 device_type 匹配的固件（未上报类型视为 phonebox），
+        避免多设备类型共存时把 phonebox 固件推给 doorlock 等设备。
+        差异 #9：统一调用 ota_negotiation_service.compare_versions（容错实现），
+        删除本地 `_compare_versions`——其 `int(x)` 在版本串含非数字片段时抛
+        ValueError 导致 500。
         """
         device_id = request.args.get("device_id")
         current_version = request.args.get("current_version")
@@ -205,21 +223,20 @@ class OTACheck(Resource):
         if not device:
             return APIResponse.error(message="Device not registered", status_code=401)
 
-        latest_firmware = (
-            FirmwareVersion.query.filter(FirmwareVersion.is_active)
-            .order_by(FirmwareVersion.created_at.desc())
-            .first()
-        )
+        # 差异 #1：优先用显式查询参数，其次用设备自身上报的类型，最后回退 phonebox
+        device_type = request.args.get("device_type") or getattr(device, "device_type", None)
+
+        latest_firmware = get_latest_active_firmware(device_type)
 
         if not latest_firmware:
             return {"has_update": False, "message": "No firmware updates available"}
 
-        if self._compare_versions(latest_firmware.version, current_version) <= 0:
+        if compare_versions(latest_firmware.version, current_version) <= 0:
             return {"has_update": False, "message": "Already latest version"}
 
         if (
             latest_firmware.min_compatible_version
-            and self._compare_versions(current_version, latest_firmware.min_compatible_version) < 0
+            and compare_versions(current_version, latest_firmware.min_compatible_version) < 0
         ):
             return {
                 "has_update": False,
@@ -234,23 +251,11 @@ class OTACheck(Resource):
             "md5": latest_firmware.md5,
             "download_url": f"/api/firmware/download/{latest_firmware.id}",
             "is_mandatory": latest_firmware.is_mandatory,
+            # 差异 #12：回传设备类型，便于设备侧确认协商上下文
+            "device_type": normalize_device_type(
+                getattr(latest_firmware, "device_type", None)
+            ),
         }
-
-    @staticmethod
-    def _compare_versions(v1, v2):
-
-        def parse(v):
-            return [int(x) for x in v.split(".")]
-
-        v1_parts = parse(v1)
-        v2_parts = parse(v2)
-
-        for i in range(max(len(v1_parts), len(v2_parts))):
-            p1 = v1_parts[i] if i < len(v1_parts) else 0
-            p2 = v2_parts[i] if i < len(v2_parts) else 0
-            if p1 != p2:
-                return 1 if p1 > p2 else -1
-        return 0
 
 
 @ns_firmware.route("/ota/report")
@@ -450,6 +455,11 @@ class FirmwareUpload(Resource):
                 "description": fields.String(description="Version description"),
                 "min_compatible_version": fields.String(description="Minimum compatible version"),
                 "is_mandatory": fields.Boolean(description="Is mandatory update", default=False),
+                "device_type": fields.String(
+                    description="Target device type (defaults to phonebox)", default="phonebox"
+                ),
+                "is_stable": fields.Boolean(description="Mark as stable release", default=False),
+                "rollback_to": fields.String(description="Rollback target version"),
             },
         )
     )
@@ -461,6 +471,10 @@ class FirmwareUpload(Resource):
         Upload firmware file
 
         Upload new firmware file to server and create firmware version record.
+
+        差异 #1/#2：可选表单字段 device_type / is_stable / rollback_to 均为可选，
+        不传时 device_type 落 phonebox、is_stable=False、rollback_to=None，
+        与历史行为完全一致（向后兼容）。
         """
         ensure_upload_folder()
 
@@ -472,6 +486,10 @@ class FirmwareUpload(Resource):
         description = request.form.get("description", "")
         min_compatible_version = request.form.get("min_compatible_version", "")
         is_mandatory = request.form.get("is_mandatory", "false").lower() == "true"
+        # 差异 #1/#2：新增可选字段（缺省即历史行为）
+        device_type = request.form.get("device_type") or None
+        is_stable = request.form.get("is_stable", "false").lower() == "true"
+        rollback_to = request.form.get("rollback_to") or None
 
         if not version:
             return APIResponse.error(message="Version is required", status_code=400)
@@ -510,6 +528,9 @@ class FirmwareUpload(Resource):
                 min_compatible_version,
                 is_mandatory,
                 created_by=getattr(request, "admin_id", None),
+                device_type=device_type,
+                is_stable=is_stable,
+                rollback_to=rollback_to,
             )
 
             return {
@@ -542,14 +563,27 @@ class FirmwareDownload(Resource):
     # S1 修复: 固件 http.GET 无认证头 → 原 requires_permission 致 OTA 全链路 401。
     # 匿名化依据：仅 GET 二进制 + realpath 目录校验 + OTA 指令携带 HMAC 签名（fwId:version:url），
     # 固件验签通过才下载，签名即来源保证。
+    #
+    # 差异 #6：新增「时效令牌」二次防护——当且仅当配置了 OTA_SIGNING_SECRET 时，
+    # 强制校验 URL 上的 expire + token（verify_download_token 在未配置密钥时恒为 True），
+    # 使「ID 可枚举」的匿名下载在启用密钥后失效。未配置密钥的存量部署行为不变。
     def get(self, id):
         """
         Download firmware file
 
-        Download firmware file by firmware ID. 匿名可下载（固件 OTA 场景），
-        完整性由 OTA 指令 HMAC 签名 + 固件 MD5 校验保证。
+        Download firmware file by firmware ID. 默认匿名可下载（固件 OTA 场景），
+        完整性由 OTA 指令 HMAC 签名 + 固件 MD5 校验保证；
+        配置 OTA_SIGNING_SECRET 后额外要求 URL 携带有效 expire + token 时效令牌。
         """
         firmware = FirmwareVersion.query.get_or_404(id)
+
+        # 差异 #6：启用密钥时强制验签（未配置密钥 → 恒通过，向后兼容）
+        if not verify_download_token(
+            firmware.id,
+            request.args.get("expire"),
+            request.args.get("token"),
+        ):
+            return APIResponse.error(message="Invalid or expired download token", status_code=403)
 
         if not firmware.file_path or not os.path.exists(firmware.file_path):
             return APIResponse.error(message="Firmware file not found", status_code=404)
@@ -743,3 +777,108 @@ class OTAFirmwareNegotiateAll(Resource):
                 return APIResponse.error(message="batch_size 必须为整数", status_code=400)
         result = negotiate_all_devices(stage_percent=stage_percent, batch_size=batch_size)
         return APIResponse.success(data=result)
+
+
+# ---------------------------------------------------------------------------
+# 差异 #2：回滚端点
+# ---------------------------------------------------------------------------
+rollback_model = ns_firmware.model(
+    "FirmwareRollback",
+    {
+        "device_ids": fields.List(fields.Integer, description="Device IDs (empty = all devices)"),
+        "reason": fields.String(description="Rollback reason for audit"),
+    },
+)
+
+
+@ns_firmware.route("/rollback")
+class FirmwareRollbackAll(Resource):
+
+    @ns_firmware.doc("rollback_all_devices", description="Rollback devices to their previous stable firmware")
+    @ns_firmware.expect(rollback_model)
+    @ns_firmware.response(200, "Success")
+    @requires_permission("device.manage")
+    def post(self):
+        """批量回滚：device_ids 为空/缺省时对所有设备执行。
+
+        差异 #2：回滚目标解析优先级为 ① 当前固件的 rollback_to ② 同类型更早的
+        稳定版（is_stable=True）。找不到目标或设备固件未知的设备会被逐个标记失败，
+        不影响其余设备（逐台异常隔离）。
+        """
+        data = request.get_json(silent=True) or {}
+        device_ids = data.get("device_ids") or None
+        reason = data.get("reason") or "manual_rollback"
+
+        if device_ids is not None and not isinstance(device_ids, list):
+            return APIResponse.error(message="device_ids 必须为数组", status_code=400)
+
+        result = rollback_all_devices(device_ids=device_ids, reason=reason)
+        return APIResponse.success(data=result)
+
+
+@ns_firmware.route("/<int:device_id>/rollback")
+@ns_firmware.param("device_id", "Device primary key ID", type="int")
+class FirmwareRollbackDevice(Resource):
+
+    @ns_firmware.doc("rollback_one_device", description="Rollback a single device firmware")
+    @ns_firmware.response(200, "Success")
+    @ns_firmware.response(400, "Rollback not possible")
+    @requires_permission("device.manage")
+    def post(self, device_id):
+        """单台设备回滚：路径参数为 Device 主键 id。
+
+        差异 #2：与批量端点共用同一 service 逻辑，行为一致。
+        """
+        device = Device.query.get_or_404(device_id)
+        data = request.get_json(silent=True) or {}
+        reason = data.get("reason") or "manual_rollback"
+
+        ok, message, payload = rollback_device(device, reason=reason)
+        if not ok:
+            # 目标缺失/固件未知 → 400（业务前置条件不满足）；MQTT 失败 → 500
+            status = 500 if message == "mqtt_publish_failed" else 400
+            return APIResponse.error(message=message, status_code=status, data=payload)
+
+        return APIResponse.success(
+            data={
+                "device_id": device.device_id,
+                "from_version": device.fw_version,
+                "rollback_to": payload.get("version") if payload else None,
+                "message": message,
+            }
+        )
+
+
+@ns_firmware.route("/<int:id>/rollback-target")
+@ns_firmware.param("id", "Firmware ID")
+class FirmwareRollbackTarget(Resource):
+
+    @ns_firmware.doc(
+        "get_rollback_target", description="Resolve the rollback target for a firmware version"
+    )
+    @ns_firmware.response(200, "Success")
+    @requires_permission("device.view")
+    def get(self, id):
+        """查询某固件版本在回滚时会落到哪个版本（供管理端预检与展示）。
+
+        差异 #2：不产生任何副作用，仅解析 rollback_to 或更早的稳定版。
+        """
+        firmware = FirmwareVersion.query.get_or_404(id)
+        target = resolve_rollback_target(firmware)
+        return APIResponse.success(
+            data={
+                "firmware_id": firmware.id,
+                "version": firmware.version,
+                "rollback_to": firmware.rollback_to,
+                "resolved_target": (
+                    {
+                        "id": target.id,
+                        "version": target.version,
+                        "is_stable": target.is_stable,
+                        "device_type": normalize_device_type(target.device_type),
+                    }
+                    if target
+                    else None
+                ),
+            }
+        )

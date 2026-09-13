@@ -4,10 +4,8 @@ from services.nlp_service import NLPService, nlp_service
 from models import User, ScoreCategory, NLPBehaviorKeyword, NLPScoringRule
 
 
-@pytest.fixture(scope="function")
-def nlp_test_data(session):
-    """创建NLP测试所需的用户和规则数据"""
-    # 检查是否已存在，避免重复创建
+def _ensure_score_categories(session):
+    """确保加分项/扣分项两个 ScoreCategory 存在（幂等）。"""
     category_add = ScoreCategory.query.filter_by(name="加分项").first()
     if not category_add:
         category_add = ScoreCategory(
@@ -24,7 +22,9 @@ def nlp_test_data(session):
 
     session.commit()
 
-    # 创建用户，避免重复
+
+def _ensure_test_users(session):
+    """确保 C001..C005 五个测试用户存在（幂等）；返回用户对象列表（原顺序）。"""
     existing_users = {
         u.card_id: u
         for u in User.query.filter(User.card_id.in_(["C001", "C002", "C003", "C004", "C005"])).all()
@@ -51,8 +51,11 @@ def nlp_test_data(session):
     if users_to_create:
         session.add_all(users_to_create)
         session.commit()
+    return users
 
-    # 创建行为关键词，避免重复
+
+def _ensure_behavior_keywords(session):
+    """确保 8 个行为关键词存在（幂等）；返回关键词对象列表（原顺序）。"""
     existing_keywords = {
         kw.keyword: kw
         for kw in NLPBehaviorKeyword.query.filter(
@@ -84,8 +87,11 @@ def nlp_test_data(session):
     if keywords_to_create:
         session.add_all(keywords_to_create)
         session.commit()
+    return behavior_keywords
 
-    # 创建评分规则，避免重复
+
+def _ensure_scoring_rules(session):
+    """确保 4 条评分规则存在（幂等）；返回规则对象列表（原顺序）。"""
     existing_rules = {
         sr.behavior_keyword: sr
         for sr in NLPScoringRule.query.filter(
@@ -115,7 +121,16 @@ def nlp_test_data(session):
     if rules_to_create:
         session.add_all(rules_to_create)
         session.commit()
+    return scoring_rules
 
+
+@pytest.fixture(scope="function")
+def nlp_test_data(session):
+    """创建NLP测试所需的用户和规则数据"""
+    _ensure_score_categories(session)
+    users = _ensure_test_users(session)
+    behavior_keywords = _ensure_behavior_keywords(session)
+    scoring_rules = _ensure_scoring_rules(session)
     return {
         "users": users,
         "rules": scoring_rules,

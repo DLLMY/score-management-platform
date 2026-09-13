@@ -1343,50 +1343,17 @@ class NLPFeedbackRecord(Resource):
         # #990: 请求结束前将线程局部缓冲原子提交到全局存储
         nlp_analyzer.flush_request_metrics()
 
-        corrections = []
-        if corrected_name and corrected_name != original_name:
-            corrections.append(
-                {
-                    "field_type": "name",
-                    "original_value": original_name,
-                    "corrected_value": corrected_name,
-                }
-            )
-
-        if corrected_intent and corrected_intent != predicted_intent:
-            corrections.append(
-                {
-                    "field_type": "intent",
-                    "original_value": predicted_intent,
-                    "corrected_value": corrected_intent,
-                }
-            )
-
-        if corrected_score is not None and corrected_score != original_score:
-            corrections.append(
-                {
-                    "field_type": "score",
-                    "original_value": str(original_score) if original_score else None,
-                    "corrected_value": str(corrected_score),
-                }
-            )
-
+        corrections = _build_feedback_corrections(
+            corrected_name, original_name, corrected_intent, predicted_intent, corrected_score, original_score
+        )
         if corrections:
-            user_id = None
-            try:
-                if hasattr(g, "current_user") and g.current_user:
-                    user_id = g.current_user.id
-            except Exception as e:
-                logger.warning("获取 current_user 失败（非致命，已跳过用户关联）: %s", e, exc_info=True)
-                user_id = None
-
+            user_id = _resolve_feedback_user_id()
             saved = record_corrections(corrections, user_id, input_text, confidence)
 
             cache_key = input_text.lower().strip()
             # S6-B-P0-4 修复: nlp_analyzer(NLPAlgorithmAnalyzer) 无 _parse_cache → 纠正对已缓存文本永不生效。
             # 改为清真实解析器（EnhancedNLPParserService）的解析缓存。
             try:
-
                 parser = _get_parser()
                 if hasattr(parser, "_parse_cache") and cache_key in parser._parse_cache:
                     del parser._parse_cache[cache_key]
@@ -1402,8 +1369,6 @@ class NLPFeedbackRecord(Resource):
             )
 
         return APIResponse.success(message="反馈已记录")
-
-
 @ns_nlp.route("/corrections")
 class NLPCorrectionsList(Resource):
 
@@ -1628,3 +1593,44 @@ class NLPPerformanceClearCache(Resource):
         optimizer._cache.clear()
 
         return APIResponse.success(message="缓存已清空")
+
+
+
+def _build_feedback_corrections(corrected_name, original_name, corrected_intent, predicted_intent, corrected_score, original_score):
+    """构造反馈纠正列表（保留逐一比较语义）。"""
+    corrections = []
+    if corrected_name and corrected_name != original_name:
+        corrections.append(
+            {
+                "field_type": "name",
+                "original_value": original_name,
+                "corrected_value": corrected_name,
+            }
+        )
+    if corrected_intent and corrected_intent != predicted_intent:
+        corrections.append(
+            {
+                "field_type": "intent",
+                "original_value": predicted_intent,
+                "corrected_value": corrected_intent,
+            }
+        )
+    if corrected_score is not None and corrected_score != original_score:
+        corrections.append(
+            {
+                "field_type": "score",
+                "original_value": str(original_score) if original_score else None,
+                "corrected_value": str(corrected_score),
+            }
+        )
+    return corrections
+
+
+def _resolve_feedback_user_id():
+    """best-effort 获取当前用户 ID（非致命）。"""
+    try:
+        if hasattr(g, "current_user") and g.current_user:
+            return g.current_user.id
+    except Exception as e:
+        logger.warning("获取 current_user 失败（非致命，已跳过用户关联）: %s", e, exc_info=True)
+    return None

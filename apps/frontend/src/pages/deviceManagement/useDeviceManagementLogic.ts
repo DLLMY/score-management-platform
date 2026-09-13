@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import api, { Alert, Heartbeat, ClassInfo } from '../../services/api';
+import api, { Alert, Heartbeat } from '../../services/api';
 import { Device } from '../../types';
 import {
   useStableToast,
@@ -12,10 +12,15 @@ import {
 } from '../../hooks';
 import { useConfirm } from '../../components';
 import { useWebSocketStore } from '../../stores';
-import { downloadBlob } from '../../utils/download';
-import logger from '../../utils/logger';
 import { createDeviceColumns } from './DeviceColumns';
-import { getSignalStrength } from './helpers';
+import {
+  useDeviceListDomain,
+  useDeviceCrudDomain,
+  useDeviceControlDomain,
+  useDeviceOTADomain,
+  useDeviceSecretDomain,
+} from './hooks';
+import type { DeviceManagementSharedDeps } from './hooks/shared';
 import type {
   DeviceStats,
   AdvancedStats,
@@ -30,10 +35,15 @@ import type {
 } from './types';
 
 /**
- * 设备管理页的逻辑层 hook。
+ * 设备管理页的逻辑层 hook（T12-9b 拆分，2026-09-12）。
  *
- * 承接原 DeviceManagement.tsx 中全部 state / effect / handler / useMemo，
- * 主文件退化为「hook → DeviceManagementView」的薄装配。
+ * 原 830 行 god hook 按「组合根持有全部 state + 共享原语，子 hook 按域处理纯逻辑」重构：
+ * - useDeviceListDomain   —— 列表/监控展示、导入导出、详情、班级管理员加载、派生计算
+ * - useDeviceCrudDomain   —— 设备新增/删除/绑定
+ * - useDeviceControlDomain —— 远程控制/设置
+ * - useDeviceOTADomain     —— OTA 升级/批量
+ * 组合根把 state 打包成 DeviceManagementSharedDeps 注入各子 hook，再 spread 装配，
+ * 对外返回对象形状与原实现逐字段一致（DeviceManagementLogic 类型不变）。
  */
 export function useDeviceManagementLogic() {
   const { showToast } = useStableToast();
@@ -251,364 +261,103 @@ export function useDeviceManagementLogic() {
     [showToast]
   );
 
-  const handleExport = useCallback(
-    async (format: 'excel' | 'pdf') => {
-      try {
-        const apiUrl =
-          format === 'pdf' ? '/api/export/devices?format=pdf' : '/api/export/devices?format=excel';
+  const shared: DeviceManagementSharedDeps = {
+    showToast,
+    runSubmit,
+    submitting,
+    confirmRef,
+    deviceStatuses,
+    activeTab,
+    setActiveTab,
+    devices,
+    setDevices,
+    stats,
+    setStats,
+    statsError,
+    setStatsError,
+    advancedStats,
+    setAdvancedStats,
+    alerts,
+    setAlerts,
+    isRefreshing,
+    setIsRefreshing,
+    lastUpdateTime,
+    setLastUpdateTime,
+    autoRefresh,
+    setAutoRefresh,
+    initialLoading,
+    setInitialLoading,
+    selectedDevice,
+    setSelectedDevice,
+    heartbeats,
+    setHeartbeats,
+    showDetailModal,
+    setShowDetailModal,
+    controlAction,
+    setControlAction,
+    otaProgressData,
+    setOtaProgressData,
+    showOTAProgressModal,
+    setShowOTAProgressModal,
+    classes,
+    setClasses,
+    admins,
+    setAdmins,
+    searchInput,
+    setSearchInput,
+    debouncedSearchTerm,
+    showImportModal,
+    setShowImportModal,
+    importFile,
+    setImportFile,
+    importResult,
+    setImportResult,
+    isImporting,
+    setIsImporting,
+    newDevice,
+    newDeviceErrors,
+    handleNewDeviceChange,
+    resetNewDeviceForm,
+    bindForm,
+    handleBindChange,
+    resetBindForm,
+    deviceSettings,
+    handleDeviceSettingsChange,
+    resetDeviceSettings,
+    otaForm,
+    handleOtaFormChange,
+    resetOtaForm,
+    bulkOtaForm,
+    handleBulkOtaFormChange,
+    resetBulkOtaForm,
+    showAddModal,
+    openAddModal,
+    closeAddModal,
+    showBindModal,
+    openBindModal,
+    closeBindModal,
+    showControlModal,
+    openControlModalInternal,
+    closeControlModal,
+    showSettingsModal,
+    openSettingsModalInternal,
+    closeSettingsModal,
+    showOTAModal,
+    closeOTAModal,
+    showBulkOTAModal,
+    openBulkOTAModal,
+    closeBulkOTAModal,
+    loadDevices,
+    throttledRefresh,
+  };
 
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          credentials: 'include',
-        });
+  const list = useDeviceListDomain(shared);
+  const crud = useDeviceCrudDomain(shared);
+  const control = useDeviceControlDomain(shared);
+  const ota = useDeviceOTADomain(shared);
+  const secret = useDeviceSecretDomain(shared);
 
-        if (!response.ok) {
-          throw new Error('导出失败');
-        }
-
-        const blob = await response.blob();
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = `devices.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename="?([^"]+)"?/);
-          if (match) {
-            filename = match[1];
-          }
-        }
-
-        downloadBlob(blob, filename);
-
-        showToast('success', '导出成功');
-      } catch (err) {
-        showToast('error', '导出失败: ' + (err as Error).message);
-      }
-    },
-    [showToast]
-  );
-
-  const openImportModal = useCallback((): void => {
-    setShowImportModal(true);
-    setImportFile(null);
-    setImportResult(null);
-  }, []);
-
-  const closeImportModal = useCallback((): void => {
-    setShowImportModal(false);
-    setImportFile(null);
-    setImportResult(null);
-  }, []);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImportFile(file);
-    }
-  }, []);
-
-  const handleImport = useCallback(async (): Promise<void> => {
-    if (!importFile) return;
-
-    setIsImporting(true);
-    setImportResult(null);
-
-    const formData = new FormData();
-    formData.append('file', importFile);
-
-    try {
-      const result = await api.devices.import(formData);
-      setImportResult(result);
-      if (result.success) {
-        showToast(
-          'success',
-          `导入完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
-        );
-        loadDevices(true);
-      } else {
-        showToast('error', '导入失败');
-      }
-    } catch (err) {
-      showToast('error', '导入失败: ' + (err as Error).message);
-    } finally {
-      setIsImporting(false);
-    }
-  }, [importFile, showToast, loadDevices]);
-
-  const handleExportErrors = useCallback((): void => {
-    if (!importResult?.messages) return;
-    const errors = importResult.messages
-      .filter((msg) => msg.action === '失败')
-      .map((msg) => ({
-        ...msg,
-        error_fields: msg.error_fields || [],
-      }));
-    if (errors.length > 0) {
-      api.export.errors(errors, 'devices');
-    }
-  }, [importResult]);
-
-  const loadClassesAndAdmins = useCallback(async () => {
-    try {
-      const classesData = await api.classes.getAll();
-      // API返回格式是 { classes: [...] }，需要提取数组
-      setClasses(
-        Array.isArray(classesData)
-          ? classesData
-          : (classesData as { classes?: ClassInfo[] })?.classes || []
-      );
-    } catch {
-      // M5: 加载失败给用户提示，不静默
-      showToast('error', '加载班级列表失败');
-    }
-
-    try {
-      const adminsData = await api.admins.getAll();
-      // M7: 数组赋值防护
-      const adminList = Array.isArray(adminsData) ? adminsData : [];
-      setAdmins(
-        adminList.map((admin) => ({
-          id: Number(admin.id),
-          real_name: admin.real_name || admin.username,
-          username: admin.username,
-        }))
-      );
-    } catch {
-      showToast('error', '加载管理员列表失败');
-    }
-  }, [showToast]);
-
-  const loadOTAStatus = useCallback(async () => {
-    try {
-      const data = await api.firmware.getOTAStatus();
-      const otaData = data as OTAProgressData;
-      if (otaData.in_progress && otaData.in_progress.length > 0) {
-        setOtaProgressData({
-          in_progress: otaData.in_progress || [],
-          summary: otaData.summary || { in_progress_count: 0, completed_count: 0, failed_count: 0 },
-        });
-        if (!showOTAProgressModal) {
-          setShowOTAProgressModal(true);
-        }
-      } else if (showOTAProgressModal && otaData.in_progress?.length === 0) {
-        setShowOTAProgressModal(false);
-      }
-    } catch (error) {
-      // OTA 状态是 5s 轮询，失败属预期内（后端瞬时不可达），warn 记录避免刷屏
-      logger.warn('获取OTA状态失败:', error);
-    }
-  }, [showOTAProgressModal]);
-
-  useEffect(() => {
-    loadDevices();
-    loadClassesAndAdmins();
-    loadOTAStatus();
-    let interval: ReturnType<typeof setInterval> | null = null;
-    let otaInterval: ReturnType<typeof setInterval> | null = null;
-    if (autoRefresh) {
-      interval = setInterval(() => {
-        loadDevices();
-      }, 10000);
-      otaInterval = setInterval(() => {
-        loadOTAStatus();
-      }, 5000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-      if (otaInterval) clearInterval(otaInterval);
-    };
-  }, [autoRefresh, loadDevices, loadClassesAndAdmins, loadOTAStatus]);
-
-  useEffect(() => {
-    if (Object.keys(deviceStatuses).length > 0) {
-      setDevices((prev) =>
-        prev.map((device) => {
-          const updatedStatus = deviceStatuses[device.device_id];
-          if (updatedStatus) {
-            return { ...device, status: updatedStatus };
-          }
-          return device;
-        })
-      );
-    }
-  }, [deviceStatuses]);
-
-  const handleAddDevice = useCallback(async () => {
-    if (!newDevice.device_id.trim()) {
-      showToast('error', '请输入设备ID');
-      return;
-    }
-    try {
-      await api.devices.create(newDevice);
-      await loadDevices(true);
-      closeAddModal();
-      showToast('success', '设备添加成功');
-    } catch (error) {
-      showToast('error', '创建设备失败: ' + (error as Error).message);
-    }
-  }, [newDevice, showToast, closeAddModal, loadDevices]);
-
-  const handleDeleteDevice = useCallback(
-    async (id: number) => {
-      const ok = await confirmRef.current({
-        title: '删除设备',
-        message: '确定要删除这个设备吗？此操作无法撤销。',
-        confirmText: '删除',
-        cancelText: '取消',
-        type: 'danger',
-      });
-      if (!ok) return;
-
-      try {
-        await api.devices.delete(id);
-        setDevices((prev) => prev.filter((d) => d.id !== id));
-        setStats((prev) => ({
-          ...prev,
-          total: Math.max(0, (prev.total || 0) - 1),
-        }));
-        showToast('success', '设备删除成功');
-      } catch (error) {
-        showToast('error', '删除设备失败: ' + (error as Error).message);
-      }
-    },
-    [showToast]
-  );
-
-  const handleViewDetail = useCallback(async (device: Device) => {
-    setSelectedDevice(device);
-    try {
-      const data = await api.devices.getHeartbeats(device.device_id);
-      // 剥信封后键是 heartbeats（后端 success(data={heartbeats:[...], total, ...})）
-      setHeartbeats((data as { heartbeats: Heartbeat[] }).heartbeats || []);
-    } catch {
-      setHeartbeats([]);
-    }
-    setShowDetailModal(true);
-  }, []);
-
-  const handleBindDevice = useCallback(async () => {
-    if (!selectedDevice) return;
-
-    try {
-      if (bindForm.class_id !== undefined) {
-        await api.devices.bindClass(selectedDevice.id, { class_id: bindForm.class_id || null });
-      }
-      if (bindForm.admin_id !== undefined) {
-        await api.devices.bindAdmin(selectedDevice.id, { admin_id: bindForm.admin_id || null });
-      }
-
-      loadDevices(true);
-      closeBindModal();
-      showToast('success', '设备绑定成功');
-    } catch (error) {
-      showToast('error', '绑定失败: ' + (error as Error).message);
-    }
-  }, [selectedDevice, bindForm, showToast, loadDevices, closeBindModal]);
-
-  const handleOpenBindModal = useCallback(
-    (device: Device) => {
-      setSelectedDevice(device);
-      handleBindChange('class_id', (device.class_info_id || '').toString());
-      handleBindChange('admin_id', (device.admin_id || '').toString());
-      openBindModal(device);
-    },
-    [handleBindChange, openBindModal]
-  );
-
-  // M7：统一的远程控制能力（行内快捷开箱与 Modal「发送指令」共用）
-  const performAction = useCallback(
-    async (action: string, device: Device) => {
-      try {
-        await api.devices.remoteControl(device.id, action);
-        showToast('success', `远程指令已发送: ${action}`);
-        return true;
-      } catch (error) {
-        showToast('error', `操作失败: ${(error as Error).message}`);
-        return false;
-      }
-    },
-    [showToast]
-  );
-
-  const handleRemoteControl = useCallback(async () => {
-    if (!selectedDevice || !controlAction) return;
-
-    const ok = await performAction(controlAction, selectedDevice);
-    if (ok) {
-      closeControlModal();
-      setControlAction('');
-    }
-  }, [selectedDevice, controlAction, performAction, closeControlModal]);
-
-  // M7：行内一步到位开A箱/开B箱（保留二次确认，跳过中间弹窗）
-  const handleQuickUnlock = useCallback(
-    async (device: Device, box: 'A' | 'B') => {
-      const action = box === 'A' ? 'unlock_a' : 'unlock_b';
-      const ok = await confirmRef.current({
-        title: '远程开箱',
-        message: `确定要远程打开设备「${device.name || device.device_id}」的${box}箱门吗？`,
-        confirmText: `开${box}箱`,
-        cancelText: '取消',
-        type: box === 'A' ? 'success' : 'danger',
-      });
-      if (!ok) return;
-
-      await performAction(action, device);
-    },
-    [performAction]
-  );
-
-  const handleOTAUpgrade = useCallback(async () => {
-    if (!selectedDevice || !otaForm.firmware_url) return;
-
-    try {
-      await api.devices.otaUpgrade(selectedDevice.id, otaForm);
-      showToast('success', 'OTA升级指令已发送，设备将自动下载并升级');
-      closeOTAModal();
-    } catch (error) {
-      showToast('error', `OTA升级失败: ${(error as Error).message}`);
-    }
-  }, [selectedDevice, otaForm, showToast, closeOTAModal]);
-
-  const handleBulkOTAUpgrade = useCallback(async () => {
-    if (!bulkOtaForm.firmware_url) return;
-
-    try {
-      await api.devices.bulkOTAUpgrade(bulkOtaForm);
-      showToast('success', '批量OTA升级指令已发送');
-      closeBulkOTAModal();
-    } catch (error) {
-      showToast('error', `批量OTA升级失败: ${(error as Error).message}`);
-    }
-  }, [bulkOtaForm, showToast, closeBulkOTAModal]);
-
-  const handleResolveAlert = useCallback(
-    async (deviceId: string, alertId: number) => {
-      try {
-        await api.devices.resolveAlert(deviceId, alertId);
-        showToast('success', '告警已解决');
-        loadDevices(true);
-      } catch (error) {
-        showToast('error', `操作失败: ${(error as Error).message}`);
-      }
-    },
-    [showToast, loadDevices]
-  );
-
-  const handleUpdateSettings = useCallback(async () => {
-    if (!selectedDevice) return;
-
-    try {
-      await api.devices.updateSettings(
-        selectedDevice.id,
-        deviceSettings as unknown as Record<string, unknown>
-      );
-      showToast('success', '设备设置已更新');
-      closeSettingsModal();
-      loadDevices(true); // M3: 保存后立即刷新列表（含设备名/状态），避免等轮询
-    } catch (error) {
-      showToast('error', `操作失败: ${(error as Error).message}`);
-    }
-  }, [selectedDevice, deviceSettings, showToast, closeSettingsModal, loadDevices]);
-
+  // ---- 视图层提交守卫 / 关闭回调（适配 useForm 泛型 handleChange -> (field, unknown) ----
   const openControlModal = useCallback(
     (device: Device) => {
       setSelectedDevice(device);
@@ -627,78 +376,6 @@ export function useDeviceManagementLogic() {
     },
     [handleDeviceSettingsChange, openSettingsModalInternal]
   );
-
-  const statsDisplay = useMemo(
-    () => ({
-      total: stats.total || 0,
-      online: stats.online || 0,
-      offline: stats.offline || 0,
-      todayHeartbeats: stats.today_heartbeats || 0,
-    }),
-    [stats]
-  );
-
-  const devicesWithSignal = useMemo(() => {
-    return devices.map((device) => ({
-      ...device,
-      signalInfo: getSignalStrength(device.wifi_signal),
-    }));
-  }, [devices]);
-
-  const filteredDevices = useMemo(() => {
-    if (!debouncedSearchTerm.trim()) {
-      return devicesWithSignal;
-    }
-    const searchLower = debouncedSearchTerm.toLowerCase();
-    return devicesWithSignal.filter((device) => {
-      const deviceId = (device.device_id || '').toLowerCase();
-      const deviceName = (device.name || '').toLowerCase();
-      const className = (device.class_name || '').toLowerCase();
-      return (
-        deviceId.includes(searchLower) ||
-        deviceName.includes(searchLower) ||
-        className.includes(searchLower)
-      );
-    });
-  }, [devicesWithSignal, debouncedSearchTerm]);
-
-  const signalDistribution = useMemo(() => {
-    const distribution: { excellent: number; good: number; fair: number; poor: number } = {
-      excellent: 0,
-      good: 0,
-      fair: 0,
-      poor: 0,
-    };
-    devices.forEach((device) => {
-      const info = getSignalStrength(device.wifi_signal);
-      distribution[info.level]++;
-    });
-    return distribution;
-  }, [devices]);
-
-  const deviceColumns = useMemo(
-    () =>
-      createDeviceColumns({
-        handleViewDetail,
-        handleOpenBindModal,
-        openSettingsModal,
-        handleDeleteDevice,
-        handleQuickUnlock,
-      }),
-    [
-      handleViewDetail,
-      handleOpenBindModal,
-      openSettingsModal,
-      handleDeleteDevice,
-      handleQuickUnlock,
-    ]
-  );
-
-  // ---- 视图层提交守卫 / 关闭回调（适配 useForm 泛型 handleChange -> (field, unknown) ----
-  const closeDetailModal = useCallback(() => {
-    setShowDetailModal(false);
-    setSelectedDevice(null);
-  }, []);
 
   const deviceSettingsChange = useCallback(
     (field: keyof DeviceSettings, value: unknown) =>
@@ -719,29 +396,81 @@ export function useDeviceManagementLogic() {
   );
 
   const submitAddDevice = useCallback(
-    () => runSubmit(handleAddDevice),
-    [runSubmit, handleAddDevice]
+    () => runSubmit(crud.handleAddDevice),
+    [runSubmit, crud.handleAddDevice]
   );
   const submitBindDevice = useCallback(
-    () => runSubmit(handleBindDevice),
-    [runSubmit, handleBindDevice]
+    () => runSubmit(crud.handleBindDevice),
+    [runSubmit, crud.handleBindDevice]
   );
   const submitRemoteControl = useCallback(
-    () => runSubmit(handleRemoteControl),
-    [runSubmit, handleRemoteControl]
+    () => runSubmit(control.handleRemoteControl),
+    [runSubmit, control.handleRemoteControl]
   );
   const submitUpdateSettings = useCallback(
-    () => runSubmit(handleUpdateSettings),
-    [runSubmit, handleUpdateSettings]
+    () => runSubmit(control.handleUpdateSettings),
+    [runSubmit, control.handleUpdateSettings]
   );
   const submitOTAUpgrade = useCallback(
-    () => runSubmit(handleOTAUpgrade),
-    [runSubmit, handleOTAUpgrade]
+    () => runSubmit(ota.handleOTAUpgrade),
+    [runSubmit, ota.handleOTAUpgrade]
   );
   const submitBulkOTAUpgrade = useCallback(
-    () => runSubmit(handleBulkOTAUpgrade),
-    [runSubmit, handleBulkOTAUpgrade]
+    () => runSubmit(ota.handleBulkOTAUpgrade),
+    [runSubmit, ota.handleBulkOTAUpgrade]
   );
+
+  const deviceColumns = useMemo(
+    () =>
+      createDeviceColumns({
+        handleViewDetail: list.handleViewDetail,
+        handleOpenBindModal: crud.handleOpenBindModal,
+        openSettingsModal,
+        handleDeleteDevice: crud.handleDeleteDevice,
+        handleQuickUnlock: control.handleQuickUnlock,
+      }),
+    [
+      list.handleViewDetail,
+      crud.handleOpenBindModal,
+      openSettingsModal,
+      crud.handleDeleteDevice,
+      control.handleQuickUnlock,
+    ]
+  );
+
+  useEffect(() => {
+    loadDevices();
+    list.loadClassesAndAdmins();
+    list.loadOTAStatus();
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let otaInterval: ReturnType<typeof setInterval> | null = null;
+    if (autoRefresh) {
+      interval = setInterval(() => {
+        loadDevices();
+      }, 10000);
+      otaInterval = setInterval(() => {
+        list.loadOTAStatus();
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+      if (otaInterval) clearInterval(otaInterval);
+    };
+  }, [autoRefresh, loadDevices, list.loadClassesAndAdmins, list.loadOTAStatus]);
+
+  useEffect(() => {
+    if (Object.keys(deviceStatuses).length > 0) {
+      setDevices((prev) =>
+        prev.map((device) => {
+          const updatedStatus = deviceStatuses[device.device_id];
+          if (updatedStatus) {
+            return { ...device, status: updatedStatus };
+          }
+          return device;
+        })
+      );
+    }
+  }, [deviceStatuses]);
 
   return {
     // —— 壳层 / 顶部 ——
@@ -749,13 +478,13 @@ export function useDeviceManagementLogic() {
     setActiveTab,
     isRefreshing,
     throttledRefresh,
-    handleExport,
-    openImportModal,
+    handleExport: list.handleExport,
+    openImportModal: list.openImportModal,
     openAddModal,
     closeAddModal,
     openBulkOTAModal,
     // —— 统计 / 监控 ——
-    statsDisplay,
+    statsDisplay: list.statsDisplay,
     statsError,
     initialLoading,
     advancedStats,
@@ -765,13 +494,13 @@ export function useDeviceManagementLogic() {
     setSearchInput,
     autoRefresh,
     setAutoRefresh,
-    filteredDevices,
+    filteredDevices: list.filteredDevices,
     deviceColumns,
     devices,
-    signalDistribution,
+    signalDistribution: list.signalDistribution,
     openControlModal,
     openSettingsModal,
-    handleResolveAlert,
+    handleResolveAlert: list.handleResolveAlert,
     // —— 弹窗开关 ——
     showAddModal,
     showDetailModal,
@@ -799,10 +528,16 @@ export function useDeviceManagementLogic() {
     controlAction,
     otaProgressData,
     submitting,
+    // —— 设备密钥（差异 #4 阶段 3）——
+    secretStatus: secret.secretStatus,
+    secretStatusLoading: secret.secretStatusLoading,
+    issuedSecret: secret.issuedSecret,
+    submitIssueSecret: secret.submitIssueSecret,
+    submitRevokeSecret: secret.submitRevokeSecret,
     // —— handler ——
     handleNewDeviceChange,
     submitAddDevice,
-    closeDetailModal,
+    closeDetailModal: list.closeDetailModal,
     handleBindChange,
     submitBindDevice,
     closeBindModal,
@@ -819,11 +554,11 @@ export function useDeviceManagementLogic() {
     submitBulkOTAUpgrade,
     closeBulkOTAModal,
     setShowOTAProgressModal,
-    loadOTAStatus,
-    closeImportModal,
-    handleFileChange,
-    handleImport,
-    handleExportErrors,
+    loadOTAStatus: list.loadOTAStatus,
+    closeImportModal: list.closeImportModal,
+    handleFileChange: list.handleFileChange,
+    handleImport: list.handleImport,
+    handleExportErrors: list.handleExportErrors,
   };
 }
 

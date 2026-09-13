@@ -481,150 +481,20 @@ class SubjectImport(Resource):
     def post(self):
         """从JSON或Excel文件导入科目数据（支持配置映射）"""
         content_type = request.content_type or ""
-        config_id = request.args.get("config_id", type=int)
-
-        config = None
-        if config_id:
-            config = get_by_id(ImportConfig, config_id)
-        else:
-            config = ImportConfig.query.filter(
-                ImportConfig.import_type == "subjects", ImportConfig.is_active
-            ).first()
-
-        default_mappings = [
-            {
-                "source_field": "科目名称",
-                "target_field": "name",
-                "field_type": "string",
-                "required": True,
-            },
-            {"source_field": "科目代码", "target_field": "code", "field_type": "string"},
-            {"source_field": "年级", "target_field": "grade", "field_type": "string"},
-            {"source_field": "描述", "target_field": "description", "field_type": "string"},
-            {"source_field": "颜色", "target_field": "color", "field_type": "string"},
-            {"source_field": "是否启用", "target_field": "is_active", "field_type": "boolean"},
-            {
-                "source_field": "班级名称",
-                "target_field": "class_name",
-                "field_type": "string",
-                "relation": "class",
-            },
-            {
-                "source_field": "班级ID",
-                "target_field": "class_id",
-                "field_type": "integer",
-                "relation": "class",
-            },
-            {
-                "source_field": "教师姓名",
-                "target_field": "teacher_name",
-                "field_type": "string",
-                "relation": "admin",
-            },
-            {
-                "source_field": "教师ID",
-                "target_field": "teacher_id",
-                "field_type": "integer",
-                "relation": "admin",
-            },
-        ]
-
-        config_data = config.config_data if config else {}
-        field_mappings = (
-            config_data.get("field_mappings", default_mappings) if config_data else default_mappings
-        )
-        validation_rules = config_data.get("validation_rules", []) if config_data else []
-        conflict_strategy = (
-            config_data.get("conflict_strategy", "update") if config_data else "update"
-        )
-        default_values = config_data.get("default_values", {}) if config_data else {}
-
+        config = _resolve_subject_import_config(request.args.get("config_id", type=int))
+        (
+            field_mappings,
+            validation_rules,
+            conflict_strategy,
+            default_values,
+        ) = _build_subject_import_config(config)
         import_list = []
-
         if "multipart/form-data" in content_type:
-            if "file" not in request.files:
-                return APIResponse.error(message="请上传文件", status_code=400)
-
-            file = request.files["file"]
-            if not file.filename:
-                return APIResponse.error(message="请选择文件", status_code=400)
-
-            filename = file.filename.lower()
-
-            if filename.endswith(".json"):
-                file_content = file.read()
-                try:
-                    json_data = json.loads(file_content.decode("utf-8"))
-                    if isinstance(json_data, list):
-                        import_list = json_data
-                    elif isinstance(json_data, dict) and "data" in json_data:
-                        import_list = json_data["data"]
-                    else:
-                        return APIResponse.error(
-                            message="JSON格式错误：应为数组或包含data字段的对象", status_code=400
-                        )
-                except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                    logger.error("%s: %s", "JSON解析失败", e)
-                    return APIResponse.error(message="JSON解析失败", status_code=400)
-            elif filename.endswith(".xlsx") or filename.endswith(".xls"):
-                file_content = file.read()
-                parse_result = excel_import_service.parse_excel_file(file_content)
-
-                if not parse_result.get("success"):
-                    return APIResponse.error(
-                        message=parse_result.get("error", "文件解析失败"), status_code=400
-                    )
-
-                headers = parse_result.get("headers", [])
-                parsed_rows = parse_result.get("data", [])
-
-                col_map = {}
-                for idx, header in enumerate(headers):
-                    if header:
-                        col_map[header] = idx
-
-                for row_idx, row_data in enumerate(parsed_rows):
-                    mapped_item = {}
-                    row_has_required = True
-                    for mapping in field_mappings:
-                        source_val = row_data.get(mapping["source_field"])
-                        target_field = mapping["target_field"]
-                        field_type = mapping.get("field_type", "string")
-
-                        if source_val is None or source_val == "":
-                            if mapping.get("required"):
-                                row_has_required = False
-                                break
-                            source_val = mapping.get(
-                                "default_value", default_values.get(target_field)
-                            )
-
-                        if field_type == "boolean":
-                            if isinstance(source_val, str):
-                                mapped_item[target_field] = source_val in [
-                                    "是",
-                                    "true",
-                                    "True",
-                                    "1",
-                                ]
-                            else:
-                                mapped_item[target_field] = bool(source_val)
-                        else:
-                            mapped_item[target_field] = source_val
-
-                    if not row_has_required:
-                        import_list.append(
-                            {
-                                "__error__": True,
-                                "__message__": f'第{row_idx + 2}行: 缺少必填字段"科目名称"',
-                            }
-                        )
-                    elif mapped_item.get("name"):
-                        import_list.append(mapped_item)
-            else:
-                return APIResponse.error(
-                    message="仅支持 .xlsx、.xls 或 .json 格式", status_code=400
-                )
+            import_list, err = _parse_subject_multipart_file(
+                request.files, field_mappings, default_values
+            )
+            if err is not None:
+                return err
         elif "application/json" in content_type:
             data = request.json
             if not data or "data" not in data:
@@ -632,7 +502,6 @@ class SubjectImport(Resource):
             import_list = data["data"]
         else:
             return APIResponse.error(message="不支持的文件格式", status_code=400)
-
         result = academics_service.execute_subject_import(
             import_list=import_list,
             validation_rules=validation_rules,
@@ -655,3 +524,144 @@ class SubjectOrder(Resource):
         academics_service.update_subject_order(data)
         invalidate_cache("api:/api/subjects/*")
         return APIResponse.success(message="排序更新成功")
+
+
+def _resolve_subject_import_config(config_id):
+    if config_id:
+        return get_by_id(ImportConfig, config_id)
+    return ImportConfig.query.filter(
+        ImportConfig.import_type == "subjects", ImportConfig.is_active
+    ).first()
+
+
+def _build_subject_import_config(config):
+    default_mappings = [
+        {
+            "source_field": "科目名称",
+            "target_field": "name",
+            "field_type": "string",
+            "required": True,
+        },
+        {"source_field": "科目代码", "target_field": "code", "field_type": "string"},
+        {"source_field": "年级", "target_field": "grade", "field_type": "string"},
+        {"source_field": "描述", "target_field": "description", "field_type": "string"},
+        {"source_field": "颜色", "target_field": "color", "field_type": "string"},
+        {"source_field": "是否启用", "target_field": "is_active", "field_type": "boolean"},
+        {
+            "source_field": "班级名称",
+            "target_field": "class_name",
+            "field_type": "string",
+            "relation": "class",
+        },
+        {
+            "source_field": "班级ID",
+            "target_field": "class_id",
+            "field_type": "integer",
+            "relation": "class",
+        },
+        {
+            "source_field": "教师姓名",
+            "target_field": "teacher_name",
+            "field_type": "string",
+            "relation": "admin",
+        },
+        {
+            "source_field": "教师ID",
+            "target_field": "teacher_id",
+            "field_type": "integer",
+            "relation": "admin",
+        },
+    ]
+    config_data = config.config_data if config else {}
+    field_mappings = (
+        config_data.get("field_mappings", default_mappings) if config_data else default_mappings
+    )
+    validation_rules = config_data.get("validation_rules", []) if config_data else []
+    conflict_strategy = config_data.get("conflict_strategy", "update") if config_data else "update"
+    default_values = config_data.get("default_values", {}) if config_data else {}
+    return (field_mappings, validation_rules, conflict_strategy, default_values)
+
+
+def _parse_subject_multipart_file(files, field_mappings, default_values):
+    if "file" not in files:
+        return None, APIResponse.error(message="请上传文件", status_code=400)
+    file = files["file"]
+    if not file.filename:
+        return None, APIResponse.error(message="请选择文件", status_code=400)
+    filename = file.filename.lower()
+    if filename.endswith(".json"):
+        return _parse_subject_json_file(file)
+    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        return _parse_subject_excel_file(file, field_mappings, default_values)
+    else:
+        return None, APIResponse.error(message="仅支持 .xlsx、.xls 或 .json 格式", status_code=400)
+
+
+def _parse_subject_json_file(file):
+    file_content = file.read()
+    try:
+        json_data = json.loads(file_content.decode("utf-8"))
+        if isinstance(json_data, list):
+            return json_data, None
+        elif isinstance(json_data, dict) and "data" in json_data:
+            return json_data["data"], None
+        else:
+            return None, APIResponse.error(
+                message="JSON格式错误：应为数组或包含data字段的对象", status_code=400
+            )
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        logger.error("%s: %s", "JSON解析失败", e)
+        return None, APIResponse.error(message="JSON解析失败", status_code=400)
+
+
+def _parse_subject_excel_file(file, field_mappings, default_values):
+    file_content = file.read()
+    parse_result = excel_import_service.parse_excel_file(file_content)
+    if not parse_result.get("success"):
+        return None, APIResponse.error(
+            message=parse_result.get("error", "文件解析失败"), status_code=400
+        )
+    headers = parse_result.get("headers", [])
+    parsed_rows = parse_result.get("data", [])
+    import_list = _map_subject_excel_rows(parsed_rows, field_mappings, default_values)
+    return import_list, None
+
+
+def _map_subject_excel_rows(parsed_rows, field_mappings, default_values):
+    import_list = []
+    for row_idx, row_data in enumerate(parsed_rows):
+        mapped_item, row_has_required = _map_subject_row(
+            row_data, row_idx, field_mappings, default_values
+        )
+        if not row_has_required:
+            import_list.append(
+                {
+                    "__error__": True,
+                    "__message__": f'第{row_idx + 2}行: 缺少必填字段"科目名称"',
+                }
+            )
+        elif mapped_item.get("name"):
+            import_list.append(mapped_item)
+    return import_list
+
+
+def _map_subject_row(row_data, row_idx, field_mappings, default_values):
+    mapped_item = {}
+    row_has_required = True
+    for mapping in field_mappings:
+        source_val = row_data.get(mapping["source_field"])
+        target_field = mapping["target_field"]
+        field_type = mapping.get("field_type", "string")
+        if source_val is None or source_val == "":
+            if mapping.get("required"):
+                row_has_required = False
+                break
+            source_val = mapping.get("default_value", default_values.get(target_field))
+        if field_type == "boolean":
+            if isinstance(source_val, str):
+                mapped_item[target_field] = source_val in ["是", "true", "True", "1"]
+            else:
+                mapped_item[target_field] = bool(source_val)
+        else:
+            mapped_item[target_field] = source_val
+    return mapped_item, row_has_required

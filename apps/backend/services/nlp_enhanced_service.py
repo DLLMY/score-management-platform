@@ -1747,90 +1747,82 @@ class EnhancedNLPParserService:
 
         user_names = self._get_user_names()
         name_to_id = self._get_name_to_id()
+        behavior_kw_list = [
+            kw["keyword"] for kw in self._get_behavior_keywords() if isinstance(kw, dict)
+        ]
 
-        behavior_keywords = self._get_behavior_keywords()
+        result = self._match_exact_user_name(text, user_names, name_to_id, behavior_kw_list)
+        if result is not None:
+            return result
 
-        # 缓存为纯 dict 列表（#912 实机：ORM 对象脱离 session 后访问属性 DetachedInstanceError）
-        behavior_kw_list = [kw["keyword"] for kw in behavior_keywords if isinstance(kw, dict)]
+        result = self._match_name_by_pattern(text, name_to_id)
+        if result is not None:
+            return result
 
-        # N1 修复: user_names 为 set 无序遍历，当一名学生姓名是另一名学生姓名的子串
-        # （如 "小明" ⊂ "王小明"）时，命中选择取决于 set 迭代顺序 → 可能把"王小明"误判为
-        # "小明"，分数记错人。改为按长度降序遍历，长名优先，消除子串碰撞导致的归因错误。
+        result = self._match_name_by_length_fallback(text, name_to_id)
+        return result if result is not None else (None, None)
+
+    def _match_exact_user_name(self, text, user_names, name_to_id, behavior_kw_list):
         for name in sorted(user_names, key=len, reverse=True):
             if name in text:
                 name_pos = text.index(name)
-                valid = True
-
-                if name_pos > 0:
-                    for prefix in self.name_prefix_words:
-                        if text.startswith(prefix, max(0, name_pos - len(prefix)), name_pos):
-                            valid = False
-                            break
-
-                if valid and name_pos + len(name) < len(text):
-                    found_suffix = False
-                    for suffix in self.name_suffix_words:
-                        if text.startswith(suffix, name_pos + len(name)):
-                            found_suffix = True
-                            break
-
-                    if found_suffix:
-                        valid = True
-                    else:
-                        remaining_text = text[name_pos + len(name) :]
-                        matched_behavior = False
-                        for kw in behavior_kw_list:
-                            if remaining_text.startswith(kw):
-                                matched_behavior = True
-                                break
-
-                        if matched_behavior:
-                            valid = True
-                        else:
-                            next_char = text[name_pos + len(name)]
-                            if next_char not in "，。！？、 ":
-                                valid = False
-
-                if valid:
+                if self._check_name_validity(text, name, name_pos, behavior_kw_list):
                     return name, name_to_id.get(name)
+        return None
 
+    def _check_name_validity(self, text, name, name_pos, behavior_kw_list):
+        if name_pos > 0:
+            for prefix in self.name_prefix_words:
+                if text.startswith(prefix, max(0, name_pos - len(prefix)), name_pos):
+                    return False
+        if name_pos + len(name) >= len(text):
+            return True
+        for suffix in self.name_suffix_words:
+            if text.startswith(suffix, name_pos + len(name)):
+                return True
+        remaining_text = text[name_pos + len(name):]
+        for kw in behavior_kw_list:
+            if remaining_text.startswith(kw):
+                return True
+        return text[name_pos + len(name)] in "，。！？、 "
+
+    def _match_name_by_pattern(self, text, name_to_id):
+        invalid_chars = (
+            "同学上课昨天今天刚才为给对让是表现作业发言迟到早退旷课"
+            "学生积极主动认真努力优秀良好出色进步按时准时及时提前"
+            "把因为奖励惩罚批评表扬处罚"
+        )
         for pattern in self.name_patterns:
             match = pattern.search(text)
             if match:
                 name = match.group(1)
                 if 2 <= len(name) <= 4:
-                    invalid_chars = (
-                        "同学上课昨天今天刚才为给对让是表现作业发言迟到早退旷课"
-                        "学生积极主动认真努力优秀良好出色进步按时准时及时提前"
-                        "把因为奖励惩罚批评表扬处罚"
-                    )
                     if name not in self.invalid_names and not any(
                         char in invalid_chars for char in name
                     ):
                         if name in name_to_id:
                             return name, name_to_id[name]
                         return name, None
+        return None
 
-        # N2 修复: 未知姓名兜底按长度降序（4→3→2）尝试，避免 "王小明" 先被 {2} 模式
-        # 截断为 "王小"。range 步长 -1，从 min(len,4) 向下到 2。
+    def _match_name_by_length_fallback(self, text, name_to_id):
+        behavior_kw_list = [
+            kw["keyword"] if isinstance(kw, dict) else str(kw)
+            for kw in self._get_behavior_keywords()
+        ]
         for i in range(min(len(text), 4), 1, -1):
             if i <= len(text):
                 candidate = text[:i]
                 if candidate in self.invalid_names:
                     continue
                 remaining = text[i:]
-                # 获取行为关键词列表（纯 dict，缓存脱离 session 安全）
-                keyword_objs = self._get_behavior_keywords()
-                behavior_kw_list = [
-                    kw["keyword"] if isinstance(kw, dict) else str(kw) for kw in keyword_objs
-                ]
                 for kw in behavior_kw_list:
                     if remaining.startswith(kw):
                         if candidate in name_to_id:
                             return candidate, name_to_id[candidate]
                         return candidate, None
+        return None
 
-        return None, None
 
     def extract_entities(self, text, name=None):
         if name:
@@ -1847,8 +1839,21 @@ class EnhancedNLPParserService:
             "behaviors": [],
         }
 
-        user_names = self._get_user_names()
+        self._extract_entity_names(text, entities)
 
+        self._extract_entity_times(text, entities)
+
+        self._extract_entity_numbers(text, entities)
+
+        self._extract_entity_dates(text, entities)
+
+        self._extract_entity_behaviors(text_no_name, entities)
+
+        return entities
+
+
+    def _extract_entity_names(self, text, entities):
+        user_names = self._get_user_names()
         for user_name in user_names:
             if user_name in text:
                 entities["names"].append(
@@ -1860,6 +1865,7 @@ class EnhancedNLPParserService:
                     }
                 )
 
+    def _extract_entity_times(self, text, entities):
         time_patterns = [
             (r"(\d+)分钟", "minutes"),
             (r"(\d+)小时", "hours"),
@@ -1869,7 +1875,6 @@ class EnhancedNLPParserService:
             (r"迟到(\d+)分钟", "late_minutes"),
             (r"早退(\d+)分钟", "early_minutes"),
         ]
-
         for pattern, entity_type in time_patterns:
             for match in re.finditer(pattern, text):
                 entities["times"].append(
@@ -1882,6 +1887,7 @@ class EnhancedNLPParserService:
                     }
                 )
 
+    def _extract_entity_numbers(self, text, entities):
         number_patterns = [
             (r"(\d+\.?\d*)分", "score"),
             (r"加(\d+\.?\d*)", "add_value"),
@@ -1891,7 +1897,6 @@ class EnhancedNLPParserService:
             (r"(\d+)个", "quantity"),
             (r"(\d+)人", "people"),
         ]
-
         for pattern, entity_type in number_patterns:
             for match in re.finditer(pattern, text):
                 try:
@@ -1923,6 +1928,7 @@ class EnhancedNLPParserService:
                 except ValueError:
                     pass
 
+    def _extract_entity_dates(self, text, entities):
         date_patterns = [
             (r"今天", "today"),
             (r"昨天", "yesterday"),
@@ -1932,7 +1938,6 @@ class EnhancedNLPParserService:
             (r"(\d+)月(\d+)号", "date"),
             (r"(\d{4})年(\d+)月(\d+)日", "full_date"),
         ]
-
         for pattern, entity_type in date_patterns:
             for match in re.finditer(pattern, text):
                 date_value = None
@@ -1944,7 +1949,6 @@ class EnhancedNLPParserService:
                     date_value = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
                 elif entity_type == "tomorrow":
                     date_value = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-
                 entities["dates"].append(
                     {
                         "text": match.group(0),
@@ -1955,8 +1959,7 @@ class EnhancedNLPParserService:
                     }
                 )
 
-        # S10 修复: 每请求全表查行为词库 → 走 _refresh_cache 300s TTL 缓存
-        # 缓存为纯 dict 列表（#912 实机：ORM 对象脱离 session 后访问属性 DetachedInstanceError）
+    def _extract_entity_behaviors(self, text_no_name, entities):
         behavior_keywords = self._get_behavior_keywords()
         for kw in behavior_keywords:
             if not isinstance(kw, dict):
@@ -1974,8 +1977,6 @@ class EnhancedNLPParserService:
                     }
                 )
 
-        return entities
-
     def extract_behavior(self, text, name=None):
         text = text.strip()
 
@@ -1990,6 +1991,26 @@ class EnhancedNLPParserService:
 
         expanded_texts = self._expand_synonyms(text_no_name)
 
+        self._match_behavior_patterns(text_no_name, expanded_texts, behavior_keywords, matched_patterns, matched_keywords)
+
+        self._match_behavior_keywords(text_no_name, expanded_texts, behavior_keywords, matched_keywords)
+
+        if self.jieba_initialized:
+            self._match_behavior_jieba(text_no_name, behavior_keywords, matched_keywords)
+
+        positive_count, negative_count = self._count_behavior_sentiment(text_no_name)
+
+        return {
+            "keywords": matched_keywords,
+            "patterns": matched_patterns,
+            "positive_count": positive_count,
+            "negative_count": negative_count,
+            "text": text_no_name.strip(),
+            "expanded_texts": expanded_texts,
+        }
+
+
+    def _match_behavior_patterns(self, text_no_name, expanded_texts, behavior_keywords, matched_patterns, matched_keywords):
         for pattern_name, patterns in self.behavior_patterns.items():
             for pattern in patterns:
                 for expanded_text in expanded_texts:
@@ -2015,6 +2036,7 @@ class EnhancedNLPParserService:
                             )
                         break
 
+    def _match_behavior_keywords(self, text_no_name, expanded_texts, behavior_keywords, matched_keywords):
         for kw in behavior_keywords:
             if not isinstance(kw, dict):
                 continue
@@ -2042,51 +2064,50 @@ class EnhancedNLPParserService:
                                 )
                             )
 
-        if self.jieba_initialized:
-            words = jieba.lcut(text_no_name)
-            for word in words:
-                if len(word) >= 2:
-                    kw = next(
+    def _match_behavior_jieba(self, text_no_name, behavior_keywords, matched_keywords):
+        words = jieba.lcut(text_no_name)
+        for word in words:
+            if len(word) >= 2:
+                kw = next(
+                    (
+                        k
+                        for k in behavior_keywords
+                        if isinstance(k, dict) and k["keyword"] == word
+                    ),
+                    None,
+                )
+                if kw and word not in [k[0] for k in matched_keywords]:
+                    matched_keywords.append(
                         (
-                            k
-                            for k in behavior_keywords
-                            if isinstance(k, dict) and k["keyword"] == word
-                        ),
-                        None,
-                    )
-                    if kw and word not in [k[0] for k in matched_keywords]:
-                        matched_keywords.append(
-                            (
-                                word,
-                                kw["keyword_type"],
-                                kw["score_type"],
-                                kw["default_score"],
-                            )
+                            word,
+                            kw["keyword_type"],
+                            kw["score_type"],
+                            kw["default_score"],
                         )
-
-                    for base_word, synonyms in self.synonym_expansion.items():
-                        if word == base_word or word in synonyms:
-                            kw = next(
+                    )
+                for base_word, synonyms in self.synonym_expansion.items():
+                    if word == base_word or word in synonyms:
+                        kw = next(
+                            (
+                                k
+                                for k in behavior_keywords
+                                if isinstance(k, dict) and k["keyword"] == base_word
+                            ),
+                            None,
+                        )
+                        if kw and base_word not in [k[0] for k in matched_keywords]:
+                            matched_keywords.append(
                                 (
-                                    k
-                                    for k in behavior_keywords
-                                    if isinstance(k, dict) and k["keyword"] == base_word
-                                ),
-                                None,
-                            )
-                            if kw and base_word not in [k[0] for k in matched_keywords]:
-                                matched_keywords.append(
-                                    (
-                                        base_word,
-                                        kw["keyword_type"],
-                                        kw["score_type"],
-                                        kw["default_score"],
-                                    )
+                                    base_word,
+                                    kw["keyword_type"],
+                                    kw["score_type"],
+                                    kw["default_score"],
                                 )
+                            )
 
+    def _count_behavior_sentiment(self, text_no_name):
         positive_count = 0
         negative_count = 0
-
         if self.jieba_initialized:
             words = jieba.lcut(text_no_name)
             for word in words:
@@ -2101,15 +2122,7 @@ class EnhancedNLPParserService:
             for kw in self.negative_keywords:
                 if kw in text_no_name:
                     negative_count += 1
-
-        return {
-            "keywords": matched_keywords,
-            "patterns": matched_patterns,
-            "positive_count": positive_count,
-            "negative_count": negative_count,
-            "text": text_no_name.strip(),
-            "expanded_texts": expanded_texts,
-        }
+        return positive_count, negative_count
 
     def _has_antonym_conflict(self, text, rule):
         rule_text = ""
@@ -2129,61 +2142,59 @@ class EnhancedNLPParserService:
 
     def determine_intent(self, text, behavior_result):
         text_lower = text.lower()
-        # S6 修复: 否定词前缀（"不要扣分/别加分/禁止减分"含意图词子串 → 原误判意图）
-        _NEG_PREFIXES = ("不要", "别", "请勿", "禁止", "不想", "别给", "别扣", "别加")
+        rule_hits = self._collect_intent_rule_hits(text_lower)
+        if self._is_query_intent(text_lower, rule_hits):
+            return "query"
+        if "reset" in rule_hits:
+            return "reset"
+        resolved = self._resolve_add_deduct_intent(rule_hits, behavior_result)
+        if resolved is not None:
+            return resolved
+        return self._resolve_intent_from_keywords_sentiment(behavior_result)
 
-        # #3 深化: 原逻辑取「首个」命中意图即返回（dict 顺序 add>deduct>query>reset），
-        # 导致同时含动作词与查询词的句子（如"小明加了多少分"）被误判为 add/deduct。
-        # 改为收集全部「非否定」命中意图，再按 疑问优先 > reset > add/deduct 的语义层级裁决。
+    def _collect_intent_rule_hits(self, text_lower):
+        _NEG_PREFIXES = ("不要", "别", "请勿", "禁止", "不想", "别给", "别扣", "别加")
         rule_hits = {}
         for intent, keywords in self.intent_keywords.items():
             for kw in keywords:
                 kw_pos = text_lower.find(kw)
                 if kw_pos == -1:
                     continue
-                # N4 修复: 否定词检测窗口由前 2 字放宽到前 5 字，覆盖
-                # "不要给他加分" 类否定词距关键词 >2 字的情形（原漏判 → 误标 add）
                 prefix_ctx = text_lower[max(0, kw_pos - 5) : kw_pos]
                 if any(prefix_ctx.endswith(neg) for neg in _NEG_PREFIXES):
-                    continue  # 否定前缀 → 不命中该意图
+                    continue
                 if intent not in rule_hits:
                     rule_hits[intent] = (kw, kw_pos)
+        return rule_hits
 
-        # 疑问/查询句式优先：句子含疑问标记（多少/怎么/吗/查询/查看/几分 或 ?）且
-        # 同时涉及加减分动作时，应判 query（问询而非执行），消除"小明加了多少分/
-        # 他扣分了吗"类误判。仅依赖配置 query 词表会漏掉"吗/多少分"等疑问标记，
-        # 故以标记 + 计分动作双条件直接判定 query（避免被配置词表覆盖导致误判 add/deduct）。
+    def _is_query_intent(self, text_lower, rule_hits):
         _QUERY_MARKERS = ("?", "？", "多少", "怎么", "如何", "吗", "查询", "查看", "几分")
         _SCORING_HINTS = ("加", "扣", "分", "积分", "成绩", "得分", "点")
         is_query_question = any(m in text_lower for m in _QUERY_MARKERS)
         involves_scoring = any(h in text_lower for h in _SCORING_HINTS)
-        if is_query_question and ("query" in rule_hits or involves_scoring):
-            return "query"
+        return is_query_question and ("query" in rule_hits or involves_scoring)
 
-        # reset 动作优先于 add/deduct
-        if "reset" in rule_hits:
-            return "reset"
-
-        # 动作意图：add/deduct 共存时按行为关键词/情感决定主导意图
-        if "add" in rule_hits or "deduct" in rule_hits:
-            if "add" in rule_hits and "deduct" in rule_hits:
-                keywords = behavior_result.get("keywords")
-                if keywords:
-                    for kw in keywords:
-                        if kw[2] == "deduct":
-                            return "deduct"
-                        if kw[2] == "add":
-                            return "add"
-                positive_count = behavior_result.get("positive_count", 0)
-                negative_count = behavior_result.get("negative_count", 0)
-                if negative_count > positive_count:
-                    return "deduct"
-                if positive_count > negative_count:
-                    return "add"
+    def _resolve_add_deduct_intent(self, rule_hits, behavior_result):
+        if "add" not in rule_hits and "deduct" not in rule_hits:
+            return None
+        if "add" in rule_hits and "deduct" in rule_hits:
+            keywords = behavior_result.get("keywords")
+            if keywords:
+                for kw in keywords:
+                    if kw[2] == "deduct":
+                        return "deduct"
+                    if kw[2] == "add":
+                        return "add"
+            positive_count = behavior_result.get("positive_count", 0)
+            negative_count = behavior_result.get("negative_count", 0)
+            if negative_count > positive_count:
+                return "deduct"
+            if positive_count > negative_count:
                 return "add"
-            return "add" if "add" in rule_hits else "deduct"
+            return "add"
+        return "add" if "add" in rule_hits else "deduct"
 
-        # 关键词意图（基于行为分析）
+    def _resolve_intent_from_keywords_sentiment(self, behavior_result):
         keywords = behavior_result.get("keywords")
         if keywords:
             for kw in keywords:
@@ -2191,17 +2202,14 @@ class EnhancedNLPParserService:
                     return "deduct"
                 if kw[2] == "add":
                     return "add"
-
-        # 情感意图
         positive_count = behavior_result.get("positive_count", 0)
         negative_count = behavior_result.get("negative_count", 0)
         if negative_count > positive_count:
             return "deduct"
         if positive_count > negative_count:
             return "add"
-
-        # 如果没有任何线索，直接返回unknown，避免机器学习调用开销
         return "unknown"
+
 
     def semantic_match(self, text, intent):
         if self.vectorizer is None:
@@ -2384,94 +2392,17 @@ class EnhancedNLPParserService:
 
     def deep_semantic_match(self, text, intent, top_n=5):
         rules = self._get_rules_by_intent(intent)
-
         if not rules:
             return []
-
-        rule_texts = []
-
-        for rule in rules:
-            texts = []
-            if rule.behavior_keyword:
-                texts.append(rule.behavior_keyword)
-            if rule.behavior_description:
-                texts.append(rule.behavior_description)
-            if rule.match_pattern:
-                texts.append(rule.match_pattern)
-            if rule.behavior_tags:
-                texts.extend(rule.behavior_tags)
-            rule_texts.append(" ".join(texts))
-
+        rule_texts = self._build_semantic_rule_texts(rules)
         bm25_index = self._build_bm25_index(rule_texts)
-
-        tfidf_similarities = []
-        if self.vectorizer is not None:
-            X_rules = self.vectorizer.transform(rule_texts)
-            expanded_texts = self._expand_synonyms(text)[:3]
-
-            for expanded_text in expanded_texts:
-                X_text = self.vectorizer.transform([expanded_text])
-                similarities = cosine_similarity(X_text, X_rules)[0]
-                tfidf_similarities.append(similarities)
-
-            if tfidf_similarities:
-                tfidf_final = np.max(tfidf_similarities, axis=0)
-            else:
-                X_text = self.vectorizer.transform([text])
-                tfidf_final = cosine_similarity(X_text, X_rules)[0]
-        else:
-            tfidf_final = np.zeros(len(rules))
-
-        bm25_scores = []
-        for i in range(len(rule_texts)):
-            score = self._bm25_score(text, i, bm25_index)
-            bm25_scores.append(score)
-
-        max_bm25 = max(bm25_scores) if bm25_scores else 1.0
-        if max_bm25 > 0:
-            bm25_normalized = [s / max_bm25 for s in bm25_scores]
-        else:
-            bm25_normalized = bm25_scores
-
+        tfidf_final = self._compute_tfidf_similarities(text, rule_texts)
+        bm25_normalized = self._compute_bm25_normalized(text, rule_texts, bm25_index)
         bert_similarities = self._compute_bert_similarities(text, rule_texts)
-
-        keyword_matches = []
-        for _, rule in enumerate(rules):
-            match_score = 0.0
-            if rule.behavior_keyword:
-                keywords = rule.behavior_keyword.split("|")
-                for kw in keywords:
-                    kw = kw.strip()
-                    if kw in text:
-                        match_score += 0.5
-                    elif any(kw in t for t in self._expand_synonyms(text)):
-                        match_score += 0.3
-            if rule.behavior_tags:
-                for tag in rule.behavior_tags:
-                    if tag in text:
-                        match_score += 0.1
-            keyword_matches.append(min(match_score, 1.0))
-
-        combined_scores = []
-        for i in range(len(rules)):
-            combined = (
-                0.2 * tfidf_final[i]
-                + 0.2 * bm25_normalized[i]
-                + 0.3 * bert_similarities[i]
-                + 0.3 * keyword_matches[i]
-            )
-            combined_scores.append(combined)
-
-        matched_rules = []
-        for i, score in enumerate(combined_scores):
-            if score > 0.15:
-                rule = rules[i]
-                if not self._has_antonym_conflict(text, rule):
-                    matched_rules.append((rule, score))
-
-        matched_rules.sort(key=lambda x: x[1], reverse=True)
-
-        return matched_rules[:top_n]
+        keyword_matches = self._compute_keyword_match_scores(text, rules)
+        return self._combine_semantic_matches(
+            text, rules, tfidf_final, bm25_normalized, bert_similarities, keyword_matches, top_n
+        )
 
     def context_aware_match(self, text, intent, context_history=None):
         semantic_matches = self.deep_semantic_match(text, intent)
@@ -2492,24 +2423,123 @@ class EnhancedNLPParserService:
 
     def multi_intent_detection(self, text, behavior_result):
         text_lower = text.lower()
-        _NEG_PREFIXES = ("不要", "别", "请勿", "禁止", "不想", "别给", "别扣", "别加")
 
+        detected_intents = self._collect_intents_from_keywords(text_lower)
+        self._add_behavior_result_intents(detected_intents, behavior_result)
+        self._add_query_intent_to_set(detected_intents, text_lower)
+        if not detected_intents:
+            detected_intents.add("unknown")
+        if "unknown" in detected_intents and len(detected_intents) > 1:
+            detected_intents.remove("unknown")
+        intent_confidences = self._compute_intent_confidences(detected_intents, behavior_result, text_lower)
+        sorted_intents = sorted(intent_confidences.items(), key=lambda x: x[1], reverse=True)
+        return [
+            {
+                "intent": intent,
+                "confidence": round(confidence, 4),
+            }
+            for intent, confidence in sorted_intents
+        ]
+
+
+    def _build_semantic_rule_texts(self, rules):
+        rule_texts = []
+        for rule in rules:
+            texts = []
+            if rule.behavior_keyword:
+                texts.append(rule.behavior_keyword)
+            if rule.behavior_description:
+                texts.append(rule.behavior_description)
+            if rule.match_pattern:
+                texts.append(rule.match_pattern)
+            if rule.behavior_tags:
+                texts.extend(rule.behavior_tags)
+            rule_texts.append(" ".join(texts))
+        return rule_texts
+
+    def _compute_tfidf_similarities(self, text, rule_texts):
+        tfidf_similarities = []
+        if self.vectorizer is not None:
+            X_rules = self.vectorizer.transform(rule_texts)
+            expanded_texts = self._expand_synonyms(text)[:3]
+            for expanded_text in expanded_texts:
+                X_text = self.vectorizer.transform([expanded_text])
+                similarities = cosine_similarity(X_text, X_rules)[0]
+                tfidf_similarities.append(similarities)
+            if tfidf_similarities:
+                tfidf_final = np.max(tfidf_similarities, axis=0)
+            else:
+                X_text = self.vectorizer.transform([text])
+                tfidf_final = cosine_similarity(X_text, X_rules)[0]
+        else:
+            tfidf_final = np.zeros(len(rule_texts))
+        return tfidf_final
+
+    def _compute_bm25_normalized(self, text, rule_texts, bm25_index):
+        bm25_scores = []
+        for i in range(len(rule_texts)):
+            score = self._bm25_score(text, i, bm25_index)
+            bm25_scores.append(score)
+        max_bm25 = max(bm25_scores) if bm25_scores else 1.0
+        if max_bm25 > 0:
+            return [s / max_bm25 for s in bm25_scores]
+        return bm25_scores
+
+    def _compute_keyword_match_scores(self, text, rules):
+        keyword_matches = []
+        for _, rule in enumerate(rules):
+            match_score = 0.0
+            if rule.behavior_keyword:
+                keywords = rule.behavior_keyword.split("|")
+                for kw in keywords:
+                    kw = kw.strip()
+                    if kw in text:
+                        match_score += 0.5
+                    elif any(kw in t for t in self._expand_synonyms(text)):
+                        match_score += 0.3
+            if rule.behavior_tags:
+                for tag in rule.behavior_tags:
+                    if tag in text:
+                        match_score += 0.1
+            keyword_matches.append(min(match_score, 1.0))
+        return keyword_matches
+
+    def _combine_semantic_matches(self, text, rules, tfidf_final, bm25_normalized, bert_similarities, keyword_matches, top_n):
+        combined_scores = []
+        for i in range(len(rules)):
+            combined = (
+                0.2 * tfidf_final[i]
+                + 0.2 * bm25_normalized[i]
+                + 0.3 * bert_similarities[i]
+                + 0.3 * keyword_matches[i]
+            )
+            combined_scores.append(combined)
+        matched_rules = []
+        for i, score in enumerate(combined_scores):
+            if score > 0.15:
+                rule = rules[i]
+                if not self._has_antonym_conflict(text, rule):
+                    matched_rules.append((rule, score))
+        matched_rules.sort(key=lambda x: x[1], reverse=True)
+        return matched_rules[:top_n]
+
+    def _collect_intents_from_keywords(self, text_lower):
+        _NEG_PREFIXES = ("不要", "别", "请勿", "禁止", "不想", "别给", "别扣", "别加")
         detected_intents = set()
         for intent, keywords in self.intent_keywords.items():
             for kw in keywords:
                 kw_pos = text_lower.find(kw)
                 if kw_pos == -1:
                     continue
-                # #3 深化: 与 determine_intent 一致的否定前缀过滤，避免
-                # "不要加分/别扣分" 误入意图集合（原 multi_intent 缺失该过滤）。
                 prefix_ctx = text_lower[max(0, kw_pos - 5) : kw_pos]
                 if any(prefix_ctx.endswith(neg) for neg in _NEG_PREFIXES):
                     continue
                 detected_intents.add(intent)
+        return detected_intents
 
+    def _add_behavior_result_intents(self, detected_intents, behavior_result):
         positive_count = behavior_result["positive_count"]
         negative_count = behavior_result["negative_count"]
-
         if positive_count > 0 and negative_count == 0:
             detected_intents.add("add")
         elif negative_count > 0 and positive_count == 0:
@@ -2517,30 +2547,25 @@ class EnhancedNLPParserService:
         elif positive_count > 0 and negative_count > 0:
             detected_intents.add("add")
             detected_intents.add("deduct")
-
         keywords = behavior_result["keywords"]
         for kw in keywords:
             detected_intents.add(kw[2])
 
-        if "unknown" in detected_intents and len(detected_intents) > 1:
-            detected_intents.remove("unknown")
-
-        if not detected_intents:
-            detected_intents.add("unknown")
-
-        # #3 深化: 疑问/查询句式给 query 更高置信，使其在 parse 链 all_intents[:2]
-        # 中优先于动作意图（与 determine_intent 的疑问优先裁决保持一致）。
-        # 同时以 疑问标记 + 计分动作 双条件直接补入 query 意图，避免配置 query 词表
-        # 缺失"吗/多少分"等疑问标记时漏判（与 determine_intent 同一判据）。
+    def _add_query_intent_to_set(self, detected_intents, text_lower):
         _QUERY_MARKERS = ("?", "？", "多少", "怎么", "如何", "吗", "查询", "查看", "几分")
         _SCORING_HINTS = ("加", "扣", "分", "积分", "成绩", "得分", "点")
         is_query_question = any(m in text_lower for m in _QUERY_MARKERS)
         involves_scoring = any(h in text_lower for h in _SCORING_HINTS)
         if is_query_question and involves_scoring:
             detected_intents.add("query")
-            if "unknown" in detected_intents and len(detected_intents) > 1:
-                detected_intents.remove("unknown")
 
+    def _compute_intent_confidences(self, detected_intents, behavior_result, text_lower):
+        positive_count = behavior_result["positive_count"]
+        negative_count = behavior_result["negative_count"]
+        _QUERY_MARKERS = ("?", "？", "多少", "怎么", "如何", "吗", "查询", "查看", "几分")
+        _SCORING_HINTS = ("加", "扣", "分", "积分", "成绩", "得分", "点")
+        is_query_question = any(m in text_lower for m in _QUERY_MARKERS)
+        involves_scoring = any(h in text_lower for h in _SCORING_HINTS)
         intent_confidences = {}
         for intent in detected_intents:
             if intent == "add":
@@ -2551,18 +2576,8 @@ class EnhancedNLPParserService:
                 confidence = 0.85 if is_query_question else 0.7
             else:
                 confidence = 0.7
-
             intent_confidences[intent] = confidence
-
-        sorted_intents = sorted(intent_confidences.items(), key=lambda x: x[1], reverse=True)
-
-        return [
-            {
-                "intent": intent,
-                "confidence": round(confidence, 4),
-            }
-            for intent, confidence in sorted_intents
-        ]
+        return intent_confidences
 
     def _get_ml_service(self):
         """T7: 懒加载 ML 训练服务，避免解析器初始化即导入 torch 重型链。
@@ -2832,98 +2847,12 @@ class EnhancedNLPParserService:
 
     def parse_without_correction(self, text):
         name, user_id = self.extract_name(text)
-
         behavior_result = self.extract_behavior(text, name)
         entities = self.extract_entities(text, name)
         primary_intent = self.determine_intent(text, behavior_result)
         all_intents = self.multi_intent_detection(text, behavior_result)
 
-        matched_rules = []
-        behavior_text = behavior_result["text"]
-
-        for intent_info in all_intents[:2]:
-            intent = intent_info["intent"]
-            if intent == "unknown":
-                continue
-
-            keyword_rules = []
-            rules_cache = self._get_rules_by_intent(intent)
-            rules_cache = self._sort_rules_by_dynamic_priority(rules_cache)
-
-            for kw, kw_type, kw_score_type, _ in behavior_result["keywords"]:
-                if kw_score_type != intent:
-                    continue
-
-                for rule in rules_cache:
-                    if rule in [r[0] for r in keyword_rules]:
-                        continue
-
-                    exact_match = False
-                    position_weight = self._get_position_weight(behavior_text, kw)
-                    importance_weight = self._get_keyword_importance(kw_type)
-
-                    if kw == rule.behavior_keyword or rule.behavior_description and kw in rule.behavior_description or rule.behavior_keyword in behavior_text:
-                        exact_match = True
-
-                    if exact_match:
-                        keyword_score = 0.85 + len(kw) * 0.03
-                        keyword_score *= position_weight
-                        keyword_score *= importance_weight
-                        if kw_type == "strong":
-                            keyword_score += 0.05
-                        keyword_rules.append((rule, "keyword", min(keyword_score, 0.98)))
-                    elif kw in rule.behavior_keyword:
-                        keyword_score = 0.65 + len(kw) * 0.05
-                        keyword_score *= position_weight
-                        keyword_score *= importance_weight
-                        if kw_type == "strong":
-                            keyword_score += 0.05
-                        keyword_rules.append((rule, "keyword", min(keyword_score, 0.9)))
-
-            if not keyword_rules:
-                for (
-                    kw,
-                    kw_type,
-                    kw_score_type,
-                    _,
-                ) in behavior_result["keywords"]:
-                    if kw_score_type != intent:
-                        continue
-                    for rule in rules_cache:
-                        if rule in [r[0] for r in keyword_rules]:
-                            continue
-                        if kw in rule.behavior_keyword or rule.behavior_keyword in behavior_text:
-                            position_weight = self._get_position_weight(behavior_text, kw)
-                            importance_weight = self._get_keyword_importance(kw_type)
-                            keyword_score = 0.55 + len(kw) * 0.05
-                            keyword_score *= position_weight
-                            keyword_score *= importance_weight
-                            keyword_rules.append((rule, "keyword", min(keyword_score, 0.85)))
-
-            matched_rules.extend(keyword_rules)
-
-        matched_rules.sort(key=lambda x: x[2], reverse=True)
-
-        best_rule, best_confidence = self.soft_vote_confidence(matched_rules)
-
-        if not matched_rules and primary_intent != "unknown":
-            keywords = behavior_result["keywords"]
-            if keywords:
-                for kw, kw_type, kw_score_type, default_score in keywords:
-                    if kw_score_type == primary_intent:
-                        rule = NLPScoringRule(
-                            behavior_keyword=kw,
-                            behavior_description=f"{kw}行为",
-                            score_value=default_score or (5 if primary_intent == "add" else -5),
-                            score_type=primary_intent,
-                            behavior_tags=[kw_type],
-                            match_pattern=kw,
-                            priority=0,
-                        )
-                        matched_rules.append((rule, "fallback", 0.5))
-
-        if best_rule and best_rule not in [r[0] for r in matched_rules]:
-            matched_rules.insert(0, (best_rule, "soft_vote", best_confidence))
+        matched_rules = self._assemble_matched_rules(behavior_result, primary_intent, all_intents)
 
         result = {
             "success": True,
@@ -2946,22 +2875,131 @@ class EnhancedNLPParserService:
             "entities": entities,
         }
 
+        result["score"] = self._extract_parse_score(entities, primary_intent, matched_rules)
+        self._populate_matched_rules(result, matched_rules)
+
+        if primary_intent == "unknown" or not matched_rules:
+            result["success"] = False
+            result["suggestions"] = self._generate_suggestions(text, behavior_result)
+
+        return result
+
+    def _append_keyword_rule(
+        self, keyword_rules, rule, kw, kw_type, base, multi, cap, behavior_text
+    ):
+        position_weight = self._get_position_weight(behavior_text, kw)
+        importance_weight = self._get_keyword_importance(kw_type)
+        keyword_score = base + len(kw) * multi
+        keyword_score *= position_weight
+        keyword_score *= importance_weight
+        if kw_type == "strong":
+            keyword_score += 0.05
+        keyword_rules.append((rule, "keyword", min(keyword_score, cap)))
+
+    def _is_exact_keyword_match(self, rule, kw, behavior_text):
+        return (
+            kw == rule.behavior_keyword
+            or rule.behavior_description and kw in rule.behavior_description
+            or rule.behavior_keyword in behavior_text
+        )
+
+    def _is_fallback_keyword_match(self, rule, kw, behavior_text):
+        return kw in rule.behavior_keyword or rule.behavior_keyword in behavior_text
+
+    def _collect_fallback_keyword_rules(
+        self, intent, behavior_result, behavior_text, rules_cache, keyword_rules
+    ):
+        if keyword_rules:
+            return keyword_rules
+        for kw, kw_type, kw_score_type, _ in behavior_result["keywords"]:
+            if kw_score_type != intent:
+                continue
+            for rule in rules_cache:
+                if rule in [r[0] for r in keyword_rules]:
+                    continue
+                if self._is_fallback_keyword_match(rule, kw, behavior_text):
+                    self._append_keyword_rule(
+                        keyword_rules, rule, kw, kw_type, 0.55, 0.05, 0.85, behavior_text
+                    )
+        return keyword_rules
+
+    def _collect_intent_keyword_rules(self, intent, behavior_result, behavior_text):
+        keyword_rules = []
+        rules_cache = self._get_rules_by_intent(intent)
+        rules_cache = self._sort_rules_by_dynamic_priority(rules_cache)
+        for kw, kw_type, kw_score_type, _ in behavior_result["keywords"]:
+            if kw_score_type != intent:
+                continue
+            for rule in rules_cache:
+                if rule in [r[0] for r in keyword_rules]:
+                    continue
+                if self._is_exact_keyword_match(rule, kw, behavior_text):
+                    self._append_keyword_rule(
+                        keyword_rules, rule, kw, kw_type, 0.85, 0.03, 0.98, behavior_text
+                    )
+                elif kw in rule.behavior_keyword:
+                    self._append_keyword_rule(
+                        keyword_rules, rule, kw, kw_type, 0.65, 0.05, 0.90, behavior_text
+                    )
+        return self._collect_fallback_keyword_rules(
+            intent, behavior_result, behavior_text, rules_cache, keyword_rules
+        )
+
+    def _build_fallback_rules(self, primary_intent, behavior_result):
+        if primary_intent == "unknown":
+            return []
+        keywords = behavior_result["keywords"]
+        if not keywords:
+            return []
+        fallback = []
+        for kw, kw_type, kw_score_type, default_score in keywords:
+            if kw_score_type == primary_intent:
+                rule = NLPScoringRule(
+                    behavior_keyword=kw,
+                    behavior_description=f"{kw}行为",
+                    score_value=default_score or (5 if primary_intent == "add" else -5),
+                    score_type=primary_intent,
+                    behavior_tags=[kw_type],
+                    match_pattern=kw,
+                    priority=0,
+                )
+                fallback.append((rule, "fallback", 0.5))
+        return fallback
+
+    def _assemble_matched_rules(self, behavior_result, primary_intent, all_intents):
+        matched_rules = []
+        behavior_text = behavior_result["text"]
+        for intent_info in all_intents[:2]:
+            intent = intent_info["intent"]
+            if intent == "unknown":
+                continue
+            keyword_rules = self._collect_intent_keyword_rules(
+                intent, behavior_result, behavior_text
+            )
+            matched_rules.extend(keyword_rules)
+        matched_rules.sort(key=lambda x: x[2], reverse=True)
+        best_rule, best_confidence = self.soft_vote_confidence(matched_rules)
+        if not matched_rules:
+            matched_rules.extend(self._build_fallback_rules(primary_intent, behavior_result))
+        if best_rule and best_rule not in [r[0] for r in matched_rules]:
+            matched_rules.insert(0, (best_rule, "soft_vote", best_confidence))
+        return matched_rules
+
+    def _extract_parse_score(self, entities, primary_intent, matched_rules):
         extracted_scores = entities.get("scores", [])
         if extracted_scores:
             add_scores = [
                 s["value"] for s in extracted_scores if s["type"] in ("add_value", "deduct_value")
             ]
             if add_scores:
-                result["score"] = add_scores[0] if primary_intent == "add" else -add_scores[0]
-            else:
-                first_score = extracted_scores[0]["value"]
-                result["score"] = first_score if primary_intent == "add" else -first_score
-        else:
-            if matched_rules:
-                result["score"] = matched_rules[0][0].score_value or 0
-            else:
-                result["score"] = 0
+                return add_scores[0] if primary_intent == "add" else -add_scores[0]
+            first_score = extracted_scores[0]["value"]
+            return first_score if primary_intent == "add" else -first_score
+        if matched_rules:
+            return matched_rules[0][0].score_value or 0
+        return 0
 
+    def _populate_matched_rules(self, result, matched_rules):
         for rule, method, confidence in matched_rules[:5]:
             result["matched_rules"].append(
                 {
@@ -2982,11 +3020,6 @@ class EnhancedNLPParserService:
                 }
             )
 
-        if primary_intent == "unknown" or not matched_rules:
-            result["success"] = False
-            result["suggestions"] = self._generate_suggestions(text, behavior_result)
-
-        return result
 
     def _trigger_inductive_learning(self, corrections):
         LEARN_THRESHOLD = 3
@@ -3068,115 +3101,17 @@ class EnhancedNLPParserService:
             return correction_result
 
         name, user_id = self.extract_name(text)
-
         if not name and context_history:
-            recent_users = context_history.get("recent_users", [])
-            if recent_users:
-                for referral_word in [
-                    "他",
-                    "她",
-                    "该同学",
-                    "这位同学",
-                    "那位同学",
-                    "同学",
-                ]:
-                    if referral_word in text:
-                        name = recent_users[-1]
-                        name_to_id = self._get_name_to_id()
-                        user_id = name_to_id.get(name)
-                        break
+            ctx_name, ctx_id = self._resolve_context_user(text, context_history)
+            if ctx_name is not None:
+                name, user_id = ctx_name, ctx_id
 
         behavior_result = self.extract_behavior(text, name)
         entities = self.extract_entities(text, name)
         primary_intent = self.determine_intent(text, behavior_result)
         all_intents = self.multi_intent_detection(text, behavior_result)
 
-        matched_rules = []
-        behavior_text = behavior_result["text"]
-
-        for intent_info in all_intents[:2]:
-            intent = intent_info["intent"]
-            if intent == "unknown":
-                continue
-
-            keyword_rules = []
-            rules_cache = self._get_rules_by_intent(intent)
-            rules_cache = self._sort_rules_by_dynamic_priority(rules_cache)
-
-            for kw, kw_type, kw_score_type, _ in behavior_result["keywords"]:
-                if kw_score_type != intent:
-                    continue
-
-                for rule in rules_cache:
-                    if rule in [r[0] for r in keyword_rules]:
-                        continue
-
-                    exact_match = False
-                    position_weight = self._get_position_weight(behavior_text, kw)
-                    importance_weight = self._get_keyword_importance(kw_type)
-
-                    if kw == rule.behavior_keyword or rule.behavior_description and kw in rule.behavior_description or rule.behavior_keyword in behavior_text:
-                        exact_match = True
-
-                    if exact_match:
-                        keyword_score = 0.85 + len(kw) * 0.03
-                        keyword_score *= position_weight
-                        keyword_score *= importance_weight
-                        if kw_type == "strong":
-                            keyword_score += 0.05
-                        keyword_rules.append((rule, "keyword", min(keyword_score, 0.98)))
-                    elif kw in rule.behavior_keyword:
-                        keyword_score = 0.65 + len(kw) * 0.05
-                        keyword_score *= position_weight
-                        keyword_score *= importance_weight
-                        if kw_type == "strong":
-                            keyword_score += 0.05
-                        keyword_rules.append((rule, "keyword", min(keyword_score, 0.9)))
-
-            if not keyword_rules:
-                for (
-                    kw,
-                    kw_type,
-                    kw_score_type,
-                    _,
-                ) in behavior_result["keywords"]:
-                    if kw_score_type != intent:
-                        continue
-                    for rule in rules_cache:
-                        if rule in [r[0] for r in keyword_rules]:
-                            continue
-                        if kw in rule.behavior_keyword or rule.behavior_keyword in behavior_text:
-                            position_weight = self._get_position_weight(behavior_text, kw)
-                            importance_weight = self._get_keyword_importance(kw_type)
-                            keyword_score = 0.55 + len(kw) * 0.05
-                            keyword_score *= position_weight
-                            keyword_score *= importance_weight
-                            keyword_rules.append((rule, "keyword", min(keyword_score, 0.85)))
-
-            matched_rules.extend(keyword_rules)
-
-        matched_rules.sort(key=lambda x: x[2], reverse=True)
-
-        best_rule, best_confidence = self.soft_vote_confidence(matched_rules)
-
-        if not matched_rules and primary_intent != "unknown":
-            keywords = behavior_result["keywords"]
-            if keywords:
-                for kw, kw_type, kw_score_type, default_score in keywords:
-                    if kw_score_type == primary_intent:
-                        rule = NLPScoringRule(
-                            behavior_keyword=kw,
-                            behavior_description=f"{kw}行为",
-                            score_value=default_score or (5 if primary_intent == "add" else -5),
-                            score_type=primary_intent,
-                            behavior_tags=[kw_type],
-                            match_pattern=kw,
-                            priority=0,
-                        )
-                        matched_rules.append((rule, "fallback", 0.5))
-
-        if best_rule and best_rule not in [r[0] for r in matched_rules]:
-            matched_rules.insert(0, (best_rule, "soft_vote", best_confidence))
+        matched_rules = self._assemble_matched_rules(behavior_result, primary_intent, all_intents)
 
         result = {
             "success": True,
@@ -3200,45 +3135,8 @@ class EnhancedNLPParserService:
             "entities": entities,
         }
 
-        # 从entities.scores中提取分数值
-        extracted_scores = entities.get("scores", [])
-        if extracted_scores:
-            # 优先使用add_value或deduct_value类型（明确的加/扣分数）
-            add_scores = [
-                s["value"] for s in extracted_scores if s["type"] in ("add_value", "deduct_value")
-            ]
-            if add_scores:
-                result["score"] = add_scores[0] if primary_intent == "add" else -add_scores[0]
-            else:
-                # 使用第一个找到的分数
-                first_score = extracted_scores[0]["value"]
-                result["score"] = first_score if primary_intent == "add" else -first_score
-        else:
-            # 如果没有提取到分数，使用规则中的默认分数
-            if matched_rules:
-                result["score"] = matched_rules[0][0].score_value or 0
-            else:
-                result["score"] = 0
-
-        for rule, method, confidence in matched_rules[:5]:
-            result["matched_rules"].append(
-                {
-                    "rule_id": rule.id if hasattr(rule, "id") else None,
-                    "behavior_keyword": rule.behavior_keyword,
-                    "behavior_description": rule.behavior_description,
-                    "score_value": rule.score_value,
-                    "score_type": rule.score_type,
-                    "behavior_tags": rule.behavior_tags,
-                    "match_pattern": rule.match_pattern,
-                    "priority": rule.priority,
-                    "usage_count": (rule.usage_count if hasattr(rule, "usage_count") else 0),
-                    "accuracy_rate": (
-                        rule.accuracy_rate if hasattr(rule, "accuracy_rate") else 0.0
-                    ),
-                    "match_confidence": round(confidence, 2),
-                    "match_method": method,
-                }
-            )
+        result["score"] = self._extract_parse_score(entities, primary_intent, matched_rules)
+        self._populate_matched_rules(result, matched_rules)
 
         if primary_intent == "unknown" or not matched_rules:
             result["success"] = False
@@ -3251,6 +3149,25 @@ class EnhancedNLPParserService:
         self._parse_cache[cache_key] = result
 
         return result
+
+    def _resolve_context_user(self, text, context_history):
+        recent_users = context_history.get("recent_users", [])
+        if not recent_users:
+            return None, None
+        for referral_word in [
+            "他",
+            "她",
+            "该同学",
+            "这位同学",
+            "那位同学",
+            "同学",
+        ]:
+            if referral_word in text:
+                name = recent_users[-1]
+                name_to_id = self._get_name_to_id()
+                return name, name_to_id.get(name)
+        return None, None
+
 
     def _calculate_confidence(self, behavior_result, intent, matched_rules):
         score = 0.0
@@ -3348,38 +3265,9 @@ class EnhancedNLPParserService:
     def execute_scoring(self, text, manual_correction=None, context_history=None, sub_clause=False):
         parse_result = self.parse(text, context_history=context_history)
 
-        # #991 修复: 复合句（"张三加5分，李四扣3分"）原"逐条确认"诚实拒绝 → 改为逐子句贯通评分，
-        # 每条指令独立落库一条 ScoreRecord，端点返回 results 列表（全量贯通，不再静默漏记首条之外）。
-        valid_intents = [
-            i
-            for i in parse_result.get("all_intents", [])
-            if isinstance(i, dict) and i.get("intent") not in ("unknown", "query")
-        ]
-        if len(valid_intents) > 1 and not sub_clause:
-            subclauses = self._split_compound_text(text)
-            if len(subclauses) > 1:
-                results = []
-                any_failed = False
-                for sub in subclauses:
-                    sub_result = self.execute_scoring(sub, None, context_history, sub_clause=True)
-                    results.append(sub_result)
-                    if not sub_result.get("success"):
-                        any_failed = True
-                return {
-                    "success": not any_failed,
-                    "message": (
-                        f"已对 {len(subclauses)} 条指令逐条评分"
-                        + ("（部分未成功）" if any_failed else "，全部成功")
-                    ),
-                    "results": results,
-                    "count": len(results),
-                }
-            # 无法按句拆分的多意图（极罕见，如单句含多意图且无分隔）→ 保留诚实拒绝，避免静默漏记
-            return {
-                "success": False,
-                "message": "检测到多条评分指令且无法按句拆分，请逐条确认执行",
-                "parse_result": parse_result,
-            }
+        compound = self._try_compound_scoring(text, context_history, parse_result, sub_clause)
+        if compound is not None:
+            return compound
 
         if not parse_result["success"] and not manual_correction:
             # S6-B-P0-6 修复: 空行为词库/无匹配规则时如实说明（原统一"无法识别意图"误导）
@@ -3398,206 +3286,26 @@ class EnhancedNLPParserService:
             }
 
         if manual_correction:
-            intent = manual_correction.get("intent", parse_result["intent"])
-            score_value = manual_correction.get("score_value", 0)
-            # S6-B-P0-3 修复: 分数符号按意图归一化（deduct 误存正数 → 扣分变加分）
-            if intent == "deduct" and score_value is not None and score_value > 0 or intent == "add" and score_value is not None and score_value < 0:
-                score_value = -score_value
-            behavior_tags = manual_correction.get("behavior_tags", [])
-            behavior_description = manual_correction.get(
-                "behavior_description", parse_result["behavior"]
-            )
-
-            rule = NLPScoringRule.query.filter(
-                NLPScoringRule.behavior_keyword == behavior_description[:100],
-                NLPScoringRule.score_type == intent,
-            ).first()
-
-            # 注意：构造 rule 后不要用 db_session_scope()——其 finally 会 session.remove()
-            # 导致 rule 脱离会话，后续访问 rule.id/behavior_keyword 会抛 "not bound to a Session"。
-            # 这里直接 add+flush 获取 rule.id 并保持附着。
-            if not rule:
-                rule = NLPScoringRule(
-                    behavior_keyword=behavior_description[:100],
-                    behavior_description=behavior_description,
-                    score_value=score_value,
-                    score_type=intent,
-                    behavior_tags=behavior_tags,
-                    created_by=manual_correction.get("created_by"),
-                    # #912 手动修正创建的规则必须立即可见/可匹配：
-                    # 之前未设 is_active(None) → 列表/自动匹配 filter(is_active) 都不命中，
-                    # 且每次手动修正都因匹配不到而重复新建规则（56/58 双份"上课玩手机"根因）
-                    is_active=True,
-                    created_at=datetime.now(),
-                )
-                db.session.add(rule)
-                db.session.flush()
-            elif rule.is_active is not True:
-                # #912 复用旧规则（行为关键词+意图匹配未过滤 is_active）时强制启用——
-                # 历史手动修正创建的规则 is_active=None 导致"后台没添加"的观感
-                rule.is_active = True
-
-            parse_result["matched_rules"] = [
-                {
-                    "rule_id": rule.id,
-                    "behavior_keyword": rule.behavior_keyword,
-                    "behavior_description": rule.behavior_description,
-                    "score_value": rule.score_value,
-                    "score_type": rule.score_type,
-                    "behavior_tags": rule.behavior_tags,
-                }
-            ]
+            rule, score_value = self._resolve_manual_rule(manual_correction, parse_result)
         else:
-            if not parse_result["matched_rules"]:
+            rule, score_value = self._resolve_auto_rule(parse_result)
+            if rule is None:
                 return {
                     "success": False,
                     "message": "未找到匹配规则",
                     "parse_result": parse_result,
                 }
 
-            rule = get_by_id(NLPScoringRule, parse_result["matched_rules"][0]["rule_id"])
-            if rule:
-                # usage_count 列无默认值，新规则为 None，直接 += 1 会 TypeError 500
-                rule.usage_count = (rule.usage_count or 0) + 1
-                rule.last_used_at = datetime.now()
-                score_value = rule.score_value
-                # S6-B-P0-3 修复: 分数符号按规则 score_type 归一化（deduct 规则误存正数 → 扣分变加分）
-                if rule.score_type == "deduct" and score_value is not None and score_value > 0 or rule.score_type == "add" and score_value is not None and score_value < 0:
-                    score_value = -score_value
-            else:
-                score_value = parse_result["matched_rules"][0]["score_value"]
-                behavior_desc = parse_result["matched_rules"][0]["behavior_description"]
-                rule = NLPScoringRule(
-                    behavior_keyword=behavior_desc[:100],
-                    behavior_description=behavior_desc,
-                    score_value=score_value,
-                    score_type=parse_result["intent"],
-                    behavior_tags=parse_result["matched_rules"][0].get("behavior_tags", []),
-                    created_by=1,
-                    is_active=True,
-                    created_at=datetime.now(),
-                )
-                db.session.add(rule)
-                db.session.flush()
-
-        # #912 手动修正接管学生：manual_correction 显式指定 user_id 或 corrected_name 时
-        # 覆盖 parse_result 的错误识别（如 NLP 把"上课玩手机"当学生名），让手动修正真正生效
-        _mc_user_id = (manual_correction or {}).get("user_id") if manual_correction else None
-        _mc_user_name = (
-            (manual_correction or {}).get("corrected_name") if manual_correction else None
-        )
-        if _mc_user_id:
-            user = get_by_id(User, _mc_user_id)
-        elif _mc_user_name:
-            user = User.query.filter(User.name == _mc_user_name, User.is_active).first()
-        else:
-            user = get_by_id(User, parse_result.get("user_id"))
+        user = self._resolve_scoring_user(manual_correction, parse_result)
         if not user:
-            # 规则已匹配但学生不存在（如文本中的姓名不在用户表）：
-            # 不能静默"评分成功"，否则前端误报而分数实际未应用。
-            name_hint = parse_result.get("extracted_name") or parse_result.get("name") or ""
-            if name_hint:
-                message = f"未找到学生「{name_hint}」，无法应用评分，请先在学生管理中创建该学生"
-            else:
-                message = "未能从文本中识别到学生姓名，无法应用评分"
-            return {
-                "success": False,
-                "message": message,
-                "parse_result": parse_result,
-            }
+            return self._user_not_found_result(parse_result)
 
-        if user:
-            old_score = user.current_score or 0
-            # S2 修复: 走标准积分链路——原直接 max(0,min(100,current+delta))：
-            # 不写流水/不原子（并发丢更新）/限额写死 0-100（非 SystemConfig）/不触发综合分重算。
-            from models import ScoreRecord, SystemConfig as _SysCfg
-            from utils.score_utils import atomic_score_update
-
-            _cfg = _SysCfg.query.first()
-            _min_s = _cfg.min_score if _cfg else 0
-            _max_s = _cfg.max_score if _cfg else 100
-            _ok, final_score = atomic_score_update(
-                user.id, score_value, min_score=_min_s, max_score=_max_s
-            )
-            if not _ok:
-                final_score = max(_min_s, min(_max_s, old_score + score_value))
-            user.current_score = final_score
-            user.updated_at = datetime.now()
-
-            from utils.logger import log_operation
-
-            action = "加分" if final_score - old_score >= 0 else "减分"
-            description = (
-                f"智能评分{action}: {user.name} {action}{abs(final_score - old_score)}分，"
-                f"原因: {getattr(rule, 'behavior_description', '') or ''}"
-            )
-
-            log_operation(
-                operation_type="score_update",
-                target_type="user",
-                target_id=user.id,
-                description=description,
-                before_data={"score": old_score},
-                after_data={"score": final_score},
-            )
-
-            # S2 修复: 补积分流水（与手动录入一致），规则为 NLP 规则（非 ScoreRule）→ rule_id 置空，
-            # 规则信息进描述，避免外键语义错位。
-            db.session.add(
-                ScoreRecord(
-                    student_id=user.id,
-                    rule_id=None,
-                    score_change=final_score - old_score,
-                    description=description,
-                    operator="NLP System",
-                )
-            )
-
-            # S2 修复: 触发综合评分重算（与手动/批量/审批/MQTT 路径一致）
-            try:
-                from services.score_recalc import enqueue_or_recalc_user_score
-
-                enqueue_or_recalc_user_score(user.id)
-            except Exception as e:
-                logging.getLogger(__name__).error(
-                    "[CompositeScore] NLP 评分重算综合分失败 user_id=%s: %s", user.id, e,
-                    exc_info=True,
-                )
-
-            usage_record = NLPRuleUsage(
-                rule_id=rule.id,
-                student_id=user.id,
-                input_text=text,
-                matched_keyword=rule.behavior_keyword,
-                score_change=final_score - old_score,
-                is_manual_correction=manual_correction is not None,
-            )
-
-            match_result = NLPMatchResult(
-                input_text=text,
-                matched_rule_id=rule.id if rule else None,
-                matched_keyword=rule.behavior_keyword if rule else parse_result["behavior"],
-                intent=parse_result["intent"],
-                confidence=parse_result["confidence"],
-                student_id=parse_result["user_id"],
-                behavior_description=parse_result["behavior"],
-                score_change=score_value,
-                is_manual_correction=manual_correction is not None,
-            )
-
-            # 注意：不得用 db_session_scope()——其 finally 会 session.remove() 销毁请求级
-            # session（同 2974 行注释警告），导致后续访问 user.name 抛 DetachedInstanceError 500，
-            # 且 add 的 usage_record/match_result 随 remove 被丢弃不落库。直接 add+commit 即可
-            # （顺带 flush 未提交的 ScoreRecord 流水）。
-            db.session.add(usage_record)
-            db.session.add(match_result)
-            db.session.commit()
-
-            self._update_context_memory(
-                user_name=user.name,
-                rule_id=rule.id,
-                intent=parse_result["intent"],
-            )
+        final_score, old_score, action, description = self._compute_final_score(
+            user, score_value, rule
+        )
+        self._persist_score_records(
+            user, rule, score_value, final_score, old_score, description, text, parse_result, manual_correction
+        )
 
         return {
             "success": True,
@@ -3607,6 +3315,253 @@ class EnhancedNLPParserService:
             "score_change": score_value,
             "new_score": user.current_score if user else None,
         }
+
+    def _try_compound_scoring(self, text, context_history, parse_result, sub_clause):
+        # #991 修复: 复合句（"张三加5分，李四扣3分"）原"逐条确认"诚实拒绝 → 改为逐子句贯通评分，
+        # 每条指令独立落库一条 ScoreRecord，端点返回 results 列表（全量贯通，不再静默漏记首条之外）。
+        valid_intents = [
+            i
+            for i in parse_result.get("all_intents", [])
+            if isinstance(i, dict) and i.get("intent") not in ("unknown", "query")
+        ]
+        if len(valid_intents) <= 1 or sub_clause:
+            return None
+        subclauses = self._split_compound_text(text)
+        if len(subclauses) > 1:
+            results = []
+            any_failed = False
+            for sub in subclauses:
+                sub_result = self.execute_scoring(sub, None, context_history, sub_clause=True)
+                results.append(sub_result)
+                if not sub_result.get("success"):
+                    any_failed = True
+            return {
+                "success": not any_failed,
+                "message": (
+                    f"已对 {len(subclauses)} 条指令逐条评分"
+                    + ("（部分未成功）" if any_failed else "，全部成功")
+                ),
+                "results": results,
+                "count": len(results),
+            }
+        # 无法按句拆分的多意图（极罕见，如单句含多意图且无分隔）→ 保留诚实拒绝，避免静默漏记
+        return {
+            "success": False,
+            "message": "检测到多条评分指令且无法按句拆分，请逐条确认执行",
+            "parse_result": parse_result,
+        }
+
+    def _normalize_score_sign(self, intent, score_value):
+        # S6-B-P0-3 修复: 分数符号按意图归一化（deduct 误存正数 → 扣分变加分）
+        if score_value is None:
+            return score_value
+        if intent == "deduct" and score_value > 0 or intent == "add" and score_value < 0:
+            return -score_value
+        return score_value
+
+    def _resolve_manual_rule(self, manual_correction, parse_result):
+        intent = manual_correction.get("intent", parse_result["intent"])
+        score_value = manual_correction.get("score_value", 0)
+        score_value = self._normalize_score_sign(intent, score_value)
+        behavior_tags = manual_correction.get("behavior_tags", [])
+        behavior_description = manual_correction.get(
+            "behavior_description", parse_result["behavior"]
+        )
+
+        rule = NLPScoringRule.query.filter(
+            NLPScoringRule.behavior_keyword == behavior_description[:100],
+            NLPScoringRule.score_type == intent,
+        ).first()
+
+        # 注意：构造 rule 后不要用 db_session_scope()——其 finally 会 session.remove()
+        # 导致 rule 脱离会话，后续访问 rule.id/behavior_keyword 会抛 "not bound to a Session"。
+        # 这里直接 add+flush 获取 rule.id 并保持附着。
+        if not rule:
+            rule = NLPScoringRule(
+                behavior_keyword=behavior_description[:100],
+                behavior_description=behavior_description,
+                score_value=score_value,
+                score_type=intent,
+                behavior_tags=behavior_tags,
+                created_by=manual_correction.get("created_by"),
+                # #912 手动修正创建的规则必须立即可见/可匹配：
+                # 之前未设 is_active(None) → 列表/自动匹配 filter(is_active) 都不命中，
+                # 且每次手动修正都因匹配不到而重复新建规则（56/58 双份"上课玩手机"根因）
+                is_active=True,
+                created_at=datetime.now(),
+            )
+            db.session.add(rule)
+            db.session.flush()
+        elif rule.is_active is not True:
+            # #912 复用旧规则（行为关键词+意图匹配未过滤 is_active）时强制启用——
+            # 历史手动修正创建的规则 is_active=None 导致"后台没添加"的观感
+            rule.is_active = True
+
+        parse_result["matched_rules"] = [
+            {
+                "rule_id": rule.id,
+                "behavior_keyword": rule.behavior_keyword,
+                "behavior_description": rule.behavior_description,
+                "score_value": rule.score_value,
+                "score_type": rule.score_type,
+                "behavior_tags": rule.behavior_tags,
+            }
+        ]
+        return rule, score_value
+
+    def _resolve_auto_rule(self, parse_result):
+        if not parse_result["matched_rules"]:
+            return None, None
+        rule = get_by_id(NLPScoringRule, parse_result["matched_rules"][0]["rule_id"])
+        if rule:
+            # usage_count 列无默认值，新规则为 None，直接 += 1 会 TypeError 500
+            rule.usage_count = (rule.usage_count or 0) + 1
+            rule.last_used_at = datetime.now()
+            score_value = rule.score_value
+            score_value = self._normalize_score_sign(rule.score_type, score_value)
+        else:
+            score_value = parse_result["matched_rules"][0]["score_value"]
+            behavior_desc = parse_result["matched_rules"][0]["behavior_description"]
+            rule = NLPScoringRule(
+                behavior_keyword=behavior_desc[:100],
+                behavior_description=behavior_desc,
+                score_value=score_value,
+                score_type=parse_result["intent"],
+                behavior_tags=parse_result["matched_rules"][0].get("behavior_tags", []),
+                created_by=1,
+                is_active=True,
+                created_at=datetime.now(),
+            )
+            db.session.add(rule)
+            db.session.flush()
+        return rule, score_value
+
+    def _resolve_scoring_user(self, manual_correction, parse_result):
+        # #912 手动修正接管学生：manual_correction 显式指定 user_id 或 corrected_name 时
+        # 覆盖 parse_result 的错误识别（如 NLP 把"上课玩手机"当学生名），让手动修正真正生效
+        _mc_user_id = (manual_correction or {}).get("user_id") if manual_correction else None
+        _mc_user_name = (
+            (manual_correction or {}).get("corrected_name") if manual_correction else None
+        )
+        if _mc_user_id:
+            return get_by_id(User, _mc_user_id)
+        if _mc_user_name:
+            return User.query.filter(User.name == _mc_user_name, User.is_active).first()
+        return get_by_id(User, parse_result.get("user_id"))
+
+    def _user_not_found_result(self, parse_result):
+        # 规则已匹配但学生不存在（如文本中的姓名不在用户表）：
+        # 不能静默"评分成功"，否则前端误报而分数实际未应用。
+        name_hint = parse_result.get("extracted_name") or parse_result.get("name") or ""
+        if name_hint:
+            message = f"未找到学生「{name_hint}」，无法应用评分，请先在学生管理中创建该学生"
+        else:
+            message = "未能从文本中识别到学生姓名，无法应用评分"
+        return {
+            "success": False,
+            "message": message,
+            "parse_result": parse_result,
+        }
+
+    def _compute_final_score(self, user, score_value, rule):
+        old_score = user.current_score or 0
+        # S2 修复: 走标准积分链路——原直接 max(0,min(100,current+delta))：
+        # 不写流水/不原子（并发丢更新）/限额写死 0-100（非 SystemConfig）/不触发综合分重算。
+        from models import SystemConfig as _SysCfg
+        from utils.score_utils import atomic_score_update
+
+        _cfg = _SysCfg.query.first()
+        _min_s = _cfg.min_score if _cfg else 0
+        _max_s = _cfg.max_score if _cfg else 100
+        _ok, final_score = atomic_score_update(
+            user.id, score_value, min_score=_min_s, max_score=_max_s
+        )
+        if not _ok:
+            final_score = max(_min_s, min(_max_s, old_score + score_value))
+        user.current_score = final_score
+        user.updated_at = datetime.now()
+
+        from utils.logger import log_operation
+
+        action = "加分" if final_score - old_score >= 0 else "减分"
+        description = (
+            f"智能评分{action}: {user.name} {action}{abs(final_score - old_score)}分，"
+            f"原因: {getattr(rule, 'behavior_description', '') or ''}"
+        )
+
+        log_operation(
+            operation_type="score_update",
+            target_type="user",
+            target_id=user.id,
+            description=description,
+            before_data={"score": old_score},
+            after_data={"score": final_score},
+        )
+        return final_score, old_score, action, description
+
+    def _persist_score_records(
+        self, user, rule, score_value, final_score, old_score, description, text, parse_result, manual_correction
+    ):
+        # S2 修复: 补积分流水（与手动录入一致），规则为 NLP 规则（非 ScoreRule）→ rule_id 置空，
+        # 规则信息进描述，避免外键语义错位。
+        from models import ScoreRecord
+
+        db.session.add(
+            ScoreRecord(
+                student_id=user.id,
+                rule_id=None,
+                score_change=final_score - old_score,
+                description=description,
+                operator="NLP System",
+            )
+        )
+
+        # S2 修复: 触发综合评分重算（与手动/批量/审批/MQTT 路径一致）
+        try:
+            from services.score_recalc import enqueue_or_recalc_user_score
+
+            enqueue_or_recalc_user_score(user.id)
+        except Exception as e:
+            logging.getLogger(__name__).error(
+                "[CompositeScore] NLP 评分重算综合分失败 user_id=%s: %s", user.id, e,
+                exc_info=True,
+            )
+
+        usage_record = NLPRuleUsage(
+            rule_id=rule.id,
+            student_id=user.id,
+            input_text=text,
+            matched_keyword=rule.behavior_keyword,
+            score_change=final_score - old_score,
+            is_manual_correction=manual_correction is not None,
+        )
+
+        match_result = NLPMatchResult(
+            input_text=text,
+            matched_rule_id=rule.id if rule else None,
+            matched_keyword=rule.behavior_keyword if rule else parse_result["behavior"],
+            intent=parse_result["intent"],
+            confidence=parse_result["confidence"],
+            student_id=parse_result["user_id"],
+            behavior_description=parse_result["behavior"],
+            score_change=score_value,
+            is_manual_correction=manual_correction is not None,
+        )
+
+        # 注意：不得用 db_session_scope()——其 finally 会 session.remove() 销毁请求级
+        # session（同 2974 行注释警告），导致后续访问 user.name 抛 DetachedInstanceError 500，
+        # 且 add 的 usage_record/match_result 随 remove 被丢弃不落库。直接 add+commit 即可
+        # （顺带 flush 未提交的 ScoreRecord 流水）。
+        db.session.add(usage_record)
+        db.session.add(match_result)
+        db.session.commit()
+
+        self._update_context_memory(
+            user_name=user.name,
+            rule_id=rule.id,
+            intent=parse_result["intent"],
+        )
+
 
     def batch_parse(self, texts, parallel: bool = True, max_workers: int = 4):
         """

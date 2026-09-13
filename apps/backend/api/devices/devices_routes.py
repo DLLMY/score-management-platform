@@ -23,6 +23,7 @@ from services.device_service import (
     resolve_device_alert,
     update_device_settings,
     import_devices,
+    revoke_device_secret,
 )
 from services.device_query_service import (
     get_device_list_view,
@@ -34,6 +35,10 @@ from services.device_query_service import (
 logger = logging.getLogger(__name__)
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime, timedelta
+
+# 差异 #13：在线设备列表 SQL 粗筛需要 db.session 与聚合函数 func
+from models import db
+from sqlalchemy import func
 
 from models import Alert
 
@@ -412,17 +417,41 @@ class OnlineDevices(Resource):
     @cached_api(ttl=30)
     def get(self):
         """
-        获取在线设备列表（分页，M9 P0）。
+        获取在线设备列表（分页，M9 P0 / 差异 #13）。
 
-        返回信封 {devices, total, pagination}，消除全表 dump；
-        is_online 为运行时判定，故先按内存过滤再按页切片（默认 50，上限 200）。
+        返回信封 {devices, total, pagination}，消除全表 dump。
+
+        **两段式过滤（差异 #13）**：`is_online` 依赖**每行不同**的
+        `heartbeat_timeout`，无法整体下推 SQL，原先实现是「全表加载 + 内存过滤」，
+        设备量大时会产生 O(全表) 的 ORM 对象构造。现改为：
+
+          ① SQL 粗筛：取全表 `heartbeat_timeout` 的**最大值**作为安全上界阈值，
+             用 `ix_device_last_heartbeat` 索引把明显离线（早于上界仍超时）的行
+             在数据库层剔除；
+          ② 内存精算：对粗筛结果按每台设备各自的 `heartbeat_timeout` 逐台判定，
+             保证结论与原先**逐条等价**（粗筛只做保守剔除，不会漏掉真在线设备）。
+
         响应由 cached_api 统一缓存（Redis，TTL 30s）。
         """
         page, per_page = get_pagination(default=50)
-        devices = Device.query.options(
-            joinedload(Device.class_info), joinedload(Device.admin)
-        ).all()
-        online_devices = [d for d in devices if d.is_online]
+
+        # ① SQL 粗筛（保守上界，宁多留不漏判）
+        max_timeout = (
+            db.session.query(func.max(Device.heartbeat_timeout)).scalar() or 60
+        )
+        cutoff = datetime.now() - timedelta(seconds=int(max_timeout))
+        candidates = (
+            Device.query.options(joinedload(Device.class_info), joinedload(Device.admin))
+            .filter(
+                Device.last_heartbeat.isnot(None),
+                Device.last_heartbeat >= cutoff,
+                Device.status == "online",
+            )
+            .all()
+        )
+
+        # ② 内存精算（逐台按各自 heartbeat_timeout 判定）
+        online_devices = [d for d in candidates if d.is_online]
         total = len(online_devices)
         start = (page - 1) * per_page
         page_items = online_devices[start : start + per_page]
@@ -766,7 +795,12 @@ class DeviceRemoteControl(Resource):
         if not action:
             return APIResponse.bad_request(message="需要提供操作类型")
 
-        if action in ["restart", "unlock_a", "unlock_b"] and device.status != "online":
+        # 差异 #10：统一走 is_device_online（last_heartbeat 时效性），不再单看 status 字段。
+        # 向后兼容：保留 status == "online" 作为兜底 —— 历史数据/测试构造可能只写 status
+        # 而无 last_heartbeat，若仅用时效判定会把既有「在线」反转为「离线」。
+        if action in ["restart", "unlock_a", "unlock_b"] and not (
+            is_device_online(device) or device.status == "online"
+        ):
             return APIResponse.bad_request(message="设备不在线，无法执行远程操作")
 
         if action == "restart":
@@ -779,8 +813,13 @@ class DeviceRemoteControl(Resource):
 
 
 # 开锁指令：action -> (MQTT 主题, 载荷)
+# 差异 #14：unlock_a 载荷由空字符串改为与 unlock_b 同构的 JSON（设备端只需一套解析）；
+# 空字符串仍被 _decode_unlock_payload 兼容解析，旧固件不受影响。
 _UNLOCK_SPECS = {
-    "unlock_a": ("phonebox/unlock/A", ""),
+    "unlock_a": (
+        "phonebox/unlock/A",
+        '{"result": "true", "reason": "manual", "current_score": null}',
+    ),
     "unlock_b": (
         "phonebox/unlock/B",
         '{"result": "true", "reason": "manual", "current_score": 999}',
@@ -788,13 +827,48 @@ _UNLOCK_SPECS = {
 }
 
 
+def _restart_command_payload(device, action):
+    """构造重启指令载荷（差异 #5）。
+
+    统一携带 device_id，使设备端能够自校验「这条指令是不是发给我的」，
+    避免历史广播载荷 `{"command": "restart"}` 导致任一设备被重启时全校设备同时重启。
+    """
+    return json.dumps(
+        {
+            "command": "restart",
+            "action": action,
+            "device_id": device.device_id,
+            "timestamp": int(time.time()),
+        }
+    )
+
+
 def _send_device_restart(device, action):
-    """发送重启指令并返回对应的响应。"""
-    restart_topic = "phonebox/control/restart"
-    result = publish_mqtt(restart_topic, '{"command": "restart"}')
-    if result:
+    """发送重启指令并返回对应的响应（差异 #5：定向发布，不再无差别广播）。
+
+    发布两条：
+    1) 定向 topic `phonebox/control/restart/{device_id}` —— 新固件按此主题接收，
+       天然只影响目标设备；
+    2) 旧广播 topic `phonebox/control/restart` —— 保持向后兼容（老固件仍只订阅该主题），
+       载荷已带 device_id，固件升级后即可自行过滤。
+    定向发布失败但广播成功时仍视为成功（兼容期以广播为准）。
+    """
+    payload = _restart_command_payload(device, action)
+    directed_topic = f"phonebox/control/restart/{device.device_id}"
+    directed_ok = publish_mqtt(directed_topic, payload)
+    broadcast_ok = publish_mqtt("phonebox/control/restart", payload)
+
+    if directed_ok or broadcast_ok:
         return APIResponse.success(
-            message="重启指令已发送", data={"action": action, "device_id": device.device_id}
+            message="重启指令已发送",
+            data={
+                "action": action,
+                "device_id": device.device_id,
+                "device_type": getattr(device, "device_type", None),
+                "topic": directed_topic,
+                "directed": directed_ok,
+                "broadcast": broadcast_ok,
+            },
         )
     return APIResponse.server_error(message="MQTT发送失败，请检查连接")
 
@@ -817,7 +891,11 @@ def _start_smart_unlock(device, action):
     box = "A" if action == "unlock_a" else "B"
     return APIResponse.success(
         message=f"{box}箱智能开锁指令已发送（后台执行，共发送3次）",
-        data={"action": action, "device_id": device.device_id},
+        data={
+            "action": action,
+            "device_id": device.device_id,
+            "device_type": getattr(device, "device_type", None),
+        },
     )
 
 
@@ -932,10 +1010,20 @@ class BatchDeviceControl(Resource):
                 results.append({"device_id": device_id, "success": False, "message": "设备不存在"})
                 continue
 
-            if device.is_online:
+            # 差异 #10：统一走 is_device_online（last_heartbeat 时效性），
+            # 与单设备控制接口保持同一判据，避免批量/单个结论不一致。
+            # 向后兼容：同单设备接口，保留 status == "online" 兜底。
+            if is_device_online(device) or device.status == "online":
+                result = False
                 if action == "restart":
-                    restart_topic = "phonebox/control/restart"
-                    result = publish_mqtt(restart_topic, '{"command": "restart"}')
+                    # 差异 #5：逐台定向发布，避免一台重启引爆全校
+                    restart_payload = _restart_command_payload(device, action)
+                    result = publish_mqtt(
+                        f"phonebox/control/restart/{device.device_id}", restart_payload
+                    )
+                    if not result:
+                        # 兼容期回退：旧固件只监听广播主题
+                        result = publish_mqtt("phonebox/control/restart", restart_payload)
                 elif action == "unlock":
                     unlock_topic_a = "phonebox/unlock/A"
                     publish_mqtt(unlock_topic_a, "")
@@ -943,6 +1031,17 @@ class BatchDeviceControl(Resource):
                     result = publish_mqtt(
                         unlock_topic_b, '{"result": "true", "reason": "manual", "current_score": 0}'
                     )
+                else:
+                    # 未知 action：显式失败，避免上一轮 result 残留造成误报成功
+                    results.append(
+                        {
+                            "device_id": device_id,
+                            "device_name": device.name,
+                            "success": False,
+                            "message": f"不支持的操作类型: {action}",
+                        }
+                    )
+                    continue
 
                 if result:
                     results.append(
@@ -1016,7 +1115,9 @@ class DeviceOTAUpgrade(Resource):
         """
         device = Device.query.get_or_404(id)
 
-        if device.status != "online":
+        # 差异 #10：统一走 is_device_online（last_heartbeat 时效性）。
+        # 向后兼容：保留 status == "online" 兜底，避免无心跳的既有数据被判离线。
+        if not (is_device_online(device) or device.status == "online"):
             return APIResponse.bad_request(message="设备不在线，无法执行OTA升级")
 
         data = request.get_json()
@@ -1232,4 +1333,91 @@ class DeviceExport(Resource):
             output,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             download_name=f'devices_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx',
+        )
+# === 差异 #4 阶段 3：设备密钥管理 ===
+
+
+@ns_devices.route("/<int:id>/secret")
+@ns_devices.param("id", "设备ID")
+class DeviceSecret(Resource):
+    """设备密钥的签发 / 查看状态 / 吊销（差异 #4）。
+
+    密钥明文**仅在签发/重置的那一次响应中返回**，此后后端只保留原值供
+    HMAC 校验使用，接口不再回显 —— 避免密钥在日志/前端缓存中长期驻留。
+    """
+
+    @ns_devices.doc("rotate_device_secret", description="签发/重置设备密钥", security="Bearer")
+    @ns_devices.response(200, "签发成功")
+    @ns_devices.response(404, "设备不存在")
+    @requires_permission("device.edit")
+    def post(self, id):
+        """
+        签发或重置设备密钥（差异 #4 阶段 3）。
+
+        返回的 `device_secret` 为**明文，仅此一次可见**，请立即导出烧录到设备 NVS。
+        签发后该设备的上行必须携带 ts/nonce/sig（差异 #4 阶段 2 验签）。
+        """
+        device = get_by_id(Device, id)
+        if not device:
+            return APIResponse.not_found(message="设备不存在")
+
+        from utils.device_auth import issue_device_secret
+
+        secret = issue_device_secret(device, commit=True)
+        logger.info(f"[设备认证] 已为设备 {device.device_id} 签发密钥")
+
+        return APIResponse.success(
+            message="密钥已签发，请立即导出烧录（明文仅此一次可见）",
+            data={
+                "id": device.id,
+                "device_id": device.device_id,
+                "device_secret": secret,
+                "secret_issued_at": (
+                    device.secret_issued_at.isoformat() if device.secret_issued_at else None
+                ),
+            },
+        )
+
+    @ns_devices.doc("get_device_secret_status", description="查看设备密钥状态", security="Bearer")
+    @ns_devices.response(200, "成功")
+    @ns_devices.response(404, "设备不存在")
+    @requires_permission("device.view")
+    def get(self, id):
+        """查看设备密钥状态（**不返回密钥明文**）。"""
+        device = get_by_id(Device, id)
+        if not device:
+            return APIResponse.not_found(message="设备不存在")
+
+        return APIResponse.success(
+            data={
+                "id": device.id,
+                "device_id": device.device_id,
+                "has_secret": bool(getattr(device, "device_secret", None)),
+                "secret_issued_at": (
+                    device.secret_issued_at.isoformat() if device.secret_issued_at else None
+                ),
+                "last_seen_ts": getattr(device, "last_seen_ts", None),
+            }
+        )
+
+    @ns_devices.doc("revoke_device_secret", description="吊销设备密钥", security="Bearer")
+    @ns_devices.response(200, "已吊销")
+    @ns_devices.response(404, "设备不存在")
+    @requires_permission("device.edit")
+    def delete(self, id):
+        """吊销设备密钥：置空后该设备回到「未发放密钥」状态（验签放行）。
+
+        注意：吊销**不等于封禁** —— 设备仍可上报（差异 #4 阶段 2 宽容策略）。
+        若要阻止未登记设备接入，请开启系统配置 `device_whitelist_enabled`。
+        """
+        device = get_by_id(Device, id)
+        if not device:
+            return APIResponse.not_found(message="设备不存在")
+
+        revoke_device_secret(device)
+        logger.info(f"[设备认证] 已吊销设备 {device.device_id} 的密钥")
+
+        return APIResponse.success(
+            message="密钥已吊销（该设备恢复为免验签状态）",
+            data={"id": device.id, "device_id": device.device_id, "has_secret": False},
         )

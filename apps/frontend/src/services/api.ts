@@ -515,7 +515,7 @@ const cacheDependencyMap: Record<string, string[]> = {
   '/api/score-categories': ['/api/score-categories'],
   '/api/rank-rules': ['/api/rank-rules'],
   '/api/admins': ['/api/admins'],
-  '/api/roles': ['/api/roles'],
+
   '/api/time-rules': ['/api/time-rules'],
   '/api/class-periods': ['/api/class-periods'],
   '/api/algorithm': ['/api/algorithm'],
@@ -1515,12 +1515,6 @@ export interface BatchNotifyResult {
   total: number;
 }
 
-interface Role {
-  id: number;
-  name: string;
-  permissions: string[];
-}
-
 interface MQTTConfig {
   broker: string;
   port: number;
@@ -1563,6 +1557,8 @@ export interface SystemConfig {
   min_interval_seconds?: number;
   enable_auto_backup?: boolean;
   backup_retention_days?: number;
+  /** 设备白名单开关（差异 #4 阶段 1）。开启后拒绝未登记设备注册；默认关闭。 */
+  device_whitelist_enabled?: boolean;
 }
 
 export interface BackupInfo {
@@ -1944,12 +1940,7 @@ export interface Api {
       data: { old_password: string; new_password: string }
     ) => Promise<void>;
   };
-  roles: {
-    getAll: () => Promise<Role[]>;
-    create: (data: Partial<Role>) => Promise<Role>;
-    update: (id: number, data: Partial<Role>) => Promise<Role>;
-    delete: (id: number) => Promise<void>;
-  };
+
   export: {
     users: (format?: 'excel' | 'pdf') => string;
     records: (userId?: number, format?: 'excel' | 'pdf') => string;
@@ -1977,10 +1968,6 @@ export interface Api {
     create: (data: TimeRuleData) => Promise<TimeRule>;
     update: (id: number, data: Partial<TimeRuleData>) => Promise<TimeRule>;
     delete: (id: number) => Promise<void>;
-    check: (data: {
-      card_id: string;
-      device_id: string;
-    }) => Promise<{ allowed: boolean; rule?: TimeRule }>;
   };
   classPeriods: {
     getAll: () => Promise<{ periods: ClassPeriod[]; total: number }>;
@@ -2137,7 +2124,7 @@ export interface Api {
     getAll: (params?: ScoreRecordParams) => Promise<Notification[]>;
     getUnread: () => Promise<Notification[]>;
     markAsRead: (id: number) => Promise<void>;
-    markAllAsRead: () => Promise<void>;
+
     create: (data: Partial<Notification>) => Promise<Notification>;
     delete: (id: number) => Promise<void>;
     batchSend: (data: {
@@ -2424,6 +2411,28 @@ export interface Api {
       failed_count: number;
       messages: Array<{ action: string; message: string }>;
     }>;
+    // ---- 设备密钥管理（差异 #4 阶段 3）----
+    /** 签发/重置设备密钥，返回的 device_secret 明文仅此一次可见。 */
+    issueSecret: (deviceId: number) => Promise<{
+      id: number;
+      device_id: string;
+      device_secret: string;
+      secret_issued_at: string | null;
+    }>;
+    /** 查看设备密钥状态（不含明文）。 */
+    getSecretStatus: (deviceId: number) => Promise<{
+      id: number;
+      device_id: string;
+      has_secret: boolean;
+      secret_issued_at: string | null;
+      last_seen_ts: number | null;
+    }>;
+    /** 吊销设备密钥（该设备恢复为免验签状态，不等于封禁）。 */
+    revokeSecret: (deviceId: number) => Promise<{
+      id: number;
+      device_id: string;
+      has_secret: boolean;
+    }>;
   };
   firmware: {
     getAll: () => Promise<Firmware[]>;
@@ -2613,10 +2622,7 @@ export interface Api {
     recalculateCompositeScores: () => Promise<{ data: unknown }>;
     runWarningEvaluation: () => Promise<{ data: unknown }>;
     resolveWarning: (warningId: number) => Promise<{ data: unknown }>;
-    updateWarningConfig: (data: {
-      config_key: string;
-      config_value: string;
-    }) => Promise<{ data: unknown }>;
+
     getCompositeScoreProgress: () => Promise<{
       status: string;
       progress: number;
@@ -4162,26 +4168,7 @@ const api: Api = {
         body: JSON.stringify(data),
       }) as Promise<void>,
   },
-  roles: {
-    getAll: async () => {
-      const result = (await request('/api/roles')) as { roles: Role[] } | Role[];
-      return Array.isArray(result) ? result : result.roles || [];
-    },
-    create: (data) =>
-      request('/api/roles', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }) as Promise<Role>,
-    update: (id, data) =>
-      request(`/api/roles/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }) as Promise<Role>,
-    delete: (id) =>
-      request(`/api/roles/${id}`, {
-        method: 'DELETE',
-      }) as Promise<void>,
-  },
+
   export: {
     users: (format: 'excel' | 'pdf' = 'excel') => `/api/export/users?format=${format}`,
     records: (userId?: number, format: 'excel' | 'pdf' = 'excel') => {
@@ -4248,11 +4235,6 @@ const api: Api = {
         body: JSON.stringify(data),
       }) as Promise<TimeRule>,
     delete: (id) => request(`/api/time-rules/${id}`, { method: 'DELETE' }) as Promise<void>,
-    check: (data) =>
-      request('/api/time-rules/check', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }) as Promise<{ allowed: boolean; rule?: TimeRule }>,
   },
   classPeriods: {
     getAll: async () => {
@@ -4717,11 +4699,7 @@ const api: Api = {
       request(`/api/algorithm/warning/${warningId}/resolve`, { method: 'POST' }) as Promise<{
         data: unknown;
       }>,
-    updateWarningConfig: (data: { config_key: string; config_value: string }) =>
-      request('/api/algorithm/warning/config', {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }) as Promise<{ data: unknown }>,
+
     getCompositeScoreProgress: () =>
       request('/api/algorithm/composite-score/progress') as Promise<{
         status: string;
@@ -4768,8 +4746,7 @@ const api: Api = {
     },
     markAsRead: (id) =>
       request(`/api/notifications/${id}/read`, { method: 'POST' }) as Promise<void>,
-    markAllAsRead: () =>
-      request('/api/notifications/read-all', { method: 'POST' }) as Promise<void>,
+
     create: (data) =>
       request('/api/notifications', {
         method: 'POST',
@@ -5297,6 +5274,31 @@ const api: Api = {
         failed_count: number;
         messages: Array<{ action: string; message: string }>;
       }>,
+    // ---- 设备密钥管理（差异 #4 阶段 3）----
+    /** 签发/重置设备密钥。返回的 device_secret 明文仅此一次可见。 */
+    issueSecret: (deviceId: number) =>
+      request(`/api/devices/${deviceId}/secret`, { method: 'POST' }) as Promise<{
+        id: number;
+        device_id: string;
+        device_secret: string;
+        secret_issued_at: string | null;
+      }>,
+    /** 查看设备密钥状态（不含明文）。 */
+    getSecretStatus: (deviceId: number) =>
+      request(`/api/devices/${deviceId}/secret`) as Promise<{
+        id: number;
+        device_id: string;
+        has_secret: boolean;
+        secret_issued_at: string | null;
+        last_seen_ts: number | null;
+      }>,
+    /** 吊销设备密钥（该设备恢复为免验签状态，不等于封禁）。 */
+    revokeSecret: (deviceId: number) =>
+      request(`/api/devices/${deviceId}/secret`, { method: 'DELETE' }) as Promise<{
+        id: number;
+        device_id: string;
+        has_secret: boolean;
+      }>,
   },
   firmware: {
     getAll: async () => {
@@ -5447,7 +5449,7 @@ const api: Api = {
       }>,
     updateOrder: (data: Array<{ id: number; order: number }>) =>
       request('/api/subjects/order', {
-        method: 'POST',
+        method: 'PUT',
         body: JSON.stringify(data),
       }) as Promise<void>,
   },
@@ -5518,11 +5520,16 @@ const api: Api = {
         method: 'POST',
         body: JSON.stringify({ device_ids: deviceIds }),
       }) as Promise<{ added_count: number; skipped: { device_id: string; reason: string }[] }>,
-    removeDevices: (groupId: number, deviceIds: string[]) =>
-      request(`/api/device-group/${groupId}/devices`, {
-        method: 'DELETE',
-        body: JSON.stringify({ device_ids: deviceIds }),
-      }) as Promise<{ removed_count: number }>,
+    removeDevices: async (groupId: number, deviceIds: string[]) => {
+      await Promise.all(
+        deviceIds.map((deviceId) =>
+          request(`/api/device-group/${groupId}/devices/${deviceId}`, {
+            method: 'DELETE',
+          })
+        )
+      );
+      return { removed_count: deviceIds.length };
+    },
     // P3-2: 删除 getUngroupedDevices（后端无此路由且零调用）；修正 getByDevice 路径为后端真实 /device/<id>/groups
     getByDevice: (deviceId: string) =>
       request(`/api/device-group/device/${deviceId}/groups`) as Promise<DeviceGroup[]>,

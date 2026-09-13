@@ -1,4 +1,5 @@
 import { Button, Modal } from '../../components';
+import { DeviceSecretPanel, type DeviceSecretStatus } from './DeviceSecretPanel';
 import type { DeviceSettings } from './types';
 
 interface DeviceSettingsModalProps {
@@ -9,6 +10,12 @@ interface DeviceSettingsModalProps {
   onChange: (field: keyof DeviceSettings, value: unknown) => void;
   submitting: boolean;
   onSubmit: () => void;
+  // —— 设备密钥（差异 #4 阶段 3）——
+  secretStatus: DeviceSecretStatus | null;
+  secretStatusLoading: boolean;
+  issuedSecret: string | null;
+  onIssueSecret: () => void;
+  onRevokeSecret: () => void;
 }
 
 export function DeviceSettingsModal({
@@ -19,6 +26,11 @@ export function DeviceSettingsModal({
   onChange,
   submitting,
   onSubmit,
+  secretStatus,
+  secretStatusLoading,
+  issuedSecret,
+  onIssueSecret,
+  onRevokeSecret,
 }: DeviceSettingsModalProps) {
   return (
     <Modal
@@ -72,6 +84,15 @@ export function DeviceSettingsModal({
             max='300'
           />
         </div>
+
+        <DeviceSecretPanel
+          submitting={submitting}
+          status={secretStatus}
+          statusLoading={secretStatusLoading}
+          issuedSecret={issuedSecret}
+          onIssue={onIssueSecret}
+          onRevoke={onRevokeSecret}
+        />
       </div>
     </Modal>
   );

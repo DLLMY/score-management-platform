@@ -88,6 +88,11 @@ function DeviceManagement() {
       handleFileChange={logic.handleFileChange}
       handleImport={logic.handleImport}
       handleExportErrors={logic.handleExportErrors}
+      secretStatus={logic.secretStatus}
+      secretStatusLoading={logic.secretStatusLoading}
+      issuedSecret={logic.issuedSecret}
+      submitIssueSecret={logic.submitIssueSecret}
+      submitRevokeSecret={logic.submitRevokeSecret}
     />
   );
 }

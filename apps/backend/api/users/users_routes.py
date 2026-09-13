@@ -218,57 +218,10 @@ class UserList(Resource):
         """
         data = ns_users.payload
         # 数据隔离检查：只能为关联班级创建学生
-        class_name = data.get("class_name")
-        if class_name:
-            admin = get_current_admin()
-            if admin:
-                allowed_classes = get_allowed_classes(admin.id)
-                if allowed_classes is not None and class_name not in allowed_classes:
-                    return APIResponse.error(message="无权为该班级创建学生", status_code=403)
-        # 参数校验
-        errors = []
-        # 姓名必填校验
-        if not data.get("name") or not data.get("name").strip():
-            errors.append("学生姓名不能为空")
-        # 姓名长度校验
-        if data.get("name") and len(data.get("name")) > ValidationRules.NAME_MAX_LEN:
-            errors.append(f"学生姓名长度不能超过{ValidationRules.NAME_MAX_LEN}个字符")
-        # 卡号必填校验（数据库NOT NULL约束）
-        card_id = data.get("card_id")
-        if not card_id or not str(card_id).strip():
-            errors.append("卡号不能为空")
-        elif card_id:
-            is_valid, error_msg = validate_card_id(card_id)
-            if not is_valid:
-                errors.append(f"卡号: {error_msg}")
-        # 联系电话校验
-        phone = data.get("phone")
-        if phone:
-            is_valid, error_msg = validate_phone(phone)
-            if not is_valid:
-                errors.append(f"联系电话: {error_msg}")
-        # 父亲电话校验
-        father_phone = data.get("father_phone")
-        if father_phone:
-            is_valid, error_msg = validate_phone(father_phone)
-            if not is_valid:
-                errors.append(f"父亲电话: {error_msg}")
-        # 母亲电话校验
-        mother_phone = data.get("mother_phone")
-        if mother_phone:
-            is_valid, error_msg = validate_phone(mother_phone)
-            if not is_valid:
-                errors.append(f"母亲电话: {error_msg}")
-        # 积分校验
-        score = data.get("current_score", 0)
-        is_valid, error_msg = validate_score(score)
-        if not is_valid:
-            errors.append(f"积分: {error_msg}")
-        # 检查卡号唯一性
-        if card_id:
-            existing_user = User.query.filter_by(card_id=card_id).first()
-            if existing_user:
-                errors.append(f"卡号 {card_id} 已被用户 {existing_user.name} 使用")
+        deny = _check_user_create_class_scope(data)
+        if deny is not None:
+            return deny
+        errors = _validate_create_user_fields(data)
         if errors:
             return validation_error_response(errors)
         user_id = user_service.create_user(data)
@@ -507,85 +460,7 @@ class UserImport(Resource):
         seen_card_ids = set()
         for idx, user_data in enumerate(users_data):
             try:
-                row_errors = []
-                row_data = user_data.copy()
-                card_id = user_data.get("card_id")
-                if not card_id:
-                    row_errors.append({"field": "card_id", "message": "学号不能为空"})
-                elif not isinstance(card_id, (int, str)) or len(str(card_id).strip()) == 0:
-                    row_errors.append({"field": "card_id", "message": "学号格式无效"})
-                elif len(str(card_id).strip()) > 50:
-                    row_errors.append(
-                        {"field": "card_id", "message": "学号长度超过限制（最大50字符）"}
-                    )
-                else:
-                    card_id_str = str(card_id).strip()
-                    is_valid, msg = validate_student_id(card_id_str)
-                    if not is_valid:
-                        row_errors.append({"field": "card_id", "message": msg})
-                name = user_data.get("name")
-                if not name:
-                    row_errors.append({"field": "name", "message": "姓名不能为空"})
-                elif not isinstance(name, str) or len(name.strip()) == 0:
-                    row_errors.append(
-                        {"field": "name", "message": "姓名格式无效，必须为非空字符串"}
-                    )
-                elif len(name.strip()) > 50:
-                    row_errors.append(
-                        {"field": "name", "message": "姓名长度超过限制（最大50字符）"}
-                    )
-                else:
-                    is_valid, msg = validate_name(name.strip())
-                    if not is_valid:
-                        row_errors.append({"field": "name", "message": msg})
-                class_name = user_data.get("class_name")
-                if class_name:
-                    if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                        row_errors.append(
-                            {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
-                        )
-                    elif len(class_name.strip()) > 100:
-                        row_errors.append(
-                            {
-                                "field": "class_name",
-                                "message": "班级名称长度超过限制（最大100字符）",
-                            }
-                        )
-                    else:
-                        class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                        if not class_info:
-                            row_errors.append(
-                                {
-                                    "field": "class_name",
-                                    "message": f'班级 "{class_name}" 在系统中不存在',
-                                }
-                            )
-                gender = user_data.get("gender")
-                if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
-                    row_errors.append(
-                        {"field": "gender", "message": '性别值无效，只能是"男"或"女"'}
-                    )
-                phone = user_data.get("phone")
-                if phone:
-                    is_valid, msg = validate_phone(str(phone))
-                    if not is_valid:
-                        row_errors.append({"field": "phone", "message": msg})
-                    else:
-                        if not re.match(r"^1[3-9]\d{9}$", str(phone).strip()):
-                            row_errors.append(
-                                {"field": "phone", "message": "联系电话格式无效，请输入11位手机号"}
-                            )
-                if card_id:
-                    card_id_norm = str(card_id).strip()
-                    existing = User.query.filter_by(card_id=card_id_norm).first()
-                    if existing:
-                        row_errors.append(
-                            {"field": "card_id", "message": f'学号 "{card_id_norm}" 已存在'}
-                        )
-                    elif card_id_norm in seen_card_ids:
-                        row_errors.append(
-                            {"field": "card_id", "message": f'学号 "{card_id_norm}" 在本批中重复'}
-                        )
+                user, row_errors, _row_data = _validate_import_user(user_data, idx, seen_card_ids)
                 if row_errors:
                     error_count += 1
                     errors.append(
@@ -594,28 +469,13 @@ class UserImport(Resource):
                             "message": "; ".join(
                                 [f'{err["field"]}: {err["message"]}' for err in row_errors]
                             ),
-                            "row_data": row_data,
+                            "row_data": _row_data,
                             "error_fields": [err["field"] for err in row_errors],
                         }
                     )
                     continue
-                user = User(
-                    name=name,
-                    gender=gender or "",
-                    class_name=class_name or "",
-                    phone=phone or "",
-                    father_name=user_data.get("father_name", ""),
-                    father_phone=user_data.get("father_phone", ""),
-                    mother_name=user_data.get("mother_name", ""),
-                    mother_phone=user_data.get("mother_phone", ""),
-                    guardian_name=user_data.get("guardian_name", ""),
-                    guardian_phone=user_data.get("guardian_phone", ""),
-                    guardian_relation=user_data.get("guardian_relation", ""),
-                    card_id=str(card_id),
-                    current_score=user_data.get("current_score", 0),
-                )
                 pending_users.append(user)
-                seen_card_ids.add(str(card_id).strip())
+                seen_card_ids.add(str(user_data.get("card_id")).strip())
                 imported_count += 1
             except Exception as e:
                 error_count += 1
@@ -839,13 +699,13 @@ class UserImportFile(Resource):
         """
         admin = get_current_admin()
         allowed_classes = get_allowed_classes(admin.id) if admin else None
-        if "file" not in request.files:
-            return APIResponse.error(message="请选择文件", status_code=400)
-        file = request.files["file"]
-        if file.filename == "":
-            return APIResponse.error(message="请选择文件", status_code=400)
-        if not file.filename.lower().endswith(".csv"):
-            return APIResponse.error(message="请选择CSV格式的文件", status_code=400)
+        file, err = _check_csv_upload_file(request)
+        if err is not None:
+            return err
+        rows, headers, err = _read_and_parse_csv(file)
+        if err is not None:
+            return err
+        mapping = _CSV_USER_HEADER_MAPPING
         imported = 0
         updated = 0
         errors = []
@@ -853,201 +713,45 @@ class UserImportFile(Resource):
         pending_users = []
         pending_updates = []
         try:
-            content_bytes = file.read()
-            content, encoding = detect_encoding(content_bytes)
-            if content is None:
-                return APIResponse.error(
-                    message="无法识别文件编码，请使用UTF-8或GBK编码保存文件", status_code=400
-                )
-            lines = content.split("\n")
-            if len(lines) == 0:
-                return APIResponse.error(message="文件为空", status_code=400)
-            reader = csv.reader(lines)
-            rows = list(reader)
-            if len(rows) < 2:
-                return APIResponse.error(message="文件没有数据", status_code=400)
-            headers = [h.strip() for h in rows[0]]
-            mapping = {
-                "姓名": "name",
-                "性别": "gender",
-                "班级": "class_name",
-                "电话": "phone",
-                "联系电话": "phone",
-                "家长信息": "parent_info",
-                "父亲姓名": "father_name",
-                "父亲电话": "father_phone",
-                "母亲姓名": "mother_name",
-                "母亲电话": "mother_phone",
-                "监护人姓名": "guardian_name",
-                "监护人电话": "guardian_phone",
-                "监护关系": "guardian_relation",
-                "卡片ID": "card_id",
-                "饭卡号": "card_id",
-                "学号": "card_id",
-                "初始积分": "current_score",
-                "积分": "current_score",
-            }
             for idx, row in enumerate(rows[1:]):
                 try:
-                    row_dict = {}
-                    row_data = {}
-                    for i, header in enumerate(headers):
-                        if header in mapping and i < len(row):
-                            value = row[i].strip() if row[i] else ""
-                            row_dict[mapping[header]] = value
-                            row_data[header] = value
-                    row_errors = []
-                    row_number = idx + 2
-                    card_id = row_dict.get("card_id", "").strip()
-                    if not card_id:
-                        row_errors.append({"field": "card_id", "message": "学号不能为空"})
-                    elif not isinstance(card_id, (int, str)) or len(str(card_id).strip()) == 0:
-                        row_errors.append({"field": "card_id", "message": "学号格式无效"})
-                    elif len(str(card_id).strip()) > 50:
-                        row_errors.append(
-                            {"field": "card_id", "message": "学号长度超过限制（最大50字符）"}
-                        )
-                    name = row_dict.get("name", "").strip()
-                    if not name:
-                        row_errors.append({"field": "name", "message": "姓名不能为空"})
-                    elif not isinstance(name, str) or len(name.strip()) == 0:
-                        row_errors.append(
-                            {"field": "name", "message": "姓名格式无效，必须为非空字符串"}
-                        )
-                    elif len(name.strip()) > 50:
-                        row_errors.append(
-                            {"field": "name", "message": "姓名长度超过限制（最大50字符）"}
-                        )
-                    class_name = row_dict.get("class_name", "").strip()
-                    if class_name:
-                        if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                            row_errors.append(
-                                {"field": "class_name", "message": "班级名称格式无效"}
-                            )
-                        elif len(class_name.strip()) > 100:
-                            row_errors.append(
-                                {
-                                    "field": "class_name",
-                                    "message": "班级名称长度超过限制（最大100字符）",
-                                }
-                            )
-                        else:
-                            class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                            if not class_info:
-                                row_errors.append(
-                                    {
-                                        "field": "class_name",
-                                        "message": f'班级 "{class_name}" 在系统中不存在',
-                                    }
-                                )
-                        if allowed_classes is not None and class_name not in allowed_classes:
-                            row_errors.append(
-                                {
-                                    "field": "class_name",
-                                    "message": f'无权为班级 "{class_name}" 导入学生',
-                                }
-                            )
-                    gender = row_dict.get("gender", "").strip()
-                    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
-                        row_errors.append(
-                            {"field": "gender", "message": '性别格式无效，只能是"男"或"女"'}
-                        )
-                    phone = row_dict.get("phone", "").strip()
-                    if phone and not re.match(r"^1[3-9]\d{9}$", phone):
-                        row_errors.append(
-                            {"field": "phone", "message": "联系电话格式无效，请输入11位手机号"}
-                        )
-                    father_phone = row_dict.get("father_phone", "").strip()
-                    if father_phone and not re.match(r"^1[3-9]\d{9}$", father_phone):
-                        row_errors.append(
-                            {
-                                "field": "father_phone",
-                                "message": "父亲电话格式无效，请输入11位手机号",
-                            }
-                        )
-                    mother_phone = row_dict.get("mother_phone", "").strip()
-                    if mother_phone and not re.match(r"^1[3-9]\d{9}$", mother_phone):
-                        row_errors.append(
-                            {
-                                "field": "mother_phone",
-                                "message": "母亲电话格式无效，请输入11位手机号",
-                            }
-                        )
-                    guardian_phone = row_dict.get("guardian_phone", "").strip()
-                    if guardian_phone and not re.match(r"^1[3-9]\d{9}$", guardian_phone):
-                        row_errors.append(
-                            {
-                                "field": "guardian_phone",
-                                "message": "监护人电话格式无效，请输入11位手机号",
-                            }
-                        )
-                    current_score = row_dict.get("current_score", "0").strip()
-                    if current_score:
-                        try:
-                            current_score_int = int(current_score)
-                            if current_score_int < 0:
-                                row_errors.append(
-                                    {"field": "current_score", "message": "初始积分不能为负数"}
-                                )
-                        except ValueError:
-                            row_errors.append(
-                                {
-                                    "field": "current_score",
-                                    "message": "初始积分格式无效，必须为整数",
-                                }
-                            )
+                    row_dict, row_data = _build_csv_row_dict(row, headers, mapping)
+                    row_errors = _validate_csv_row(row_dict, allowed_classes)
                     if row_errors:
                         error_count = len(errors)
                         error_msg = "; ".join(
-                            [f'{err["field"]}: {err["message"]}' for err in row_errors]
+                            [f'{err2["field"]}: {err2["message"]}' for err2 in row_errors]
                         )
                         errors.append(
                             {
-                                "row": row_number,
+                                "row": idx + 2,
                                 "message": error_msg,
                                 "row_data": row_data,
-                                "error_fields": [err["field"] for err in row_errors],
+                                "error_fields": [err2["field"] for err2 in row_errors],
                             }
                         )
                         messages.append(
                             {
-                                "name": name or card_id or "未知",
+                                "name": row_dict.get("name", "")
+                                or row_dict.get("card_id", "")
+                                or "未知",
                                 "action": "failed",
                                 "message": error_msg,
                                 "row_data": row_data,
-                                "error_fields": [err["field"] for err in row_errors],
+                                "error_fields": [err2["field"] for err2 in row_errors],
                             }
                         )
                         continue
-                    current_score_int = int(current_score) if current_score else 0
+                    name = row_dict.get("name", "").strip()
+                    card_id = row_dict.get("card_id", "").strip()
+                    class_name = row_dict.get("class_name", "").strip()
+                    gender = row_dict.get("gender", "").strip()
+                    phone = row_dict.get("phone", "").strip()
+                    score_str = row_dict.get("current_score", "0").strip()
+                    current_score_int = int(score_str) if score_str else 0
                     existing = User.query.filter_by(card_id=card_id).first()
                     if existing:
-                        updates = {}
-                        if name:
-                            updates["name"] = name
-                        if gender:
-                            updates["gender"] = gender
-                        if class_name:
-                            updates["class_name"] = class_name
-                        if phone:
-                            updates["phone"] = phone
-                        if row_dict.get("parent_info", ""):
-                            updates["parent_info"] = row_dict["parent_info"]
-                        if row_dict.get("father_name", ""):
-                            updates["father_name"] = row_dict["father_name"]
-                        if row_dict.get("father_phone", ""):
-                            updates["father_phone"] = row_dict["father_phone"]
-                        if row_dict.get("mother_name", ""):
-                            updates["mother_name"] = row_dict["mother_name"]
-                        if row_dict.get("mother_phone", ""):
-                            updates["mother_phone"] = row_dict["mother_phone"]
-                        if row_dict.get("guardian_name", ""):
-                            updates["guardian_name"] = row_dict["guardian_name"]
-                        if row_dict.get("guardian_phone", ""):
-                            updates["guardian_phone"] = row_dict["guardian_phone"]
-                        if row_dict.get("guardian_relation", ""):
-                            updates["guardian_relation"] = row_dict["guardian_relation"]
-                        updates["current_score"] = current_score_int
+                        updates = _build_csv_user_updates(row_dict, current_score_int)
                         pending_updates.append((existing.id, updates))
                         updated += 1
                         messages.append(
@@ -1058,22 +762,7 @@ class UserImportFile(Resource):
                             }
                         )
                     else:
-                        user = User(
-                            name=name,
-                            gender=gender,
-                            class_name=class_name,
-                            phone=phone,
-                            parent_info=row_dict.get("parent_info", ""),
-                            father_name=row_dict.get("father_name", ""),
-                            father_phone=row_dict.get("father_phone", ""),
-                            mother_name=row_dict.get("mother_name", ""),
-                            mother_phone=row_dict.get("mother_phone", ""),
-                            guardian_name=row_dict.get("guardian_name", ""),
-                            guardian_phone=row_dict.get("guardian_phone", ""),
-                            guardian_relation=row_dict.get("guardian_relation", ""),
-                            card_id=card_id,
-                            current_score=current_score_int,
-                        )
+                        user = _build_csv_user(row_dict, current_score_int)
                         pending_users.append(user)
                         imported += 1
                         messages.append(
@@ -1121,3 +810,398 @@ class UserImportFile(Resource):
             },
             message=f"导入完成: 新增{imported}条, 更新{updated}条, 失败{failed_count}条",
         )
+
+
+def _check_user_create_class_scope(data):
+    class_name = data.get("class_name")
+    if class_name:
+        admin = get_current_admin()
+        if admin:
+            allowed_classes = get_allowed_classes(admin.id)
+            if allowed_classes is not None and class_name not in allowed_classes:
+                return APIResponse.error(message="无权为该班级创建学生", status_code=403)
+    return None
+
+
+def _validate_create_user_fields(data):
+    errors = []
+    errors.extend(_validate_create_user_name(data))
+    errors.extend(_validate_create_user_card_id(data))
+    errors.extend(_validate_create_user_phones(data))
+    errors.extend(_validate_create_user_score(data))
+    errors.extend(_validate_create_user_card_unique(data))
+    return errors
+
+
+def _validate_create_user_name(data):
+    errors = []
+    name = data.get("name")
+    if not name or not name.strip():
+        errors.append("学生姓名不能为空")
+    elif len(name) > ValidationRules.NAME_MAX_LEN:
+        errors.append(f"学生姓名长度不能超过{ValidationRules.NAME_MAX_LEN}个字符")
+    return errors
+
+
+def _validate_create_user_card_id(data):
+    errors = []
+    card_id = data.get("card_id")
+    if not card_id or not str(card_id).strip():
+        errors.append("卡号不能为空")
+    elif card_id:
+        is_valid, error_msg = validate_card_id(card_id)
+        if not is_valid:
+            errors.append(f"卡号: {error_msg}")
+    return errors
+
+
+def _validate_create_user_phones(data):
+    errors = []
+    phone = data.get("phone")
+    if phone:
+        is_valid, error_msg = validate_phone(phone)
+        if not is_valid:
+            errors.append(f"联系电话: {error_msg}")
+    father_phone = data.get("father_phone")
+    if father_phone:
+        is_valid, error_msg = validate_phone(father_phone)
+        if not is_valid:
+            errors.append(f"父亲电话: {error_msg}")
+    mother_phone = data.get("mother_phone")
+    if mother_phone:
+        is_valid, error_msg = validate_phone(mother_phone)
+        if not is_valid:
+            errors.append(f"母亲电话: {error_msg}")
+    return errors
+
+
+def _validate_create_user_score(data):
+    errors = []
+    score = data.get("current_score", 0)
+    is_valid, error_msg = validate_score(score)
+    if not is_valid:
+        errors.append(f"积分: {error_msg}")
+    return errors
+
+
+def _validate_create_user_card_unique(data):
+    errors = []
+    card_id = data.get("card_id")
+    if card_id:
+        existing_user = User.query.filter_by(card_id=card_id).first()
+        if existing_user:
+            errors.append(f"卡号 {card_id} 已被用户 {existing_user.name} 使用")
+    return errors
+
+
+def _validate_import_user(user_data, idx, seen_card_ids):
+    row_errors = []
+    row_data = user_data.copy()
+    row_errors.extend(_validate_import_user_card_id(user_data, seen_card_ids))
+    row_errors.extend(_validate_import_user_name(user_data))
+    row_errors.extend(_validate_import_user_class(user_data))
+    row_errors.extend(_validate_import_user_gender(user_data))
+    row_errors.extend(_validate_import_user_phone(user_data))
+    if row_errors:
+        return None, row_errors, row_data
+    card_id = user_data.get("card_id")
+    user = _build_import_user(user_data, card_id)
+    return user, None, row_data
+
+
+def _validate_import_user_card_id(user_data, seen_card_ids):
+    errors = []
+    card_id = user_data.get("card_id")
+    if not card_id:
+        errors.append({"field": "card_id", "message": "学号不能为空"})
+    elif not isinstance(card_id, (int, str)) or len(str(card_id).strip()) == 0:
+        errors.append({"field": "card_id", "message": "学号格式无效"})
+    elif len(str(card_id).strip()) > 50:
+        errors.append({"field": "card_id", "message": "学号长度超过限制（最大50字符）"})
+    else:
+        card_id_str = str(card_id).strip()
+        is_valid, msg = validate_student_id(card_id_str)
+        if not is_valid:
+            errors.append({"field": "card_id", "message": msg})
+    if card_id:
+        card_id_norm = str(card_id).strip()
+        existing = User.query.filter_by(card_id=card_id_norm).first()
+        if existing:
+            errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 已存在'})
+        elif card_id_norm in seen_card_ids:
+            errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 在本批中重复'})
+    return errors
+
+
+def _validate_import_user_name(user_data):
+    errors = []
+    name = user_data.get("name")
+    if not name:
+        errors.append({"field": "name", "message": "姓名不能为空"})
+    elif not isinstance(name, str) or len(name.strip()) == 0:
+        errors.append({"field": "name", "message": "姓名格式无效，必须为非空字符串"})
+    elif len(name.strip()) > 50:
+        errors.append({"field": "name", "message": "姓名长度超过限制（最大50字符）"})
+    else:
+        is_valid, msg = validate_name(name.strip())
+        if not is_valid:
+            errors.append({"field": "name", "message": msg})
+    return errors
+
+
+def _validate_import_user_class(user_data):
+    errors = []
+    class_name = user_data.get("class_name")
+    if class_name:
+        if not isinstance(class_name, str) or len(class_name.strip()) == 0:
+            errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
+        elif len(class_name.strip()) > 100:
+            errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+        else:
+            class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
+            if not class_info:
+                errors.append(
+                    {"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'}
+                )
+    return errors
+
+
+def _validate_import_user_gender(user_data):
+    errors = []
+    gender = user_data.get("gender")
+    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
+        errors.append({"field": "gender", "message": '性别值无效，只能是"男"或"女"'})
+    return errors
+
+
+def _validate_import_user_phone(user_data):
+    errors = []
+    phone = user_data.get("phone")
+    if phone:
+        is_valid, msg = validate_phone(str(phone))
+        if not is_valid:
+            errors.append({"field": "phone", "message": msg})
+        else:
+            if not re.match(r"^1[3-9]\d{9}$", str(phone).strip()):
+                errors.append({"field": "phone", "message": "联系电话格式无效，请输入11位手机号"})
+    return errors
+
+
+def _build_import_user(user_data, card_id):
+    return User(
+        name=user_data.get("name"),
+        gender=user_data.get("gender") or "",
+        class_name=user_data.get("class_name") or "",
+        phone=user_data.get("phone") or "",
+        father_name=user_data.get("father_name", ""),
+        father_phone=user_data.get("father_phone", ""),
+        mother_name=user_data.get("mother_name", ""),
+        mother_phone=user_data.get("mother_phone", ""),
+        guardian_name=user_data.get("guardian_name", ""),
+        guardian_phone=user_data.get("guardian_phone", ""),
+        guardian_relation=user_data.get("guardian_relation", ""),
+        card_id=str(card_id),
+        current_score=user_data.get("current_score", 0),
+    )
+
+
+_CSV_USER_HEADER_MAPPING = {
+    "姓名": "name",
+    "性别": "gender",
+    "班级": "class_name",
+    "电话": "phone",
+    "联系电话": "phone",
+    "家长信息": "parent_info",
+    "父亲姓名": "father_name",
+    "父亲电话": "father_phone",
+    "母亲姓名": "mother_name",
+    "母亲电话": "mother_phone",
+    "监护人姓名": "guardian_name",
+    "监护人电话": "guardian_phone",
+    "监护关系": "guardian_relation",
+    "卡片ID": "card_id",
+    "饭卡号": "card_id",
+    "学号": "card_id",
+    "初始积分": "current_score",
+    "积分": "current_score",
+}
+
+
+def _check_csv_upload_file(request):
+    if "file" not in request.files:
+        return None, APIResponse.error(message="请选择文件", status_code=400)
+    file = request.files["file"]
+    if file.filename == "":
+        return None, APIResponse.error(message="请选择文件", status_code=400)
+    if not file.filename.lower().endswith(".csv"):
+        return None, APIResponse.error(message="请选择CSV格式的文件", status_code=400)
+    return file, None
+
+
+def _read_and_parse_csv(file):
+    content_bytes = file.read()
+    content, encoding = detect_encoding(content_bytes)
+    if content is None:
+        return (
+            None,
+            None,
+            APIResponse.error(
+                message="无法识别文件编码，请使用UTF-8或GBK编码保存文件", status_code=400
+            ),
+        )
+    lines = content.split("\n")
+    if len(lines) == 0:
+        return None, None, APIResponse.error(message="文件为空", status_code=400)
+    reader = csv.reader(lines)
+    rows = list(reader)
+    if len(rows) < 2:
+        return None, None, APIResponse.error(message="文件没有数据", status_code=400)
+    return rows, [h.strip() for h in rows[0]], None
+
+
+def _build_csv_row_dict(row, headers, mapping):
+    row_dict = {}
+    row_data = {}
+    for i, header in enumerate(headers):
+        if header in mapping and i < len(row):
+            value = row[i].strip() if row[i] else ""
+            row_dict[mapping[header]] = value
+            row_data[header] = value
+    return row_dict, row_data
+
+
+def _validate_csv_row(row_dict, allowed_classes):
+    row_errors = []
+    row_errors.extend(_csv_validate_card_id(row_dict))
+    row_errors.extend(_csv_validate_name(row_dict))
+    row_errors.extend(_csv_validate_class_name(row_dict, allowed_classes))
+    row_errors.extend(_csv_validate_gender(row_dict))
+    row_errors.extend(_csv_validate_phones(row_dict))
+    row_errors.extend(_csv_validate_score(row_dict))
+    return row_errors
+
+
+def _csv_validate_card_id(row_dict):
+    errors = []
+    card_id = row_dict.get("card_id", "").strip()
+    if not card_id:
+        errors.append({"field": "card_id", "message": "学号不能为空"})
+    elif not isinstance(card_id, (int, str)) or len(str(card_id).strip()) == 0:
+        errors.append({"field": "card_id", "message": "学号格式无效"})
+    elif len(str(card_id).strip()) > 50:
+        errors.append({"field": "card_id", "message": "学号长度超过限制（最大50字符）"})
+    return errors
+
+
+def _csv_validate_name(row_dict):
+    errors = []
+    name = row_dict.get("name", "").strip()
+    if not name:
+        errors.append({"field": "name", "message": "姓名不能为空"})
+    elif not isinstance(name, str) or len(name.strip()) == 0:
+        errors.append({"field": "name", "message": "姓名格式无效，必须为非空字符串"})
+    elif len(name.strip()) > 50:
+        errors.append({"field": "name", "message": "姓名长度超过限制（最大50字符）"})
+    return errors
+
+
+def _csv_validate_class_name(row_dict, allowed_classes):
+    errors = []
+    class_name = row_dict.get("class_name", "").strip()
+    if class_name:
+        if not isinstance(class_name, str) or len(class_name.strip()) == 0:
+            errors.append({"field": "class_name", "message": "班级名称格式无效"})
+        elif len(class_name.strip()) > 100:
+            errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+        else:
+            class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
+            if not class_info:
+                errors.append(
+                    {"field": "class_name", "message": f'班级 "{class_name}" 在系统中不存在'}
+                )
+        if allowed_classes is not None and class_name not in allowed_classes:
+            errors.append({"field": "class_name", "message": f'无权为班级 "{class_name}" 导入学生'})
+    return errors
+
+
+def _csv_validate_gender(row_dict):
+    errors = []
+    gender = row_dict.get("gender", "").strip()
+    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
+        errors.append({"field": "gender", "message": '性别格式无效，只能是"男"或"女"'})
+    return errors
+
+
+def _csv_validate_phones(row_dict):
+    errors = []
+    phone = row_dict.get("phone", "").strip()
+    if phone and not re.match(r"^1[3-9]\d{9}$", phone):
+        errors.append({"field": "phone", "message": "联系电话格式无效，请输入11位手机号"})
+    father_phone = row_dict.get("father_phone", "").strip()
+    if father_phone and not re.match(r"^1[3-9]\d{9}$", father_phone):
+        errors.append({"field": "father_phone", "message": "父亲电话格式无效，请输入11位手机号"})
+    mother_phone = row_dict.get("mother_phone", "").strip()
+    if mother_phone and not re.match(r"^1[3-9]\d{9}$", mother_phone):
+        errors.append({"field": "mother_phone", "message": "母亲电话格式无效，请输入11位手机号"})
+    guardian_phone = row_dict.get("guardian_phone", "").strip()
+    if guardian_phone and not re.match(r"^1[3-9]\d{9}$", guardian_phone):
+        errors.append(
+            {"field": "guardian_phone", "message": "监护人电话格式无效，请输入11位手机号"}
+        )
+    return errors
+
+
+def _csv_validate_score(row_dict):
+    errors = []
+    current_score = row_dict.get("current_score", "0").strip()
+    if current_score:
+        try:
+            current_score_int = int(current_score)
+            if current_score_int < 0:
+                errors.append({"field": "current_score", "message": "初始积分不能为负数"})
+        except ValueError:
+            errors.append({"field": "current_score", "message": "初始积分格式无效，必须为整数"})
+    return errors
+
+
+def _build_csv_user(row_dict, current_score_int):
+    return User(
+        name=row_dict.get("name", "").strip(),
+        gender=row_dict.get("gender", "").strip(),
+        class_name=row_dict.get("class_name", "").strip(),
+        phone=row_dict.get("phone", "").strip(),
+        parent_info=row_dict.get("parent_info", ""),
+        father_name=row_dict.get("father_name", ""),
+        father_phone=row_dict.get("father_phone", ""),
+        mother_name=row_dict.get("mother_name", ""),
+        mother_phone=row_dict.get("mother_phone", ""),
+        guardian_name=row_dict.get("guardian_name", ""),
+        guardian_phone=row_dict.get("guardian_phone", ""),
+        guardian_relation=row_dict.get("guardian_relation", ""),
+        card_id=row_dict.get("card_id", "").strip(),
+        current_score=current_score_int,
+    )
+
+
+def _build_csv_user_updates(row_dict, current_score_int):
+    spec = [
+        ("name", "name"),
+        ("gender", "gender"),
+        ("class_name", "class_name"),
+        ("phone", "phone"),
+        ("parent_info", "parent_info"),
+        ("father_name", "father_name"),
+        ("father_phone", "father_phone"),
+        ("mother_name", "mother_name"),
+        ("mother_phone", "mother_phone"),
+        ("guardian_name", "guardian_name"),
+        ("guardian_phone", "guardian_phone"),
+        ("guardian_relation", "guardian_relation"),
+    ]
+    updates = {}
+    for src, dst in spec:
+        val = row_dict.get(src, "")
+        if val:
+            updates[dst] = val
+    updates["current_score"] = current_score_int
+    return updates

@@ -6,27 +6,8 @@ import time
 BASE = "http://127.0.0.1:5000/api"
 
 
-def check():
-    results = []
-    # 1. 登录
-    try:
-        t0 = time.time()
-        r = requests.post(
-            f"{BASE}/auth/login", json={"username": "admin", "password": "123456"}, timeout=10
-        )
-        elapsed = (time.time() - t0) * 1000
-        if r.status_code == 200:
-            token = r.json().get("access_token")
-            results.append(("登录", "PASS", f"{r.status_code} {elapsed:.0f}ms"))
-        else:
-            results.append(("登录", "FAIL", f"{r.status_code}"))
-            token = None
-    except Exception as e:
-        results.append(("登录", "ERROR", str(e)))
-        token = None
-
-    # 2. 全部页面API端点（使用前端实际调用的正确路径）
-    endpoints = [
+# (method, endpoint, 中文标签)
+ENDPOINTS = [
         # 首页
         ("GET", "/dashboard/data", "数据概览"),
         ("GET", "/users/", "学生管理"),
@@ -74,54 +55,77 @@ def check():
         ("GET", "/notify_templates/", "通知模板"),
     ]
 
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+def _do_login():
+    """执行登录，返回 (token, login_result_tuple)。"""
+    try:
+        t0 = time.time()
+        r = requests.post(
+            f"{BASE}/auth/login", json={"username": "admin", "password": "123456"}, timeout=10
+        )
+        elapsed = (time.time() - t0) * 1000
+        if r.status_code == 200:
+            token = r.json().get("access_token")
+            return token, ("登录", "PASS", f"{r.status_code} {elapsed:.0f}ms")
+        return None, ("登录", "FAIL", f"{r.status_code}")
+    except Exception as e:
+        return None, ("登录", "ERROR", str(e))
 
-    for _method, ep, label in endpoints:
-        try:
-            t0 = time.time()
-            r = requests.get(f"{BASE}{ep}", headers=headers, timeout=10)
-            elapsed = (time.time() - t0) * 1000
-            status = "PASS" if r.status_code < 400 else "FAIL"
-            body = ""
-            try:
-                j = r.json()
-                if isinstance(j, dict):
-                    for k in (
-                        "items",
-                        "data",
-                        "rules",
-                        "users",
-                        "classes",
-                        "devices",
-                        "notifications",
-                        "admins",
-                        "periods",
-                        "versions",
-                        "logs",
-                    ):
-                        if k in j:
-                            v = j[k]
-                            if isinstance(v, list):
-                                body = f"{k}={len(v)}"
-                            elif isinstance(v, dict):
-                                body = f"{k}=dict"
-                            else:
-                                body = f"{k}={v}"
-                            break
+
+def _summarize_body(r):
+    """从响应中提炼摘要体（原内联逐字搬运）。"""
+    body = ""
+    try:
+        j = r.json()
+        if isinstance(j, dict):
+            for k in (
+                "items",
+                "data",
+                "rules",
+                "users",
+                "classes",
+                "devices",
+                "notifications",
+                "admins",
+                "periods",
+                "versions",
+                "logs",
+            ):
+                if k in j:
+                    v = j[k]
+                    if isinstance(v, list):
+                        body = f"{k}={len(v)}"
+                    elif isinstance(v, dict):
+                        body = f"{k}=dict"
                     else:
-                        if "total" in j:
-                            body = f"total={j['total']}"
-                        else:
-                            body = f"keys={list(j.keys())[:4]}"
-                elif isinstance(j, list):
-                    body = f"list={len(j)}"
-            except:
-                body = r.text[:30] if r.text else "empty"
-            results.append((f"{label}({ep})", status, f"{r.status_code} {elapsed:.0f}ms {body}"))
-        except Exception as e:
-            results.append((f"{label}({ep})", "ERROR", str(e)[:50]))
+                        body = f"{k}={v}"
+                    break
+            else:
+                if "total" in j:
+                    body = f"total={j['total']}"
+                else:
+                    body = f"keys={list(j.keys())[:4]}"
+        elif isinstance(j, list):
+            body = f"list={len(j)}"
+    except Exception:
+        body = r.text[:30] if r.text else "empty"
+    return body
 
-    # 输出
+
+def _check_endpoint(ep, label, headers):
+    """探测单个端点，返回结果元组（原逐字搬运）。"""
+    try:
+        t0 = time.time()
+        r = requests.get(f"{BASE}{ep}", headers=headers, timeout=10)
+        elapsed = (time.time() - t0) * 1000
+        status = "PASS" if r.status_code < 400 else "FAIL"
+        body = _summarize_body(r)
+        return (f"{label}({ep})", status, f"{r.status_code} {elapsed:.0f}ms {body}")
+    except Exception as e:
+        return (f"{label}({ep})", "ERROR", str(e)[:50])
+
+
+def _print_report(results):
+    """输出健康检查报告，返回 (pass, fail, error)。"""
     print("\n" + "=" * 95)
     print("全面服务健康检查报告 V2")
     print("=" * 95)
@@ -137,6 +141,22 @@ def check():
         print(f"{icon} [{status:4}] {name:45} {detail}")
     print("=" * 95)
     return p, f, e
+
+
+def check():
+    results = []
+    # 1. 登录
+    token, login_result = _do_login()
+    results.append(login_result)
+
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+
+    for _method, ep, label in ENDPOINTS:
+        results.append(_check_endpoint(ep, label, headers))
+
+    return _print_report(results)
+
+
 
 
 if __name__ == "__main__":

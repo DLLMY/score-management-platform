@@ -18,6 +18,7 @@ from models import ClassInfo
 from services import phonebox_policy as policy_service
 from utils.permission import requires_permission, get_current_admin
 from utils.response import APIResponse
+from utils.decorators import safe_handle
 from datetime import datetime
 
 ns_phonebox_policy = Namespace("phonebox-policy", description="班主任手机箱开箱策略")
@@ -203,6 +204,7 @@ class PhoneBoxOverrideResource(Resource):
     @ns_phonebox_policy.expect(override_model)
     @ns_phonebox_policy.response(200, "成功", policy_response)
     @requires_permission("phonebox.unlock.manage")
+    @safe_handle(message="一键放行失败", default_status=500)
     def post(self):
         data = ns_phonebox_policy.payload or {}
         minutes = data.get("minutes")
@@ -213,13 +215,10 @@ class PhoneBoxOverrideResource(Resource):
         if err:
             return APIResponse.error(message=err, status_code=403)
         admin = _current_admin()
-        try:
-            policy = policy_service.one_click_allow(
-                cid, int(minutes), updated_by=admin.id if admin else None
-            )
-            return APIResponse.success(data=_serialize(policy, cid))
-        except Exception as e:
-            return APIResponse.error(message=f"一键放行失败: {e}", status_code=500)
+        policy = policy_service.one_click_allow(
+            cid, int(minutes), updated_by=admin.id if admin else None
+        )
+        return APIResponse.success(data=_serialize(policy, cid))
 
 
 @ns_phonebox_policy.route("/cancel-override")
@@ -238,3 +237,4 @@ class PhoneBoxCancelOverrideResource(Resource):
             # 本班从未配置过策略，返回默认空策略
             return APIResponse.success(data=_serialize(None, cid))
         return APIResponse.success(data=_serialize(policy, cid))
+

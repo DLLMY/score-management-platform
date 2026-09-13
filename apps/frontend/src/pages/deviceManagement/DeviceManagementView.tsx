@@ -24,6 +24,7 @@ import { DeviceDetailModal } from './DeviceDetailModal';
 import { BindDeviceModal } from './BindDeviceModal';
 import { ControlDeviceModal } from './ControlDeviceModal';
 import { DeviceSettingsModal } from './DeviceSettingsModal';
+import type { DeviceSecretStatus } from './DeviceSecretPanel';
 import { OTAModal } from './OTAModal';
 import { BulkOTAModal } from './BulkOTAModal';
 import { OTAProgressModal } from './OTAProgressModal';
@@ -112,6 +113,12 @@ interface DeviceManagementViewProps {
   handleFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   handleImport: () => void;
   handleExportErrors: () => void;
+  // 设备密钥（差异 #4 阶段 3）
+  secretStatus: DeviceSecretStatus | null;
+  secretStatusLoading: boolean;
+  issuedSecret: string | null;
+  submitIssueSecret: () => void;
+  submitRevokeSecret: () => void;
 }
 
 export function DeviceManagementView(props: DeviceManagementViewProps) {
@@ -179,6 +186,11 @@ export function DeviceManagementView(props: DeviceManagementViewProps) {
     handleDeviceSettingsChange,
     submitUpdateSettings,
     closeSettingsModal,
+    secretStatus,
+    secretStatusLoading,
+    issuedSecret,
+    submitIssueSecret,
+    submitRevokeSecret,
     handleOtaFormChange,
     submitOTAUpgrade,
     closeOTAModal,
@@ -340,6 +352,11 @@ export function DeviceManagementView(props: DeviceManagementViewProps) {
         onChange={handleDeviceSettingsChange}
         submitting={submitting}
         onSubmit={submitUpdateSettings}
+        secretStatus={secretStatus}
+        secretStatusLoading={secretStatusLoading}
+        issuedSecret={issuedSecret}
+        onIssueSecret={submitIssueSecret}
+        onRevokeSecret={submitRevokeSecret}
       />
 
       <OTAModal

@@ -27,6 +27,9 @@ def create_firmware_version(data, created_by=None):
     """创建固件版本记录并落库 + 写操作日志。返回新建 id。
 
     version 必填校验、version 唯一性校验（返回 400）由路由负责，service 只做写入。
+
+    差异 #1/#2：支持 device_type / is_stable / rollback_to。
+    device_type 未提供时落 DEFAULT_DEVICE_TYPE（'phonebox'），与模型 server_default 一致。
     """
     firmware = FirmwareVersion(
         version=data.get("version"),
@@ -37,6 +40,9 @@ def create_firmware_version(data, created_by=None):
         min_compatible_version=data.get("min_compatible_version"),
         is_mandatory=data.get("is_mandatory", False),
         is_active=data.get("is_active", True),
+        device_type=_normalize_device_type(data.get("device_type")),
+        is_stable=bool(data.get("is_stable", False)),
+        rollback_to=data.get("rollback_to"),
         created_by=created_by,
     )
     db.session.add(firmware)
@@ -52,15 +58,36 @@ def create_firmware_version(data, created_by=None):
 
 
 def update_firmware_version(firmware, data):
-    """更新固件版本字段（description / is_mandatory / is_active）并提交。"""
+    """更新固件版本字段（description / is_mandatory / is_active）并提交。
+
+    差异 #1/#2：额外支持 device_type / is_stable / rollback_to 的可选更新。
+    仅当请求显式携带对应键时才改写，避免误把未传字段清空（向后兼容）。
+    """
     if "description" in data:
         firmware.description = data["description"]
     if "is_mandatory" in data:
         firmware.is_mandatory = data["is_mandatory"]
     if "is_active" in data:
         firmware.is_active = data["is_active"]
+    if "device_type" in data:
+        firmware.device_type = _normalize_device_type(data["device_type"])
+    if "is_stable" in data:
+        firmware.is_stable = bool(data["is_stable"])
+    if "rollback_to" in data:
+        firmware.rollback_to = data["rollback_to"]
     db.session.commit()
     return
+
+
+def _normalize_device_type(device_type):
+    """归一化 device_type（None/空 → 'phonebox'）。
+
+    直接内联实现而非 import ota_negotiation_service，避免 service 间循环依赖。
+    """
+    if device_type is None:
+        return "phonebox"
+    text = str(device_type).strip()
+    return text or "phonebox"
 
 
 def delete_firmware_version(firmware):
@@ -151,11 +178,17 @@ def create_uploaded_firmware(
     min_compatible_version,
     is_mandatory,
     created_by=None,
+    device_type=None,
+    is_stable=False,
+    rollback_to=None,
 ):
     """上传固件：创建 FirmwareVersion 记录并落库 + 写操作日志。返回新建 id。
 
     文件保存 / MD5 计算 / 扩展名校验由路由负责，service 只做落库。
     md5_hex 为调用方已计算的真实 MD5（32 位），同时写入响应与日志（修复原 sha256 缺陷）。
+
+    差异 #1/#2：新增 device_type / is_stable / rollback_to 三个**带默认值**的末位参数，
+    既有位置参数与关键字调用方式完全不受影响（向后兼容）。
     """
     firmware = FirmwareVersion(
         version=version,
@@ -166,6 +199,9 @@ def create_uploaded_firmware(
         min_compatible_version=min_compatible_version,
         is_mandatory=is_mandatory,
         is_active=True,
+        device_type=_normalize_device_type(device_type),
+        is_stable=bool(is_stable),
+        rollback_to=rollback_to,
         created_by=created_by,
     )
     db.session.add(firmware)

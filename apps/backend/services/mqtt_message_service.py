@@ -7,6 +7,14 @@ from services.mqtt_service import publish_mqtt, mqtt_manager, mqtt_logs
 from services.class_time_checker import ClassTimeChecker
 from services import phonebox_policy
 from services.phonebox_policy import POLICY_BLOCK, POLICY_ALLOW_OVERRIDE, POLICY_ALLOW_WINDOW
+# 差异 #3/#11：心跳统一写入 + 设备错误自动告警
+from services.heartbeat_service import (
+    apply_heartbeat_to_device,
+    check_device_errors,
+    is_safe_device_id,
+)
+# 差异 #17：开锁原因码唯一命名来源
+from utils.unlock_reasons import UnlockReason, canonicalize
 from utils.db_session import db_session_scope
 
 
@@ -144,12 +152,25 @@ class MQTTMessageService:
         return max(0, min(100, score))
 
     def publish_unlock_result(self, box_id, success, reason, score=None):
+        """下发开锁结果（差异 #17：原因码收拢到 UnlockReason 常量）。
+
+        零破坏性变更约束下的设计：
+          - 派发层历史写死的取值（`not_in_time` / `daily_limit` / `class_in_session` …）
+            全部**原样保留**，仅改为引用常量，线上 payload 逐字节不变；
+          - `canonicalize` 只处理**语义等价**的历史别名（如 `user_blacklisted`
+            → `blacklisted`），对 `not_in_time` / `not_in_time_window` 这类
+            **跨层异义**取值不做合并；
+          - 若确实发生了别名改写，把原值放进 `legacy_reason`，旧下游零破坏。
+        """
         topic = f"phonebox/unlock/{box_id}"
+        canonical = canonicalize(reason)
         payload = {
             "result": "true" if success else "false",
-            "reason": reason,
+            "reason": canonical,
             "current_score": score,
         }
+        if canonical != reason:
+            payload["legacy_reason"] = reason
         publish_mqtt(topic, json.dumps(payload))
 
     def _get_user_by_card_id(self, card_id):
@@ -167,15 +188,17 @@ class MQTTMessageService:
         card_id = data.get("card_id")
 
         if not card_id:
-            self.publish_unlock_result(box_id, False, "card_not_found")
+            self.publish_unlock_result(box_id, False, UnlockReason.CARD_NOT_FOUND)
             return
 
         user = self._get_user_by_card_id(card_id)
 
         if not user:
-            self.publish_unlock_result(box_id, False, "card_not_found")
+            self.publish_unlock_result(box_id, False, UnlockReason.CARD_NOT_FOUND)
         else:
-            self.publish_unlock_result(box_id, True, "query_ok", user.current_score)
+            self.publish_unlock_result(
+                box_id, True, UnlockReason.QUERY_OK, user.current_score
+            )
 
     def handle_unlock_message(self, data):
         box_id = data.get("box_id", "A")
@@ -184,20 +207,22 @@ class MQTTMessageService:
         minute = data.get("minute")
 
         if not card_id:
-            self.publish_unlock_result(box_id, False, "card_not_found")
+            self.publish_unlock_result(box_id, False, UnlockReason.CARD_NOT_FOUND)
             return
 
         user = self._get_user_by_card_id(card_id)
         if not user:
-            self.publish_unlock_result(box_id, False, "card_not_found")
+            self.publish_unlock_result(box_id, False, UnlockReason.CARD_NOT_FOUND)
             return
 
         if self._apply_teacher_unlock_policy(box_id, card_id, user, hour, minute):
             return
 
         # 全局 TimeRule 时段门禁（保留原有逻辑：allow_unlock 窗口外一律拒绝）
+        # 差异 #17：此处下发 `not_in_time`（全局规则语义），与判定层的
+        # `not_in_time_window` 是不同层不同语义，**不可互换**（设备端已按前者匹配）。
         if not self.check_time_valid(box_id, hour, minute):
-            self.publish_unlock_result(box_id, False, "not_in_time")
+            self.publish_unlock_result(box_id, False, UnlockReason.NOT_IN_TIME)
             return
 
         # 新增：按班级课表反查，上课 / 自习时间禁止学生自助开箱（硬拦截，无 force_send）
@@ -230,7 +255,7 @@ class MQTTMessageService:
                         "班主任已关闭本班自助开箱",
                         force_send=False,
                     )
-                    self.publish_unlock_result(box_id, False, "teacher_disabled")
+                    self.publish_unlock_result(box_id, False, UnlockReason.TEACHER_DISABLED)
                     return True
                 if decision in (POLICY_ALLOW_OVERRIDE, POLICY_ALLOW_WINDOW):
                     reason_code, reason_msg = _teacher_policy_reason(decision)
@@ -278,7 +303,7 @@ class MQTTMessageService:
                         msg,
                         force_send=False,
                     )
-                    self.publish_unlock_result(box_id, False, "class_in_session")
+                    self.publish_unlock_result(box_id, False, UnlockReason.CLASS_IN_SESSION)
                     return True
         except Exception as e:
             # 课表反查异常不影响主流程（全局门禁已校验），默认放行
@@ -301,7 +326,7 @@ class MQTTMessageService:
         UnlockValidator.record_unlock(user)
 
         mqtt_manager.set_cached_user(card_id, user)
-        self.publish_unlock_result(box_id, True, "score_ok", user.current_score)
+        self.publish_unlock_result(box_id, True, UnlockReason.SCORE_OK, user.current_score)
 
     def handle_heartbeat_message(self, data):
         device_id = data.get("device_id")
@@ -313,14 +338,24 @@ class MQTTMessageService:
         box_b_status = data.get("box_b_status")
         system_state = data.get("system_state")
 
-        fw_version = data.get("fw_version")
-        platform = data.get("platform")
-        free_heap = data.get("free_heap")
-        last_error = data.get("last_error")
-        error_count = data.get("error_count")
+        # fw_version / platform / free_heap / last_error / error_count 不再在此逐个取局部变量，
+        # 统一由 apply_heartbeat_to_device 按字段映射表写入（差异 #3）。
+        # 差异 #15：宽松 device_id 兜底校验（仅拦截非法形态，不拒绝存量设备）
+        if not is_safe_device_id(device_id):
+            log_warning(f"[心跳] device_id 非法，已忽略: {device_id!r}")
+            return
 
         with db_session_scope():
             from models import Device, DeviceHeartbeat
+
+            device = Device.query.filter_by(device_id=device_id).first()
+
+            # 差异 #4：白名单 + 签名准入（默认关闭/无密钥 ⇒ 放行，零行为变化）。
+            # 与 mqtt_manager._process_heartbeat 共用同一门禁语义，避免两条心跳路径漂移。
+            from services.mqtt_manager import MQTTManager
+
+            if not MQTTManager._passes_device_auth_gate(device, data, device_id, kind="心跳"):
+                return
 
             heartbeat_record = DeviceHeartbeat(
                 device_id=device_id,
@@ -334,45 +369,60 @@ class MQTTMessageService:
             )
             db.session.add(heartbeat_record)
 
-            device = Device.query.filter_by(device_id=device_id).first()
             if device:
-                device.status = status
-                device.last_heartbeat = datetime.now()
-                device.wifi_signal = wifi_signal
-                device.uptime = uptime
-                device.box_a_status = box_a_status
-                device.box_b_status = box_b_status
-                device.system_state = system_state
-                device.updated_at = datetime.now()
-
-                if fw_version is not None:
-                    device.fw_version = fw_version
-                if platform is not None:
-                    device.platform = platform
-                if free_heap is not None:
-                    device.free_heap = free_heap
-                if last_error is not None:
-                    device.last_error = last_error
-                if error_count is not None:
-                    device.error_count = error_count
+                # 差异 #3：统一走 apply_heartbeat_to_device（键存在且非 None 才覆盖），
+                # 不再无条件覆盖各字段——避免设备按需上报时把已有状态清空。
+                apply_heartbeat_to_device(device, data, touch_status=True)
+                # 差异 #11：设备错误自动告警（last_error / error_count 超阈值）
+                check_device_errors(device, data)
             else:
                 device = Device(
                     device_id=device_id,
                     name=f"Device {device_id}",
                     status=status,
-                    last_heartbeat=datetime.now(),
-                    wifi_signal=wifi_signal,
-                    uptime=uptime,
-                    box_a_status=box_a_status,
-                    box_b_status=box_b_status,
-                    system_state=system_state,
-                    fw_version=fw_version,
-                    platform=platform,
-                    free_heap=free_heap,
-                    last_error=last_error,
-                    error_count=error_count or 0,
                 )
                 db.session.add(device)
+                # 新建设备同样走统一写入，保证首帧心跳与后续心跳字段语义一致
+                apply_heartbeat_to_device(device, data, touch_status=True)
+                # 差异 #11：新设备首帧即带上错误信息时也要告警
+                check_device_errors(device, data)
+
+    # ---- 差异 #7：points/add|sub 幂等辅助 ----
+    @staticmethod
+    def _points_idempotency_key(kind, msg_id):
+        """构造幂等键；msg_id 为空则返回 None（表示不做去重，保持历史行为）。"""
+        if not msg_id:
+            return None
+        return f"points:{kind}:{msg_id}"
+
+    @staticmethod
+    def _find_processed(key):
+        """查询已处理记录；key 为空返回 None。"""
+        if not key:
+            return None
+        from models import ProcessedMessage
+
+        return ProcessedMessage.query.filter_by(message_id=key).first()
+
+    @staticmethod
+    def _mark_processed(key, approval_id, card_id, device_id):
+        """写入幂等记录（key 为空则跳过）。失败不阻断主流程。"""
+        if not key:
+            return
+        try:
+            from models import ProcessedMessage
+
+            db.session.add(
+                ProcessedMessage(
+                    message_id=key,
+                    record_id=approval_id,
+                    client_id=device_id,
+                )
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            log_warning(f"[points] 幂等记录写入失败（已回滚）: {e}")
 
     def handle_points_query(self, data):
         card_id = data.get("card_id")
@@ -430,6 +480,23 @@ class MQTTMessageService:
             publish_mqtt("phonebox/points/result", json.dumps(response))
             return
 
+        # 差异 #7：msg_id 幂等（未带 msg_id → 不做去重，行为与历史一致）
+        idem_key = self._points_idempotency_key("add", data.get("msg_id"))
+        processed = self._find_processed(idem_key)
+        if processed:
+            response = {
+                "success": True,
+                "message": "Message already processed (idempotent)",
+                "card_id": card_id,
+                "requested_amount": amount,
+                "request_id": request_id,
+                "msg_id": data.get("msg_id"),
+                "approval_id": processed.record_id,
+                "status": "pending",
+            }
+            publish_mqtt("phonebox/points/result", json.dumps(response))
+            return
+
         user = self._get_user_by_card_id(card_id)
 
         if not user:
@@ -454,6 +521,9 @@ class MQTTMessageService:
                     status="pending",
                 )
                 db.session.add(approval)
+
+            # 差异 #7：首次处理成功后写幂等记录
+            self._mark_processed(idem_key, approval.id, card_id, device_id)
 
             response = {
                 "success": True,
@@ -490,6 +560,23 @@ class MQTTMessageService:
             publish_mqtt("phonebox/points/result", json.dumps(response))
             return
 
+        # 差异 #7：msg_id 幂等（未带 msg_id → 不做去重，行为与历史一致）
+        idem_key = self._points_idempotency_key("sub", data.get("msg_id"))
+        processed = self._find_processed(idem_key)
+        if processed:
+            response = {
+                "success": True,
+                "message": "Message already processed (idempotent)",
+                "card_id": card_id,
+                "requested_amount": amount,
+                "request_id": request_id,
+                "msg_id": data.get("msg_id"),
+                "approval_id": processed.record_id,
+                "status": "pending",
+            }
+            publish_mqtt("phonebox/points/result", json.dumps(response))
+            return
+
         user = self._get_user_by_card_id(card_id)
 
         if not user:
@@ -514,6 +601,9 @@ class MQTTMessageService:
                     status="pending",
                 )
                 db.session.add(approval)
+
+            # 差异 #7：首次处理成功后写幂等记录
+            self._mark_processed(idem_key, approval.id, card_id, device_id)
 
             response = {
                 "success": True,

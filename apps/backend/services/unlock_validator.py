@@ -1,12 +1,22 @@
 from models import db, User, TimeRule, ScoreRankRule, ScoreRecord
+from utils.unlock_reasons import UnlockReason
 from datetime import datetime, date, time
+
+
+# 差异 #8：每日开锁次数默认上限（用户级 daily_unlock_limit 为空时使用）。
+# 历史实现硬编码为 5（常量 DAILY_LIMIT=10 从未生效）；此处把它显式命名为常量，
+# **取值保持 5 不变**——零行为漂移，仅消除「常量 10 vs 实际 5」的认知陷阱。
+# 如需调整全校默认值，只改这一处（get_unlock_status / _check_daily_limit 共同引用）。
+DEFAULT_DAILY_UNLOCK_LIMIT = 5
 
 
 class UnlockValidator:
     MIN_SCORE = 80
     UNLOCK_COST = 10
     WEEKLY_LIMIT = 5
-    DAILY_LIMIT = 10
+    # 保留历史常量名以免破坏既有引用；其值不再被 _check_daily_limit 使用
+    # （见 DEFAULT_DAILY_UNLOCK_LIMIT 说明）。测试接口 get_daily_limit 返回值也随之一致化。
+    DAILY_LIMIT = DEFAULT_DAILY_UNLOCK_LIMIT
 
     @staticmethod
     def get_user_rank(user: User) -> ScoreRankRule | None:
@@ -43,16 +53,16 @@ class UnlockValidator:
         user = User.query.filter_by(card_id=card_id).first()
 
         if not user:
-            return False, "card_not_found", None
+            return False, UnlockReason.CARD_NOT_FOUND, None
 
         if not user.is_active:
-            return False, "user_inactive", {"current_score": user.current_score}
+            return False, UnlockReason.USER_INACTIVE, {"current_score": user.current_score}
 
         if user.is_blacklisted:
             if user.blacklist_until and user.blacklist_until > datetime.now():
                 return (
                     False,
-                    "user_blacklisted",
+                    UnlockReason.USER_BLACKLISTED,
                     {
                         "reason": user.blacklist_reason,
                         "until": user.blacklist_until.isoformat(),
@@ -62,7 +72,7 @@ class UnlockValidator:
             if user.blacklist_until is None:
                 return (
                     False,
-                    "user_permanently_blacklisted",
+                    UnlockReason.USER_PERMANENTLY_BLACKLISTED,
                     {"reason": user.blacklist_reason, "current_score": user.current_score},
                 )
 
@@ -76,7 +86,7 @@ class UnlockValidator:
         if user.current_score < min_score:
             return (
                 False,
-                "score_low",
+                UnlockReason.SCORE_LOW,
                 {"current_score": user.current_score, "min_required": min_score},
             )
 
@@ -88,7 +98,7 @@ class UnlockValidator:
         if not UnlockValidator._check_weekly_limit(user, weekly_limit):
             return (
                 False,
-                "weekly_limit_exceeded",
+                UnlockReason.WEEKLY_LIMIT_EXCEEDED,
                 {
                     "current_score": user.current_score,
                     "limit": weekly_limit,
@@ -99,20 +109,20 @@ class UnlockValidator:
         if not UnlockValidator._check_daily_limit(user):
             return (
                 False,
-                "daily_limit_exceeded",
+                UnlockReason.DAILY_LIMIT_EXCEEDED,
                 {
                     "current_score": user.current_score,
-                    "limit": user.daily_unlock_limit,
+                    "limit": UnlockValidator._resolve_daily_limit(user),
                     "used": user.today_unlock_count,
                 },
             )
 
         if not UnlockValidator._check_time_window() and not skip_time_window:
-            return False, "not_in_time_window", {"current_score": user.current_score}
+            return False, UnlockReason.NOT_IN_TIME_WINDOW, {"current_score": user.current_score}
 
         return (
             True,
-            "ok",
+            UnlockReason.OK,
             {
                 "user_id": user.id,
                 "name": user.name,
@@ -123,15 +133,36 @@ class UnlockValidator:
         )
 
     @staticmethod
-    def _check_daily_limit(user: User) -> bool:
+    def _resolve_daily_limit(user) -> int:
+        """解析用户当日开锁上限（差异 #8：三级回退，单一来源）。
+
+        1) user.daily_unlock_limit（管理员按用户设置）
+        2) rank.weekly_unlock_limit 同源规则未定义日限额 → 不参与
+        3) DEFAULT_DAILY_UNLOCK_LIMIT（全校默认，历史硬编码 5 显式化）
+
+        历史实现的 `limit = user.daily_unlock_limit if not None else 5` 与
+        常量 DAILY_LIMIT=10 并存且不一致，本函数收敛为唯一口径，
+        并保证**默认值仍为 5**（零行为漂移）。
+        """
+        limit = getattr(user, "daily_unlock_limit", None)
+        if limit is None:
+            return DEFAULT_DAILY_UNLOCK_LIMIT
+        try:
+            return int(limit)
+        except (TypeError, ValueError):
+            return DEFAULT_DAILY_UNLOCK_LIMIT
+
+    @staticmethod
+    def _check_daily_limit(user: User, daily_limit: int = None) -> bool:
         today = date.today()
 
         if user.last_unlock_date != today:
             user.today_unlock_count = 0
             user.last_unlock_date = today
 
+        # 差异 #8：允许调用方显式传入限额（如排名规则下发），否则走三级回退。
         # R2 复核修复: daily_unlock_limit/today_unlock_count 历史数据可能为 NULL → None 比较 TypeError
-        limit = user.daily_unlock_limit if user.daily_unlock_limit is not None else 5
+        limit = daily_limit if daily_limit is not None else UnlockValidator._resolve_daily_limit(user)
         used = user.today_unlock_count or 0
         return used < limit
 
@@ -236,7 +267,11 @@ class UnlockValidator:
             return {"exists": False}
 
         today = date.today()
-        unlock_count = 0 if user.last_unlock_date != today else user.today_unlock_count
+        unlock_count = 0 if user.last_unlock_date != today else (user.today_unlock_count or 0)
+
+        # 差异 #8：极限值统一走 _resolve_daily_limit，避免 user.daily_unlock_limit 为 NULL 时
+        # 直接参与算术（历史实现会 TypeError）或与实际校验口径不一致。
+        limit = UnlockValidator._resolve_daily_limit(user)
 
         return {
             "exists": True,
@@ -244,9 +279,9 @@ class UnlockValidator:
             "name": user.name,
             "current_score": user.current_score,
             "is_blacklisted": user.is_blacklisted,
-            "daily_unlock_limit": user.daily_unlock_limit,
+            "daily_unlock_limit": limit,
             "today_unlock_count": unlock_count,
-            "remaining": max(0, user.daily_unlock_limit - unlock_count),
+            "remaining": max(0, limit - unlock_count),
             "is_active": user.is_active,
         }
 

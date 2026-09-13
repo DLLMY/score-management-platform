@@ -88,12 +88,17 @@ class MQTTManager:
         # - 遥测连接（self._telemetry_client）：只订阅 phonebox/#（QoS0，可容忍丢包），
         #   心跳/状态等异步入 Celery，不在请求路径处理。
         # 注意 EMQX 对单客户端订阅数有上限(~10)，两组订阅均在限额内。
+        # 注意 EMQX 对单客户端订阅数有上限(~10)，新增订阅前先确认总数。
         self.CONTROL_SUBSCRIPTIONS = [
             ("score/#", 1),
             ("phonebox/query", 1),
             ("phonebox/unlock/#", 1),
             ("phonebox/ota/#", 1),
             ("phonebox/points/#", 1),
+            # 差异 #5：重启回执（设备上报「已收到重启指令」）。这是新增订阅，用于解决
+            # 重启指令此前无任何回执、下发成功与否不可观测的问题；覆盖
+            # phonebox/control/restart/ack 与 phonebox/control/restart/ack/{device_id}。
+            ("phonebox/control/restart/ack/#", 1),
         ]
         self.TELEMETRY_SUBSCRIPTIONS = [
             ("phonebox/#", 0),
@@ -105,6 +110,7 @@ class MQTTManager:
             "phonebox/unlock/",
             "phonebox/ota/",
             "phonebox/points/",
+            "phonebox/control/restart/ack/",
         )
 
     @property
@@ -247,6 +253,7 @@ class MQTTManager:
                 or topic.startswith("phonebox/unlock/")
                 or topic.startswith("phonebox/ota/")
                 or topic.startswith("phonebox/points/")
+                or topic.startswith("phonebox/control/restart/ack/")
             ):
                 self._process_critical_message(topic, message)
         except Exception as e:
@@ -397,8 +404,39 @@ class MQTTManager:
                 except Exception as e:
                     logger.warning(f"[MQTTManager] 心跳处理异常(已跳过本条): {e}")
 
+    @staticmethod
+    def _passes_device_auth_gate(device, data, device_id, kind="心跳"):
+        """差异 #4 统一准入门禁：白名单（阶段 1）+ 签名（阶段 2）。
+
+        返回 True 表示放行。所有判定集中在此，避免在各处理函数里重复分支
+        （同时把圈复杂度挡在调用方之外）。
+
+        默认行为与改造前完全一致：
+          - 白名单开关默认关闭 ⇒ 未登记设备照旧允许「上报即注册」；
+          - 设备无密钥 ⇒ 验签直接放行。
+        """
+        from utils.device_auth import should_register_unknown_device
+
+        if not device and not should_register_unknown_device():
+            logger.warning(f"[设备认证] 白名单已开启，拒绝未登记设备{kind}注册: {device_id}")
+            return False
+
+        from utils.device_auth import verify_device_signature
+
+        sig_ok, sig_reason = verify_device_signature(device, data)
+        if not sig_ok:
+            logger.warning(f"[设备认证] {kind}签名校验失败 ({sig_reason})，已丢弃: {device_id}")
+            return False
+        return True
+
     def _process_critical_message(self, topic, message):
-        """立即处理关键消息（如刷卡查询、OTA状态）"""
+        """立即处理关键消息（如刷卡查询、OTA状态、重启回执）"""
+        if topic.startswith("phonebox/control/restart/ack"):
+            try:
+                self._process_restart_ack(topic, message)
+            except Exception as e:
+                logger.error(f"[MQTTManager] 重启回执处理异常(已隔离): {e}")
+
         if topic.startswith("phonebox/ota/"):
             try:
                 if topic.endswith("/status") or topic == "phonebox/ota/status":
@@ -414,39 +452,111 @@ class MQTTManager:
             except Exception as e:
                 logger.error(f"[MQTTManager] 消息回调处理错误: {e}")
 
+    def _process_restart_ack(self, topic, message):
+        """处理设备重启回执（差异 #5 配套）：记录 MQTTLog 审计并刷新设备心跳时间。
+
+        设备应在执行重启前上报 `phonebox/control/restart/ack` 或
+        `phonebox/control/restart/ack/{device_id}`，payload 示例：
+            {"device_id": "PB-01", "action": "restart", "result": "accepted"}
+        处理策略为「只审计、不写业务状态」——重启会导致设备离线属预期行为，
+        因此不在此把 device.status 置为 online，避免掩盖真实离线。
+        """
+        try:
+            data = json.loads(message)
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+
+        device_id = data.get("device_id")
+        if not device_id and topic != "phonebox/control/restart/ack":
+            parts = topic.split("/")
+            # phonebox/control/restart/ack/{device_id}
+            if len(parts) >= 6 and parts[5]:
+                device_id = parts[5]
+        if not device_id:
+            logger.warning(f"[MQTTManager] 重启回执缺少 device_id，已忽略: topic={topic}")
+            return
+
+        from app import app
+        from models import MQTTLog, Device, db
+
+        with app.app_context():
+            try:
+                db.session.add(
+                    MQTTLog(
+                        topic=topic,
+                        message=message,
+                        direction="receive",
+                        timestamp=datetime.now(),
+                    )
+                )
+                # 仅刷新「最近一次通信时间」，不动 status（重启中设备应自然转为离线）
+                device = Device.query.filter_by(device_id=device_id).first()
+                if device:
+                    device.last_heartbeat = datetime.now()
+                    device.updated_at = datetime.now()
+                db.session.commit()
+                logger.info(
+                    f"[MQTTManager] 收到重启回执: device_id={device_id}, "
+                    f"result={data.get('result')}, action={data.get('action')}"
+                )
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"[MQTTManager] 重启回执落库失败（已回滚）: {e}")
+
+    @staticmethod
+    def _resolve_register_device_id(topic, data):
+        """解析 OTA 注册的 device_id：payload 优先，其次从 topic 取（…/{device_id}/register）。"""
+        device_id = data.get("device_id")
+        if not device_id and topic != "phonebox/ota/register":
+            parts = topic.split("/")
+            if len(parts) >= 3:
+                device_id = parts[2]
+        return device_id
+
+    @staticmethod
+    def _apply_register_fields(device, data):
+        """把注册上报的可选字段写入设备（仅非空才覆盖，避免清空已有值）。"""
+        for field in ("fw_version", "platform", "device_type"):
+            value = data.get(field)
+            if value:
+                setattr(device, field, value)
+
     def _process_ota_register(self, topic, message):
         """处理设备主动注册 / 类型上报（phonebox/ota/register 或 phonebox/ota/{device_id}/register）"""
         try:
             data = json.loads(message)
-            # 优先取 payload 中的 device_id；否则从 topic 解析（phonebox/ota/{device_id}）
-            device_id = data.get("device_id")
-            if not device_id and topic != "phonebox/ota/register":
-                parts = topic.split("/")
-                if len(parts) >= 3:
-                    device_id = parts[2]
+            device_id = self._resolve_register_device_id(topic, data)
             if not device_id:
+                return
+
+            # 差异 #15：宽松 device_id 兜底校验（仅拦截非法形态，不拒绝存量设备）
+            from services.heartbeat_service import is_safe_device_id
+
+            if not is_safe_device_id(device_id):
+                logger.warning(f"[OTA] 设备注册 device_id 非法，已忽略: {device_id!r}")
                 return
 
             device_type = data.get("device_type")
             fw_version = data.get("fw_version")
-            platform = data.get("platform")
 
             from app import app
             from models import db, Device
 
             with app.app_context():
                 device = Device.query.filter_by(device_id=device_id).first()
+
+                # 差异 #4：白名单 + 签名准入（默认关闭/无密钥 ⇒ 放行，零行为变化）
+                if not self._passes_device_auth_gate(device, data, device_id, kind="OTA 注册"):
+                    return
+
                 if not device:
                     device = Device(device_id=device_id, name=f"设备 {device_id}", status="online")
                     db.session.add(device)
                 device.status = "online"
                 device.last_heartbeat = datetime.now()
-                if fw_version:
-                    device.fw_version = fw_version
-                if platform:
-                    device.platform = platform
-                if device_type:
-                    device.device_type = device_type
+                self._apply_register_fields(device, data)
                 db.session.commit()
                 logger.info(
                     f"[OTA] 设备注册/类型上报: {device_id} type={device_type} fw={fw_version}"
@@ -650,9 +760,23 @@ class MQTTManager:
                 from app import app
                 from models import Device, DeviceHeartbeat, db
 
+                # 差异 #3/#11：心跳统一写入 + 设备错误自动告警
+                from services.heartbeat_service import apply_heartbeat_to_device, check_device_errors
+                # 差异 #15：宽松 device_id 兜底校验
+                from services.heartbeat_service import is_safe_device_id
+
+                if not is_safe_device_id(device_id):
+                    logger.warning(f"[心跳] device_id 非法，已忽略: {device_id!r}")
+                    return
+
                 with app.app_context():
                     # 检查Device表中是否存在该设备，不存在则自动创建
                     device = Device.query.filter_by(device_id=device_id).first()
+
+                    # 差异 #4：白名单 + 签名准入（默认关闭/无密钥 ⇒ 放行，零行为变化）
+                    if not self._passes_device_auth_gate(device, data, device_id, kind="心跳"):
+                        return
+
                     if not device:
                         # 自动注册新设备
                         device = Device(
@@ -661,20 +785,11 @@ class MQTTManager:
                         db.session.add(device)
                         logger.info(f"[设备注册] 新设备自动注册: {device_id}")
 
-                    # 更新设备状态
-                    device.status = "online"
-                    device.last_heartbeat = datetime.now()
-                    device.wifi_signal = data.get("wifi_signal")
-                    device.uptime = data.get("uptime")
-                    device.box_a_status = data.get("box_a_status")
-                    device.box_b_status = data.get("box_b_status")
-                    device.system_state = data.get("system_state")
-                    device.fw_version = data.get("fw_version")
-                    device.platform = data.get("platform")
-                    if data.get("device_type") is not None:
-                        device.device_type = data.get("device_type")
-                    device.free_heap = data.get("free_heap")
-                    device.updated_at = datetime.now()
+                    # 差异 #3：统一走 apply_heartbeat_to_device，与 mqtt_message_service
+                    # 的心跳路径共享同一字段映射与「键存在且非 None 才覆盖」语义。
+                    apply_heartbeat_to_device(device, data, touch_status=True)
+                    # 差异 #11：设备错误自动告警（last_error / error_count 超阈值）
+                    check_device_errors(device, data)
 
                     # 更新或创建心跳记录
                     heartbeat = DeviceHeartbeat.query.filter_by(device_id=device_id).first()

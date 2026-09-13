@@ -53,18 +53,8 @@ def rename_column_with_alter(conn, table):
     conn.execute(f'ALTER TABLE {q(table)} RENAME COLUMN "user_id" TO "student_id"')
 
 
-def rebuild_table_add_fk(conn, table, nullable):
-    """缺 FK 的表：重建并补 FK + 孤儿清理。"""
-    cur = conn.cursor()
-    cur.execute(f"PRAGMA table_info({q(table)})")
-    cols = cur.fetchall()  # cid,name,type,notnull,dflt,pk
-    col_names = [c[1] for c in cols]
-    if "student_id" in col_names:
-        return "skip"  # 已迁移
-    if "user_id" not in col_names:
-        return "skip"
-
-    # 建新表 DDL
+def _build_new_table_ddl(cols):
+    """根据旧列定义构造带 student_id + FK 的新表 DDL 列清单。"""
     ddl = []
     for _cid, name, ctype, notnull, dflt, pk in cols:
         if name == "user_id":
@@ -77,11 +67,11 @@ def rebuild_table_add_fk(conn, table, nullable):
         nn_clause = " NOT NULL" if notnull else ""
         df_clause = f" DEFAULT {dflt}" if dflt is not None else ""
         ddl.append(f"{q(name)} {ctype}{pk_clause}{nn_clause}{df_clause}{fk_clause}")
-    new_table = table + "_new"
-    cur.execute(f"DROP TABLE IF EXISTS {q(new_table)}")
-    cur.execute(f"CREATE TABLE {q(new_table)} ({', '.join(ddl)})")
+    return ddl
 
-    # 拷贝数据（孤儿清理）
+
+def _copy_data(cur, table, new_table, col_names, nullable):
+    """将旧表数据拷入新表（user_id->student_id 映射 + 孤儿清理），返回孤儿数。"""
     new_names = [("student_id" if c == "user_id" else c) for c in col_names]
     select_parts = []
     for c in col_names:
@@ -108,13 +98,11 @@ def rebuild_table_add_fk(conn, table, nullable):
     else:
         cur.execute(insert_sql)
         orphans = 0
-    print(f"  [{table}] 重建完成：拷贝行，孤儿(删除/置空)={orphans}")
+    return orphans
 
-    # 删旧表 + 改名
-    cur.execute(f"DROP TABLE {q(table)}")
-    cur.execute(f"ALTER TABLE {q(new_table)} RENAME TO {q(table)}")
 
-    # 重建索引（含 user_id→student_id 重命名）
+def _rebuild_indexes(cur, table):
+    """重建索引（user_id->student_id 列重命名）。"""
     cur.execute(f"PRAGMA index_list({q(table)})")
     indexes = cur.fetchall()  # seq,name,unique,origin,partial
     for _seq, idx_name, unique, origin, _partial in indexes:
@@ -128,7 +116,37 @@ def rebuild_table_add_fk(conn, table, nullable):
             f"CREATE {uniq}INDEX {q(idx_name)} ON {q(table)} "
             f"({', '.join(q(c) for c in new_idx_cols)})"
         )
+
+
+def rebuild_table_add_fk(conn, table, nullable):
+    """缺 FK 的表：重建并补 FK + 孤儿清理。"""
+    cur = conn.cursor()
+    cur.execute(f"PRAGMA table_info({q(table)})")
+    cols = cur.fetchall()  # cid,name,type,notnull,dflt,pk
+    col_names = [c[1] for c in cols]
+    if "student_id" in col_names:
+        return "skip"  # 已迁移
+    if "user_id" not in col_names:
+        return "skip"
+
+    # 建新表 DDL
+    ddl = _build_new_table_ddl(cols)
+    new_table = table + "_new"
+    cur.execute(f"DROP TABLE IF EXISTS {q(new_table)}")
+    cur.execute(f"CREATE TABLE {q(new_table)} ({', '.join(ddl)})")
+
+    # 拷贝数据（孤儿清理）
+    orphans = _copy_data(cur, table, new_table, col_names, nullable)
+    print(f"  [{table}] 重建完成：拷贝行，孤儿(删除/置空)={orphans}")
+
+    # 删旧表 + 改名
+    cur.execute(f"DROP TABLE {q(table)}")
+    cur.execute(f"ALTER TABLE {q(new_table)} RENAME TO {q(table)}")
+
+    # 重建索引（含 user_id->student_id 重命名）
+    _rebuild_indexes(cur, table)
     return "rebuilt"
+
 
 
 def clean_orphans_nullable(conn, table):

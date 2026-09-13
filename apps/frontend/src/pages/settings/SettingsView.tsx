@@ -3,6 +3,7 @@ import {
   Settings as SettingsIcon,
   Bell,
   Shield,
+  ShieldAlert,
   Palette,
   Database,
   Save,
@@ -30,6 +31,8 @@ export interface SystemSettings {
   autoSave: boolean;
   theme: string;
   language: string;
+  /** 设备白名单开关（差异 #4 阶段 1）。开启后拒绝未登记设备注册；默认关闭。 */
+  deviceWhitelistEnabled: boolean;
 }
 
 export interface LoadingState {
@@ -381,6 +384,42 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            <div className='card'>
+              <div className='card-header'>
+                <div className='flex items-center gap-2'>
+                  <ShieldAlert className='w-5 h-5 text-gray-600' />
+                  <h3 className='font-semibold text-gray-900'>设备接入安全</h3>
+                </div>
+              </div>
+              <div className='card-body space-y-6'>
+                <div className='flex items-center justify-between'>
+                  <div className='pr-4'>
+                    <h4 className='font-medium text-gray-900'>设备白名单</h4>
+                    <p className='text-sm text-gray-500'>
+                      开启后，未登记的设备上报注册将被拒绝。关闭时允许新设备自动注册（默认关闭）。
+                    </p>
+                    <p className='text-xs text-amber-600 mt-1'>
+                      提示：上线的设备建议在「设备管理 →
+                      设备设置」中签发密钥；密钥与白名单相互独立。
+                    </p>
+                  </div>
+                  <PermissionButton
+                    permission='system.settings'
+                    onClick={() => onToggle('deviceWhitelistEnabled')}
+                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${
+                      settings.deviceWhitelistEnabled ? 'bg-primary-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow ${
+                        settings.deviceWhitelistEnabled ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </PermissionButton>
                 </div>
               </div>
             </div>

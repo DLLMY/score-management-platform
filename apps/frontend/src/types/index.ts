@@ -317,6 +317,8 @@ export interface SystemConfig {
   enable_notifications: boolean;
   notification_sound: boolean;
   auto_save: boolean;
+  /** 设备白名单开关（差异 #4 阶段 1）。开启后拒绝未登记设备注册；默认关闭。 */
+  device_whitelist_enabled?: boolean;
   updated_at: Date | string;
 }
 

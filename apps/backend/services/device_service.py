@@ -58,6 +58,19 @@ def delete_device(device):
     return
 
 
+def revoke_device_secret(device):
+    """吊销设备密钥：置空 secret 字段并提交（差异 #4 阶段 3）。
+
+    路由负责 404/权限校验，service 只做字段写入与提交。吊销不等于封禁，
+    设备仍可上报（阶段 2 宽容策略）。
+    """
+    device.device_secret = None
+    device.secret_issued_at = None
+    device.last_seen_ts = None
+    db.session.commit()
+    return
+
+
 def bind_device_class(device, class_info_id):
     """绑定/解绑设备到班级（class_info_id 可能为 None 表示解绑）。
 
@@ -121,172 +134,35 @@ def import_devices(file):
     wb = openpyxl.load_workbook(file)
     sheet = wb.active
 
+    headers = [cell.value for cell in sheet[1]]
+    all_rows = list(sheet.iter_rows(min_row=2, values_only=True))
+
+    device_ids, class_names, admin_names = _collect_device_import_keys(all_rows, headers)
+    device_map, class_map, admin_map = _build_device_import_maps(device_ids, class_names, admin_names)
+
     success_count = 0
     failed_count = 0
     messages = []
-
-    headers = [cell.value for cell in sheet[1]]
-
-    # M7：预扫描收集查询键（strip 后去重、跳过空值），把逐行 N+1 查询改为批量预取
-    all_rows = list(sheet.iter_rows(min_row=2, values_only=True))
-
-    device_ids = set()
-    class_names = set()
-    admin_names = set()
-    for row in all_rows:
-        row_dict = dict(zip(headers, row))
-        raw_device_id = (
-            row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
-        )
-        if raw_device_id is not None and str(raw_device_id).strip():
-            device_ids.add(str(raw_device_id).strip())
-        raw_class_name = row_dict.get("班级名称") or row_dict.get("class_name")
-        if raw_class_name and str(raw_class_name).strip():
-            class_names.add(str(raw_class_name).strip())
-        raw_admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
-        if raw_admin_name and str(raw_admin_name).strip():
-            admin_names.add(str(raw_admin_name).strip())
-
-    # 批量预查询三个 map（admin 先 real_name 后 username 兜底，setdefault 保证 real_name 优先）
-    device_map = {}
-    if device_ids:
-        device_map = {
-            d.device_id: d for d in Device.query.filter(Device.device_id.in_(device_ids)).all()
-        }
-
-    class_map = {}
-    if class_names:
-        class_map = {
-            c.name: c for c in ClassInfo.query.filter(ClassInfo.name.in_(class_names)).all()
-        }
-
-    admin_map = {}
-    if admin_names:
-        admins = Admin.query.filter(Admin.real_name.in_(admin_names)).all()
-        admin_map = {a.real_name: a for a in admins}
-        remaining = [n for n in admin_names if n not in admin_map]
-        if remaining:
-            for a in Admin.query.filter(Admin.username.in_(remaining)).all():
-                admin_map.setdefault(a.username, a)
-
     for row in all_rows:
         try:
-            row_dict = dict(zip(headers, row))
-
-            device_id = (
-                row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
-            )
-            name = row_dict.get("设备名称") or row_dict.get("name")
-            class_name = row_dict.get("班级名称") or row_dict.get("class_name")
-            admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
-
-            row_errors = []
-
-            if not device_id:
-                row_errors.append({"field": "device_id", "message": "设备标识不能为空"})
-            elif not isinstance(device_id, (int, str)) or len(str(device_id).strip()) == 0:
-                row_errors.append({"field": "device_id", "message": "设备标识格式无效"})
-            elif len(str(device_id).strip()) > 100:
-                row_errors.append(
-                    {"field": "device_id", "message": "设备标识长度超过限制（最大100字符）"}
+            status, *rest = _process_one_device_row(row, headers, device_map, class_map, admin_map)
+            if status == "ok":
+                device_id_str, row_dict = rest
+                success_count += 1
+                messages.append(
+                    {"action": "成功", "message": f"创建设备 {device_id_str}", "row_data": row_dict}
                 )
             else:
-                device_id_str = str(device_id).strip()
-                is_valid, msg = validate_device_id(device_id_str)
-                if not is_valid:
-                    row_errors.append({"field": "device_id", "message": msg})
-
-            if name and (not isinstance(name, str) or len(name.strip()) > 200):
-                row_errors.append(
-                    {"field": "name", "message": "设备名称长度超过限制（最大200字符）"}
-                )
-            elif name:
-                is_valid, msg = validate_name(name.strip())
-                if not is_valid:
-                    row_errors.append({"field": "name", "message": msg})
-
-            existing_device = device_map.get(str(device_id))
-            if existing_device:
-                row_errors.append(
-                    {"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'}
-                )
-
-            class_info = None
-            if class_name:
-                if not isinstance(class_name, str) or len(class_name.strip()) == 0:
-                    row_errors.append(
-                        {"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"}
-                    )
-                elif len(class_name.strip()) > 100:
-                    row_errors.append(
-                        {"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"}
-                    )
-                else:
-                    class_info = class_map.get(class_name.strip())
-                    if not class_info:
-                        row_errors.append(
-                            {
-                                "field": "class_name",
-                                "message": f'班级 "{class_name}" 在系统中不存在',
-                            }
-                        )
-
-            admin = None
-            if admin_name:
-                if not isinstance(admin_name, str) or len(admin_name.strip()) == 0:
-                    row_errors.append(
-                        {"field": "admin_name", "message": "管理员姓名格式无效，必须为非空字符串"}
-                    )
-                elif len(admin_name.strip()) > 50:
-                    row_errors.append(
-                        {"field": "admin_name", "message": "管理员姓名长度超过限制（最大50字符）"}
-                    )
-                else:
-                    admin = admin_map.get(admin_name.strip())
-                    if not admin:
-                        row_errors.append(
-                            {
-                                "field": "admin_name",
-                                "message": f'管理员 "{admin_name}" 在系统中不存在',
-                            }
-                        )
-                    else:
-                        if admin.role not in ["admin", "teacher"]:
-                            row_errors.append(
-                                {
-                                    "field": "admin_name",
-                                    "message": f'用户 "{admin_name}" 的角色不是管理员或教师，无法担任设备管理员',
-                                }
-                            )
-
-            if row_errors:
+                msg, row_dict, error_fields = rest
                 failed_count += 1
                 messages.append(
                     {
                         "action": "失败",
-                        "message": "; ".join(
-                            [f'{err["field"]}: {err["message"]}' for err in row_errors]
-                        ),
+                        "message": msg,
                         "row_data": row_dict,
-                        "error_fields": [err["field"] for err in row_errors],
+                        "error_fields": error_fields,
                     }
                 )
-                continue
-
-            new_device = Device(
-                device_id=str(device_id),
-                name=name or str(device_id),
-                class_info_id=class_info.id if class_info else None,
-                admin_id=admin.id if admin else None,
-                status="offline",
-            )
-
-            db.session.add(new_device)
-            success_count += 1
-            messages.append(
-                {"action": "成功", "message": f"创建设备 {str(device_id)}", "row_data": row_dict}
-            )
-
         except Exception as e:
             failed_count += 1
             messages.append(
@@ -313,26 +189,145 @@ def import_devices(file):
     }
 
 
+def _collect_device_import_keys(all_rows, headers):
+    """M7 预扫描：从所有行收集去重后的设备ID/班级名/管理员名查询键（空值跳过）。
+
+    与原 import_devices 内联预扫描逐字节等价。
+    """
+    device_ids = set()
+    class_names = set()
+    admin_names = set()
+    for row in all_rows:
+        row_dict = dict(zip(headers, row))
+        raw_device_id = (
+            row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
+        )
+        if raw_device_id is not None and str(raw_device_id).strip():
+            device_ids.add(str(raw_device_id).strip())
+        raw_class_name = row_dict.get("班级名称") or row_dict.get("class_name")
+        if raw_class_name and str(raw_class_name).strip():
+            class_names.add(str(raw_class_name).strip())
+        raw_admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
+        if raw_admin_name and str(raw_admin_name).strip():
+            admin_names.add(str(raw_admin_name).strip())
+    return device_ids, class_names, admin_names
+
+
+def _build_device_import_maps(device_ids, class_names, admin_names):
+    """批量预查询 device/class/admin 三个 map，避免逐行 N+1。
+
+    与原 import_devices 内联 map 构建逐字节等价（admin 先 real_name 后 username 兜底）。
+    """
+    device_map = {}
+    if device_ids:
+        device_map = {
+            d.device_id: d for d in Device.query.filter(Device.device_id.in_(device_ids)).all()
+        }
+
+    class_map = {}
+    if class_names:
+        class_map = {
+            c.name: c for c in ClassInfo.query.filter(ClassInfo.name.in_(class_names)).all()
+        }
+
+    admin_map = {}
+    if admin_names:
+        admins = Admin.query.filter(Admin.real_name.in_(admin_names)).all()
+        admin_map = {a.real_name: a for a in admins}
+        remaining = [n for n in admin_names if n not in admin_map]
+        if remaining:
+            for a in Admin.query.filter(Admin.username.in_(remaining)).all():
+                admin_map.setdefault(a.username, a)
+    return device_map, class_map, admin_map
+
+
+def _process_one_device_row(row, headers, device_map, class_map, admin_map):
+    """处理单行设备导入：校验 -> 建 Device -> 落库。
+
+    返回 ("ok", device_id_str, row_dict) 或 ("failed", msg, row_dict, error_fields)。
+    与原 import_devices 循环体逐字节等价（含空班级/管理员为可选 -> None 不报错）。
+    """
+    row_dict = dict(zip(headers, row))
+    device_id = row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
+    name = row_dict.get("设备名称") or row_dict.get("name")
+
+    row_errors, class_info, admin = _validate_device_import_row(row_dict, device_map, class_map, admin_map)
+    if row_errors:
+        return (
+            "failed",
+            "; ".join([f'{err["field"]}: {err["message"]}' for err in row_errors]),
+            row_dict,
+            [err["field"] for err in row_errors],
+        )
+
+    new_device = Device(
+        device_id=str(device_id),
+        name=name or str(device_id),
+        class_info_id=class_info.id if class_info else None,
+        admin_id=admin.id if admin else None,
+        status="offline",
+    )
+    db.session.add(new_device)
+    return ("ok", str(device_id), row_dict)
+
+
 # ============ 积分盒子 / WOL 写入事务（devices 子批2，F17） ============
 
 
-def box_add_score(user, rule):
+def box_add_score(user, rule, device_id=None, operator=None, request_id=None):
     """积分盒子刷卡：为用户累加规则积分并落库 ScoreRecord。
 
     前置校验链路（用户存在、设备在线、规则启用、规则归属权限、每日/间隔限速）
     由路由 box_routes.BoxVerify.post 负责，service 只做积分累加 + 明细写入 + 提交。
     返回更新后的 current_score 供路由复刻响应体。
+
+    差异 #16（向后兼容，新增参数全部带默认值）：
+      - device_id / operator：写入 ScoreRecord.operator，使「哪台设备、以谁的名义」
+        可追溯。历史实现不写 operator（NULL），管理端明细「操作人」列为此空白。
+      - request_id：设备可选的幂等键。**传空则完全不去重**，行为与历史一致；
+        传入且已处理过则直接返回既有结果，不重复加分（防设备断线重发双计）。
+
+    Returns:
+        (new_score, reused) —— reused=True 表示命中幂等、本次未实际加分。
+        为兼容既有调用方（只解包一个值的历史代码），新调用方可按需解包两个值。
     """
+    from models import ProcessedMessage
+
+    idem_key = f"box_verify:{request_id}" if request_id else None
+
+    if idem_key:
+        processed = ProcessedMessage.query.filter_by(message_id=idem_key).first()
+        if processed:
+            # 命中幂等：回放既有分数，不重复加分
+            return user.current_score, True
+
     user.current_score += rule.score
     record = ScoreRecord(
         student_id=user.id,
         rule_id=rule.id,
         score_change=rule.score,
         description=rule.description,
+        operator=operator or (f"Box {device_id}" if device_id else "Box Device"),
     )
     db.session.add(record)
+    db.session.flush()  # 取 record.id 供幂等记录引用
+
+    if idem_key:
+        try:
+            db.session.add(
+                ProcessedMessage(
+                    message_id=idem_key,
+                    record_id=record.id,
+                    client_id=device_id,
+                )
+            )
+        except Exception:
+            # 幂等记录写入失败不应回滚已完成的加分；交由外层事务语义处理
+            db.session.rollback()
+            raise
+
     db.session.commit()
-    return user.current_score
+    return user.current_score, False
 
 
 def create_wol_device(data):
@@ -505,3 +500,95 @@ def remove_device_from_group(group_id, device_id):
         db.session.commit()
 
     return True
+
+
+
+def _validate_device_import_row(row_dict, device_map, class_map, admin_map):
+    row_errors = []
+    device_id = row_dict.get("设备标识") or row_dict.get("device_id") or row_dict.get("设备ID")
+    name = row_dict.get("设备名称") or row_dict.get("name")
+    class_name = row_dict.get("班级名称") or row_dict.get("class_name")
+    admin_name = row_dict.get("管理员姓名") or row_dict.get("admin_name")
+
+    _validate_device_id_field(device_id, device_map, row_errors)
+    _validate_device_name_field(name, row_errors)
+
+    existing_device = device_map.get(str(device_id))
+    if existing_device:
+        row_errors.append({"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'})
+
+    class_info = _validate_device_class_field(class_name, class_map, row_errors)
+    admin = _validate_device_admin_field(admin_name, admin_map, row_errors)
+    return row_errors, class_info, admin
+
+
+def _validate_device_name_field(name, row_errors):
+    if name and (not isinstance(name, str) or len(name.strip()) > 200):
+        row_errors.append({"field": "name", "message": "设备名称长度超过限制（最大200字符）"})
+    elif name:
+        is_valid, msg = validate_name(name.strip())
+        if not is_valid:
+            row_errors.append({"field": "name", "message": msg})
+
+
+def _validate_device_class_field(class_name, class_map, row_errors):
+    # 班级为可选字段：未提供（None / 空串）视为不绑定班级，不报错。
+    # 与重构前 import_devices 内联校验块行为一致——仅非空班级名才做存在性校验。
+    class_info = None
+    if class_name is None:
+        return class_info
+    if not isinstance(class_name, str):
+        row_errors.append({"field": "class_name", "message": "班级名称格式无效，必须为非空字符串"})
+        return class_info
+    stripped = class_name.strip()
+    if len(stripped) == 0:
+        return class_info
+    if len(stripped) > 100:
+        row_errors.append({"field": "class_name", "message": "班级名称长度超过限制（最大100字符）"})
+        return class_info
+    class_info = class_map.get(stripped)
+    if not class_info:
+        row_errors.append({"field": "class_name", "message": f'班级 "{stripped}" 在系统中不存在'})
+    return class_info
+
+
+def _validate_device_admin_field(admin_name, admin_map, row_errors):
+    # 管理员为可选字段：未提供（None / 空串）视为不绑定管理员，不报错。
+    # 与重构前 import_devices 内联校验块行为一致——仅非空管理员名才做存在性/角色校验。
+    admin = None
+    if admin_name is None:
+        return admin
+    if not isinstance(admin_name, str):
+        row_errors.append({"field": "admin_name", "message": "管理员姓名格式无效，必须为非空字符串"})
+        return admin
+    stripped = admin_name.strip()
+    if len(stripped) == 0:
+        return admin
+    if len(stripped) > 50:
+        row_errors.append({"field": "admin_name", "message": "管理员姓名长度超过限制（最大50字符）"})
+        return admin
+    admin = admin_map.get(stripped)
+    if not admin:
+        row_errors.append({"field": "admin_name", "message": f'管理员 "{stripped}" 在系统中不存在'})
+        return admin
+    if admin.role not in ["admin", "teacher"]:
+        row_errors.append({
+            "field": "admin_name",
+            "message": f'用户 "{stripped}" 的角色不是管理员或教师，无法担任设备管理员',
+        })
+    return admin
+
+def _validate_device_id_field(raw_id, device_map, row_errors):
+    if not raw_id:
+        row_errors.append({"field": "device_id", "message": "设备标识不能为空"})
+    elif not isinstance(raw_id, (int, str)) or len(str(raw_id).strip()) == 0:
+        row_errors.append({"field": "device_id", "message": "设备标识格式无效"})
+    elif len(str(raw_id).strip()) > 100:
+        row_errors.append({"field": "device_id", "message": "设备标识长度超过限制（最大100字符）"})
+    else:
+        device_id_str = str(raw_id).strip()
+        is_valid, msg = validate_device_id(device_id_str)
+        if not is_valid:
+            row_errors.append({"field": "device_id", "message": msg})
+        return device_id_str
+    return None

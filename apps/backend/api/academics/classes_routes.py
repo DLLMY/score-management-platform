@@ -250,89 +250,7 @@ class ClassImport(Resource):
 
             filename = file.filename.lower()
             if filename.endswith(".xlsx") or filename.endswith(".xls"):
-                from openpyxl import load_workbook
-
-                wb = load_workbook(file)
-                ws = wb.active
-
-                headers = []
-                for cell in ws[1]:
-                    headers.append(cell.value)
-
-                col_map = {}
-                for idx, header in enumerate(headers):
-                    if header:
-                        col_map[header] = idx
-
-                for row_idx in range(2, ws.max_row + 1):
-                    row_data = {}
-                    for header, col_idx in col_map.items():
-                        row_data[header] = ws.cell(row=row_idx, column=col_idx + 1).value
-
-                    default_mappings = [
-                        {
-                            "source_field": "班级名称",
-                            "target_field": "name",
-                            "field_type": "string",
-                            "required": True,
-                        },
-                        {"source_field": "年级", "target_field": "grade", "field_type": "string"},
-                        {
-                            "source_field": "描述",
-                            "target_field": "description",
-                            "field_type": "string",
-                        },
-                        {
-                            "source_field": "班主任ID",
-                            "target_field": "head_teacher_id",
-                            "field_type": "integer",
-                            "relation": "admin",
-                        },
-                        {
-                            "source_field": "班主任姓名",
-                            "target_field": "head_teacher_name",
-                            "field_type": "string",
-                            "relation": "admin",
-                        },
-                        {
-                            "source_field": "是否启用",
-                            "target_field": "is_active",
-                            "field_type": "boolean",
-                        },
-                    ]
-                    field_mappings = config.field_mappings if config else default_mappings
-                    default_values = config.default_values if config else {}
-
-                    mapped_item = {}
-                    for mapping in field_mappings:
-                        source_val = row_data.get(mapping["source_field"])
-                        target_field = mapping["target_field"]
-                        field_type = mapping.get("field_type", "string")
-
-                        if source_val is None:
-                            if mapping.get("required"):
-                                break
-                            source_val = mapping.get(
-                                "default_value", default_values.get(target_field)
-                            )
-
-                        if field_type == "boolean":
-                            if isinstance(source_val, str):
-                                mapped_item[target_field] = source_val in [
-                                    "是",
-                                    "true",
-                                    "True",
-                                    "1",
-                                ]
-                            else:
-                                mapped_item[target_field] = bool(source_val)
-                        elif field_type == "integer":
-                            mapped_item[target_field] = int(source_val) if source_val else None
-                        else:
-                            mapped_item[target_field] = source_val
-
-                    if mapped_item.get("name"):
-                        import_list.append(mapped_item)
+                import_list = _parse_classes_xlsx(file, config)
             else:
                 return APIResponse.bad_request(message="仅支持 .xlsx 或 .xls 格式")
         elif "application/json" in content_type:
@@ -346,3 +264,99 @@ class ClassImport(Resource):
         result = class_service.import_classes(import_list, config)
         invalidate_cache("api:/api/classes/*")
         return result
+def _map_class_row(row_data, field_mappings, default_values):
+    """Map a single workbook row into a class dict, preserving the
+    original per-field break-on-required-missing semantics.
+    """
+    mapped_item = {}
+    for mapping in field_mappings:
+        source_val = row_data.get(mapping["source_field"])
+        target_field = mapping["target_field"]
+        field_type = mapping.get("field_type", "string")
+
+        if source_val is None:
+            if mapping.get("required"):
+                break
+            source_val = mapping.get(
+                "default_value", default_values.get(target_field)
+            )
+
+        if field_type == "boolean":
+            if isinstance(source_val, str):
+                mapped_item[target_field] = source_val in [
+                    "是",
+                    "true",
+                    "True",
+                    "1",
+                ]
+            else:
+                mapped_item[target_field] = bool(source_val)
+        elif field_type == "integer":
+            mapped_item[target_field] = int(source_val) if source_val else None
+        else:
+            mapped_item[target_field] = source_val
+    return mapped_item
+
+
+def _parse_classes_xlsx(file, config):
+    """Parse an uploaded .xlsx/.xls workbook into a list of mapped class dicts.
+    Pure structural extraction from ClassImport.post; identical behavior.
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(file)
+    ws = wb.active
+
+    headers = []
+    for cell in ws[1]:
+        headers.append(cell.value)
+
+    col_map = {}
+    for idx, header in enumerate(headers):
+        if header:
+            col_map[header] = idx
+
+    default_mappings = [
+        {
+            "source_field": "班级名称",
+            "target_field": "name",
+            "field_type": "string",
+            "required": True,
+        },
+        {"source_field": "年级", "target_field": "grade", "field_type": "string"},
+        {
+            "source_field": "描述",
+            "target_field": "description",
+            "field_type": "string",
+        },
+        {
+            "source_field": "班主任ID",
+            "target_field": "head_teacher_id",
+            "field_type": "integer",
+            "relation": "admin",
+        },
+        {
+            "source_field": "班主任姓名",
+            "target_field": "head_teacher_name",
+            "field_type": "string",
+            "relation": "admin",
+        },
+        {
+            "source_field": "是否启用",
+            "target_field": "is_active",
+            "field_type": "boolean",
+        },
+    ]
+    field_mappings = config.field_mappings if config else default_mappings
+    default_values = config.default_values if config else {}
+
+    import_list = []
+    for row_idx in range(2, ws.max_row + 1):
+        row_data = {}
+        for header, col_idx in col_map.items():
+            row_data[header] = ws.cell(row=row_idx, column=col_idx + 1).value
+
+        mapped_item = _map_class_row(row_data, field_mappings, default_values)
+        if mapped_item.get("name"):
+            import_list.append(mapped_item)
+    return import_list

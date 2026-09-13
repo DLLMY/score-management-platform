@@ -69,49 +69,14 @@ class NotificationConfig(Resource):
         更新微信和短信通知的配置。
         """
         data = request.get_json(silent=True) or {}
-
-        if "wechat_appid" in data:
-            current_app.config["WECHAT_APPID"] = data["wechat_appid"]
-        if "wechat_secret" in data and data["wechat_secret"] != "***":
-            current_app.config["WECHAT_SECRET"] = data["wechat_secret"]
-        if "template_unlock_success" in data:
-            current_app.config["WECHAT_TEMPLATE_UNLOCK_SUCCESS"] = data["template_unlock_success"]
-        if "template_unlock_failure" in data:
-            current_app.config["WECHAT_TEMPLATE_UNLOCK_FAILURE"] = data["template_unlock_failure"]
-        if "template_score_change" in data:
-            current_app.config["WECHAT_TEMPLATE_SCORE_CHANGE"] = data["template_score_change"]
-
-        sms_config = current_app.config.get("SMS_CONFIG", {})
-        if "sms_provider" in data:
-            sms_config["provider"] = data["sms_provider"]
-        if "sms_access_key_id" in data:
-            sms_config["access_key_id"] = data["sms_access_key_id"]
-        if "sms_access_key_secret" in data and data["sms_access_key_secret"] != "***":
-            sms_config["access_key_secret"] = data["sms_access_key_secret"]
-        if "sms_sign_name" in data:
-            sms_config["sign_name"] = data["sms_sign_name"]
-        if "sms_template_code" in data:
-            sms_config["template_code"] = data["sms_template_code"]
-        current_app.config["SMS_CONFIG"] = sms_config
-
+        _apply_wechat_config(data)
+        _apply_sms_config(data)
         if "enable_wechat_notification" in data:
             current_app.config["ENABLE_WECHAT_NOTIFICATION"] = data["enable_wechat_notification"]
         if "enable_sms_notification" in data:
             current_app.config["ENABLE_SMS_NOTIFICATION"] = data["enable_sms_notification"]
-
-        # 持久化到 notification_config 表（字段名与模型列一一对应；掩码值不落库，避免覆盖真实密钥）
-        from services.notification_config_store import save_notification_config
-
-        updates = dict(data)
-        if updates.get("wechat_secret") == "***":
-            updates.pop("wechat_secret", None)
-        if updates.get("sms_access_key_secret") == "***":
-            updates.pop("sms_access_key_secret", None)
-        save_notification_config(updates)
-
+        _persist_notification_config(data)
         return APIResponse.success(message="通知配置已更新")
-
-
 @ns_notification_config.route("/test-wechat")
 class TestWechatNotification(Resource):
 
@@ -178,3 +143,55 @@ class TestSmsNotification(Resource):
         if result.get("success"):
             return APIResponse.success(data=result, message=result.get("message"))
         return APIResponse.error(message=result.get("message"), status_code=400)
+
+
+
+_WECHAT_CONFIG_MAP = {
+    "wechat_appid": "WECHAT_APPID",
+    "wechat_secret": "WECHAT_SECRET",
+    "template_unlock_success": "WECHAT_TEMPLATE_UNLOCK_SUCCESS",
+    "template_unlock_failure": "WECHAT_TEMPLATE_UNLOCK_FAILURE",
+    "template_score_change": "WECHAT_TEMPLATE_SCORE_CHANGE",
+}
+_SMS_CONFIG_MAP = {
+    "sms_provider": "provider",
+    "sms_access_key_id": "access_key_id",
+    "sms_access_key_secret": "access_key_secret",
+    "sms_sign_name": "sign_name",
+    "sms_template_code": "template_code",
+}
+_SECRET_MASK = "***"
+
+
+def _apply_wechat_config(data):
+    """把请求中的微信相关配置写入 current_app.config（掩码值不覆盖真实密钥）。"""
+    for data_key, cfg_key in _WECHAT_CONFIG_MAP.items():
+        if data_key in data:
+            val = data[data_key]
+            if data_key.endswith("_secret") and val == _SECRET_MASK:
+                continue
+            current_app.config[cfg_key] = val
+
+
+def _apply_sms_config(data):
+    """把请求中的短信相关配置写入 current_app.config["SMS_CONFIG"]（掩码值不覆盖真实密钥）。"""
+    sms_config = current_app.config.get("SMS_CONFIG", {})
+    for data_key, cfg_key in _SMS_CONFIG_MAP.items():
+        if data_key in data:
+            val = data[data_key]
+            if data_key.endswith("_secret") and val == _SECRET_MASK:
+                continue
+            sms_config[cfg_key] = val
+    current_app.config["SMS_CONFIG"] = sms_config
+
+
+def _persist_notification_config(data):
+    """持久化到 notification_config 表（掩码值不落库，避免覆盖真实密钥）。"""
+    from services.notification_config_store import save_notification_config
+
+    updates = dict(data)
+    if updates.get("wechat_secret") == _SECRET_MASK:
+        updates.pop("wechat_secret", None)
+    if updates.get("sms_access_key_secret") == _SECRET_MASK:
+        updates.pop("sms_access_key_secret", None)
+    save_notification_config(updates)

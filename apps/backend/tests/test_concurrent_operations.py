@@ -20,6 +20,138 @@ except ImportError:
 """
 
 
+def _make_mixed_import_op(client, auth_headers, lock, operation_results, errors):
+    """返回「批量导入」并发操作闭包（原 do_import 逐字搬运）。"""
+
+    def do_import(thread_id):
+        """执行导入"""
+        try:
+            import_batch = [
+                {
+                    "name": f"混合导入_{thread_id}_{i:04d}",
+                    "code": f"MIXED_IMP_{thread_id}_{i:04d}",
+                    "grade": "Grade_2",
+                    "is_active": True,
+                }
+                for i in range(10)
+            ]
+
+            data = {
+                "file": (
+                    io.BytesIO(json.dumps(import_batch).encode()),
+                    f"mixed_import_{thread_id}.json",
+                )
+            }
+
+            response = client.post(
+                "/api/subjects/import",
+                headers=auth_headers,
+                data=data,
+                content_type="multipart/form-data",
+            )
+
+            with lock:
+                operation_results.append(
+                    {
+                        "thread_id": thread_id,
+                        "operation": "import",
+                        "status": response.status_code,
+                    }
+                )
+
+        except Exception as e:
+            with lock:
+                errors.append({"thread_id": thread_id, "operation": "import", "error": str(e)})
+
+    return do_import
+
+
+def _make_mixed_export_op(client, auth_headers, lock, operation_results, errors):
+    """返回「批量导出」并发操作闭包（原 do_export 逐字搬运）。"""
+
+    def do_export(thread_id):
+        """执行导出"""
+        try:
+            response = client.get(
+                "/api/subjects/export", headers=auth_headers, query_string={"format": "excel"}
+            )
+
+            with lock:
+                operation_results.append(
+                    {
+                        "thread_id": thread_id,
+                        "operation": "export",
+                        "status": response.status_code,
+                        "size": len(response.data) if response.status_code == 200 else 0,
+                    }
+                )
+
+        except Exception as e:
+            with lock:
+                errors.append({"thread_id": thread_id, "operation": "export", "error": str(e)})
+
+    return do_export
+
+
+def _make_mixed_filter_op(client, auth_headers, lock, operation_results, errors):
+    """返回「列表筛选」并发操作闭包（原 do_filter 逐字搬运）。"""
+
+    def do_filter(thread_id):
+        """执行筛选"""
+        try:
+            response = client.get(
+                "/api/subjects/", headers=auth_headers, query_string={"search": "混合"}
+            )
+
+            with lock:
+                if response.status_code == 200:
+                    data = response.get_json()
+                    operation_results.append(
+                        {
+                            "thread_id": thread_id,
+                            "operation": "filter",
+                            "status": response.status_code,
+                            "results": len(data["data"]["items"]),
+                        }
+                    )
+                else:
+                    operation_results.append(
+                        {
+                            "thread_id": thread_id,
+                            "operation": "filter",
+                            "status": response.status_code,
+                        }
+                    )
+
+        except Exception as e:
+            with lock:
+                errors.append({"thread_id": thread_id, "operation": "filter", "error": str(e)})
+
+    return do_filter
+
+
+def _spawn_threads(do_import, do_export, do_filter):
+    """按「2 导入 / 2 导出 / 2 筛选」装配、启动并 join，返回线程列表。"""
+    threads = []
+    # 2个导入线程
+    for i in range(2):
+        threads.append(threading.Thread(target=do_import, args=(i,)))
+    # 2个导出线程
+    for i in range(2, 4):
+        threads.append(threading.Thread(target=do_export, args=(i,)))
+    # 2个筛选线程
+    for i in range(4, 6):
+        threads.append(threading.Thread(target=do_filter, args=(i,)))
+
+    for t in threads:
+        t.start()
+
+    for t in threads:
+        t.join()
+
+    return threads
+
+
 class TestConcurrentImportExport:
     """并发导入导出测试
 
@@ -256,120 +388,14 @@ class TestConcurrentImportExport:
         errors = []
         lock = threading.Lock()
 
-        def do_import(thread_id):
-            """执行导入"""
-            try:
-                import_batch = [
-                    {
-                        "name": f"混合导入_{thread_id}_{i:04d}",
-                        "code": f"MIXED_IMP_{thread_id}_{i:04d}",
-                        "grade": "Grade_2",
-                        "is_active": True,
-                    }
-                    for i in range(10)
-                ]
-
-                data = {
-                    "file": (
-                        io.BytesIO(json.dumps(import_batch).encode()),
-                        f"mixed_import_{thread_id}.json",
-                    )
-                }
-
-                response = client.post(
-                    "/api/subjects/import",
-                    headers=auth_headers,
-                    data=data,
-                    content_type="multipart/form-data",
-                )
-
-                with lock:
-                    operation_results.append(
-                        {
-                            "thread_id": thread_id,
-                            "operation": "import",
-                            "status": response.status_code,
-                        }
-                    )
-
-            except Exception as e:
-                with lock:
-                    errors.append({"thread_id": thread_id, "operation": "import", "error": str(e)})
-
-        def do_export(thread_id):
-            """执行导出"""
-            try:
-                response = client.get(
-                    "/api/subjects/export", headers=auth_headers, query_string={"format": "excel"}
-                )
-
-                with lock:
-                    operation_results.append(
-                        {
-                            "thread_id": thread_id,
-                            "operation": "export",
-                            "status": response.status_code,
-                            "size": len(response.data) if response.status_code == 200 else 0,
-                        }
-                    )
-
-            except Exception as e:
-                with lock:
-                    errors.append({"thread_id": thread_id, "operation": "export", "error": str(e)})
-
-        def do_filter(thread_id):
-            """执行筛选"""
-            try:
-                response = client.get(
-                    "/api/subjects/", headers=auth_headers, query_string={"search": "混合"}
-                )
-
-                with lock:
-                    if response.status_code == 200:
-                        data = response.get_json()
-                        operation_results.append(
-                            {
-                                "thread_id": thread_id,
-                                "operation": "filter",
-                                "status": response.status_code,
-                                "results": len(data["data"]["items"]),
-                            }
-                        )
-                    else:
-                        operation_results.append(
-                            {
-                                "thread_id": thread_id,
-                                "operation": "filter",
-                                "status": response.status_code,
-                            }
-                        )
-
-            except Exception as e:
-                with lock:
-                    errors.append({"thread_id": thread_id, "operation": "filter", "error": str(e)})
+        do_import = _make_mixed_import_op(client, auth_headers, lock, operation_results, errors)
+        do_export = _make_mixed_export_op(client, auth_headers, lock, operation_results, errors)
+        do_filter = _make_mixed_filter_op(client, auth_headers, lock, operation_results, errors)
 
         # 执行混合并发操作
         start_time = time.time()
 
-        threads = []
-        # 2个导入线程
-        for i in range(2):
-            t = threading.Thread(target=do_import, args=(i,))
-            threads.append(t)
-        # 2个导出线程
-        for i in range(2, 4):
-            t = threading.Thread(target=do_export, args=(i,))
-            threads.append(t)
-        # 2个筛选线程
-        for i in range(4, 6):
-            t = threading.Thread(target=do_filter, args=(i,))
-            threads.append(t)
-
-        for t in threads:
-            t.start()
-
-        for t in threads:
-            t.join()
+        threads = _spawn_threads(do_import, do_export, do_filter)
 
         elapsed_time = time.time() - start_time
 

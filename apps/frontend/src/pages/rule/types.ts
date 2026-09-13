@@ -1,0 +1,45 @@
+// T12-6 拆分（2026-09-12）：类型自 RuleSections.tsx 原样搬出。
+import type { ChangeEvent, FormEvent } from 'react';
+import type { Rule, Category, FormData, FormErrors, RuleTemplate } from '../RuleList';
+export interface RuleViewProps {
+  loadError: boolean;
+  error: string | null;
+  categories: Category[];
+  searchTerm: string;
+  setSearchTerm: (v: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (v: string) => void;
+  filteredRules: Rule[];
+  rulesLoading: boolean;
+  editingRule: Rule | null;
+  setEditingRule: (r: Rule | null) => void;
+  setFormData: (data: Partial<FormData>) => void;
+  openModal: () => void;
+  closeModal: () => void;
+  showModal: boolean;
+  openImportModal: () => void;
+  closeImportModal: () => void;
+  showImportModal: boolean;
+  openTemplateModal: () => void;
+  closeTemplateModal: () => void;
+  showTemplateModal: boolean;
+  templates: RuleTemplate[];
+  formData: FormData;
+  formErrors: FormErrors;
+  setFormErrors: (e: FormErrors) => void;
+  submitting: boolean;
+  runSubmit: (fn: () => Promise<void>) => void;
+  handleSubmit: (e?: FormEvent<HTMLFormElement>) => Promise<void>;
+  handleDelete: (id: number) => Promise<void>;
+  handleExport: () => Promise<void>;
+  handleExportFile: (format: 'excel' | 'pdf') => Promise<void>;
+  handleDownloadTemplate: () => Promise<void>;
+  handleImport: (e: ChangeEvent<HTMLInputElement>) => Promise<void>;
+  importing: boolean;
+  handleApplyTemplate: (templateId: string) => Promise<void>;
+  applyingTemplate: boolean;
+  fetchRules: () => Promise<void>;
+  setError: (e: string | null) => void;
+  getCategoryColor: (id: number | null) => string;
+  getCategoryName: (id: number | null) => string;
+}

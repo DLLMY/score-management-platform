@@ -91,6 +91,12 @@ class Device(db.Model):
     error_count = db.Column(db.Integer, default=0)
     alert_enabled = db.Column(db.Boolean, default=True)
     heartbeat_timeout = db.Column(db.Integer, default=30)
+    # ---- 差异 #4 阶段 2：设备认证凭证 ----
+    # device_secret 为 NULL ⇒ 未发放密钥，验签直接放行（灰度兼容）；
+    # 非 NULL ⇒ 该设备上行必须携带 ts/nonce/sig 并通过 HMAC-SHA256 校验。
+    device_secret = db.Column(db.String(64), nullable=True)
+    secret_issued_at = db.Column(db.DateTime, nullable=True)
+    last_seen_ts = db.Column(db.BigInteger, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -144,6 +150,14 @@ class FirmwareVersion(db.Model):
     min_compatible_version = db.Column(db.String(50))
     is_mandatory = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
+    # 差异 #1：固件适用设备类型。历史数据与未上报类型的设备统一视为 'phonebox'，
+    # 使 get_latest_active_firmware 能按设备类型精确匹配，避免跨类型误推固件。
+    device_type = db.Column(
+        db.String(50), nullable=False, server_default="phonebox", index=True
+    )
+    # 差异 #2：稳定版标记 + 回滚目标版本，支撑设备端回滚闭环。
+    is_stable = db.Column(db.Boolean, default=False, nullable=False, server_default="0")
+    rollback_to = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer)
 
@@ -162,6 +176,9 @@ class FirmwareVersion(db.Model):
             "min_compatible_version": self.min_compatible_version,
             "is_mandatory": self.is_mandatory,
             "is_active": self.is_active,
+            "device_type": self.device_type,
+            "is_stable": self.is_stable,
+            "rollback_to": self.rollback_to,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "created_by": self.created_by,
         }

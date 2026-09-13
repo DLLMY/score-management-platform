@@ -11,7 +11,7 @@ import api from '../../services/api';
 import type { User, Device, Notification, AlgorithmStatistics, WarningData } from '../../types';
 import { useThrottledCallback } from '../../hooks';
 import { useWebSocketStore } from '../../stores';
-import type { DashboardViewProps } from './DashboardView';
+import type { DashboardViewProps } from './types';
 
 export interface DashboardStatistics {
   totalUsers: number;

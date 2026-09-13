@@ -2,6 +2,10 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { ColumnType } from '../../components';
 import type { User, Subject } from '../../types';
 import type { LucideIcon } from 'lucide-react';
+import { useStableToast } from '../../hooks';
+
+// T12-7 拆分：子 hooks 共享的 toast 回调类型（取自 useStableToast 返回值）
+export type ShowToast = ReturnType<typeof useStableToast>['showToast'];
 
 // 班级信息类型
 export interface ClassInfo {

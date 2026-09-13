@@ -1,4 +1,3 @@
-import type { Dispatch, SetStateAction } from 'react';
 import { Pagination } from 'antd';
 import {
   Brain,
@@ -11,10 +10,9 @@ import {
   Heart,
   Moon,
   Activity,
-  Smile,
   Frown,
   Meh,
-  Clock,
+  Smile,
 } from 'lucide-react';
 import {
   DataTable,
@@ -23,192 +21,14 @@ import {
   StudentSelect,
   CurrentClassLabel,
   WorkbenchBreadcrumb,
-  type ColumnType,
 } from '../../components';
-import { MentalHealthRecord, MentalHealthAlert } from '../../types';
-
-export interface RecordFormData {
-  student_id: number;
-  mood_level: number;
-  stress_level: number;
-  sleep_hours: number;
-  notes: string;
-}
-
-export const defaultRecordForm: RecordFormData = {
-  student_id: 0,
-  mood_level: 3,
-  stress_level: 3,
-  sleep_hours: 8,
-  notes: '',
-};
-
-const getMoodIcon = (level: number) => {
-  if (level <= 2) return <Frown className='w-5 h-5 text-red-500' />;
-  if (level === 3) return <Meh className='w-5 h-5 text-amber-500' />;
-  return <Smile className='w-5 h-5 text-emerald-500' />;
-};
-
-const getMoodLabel = (level: number) => {
-  const labels: Record<number, string> = {
-    1: '很差',
-    2: '较差',
-    3: '一般',
-    4: '良好',
-    5: '优秀',
-  };
-  return labels[level] || '未知';
-};
-
-const getStressLabel = (level: number) => {
-  const labels: Record<number, string> = {
-    1: '极低',
-    2: '较低',
-    3: '中等',
-    4: '较高',
-    5: '极高',
-  };
-  return labels[level] || '未知';
-};
-
-const getAlertSeverityColor = (severity: number) => {
-  if (severity >= 4)
-    return 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800';
-  if (severity >= 3)
-    return 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800';
-  return 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-};
-
-const getAlertSeverityLabel = (severity: number) => {
-  if (severity >= 4) return '高危';
-  if (severity >= 3) return '中等';
-  return '低';
-};
-
-const columns: ColumnType<MentalHealthRecord>[] = [
-  {
-    title: '学生',
-    key: 'student',
-    render: (_value, record) => (
-      <div className='flex items-center gap-3'>
-        <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/30 dark:to-blue-900/30 flex items-center justify-center'>
-          <Brain className='w-5 h-5 text-cyan-600 dark:text-cyan-400' />
-        </div>
-        <p className='font-medium text-slate-800 dark:text-slate-200'>
-          {record.student_name || `学生 #${record.student_id}`}
-        </p>
-      </div>
-    ),
-  },
-  {
-    title: '心情',
-    key: 'mood_level',
-    dataIndex: 'mood_level',
-    align: 'center',
-    render: (value) => (
-      <div className='flex items-center justify-center gap-1.5'>
-        {value != null ? (
-          getMoodIcon(value as number)
-        ) : (
-          <span className='w-5 h-5 text-slate-400 dark:text-slate-500'>--</span>
-        )}
-        <span className='text-sm text-slate-600 dark:text-slate-300'>
-          {value != null ? getMoodLabel(value as number) : '--'}
-        </span>
-      </div>
-    ),
-  },
-  {
-    title: '压力',
-    key: 'stress_level',
-    dataIndex: 'stress_level',
-    align: 'center',
-    render: (value) => (
-      <span
-        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-          value == null
-            ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-            : (value as number) >= 4
-            ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-            : (value as number) >= 3
-            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-        }`}
-      >
-        {value != null ? getStressLabel(value as number) : '--'}
-      </span>
-    ),
-  },
-  {
-    title: '睡眠',
-    key: 'sleep_hours',
-    dataIndex: 'sleep_hours',
-    align: 'center',
-    render: (value) => (
-      <span className='inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300'>
-        <Moon className='w-4 h-4 text-indigo-400' />
-        {value as number}h
-      </span>
-    ),
-  },
-  {
-    title: '备注',
-    key: 'notes',
-    dataIndex: 'notes',
-    render: (value) => (
-      <span className='text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate'>
-        {value ? (value as string) : '-'}
-      </span>
-    ),
-  },
-  {
-    title: '时间',
-    key: 'created_at',
-    dataIndex: 'created_at',
-    render: (value) => (
-      <div className='flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400'>
-        <Clock className='w-4 h-4' />
-        {value as string}
-      </div>
-    ),
-  },
-];
-
-export interface MentalHealthViewProps {
-  records: MentalHealthRecord[];
-  isLoading: boolean;
-  alerts: MentalHealthAlert[] | null;
-  filteredRecords: MentalHealthRecord[];
-  unresolvedAlerts: MentalHealthAlert[];
-  resolvedAlerts: MentalHealthAlert[];
-  avgMood: string;
-  avgStress: string;
-  avgSleep: string;
-  recordTotal: number;
-  alertTotal: number;
-  recordPage: number;
-  alertPage: number;
-  activeTab: 'records' | 'alerts';
-  resolvedFilter: boolean | undefined;
-  searchTerm: string;
-  filterClassId: number;
-  showForm: boolean;
-  formData: RecordFormData;
-  errors: Partial<Record<keyof RecordFormData, string>>;
-  submitting: boolean;
-  setSearchTerm: (v: string) => void;
-  setActiveTab: (t: 'records' | 'alerts') => void;
-  setResolvedFilter: (v: boolean | undefined) => void;
-  setRecordPage: (p: number) => void;
-  setAlertPage: (p: number) => void;
-  setFilterClassId: (id: number) => void;
-  setFormData: Dispatch<SetStateAction<RecordFormData>>;
-  handleOpenForm: () => void;
-  handleCloseForm: () => void;
-  handleSubmit: () => void;
-  handleResolveAlert: (id: number) => void;
-  runSubmit: (fn: () => Promise<unknown> | unknown) => Promise<void>;
-}
+import type { MentalHealthRecord } from '../../types';
+import type { MentalHealthViewProps } from './types';
+import { columns } from './columns';
+import { getAlertSeverityColor, getAlertSeverityLabel } from './helpers';
+// 兼容父组件（pages/MentalHealth.tsx）从本文件具名导入
+export { defaultRecordForm } from './types';
+export type { RecordFormData, MentalHealthViewProps } from './types';
 
 export default function MentalHealthView(props: MentalHealthViewProps) {
   const {

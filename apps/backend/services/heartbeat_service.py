@@ -5,6 +5,95 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# 差异 #3：心跳 → Device 字段的**唯一**映射表。
+# 两条心跳入口（mqtt_manager._process_heartbeat / mqtt_message_service.
+# handle_heartbeat_message）与 update_device_heartbeat 统一引用此处，
+# 避免字段集不一致导致同一设备经不同入口进来状态不同。
+# 值为 Device 上的属性名；键为心跳 payload 字段名。
+_HEARTBEAT_DEVICE_FIELDS = {
+    "wifi_signal": "wifi_signal",
+    "uptime": "uptime",
+    "box_a_status": "box_a_status",
+    "box_b_status": "box_b_status",
+    "system_state": "system_state",
+    "fw_version": "fw_version",
+    "platform": "platform",
+    "free_heap": "free_heap",
+    "last_error": "last_error",
+    "error_count": "error_count",
+    "device_type": "device_type",
+    "battery_level": "battery_level",
+    "temperature": "temperature",
+}
+
+# 心跳中「设备自称在线」时可安全回写的状态字段（不包含 status，见下）
+_HEARTBEAT_STATUS_VALUE = "online"
+
+
+# 差异 #15：device_id 兜底格式校验（**宽松**，绝不拒绝既有设备）
+# 只拦截明确非法的形态：空、含空白/换行、超过列宽、含 MQTT 主题分隔符或控制字符。
+# 历史上已存在的设备（可能是无连字符的短 ID、含中文前缀等）一律放行，
+# 因此本校验只做「安全卫生」而非「强制命名规范」，避免存量设备集体失效。
+_DEVICE_ID_MAX_LEN = 100  # 与 Device.device_id 列宽一致
+_DEVICE_ID_FORBIDDEN = set("/+#\x00\r\n\t")
+
+
+def is_safe_device_id(device_id) -> bool:
+    """device_id 是否可安全入库（宽松白名单，见模块内说明）。
+
+    注意：**不**校验长度下限，也不要求字母开头 —— 仅拦截会造成
+    「空值键」「Topic 注入」「列溢出」的非法形态。
+    """
+    if not device_id or not isinstance(device_id, str):
+        return False
+    text = device_id.strip()
+    if not text or text != device_id:
+        # 前后空白（trim 后不等）会导致同一设备产生两个主键 → 拒绝
+        return False
+    if len(text) > _DEVICE_ID_MAX_LEN:
+        return False
+    return not any(ch in _DEVICE_ID_FORBIDDEN for ch in text)
+
+
+def apply_heartbeat_to_device(device, heartbeat_data, now=None, touch_status=True):
+    """把心跳 payload 写入 Device 实例（差异 #3：统一心跳落库语义）。
+
+    统一规则（与历史两条路径的关键差异）：
+      - 字段**键存在且值非 None** 才覆盖，避免设备「按需上报」时把已有值清空；
+      - last_heartbeat 总是刷新为 now（心跳到达即代表在线时刻）；
+      - touch_status=True 时把 status 置为 'online'（心跳到达即在线）。
+
+    注意：本函数只改内存对象，**不 commit** —— 事务边界由调用方掌控，
+    保持与两条既有路径各自的事务语义一致。
+
+    Args:
+        device: Device 模型实例
+        heartbeat_data: 心跳 payload（dict）
+        now: 注入当前时间（便于测试）
+        touch_status: 是否同时置 status='online'
+    """
+    if device is None:
+        return device
+
+    data = heartbeat_data or {}
+    device.last_heartbeat = now or datetime.now()
+    if touch_status and hasattr(device, "status"):
+        device.status = _HEARTBEAT_STATUS_VALUE
+
+    for payload_key, attr_name in _HEARTBEAT_DEVICE_FIELDS.items():
+        if payload_key not in data:
+            continue
+        value = data[payload_key]
+        if value is None:
+            continue
+        if hasattr(device, attr_name):
+            setattr(device, attr_name, value)
+
+    if hasattr(device, "updated_at"):
+        device.updated_at = now or datetime.now()
+    return device
+
+
 def is_device_online(device, now=None, default_timeout_seconds: int = 60) -> bool:
     """判断设备是否在线——以 last_heartbeat 时效性为准（status 字段可能陈旧）。
 
@@ -123,17 +212,11 @@ def update_device_heartbeat(device_id: str, heartbeat_data: dict = None) -> bool
         logger.error(f"未找到设备: {device_id}")
         return False
 
-    device.last_heartbeat = datetime.now()
-    device.status = "online"
+    # 差异 #3：复用统一映射表，字段集不再与另两条心跳路径分叉。
+    # 保留本函数原有的 last_error=None 语义（此路径用于「设备确认存活」场景，
+    # 与两条 MQTT 心跳路径的 last_error 语义不同，故显式保留）。
+    apply_heartbeat_to_device(device, heartbeat_data, touch_status=True)
     device.last_error = None
-
-    if heartbeat_data:
-        if "wifi_signal" in heartbeat_data:
-            device.wifi_signal = heartbeat_data["wifi_signal"]
-        if "battery_level" in heartbeat_data:
-            device.battery_level = heartbeat_data["battery_level"]
-        if "temperature" in heartbeat_data:
-            device.temperature = heartbeat_data["temperature"]
 
     db.session.commit()
     logger.debug(f"设备 {device_id} 心跳已更新")
@@ -192,3 +275,80 @@ def get_device_heartbeat_status(device_id: str = None) -> dict:
         "offline": sum(1 for d in status_list if d["status"] == "offline" or d["is_timeout"]),
         "timeout": sum(1 for d in status_list if d["is_timeout"]),
     }
+
+
+# 差异 #11：设备错误计数达到该阈值时额外产生 high 级别告警
+DEVICE_ERROR_COUNT_ALERT_THRESHOLD = 5
+
+
+def check_device_errors(device, heartbeat_data=None, now=None):
+    """差异 #11：设备错误自动告警。
+
+    此前 last_error / error_count 只落库、不产生任何 Alert，导致设备自报的故障
+    （传感器异常、看门狗复位等）在管理端完全不可见，只能靠人工翻设备详情页。
+
+    本函数在心跳落库后调用，产生两类告警（均遵循既有 Alert 体例）：
+      - device_error       : last_error 非空且非「心跳超时」（后者已有专门告警）
+      - error_count_high   : error_count >= DEVICE_ERROR_COUNT_ALERT_THRESHOLD
+    去重规则与 check_heartbeat_timeout 一致：同 device_id + alert_type + is_resolved=False
+    + source='device' 已存在则不重复创建。
+
+    仅改内存（不 commit），事务由调用方掌控；异常不向上抛出，避免影响心跳主流程。
+    返回本次新建的告警数量。
+    """
+    if device is None:
+        return 0
+
+    data = heartbeat_data or {}
+    last_error = data.get("last_error", getattr(device, "last_error", None))
+    error_count = data.get("error_count", getattr(device, "error_count", None))
+
+    now = now or datetime.now()
+    created = 0
+
+    def _ensure_alert(alert_type, severity, message):
+        nonlocal created
+        existing = Alert.query.filter_by(
+            device_id=device.device_id,
+            alert_type=alert_type,
+            is_resolved=False,
+            source="device",
+        ).first()
+        if existing:
+            return
+        db.session.add(
+            Alert(
+                device_id=device.device_id,
+                alert_type=alert_type,
+                severity=severity,
+                message=message,
+                source="device",
+            )
+        )
+        created += 1
+
+    try:
+        # ① 设备自报错误（排除「心跳超时」——那是后端推断的，另有 heartbeat_timeout 告警）
+        if last_error and str(last_error).strip() and str(last_error).strip() != "心跳超时":
+            _ensure_alert(
+                "device_error",
+                "warning",
+                f"设备 {device.name or device.device_id} 上报错误：{last_error}",
+            )
+
+        # ② 错误计数超阈值 → 升级为 high（提示需人工介入）
+        try:
+            count_val = int(error_count) if error_count is not None else 0
+        except (TypeError, ValueError):
+            count_val = 0
+        if count_val >= DEVICE_ERROR_COUNT_ALERT_THRESHOLD:
+            _ensure_alert(
+                "error_count_high",
+                "high",
+                f"设备 {device.name or device.device_id} 错误次数达 {count_val}，"
+                f"超过阈值 {DEVICE_ERROR_COUNT_ALERT_THRESHOLD}",
+            )
+    except Exception as e:  # 告警失败不得影响心跳主流程
+        logger.warning(f"设备 {getattr(device, 'device_id', '?')} 错误告警检查失败: {e}")
+
+    return created

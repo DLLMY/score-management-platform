@@ -169,7 +169,19 @@ class TestUnlockValidator:
         assert UnlockValidator.get_weekly_limit() == 5
 
     def test_get_daily_limit(self):
-        assert UnlockValidator.get_daily_limit() == 10
+        """日限额默认值 = 实际生效值 5（差异 #8）。
+
+        历史断言 10 反映的是**死常量** `DAILY_LIMIT = 10`——它在日限额判定路径中
+        从未生效（`_check_daily_limit` 一直硬编码回落 5）。06 差异文档已认定该常量
+        属误导性遗留，方案 A 要求删除并统一到 `DEFAULT_DAILY_UNLOCK_LIMIT = 5`。
+        业务行为零漂移，仅让常量与实现一致。
+        """
+        assert UnlockValidator.get_daily_limit() == 5
+        # 与用户级默认值 / 判定路径回落值三方对齐
+        from services.unlock_validator import DEFAULT_DAILY_UNLOCK_LIMIT
+
+        assert DEFAULT_DAILY_UNLOCK_LIMIT == 5
+        assert UnlockValidator.get_daily_limit() == DEFAULT_DAILY_UNLOCK_LIMIT
 
     def test_check_daily_limit(self, app, session):
         with app.app_context():

@@ -988,38 +988,16 @@ class CourseScheduleImport(Resource):
 
         for row_idx, item in enumerate(import_list, start=2):
             try:
-                row_errors = _validate_course_import_item(item, day_text_map, max_period)
-
-                class_name = item.get("class_name")
-                subject_name = item.get("subject_name")
-
-                if class_name:
-                    class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                    if not class_info:
-                        row_errors.append(
-                            {
-                                "field": "class_name",
-                                "message": f'班级 "{class_name}" 在系统中不存在',
-                            }
-                        )
-
-                if subject_name:
-                    subject = Subject.query.filter_by(
-                        name=subject_name.strip()
-                    ).first()
-                    if not subject:
-                        row_errors.append(
-                            {
-                                "field": "subject_name",
-                                "message": f'科目 "{subject_name}" 在系统中不存在',
-                            }
-                        )
-
+                (row_errors, class_info, subject, day_of_week, period_number,
+                 teacher_name, classroom) = _validate_course_row(
+                    item, day_text_map, max_period
+                )
                 if row_errors:
-                    failed_count += 1
                     error_msg = "; ".join(
                         [f'{err["field"]}: {err["message"]}' for err in row_errors]
                     )
+                    class_name = item.get("class_name")
+                    subject_name = item.get("subject_name")
                     messages.append(
                         {
                             "class_name": class_name or "未知",
@@ -1038,36 +1016,15 @@ class CourseScheduleImport(Resource):
                             "error_fields": [err["field"] for err in row_errors],
                         }
                     )
+                    failed_count += 1
                     continue
 
-                class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
-                subject = Subject.query.filter_by(name=subject_name.strip()).first()
-
-                day_of_week = item["day_of_week"]
-                if isinstance(day_of_week, str):
-                    day_of_week = day_text_map.get(day_of_week, 0)
-
-                period_number = item["period_number"]
-                teacher_name = item.get("teacher_name")
-                classroom = item.get("classroom")
-
-                conflicts = []
-                conflicts.extend(check_conflicts(class_info.id, day_of_week, period_number))
-
-                if teacher_name:
-                    conflicts.extend(
-                        check_teacher_conflicts(teacher_name, day_of_week, period_number)
-                    )
-
-                if classroom:
-                    conflicts.extend(
-                        check_classroom_conflicts(classroom, day_of_week, period_number)
-                    )
-
+                conflicts = _detect_course_conflicts(
+                    class_info, subject, day_of_week, period_number,
+                    teacher_name, classroom
+                )
                 if conflicts:
-                    conflict_messages = [c["message"] for c in conflicts]
-                    failed_count += 1
-                    error_msg = "; ".join(conflict_messages)
+                    error_msg = "; ".join([c["message"] for c in conflicts])
                     messages.append(
                         {
                             "class_name": class_info.name,
@@ -1086,6 +1043,7 @@ class CourseScheduleImport(Resource):
                             "error_fields": ["conflict"],
                         }
                     )
+                    failed_count += 1
                     continue
 
                 existing = CourseSchedule.query.filter(
@@ -1094,92 +1052,32 @@ class CourseScheduleImport(Resource):
                     CourseSchedule.period_number == period_number,
                 ).first()
 
-                if existing:
-                    if conflict_strategy == "skip":
-                        messages.append(
-                            {
-                                "class_name": class_info.name,
-                                "subject_name": subject.name,
-                                "action": "skipped",
-                                "message": (
-                                    f"{class_info.name} {format_day_of_week(day_of_week)}"
-                                    f"第{period_number}节课程已存在，已跳过"
-                                ),
-                            }
-                        )
-                        continue
-                    if conflict_strategy == "update":
-                        updates.append(
-                            (
-                                existing.id,
-                                {
-                                    "subject_id": subject.id,
-                                    "teacher_name": teacher_name or existing.teacher_name,
-                                    "classroom": classroom or existing.classroom,
-                                    "description": item.get("description", existing.description),
-                                    "color": item.get("color", existing.color),
-                                    "is_active": item.get("is_active", existing.is_active),
-                                },
-                            )
-                        )
-
-                        messages.append(
-                            {
-                                "class_name": class_info.name,
-                                "subject_name": subject.name,
-                                "action": "updated",
-                                "message": f"{class_info.name} {format_day_of_week(day_of_week)}第{period_number}节课程已更新",
-                            }
-                        )
-                    elif conflict_strategy == "error":
-                        failed_count += 1
-                        error_msg = f"{class_info.name} {format_day_of_week(day_of_week)}第{period_number}节课程已存在，与导入数据冲突"
-                        messages.append(
-                            {
-                                "class_name": class_info.name,
-                                "subject_name": subject.name,
-                                "action": "failed",
-                                "message": error_msg,
-                                "row_data": item,
-                                "error_fields": ["conflict"],
-                            }
-                        )
-                        errors.append(
-                            {
-                                "row": row_idx,
-                                "message": error_msg,
-                                "row_data": item,
-                                "error_fields": ["conflict"],
-                            }
-                        )
-                        continue
-                else:
-                    creates.append(
+                action, payload, message = _resolve_existing_course(
+                    existing, item, class_info, subject, day_of_week,
+                    period_number, teacher_name, classroom, conflict_strategy
+                )
+                if action == "skip":
+                    messages.append(message)
+                    continue
+                if action == "error":
+                    messages.append(message)
+                    errors.append(
                         {
-                            "class_info_id": class_info.id,
-                            "subject_id": subject.id,
-                            "day_of_week": day_of_week,
-                            "period_number": period_number,
-                            "teacher_name": teacher_name,
-                            "classroom": classroom,
-                            "description": item.get("description"),
-                            "color": item.get("color", subject.color),
-                            "is_active": item.get("is_active", True),
+                            "row": row_idx,
+                            "message": message["message"],
+                            "row_data": item,
+                            "error_fields": ["conflict"],
                         }
                     )
-
-                    messages.append(
-                        {
-                            "class_name": class_info.name,
-                            "subject_name": subject.name,
-                            "action": "created",
-                            "message": f"{class_info.name} {format_day_of_week(day_of_week)}第{period_number}节课程已创建",
-                        }
-                    )
-
+                    failed_count += 1
+                    continue
+                if action == "update":
+                    updates.append(payload)
+                elif action == "create":
+                    creates.append(payload)
+                messages.append(message)
                 success_count += 1
             except Exception as e:
-                failed_count += 1
                 error_msg = str(e)
                 messages.append(
                     {
@@ -1199,6 +1097,7 @@ class CourseScheduleImport(Resource):
                         "error_fields": ["system"],
                     }
                 )
+                failed_count += 1
 
         academics_service.apply_course_schedule_import(creates, updates)
         invalidate_cache("api:/api/course-schedules/*")
@@ -1212,3 +1111,113 @@ class CourseScheduleImport(Resource):
                 "messages": messages,
             }
         )
+def _validate_course_row(item, day_text_map, max_period):
+    """Validate one course-schedule import row and resolve its entities.
+    Mirrors the original post() validation block exactly.
+    """
+    row_errors = _validate_course_import_item(item, day_text_map, max_period)
+    class_name = item.get("class_name")
+    subject_name = item.get("subject_name")
+    class_info = None
+    subject = None
+    if class_name:
+        class_info = ClassInfo.query.filter_by(name=class_name.strip()).first()
+        if not class_info:
+            row_errors.append(
+                {
+                    "field": "class_name",
+                    "message": f'班级 "{class_name}" 在系统中不存在',
+                }
+            )
+    if subject_name:
+        subject = Subject.query.filter_by(name=subject_name.strip()).first()
+        if not subject:
+            row_errors.append(
+                {
+                    "field": "subject_name",
+                    "message": f'科目 "{subject_name}" 在系统中不存在',
+                }
+            )
+    day_of_week = item["day_of_week"]
+    if isinstance(day_of_week, str):
+        day_of_week = day_text_map.get(day_of_week, 0)
+    period_number = item["period_number"]
+    teacher_name = item.get("teacher_name")
+    classroom = item.get("classroom")
+    return row_errors, class_info, subject, day_of_week, period_number, teacher_name, classroom
+
+
+def _detect_course_conflicts(class_info, subject, day_of_week, period_number,
+                             teacher_name, classroom):
+    """Collect schedule/teacher/classroom conflicts for one resolved row."""
+    conflicts = []
+    conflicts.extend(check_conflicts(class_info.id, day_of_week, period_number))
+    if teacher_name:
+        conflicts.extend(
+            check_teacher_conflicts(teacher_name, day_of_week, period_number)
+        )
+    if classroom:
+        conflicts.extend(
+            check_classroom_conflicts(classroom, day_of_week, period_number)
+        )
+    return conflicts
+
+
+def _resolve_existing_course(existing, item, class_info, subject, day_of_week,
+                             period_number, teacher_name, classroom, conflict_strategy):
+    """Decide the outcome for one resolved row given the existing schedule.
+    Returns (action, payload, message) where action is one of
+    skip/update/error/create.
+    """
+    if existing:
+        if conflict_strategy == "skip":
+            return "skip", None, {
+                "class_name": class_info.name,
+                "subject_name": subject.name,
+                "action": "skipped",
+                "message": (
+                    f"{class_info.name} {format_day_of_week(day_of_week)}"
+                    f"第{period_number}节课程已存在，已跳过"
+                ),
+            }
+        if conflict_strategy == "update":
+            return "update", (existing.id, {
+                "subject_id": subject.id,
+                "teacher_name": teacher_name or existing.teacher_name,
+                "classroom": classroom or existing.classroom,
+                "description": item.get("description", existing.description),
+                "color": item.get("color", existing.color),
+                "is_active": item.get("is_active", existing.is_active),
+            }), {
+                "class_name": class_info.name,
+                "subject_name": subject.name,
+                "action": "updated",
+                "message": f"{class_info.name} {format_day_of_week(day_of_week)}第{period_number}节课程已更新",
+            }
+        elif conflict_strategy == "error":
+            error_msg = f"{class_info.name} {format_day_of_week(day_of_week)}第{period_number}节课程已存在，与导入数据冲突"
+            return "error", None, {
+                "class_name": class_info.name,
+                "subject_name": subject.name,
+                "action": "failed",
+                "message": error_msg,
+                "row_data": item,
+                "error_fields": ["conflict"],
+            }
+    return "create", {
+        "class_info_id": class_info.id,
+        "subject_id": subject.id,
+        "day_of_week": day_of_week,
+        "period_number": period_number,
+        "teacher_name": teacher_name,
+        "classroom": classroom,
+        "description": item.get("description"),
+        "color": item.get("color", subject.color),
+        "is_active": item.get("is_active", True),
+    }, {
+        "class_name": class_info.name,
+        "subject_name": subject.name,
+        "action": "created",
+        "message": f"{class_info.name} {format_day_of_week(day_of_week)}第{period_number}节课程已创建",
+    }
+

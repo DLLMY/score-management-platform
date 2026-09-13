@@ -17,6 +17,7 @@ from models import ClassInfo, Exam, Score, User
 from utils.excel_utils import ExcelUtils
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.decorators import safe_handle
 from services.report_summary_service import build_class_summary, summary_to_rows
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ class ClassSemesterReport(Resource):
         },
     )
     @requires_permission("score.view")
+    @safe_handle(message="生成报表失败", default_status=500)
     def get(self):
         class_id = request.args.get("class_id", type=int)
         fmt = (request.args.get("format") or "excel").lower()
@@ -49,33 +51,30 @@ class ClassSemesterReport(Resource):
         if scope_error is not None:
             return scope_error
 
-        try:
-            students = (
-                User.query.filter_by(class_info_id=class_id, is_active=True)
-                .order_by(User.name)
-                .all()
-            )
-            exams = Exam.query.filter_by(class_id=class_id).order_by(Exam.id).all()
-            exam_ids = [e.id for e in exams]
-            scores = Score.query.filter(Score.exam_id.in_(exam_ids)).all() if exam_ids else []
+        students = (
+            User.query.filter_by(class_info_id=class_id, is_active=True)
+            .order_by(User.name)
+            .all()
+        )
+        exams = Exam.query.filter_by(class_id=class_id).order_by(Exam.id).all()
+        exam_ids = [e.id for e in exams]
+        scores = Score.query.filter(Score.exam_id.in_(exam_ids)).all() if exam_ids else []
 
-            # (student_id, exam_id) -> 该考试跨科目总分
-            score_map = _build_report_score_map(scores)
+        # (student_id, exam_id) -> 该考试跨科目总分
+        score_map = _build_report_score_map(scores)
 
-            headers = _build_report_headers(exams)
-            rows = _build_report_rows(students, exams, score_map)
+        headers = _build_report_headers(exams)
+        rows = _build_report_rows(students, exams, score_map)
 
-            safe_name = (class_info.name or "班级").replace("/", "_")
-            filename = f"{safe_name}_学期报告"
+        safe_name = (class_info.name or "班级").replace("/", "_")
+        filename = f"{safe_name}_学期报告"
 
-            # 算法摘要（参与度 / 风险 / 归因）：三维各自隔离，失败不影响主表格
-            summary_rows = _build_report_summary_rows(class_info)
+        # 算法摘要（参与度 / 风险 / 归因）：三维各自隔离，失败不影响主表格
+        summary_rows = _build_report_summary_rows(class_info)
 
-            if fmt == "csv":
-                return _render_csv_report(rows, headers, summary_rows, filename)
-            return _render_excel_report(rows, headers, summary_rows, filename)
-        except Exception as exc:
-            return APIResponse.error(message=f"生成报表失败: {exc}", status_code=500)
+        if fmt == "csv":
+            return _render_csv_report(rows, headers, summary_rows, filename)
+        return _render_excel_report(rows, headers, summary_rows, filename)
 
 
 def _check_report_class_scope(class_id):
@@ -181,3 +180,4 @@ def _render_excel_report(rows, headers, summary_rows, filename):
         as_attachment=True,
         download_name=f"{filename}.xlsx",
     )
+

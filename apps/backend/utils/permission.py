@@ -164,6 +164,26 @@ def _check_class_scope(permission):
     return None
 
 
+def _load_authenticated_admin(auth_header, admin_id_header):
+    """从已解析的 Bearer auth_header 校验 token 并加载 admin。
+    返回 (error_response, admin)：error_response 非 None 时应由调用方直接返回。
+    异常（token 校验/类型转换）交由调用方 try 捕获。"""
+    token = auth_header.replace("Bearer ", "")
+    payload = validate_token(token, "access")
+    if not payload:
+        log_access_denied(request.path, reason="无效或过期的认证令牌")
+        return {"success": False, "message": "无效或过期的认证令牌"}, 401
+    token_admin_id = int(payload["sub"])
+    if admin_id_header and int(admin_id_header) != token_admin_id:
+        log_access_denied(request.path, reason="X-Admin-Id与令牌不匹配")
+        return {"success": False, "message": "请求头中的X-Admin-Id与认证令牌不匹配"}, 401
+    admin = Admin.query.filter_by(id=token_admin_id).first()
+    if not admin:
+        log_access_denied(request.path, reason="管理员不存在")
+        return {"success": False, "message": "管理员不存在"}, 401
+    return None, admin
+
+
 def requires_permission(permission):
     def decorator(f):
         @wraps(f)
@@ -181,27 +201,11 @@ def requires_permission(permission):
                 log_access_denied(request.path, reason="未提供有效的认证令牌")
                 return {"success": False, "message": "未提供有效的认证令牌"}, 401
 
-            token = auth_header.replace("Bearer ", "")
-
             try:
-                payload = validate_token(token, "access")
-                if not payload:
-                    log_access_denied(request.path, reason="无效或过期的认证令牌")
-                    return {"success": False, "message": "无效或过期的认证令牌"}, 401
-
-                token_admin_id = int(payload["sub"])
-                if admin_id_header and int(admin_id_header) != token_admin_id:
-                    log_access_denied(request.path, reason="X-Admin-Id与令牌不匹配")
-                    return {
-                        "success": False,
-                        "message": "请求头中的X-Admin-Id与认证令牌不匹配",
-                    }, 401
-
-                admin = Admin.query.filter_by(id=token_admin_id).first()
-                if not admin:
-                    log_access_denied(request.path, reason="管理员不存在")
-                    return {"success": False, "message": "管理员不存在"}, 401
-
+                result = _load_authenticated_admin(auth_header, admin_id_header)
+                if result[0] is not None:
+                    return result
+                admin = result[1]
                 g.current_user = admin
 
                 if not has_permission(admin, permission):
@@ -222,6 +226,7 @@ def requires_permission(permission):
         return decorated_function
 
     return decorator
+
 
 
 def requires_role(allowed_roles):

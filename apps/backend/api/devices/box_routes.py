@@ -6,6 +6,7 @@ from utils.response import APIResponse
 from datetime import datetime
 
 from services.device_service import box_add_score
+from services.heartbeat_service import is_device_online
 
 ns_box = Namespace("box", description="积分盒子相关操作")
 
@@ -15,6 +16,9 @@ box_verify_request = ns_box.model(
         "card_id": fields.String(required=True, description="卡号ID"),
         "device_id": fields.String(required=True, description="设备标识ID"),
         "rule_id": fields.Integer(description="规则ID（可选）"),
+        "request_id": fields.String(
+            description="幂等键（可选，差异 #16：传入则同一 request_id 不重复加分）"
+        ),
     },
 )
 
@@ -96,11 +100,13 @@ class BoxVerify(Resource):
         - card_id: 卡号ID（必填）
         - device_id: 设备标识ID（必填）
         - rule_id: 规则ID（可选）
+        - request_id: 幂等键（可选，差异 #16：传入则同一 request_id 不重复加分）
         """
         data = request.get_json()
         card_id = data.get("card_id")
         device_id = data.get("device_id")
         rule_id = data.get("rule_id")
+        request_id = data.get("request_id")
 
         if not card_id or not device_id:
             return APIResponse.bad_request(message="缺少必要参数")
@@ -113,7 +119,12 @@ class BoxVerify(Resource):
         if not device:
             return APIResponse.not_found(message="设备不存在")
 
-        if device.status != "online":
+        # 差异 #10：统一走 is_device_online（含 last_heartbeat 时效性判定）。
+        # 向后兼容：保留历史 `status == "online"` 分支 —— 既有调用方/测试数据可能只
+        # 设置了 status 而未写 last_heartbeat（未模拟心跳），若仅用时效判定会使这类
+        # 既有数据的行为从「在线」反转为「离线」，属破坏性变更。
+        # 因此取二者之「或」：任一口径认为在线即放行，仅当两口径都判离线才拒绝。
+        if not (is_device_online(device) or device.status == "online"):
             return APIResponse.bad_request(message="设备离线")
 
         if rule_id:
@@ -129,15 +140,26 @@ class BoxVerify(Resource):
                 return APIResponse.bad_request(message=error_msg)
 
             # 写入路径收口至防腐层 service（F17）：积分累加 + 明细落库 + 提交
-            new_score = box_add_score(user, rule)
+            # 差异 #16：回写 device_id / request_id，使明细可溯源且支持幂等
+            new_score, reused = box_add_score(
+                user,
+                rule,
+                device_id=device_id,
+                request_id=request_id,
+            )
 
             return APIResponse.success(
-                message=f"积分添加成功 +{rule.score}",
+                message=(
+                    "请求已处理（幂等命中，未重复加分）"
+                    if reused
+                    else f"积分添加成功 +{rule.score}"
+                ),
                 data={
                     "user": {
                         **user.to_dict(BOX_POINTS_FIELDS),
                         "current_score": new_score,
-                    }
+                    },
+                    "idempotent_replay": reused,
                 },
             )
 

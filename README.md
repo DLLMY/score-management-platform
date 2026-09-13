@@ -264,7 +264,7 @@ bash scripts/run_regression.sh
 | [ops/infra/RELEASE_GUIDE.md](ops/infra/RELEASE_GUIDE.md) | 版本发布流程 |
 | [ops/infra/BRANCH_STRATEGY.md](ops/infra/BRANCH_STRATEGY.md) | 分支策略 |
 | [docs/STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | 启动流程指南（开发/测试/生产） |
-| [docs/MQTT_INTEGRATION.md](docs/MQTT_INTEGRATION.md) | MQTT 设备集成 |
+| [docs/esp32/README.md](docs/esp32/README.md) | **ESP32 手机箱对接文档套件**（MQTT 协议/设备认证/积分/OTA/多设备管理，7 篇） |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更日志 |
 | [docs/reports/](docs/reports/) | 历次项目评估报告（第七~十一次） |
 
