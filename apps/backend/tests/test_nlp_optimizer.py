@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import pytest
 
 try:
     from services.nlp_optimizer import NLPCache
@@ -21,6 +22,17 @@ except ImportError:
     pass
 
 
+
+@pytest.fixture(autouse=True)
+def _isolate_nlp_cache():
+    # P6 修复后 NLPCache 真实持久化到 Redis(nlp:* 键)，跨测试/跨运行共享。
+    # 每个测试前清空 Redis nlp:* 命名空间与本地缓存，保证缓存相关断言确定性。
+    try:
+        from services.nlp_optimizer import NLPCache
+        NLPCache().clear()
+    except Exception:
+        pass
+    yield
 class TestNLPCache:
     """NLP缓存测试"""
 

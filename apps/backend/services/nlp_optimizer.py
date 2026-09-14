@@ -30,9 +30,9 @@ class NLPCache:
         self._lock = threading.Lock()
         try:
             self._redis = redis.Redis(
-                host=config_loader.get("REDIS_HOST", "localhost"),
-                port=config_loader.get("REDIS_PORT", 6379),
-                db=config_loader.get("REDIS_DB", 0),
+                host=config_loader.get_config("REDIS_HOST", "localhost"),
+                port=config_loader.get_config("REDIS_PORT", 6379),
+                db=config_loader.get_config("REDIS_DB", 0),
                 socket_timeout=5,
             )
             self._redis.ping()
