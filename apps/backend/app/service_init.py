@@ -225,6 +225,12 @@ def _scheduled_heartbeat_check_job(app):
                 log_info("心跳超时检查完成，所有设备正常")
     except Exception as e:
         log_error(f"心跳超时检查异常: {e}", exception=e)
+    finally:
+        try:
+            from models import db
+            db.session.remove()
+        except Exception:
+            pass
 
 
 def init_scheduler(app):

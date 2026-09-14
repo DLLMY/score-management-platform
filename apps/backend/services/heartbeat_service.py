@@ -137,49 +137,55 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
         f"开始检查心跳超时设备，超时阈值: {timeout_threshold}, 超时时间: {timeout_seconds}秒"
     )
 
-    timeout_devices = Device.query.filter(
-        Device.last_heartbeat.isnot(None),
-        Device.last_heartbeat < timeout_threshold,
-        Device.status == "online",
-        Device.alert_enabled,
-    ).all()
+    try:
+        timeout_devices = Device.query.filter(
+            Device.last_heartbeat.isnot(None),
+            Device.last_heartbeat < timeout_threshold,
+            Device.status == "online",
+            Device.alert_enabled,
+        ).all()
 
-    logger.info(f"发现 {len(timeout_devices)} 台设备心跳超时")
+        logger.info(f"发现 {len(timeout_devices)} 台设备心跳超时")
 
-    alerts_created = 0
-    for device in timeout_devices:
-        # F9-A: 心跳超时告警统一写入 alert 表，来源标记为 'device'
-        existing_alert = Alert.query.filter_by(
-            device_id=device.device_id,
-            alert_type="heartbeat_timeout",
-            is_resolved=False,
-            source="device",
-        ).first()
-
-        if not existing_alert:
-            alert = Alert(
+        alerts_created = 0
+        for device in timeout_devices:
+            # F9-A: 心跳超时告警统一写入 alert 表，来源标记为 'device'
+            existing_alert = Alert.query.filter_by(
                 device_id=device.device_id,
                 alert_type="heartbeat_timeout",
-                severity="warning",
-                message=f"设备 {device.name or device.device_id} 心跳超时",
+                is_resolved=False,
                 source="device",
-            )
-            db.session.add(alert)
-            alerts_created += 1
+            ).first()
 
-            device.status = "offline"
-            device.last_error = "心跳超时"
+            if not existing_alert:
+                alert = Alert(
+                    device_id=device.device_id,
+                    alert_type="heartbeat_timeout",
+                    severity="warning",
+                    message=f"设备 {device.name or device.device_id} 心跳超时",
+                    source="device",
+                )
+                db.session.add(alert)
+                alerts_created += 1
 
-            logger.warning(f"设备 {device.device_id} ({device.name}) 心跳超时，已创建告警")
+                device.status = "offline"
+                device.last_error = "心跳超时"
 
-    if alerts_created > 0:
-        try:
-            db.session.commit()
-            logger.info(f"已提交 {alerts_created} 条心跳超时告警")
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"心跳超时告警提交失败: {e}", exc_info=True)
+                logger.warning(f"设备 {device.device_id} ({device.name}) 心跳超时，已创建告警")
 
+        if alerts_created > 0:
+            try:
+                db.session.commit()
+                logger.info(f"已提交 {alerts_created} 条心跳超时告警")
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"心跳超时告警提交失败: {e}", exc_info=True)
+
+    finally:
+        # P5: 后台线程（心跳检查每30s）无请求上下文，app_context teardown
+        # 不一定可靠释放 scoped session；显式 remove 保证连接归还连接池，
+        # 杜绝 QueuePool 耗尽（覆盖 0 超时不 commit 与异常两条泄漏路径）。
+        db.session.remove()
     return {
         "timeout_devices": [
             {

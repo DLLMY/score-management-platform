@@ -47,6 +47,12 @@ logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.addHandler(error_handler)
 
+# P2: 关闭 logging 在解释器关闭后对已关闭流写日志时打印的
+# "--- Logging error ---" traceback。后台线程（NLP 预热 / warmup）在解释器
+# 退出后仍可能写日志，触发 "ValueError: I/O operation on closed file" 属无害
+# 噪音；置 False 后 handleError 变为 no-op（等价生产常规配置）。
+logging.raiseExceptions = False
+
 
 def _dump_extra(kwargs) -> str:
     """序列化额外字段。

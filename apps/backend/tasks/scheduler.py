@@ -64,6 +64,12 @@ def scheduled_approval_timeout_check(app):
                 log_debug("审批超时检查完成，无超时审批")
     except Exception as e:
         log_warning(f"审批超时检查异常: {e}", exception=e)
+    finally:
+        try:
+            from models import db
+            db.session.remove()
+        except Exception:
+            pass
 
 
 def scheduled_notify_check(app):
@@ -74,6 +80,12 @@ def scheduled_notify_check(app):
             process_scheduled_notifications()
     except Exception as e:
         log_warning(f"定时通知检查异常: {e}", exception=e)
+    finally:
+        try:
+            from models import db
+            db.session.remove()
+        except Exception:
+            pass
 
 
 def shutdown_scheduler():
