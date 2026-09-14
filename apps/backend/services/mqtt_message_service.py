@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import time
+from functools import wraps
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from services.mqtt_service import publish_mqtt, mqtt_manager, mqtt_logs
@@ -25,7 +26,31 @@ logger = logging.getLogger(__name__)
 
 
 from utils.logger import log_warning
+from flask import has_app_context
 
+
+
+def ensure_app_context(func):
+    """装饰器：确保被装饰的 MQTT 处理方法始终运行在 Flask app context 内。
+
+    背景：本服务各处理方法（心跳/积分/开锁/查询/规则…）直接触碰 db.session /
+    Model.query，但历史上完全依赖调用方包 app_context。MQTT paho 网络线程、
+    部分同步兜底路径若漏包一层，就会高频抛 'Working outside of application
+    context'，导致设备消息落库静默失败（日志 09-14 当天 101 次）。
+    这里让每个公共 handler 自愈：已有 context 则透传，否则惰性导入 app 并
+    push 一个，等价于调用方包 with app.app_context()，且可重入。
+    """
+
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        if has_app_context():
+            return func(*args, **kwargs)
+        from app import app as _flask_app
+
+        with _flask_app.app_context():
+            return func(*args, **kwargs)
+
+    return _wrapper
 
 def _build_policy_check_time(hour, minute):
     """按 hour/minute 构造策略判定时刻；缺参或非法值返回 None。"""
@@ -183,6 +208,7 @@ class MQTTMessageService:
                 mqtt_manager.set_cached_user(card_id, user)
         return user
 
+    @ensure_app_context
     def handle_query_message(self, data):
         box_id = data.get("box_id", "A")
         card_id = data.get("card_id")
@@ -200,6 +226,7 @@ class MQTTMessageService:
                 box_id, True, UnlockReason.QUERY_OK, user.current_score
             )
 
+    @ensure_app_context
     def handle_unlock_message(self, data):
         box_id = data.get("box_id", "A")
         card_id = data.get("card_id")
@@ -328,6 +355,7 @@ class MQTTMessageService:
         mqtt_manager.set_cached_user(card_id, user)
         self.publish_unlock_result(box_id, True, UnlockReason.SCORE_OK, user.current_score)
 
+    @ensure_app_context
     def handle_heartbeat_message(self, data):
         device_id = data.get("device_id")
         timestamp = data.get("timestamp")
@@ -424,6 +452,7 @@ class MQTTMessageService:
             db.session.rollback()
             log_warning(f"[points] 幂等记录写入失败（已回滚）: {e}")
 
+    @ensure_app_context
     def handle_points_query(self, data):
         card_id = data.get("card_id")
         request_id = data.get("request_id")
@@ -458,6 +487,7 @@ class MQTTMessageService:
 
         publish_mqtt("phonebox/points/result", json.dumps(response))
 
+    @ensure_app_context
     def handle_points_add(self, data):
         card_id = data.get("card_id")
         amount = data.get("amount", 0)
@@ -538,6 +568,7 @@ class MQTTMessageService:
 
         publish_mqtt("phonebox/points/result", json.dumps(response))
 
+    @ensure_app_context
     def handle_points_sub(self, data):
         card_id = data.get("card_id")
         amount = data.get("amount", 0)
@@ -618,6 +649,7 @@ class MQTTMessageService:
 
         publish_mqtt("phonebox/points/result", json.dumps(response))
 
+    @ensure_app_context
     def handle_score_add(self, data):
         msg_id = data.get("msg_id")
         client_id = data.get("client_id")
@@ -881,6 +913,7 @@ class MQTTMessageService:
                 return True
             raise
 
+    @ensure_app_context
     def handle_score_undo(self, data):
         undo_code = data.get("undo_code")
         client_id = data.get("client_id")
@@ -953,6 +986,7 @@ class MQTTMessageService:
                 time.sleep(0.15 * (attempt + 1))
         raise last_err
 
+    @ensure_app_context
     def handle_score_rules_query(self, data):
         """设备查询积分规则：回发当前启用的规则列表（供设备端本地加分/校验参考）。
 
@@ -995,6 +1029,7 @@ class MQTTMessageService:
             }
         publish_mqtt("score/rules/result", json.dumps(response))
 
+    @ensure_app_context
     def handle_mqtt_message(self, client, topic, message):
         mqtt_logs.append(
             {
