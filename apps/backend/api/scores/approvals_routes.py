@@ -452,7 +452,7 @@ def _approve_publish_score_change(user, approval):
         create_admin_notification(
             title="审批通过通知",
             message=score_change_text,
-            type="success",
+            notify_type="success",
             priority="medium",
             extra_data={
                 "approval_id": approval.id,

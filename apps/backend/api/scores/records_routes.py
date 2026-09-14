@@ -288,7 +288,7 @@ def _notify_score_change(publish_mqtt_fn, user, user_name, user_id, rule_id, sco
         create_admin_notification(
             title="积分变动通知",
             message=score_change_text,
-            type="success" if score_change > 0 else "warning",
+            notify_type="success" if (score_change or 0) > 0 else "warning",
             priority="medium",
             extra_data={
                 "user_id": user_id,
