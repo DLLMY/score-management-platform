@@ -9,7 +9,8 @@ from typing import Any
 import json
 import os
 from flask import request
-from utils.logger import log_warning
+from utils.logger import log_warning
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 # F5 修复: 移除弱密钥兜底 "your_secret_key_here"。env 缺失时：
 #   - 测试模式（pytest 已加载）→ 使用固定测试密钥，保证测试可用
 #   - 生产/正常启动 → 抛 RuntimeError 拒绝启动，杜绝弱密钥签发
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", os.getenv("FLASK_SECRET_KEY"))
+JWT_SECRET_KEY = config.JWT_SECRET_KEY  # #196 T8: 统一从 Config 读取（fallback 已与 Config 对齐）
 if not JWT_SECRET_KEY:
     import sys
 

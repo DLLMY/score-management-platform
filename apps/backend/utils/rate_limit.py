@@ -1,8 +1,8 @@
-import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask import jsonify
 from flask import Flask
+from config import config
 
 import functools
 
@@ -16,11 +16,11 @@ import functools
 
 def get_rate_limit_config(limit_name: str, default_value: str) -> str:
     """获取限流配置，开发环境自动放宽"""
-    env_value = os.getenv(f"RATE_LIMIT_{limit_name.upper()}")
+    env_value = config.get_rate_limit_env(limit_name)
     if env_value:
         return env_value
     # 开发环境放宽限流
-    if os.getenv("FLASK_ENV") == "development":
+    if config.FLASK_ENV == "development":
         # 开发环境：放宽5-10倍
         if "per minute" in default_value:
             num = int(default_value.split()[0])
@@ -101,7 +101,7 @@ class RateLimitStrategy:
     ADMIN = get_rate_limit_config("admin", "60 per minute")  # 每IP每分钟60次
 
 
-def rate_limit(limit_string, message=None):
+def rate_limit(limit_string, message=None):  # noqa: ARG001
     """
     通用限流装饰器
     Args:

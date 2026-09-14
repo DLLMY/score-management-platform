@@ -207,7 +207,10 @@ class Config:
     MQTT_TOPIC_PREFIX = os.getenv("MQTT_TOPIC_PREFIX", "score/management")
     MQTT_TRANSPORT = os.getenv("MQTT_TRANSPORT", "tcp")
     # ========== JWT认证配置 ==========
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", _generate_secret_key())
+    # 注意：fallback 与 utils/security.py 保持一致（优先 JWT_SECRET_KEY，其次 FLASK_SECRET_KEY）。
+    # 此前本类使用 _generate_secret_key() 随机兜底，导致与 security.py 的密钥源不一致；
+    # 统一为 FLASK_SECRET_KEY 后，两处密钥源一致，security.py 可直接复用本值。
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", os.getenv("FLASK_SECRET_KEY"))
     JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", "3600"))
     JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", "604800"))
     JWT_ALGORITHM = "HS256"
@@ -303,6 +306,51 @@ class Config:
     GUNICORN_LOG_LEVEL = "info"
     GUNICORN_KEEPALIVE = 60
     GUNICORN_MAX_REQUESTS_JITTER = 200
+
+    # ========== OTA 协商服务配置（原 services/ota_negotiation_service.py 模块级 env 读取，现统一至此） ==========
+    @classmethod
+    def get_ota_config(cls) -> dict:
+        """
+        OTA 特性开关与参数。
+        行为与原模块级常量完全一致（同 env 键、同默认值、同防御性 int/try 解析），仅读取收口到 Config。
+        """
+        def _bool(k: str, d: str) -> bool:
+            return os.getenv(k, d).lower() == "true"
+
+        def _int(k: str, d: int) -> int:
+            try:
+                return int(os.getenv(k, str(d)))
+            except (TypeError, ValueError):
+                return d
+
+        return {
+            "OTA_AUTO_PUSH_ENABLED": _bool("OTA_AUTO_PUSH_ENABLED", "true"),
+            "OTA_PUSH_COOLDOWN_SEC": _int("OTA_PUSH_COOLDOWN_SEC", 600),
+            "OTA_ROLLOUT_JITTER_SEC": _int("OTA_ROLLOUT_JITTER_SEC", 30),
+            "OTA_FIRMWARE_BASE_URL": (os.getenv("OTA_FIRMWARE_BASE_URL", "") or "").rstrip("/"),
+            "OTA_RESPECT_CLASS_TIME": _bool("OTA_RESPECT_CLASS_TIME", "true"),
+            "OTA_QUIET_WINDOWS": (os.getenv("OTA_QUIET_WINDOWS", "") or "").strip(),
+            "OTA_STAGED_ROLLOUT": _bool("OTA_STAGED_ROLLOUT", "false"),
+            "OTA_STAGE_PERCENT": _int("OTA_STAGE_PERCENT", 100),
+            "OTA_STAGE_BATCH_SIZE": _int("OTA_STAGE_BATCH_SIZE", 0),
+            "OTA_STAGE_BATCH_INTERVAL_SEC": _int("OTA_STAGE_BATCH_INTERVAL_SEC", 60),
+            "OTA_SIGNING_SECRET": (os.getenv("OTA_SIGNING_SECRET", "") or "").strip(),
+            "OTA_DOWNLOAD_URL_TTL_SEC": _int("OTA_DOWNLOAD_URL_TTL_SEC", 3600),
+        }
+
+    # ========== 限流动态键读取（原 utils/rate_limit.py 运行时 os.getenv，统一至此） ==========
+    @classmethod
+    def get_rate_limit_env(cls, limit_name: str):
+        """读取 RATE_LIMIT_<NAME> 动态环境变量；未设置返回 None（保留原行为）。"""
+        return os.getenv(f"RATE_LIMIT_{limit_name.upper()}")
+
+    # ========== 权限缓存 TTL（原 utils/permission.py 模块级 try/except 解析，统一至此） ==========
+    @property
+    def PERMISSION_CACHE_TTL(self) -> int:
+        try:
+            return int(os.getenv("PERMISSION_CACHE_TTL", "30"))
+        except (TypeError, ValueError):
+            return 30
 
     @classmethod
     def validate(cls) -> dict:

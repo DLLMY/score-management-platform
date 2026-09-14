@@ -16,6 +16,7 @@ from models import (
 from utils.security import validate_token
 from utils.logger import log_access_denied, log_warning
 from utils.response import APIResponse
+from config import config
 
 # 角色定义
 ROLES = {
@@ -310,10 +311,7 @@ def _get_inherited_permissions(role_code, visited=None):
 # F9 修复: 权限码 TTL 缓存——原每次请求重查 AdminRole/mappings/继承，全接口必经 has_permission
 # TTL 通过环境变量 PERMISSION_CACHE_TTL 可调，默认 30s（行为零变化，仅获得按环境可调能力）
 _PERM_CACHE: dict = {}
-try:
-    _PERM_CACHE_TTL = int(os.getenv("PERMISSION_CACHE_TTL", "30"))
-except (TypeError, ValueError):
-    _PERM_CACHE_TTL = 30
+_PERM_CACHE_TTL = config.PERMISSION_CACHE_TTL  # #196 T8: 统一到 Config（保留 int/try 解析语义）
 
 
 def _get_admin_permission_codes(admin):

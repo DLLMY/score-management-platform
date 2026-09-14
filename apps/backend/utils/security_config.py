@@ -2,15 +2,14 @@
 安全配置模块 - 集中管理安全相关配置
 """
 
-import os
-
 from utils.logger import log_warning
+from config import config
 
 
 class SecurityConfig:
     """安全配置类"""
 
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+    CORS_ORIGINS = config.CORS_ORIGINS  # #196 T8: 统一到 Config（与线上 flask-cors 同源）
     if "*" in CORS_ORIGINS:
         log_warning(
             "安全警告: CORS配置允许所有来源('*')！"
@@ -24,8 +23,8 @@ class SecurityConfig:
         "X-CSRFToken",
         "X-Requested-With",
     ]
-    RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "30"))
-    RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
+    RATE_LIMIT_PER_MINUTE = config.RATE_LIMIT_PER_MINUTE
+    RATE_LIMIT_PER_HOUR = config.RATE_LIMIT_PER_HOUR
     PASSWORD_MIN_LENGTH = 6
     PASSWORD_MAX_LENGTH = 128
     PASSWORD_REQUIRE_UPPERCASE = True
@@ -37,9 +36,7 @@ class SecurityConfig:
     JWT_ALGORITHM = "HS256"
     # Cookie Secure：显式 SESSION_COOKIE_SECURE 键优先（本机 http 部署可显式 false），
     # 未设置时按 FLASK_ENV 自动判断（production=True）。
-    SESSION_COOKIE_SECURE = os.getenv(
-        "SESSION_COOKIE_SECURE", "true" if os.getenv("FLASK_ENV") == "production" else "false"
-    ).strip().lower() in ("true", "1", "yes")
+    SESSION_COOKIE_SECURE = config.SESSION_COOKIE_SECURE
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_ENABLED = True

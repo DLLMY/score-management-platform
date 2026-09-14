@@ -26,42 +26,30 @@ import math
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+from config import config
+
+_ota_cfg = config.get_ota_config()  # #196 T8: OTA 配置统一收口到 Config
 
 # ---- 配置（env 可覆盖）----
-OTA_AUTO_PUSH_ENABLED = os.environ.get("OTA_AUTO_PUSH_ENABLED", "true").lower() == "true"
-try:
-    OTA_PUSH_COOLDOWN_SEC = int(os.environ.get("OTA_PUSH_COOLDOWN_SEC", "600"))
-except ValueError:
-    OTA_PUSH_COOLDOWN_SEC = 600
-try:
-    OTA_ROLLOUT_JITTER_SEC = int(os.environ.get("OTA_ROLLOUT_JITTER_SEC", "30"))
-except ValueError:
-    OTA_ROLLOUT_JITTER_SEC = 30
-OTA_FIRMWARE_BASE_URL = (os.environ.get("OTA_FIRMWARE_BASE_URL", "") or "").rstrip("/")
+OTA_AUTO_PUSH_ENABLED = _ota_cfg["OTA_AUTO_PUSH_ENABLED"]
+OTA_PUSH_COOLDOWN_SEC = _ota_cfg["OTA_PUSH_COOLDOWN_SEC"]
+OTA_ROLLOUT_JITTER_SEC = _ota_cfg["OTA_ROLLOUT_JITTER_SEC"]
+OTA_FIRMWARE_BASE_URL = _ota_cfg["OTA_FIRMWARE_BASE_URL"]
 
 # P2：静默时段（上课时段 + 夜间/自定义窗口），静默期内不自动推送 OTA
-OTA_RESPECT_CLASS_TIME = os.environ.get("OTA_RESPECT_CLASS_TIME", "true").lower() == "true"
+OTA_RESPECT_CLASS_TIME = _ota_cfg["OTA_RESPECT_CLASS_TIME"]
 # 逗号分隔的本地时间窗口，支持跨午夜，如 "22:00-06:00,12:00-13:00"
-OTA_QUIET_WINDOWS = (os.environ.get("OTA_QUIET_WINDOWS", "") or "").strip()
+OTA_QUIET_WINDOWS = _ota_cfg["OTA_QUIET_WINDOWS"]
 
 # P2：灰度/分批推送
-OTA_STAGED_ROLLOUT = os.environ.get("OTA_STAGED_ROLLOUT", "false").lower() == "true"
-try:
-    OTA_STAGE_PERCENT = int(os.environ.get("OTA_STAGE_PERCENT", "100"))
-except ValueError:
-    OTA_STAGE_PERCENT = 100
-try:
-    OTA_STAGE_BATCH_SIZE = int(os.environ.get("OTA_STAGE_BATCH_SIZE", "0"))
-except ValueError:
-    OTA_STAGE_BATCH_SIZE = 0
-try:
-    OTA_STAGE_BATCH_INTERVAL_SEC = int(os.environ.get("OTA_STAGE_BATCH_INTERVAL_SEC", "60"))
-except ValueError:
-    OTA_STAGE_BATCH_INTERVAL_SEC = 60
+OTA_STAGED_ROLLOUT = _ota_cfg["OTA_STAGED_ROLLOUT"]
+OTA_STAGE_PERCENT = _ota_cfg["OTA_STAGE_PERCENT"]
+OTA_STAGE_BATCH_SIZE = _ota_cfg["OTA_STAGE_BATCH_SIZE"]
+OTA_STAGE_BATCH_INTERVAL_SEC = _ota_cfg["OTA_STAGE_BATCH_INTERVAL_SEC"]
 
 # P2：指令签名（HMAC-SHA256），防止伪造 MQTT Broker 下发假 OTA 指令；
 # 设备侧需编译相同密钥（OTA_SIGNING_SECRET）才能校验通过。
-OTA_SIGNING_SECRET = (os.environ.get("OTA_SIGNING_SECRET", "") or "").strip()
+OTA_SIGNING_SECRET = _ota_cfg["OTA_SIGNING_SECRET"]
 
 # device_id -> threading.Timer，避免同一设备被重复调度
 _ota_timers = {}
@@ -167,10 +155,7 @@ def get_latest_active_firmware(device_type=None):
 
 
 # 差异 #6：固件下载 URL 时效签名。默认 3600 秒，0 表示不生成 token（仅当显式配置为 0）。
-try:
-    OTA_DOWNLOAD_URL_TTL_SEC = int(os.environ.get("OTA_DOWNLOAD_URL_TTL_SEC", "3600"))
-except ValueError:
-    OTA_DOWNLOAD_URL_TTL_SEC = 3600
+OTA_DOWNLOAD_URL_TTL_SEC = _ota_cfg["OTA_DOWNLOAD_URL_TTL_SEC"]
 
 
 def _download_token(firmware, expires_at):
