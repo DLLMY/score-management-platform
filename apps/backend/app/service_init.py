@@ -34,7 +34,9 @@ def init_index_check(app):
     try:
         from models import db
 
-        inspector = db.inspect(db.engine)
+        with app.app_context():
+            engine = db.engine
+        inspector = db.inspect(engine)
         core_indexes = {
             "user": ["ix_user_card_id_is_active", "ix_user_created_at"],
             "score_record": ["ix_score_record_created_desc", "ix_score_record_user_created"],

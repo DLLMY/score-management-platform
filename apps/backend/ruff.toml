@@ -1,0 +1,4 @@
+# 排除分析残留目录，保持 lint 基线可信（不影响既有规则）。
+# 背景：apps/backend/.workbuddy/ 为临时扫描脚本（非项目代码），
+# 此前被 ruff 计入导致基线虚高（2372 → 排除后回落）。
+extend-exclude = [".workbuddy"]
