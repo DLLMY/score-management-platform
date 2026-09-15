@@ -302,9 +302,9 @@ export default function CategoryListView({
                 <label className='form-label'>颜色标识</label>
                 <div className='flex items-center gap-3'>
                   <div className='flex flex-wrap gap-2'>
-                    {COLORS.map((color: string) => (
+                    {COLORS.map((color: string, i: number) => (
                       <button
-                        key={color}
+                        key={`swatch-${i}`}
                         type='button'
                         onClick={() => setFormData({ ...formData, color })}
                         className={`w-8 h-8 rounded-full transition-all hover:scale-110 ${

@@ -84,8 +84,15 @@ class ExamList(Resource):
         data = request.get_json(silent=True) or {}
         if not data.get("name"):
             return APIResponse.bad_request(message="考试名称 name 为必填项")
-        if not data.get("date"):
-            return APIResponse.bad_request(message="考试日期 date 为必填项")
+        # 兼容新旧两种前端形态：
+        #   旧前端传 {date}；新前端（考试管理页）传 {start_time,end_time} 且不发 date。
+        #   二者至少满足其一即可创建（缺 name 仍 400，仅传 name 仍 400）。
+        has_date = bool(data.get("date"))
+        has_start_end = bool(data.get("start_time")) and bool(data.get("end_time"))
+        if not (has_date or has_start_end):
+            return APIResponse.bad_request(
+                message="请至少提供考试日期 date，或开始/结束时间 start_time、end_time"
+            )
         new_id = academics_service.create_exam(data)
         exam = get_by_id(Exam, new_id)
         invalidate_cache("api:/api/exams/*")
