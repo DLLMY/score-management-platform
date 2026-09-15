@@ -32,8 +32,9 @@
 - 全部批次 commit：T12-1 `e4f05e4` / T12-2 `35bbe51` / T12-3 `7e66874` / T12-4 `025b00e` / T12-5 `f74a0de` / T12-6 `3254750` / T12-7 `67e57fc` / T12-8 `773f3e9` / T12-9a `5152809` / T12-9b `f7751f0` / T12-10a `f9ff191` / T12-10b `f8f28ff` / T12-10c `3be7992` / T12-10d `28e2295` / T12-10e `036146f` / T12-10f `9c22489` / T12-10g `68e8fac` / T12-10h `1095b92` / T12-10i `066485d` / prettier 补格式 `866643e`。
 - 拆分手法定型（7 条坑，含「deps 类型须真源派生」「spread 键完备性须用类型级 `Exclude<Needed, keyof ReturnType<typeof useX>>` + tsc 校验，Python 正则脚本不识别 spread」）见 `memory/2026-09-12.md`「T12 战役收官」段；范式 SOP 在 skill `react-page-split`；脚本沉淀 `.workbuddy/tmp_scan/equiv_t12*.py`。
 
-## OTA/手机箱唯一真实缺口
-- `FirmwareVersion` 无 `device_type` 维度：`negotiate()`/`/ota/check` 取全局最新 active → doorlock 接入会被误推 phonebox 固件。方案见 `docs/特性任务优化方案-20260912.md`（F1 五阶段）。**OTA 相关用户已明确延期**。
+## OTA/手机箱真实状态（2026-09-15 复评修正）
+- **`device_type` 维度已闭合**：`device_models.py:155` 的 `FirmwareVersion` 已加 `device_type` 列（`server_default="phonebox"`, index），`get_latest_active_firmware` 按设备类型精确匹配——这是 06 差异 #1 收官的一部分。**此前「FirmwareVersion 无 device_type 维度」描述已过时，作废。**
+- 仅剩 **F1 五阶段**的 `negotiate()`/`/ota/check` 推送闭环（设备类型主动上报→版本协商→自动推送）**仍按用户明确决定延期**，非技术阻塞。方案见 `docs/特性任务优化方案-20260912.md`。
 
 ## ESP32 硬件对接文档（唯一入口 `docs/esp32/`）
 - 7 文件套件：README + 01 MQTT 通信协议 / 02 设备识别与注册认证 / 03 积分逻辑 / 04 OTA 升级设计 / 05 其他对接与多设备管理 / 06 差异同步与优化方案。**硬件对接问题先查这里**；`docs/MQTT_INTEGRATION.md`（旧）已过时，仅作历史参考。
@@ -42,7 +43,7 @@
 
 ## 关键坑
 - SQLite join User 双 join → ambiguous column，单次 join；run.py 只 load `.env`（`--env` 不切文件）；conftest 动态 Namespace 须自带 `path="/mental-health"`；sandbox torch 先 `import services.nlp_ml_service` 预热。
-- ⚠️ **EOL 铁律**：backend 大量 `.py` 为 CRLF，**禁 Edit 直改**，须 python 二进制读改写（字节判据 `b"\r\n"`）。
+- ⚠️ **EOL 铁律**：backend **多数** `.py` 为 CRLF，**禁 Edit 直改**，须 python 二进制读改写（字节判据 `b"\r\n"`）。**但存在纯 LF 例外**（已实测：`api/scores/records_routes.py`、`api/algorithm/algorithm_routes.py`、`app/api_versioning.py` 等均为 LF）——改写前**必须逐文件检测实际行尾**再按该文件自身风格守恒，切勿断言 `crlf>0`（本轮曾因此误报失败）。
 - ⚠️ Edit 同文件多次编辑勿放同一并行批次（会静默丢写）；`&&` 链断致假绿 → 校验段用 `;` + `echo EXIT=$?`；快照 diff 先证确定性；harness 必先自检。
 - 引用 `docs/` 审计文档前必须实测复核；grep 权限词根带 `-A3`，前后端权限逐路由比对。
 - ⚠️ **grep 被 SIGTERM 截断 = 假「0 引用」**。长 grep 必须先拆/后台化；**任何删除/归档操作前必须用 `Grep` 工具二次确认引用**（本轮若信了上轮的「0 引用」直接删，根 `README.md` 会留永久断链）。
