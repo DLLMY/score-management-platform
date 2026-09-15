@@ -273,12 +273,6 @@ def register_v1_routes(api, app):
         api.add_namespace(ns_sub_accounts)
     except Exception as e:
         logger.warning(f"sub_accounts 命名空间注册失败: {e}", exc_info=True)
-    try:
-        from api.users.role_permissions_routes import ns_role_permissions
-
-        api.add_namespace(ns_role_permissions)
-    except Exception as e:
-        logger.warning(f"role_permissions 命名空间注册失败: {e}", exc_info=True)
 
     # 学生自助端 / 学期报告导出 / 积分排行榜：补齐生产环境路由（route_init.py 已删除，本函数是唯一注册源）
     from api.student.student_routes import ns_student
