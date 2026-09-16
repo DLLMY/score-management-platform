@@ -413,6 +413,10 @@ export const usePermissionStore = create<PermissionState>()(
         try {
           const rbacApi = await import('../services/rbacApi');
           const result = await rbacApi.default.getAdminRoles(adminId);
+          // 防 StrictMode 双调用导致请求被取消后 request 返回 null，直接读 result.roles 会崩藻
+          if (!result) {
+            throw new Error('permissions request returned null (likely cancelled)');
+          }
 
           const roles = result.roles || [];
           let permissions = result.permissions || [];

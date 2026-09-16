@@ -44,7 +44,8 @@ export function Pagination({
       pages.push(totalPages);
     }
 
-    return pages;
+    // 去重：避免 start===1 时 line30 与循环、或结尾 totalPages 与循环末项重叠导致同 key 重复
+    return Array.from(new Set(pages));
   };
 
   if (totalPages <= 1) return null;
@@ -64,7 +65,7 @@ export function Pagination({
         </button>
         {getPageNumbers().map((page, index) =>
           page === -1 ? (
-            <span key={index} className='px-2 text-gray-400'>
+            <span key={'ellipsis-' + index} className='px-2 text-gray-400'>
               ...
             </span>
           ) : (

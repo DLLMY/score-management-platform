@@ -85,7 +85,9 @@ function Header() {
         admin_id: parsedAdmin.id,
         limit: 10,
       });
-      setNotifications(result);
+      // 防 StrictMode 双调用导致请求被取消后 request 返回 null，setNotifications(null) 会让
+      // notifications.filter 崩藻；用空数组兜底，保留已有列表
+      setNotifications(Array.isArray(result) ? result : []);
     } catch (error) {
       if ((error as { status?: number }).status !== 401) {
         // 轮询失败静默降级（保留旧列表，30s 后自动重试），不打扰用户；仅记录日志

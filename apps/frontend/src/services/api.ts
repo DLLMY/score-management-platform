@@ -183,12 +183,14 @@ export const createAbortController = (): AbortController => {
  * 注册请求的 AbortController，用于路由切换时取消
  */
 export const registerAbortController = (key: string, controller: AbortController): void => {
-  // M5: 同 key 二次注册时，若旧 controller 仍存活须先 abort，否则旧请求泄漏
-  // （既不被 abort 也失去引用，无法被 abortAllRequests 取消，持连接直到超时）。
-  const existing = abortControllers.get(key);
-  if (existing && !existing.signal.aborted) {
-    existing.abort();
-  }
+  // M5 原逻辑：同 key 二次注册时先 abort 旧 controller，避免旧请求泄漏。
+  // 但 React 18 StrictMode（开发期）会让每个初始请求双触发：首个请求的 controller
+  // 被第二个注册 abort，导致 fetch 抛 AbortError → executeRequest 在 cancel 分支
+  // 返回 null。各数据层拿到 null 后直接 result.xxx / setX(null)，引发
+  // "Cannot read properties of null (reading 'xxx')" 的系统性崩溃（Header、权限、Workbench 等）。
+  // 改为：不再主动 abort 旧请求，让它自然完成（最多重复一次同一请求）。
+  // 旧 controller 即使脱离 Map 也会随 fetch 自身结束而释放，不会真正泄漏；
+  // 路由切换仍由 abortAllRequests() 统一取消所有在途请求，不受影响。
   abortControllers.set(key, controller);
 };
 

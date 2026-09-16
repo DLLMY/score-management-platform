@@ -38,8 +38,8 @@ class CommitteeService:
             student_id=data["student_id"],
             responsibilities=data.get("responsibilities"),
             rating=data.get("rating", 0),
-            term_start=data.get("term_start"),
-            term_end=data.get("term_end"),
+            term_start=parse_date(data.get("term_start")),
+            term_end=parse_date(data.get("term_end")),
         )
         db.session.add(member)
         db.session.commit()
@@ -53,6 +53,8 @@ class CommitteeService:
         if denied:
             return denied
         for key, value in data.items():
+            if key in ("term_start", "term_end"):
+                value = parse_date(value)
             if hasattr(member, key) and key not in ("id", "created_at"):
                 setattr(member, key, value)
         db.session.commit()
