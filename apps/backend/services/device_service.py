@@ -24,6 +24,7 @@ from models import (
     get_by_id,
 )
 from utils.validation import validate_device_id, validate_name
+from sqlalchemy.exc import IntegrityError
 
 # ============ Device 实体事务 ============
 
@@ -38,8 +39,12 @@ def create_device(data):
         device_id=data.get("device_id"),
         name=data.get("name", f'设备 {data.get("device_id")}'),
     )
-    db.session.add(device)
-    db.session.commit()
+    try:
+        db.session.add(device)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ValueError(f"设备ID '{data.get('device_id')}' 已存在，无法重复创建")
     return device.id
 
 

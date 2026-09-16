@@ -1,8 +1,10 @@
 from flask import request, make_response, jsonify
 from flask_restx import Namespace, Resource, fields
+from sqlalchemy.exc import IntegrityError
 from utils.response import APIResponse
 from flask_wtf.csrf import generate_csrf
 from models import (
+    db,
     Admin,
     AdminClass,
     ClassInfo,
@@ -193,15 +195,19 @@ class AdminList(Resource):
             )
         role = data.get("role", "admin")
         roles = data.get("roles")
-        admin = _service_create_admin(
-            username=data.get("username"),
-            password=password,
-            role=role,
-            real_name=data.get("real_name"),
-            phone=data.get("phone"),
-            class_name=data.get("class_name"),
-            roles=roles,
-        )
+        try:
+            admin = _service_create_admin(
+                username=data.get("username"),
+                password=password,
+                role=role,
+                real_name=data.get("real_name"),
+                phone=data.get("phone"),
+                class_name=data.get("class_name"),
+                roles=roles,
+            )
+        except IntegrityError:
+            db.session.rollback()
+            return APIResponse.bad_request(message="用户名已存在，请更换用户名后重试")
         log_permission_action(
             "创建管理员",
             "admin",

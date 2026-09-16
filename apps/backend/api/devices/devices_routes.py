@@ -214,7 +214,10 @@ class DeviceList(Resource):
         - name: 设备名称（可选，默认"设备 {device_id}"）
         """
         data = ns_devices.payload
-        device_id = create_device(data)
+        try:
+            device_id = create_device(data)
+        except ValueError as e:
+            return APIResponse.bad_request(message=str(e))
         invalidate_cache("api:/api/devices/*")
         return APIResponse.created(data={"device_id": device_id}, message="设备创建成功")
 

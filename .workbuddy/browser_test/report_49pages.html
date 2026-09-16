@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>49 页面浏览器实跑验收报告</title>
+<style>
+  *{box-sizing:border-box;font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+  body{margin:0;background:#f5f6f8;color:#1f2937;padding:24px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:#6b7280;font-size:13px;margin-bottom:16px}
+  .stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .stat{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 18px;min-width:120px}
+  .stat b{display:block;font-size:24px;line-height:1.1}
+  .stat span{font-size:12px;color:#6b7280}
+  table{border-collapse:collapse;width:100%;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:12.5px}
+  th,td{border-bottom:1px solid #eef0f3;padding:8px 10px;vertical-align:top;text-align:left}
+  th{background:#f3f4f6;font-weight:600;position:sticky;top:0}
+  tr:hover{background:#fafbfc}
+  .idx{font-weight:700;color:#374151}
+  .badge{color:#fff;padding:2px 8px;border-radius:20px;font-size:11.5px;white-space:nowrap}
+  .api{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#2563eb}
+  .err{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#b91c1c}
+  .ec{display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:10px;padding:0 6px;font-weight:700}
+</style></head>
+<body>
+<h1>49 页面浏览器实跑验收报告</h1>
+<div class="sub">生成时间：2026/9/16 10:39:33 ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 后全量重跑 ｜ 28 页真实落库 / 0 失败</div>
+<div class="stats">
+  <div class="stat"><b style="color:#16a34a">28</b><span>已真实落库（POST 2xx）</span></div>
+  <div class="stat"><b style="color:#dc2626">0</b><span>提交被拒（4xx/5xx）</span></div>
+  <div class="stat"><b style="color:#6b7280">16</b><span>只读/展示页</span></div>
+  <div class="stat"><b style="color:#d97706">5</b><span>已提交未落库/未提交</span></div>
+  <div class="stat"><b>49</b><span>页面总数</span></div>
+</div>
+<table>
+<thead><tr>
+  <th>#</th><th>页面</th><th>验收结论</th><th>有新增</th><th>弹窗</th><th>字段数</th><th>提交</th><th>业务 API 调用</th><th>控制台错误</th><th>备注</th>
+</tr></thead>
+<tbody>
+<tr>
+    <td class="idx">0</td>
+    <td>数据概览</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">1</td>
+    <td>学生管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>创建</td>
+    <td class="api">POST /api/users → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">2</td>
+    <td>数据分析</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">3</td>
+    <td>班级对比</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">4</td>
+    <td>积分规则</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>添加规则</td>
+    <td class="api">POST /api/rules → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">5</td>
+    <td>排名规则</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>添加等级</td>
+    <td class="api">POST /api/rank-rules → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">6</td>
+    <td>分类管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>3</td>
+    <td>添加分类</td>
+    <td class="api">POST /api/score-categories → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">7</td>
+    <td>智能评分</td>
+    <td><span class="badge" style="background:#9ca3af">未提交</span></td>
+    <td>是</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td><br>[未识别到新增按钮]</td>
+  </tr>
+<tr>
+    <td class="idx">8</td>
+    <td>班级管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>3</td>
+    <td>保存</td>
+    <td class="api">POST /api/classes → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">9</td>
+    <td>科目管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>保存</td>
+    <td class="api">POST /api/subjects → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=6]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">10</td>
+    <td>课程表管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>保存(循环避冲突)</td>
+    <td class="api">POST /api/course-schedules → 201</td>
+    <td class="err">0</td>
+    <td><br>[课程表尝试=4/30]<br>[成功]</td>
+  </tr>
+<tr>
+    <td class="idx">11</td>
+    <td>时间规则设置</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>保存</td>
+    <td class="api">POST /api/time-rules → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">12</td>
+    <td>课程节次管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>9</td>
+    <td>添加节次</td>
+    <td class="api">POST /api/class-periods → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">13</td>
+    <td>工作台总览</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">14</td>
+    <td>座次表</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>创建</td>
+    <td class="api">POST /api/seating/charts → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=1]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">15</td>
+    <td>值日生表</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>创建</td>
+    <td class="api">POST /api/duty/groups → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=1]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">16</td>
+    <td>班委名单</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>添加</td>
+    <td class="api">POST /api/committee/members → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">17</td>
+    <td>家长联系</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>添加</td>
+    <td class="api">POST /api/parent/contacts → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=6]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">18</td>
+    <td>作业检查</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>保存</td>
+    <td class="api">POST /api/homework/assignments → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">19</td>
+    <td>考勤管理</td>
+    <td><span class="badge" style="background:#9ca3af">未提交</span></td>
+    <td>是</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td><br>[未识别到新增按钮]</td>
+  </tr>
+<tr>
+    <td class="idx">20</td>
+    <td>学习小组</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>保存</td>
+    <td class="api">POST /api/study-group/groups → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">21</td>
+    <td>心理健康</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>保存记录</td>
+    <td class="api">POST /api/mental-health/records → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">22</td>
+    <td>文体活动</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>8</td>
+    <td>保存</td>
+    <td class="api">POST /api/activity → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=7]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">23</td>
+    <td>班级文化</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>保存</td>
+    <td class="api">POST /api/culture/records → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">24</td>
+    <td>学法指导</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>保存</td>
+    <td class="api">POST /api/study-guide/guides → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">25</td>
+    <td>评语管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>添加</td>
+    <td class="api">POST /api/teacher-comments → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">26</td>
+    <td>手机箱开箱策略</td>
+    <td><span class="badge" style="background:#9ca3af">未提交</span></td>
+    <td>是</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td><br>[未识别到新增按钮]</td>
+  </tr>
+<tr>
+    <td class="idx">27</td>
+    <td>考试管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>10</td>
+    <td>保存</td>
+    <td class="api">POST /api/exams → 200</td>
+    <td class="err">0</td>
+    <td><br>[filled=6]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">28</td>
+    <td>成绩录入</td>
+    <td><span class="badge" style="background:#9ca3af">未提交</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>1</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td><br>[文件已选]<br>[filled=0]<br>[表单已开但未定位到提交按钮]</td>
+  </tr>
+<tr>
+    <td class="idx">29</td>
+    <td>成绩档案</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">30</td>
+    <td>成绩分析</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">31</td>
+    <td>算法分析</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">32</td>
+    <td>设备管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>2</td>
+    <td>确认添加</td>
+    <td class="api">POST /api/devices → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">33</td>
+    <td>设备分组</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>创建</td>
+    <td class="api">POST /api/device-group/ → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">34</td>
+    <td>固件管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>上传</td>
+    <td class="api">POST /api/firmware/upload → 200</td>
+    <td class="err">0</td>
+    <td><br>[文件已选]<br>[filled=3]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">35</td>
+    <td>通知管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>发送通知</td>
+    <td class="api">POST /api/admin_notifications/ → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">36</td>
+    <td>审批管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>创建申请</td>
+    <td class="api">POST /api/approvals → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">37</td>
+    <td>远程通知</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>保存</td>
+    <td class="api">POST /api/notify_templates/ → 200</td>
+    <td class="err">0</td>
+    <td><br>[filled=8]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">38</td>
+    <td>远程开机</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">39</td>
+    <td>系统设置</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">40</td>
+    <td>权限管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>保存</td>
+    <td class="api">POST /api/admins → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]</td>
+  </tr>
+<tr>
+    <td class="idx">41</td>
+    <td>数据同步</td>
+    <td><span class="badge" style="background:#9ca3af">未提交</span></td>
+    <td>是</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td><br>[未识别到新增按钮]</td>
+  </tr>
+<tr>
+    <td class="idx">42</td>
+    <td>运维总览</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">43</td>
+    <td>前端遥测</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">44</td>
+    <td>系统指标趋势</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">45</td>
+    <td>系统诊断</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">46</td>
+    <td>安全审计</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">47</td>
+    <td>操作日志</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+<tr>
+    <td class="idx">48</td>
+    <td>帮助中心</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
+  </tr>
+</tbody>
+</table>
+</body></html>
