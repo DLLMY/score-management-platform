@@ -11,8 +11,9 @@ const rows = raw.map(l => JSON.parse(l));
 function classify(r) {
   const isReadOnly = (r.note && r.note.includes('只读/展示页')) || !r.hasAdd;
   const biz = (r.apiCalls || []).filter(c => !/frontend-performance/.test(c.url));
-  const createOk = biz.some(c => c.m === 'POST' && c.status >= 200 && c.status < 300);
-  const createFail = biz.some(c => c.m === 'POST' && c.status >= 400);
+  const isWrite = c => ['POST','PUT','PATCH','DELETE'].includes(c.m);
+  const createOk = biz.some(c => isWrite(c) && c.status >= 200 && c.status < 300);
+  const createFail = biz.some(c => isWrite(c) && c.status >= 400);
   if (isReadOnly) return 'readonly';
   if (createOk) return 'ok';
   if (createFail) return 'fail';
@@ -77,9 +78,9 @@ const html = `<!doctype html>
 </style></head>
 <body>
 <h1>49 页面浏览器实跑验收报告</h1>
-<div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 后全量重跑 ｜ 28 页真实落库 / 0 失败</div>
+<div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 后全量重跑（full11）｜ 30 页真实落库 / 0 失败</div>
 <div class="stats">
-  <div class="stat"><b style="color:#16a34a">${ok}</b><span>已真实落库（POST 2xx）</span></div>
+  <div class="stat"><b style="color:#16a34a">${ok}</b><span>已真实落库（写接口 2xx）</span></div>
   <div class="stat"><b style="color:#dc2626">${fail}</b><span>提交被拒（4xx/5xx）</span></div>
   <div class="stat"><b style="color:#6b7280">${readonly}</b><span>只读/展示页</span></div>
   <div class="stat"><b style="color:#d97706">${other}</b><span>已提交未落库/未提交</span></div>

@@ -32,6 +32,7 @@ const ROUTES = [
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 function log(s){ fs.appendFileSync(RESULT, s + '\n'); }
+function safeStr(o){ const seen=new WeakSet(); return JSON.stringify(o, (k,v)=>{ if(typeof v==='object'&&v!==null){ if(seen.has(v)) return '[circular]'; seen.add(v); } if(typeof v==='function') return '[fn]'; return v; }); }
 const vis = (e)=>{const r=e.getBoundingClientRect();const s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
 async function clickById(page, id){
   const h = await page.$(`#${id}`);
@@ -349,6 +350,170 @@ async function captureResult(page){
   });
 }
 
+// ===== 缺口页专属驱动（A 计划）=====
+// idx 7 智能评分：切到"规则管理"Tab → 添加规则 → 填行为关键词 → 创建规则
+async function fillNLP(page, marker, sleep){
+  const tab=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').trim()==='规则管理'); if(b){ b.click(); return true;} return false; });
+  await sleep(1000);
+  if(!tab) return {ok:false, note:'[NLP:未找到规则管理Tab]'};
+  const add=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('添加规则')); if(b){ b.click(); return true;} return false; });
+  await sleep(1000);
+  if(!add) return {ok:false, note:'[NLP:未找到添加规则按钮]'};
+  const res=await page.evaluate((mk)=>{
+    const modal=document.querySelector('div.fixed.inset-0'); if(!modal) return {kw:false,desc:false};
+    const text=modal.querySelectorAll('input[type=text]');
+    const ta=modal.querySelector('textarea');
+    if(text[0]){ const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set; try{ s.call(text[0],mk); }catch(e){} text[0].dispatchEvent(new Event('input',{bubbles:true})); text[0].dispatchEvent(new Event('change',{bubbles:true})); }
+    if(ta){ const s=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set; try{ s.call(ta,mk); }catch(e){} ta.dispatchEvent(new Event('input',{bubbles:true})); ta.dispatchEvent(new Event('change',{bubbles:true})); }
+    return {kw:!!text[0], desc:!!ta};
+  }, marker);
+  await sleep(600);
+  const sb=await page.evaluate(()=>{ const b=[...document.querySelectorAll('div.fixed.inset-0 button')].find(e=>(e.innerText||'').includes('创建规则')); if(b){ b.click(); return true;} return false; });
+  await sleep(1500);
+  return {ok:sb, note:(sb?'[NLP:已创建规则]':'[NLP:未找到创建规则按钮]')+'[kw='+res.kw+',desc='+res.desc+']'};
+}
+
+// idx 19 考勤管理：点"快速记录" → 班级自动首选项 + 选学生 + 出勤 + 保存记录
+async function fillAttendance(page, marker, sleep){
+  let add=false;
+  for(let t=0;t<10 && !add;t++){ add=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('快速记录')); if(b){ b.click(); return true;} return false; }); if(!add) await sleep(1000); }
+  if(!add) return {ok:false, note:'[考勤:未找到快速记录]'};
+  const modal=await page.$('div.fixed.inset-0'); if(!modal) return {ok:false, note:'[考勤:未找到弹窗]'};
+  // 选日期
+  const dateInp=await modal.$('input[type=date]'); if(dateInp){ const cur=await dateInp.inputValue().catch(()=>''); if(!cur){ try{ await dateInp.fill('2026-09-15'); }catch(e){} } }
+  await sleep(400);
+  // select 顺序：0=班级 1=学生 2=时段；轮询班级直到该班有学生
+  const sels=await modal.$$('select');
+  if(sels.length<3) return {ok:false, note:'[考勤:下拉框数量不足='+sels.length+']'};
+  let stChosen=false;
+  for(let ci=0; ci<8 && !stChosen; ci++){
+    try{ await sels[0].selectOption({index:ci}); }catch(e){}
+    await sleep(900);
+    const stOpts=await sels[1].$$('option');
+    for(let k=1;k<stOpts.length;k++){
+      const v=await stOpts[k].getAttribute('value');
+      if(v && v!=='0' && v!==''){ await sels[1].selectOption({index:k}).catch(()=>{}); stChosen=true; break; }
+    }
+  }
+  if(!stChosen) return {ok:false, note:'[考勤:所有班级均无可选学生]'};
+  await sleep(500);
+  await page.evaluate(()=>{ const b=[...document.querySelectorAll('div.fixed.inset-0 button')].find(e=>(e.innerText||'')==='出勤'); if(b) b.click(); });
+  await sleep(500);
+  const sb=await page.evaluate(()=>{ const b=[...document.querySelectorAll('div.fixed.inset-0 button')].find(e=>(e.innerText||'').includes('保存记录')); if(b){ b.click(); return true;} return false; });
+  await sleep(1800);
+  return {ok:sb, note:(sb?'[考勤:已保存记录]':'[考勤:未找到保存记录]')};
+}
+
+// idx 26 手机箱开箱策略：选班级 → 添加时段 → 保存总开关与时段（PUT 更新/建）
+async function fillPhonebox(page, marker, sleep){
+  const sel=await page.$('select'); let chose=false;
+  if(sel){ const opts=await sel.$$('option'); for(let k=1;k<opts.length;k++){ const t=await opts[k].evaluate(o=>o.text.trim()); if(t && !/请选择/.test(t)){ await sel.selectOption({index:k}); chose=true; break; } } }
+  await sleep(1000);
+  if(!chose) return {ok:false, note:'[开箱策略:无可选班级]'};
+  const addWin=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('添加时段')); if(b){ b.click(); return true;} return false; });
+  await sleep(800);
+  const sb=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('保存总开关与时段')); if(b){ b.click(); return true;} return false; });
+  await sleep(1500);
+  return {ok:sb, note:(addWin?'[已添加时段]':'')+(sb?'[已保存策略]':'[未找到保存按钮]')};
+}
+
+// idx 28 成绩录入：自建"已发布+带科目"考试 → 刷新 → 选考试 → 填首个单元格 → 保存全部
+async function fillScoreEntry(page, marker, sleep){
+  let examId=null, dbg='';
+  try{
+    const resp=await page.request.post(BASE+'/api/exams', {
+      data: JSON.stringify({
+        name: '自动化测试考试_'+marker,
+        start_time: '2026-09-15T09:00:00',
+        end_time: '2026-09-15T10:30:00',
+        subjects: ['测试69614'],
+        status: 'published'
+      }),
+      headers: { 'Content-Type':'application/json' }
+    });
+    const st=resp.status();
+    dbg='[examPOST='+st+']';
+    let cj={}; try{ cj=await resp.json(); }catch(e){ try{ cj={raw:await resp.text()}; }catch(_){} }
+    if(st>=200&&st<300){ examId=(cj&&cj.data&&cj.data.id)||cj.id||null; }
+    else { dbg+='[examErr='+JSON.stringify(cj).slice(0,120)+']'; }
+  }catch(e){ dbg='[examEX='+String(e).slice(0,80)+']'; }
+  if(!examId) return {ok:false, note:'[成绩录入:建考试失败]'+dbg};
+  await page.reload({waitUntil:'load'}); await sleep(2200);
+  let chose=false;
+  for(let attempt=0; attempt<3 && !chose; attempt++){
+    const sel=await page.$('select'); if(!sel) break;
+    const opts=await sel.$$('option');
+    for(let k=1;k<opts.length;k++){ const t=await opts[k].evaluate(o=>o.text.trim()); if(t && !/请选择考试/.test(t)){ await sel.selectOption({index:k}); chose=true; break; } }
+    if(!chose) await sleep(1000);
+  }
+  await sleep(3500);
+  if(!chose) return {ok:false, note:'[成绩录入:无可选考试]'+dbg};
+  const cell=await page.$('input[data-sid]'); if(!cell) return {ok:false, note:'[成绩录入:未找到单元格]'+dbg};
+  try{ await cell.fill('88'); }catch(e){}
+  await sleep(400);
+  try{ await page.keyboard.press('Tab'); }catch(e){}
+  await sleep(900);
+  const sb=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('保存全部')); if(b){ b.click(); return true;} return false; });
+  await sleep(1800);
+  return {ok:sb, note:(sb?'[成绩录入:已保存成绩]':'[成绩录入:未找到保存全部]')+dbg};
+}
+
+// idx 41 数据同步：点"执行修复" → 确认弹窗"确定"（POST 修复）
+async function fillDataSync(page, marker, sleep){
+  const fix=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('执行修复')); if(b){ b.click(); return true;} return false; });
+  await sleep(1200);
+  if(!fix) return {ok:false, note:'[数据同步:未找到执行修复]'};
+  const ok=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('确定')); if(b){ b.click(); return true;} return false; });
+  await sleep(2200);
+  return {ok:ok, note: ok?'[数据同步:已执行修复]':'[数据同步:未找到确认按钮]'};
+}
+
+// ===== 编辑/删除回归（B 计划）：仅对本次新建的 PBT 测试行操作，绝不碰真实种子数据 =====
+async function verifyEditDelete(page, sleep){
+  const note=[]; let short='skipped';
+  try{
+    // 1) 在表格里找含 PBT 标记的行（即本次 UI 新建的测试行）
+    const rowInfo=await page.evaluate(()=>{
+      const rows=[...document.querySelectorAll('tr.ant-table-row, tr, .ant-list-item, [class*=row]')];
+      for(const r of rows){
+        const t=(r.innerText||'');
+        if(/PBT/.test(t)){
+          // 行内找编辑按钮（图标按钮 title/aria-label 含 编辑/修改，或文字按钮）
+          const editBtn=r.querySelector('button[title*=编辑],button[aria-label*=编辑],a[title*=编辑],button[title*=修改],a[title*=修改]') || [...r.querySelectorAll('button,a,[role=button]')].find(e=>/编辑|修改/.test(e.innerText||e.getAttribute('title')||'')) || null;
+          if(editBtn){ return {found:true, idx:[...r.parentNode.children].indexOf(r), hasEdit:true}; }
+          return {found:true, idx:[...r.parentNode.children].indexOf(r), hasEdit:false};
+        }
+      }
+      return {found:false};
+    });
+    if(!rowInfo.found){ note.push('[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]'); return {note:note.join(''), short}; }
+    if(rowInfo.hasEdit){
+      // 重新定位该行并点编辑
+      const clicked=await page.evaluate(()=>{
+        const rows=[...document.querySelectorAll('tr.ant-table-row, tr, .ant-list-item, [class*=row]')];
+        for(const r of rows){ if(/PBT/.test(r.innerText||'')){ const b=r.querySelector('button[title*=编辑],button[aria-label*=编辑],a[title*=编辑],button[title*=修改],a[title*=修改]') || [...r.querySelectorAll('button,a,[role=button]')].find(e=>/编辑|修改/.test(e.innerText||e.getAttribute('title')||'')); if(b){ b.click(); return true; } } } return false;
+      });
+      if(clicked){ note.push('[edit:已点编辑]'); await sleep(1300);
+        await page.evaluate((mk)=>{ const inp=document.querySelector('.ant-modal input[type=text],.ant-modal textarea,.ant-modal input:not([type]),input[type=text],textarea'); if(inp){ const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set; try{ s.call(inp, mk);}catch(e){} inp.dispatchEvent(new Event('input',{bubbles:true})); } }, 'EDIT'+String(Date.now()).slice(-8));
+        await sleep(400);
+        const sb=await page.evaluate(()=>{ const b=[...document.querySelectorAll('.ant-modal button')].find(e=>/保存|确定|提交|更新/.test(e.innerText||'')); if(b){ b.click(); return (e.innerText||'').trim().slice(0,8);} return null; });
+        note.push(sb?('[edit-submit:'+sb+']'):'[edit提交未找到]'); await sleep(1500);
+      } else { note.push('[edit:行内编辑按钮未定位]'); }
+    } else { note.push('[edit:该行无编辑按钮]'); }
+    // 2) 删除：找含 PBT 的行，点其删除
+    const delClicked=await page.evaluate(()=>{
+      const rows=[...document.querySelectorAll('tr.ant-table-row, tr, .ant-list-item, [class*=row]')];
+      for(const r of rows){ if(/PBT/.test(r.innerText||'')){ const b=r.querySelector('button[title*=删除],button[aria-label*=删除],a[title*=删除]') || [...r.querySelectorAll('button,a,[role=button]')].find(e=>/删除|移除|作废/.test(e.innerText||e.getAttribute('title')||'')); if(b){ b.click(); return true; } } } return false;
+    });
+    if(delClicked){ note.push('[delete:已点删除]'); await sleep(1000);
+      const ok=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'')==='确定'||(e.innerText||'')==='确认删除'||(e.innerText||'')==='删除'); if(b){ b.click(); return true;} return false; });
+      note.push(ok?'[delete确认]':'[delete确认未找到]'); await sleep(1500);
+    } else { note.push('[delete:该行无删除按钮]'); }
+    short='attempted';
+  }catch(e){ note.push('[editDelete异常'+String(e).slice(0,40)+']'); }
+  return {note:note.join(''), short};
+}
+
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME, headless: true, args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'] });
   const ctx = await browser.newContext({ viewport:{width:1280,height:1100} });
@@ -380,12 +545,25 @@ async function captureResult(page){
       await page.screenshot({path:path.join(SHOTS,`${String(i).padStart(2,'0')}_${slug}.jpeg`),type:'jpeg',quality:55});
       rec.h1=await page.evaluate(()=>{const h=document.querySelector('h1,h2,.page-title');return ((h?(h.innerText||''):'')||'').trim().slice(0,40)||document.title.slice(0,40);});
       if(hasAdd){
+        const GAP={ '智能评分':fillNLP, '考勤管理':fillAttendance, '手机箱开箱策略':fillPhonebox, '成绩录入':fillScoreEntry, '数据同步':fillDataSync };
+        let __gap=false;
+        if(GAP[name]){
+          __gap=true;
+          rec.addBtnFound=true; rec.addBtnText=name+'专属驱动';
+          try{
+            const gr=await GAP[name](page, marker, sleep);
+            rec.modalOpened=true; rec.submitClicked=!!gr.ok; rec.submitText=name+'提交';
+            rec.note=(rec.note||'')+(gr.note||'');
+            rec.result=await captureResult(page);
+          }catch(e){ rec.note=(rec.note||'')+'[专属驱动异常 '+String(e).slice(0,80)+']'; }
+        }
+        if(!__gap){
         const pick=await pickAddBtn(page);
         rec.addBtnFound=pick.found; rec.addBtnText=pick.text||'';
         if(pick.found){
           try{ await clickById(page,'__auto_add_btn'); }catch{}
-          await sleep(2200);
-          const m=await findModalContainer(page);
+          let m={found:false};
+          for(let w=0; w<10 && !m.found; w++){ await sleep(700); m=await findModalContainer(page); }
           if(m.found){
             rec.modalOpened=true; rec.fields=m.fields;
             const scope=page;
@@ -418,14 +596,17 @@ async function captureResult(page){
             try{ await page.screenshot({path:path.join(SHOTS,`${String(i).padStart(2,'0')}_${slug}_form.jpeg`),type:'jpeg',quality:55}); }catch{}
           } else { rec.note=(rec.note||'')+'[点击新增后未出现可见表单]'; }
         } else { rec.note=(rec.note||'')+'[未识别到新增按钮]'; }
+        } /* end !__gap */
+        const wrote=respBuf.slice(beforeResp).some(c=>['POST','PUT','PATCH','DELETE'].includes(c.m)&&c.status>=200&&c.status<300 && !/frontend-performance/.test(c.url));
+        if(wrote){ try{ const ed=await verifyEditDelete(page, sleep); rec.note=(rec.note||'')+(ed.note||''); rec.editDelete=ed.short||null; }catch(e){ rec.note=(rec.note||'')+'[editDelete异常]'; } }
       } else { rec.note='只读/展示页'; }
     }catch(e){ rec.note='EXCEPTION: '+String(e).slice(0,160); }
     rec.apiCalls=respBuf.slice(beforeResp).map(x=>({m:x.m,url:x.url,status:x.status}));
     const slice=errBuf.slice(before);
     rec.pageErrors=slice.filter(x=>x.t==='pageerror').map(x=>x.m);
     rec.consoleErrors=slice.filter(x=>x.t==='console').map(x=>x.m);
-    log(JSON.stringify(rec));
-    console.log(`[${i}] ${name} add=${rec.addBtnFound}(${rec.addBtnText}) modal=${rec.modalOpened} f=${rec.fields} submit=${rec.submitClicked} err=${rec.pageErrors.length+rec.consoleErrors.length}`);
+    try{ log(safeStr(rec)); }catch(e){ try{ log('LOG_FAIL idx='+i+' '+String(e).slice(0,80)); }catch(_){} }
+    try{ console.log(`[${i}] ${name} add=${rec.addBtnFound}(${rec.addBtnText}) modal=${rec.modalOpened} f=${rec.fields} submit=${rec.submitClicked} err=${rec.pageErrors.length+rec.consoleErrors.length}`); }catch(_){}
   }
   await browser.close();
   log('__DONE__');
