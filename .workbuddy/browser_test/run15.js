@@ -44,15 +44,15 @@ async function clickById(page, id){
 
 async function pickAddBtn(page){
   return await page.evaluate(() => {
-    const reAdd=/添加|新建|新增|创建|录入|登记|上报|布置|发布|开通|上传|发送|导入|配置|发起|生成|绑定|打卡|添加规则|新增规则|新建规则/;
+    const reAdd=/添加|新建|新增|创建|录入|登记|上报|布置|发布|开通|上传|发送|导入|配置|发起|生成|绑定|打卡|快速记录|添加规则|新增规则|新建规则/;
     const inNav=(el)=>!!el.closest('nav,aside,.sidebar,.ant-menu,[class*=sidebar],[class*=menu],header,.header,[class*=header],a[href]');
     const els=Array.from(document.querySelectorAll('button,[role=button],a:not([href])'));
     const cand=els.filter(e=>{ const t=(e.innerText||e.getAttribute('title')||'').trim(); return reAdd.test(t) && !inNav(e); });
     if(!cand.length) return {found:false};
-    const score=t=>{ if(/添加|新建|新增|创建|发送/.test(t)) return 3; if(/录入|登记|上报|布置|发布|开通|上传|导入/.test(t)) return 2; return 1; };
+    const score=t=>{ if(/添加|新建|新增|创建|发送|快速记录/.test(t)) return 3; if(/录入|登记|上报|布置|发布|开通|上传|导入/.test(t)) return 2; return 1; };
     const mx=Math.max(...cand.map(e=>score(e.textContent||'')));
     const top=cand.filter(e=>score(e.textContent||'')===mx);
-    const create=top.find(e=>/添加|新建|新增|创建|发送/.test(e.textContent||''));
+    const create=top.find(e=>/添加|新建|新增|创建|发送|快速记录/.test(e.textContent||''));
     const chosen=create||top[0];
     chosen.id='__auto_add_btn';
     return {found:true, text:(chosen.innerText||chosen.getAttribute('title')||'').trim().slice(0,20)};
@@ -271,30 +271,46 @@ async function fillExam(scope, marker){
   return filled;
 }
 
-// 课程表专用：循环尝试 (班级 × 星期 × 节次) 组合，避开"该班级此时段已有课程"冲突，确保真实落库
+// 课程表专用：先轮询等 班级/科目/星期/节次 选项从 API 加载完，再循环尝试组合避开"该班级此时段已有课程"冲突，确保真实落库
 async function fillCourseSchedule(page, marker, sleep, captureResult){
   try{
-    const modal = await page.$('div.fixed.inset-0');
+    const realOpt=(opts)=>opts.filter(o=>!/请选择|选择|全部|不限/i.test(o.textContent||'')).length;
+    // 1) 等待弹窗与下拉就绪（星期/节次 来自 weekDays/activePeriods，可能比弹窗晚到）
+    let modal=null, form=null, sels=[];
+    for(let w=0; w<25 && (!modal || sels.length<4); w++){
+      modal = await page.$('div.fixed.inset-0');
+      if(modal){ form = await modal.$('form'); if(form) sels = await form.$$('select'); }
+      if(sels.length>=4) break;
+      await sleep(700);
+    }
     if(!modal) return {filled:0,result:null,note:'[课程表:未定位弹窗]'};
-    const form = await modal.$('form');
     if(!form) return {filled:0,result:null,note:'[课程表:未定位表单]'};
-    const sels = await form.$$('select');
     if(sels.length<4) return {filled:0,result:null,note:`[课程表:select数=${sels.length}]`};
-    const [classSel,subjectSel,daySel,periodSel]=sels; // [0]班级 [1]科目 [2]星期 [3]节次
+    const [classSel,subjectSel,daySel,periodSel]=sels; // [0]班级 [1]科目 [2]星期 [3]节次 [4]教师
+    let loaded=false;
+    for(let w=0; w<30 && !loaded; w++){
+      const cls=await classSel.$$('option'), sub=await subjectSel.$$('option'), day=await daySel.$$('option'), per=await periodSel.$$('option');
+      if(realOpt(cls)>=1 && realOpt(sub)>=1 && day.length>=1 && per.length>=1) loaded=true;
+      else await sleep(700);
+    }
+    if(!loaded) return {filled:0,result:null,note:'[课程表:下拉选项迟迟未加载(可能缺班级/科目/星期/节次数据)]'};
     const classOpts = await classSel.$$('option');
     const dayOpts = await daySel.$$('option');
     const periodOpts = await periodSel.$$('option');
-    const classReal = Math.max(1, classOpts.length-1); // 去掉"选择班级"占位
+    const classReal = Math.max(1, classOpts.length-1);
+    const subjectReal = Math.max(1, (await subjectSel.$$('option')).length-1);
     const dayN = dayOpts.length, periodN = periodOpts.length;
     const roomInput = await form.$('input[placeholder="输入教室"]');
-    const maxTry = Math.min(classReal*dayN*periodN, 30);
+    const maxTry = Math.min(classReal*subjectReal*dayN*periodN, 40);
     let attempts=0, done=false, res=null, lastNote='';
     for(let a=0; a<maxTry && !done; a++){
       attempts++;
-      const cIdx=1+(a%classReal), dIdx=a%dayN, pIdx=Math.floor(a/dayN)%periodN;
+      const cIdx=1+(a%classReal);
+      const sIdx=1+Math.floor(a/classReal)%subjectReal;
+      const dIdx=a%dayN, pIdx=Math.floor(a/dayN)%periodN;
       try{
         await classSel.selectOption({index:cIdx});
-        await subjectSel.selectOption({index:1});
+        await subjectSel.selectOption({index:sIdx});
         await daySel.selectOption({index:dIdx});
         await periodSel.selectOption({index:pIdx});
         if(roomInput) await roomInput.fill(marker+'_'+a);
@@ -468,6 +484,92 @@ async function fillDataSync(page, marker, sleep){
   return {ok:ok, note: ok?'[数据同步:已执行修复]':'[数据同步:未找到确认按钮]'};
 }
 
+// idx 4 积分规则：点"添加规则" → modal-overlay 内填 规则名称/积分值/描述/分类 → 提交"添加规则"
+async function fillPointsRule(page, marker, sleep){
+  const ok=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('添加规则')); if(b){ b.click(); return true;} return false; });
+  await sleep(1200);
+  if(!ok) return {ok:false, note:'[积分规则:未找到添加规则按钮]'};
+  const r=await page.evaluate((mk)=>{
+    const overlay=document.querySelector('.modal-overlay'); if(!overlay) return {ok:false, note:'[未找到.modal-overlay]'};
+    const form=overlay.querySelector('form'); if(!form) return {ok:false, note:'[未找到form]'};
+    const setVal=(el,v)=>{ if(!el) return; const proto=el.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype; const s=Object.getOwnPropertyDescriptor(proto,'value').set; try{ s.call(el,v); }catch(e){} el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); };
+    const name=form.querySelector('input[type=text]')||form.querySelector('input'); if(name) setVal(name, mk);
+    const nums=form.querySelectorAll('input[type=number]'); if(nums[0]) setVal(nums[0],'5');
+    const ta=form.querySelector('textarea'); if(ta) setVal(ta, mk);
+    const sel=form.querySelector('select'); if(sel){ const o=[...sel.options].find(o=>!/请选择|选择|全部|不限/i.test(o.text)); if(o){ sel.value=o.value; sel.dispatchEvent(new Event('change',{bubbles:true})); } }
+    return {ok:true};
+  }, marker);
+  await sleep(600);
+  const sb=await page.evaluate(()=>{ const b=[...document.querySelectorAll('.modal-overlay button')].find(e=>(e.innerText||'').includes('添加规则')); if(b){ b.click(); return true;} return false; });
+  await sleep(2000);
+  return {ok:sb, note:(r.ok?'[表单已填]':'')+(sb?'[已提交]':'[未找到提交按钮]')+(r.note||'')};
+}
+
+// idx 36 审批管理：点"创建申请" → 填 学生(真实选项)/标题/积分变化/说明 → 提交"创建申请"
+async function fillApproval(page, marker, sleep){
+  const ok=await page.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(e=>(e.innerText||'').includes('创建申请')); if(b){ b.click(); return true;} return false; });
+  await sleep(1200);
+  if(!ok) return {ok:false, note:'[审批:未找到创建申请按钮]'};
+  const r=await page.evaluate((mk)=>{
+    const modal=document.querySelector('div.fixed.inset-0'); if(!modal) return {ok:false,note:'[未找到modal]'};
+    const form=modal.querySelector('form'); if(!form) return {ok:false,note:'[未找到form]'};
+    const setVal=(el,v)=>{ if(!el) return; const proto=el.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype; const s=Object.getOwnPropertyDescriptor(proto,'value').set; try{s.call(el,v);}catch(e){} el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); };
+    const sels=form.querySelectorAll('select');
+    if(sels[0]){ const o=[...sels[0].options].find(o=>o.value&&o.value!=='0'); if(o){ sels[0].value=o.value; sels[0].dispatchEvent(new Event('change',{bubbles:true})); } else return {ok:false, note:'[无可选学生]'}; }
+    const title=form.querySelector('input[type=text]'); if(title) setVal(title, mk);
+    const num=form.querySelector('input[type=number]'); if(num) setVal(num,'5');
+    const ta=form.querySelector('textarea'); if(ta) setVal(ta, mk);
+    return {ok:true};
+  }, marker);
+  await sleep(600);
+  const sb=await page.evaluate(()=>{ const modal=document.querySelector('div.fixed.inset-0'); if(!modal) return false; const b=[...modal.querySelectorAll('button')].find(e=>(e.innerText||'').includes('创建申请')); if(b){ b.click(); return true;} return false; });
+  await sleep(2000);
+  return {ok:sb, note:(r.ok?'[表单已填]':'')+(sb?'[已提交]':'[未找到提交按钮]')+(r.note||'')};
+}
+
+// idx 37 远程通知：精确点「我的模板」卡片的"新建" → 填模板名称/内容 → 保存（POST 模板，2xx 即真实落库）
+// 该页有两个"新建"（模板 / 定时通知）外加右侧"发送通知"，通用 pickAddBtn 在连续跑时偶发检测不到弹窗；专属驱动精确命中模板弹窗
+async function fillRemoteNotify(page, marker, sleep){
+  // 1) 精确命中「我的模板」卡片内的"新建"按钮（避开「定时通知」卡片的"新建"与右侧"发送通知"）
+  let add=false;
+  for(let t=0; t<8 && !add; t++){
+    add=await page.evaluate(()=>{
+      const h3=[...document.querySelectorAll('h3')].find(h=>(h.innerText||'').includes('我的模板'));
+      if(!h3) return false;
+      const card=h3.parentElement && h3.parentElement.parentElement; // header div -> card div
+      if(!card) return false;
+      const b=[...card.querySelectorAll('button,[role=button]')].find(e=>(e.innerText||'').trim()==='新建');
+      if(b){ b.click(); return true; } return false;
+    });
+    if(!add) await sleep(800);
+  }
+  if(!add) return {ok:false, note:'[远程通知:未找到我的模板-新建按钮]'};
+  // 2) 轮询等待模板弹窗（div.fixed.inset-0 内含 input/textarea），比通用流程等待更久，规避连续跑首检过早
+  let modal=null;
+  for(let t=0; t<12 && !modal; t++){
+    modal=await page.evaluate(()=>{
+      const ov=document.querySelector('div.fixed.inset-0');
+      if(ov && ov.querySelector('input,textarea')) return {found:true};
+      return null;
+    });
+    if(!modal) await sleep(600);
+  }
+  if(!modal) return {ok:false, note:'[远程通知:未出现模板弹窗]'};
+  // 3) 填模板名称 + 内容
+  const r=await page.evaluate((mk)=>{
+    const ov=document.querySelector('div.fixed.inset-0'); if(!ov) return {ok:false};
+    const setVal=(el,v)=>{ if(!el) return; const proto=el.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype; const s=Object.getOwnPropertyDescriptor(proto,'value').set; try{s.call(el,v);}catch(e){} el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); };
+    const name=ov.querySelector('input[type=text]')||ov.querySelector('input'); if(name) setVal(name, 'PBT模板'+mk);
+    const ta=ov.querySelector('textarea'); if(ta) setVal(ta, 'PBT自动化测试通知内容'+mk);
+    return {ok:!!name};
+  }, marker);
+  await sleep(600);
+  // 4) 点"保存"（handleSaveTemplate → api.notifyTemplates.create → POST 真实写库）
+  const sb=await page.evaluate(()=>{ const ov=document.querySelector('div.fixed.inset-0'); if(!ov) return false; const b=[...ov.querySelectorAll('button')].find(e=>(e.innerText||'').includes('保存')); if(b){ b.click(); return true;} return false; });
+  await sleep(2200);
+  return {ok:sb, note:(r.ok?'[模板表单已填]':'[模板名称输入框未定位]')+(sb?'[已保存模板]':'[未找到保存按钮]')};
+}
+
 // ===== 编辑/删除回归（B 计划）：仅对本次新建的 PBT 测试行操作，绝不碰真实种子数据 =====
 async function verifyEditDelete(page, sleep){
   const note=[]; let short='skipped';
@@ -545,7 +647,7 @@ async function verifyEditDelete(page, sleep){
       await page.screenshot({path:path.join(SHOTS,`${String(i).padStart(2,'0')}_${slug}.jpeg`),type:'jpeg',quality:55});
       rec.h1=await page.evaluate(()=>{const h=document.querySelector('h1,h2,.page-title');return ((h?(h.innerText||''):'')||'').trim().slice(0,40)||document.title.slice(0,40);});
       if(hasAdd){
-        const GAP={ '智能评分':fillNLP, '考勤管理':fillAttendance, '手机箱开箱策略':fillPhonebox, '成绩录入':fillScoreEntry, '数据同步':fillDataSync };
+        const GAP={ '智能评分':fillNLP, '考勤管理':fillAttendance, '手机箱开箱策略':fillPhonebox, '成绩录入':fillScoreEntry, '数据同步':fillDataSync, '积分规则':fillPointsRule, '审批管理':fillApproval, '远程通知':fillRemoteNotify };
         let __gap=false;
         if(GAP[name]){
           __gap=true;
@@ -561,9 +663,13 @@ async function verifyEditDelete(page, sleep){
         const pick=await pickAddBtn(page);
         rec.addBtnFound=pick.found; rec.addBtnText=pick.text||'';
         if(pick.found){
-          try{ await clickById(page,'__auto_add_btn'); }catch{}
           let m={found:false};
-          for(let w=0; w<10 && !m.found; w++){ await sleep(700); m=await findModalContainer(page); }
+          // 重试至多 3 轮：首检过早或点击偶发被吞时，重标按钮再点
+          for(let attempt=0; attempt<3 && !m.found; attempt++){
+            try{ await clickById(page,'__auto_add_btn'); }catch(_){}
+            for(let w=0; w<6 && !m.found; w++){ await sleep(700); m=await findModalContainer(page); }
+            if(!m.found){ try{ await pickAddBtn(page); }catch(_){} } // 重新给按钮打 id 供下一轮点击
+          }
           if(m.found){
             rec.modalOpened=true; rec.fields=m.fields;
             const scope=page;

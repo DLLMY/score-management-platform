@@ -78,7 +78,7 @@ const html = `<!doctype html>
 </style></head>
 <body>
 <h1>49 页面浏览器实跑验收报告</h1>
-<div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 后全量重跑（full11）｜ 30 页真实落库 / 0 失败</div>
+<div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 + 种子前置数据（学生×8 / 节次 1..7）+ dev 库模式漂移修复（device/firmware_versions/system_config 补 7 列）+ idx37 远程通知专属驱动（fillRemoteNotify）+ idx21 快速记录识别 后全量重跑（full19）｜ ${ok} 页真实落库 / ${fail} 失败 / ${readonly} 只读 / ${other} 其他</div>
 <div class="stats">
   <div class="stat"><b style="color:#16a34a">${ok}</b><span>已真实落库（写接口 2xx）</span></div>
   <div class="stat"><b style="color:#dc2626">${fail}</b><span>提交被拒（4xx/5xx）</span></div>
