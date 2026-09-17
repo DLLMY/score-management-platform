@@ -33,6 +33,11 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': { target: apiUrl, changeOrigin: true },
         '/ws': { target: apiUrl, changeOrigin: true, ws: true },
+        // flask-restx / flasgger 的 Swagger UI 静态资源以根路径 /swaggerui、/flasgger_static、/swagger/ 提供，
+        // 不属 /api 前缀，须单独转发到后端；否则经前端(3000) SPA fallback 返回 HTML → SwaggerUIBundle 未定义
+        '/swaggerui': { target: apiUrl, changeOrigin: true },
+        '/flasgger_static': { target: apiUrl, changeOrigin: true },
+        '/swagger/': { target: apiUrl, changeOrigin: true },
       },
     },
     build: {

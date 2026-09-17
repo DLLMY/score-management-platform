@@ -84,6 +84,22 @@ const TYPE_LABELS: Record<DataType, string> = {
   all: '全部',
 };
 
+// 资源复数名映射：用于拼装 /api/import_export/{import|export}/{plural} 端点。
+// 注意 'category' 的不规则复数为 'categories'，不能简单追加 s（'categorys' 会 404）。
+// 其余类型与 `${type}s` 等价，因此本映射只改变 category 的行为，不影响其他页面。
+const RESOURCE_PLURAL: Record<DataType, string> = {
+  user: 'users',
+  rule: 'rules',
+  category: 'categories',
+  class: 'classes',
+  subject: 'subjects',
+  exam: 'exams',
+  score: 'scores',
+  approval: 'approvals',
+  device: 'devices',
+  all: 'all',
+};
+
 function ImportExportPanel({
   type = 'user',
   onImportComplete,
@@ -164,7 +180,7 @@ function ImportExportPanel({
         const formData = new FormData();
         formData.append('file', importFile);
 
-        const apiUrl = importUrl || `/api/import_export/import/${type}s`;
+        const apiUrl = importUrl || `/api/import_export/import/${RESOURCE_PLURAL[type]}`;
         const response = await fetch(apiUrl, {
           method: 'POST',
           credentials: 'include',
@@ -220,7 +236,7 @@ function ImportExportPanel({
         showToast('success', '导出成功');
       } else {
         setExportProgress(20);
-        const apiUrl = exportUrl || `/api/import_export/export/${type}s?format=${format}`;
+        const apiUrl = exportUrl || `/api/import_export/export/${RESOURCE_PLURAL[type]}?format=${format}`;
         const response = await fetch(apiUrl, {
           method: 'GET',
           credentials: 'include',
