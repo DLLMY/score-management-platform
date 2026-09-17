@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask_wtf.csrf import generate_csrf
-from flask import request
+from flask import current_app, request
+from config import Config
 from utils.response import APIResponse
 from utils.pagination import get_pagination
 from utils.params import get_int_arg
@@ -292,12 +293,24 @@ class SystemBackup(Resource):
         """
         basedir = os.path.abspath(os.path.dirname(__file__))
         # 备份目录统一走 Config.BACKUP_DIR（此前硬编码相对路径，BACKUP_DIR 配置从未生效）
-        from config import Config
 
         backup_dir = Config.BACKUP_DIR
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = os.path.join(backup_dir, f"score_management_{timestamp}.db")
-        source_path = os.path.join(basedir, "..", "instance", "score_management.db")
+
+        # 源数据库路径从运行时 SQLALCHEMY_DATABASE_URI 推导，避免硬编码相对路径偏差导致 404
+        db_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        source_path = None
+        if db_uri.startswith("sqlite:///"):
+            source_path = db_uri[len("sqlite:///"):]
+        elif db_uri.startswith("sqlite://"):
+            source_path = db_uri[len("sqlite://"):]
+        if not source_path:
+            source_path = os.path.join(
+                os.path.abspath(os.path.join(basedir, "..", "..")),
+                "instance",
+                "score_management.db",
+            )
 
         os.makedirs(backup_dir, exist_ok=True)
 
@@ -331,7 +344,7 @@ class SystemBackupsList(Resource):
         获取所有可用数据库备份文件的列表。
         """
         basedir = os.path.abspath(os.path.dirname(__file__))
-        backup_dir = os.path.join(basedir, "..", "backups")
+        backup_dir = Config.BACKUP_DIR
 
         if not os.path.exists(backup_dir):
             return APIResponse.success(data=[])

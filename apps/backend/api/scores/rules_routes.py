@@ -284,33 +284,24 @@ class RuleExport(Resource):
     def get(self):
         """
         导出规则列表
-        将所有规则导出为CSV文件，需要报表导出权限。
+        返回 JSON 结构，由前端序列化为 .json 文件下载，需要报表导出权限。
         """
         rules = ScoreRule.query.all()
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["规则名称", "描述", "分类", "分数", "是否启用", "每日上限", "最小间隔"])
-        for rule in rules:
-            writer.writerow(
-                [
-                    rule.name,
-                    rule.description,
-                    rule.category.name if rule.category else "",
-                    rule.score,
-                    "是" if rule.is_active else "否",
-                    rule.daily_limit,
-                    rule.min_interval,
-                ]
-            )
-        output.seek(0)
-        from flask import send_file
-
-        return send_file(
-            io.BytesIO(output.getvalue().encode("utf-8-sig")),
-            mimetype="text/csv",
-            as_attachment=True,
-            download_name=f'rules_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
-        )
+        data = [
+            {
+                "id": rule.id,
+                "name": rule.name,
+                "description": rule.description,
+                "category": rule.category.name if rule.category else "",
+                "category_id": rule.category_id,
+                "score": rule.score,
+                "is_active": rule.is_active,
+                "daily_limit": rule.daily_limit,
+                "min_interval": rule.min_interval,
+            }
+            for rule in rules
+        ]
+        return APIResponse.success(data={"rules": data, "count": len(data)})
 
 
 @ns_rules.route("/import")
