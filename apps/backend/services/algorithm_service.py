@@ -2,6 +2,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from scipy.stats import pearsonr
 from functools import wraps
+import math
 from models import db, User, Score
 from services.redis_cache_service import get_cache_service
 from config.config_loader import config_loader
@@ -11,6 +12,22 @@ import numpy as np
 import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
+
+
+def _safe_float(value, default=0.0):
+    """将可能产生的 NaN/Inf 收敛为合法数值，避免被序列化成非法 JSON（NaN/Infinity）。
+
+    当样本量 n<=1 时 pandas .std()（ddof=1）会返回 NaN；零方差数据相关系数也会是 NaN。
+    这些在数学上“未定义”，前端 JSON.parse 无法解析字面量 NaN，会导致整页统计加载失败。
+    统一收敛为 default（统计上未定义 → 0.0）以保证接口契约稳定。
+    """
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(f) or math.isinf(f):
+        return default
+    return f
 
 """
 算法核心服务模块
@@ -283,22 +300,22 @@ class AlgorithmService:
                 "student_count": 0,
                 "group_comparison": [],
             }
-        # 基本统计
+        # 基本统计（_safe_float 兜底：n<=1 时 std 为 NaN、零方差时 corr 为 NaN，归一为 0.0）
         stats = {
-            "avg_behavior_score": round(df["behavior_score"].mean(), 2),
-            "avg_academic_score": round(df["academic_score"].mean(), 2),
-            "std_behavior_score": round(df["behavior_score"].std(), 2),
-            "std_academic_score": round(df["academic_score"].std(), 2),
+            "avg_behavior_score": _safe_float(round(df["behavior_score"].mean(), 2)),
+            "avg_academic_score": _safe_float(round(df["academic_score"].mean(), 2)),
+            "std_behavior_score": _safe_float(round(df["behavior_score"].std(), 2)),
+            "std_academic_score": _safe_float(round(df["academic_score"].std(), 2)),
             "student_count": len(df),
         }
         # 相关性分析
         corr, _ = AlgorithmService.calculate_correlation(
             df["behavior_score"].tolist(), df["academic_score"].tolist()
         )
-        stats["correlation"] = round(corr, 2)
+        stats["correlation"] = _safe_float(round(corr, 2))
         # 及格率（假设60分为及格线）
         pass_count = len(df[df["academic_score"] >= 60])
-        stats["pass_rate"] = round(pass_count / len(df), 2)
+        stats["pass_rate"] = _safe_float(round(pass_count / len(df), 2))
         # 分组对比（#198-C 修复：原 pd.qcut 在行为分大量并列时抛 ValueError 致 /statistics 500。
         # 改用百分位手动分箱（33.33%/66.67%），容忍并列，保证接口永不崩溃，且返回形态与旧一致。）
         try:
@@ -321,9 +338,11 @@ class AlgorithmService:
                 {
                     "group": g,
                     "avg_behavior": (
-                        round(float(np.mean([x[0] for x in vals])), 2) if vals else 0.0
+                        _safe_float(round(float(np.mean([x[0] for x in vals])), 2)) if vals else 0.0
                     ),
-                    "avg_score": (round(float(np.mean([x[1] for x in vals])), 2) if vals else 0.0),
+                    "avg_score": (
+                        _safe_float(round(float(np.mean([x[1] for x in vals])), 2)) if vals else 0.0
+                    ),
                     "count": len(vals),
                 }
                 for g, vals in groups.items()
