@@ -38,18 +38,18 @@
 </style></head>
 <body>
 <div class="header"><h1>全按钮浏览器实跑验收报告</h1>
-<div class="sub">生成时间：2026/9/17 18:26:51 ｜ 数据来源：click_all_buttons.js 实跑（Playwright + 系统 Chrome）｜ 登录 admin 遍历 49 页，逐按钮点击并捕获 console/page 错误<br>
+<div class="sub">生成时间：2026/9/17 19:06:25 ｜ 数据来源：click_all_buttons.js 实跑（Playwright + 系统 Chrome）｜ 登录 admin 遍历 49 页，逐按钮点击并捕获 console/page 错误<br>
 安全策略：破坏性确认框（删除/清空/移除/作废）仅打开并取消，不执行破坏性操作；新增表单弹窗仅统计字段数后取消，不落库（写路径已由 run15 full22 覆盖）。</div></div>
 <div class="summary">
   <div class="stat"><div class="n blue">49</div><div class="l">页面数</div></div>
-  <div class="stat"><div class="n">270</div><div class="l">测试按钮数（去重）</div></div>
-  <div class="stat"><div class="n green">232</div><div class="l">正常 / 安全取消</div></div>
-  <div class="stat"><div class="n gray">103</div><div class="l">安全取消（破坏性/表单）</div></div>
-  <div class="stat"><div class="n red">4</div><div class="l">触发错误按钮</div></div>
+  <div class="stat"><div class="n">271</div><div class="l">测试按钮数（去重）</div></div>
+  <div class="stat"><div class="n green">237</div><div class="l">正常 / 安全取消</div></div>
+  <div class="stat"><div class="n gray">104</div><div class="l">安全取消（破坏性/表单）</div></div>
+  <div class="stat"><div class="n red">0</div><div class="l">触发错误按钮</div></div>
   <div class="stat"><div class="n gray">34</div><div class="l">未触发（动态消失）</div></div>
 </div>
 <div class="wrap">
-<div class="sec">⚠ 报错按钮明细（4）</div><ul class="blist" style="background:#fff;border-radius:10px;padding:12px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06)"><li class="bad"><span class="bname">导出JSON</span><span class="note">页面：积分规则 (#4)</span><div class="err">⚠ [ErrorMonitor] [api_error] Unexpected token &#39;规&#39;, &quot;规则名称,描述,分类&quot;... is not valid JSON {type: api_error, message: Unexpected token &#39;规&#39;, &quot;规则名称,描述,分类&quot;... is not valid</div></li><li class="bad"><span class="bname">导出分类数据 (Excel)</span><span class="note">页面：分类管理 (#6)</span><div class="err">⚠ Failed to load resource: the server responded with a status of 404 (NOT FOUND)</div></li><li class="bad"><span class="bname">备份数据库 导出所有数据到文件</span><span class="note">页面：系统设置 (#39)</span><div class="err">⚠ Failed to load resource: the server responded with a status of 404 (NOT FOUND)</div><div class="err">⚠ [ErrorMonitor] [api_error] 数据库文件不存在 {type: api_error, message: 数据库文件不存在, url: /api/system/backup, method: POST, status: 404}</div></li><li class="bad"><span class="bname">API接口文档 后端API接口说明和使用示例（Swagger UI）</span><span class="note">页面：帮助中心 (#48)</span><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 404 (Not Found)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 404 (Not Found)</div><div class="err">⚠ SwaggerUIBundle is not defined</div></li></ul>
+
 <div class="sec">全页面按钮矩阵</div>
 <div class="card card-ok">
     <div class="card-h"><span class="idx">#0</span> <span class="pname">数据概览</span>
@@ -211,9 +211,9 @@
       
       
       </li></ul>
-  </div><div class="card card-bad">
+  </div><div class="card card-ok">
     <div class="card-h"><span class="idx">#4</span> <span class="pname">积分规则</span>
-      <span class="cnt">按钮 7 · 报错 1</span></div>
+      <span class="cnt">按钮 7 · 报错 0</span></div>
     <ul class="blist"><li class="ok"><span class="bname">刷新</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
@@ -238,13 +238,13 @@
       <span class="eff">dialog(cancelled)</span>
       
       <span class="note">表单/对话框已打开(字段数=0)，已取消未落库</span>
-      </li><li class="bad"><span class="bname">导出JSON</span>
+      </li><li class="ok"><span class="bname">导出JSON</span>
       <span class="tag">button</span>
-      <span class="st">报错</span>
+      <span class="st">无副作用</span>
       <span class="eff">none</span>
       
       
-      <div class="err">⚠ [ErrorMonitor] [api_error] Unexpected token &#39;规&#39;, &quot;规则名称,描述,分类&quot;... is not valid JSON {type: api_error, message: Unexpected token &#39;规&#39;, &quot;规则名称,描述,分类&quot;... is not valid</div></li><li class="ok"><span class="bname">导出Excel</span>
+      </li><li class="ok"><span class="bname">导出Excel</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
       <span class="eff">none</span>
@@ -273,9 +273,9 @@
       
       <span class="note">表单/对话框已打开(字段数=4)，已取消未落库</span>
       </li></ul>
-  </div><div class="card card-bad">
+  </div><div class="card card-ok">
     <div class="card-h"><span class="idx">#6</span> <span class="pname">分类管理</span>
-      <span class="cnt">按钮 5 · 报错 1</span></div>
+      <span class="cnt">按钮 5 · 报错 0</span></div>
     <ul class="blist"><li class="ok"><span class="bname">刷新</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
@@ -288,13 +288,13 @@
       <span class="eff">dialog(cancelled)</span>
       
       <span class="note">表单/对话框已打开(字段数=1)，已取消未落库</span>
-      </li><li class="bad"><span class="bname">导出分类数据 (Excel)</span>
+      </li><li class="ok"><span class="bname">导出分类数据 (Excel)</span>
       <span class="tag">button</span>
-      <span class="st">报错</span>
+      <span class="st">无副作用</span>
       <span class="eff">none</span>
       
       
-      <div class="err">⚠ Failed to load resource: the server responded with a status of 404 (NOT FOUND)</div></li><li class="ok"><span class="bname">下载导入模板</span>
+      </li><li class="ok"><span class="bname">下载导入模板</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
       <span class="eff">none</span>
@@ -1575,9 +1575,9 @@
       
       
       </li></ul>
-  </div><div class="card card-bad">
+  </div><div class="card card-ok">
     <div class="card-h"><span class="idx">#39</span> <span class="pname">系统设置</span>
-      <span class="cnt">按钮 8 · 报错 1</span></div>
+      <span class="cnt">按钮 9 · 报错 0</span></div>
     <ul class="blist"><li class="ok"><span class="bname">浅色 明亮清爽的界面</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
@@ -1596,19 +1596,25 @@
       <span class="eff">none</span>
       
       
-      </li><li class="bad"><span class="bname">备份数据库 导出所有数据到文件</span>
+      </li><li class="ok"><span class="bname">备份数据库 导出所有数据到文件</span>
       <span class="tag">button</span>
-      <span class="st">报错</span>
+      <span class="st">正常</span>
       <span class="eff">api</span>
-      <span class="api">API POST 404</span>
+      <span class="api">API POST 200</span>
       
-      <div class="err">⚠ Failed to load resource: the server responded with a status of 404 (NOT FOUND)</div><div class="err">⚠ [ErrorMonitor] [api_error] 数据库文件不存在 {type: api_error, message: 数据库文件不存在, url: /api/system/backup, method: POST, status: 404}</div></li><li class="ok"><span class="bname">恢复数据 从备份文件恢复数据</span>
+      </li><li class="ok"><span class="bname">恢复数据 从备份文件恢复数据</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
       <span class="eff">none</span>
       
       
       </li><li class="safe"><span class="bname">清理缓存 清除临时数据和缓存</span>
+      <span class="tag">button</span>
+      <span class="st">安全取消</span>
+      <span class="eff">dialog(cancelled)</span>
+      
+      <span class="note">表单/对话框已打开(字段数=0)，已取消未落库</span>
+      </li><li class="safe"><span class="bname">恢复</span>
       <span class="tag">button</span>
       <span class="st">安全取消</span>
       <span class="eff">dialog(cancelled)</span>
@@ -1797,22 +1803,22 @@
       
       
       </li></ul>
-  </div><div class="card card-bad">
+  </div><div class="card card-ok">
     <div class="card-h"><span class="idx">#48</span> <span class="pname">帮助中心</span>
-      <span class="cnt">按钮 11 · 报错 1</span></div>
+      <span class="cnt">按钮 11 · 报错 0</span></div>
     <ul class="blist"><li class="ok"><span class="bname">系统使用指南 详细介绍系统各项功能的使用方法</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
       <span class="eff">none</span>
       
       
-      </li><li class="bad"><span class="bname">API接口文档 后端API接口说明和使用示例（Swagger UI）</span>
+      </li><li class="ok"><span class="bname">API接口文档 后端API接口说明和使用示例（Swagger UI）</span>
       <span class="tag">button</span>
-      <span class="st">报错</span>
+      <span class="st">正常</span>
       <span class="eff">navigate</span>
-      <span class="api">API POST 415 / POST 415 / POST 415 / POST 415</span>
       
-      <div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 415 (UNSUPPORTED MEDIA TYPE)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 404 (Not Found)</div><div class="err">⚠ Failed to load resource: the server responded with a status of 404 (Not Found)</div><div class="err">⚠ SwaggerUIBundle is not defined</div></li><li class="ok"><span class="bname">MQTT协议说明 手机箱通信协议和消息格式</span>
+      
+      </li><li class="ok"><span class="bname">MQTT协议说明 手机箱通信协议和消息格式</span>
       <span class="tag">button</span>
       <span class="st">无副作用</span>
       <span class="eff">none</span>
