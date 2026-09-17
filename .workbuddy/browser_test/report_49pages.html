@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="zh-CN" data-page-node-id="5BR2cq6xweRIBn1BZjIZq4"><head data-page-node-id="qSXkvf3LrwvHWOV5136Hlg"><meta charset="utf-8" data-page-node-id="cGcDmjF5Fj5hsXdPJIe84P">
-<meta name="viewport" content="width=device-width,initial-scale=1" data-page-node-id="naMz51ZQij00tyXGjmoC7P">
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>49 页面浏览器实跑验收报告</title>
 <style>
   *{box-sizing:border-box;font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
@@ -21,610 +21,608 @@
   .err{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#b91c1c}
   .ec{display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:10px;padding:0 6px;font-weight:700}
 </style></head>
-<body data-page-node-id="sRdQCeFBRWOb38RGGE90Wy">
-<h1 data-page-node-id="Mpm6o2UB6FBShWp1yWMYsb">49 页面浏览器实跑验收报告</h1>
-<div class="sub" data-page-node-id="VDZT1rckiCaNiMSRse2Kcn">生成时间：2026/9/16 23:17:47 ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 + 种子前置数据（学生×8 / 节次 1..7）+ dev 库模式漂移修复（device/firmware_versions/system_config 补 7 列）+ idx37 远程通知专属驱动（fillRemoteNotify）+ idx21 快速记录识别 后全量重跑（full19）｜ 33 页真实落库 / 0 失败 / 16 只读 / 0 其他</div>
-<div class="stats" data-page-node-id="g9SfVnDnMGctgdjd9q6AYL">
-  <div class="stat" data-page-node-id="rKoHnrUZmZ8fiJhtuh8oM5"><b style="color:#16a34a" data-page-node-id="i0EVwV8q1XdFq9DW6f0NWC">33</b><span data-page-node-id="9PcctOE745NmH1kY7qxR8i">已真实落库（写接口 2xx）</span></div>
-  <div class="stat" data-page-node-id="NU0XKB2gjv6HqB0ofqT2yz"><b style="color:#dc2626" data-page-node-id="Wx1HWDO41csQY9b7u6vaF8">0</b><span data-page-node-id="TsU2y3ScNP42UWNP0ZcBln">提交被拒（4xx/5xx）</span></div>
-  <div class="stat" data-page-node-id="rZfLPoj2oqJxhNXmnkqpMH"><b style="color:#6b7280" data-page-node-id="CwJ8I8d6VczFjfqR1RnUc1">16</b><span data-page-node-id="NhUch8gVcayw95OiLJs3Q1">只读/展示页</span></div>
-  <div class="stat" data-page-node-id="bVYNT3gOl4OSmfRFSSB25j"><b style="color:#d97706" data-page-node-id="7YrETM2uQqDPC1F2y2FmrU">0</b><span data-page-node-id="4XHrdMUsdhaQyKNmrsFXks">已提交未落库/未提交</span></div>
-  <div class="stat" data-page-node-id="QfimRm2J7eDf8sUFrcGylo"><b data-page-node-id="AcDhQbvuA5bFEJaOVHxGYV">49</b><span data-page-node-id="9ruNM6SOcS44FCZfIAQSI4">页面总数</span></div>
+<body>
+<h1>49 页面浏览器实跑验收报告</h1>
+<div class="sub">生成时间：2026/9/17 17:50:22 ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 累计修复：后端 UNIQUE 冲突转 400 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 + 种子前置数据 + dev 库模式漂移补列 + idx37 远程通知专属驱动 + idx21 快速记录识别 + idx28 成绩录入先建科目 + idx0/idx31 统计接口 NaN 非法 JSON 兜底（algorithm_service._safe_float）｜ 全量重跑 full22（控制台错误归零）｜ 33 页真实落库 / 0 失败 / 16 只读 / 0 其他</div>
+<div class="stats">
+  <div class="stat"><b style="color:#16a34a">33</b><span>已真实落库（写接口 2xx）</span></div>
+  <div class="stat"><b style="color:#dc2626">0</b><span>提交被拒（4xx/5xx）</span></div>
+  <div class="stat"><b style="color:#6b7280">16</b><span>只读/展示页</span></div>
+  <div class="stat"><b style="color:#d97706">0</b><span>已提交未落库/未提交</span></div>
+  <div class="stat"><b>49</b><span>页面总数</span></div>
 </div>
-<table data-page-node-id="Mw7VZVC6d6B0EMJJRnf1oD">
-<thead data-page-node-id="sNto1lLaUneKZ9Bj8mBaf4"><tr data-page-node-id="0GFONhnowSLjlhoNoWPoaY">
-  <th data-page-node-id="GmqoFtosEWqXGEdrROEgAT">#</th><th data-page-node-id="EEC3fVy6z4gJTbv9HOIAR3">页面</th><th data-page-node-id="XWsbHdnfQFI7NN9j47Yy2w">验收结论</th><th data-page-node-id="S5WHVcWRQWM21ihBFG0nVT">有新增</th><th data-page-node-id="dkQQJCdcRgiCRKuB7WHVu4">弹窗</th><th data-page-node-id="YAeeuKHmQfY6Za2x38UxhQ">字段数</th><th data-page-node-id="46fDtoeWJ8pcInkuCwpXdS">提交</th><th data-page-node-id="MSuqg8EG1usc1oAJxa4XWm">业务 API 调用</th><th data-page-node-id="Vg7OjHGUO8uEl6E9FZXF1H">控制台错误</th><th data-page-node-id="jBqBlE8BLNl3jE4g8sRpQu">备注</th>
+<table>
+<thead><tr>
+  <th>#</th><th>页面</th><th>验收结论</th><th>有新增</th><th>弹窗</th><th>字段数</th><th>提交</th><th>业务 API 调用</th><th>控制台错误</th><th>备注</th>
 </tr></thead>
-<tbody data-page-node-id="3z0JW7POW4Ns87ndgZ1hRy">
-<tr data-page-node-id="uzB8mdM74DH71gAxwRp8t2">
-    <td class="idx" data-page-node-id="28QFHl7BsIaqzBvjGSPiO0">0</td>
-    <td data-page-node-id="ZE2YJ7NGhJBJWETME4w1cf">数据概览</td>
-    <td data-page-node-id="rZAaoRQT5xU6PD2korHraH"><span class="badge" style="background:#6b7280" data-page-node-id="OM5YyklJojXcGMZjYpXxGG">只读/展示</span></td>
-    <td data-page-node-id="7ZCgwnvM1CGtXPfrBSxs1B">否</td>
-    <td data-page-node-id="1rD3oyXJVNPPmA6YDD9ORV">否</td>
-    <td data-page-node-id="NfABvQCHhdWXnSC5pla6N1">0</td>
-    <td data-page-node-id="BcXVFWQG969ZXXiQHDJOOe">否</td>
-    <td class="api" data-page-node-id="9vzEhYxxPaMBTrIGY3c5bR">—</td>
-    <td class="err" data-page-node-id="ud4FEoEDiRH0pkjBxVvjaQ">0</td>
-    <td data-page-node-id="RlG1ZUBYMbASIKBURCVNtj">只读/展示页</td>
+<tbody>
+<tr>
+    <td class="idx">0</td>
+    <td>数据概览</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="W5CLvH6YeH6q0iiW77K8QL">
-    <td class="idx" data-page-node-id="jQdrcWtFZxiq5KYYUxeWgw">1</td>
-    <td data-page-node-id="6Nla8JtjiQrYtsB5ELFOTs">学生管理</td>
-    <td data-page-node-id="TktwK8hXwyCYH7CX6Oymj2"><span class="badge" style="background:#16a34a" data-page-node-id="aV3fTE6hch1CnMg07AOKRS">已真实落库</span></td>
-    <td data-page-node-id="kN6eHAJahzWghjvrTfAOnk">是</td>
-    <td data-page-node-id="nboTY11wZ1g6IPfPkJiX49">是</td>
-    <td data-page-node-id="LxpJY65vIFBBWx0sa8EQv5">5</td>
-    <td data-page-node-id="41WGQXuLQnsc5wGOfMIHS7">创建</td>
-    <td class="api" data-page-node-id="SfpqGqQNOR4YRgWwEXcIoC">POST /api/users → 201</td>
-    <td class="err" data-page-node-id="FRUMkEqxpqzrcjCSn7zGM9">0</td>
-    <td data-page-node-id="yslRtSxbfcIDLmH0ZyDKxR"><br data-page-node-id="2ugR6dRcE7FIoj15z2jSAD">[filled=4]<br data-page-node-id="HiWhv0icAAAj7pjhVY2SbI">[submit-clicked]<br data-page-node-id="mzEyP3bN5nEZaKOB3aujCc">[edit:已点编辑]<br data-page-node-id="LhimzEsxlLhbsDgKITGSnf">[edit提交未找到]<br data-page-node-id="Z4lIdvkFJgLbMAc0RX4mlh">[delete:已点删除]<br data-page-node-id="E0kBKRQqbmP6tDAaFeAEwj">[delete确认]</td>
+<tr>
+    <td class="idx">1</td>
+    <td>学生管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>创建</td>
+    <td class="api">POST /api/users → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]<br>[edit:已点编辑]<br>[edit提交未找到]<br>[delete:已点删除]<br>[delete确认]</td>
   </tr>
-<tr data-page-node-id="H5Go0oGfNBCdqpF65gixuY">
-    <td class="idx" data-page-node-id="z5XLMiVuFDfL5TYoCj7Dt7">2</td>
-    <td data-page-node-id="mR0BGkF4gcFGt86piMbxDq">数据分析</td>
-    <td data-page-node-id="DLVmVTVNEXERaKyBRWfUuR"><span class="badge" style="background:#6b7280" data-page-node-id="HFtDO5iE8ot2uKpDHqOTEq">只读/展示</span></td>
-    <td data-page-node-id="A3C2OQFa2uIdKEgV1ErHSA">否</td>
-    <td data-page-node-id="ZCuf6WCkzpBUVHZx9ovoa9">否</td>
-    <td data-page-node-id="4JEHpnpu4v5tAiV1byQd92">0</td>
-    <td data-page-node-id="xQZYe8ORAtodkoVtAtZqiZ">否</td>
-    <td class="api" data-page-node-id="Hj6FMJbAPIzq8vHFS3melt">—</td>
-    <td class="err" data-page-node-id="77IULKebAVH8dB7LQcP0lu">0</td>
-    <td data-page-node-id="whQu3XGKDurXRKAecK0GbG">只读/展示页</td>
+<tr>
+    <td class="idx">2</td>
+    <td>数据分析</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="P5NK2zm4R8v4GaD0RvsU64">
-    <td class="idx" data-page-node-id="nHEKqqvcPU6C5w8GrdJ64w">3</td>
-    <td data-page-node-id="HamQyUq2lto7UDWUs19wDX">班级对比</td>
-    <td data-page-node-id="svmU5IgprvEiH1Hiw1gHyA"><span class="badge" style="background:#6b7280" data-page-node-id="6tTLV3TDElmajATHOzOH5J">只读/展示</span></td>
-    <td data-page-node-id="xQgvWokoK8xbK1aRW5qy0W">否</td>
-    <td data-page-node-id="C9kC4n8PHuqAsGUg3gfoW7">否</td>
-    <td data-page-node-id="RsETJbIPAjJLTAIqjUMe0D">0</td>
-    <td data-page-node-id="jX26NhTIY9iOyiJzSPb9aG">否</td>
-    <td class="api" data-page-node-id="BbMj2tuJXfBSGOdoFOwQuT">—</td>
-    <td class="err" data-page-node-id="lLR5miPGy38CzQVIC5IdbD">0</td>
-    <td data-page-node-id="QEiTDKwrNuQWzfeKxdNZvG">只读/展示页</td>
+<tr>
+    <td class="idx">3</td>
+    <td>班级对比</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="BpoFZ6IFoB7UbYXDye6sDt">
-    <td class="idx" data-page-node-id="1NO1dMjnm1JnHDJpHLTB06">4</td>
-    <td data-page-node-id="gt564jqFCkMshbmoiqfG4E">积分规则</td>
-    <td data-page-node-id="BmAlgw0HJVESlYr9mIStv4"><span class="badge" style="background:#16a34a" data-page-node-id="gSQ5M5Z3P02q68Yz6arrGI">已真实落库</span></td>
-    <td data-page-node-id="0wsWigHlwCPCmJyvTb9NEt">是</td>
-    <td data-page-node-id="a2otoOqfFpjwVPOLz8nUKl">是</td>
-    <td data-page-node-id="aCXJaTqMDc8Vig0lBILb2x">0</td>
-    <td data-page-node-id="Ho3lCV6IT1Z7v6q6nnPBUc">积分规则提交</td>
-    <td class="api" data-page-node-id="cWTXIDrNEuWUBPmJekEDWj">POST /api/rules → 201</td>
-    <td class="err" data-page-node-id="IceToF4n6Yk5S3pOQH6MDk">0</td>
-    <td data-page-node-id="3vomTxr08u0yFQJPL2qgtG"><br data-page-node-id="HFRJxXJdpNuI7fYOE9XoAo">[表单已填]<br data-page-node-id="ydBDEcZtBffVqOnbJXkC2W">[已提交]<br data-page-node-id="blALL8CqOw2wbkuemoLoKH">[edit:该行无编辑按钮]<br data-page-node-id="1SG2GwHrJkO6eFf24RBSsh">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">4</td>
+    <td>积分规则</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>积分规则提交</td>
+    <td class="api">POST /api/rules → 201</td>
+    <td class="err">0</td>
+    <td><br>[表单已填]<br>[已提交]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="dvTli00fBna6eNKCGoJw6V">
-    <td class="idx" data-page-node-id="MHwBIkXUmeE34qtRGAQUFi">5</td>
-    <td data-page-node-id="BSXcz3prvhGkQyEhRV3iTE">排名规则</td>
-    <td data-page-node-id="wZVJBaQAX9ZOLSkdgPUKrC"><span class="badge" style="background:#16a34a" data-page-node-id="bVtdjfbtCqASwEs4I0jrAb">已真实落库</span></td>
-    <td data-page-node-id="WlKN7y7PimlmGC2jpyJBlg">是</td>
-    <td data-page-node-id="6LRJEpR860JZL6HATzEaDa">是</td>
-    <td data-page-node-id="BGfNxQFC1h0H8HoXiAUWgi">4</td>
-    <td data-page-node-id="QftJS2XmqhRgdrbZGeUBQV">添加等级</td>
-    <td class="api" data-page-node-id="v4ysw9HHACWa4bno5GX18z">POST /api/rank-rules → 201</td>
-    <td class="err" data-page-node-id="gDhNqWguMUyrXoD7nfeYc5">0</td>
-    <td data-page-node-id="lsRx6QxFT4TdGc1SbuRvD7"><br data-page-node-id="HuYWCqusDsZB8eZUKErHqa">[filled=3]<br data-page-node-id="4LMFQXQB7NL0G5HiyFCzCd">[submit-clicked]<br data-page-node-id="4qrefFD6GGwPcRLvxBnngc">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">5</td>
+    <td>排名规则</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>添加等级</td>
+    <td class="api">POST /api/rank-rules → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="59DDzJEOfP73HEdZm6e0L1">
-    <td class="idx" data-page-node-id="S8AxtrIRO4kC7eHzcDzOOk">6</td>
-    <td data-page-node-id="lVr5JsDZCXm2W2qHgqjBAe">分类管理</td>
-    <td data-page-node-id="DEZBY5kRGLdfTa9AUAxzVV"><span class="badge" style="background:#16a34a" data-page-node-id="BLwJUsZ0acLykWNbAUVpzb">已真实落库</span></td>
-    <td data-page-node-id="KF1YMlUCDJOHsHz5tYWSfi">是</td>
-    <td data-page-node-id="hktuBHvxQFd0AciR9JjRTU">是</td>
-    <td data-page-node-id="mhQMmWvc1gFdlTt22zPo9z">3</td>
-    <td data-page-node-id="qQUiKeAvV0BkAOu5mgDYUo">添加分类</td>
-    <td class="api" data-page-node-id="JMwoArcBDtlWJ8FQoEt36P">POST /api/score-categories → 201</td>
-    <td class="err" data-page-node-id="lLeXvomlzCSnAFineo7zSg">0</td>
-    <td data-page-node-id="ZuVxxdFp2ShJ30UWSJszeF"><br data-page-node-id="iNwBjmBSAgsiMhS0wMwNf3">[filled=3]<br data-page-node-id="2NKmD5QJtDm6ia9G4qJHCq">[submit-clicked]<br data-page-node-id="ZcOzYlYsVwN91uiOdWXm5k">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">6</td>
+    <td>分类管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>3</td>
+    <td>添加分类</td>
+    <td class="api">POST /api/score-categories → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="Nz5QQSq5H2yc8FizuHhXFk">
-    <td class="idx" data-page-node-id="XPLlFrYqbeWcU5jTZ0Cpvx">7</td>
-    <td data-page-node-id="mHEy1yhRN8Od1lFqVstnU6">智能评分</td>
-    <td data-page-node-id="a8PiAciFEfjXsjQYD4QEHN"><span class="badge" style="background:#16a34a" data-page-node-id="TxU3zFgj4ORsZTPOuGEtKC">已真实落库</span></td>
-    <td data-page-node-id="fxAgt09R6n6zUPcW9Ng2ou">是</td>
-    <td data-page-node-id="9iKtnT2zop0QFlbznCZ4Rw">是</td>
-    <td data-page-node-id="kBccnhLw8f4HXjctOyE12O">0</td>
-    <td data-page-node-id="alJC1TVuSwPotqMUi8vIoD">智能评分提交</td>
-    <td class="api" data-page-node-id="ULlWBrgsM0f1ZJbIuki8w9">POST /api/nlp/rules → 200</td>
-    <td class="err" data-page-node-id="rfBLgvaBD7XVERIjzVQdWl">0</td>
-    <td data-page-node-id="QnGNlNoGkXnkHhmkHm7Hjn"><br data-page-node-id="Qaj7efgFnbJVGPNtEXzhxo">[NLP:已创建规则]<br data-page-node-id="LCTovGyjf8jiYzyCehMUYJ">[kw=true,desc=true]<br data-page-node-id="3v1iu9L1Erc1WnVf9p3wbE">[edit:该行无编辑按钮]<br data-page-node-id="A0ekfRVDAlIkK91N7oME6B">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">7</td>
+    <td>智能评分</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>智能评分提交</td>
+    <td class="api">POST /api/nlp/rules → 200</td>
+    <td class="err">0</td>
+    <td><br>[NLP:已创建规则]<br>[kw=true,desc=true]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="s4EozouWgGCUWs9dGJDJx1">
-    <td class="idx" data-page-node-id="QLdHQ3YvXGDvaM46wmI4P9">8</td>
-    <td data-page-node-id="VmHamvO3Vh3T3zzZEiAJDn">班级管理</td>
-    <td data-page-node-id="Drt5hH6Yjt6hsBJ3ROtO8T"><span class="badge" style="background:#16a34a" data-page-node-id="KUV0dwwtPfLuIpzooDAVzg">已真实落库</span></td>
-    <td data-page-node-id="BkPX2HU0qfIbAhg3jqjtFl">是</td>
-    <td data-page-node-id="hskEM0P6GzKCJdrXvcUweF">是</td>
-    <td data-page-node-id="7Lz0tkOIVzF4HPFrEfHMaB">3</td>
-    <td data-page-node-id="vGNK5yKZRd0H4u2EF2yxpQ">保存</td>
-    <td class="api" data-page-node-id="KY2L3HV5ic5PzjgIRcdcph">POST /api/classes → 201</td>
-    <td class="err" data-page-node-id="0wPqaxSEtmueYJPO6EA40z">0</td>
-    <td data-page-node-id="Wgzc29vb3rbQbcCCvlAXgA"><br data-page-node-id="csdFpeueoz1A6Y2YXo5T15">[filled=4]<br data-page-node-id="aLIidzzKOCLZ7Lcez8Bwk2">[submit-clicked]<br data-page-node-id="iseUxDWjKL60IIN9C8M5H3">[edit:该行无编辑按钮]<br data-page-node-id="E3c7l92NWhXVtajgzucTWb">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">8</td>
+    <td>班级管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>3</td>
+    <td>保存</td>
+    <td class="api">POST /api/classes → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="16rNBBoN9cx9whFyptlyAQ">
-    <td class="idx" data-page-node-id="q3YH76qGfLJZLiH9je2WWK">9</td>
-    <td data-page-node-id="OvvsLnFeEoFAbPVC3DKTnX">科目管理</td>
-    <td data-page-node-id="wkPMjgUNuInGoZ2qXPMgds"><span class="badge" style="background:#16a34a" data-page-node-id="BDXTTSAY3IhaghSpe7cJ33">已真实落库</span></td>
-    <td data-page-node-id="kZjCgcXugNhQrnDG4UeXP2">是</td>
-    <td data-page-node-id="AvmU9gMbl9esEjzFGMhX61">是</td>
-    <td data-page-node-id="5nxtTcy75esahNt1KoEuN9">6</td>
-    <td data-page-node-id="Z1SfsGZXi0wHgCyI6E6FXr">保存</td>
-    <td class="api" data-page-node-id="6ncKhYJzxM75XTy1ndLmi6">POST /api/subjects → 201</td>
-    <td class="err" data-page-node-id="WG3BvHjMwi9H67UnW2sWFz">0</td>
-    <td data-page-node-id="CWXSncgcGS9071hzcpjoVU"><br data-page-node-id="NPIdHEXjJUqkIvgHre3zPL">[filled=6]<br data-page-node-id="ST3JEiUpnnEQH3ip5vmA6L">[submit-clicked]<br data-page-node-id="ito9qKaYHIFlkNzV8GgHHd">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">9</td>
+    <td>科目管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>保存</td>
+    <td class="api">POST /api/subjects → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=6]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="OKDd4bRJwziydUiyiwYT2j">
-    <td class="idx" data-page-node-id="17VdekIRBvxCK1V96pH4tG">10</td>
-    <td data-page-node-id="61025DHSHKIqJFJwRplyJj">课程表管理</td>
-    <td data-page-node-id="lH0WU5O5KU5mKV1XNWRqpq"><span class="badge" style="background:#16a34a" data-page-node-id="SCcikUhuMN5SpBpuiMDOaC">已真实落库</span></td>
-    <td data-page-node-id="WjSjny9BYclw9JMtSkBgS9">是</td>
-    <td data-page-node-id="wc31a9EzGFF19hMxFQELVu">是</td>
-    <td data-page-node-id="YqbjXlfUyXEr71DVDuv8yp">7</td>
-    <td data-page-node-id="un5Cx98vfWnkvBbGVGPsu7">保存(循环避冲突)</td>
-    <td class="api" data-page-node-id="Rb4Emt1bO3Zap3vSJrcUVR">POST /api/course-schedules → 201</td>
-    <td class="err" data-page-node-id="VVuBpxSmocdQjR0AxCaNcR">0</td>
-    <td data-page-node-id="ECqxHKMj9sJ6plv04TpWvy"><br data-page-node-id="FHdc5G9SCn2A8NlmgHiJxX">[课程表尝试=4/40]<br data-page-node-id="iXJOUvTGYqzFuDKPRHie0u">[成功]<br data-page-node-id="QXwdsDvOnDqPffvCgpaAs2">[edit:该行无编辑按钮]<br data-page-node-id="9QEyNsBxf23sCV2HsCQlYt">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">10</td>
+    <td>课程表管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>保存(循环避冲突)</td>
+    <td class="api">POST /api/course-schedules → 201</td>
+    <td class="err">0</td>
+    <td><br>[课程表尝试=6/40]<br>[成功]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="wg0YBeRAOHYaoenESpCPCr">
-    <td class="idx" data-page-node-id="9zoXAGLUR7N0eTtOYVms5l">11</td>
-    <td data-page-node-id="FDXS8JbgtDd6gWeyBvHEl3">时间规则设置</td>
-    <td data-page-node-id="KfkEV8mWDFLwOCadcZ6p5e"><span class="badge" style="background:#16a34a" data-page-node-id="TCMXlB7mJHvTR9HXuRsBa6">已真实落库</span></td>
-    <td data-page-node-id="ZESashLehSBLPtx18B2XqA">是</td>
-    <td data-page-node-id="HfdjEFmXupVuJ8ZPOlPsOc">是</td>
-    <td data-page-node-id="4XM7QXBmechW7KR0zBf5Th">7</td>
-    <td data-page-node-id="F48Ax7O7ea6t7l027djwHh">保存</td>
-    <td class="api" data-page-node-id="4d0WbfF6L8MsnQqLCBmMKa">POST /api/time-rules → 201</td>
-    <td class="err" data-page-node-id="K5fdzuOdJHNoQxQ1lk1yPA">0</td>
-    <td data-page-node-id="0jlQxhPNgTf6zefEcrlkjN"><br data-page-node-id="sZGZhpuA6wxOzZJ1kWbeko">[filled=3]<br data-page-node-id="BvcqAJS7NudgQYwWUYD7YH">[submit-clicked]<br data-page-node-id="9i94UrCAB8PEc20no22u5K">[edit:该行无编辑按钮]<br data-page-node-id="B6dTz194YCCoyIK15fse0i">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">11</td>
+    <td>时间规则设置</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>保存</td>
+    <td class="api">POST /api/time-rules → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="DRrRPT9JbtROPCYrxpT4uC">
-    <td class="idx" data-page-node-id="SxvCM9I5VoslSP01si0Cgw">12</td>
-    <td data-page-node-id="fltwCyjbdjofM77syVLDTN">课程节次管理</td>
-    <td data-page-node-id="OlfmBtxpZaGVbiTpyqcMwe"><span class="badge" style="background:#16a34a" data-page-node-id="A1IjX8v1UzMY6sQJLCFOQr">已真实落库</span></td>
-    <td data-page-node-id="WHH0DVAGWNI2ml2qRcOTtX">是</td>
-    <td data-page-node-id="MRxClaTxK5FPRgyJ6J3AvP">是</td>
-    <td data-page-node-id="atJNUNzixwUGWcDeWF0j9M">9</td>
-    <td data-page-node-id="Kd9yRIXUzAXUmCe8fIGRS0">添加节次</td>
-    <td class="api" data-page-node-id="5L4Vqqo6ssOnu7zAsy7u8f">POST /api/class-periods → 201</td>
-    <td class="err" data-page-node-id="SabwmSNO2DOs6GilrRLbBg">0</td>
-    <td data-page-node-id="9eFesNKNHyYAz70jJvSGIc"><br data-page-node-id="2KQCzDiANlHCMBP9ckb8u9">[filled=2]<br data-page-node-id="kDMcEqAkAAmJnEOsxYlAKw">[submit-clicked]<br data-page-node-id="3KvGpH5IOnW6ratabPVjto">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">12</td>
+    <td>课程节次管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>9</td>
+    <td>添加节次</td>
+    <td class="api">POST /api/class-periods → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="IGR4pBUzf6cAIf6O6KO16o">
-    <td class="idx" data-page-node-id="eU0BapFzZrWAhu55LdgO4b">13</td>
-    <td data-page-node-id="GnUSHfPXzQ1ZXUGNhRwsvw">工作台总览</td>
-    <td data-page-node-id="5o3oIHfkgcniylaqLeZTdm"><span class="badge" style="background:#6b7280" data-page-node-id="htiFOPvXM3AU1c5Ha3aa0o">只读/展示</span></td>
-    <td data-page-node-id="SEHpZRRZKK2jvpMzwh8C77">否</td>
-    <td data-page-node-id="wQwAra74fcyVd5POD7Oxge">否</td>
-    <td data-page-node-id="PS8HulVkdLLAPS9RpLNsJy">0</td>
-    <td data-page-node-id="sw40yhjbsabetPYC4APw2w">否</td>
-    <td class="api" data-page-node-id="bsNsJkrxVSUYi5HsqBiArK">—</td>
-    <td class="err" data-page-node-id="VkZKEBlotYGNkqqKRuTMQs">0</td>
-    <td data-page-node-id="DEpo225Ryl9JNEr5j1NX1u">只读/展示页</td>
+<tr>
+    <td class="idx">13</td>
+    <td>工作台总览</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="M2jv0cfFCDr2aeN4DghLjP">
-    <td class="idx" data-page-node-id="pbYSksLd4NMSmvNdAheJ76">14</td>
-    <td data-page-node-id="95SiuYaGVztrEMCXmLcEkA">座次表</td>
-    <td data-page-node-id="dKZUZfYpBhUGkhyE5pIPqu"><span class="badge" style="background:#16a34a" data-page-node-id="D2sS4BOKMTl5xiuruQJtWo">已真实落库</span></td>
-    <td data-page-node-id="sAHeuFFPp4gLYl0KYEBy4j">是</td>
-    <td data-page-node-id="48zDu856AQYRGjYwwaV7Ef">是</td>
-    <td data-page-node-id="5EgAYimqvrAwlXCjnAmH9t">5</td>
-    <td data-page-node-id="Q9fYAUASCwsQG1KB1HsJiV">创建</td>
-    <td class="api" data-page-node-id="VJzjpaS1DPYxu1agQMez5W">POST /api/seating/charts → 201</td>
-    <td class="err" data-page-node-id="iYBuTbelCrC0EpjlaBFmm0">0</td>
-    <td data-page-node-id="K6EcwCaTu9oNUyo4rmqoE7"><br data-page-node-id="mhGQnsI7KroAfzOudrNgEP">[filled=1]<br data-page-node-id="qJFfkHHJ3T9cTtHObB7U2a">[submit-clicked]<br data-page-node-id="ITH3wGQeQQCBi0NgPRseBu">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">14</td>
+    <td>座次表</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>创建</td>
+    <td class="api">POST /api/seating/charts → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=1]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="mmWIHoOFQJQF1s1IbvG5SI">
-    <td class="idx" data-page-node-id="0Ff5hh0FAlHyjg1JXhjzRj">15</td>
-    <td data-page-node-id="UdR1IkUFqtA0iPi8CBgs6W">值日生表</td>
-    <td data-page-node-id="s3KLNawyUpbVQepKe4Pn7E"><span class="badge" style="background:#16a34a" data-page-node-id="17pJvxVwwmkkqLjUTSGZgG">已真实落库</span></td>
-    <td data-page-node-id="mo4f2I7IuvqFuEYuSuDr7e">是</td>
-    <td data-page-node-id="59kWxmNCvxrpBwIYD8aRRr">是</td>
-    <td data-page-node-id="opAEp1omDQat1AMAEEcoAJ">4</td>
-    <td data-page-node-id="VuMOdapBmiYzrpbogD2a5a">创建</td>
-    <td class="api" data-page-node-id="E6z0ZDEquBeGhqV5iQWnoe">POST /api/duty/groups → 201</td>
-    <td class="err" data-page-node-id="NXULIwmN23pslfgG28se6A">0</td>
-    <td data-page-node-id="TOMku5gfyKvXdiSPXTUyH9"><br data-page-node-id="tpusoORxAcPmQnnQvTpLeC">[filled=1]<br data-page-node-id="uq6jmweMuJfcSWjzSD1Yyj">[submit-clicked]<br data-page-node-id="KWQTPNP1u55ZfGZVwA8GEL">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">15</td>
+    <td>值日生表</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>创建</td>
+    <td class="api">POST /api/duty/groups → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=1]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="E4ESUuroCZeeUsb6Ym3yU9">
-    <td class="idx" data-page-node-id="zFBsSSUlHN2dkz0yszwVDL">16</td>
-    <td data-page-node-id="BTB5P0DurZAtpJF1chY7GQ">班委名单</td>
-    <td data-page-node-id="xO7kONHnmIIsmpEOI8d7xh"><span class="badge" style="background:#16a34a" data-page-node-id="mFUi2xlHA0IVQn6VZ0Encd">已真实落库</span></td>
-    <td data-page-node-id="b73hBYpiDCc7111k28eGgW">是</td>
-    <td data-page-node-id="qioBfC0IG71SDoC8i0KnUA">是</td>
-    <td data-page-node-id="bCYGxE1da82czfd6leNccX">6</td>
-    <td data-page-node-id="q3gLwFZF0r78WiMhISEEZU">添加</td>
-    <td class="api" data-page-node-id="Dq84rFtNt66vqm7gJTfMtJ">POST /api/committee/members → 201<br data-page-node-id="L0AlLDi72ZbQTLD4ejUzbu">DELETE /api/committee/members/5 → 200</td>
-    <td class="err" data-page-node-id="DoVhAtpV6cO7u26aavAN7Z">0</td>
-    <td data-page-node-id="2EbO6u8jFwuM6BR0HwRgqZ"><br data-page-node-id="CfmJLEgRUea7ZXHv2lbvIy">[filled=2]<br data-page-node-id="GkiVGAPW0xkUVrq6rrVz3i">[submit-clicked]<br data-page-node-id="Ufxc9eo797Z53OcD0cRSjB">[edit:已点编辑]<br data-page-node-id="V7je9wz64rcT8YyqTR73In">[edit提交未找到]<br data-page-node-id="xGmArr43v2foTI93DjTwA2">[delete:已点删除]<br data-page-node-id="oppc1t6064Qy2WPiiOfYGF">[delete确认]</td>
+<tr>
+    <td class="idx">16</td>
+    <td>班委名单</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>添加</td>
+    <td class="api">POST /api/committee/members → 201<br>DELETE /api/committee/members/8 → 200</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]<br>[edit:已点编辑]<br>[edit提交未找到]<br>[delete:已点删除]<br>[delete确认]</td>
   </tr>
-<tr data-page-node-id="HO8GXKBM6BDSVniYdAqUKm">
-    <td class="idx" data-page-node-id="9dUhcwS6Qiss5ZtKdfBN9Q">17</td>
-    <td data-page-node-id="EDKgyR8d0GU7Xj4p52YHZM">家长联系</td>
-    <td data-page-node-id="bwoscV81QuuEcLeX2GmXYf"><span class="badge" style="background:#16a34a" data-page-node-id="3goNbHTEDFbcMuGXg9tSkI">已真实落库</span></td>
-    <td data-page-node-id="BnWCSs6g26urHAAb8C8q2c">是</td>
-    <td data-page-node-id="us1JA2p7V54jvb6VTAzb1M">是</td>
-    <td data-page-node-id="UtdUGrvrpBNiopCDonoB0T">7</td>
-    <td data-page-node-id="XXdkEdW44re2Uao1EPNodh">添加</td>
-    <td class="api" data-page-node-id="7WDzZ0bK70XUYUxHzKC9Ml">POST /api/parent/contacts → 201</td>
-    <td class="err" data-page-node-id="2bxyJkPEeqZvUeTFSWvCbP">0</td>
-    <td data-page-node-id="B5lW1IXRyHdJnab6HG4AkR"><br data-page-node-id="arWewiXJux6vwDOZnBhLaC">[filled=6]<br data-page-node-id="D8o3qBBFIJVpC5pvMwyoPA">[submit-clicked]<br data-page-node-id="DxJtQ3uUFVbxJyADyiRN0p">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">17</td>
+    <td>家长联系</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>7</td>
+    <td>添加</td>
+    <td class="api">POST /api/parent/contacts → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=6]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="eX8wAWDdUwdp28Flug3xDa">
-    <td class="idx" data-page-node-id="xkDoNnJfYvqcvgAjNfBsOx">18</td>
-    <td data-page-node-id="LbTINXmC0blnL5egQT4x79">作业检查</td>
-    <td data-page-node-id="ez0WlPiajUFgBLKG3R5QUP"><span class="badge" style="background:#16a34a" data-page-node-id="wHao7Bic4LMeeGfYH2aM57">已真实落库</span></td>
-    <td data-page-node-id="bedklBkjCfCHeePpcxPztS">是</td>
-    <td data-page-node-id="zkaLAT2kp1cVlKYlZZuAG4">是</td>
-    <td data-page-node-id="YpoFx0WRXeENk5azLxSbyR">6</td>
-    <td data-page-node-id="zEj9phFybMkktNIwxYb18e">保存</td>
-    <td class="api" data-page-node-id="MZqvq8Q6tChpztDlBXAhqP">POST /api/homework/assignments → 201<br data-page-node-id="W4AEqFYrocsFcSBEhPSZs1">DELETE /api/homework/assignments/1 → 200</td>
-    <td class="err" data-page-node-id="MAKw7cDZuKckbkPdTD55Ev">0</td>
-    <td data-page-node-id="5FBBFUdGvkdkab6wjR3yP5"><br data-page-node-id="O9mAd8cHkT5Xaf081POKz0">[filled=4]<br data-page-node-id="bc2ApLQR5R1b2AknnoTcOT">[submit-clicked]<br data-page-node-id="kaQnTZ3yQrXW8KvU36OvPk">[edit:已点编辑]<br data-page-node-id="WyAovj3mqNv1A8b88vFtvg">[edit提交未找到]<br data-page-node-id="eUmsHY06VWyKbJhxh41gj8">[delete:已点删除]<br data-page-node-id="zEZ8OYjQMmgO9hdU3CEMqG">[delete确认]</td>
+<tr>
+    <td class="idx">18</td>
+    <td>作业检查</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>保存</td>
+    <td class="api">POST /api/homework/assignments → 201<br>DELETE /api/homework/assignments/1 → 200</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]<br>[edit:已点编辑]<br>[edit提交未找到]<br>[delete:已点删除]<br>[delete确认]</td>
   </tr>
-<tr data-page-node-id="PDphpmcp7s2sH13QQiuW4A">
-    <td class="idx" data-page-node-id="FeLjxeC2ObKGoLwZAPgyOW">19</td>
-    <td data-page-node-id="wFSk17xfvUnCyujZHEJuAO">考勤管理</td>
-    <td data-page-node-id="96LVfg1MuPeLEpzsMGXkhk"><span class="badge" style="background:#16a34a" data-page-node-id="ABMkAWvhdlNyvZk2nkp2Sp">已真实落库</span></td>
-    <td data-page-node-id="PjD4eXv9MsiOLcImq2O7Wi">是</td>
-    <td data-page-node-id="FZddBNMKNrG0AsjAHckSuO">是</td>
-    <td data-page-node-id="gtyPXHELWcXeqQSYWO8VlF">0</td>
-    <td data-page-node-id="FCoJHKitct80kNJPbCwrEA">考勤管理提交</td>
-    <td class="api" data-page-node-id="PJizlLi0ODjYbnBSOrZnXS">POST /api/attendance/records → 201</td>
-    <td class="err" data-page-node-id="BEA3PNIsfSgMhkmSRbd8pg">0</td>
-    <td data-page-node-id="RV9jTqtRwb1YXA7aj7xrUL"><br data-page-node-id="gXrG6faLmdJckXCSg1SrWv">[考勤:已保存记录]<br data-page-node-id="Wg9cC4c8EII2xPZguE7D8b">[edit:该行无编辑按钮]<br data-page-node-id="aS7Rwav55TcXQradLNxnSO">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">19</td>
+    <td>考勤管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>考勤管理提交</td>
+    <td class="api">POST /api/attendance/records → 201</td>
+    <td class="err">0</td>
+    <td><br>[考勤:已保存记录]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="fcHpDbaQThXwvo3oW39ruh">
-    <td class="idx" data-page-node-id="hoqJ2yCZB9972jh1IoWkhG">20</td>
-    <td data-page-node-id="5SRqFHCVPHYnVsuTTF2feV">学习小组</td>
-    <td data-page-node-id="ftTxJLAllDf75sa8G3OxQW"><span class="badge" style="background:#16a34a" data-page-node-id="0MTxcYPyUjoBGX9PbKNe4h">已真实落库</span></td>
-    <td data-page-node-id="XkHPFJ6hBYNslABgX2Uqtc">是</td>
-    <td data-page-node-id="NBXLfG5Mb0YbfweUPXP8EP">是</td>
-    <td data-page-node-id="c32694CndR24LQck4MGFkG">4</td>
-    <td data-page-node-id="3136gcHr90CfkRBxgBOK9V">保存</td>
-    <td class="api" data-page-node-id="XnjJuEqEWt8ZbDZrGURRWI">POST /api/study-group/groups → 201</td>
-    <td class="err" data-page-node-id="q7YI9lxnn8dvT50xnQTcCv">0</td>
-    <td data-page-node-id="h6GSDdnqJSpyjWd979klpZ"><br data-page-node-id="KBQoMf6OR6ALUFB88J9bIv">[filled=3]<br data-page-node-id="rtFtfIQ4P6FCX4VcqvF42a">[submit-clicked]<br data-page-node-id="B8of3DRvbOb9DdCwnRTQNM">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">20</td>
+    <td>学习小组</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>保存</td>
+    <td class="api">POST /api/study-group/groups → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="yJO7lXB5T1kTNdtJjBWwrA">
-    <td class="idx" data-page-node-id="NYBlHUgLmBcaAN2GGvHQyY">21</td>
-    <td data-page-node-id="k2kOMmDBhNmkpredq4jMRa">心理健康</td>
-    <td data-page-node-id="SDjSZvgbEJzjZlEHUWogad"><span class="badge" style="background:#16a34a" data-page-node-id="WYUD5ZpT0uOwIEExTpTX1W">已真实落库</span></td>
-    <td data-page-node-id="ufSEig5Oy2sJK3HW8FouwW">是</td>
-    <td data-page-node-id="ktX40pnyqPhCBFsS26Tq4A">是</td>
-    <td data-page-node-id="p0VKWXcWIjEatAFAFrPRG5">0</td>
-    <td data-page-node-id="hAUygixhDwJxsDaw8XEsFa">保存记录</td>
-    <td class="api" data-page-node-id="uAfB7eoCVysmVLtE7R1Jks">POST /api/mental-health/records → 201</td>
-    <td class="err" data-page-node-id="ToIx4GdcJfjXiO45tJWgWJ">0</td>
-    <td data-page-node-id="hKIC5CtlRbEEpGjXJ1J5OE"><br data-page-node-id="Ro27DI7cYWZxuk5JKL3SXD">[filled=2]<br data-page-node-id="z1WkgOKKdnkzX8CIKklIkZ">[submit-clicked]<br data-page-node-id="yoxJgctX2Ow6tbJZMUIbPP">[edit:该行无编辑按钮]<br data-page-node-id="3oY4HMGHJAKtOBVxFTyd9y">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">21</td>
+    <td>心理健康</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>保存记录</td>
+    <td class="api">POST /api/mental-health/records → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="l7qSMZu8tHQBPGVt5PjEUf">
-    <td class="idx" data-page-node-id="G07SAlfeU1paaPJhqef4R4">22</td>
-    <td data-page-node-id="8KjoCnCsnXqYTStSSbJkAL">文体活动</td>
-    <td data-page-node-id="waHeOqEqkWTLFCHr8wTlf7"><span class="badge" style="background:#16a34a" data-page-node-id="hmDAB1dDUsw3aNvnEiUuJY">已真实落库</span></td>
-    <td data-page-node-id="4vIMET6nVIjeLdXbkQE9zW">是</td>
-    <td data-page-node-id="SapVfzyhBZq8nsGCekFcyn">是</td>
-    <td data-page-node-id="5cG51vhVs7am7jmOvA8vHz">8</td>
-    <td data-page-node-id="XWZ5IEqZFIi1BWRmExZ9lp">保存</td>
-    <td class="api" data-page-node-id="3tQjCSrfSjHZtQzM4oxpCu">POST /api/activity → 201</td>
-    <td class="err" data-page-node-id="pjzUqYBCbg2fKIg7me3L0J">0</td>
-    <td data-page-node-id="2ea7GhPfgiwr0YO44oGFz6"><br data-page-node-id="n4NpeokX7hYABHTPZMoGQS">[filled=7]<br data-page-node-id="kbBmcVgCFskRBFW6rEFvdj">[submit-clicked]<br data-page-node-id="AyJOJZOADC2fhJdrUV2lrJ">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">22</td>
+    <td>文体活动</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>8</td>
+    <td>保存</td>
+    <td class="api">POST /api/activity → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=7]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="SKoGyT3n7bJkATdM3umRqq">
-    <td class="idx" data-page-node-id="pPcGVWUWjLaYGMwVqXys1y">23</td>
-    <td data-page-node-id="SFbTDbMuuj0Vc1AzSqIaZm">班级文化</td>
-    <td data-page-node-id="hKQ5bVAD5gK0YQgLA6vWKA"><span class="badge" style="background:#16a34a" data-page-node-id="8wB73DJjqEorpqkcxu38hY">已真实落库</span></td>
-    <td data-page-node-id="O7vkLqhRkd1AWTEGXGxfDH">是</td>
-    <td data-page-node-id="qtcQlvIyu0mpyK9dRSPVA9">是</td>
-    <td data-page-node-id="3e4FLlUbh0a99oUDhqfDFN">6</td>
-    <td data-page-node-id="N83RNNjt5fqD85Bm25nCWD">保存</td>
-    <td class="api" data-page-node-id="guOgDyqvvmuATUDIFMMFDV">POST /api/culture/records → 201</td>
-    <td class="err" data-page-node-id="cpaPjrIiBakh6wdAj6qCsV">0</td>
-    <td data-page-node-id="gmubsvMKRxQjCLNkR0zBMQ"><br data-page-node-id="5KFwAWWdw772GbCoLsmUlC">[filled=4]<br data-page-node-id="yxXYdGLC45HULsh9nXSmNm">[submit-clicked]<br data-page-node-id="N8Xqk3pQKoB3SKcWew6Cbw">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">23</td>
+    <td>班级文化</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>保存</td>
+    <td class="api">POST /api/culture/records → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="v3qqjWSZjbCPbxaJEy7Kkr">
-    <td class="idx" data-page-node-id="ZzVcFVxHF59rzqJHWK1hXv">24</td>
-    <td data-page-node-id="uadUeSrCgJjEyaQqqUynhz">学法指导</td>
-    <td data-page-node-id="H68yxa1BoJfSht0GpTOuaV"><span class="badge" style="background:#16a34a" data-page-node-id="vIHuPrRGWTglBbOlH6Ytlx">已真实落库</span></td>
-    <td data-page-node-id="8xdMc4NgGVboPB8hR68SDT">是</td>
-    <td data-page-node-id="5sBUKj6GGDEZBXf9IZiLqO">是</td>
-    <td data-page-node-id="1nBYHHxambJWHqAmpVOX3f">5</td>
-    <td data-page-node-id="XCNTKYQDtsOiK41S7SHJM7">保存</td>
-    <td class="api" data-page-node-id="CYbzIbTD4hSbjGLpSBmXuC">POST /api/study-guide/guides → 201</td>
-    <td class="err" data-page-node-id="xKSTHnyE7tHYBfAaGqVcd6">0</td>
-    <td data-page-node-id="qP4WrRVvsj5PJsM8eUczRz"><br data-page-node-id="fliMmsFZ0jPtbr8BiJ97nf">[filled=3]<br data-page-node-id="oiCCQgBwkzzo6OA0B88Utj">[submit-clicked]<br data-page-node-id="FhtHu1H1EQbREOkHhR353l">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">24</td>
+    <td>学法指导</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>保存</td>
+    <td class="api">POST /api/study-guide/guides → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="2WtNLHdvl3rv2Lfz1dYLNO">
-    <td class="idx" data-page-node-id="XmH3X3sAH0iab62lKeTY6m">25</td>
-    <td data-page-node-id="wANx6trRjJJzCAHHlIWfGH">评语管理</td>
-    <td data-page-node-id="XnTOLEBrpLOIuiHv56k8CS"><span class="badge" style="background:#16a34a" data-page-node-id="rGFtDvmM5T2JpxRon1hC8z">已真实落库</span></td>
-    <td data-page-node-id="JCdeklhxSMIQDo4IfEE2gn">是</td>
-    <td data-page-node-id="FHRXXWVWqzB5ESgcnMwpfM">是</td>
-    <td data-page-node-id="k4kiPFI7osk9IKL9rKzM7D">4</td>
-    <td data-page-node-id="xxZrDryVBttGmy4693u88F">添加</td>
-    <td class="api" data-page-node-id="EmiE7p8nPuCCJcJFA58FUh">POST /api/teacher-comments → 201<br data-page-node-id="YKVJUhxBNVxBNG0RVL7B9D">DELETE /api/teacher-comments/4 → 200</td>
-    <td class="err" data-page-node-id="Za1H5rFwsNg91cjEwuYApy">0</td>
-    <td data-page-node-id="SxqoI7wXz8aYLcmvlzJ5Bd"><br data-page-node-id="evS2GEt4Q2xjm90HovpoQL">[filled=3]<br data-page-node-id="7RXPea5345EoHEiuyKq8go">[submit-clicked]<br data-page-node-id="40nOdUK9TmXnOJDS0DhEY9">[edit:已点编辑]<br data-page-node-id="BJ98fsM3Q2k6EeJ0xraU5d">[edit提交未找到]<br data-page-node-id="CxRkAEMpifEfLLWCVE8vJN">[delete:已点删除]<br data-page-node-id="CICoNt672E76nJEAdX87mN">[delete确认]</td>
+<tr>
+    <td class="idx">25</td>
+    <td>评语管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>添加</td>
+    <td class="api">POST /api/teacher-comments → 201<br>DELETE /api/teacher-comments/4 → 200</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit:已点编辑]<br>[edit提交未找到]<br>[delete:已点删除]<br>[delete确认]</td>
   </tr>
-<tr data-page-node-id="CBLYK7IZP4rWCMRoAF9HKH">
-    <td class="idx" data-page-node-id="BrAsNapZmfgNqIDFE5y1aR">26</td>
-    <td data-page-node-id="FQSd1ibq9nnv2JOXQ1gGjm">手机箱开箱策略</td>
-    <td data-page-node-id="7KxtEOKdtZyEmsxGjDLxfi"><span class="badge" style="background:#16a34a" data-page-node-id="LoJmIlr5igEz25TQBshucB">已真实落库</span></td>
-    <td data-page-node-id="JK5GLBVFiE2Uo32Q0sIfwI">是</td>
-    <td data-page-node-id="4m2nnTK1Gg7M725mWXc2da">是</td>
-    <td data-page-node-id="UTyib1yJQsenY2IGe4MQin">0</td>
-    <td data-page-node-id="8sltoqMCBHBwKZyyfHXMpT">手机箱开箱策略提交</td>
-    <td class="api" data-page-node-id="LiS9tozJmaOJd7YKnaAEom">PUT /api/phonebox-policy → 200</td>
-    <td class="err" data-page-node-id="O5BjK06cz5F0mhe1ii0AeE">0</td>
-    <td data-page-node-id="xpxCIY9uCFelsvod7nHJtG"><br data-page-node-id="67fiLJVJ2HyMbGCg86uUlF">[已添加时段]<br data-page-node-id="wYr8zyYxi63TEYyTZ49h5M">[已保存策略]<br data-page-node-id="u1mU22GZ4JVNA6bWGAuYvE">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">26</td>
+    <td>手机箱开箱策略</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>手机箱开箱策略提交</td>
+    <td class="api">PUT /api/phonebox-policy → 200</td>
+    <td class="err">0</td>
+    <td><br>[已添加时段]<br>[已保存策略]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="NmbfMbQcHZN0sUOXhiqECl">
-    <td class="idx" data-page-node-id="UBMMmlx0Q2Q1JES1VF3HY4">27</td>
-    <td data-page-node-id="YyffRv0oecv6nRKdYfoqOV">考试管理</td>
-    <td data-page-node-id="xmVYkc19LSht9bct6QE8kj"><span class="badge" style="background:#16a34a" data-page-node-id="ZVF5rmEMgEJu09NNlc6e0a">已真实落库</span></td>
-    <td data-page-node-id="TGXVPgizqFFBouKYu7gJKa">是</td>
-    <td data-page-node-id="tvAjoq0RCBbsnAjAlyS6Go">是</td>
-    <td data-page-node-id="nMzpYnmVjA22zqh8Bb3PKC">13</td>
-    <td data-page-node-id="9DIGuAysiSGtLKectvgEeP">保存</td>
-    <td class="api" data-page-node-id="ASnJAJLQh0YWBWpvYHOypN">POST /api/exams → 200</td>
-    <td class="err" data-page-node-id="eOquoLIfmb5iE5mqG0BEnn">0</td>
-    <td data-page-node-id="xdjalyRRS9D4KBWKmP13vq"><br data-page-node-id="bvxMQteFPqAsGdYxggMAMA">[filled=6]<br data-page-node-id="qODnHDCNUyHooaajAn5pZg">[submit-clicked]<br data-page-node-id="lyPnHF5gj8keL1rrgVuGWp">[edit:该行无编辑按钮]<br data-page-node-id="UOLcU4AX9GZRZFTG8QD7Ta">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">27</td>
+    <td>考试管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>17</td>
+    <td>保存</td>
+    <td class="api">POST /api/exams → 200</td>
+    <td class="err">0</td>
+    <td><br>[filled=6]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="6CO9dfwNr9sA6iCJ37z6Ae">
-    <td class="idx" data-page-node-id="t8bWF5TF1eEoFPcC1I5Ipm">28</td>
-    <td data-page-node-id="FQk7EQ7mmqgdg4ZFplvp4A">成绩录入</td>
-    <td data-page-node-id="O4hNEs5kMHxVlJBj5a48Ft"><span class="badge" style="background:#16a34a" data-page-node-id="fL7ulrem9VJ5uJtJVaPxOU">已真实落库</span></td>
-    <td data-page-node-id="aabp4Rju03oUBXEVFy3VAB">是</td>
-    <td data-page-node-id="POHF30yQkZYLQUAL3Wk195">是</td>
-    <td data-page-node-id="NB1YdKbibs9MD51dDzpDDl">0</td>
-    <td data-page-node-id="RZN3KpdRsOovizOxscOjru">成绩录入提交</td>
-    <td class="api" data-page-node-id="yHSetg5mAkgO5yzaJhQCbJ">POST http://localhost:5000/socket.io/ → 200<br data-page-node-id="t1uL6jbDomuYaWL5lT9pCR">POST /api/scores → 400</td>
-    <td class="err" data-page-node-id="AvMTSEtGUfmBw7FLE3HTym"><span class="ec" data-page-node-id="bJMcZ9SXS414uaizJgcGlX">4</span><br data-page-node-id="VyPWgwMqayKs01ru2xnHMM">Failed to load resource: the server responded with a status of 400 (BAD REQUEST)<br data-page-node-id="1xk1O1aHgcvdetvzfZwpGb">[ErrorMonitor] [api_error] 请求参数错误，请检查输入内容 {type: api_error, message: 请求参数错误，请检查输入内容, url: /api/scores, method: POST, sta<br data-page-node-id="9TCuMvbOuPszHP8nyr9HEd">[score-blur-save] failed for 11-测试69614: Error: 请求参数错误，请检查输入内容
-    at executeRequest (/src/services/api.ts:617:24)
-    a</td>
-    <td data-page-node-id="WGEHCcyqtW4pqEeDo2FatZ"><br data-page-node-id="5GpC646SNZJmYDVkNiffKP">[成绩录入:已保存成绩]<br data-page-node-id="pKsXD1h3wRpbCnp6rWRj2C">[examPOST=200]<br data-page-node-id="zQgEFN84kOBdMP5wKhKLRC">[edit:该行无编辑按钮]<br data-page-node-id="A7xNnstHn0dAb4FiSDCBG5">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">28</td>
+    <td>成绩录入</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>成绩录入提交</td>
+    <td class="api">POST /api/scores → 200</td>
+    <td class="err">0</td>
+    <td><br>[成绩录入:已保存成绩]<br>[examPOST=200]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="vrn9RtNrSUdSmfgAKgEoFD">
-    <td class="idx" data-page-node-id="glgyoukqeMXt2QDGrSwB8L">29</td>
-    <td data-page-node-id="9HMNAWu3gB616qYSyQuqnt">成绩档案</td>
-    <td data-page-node-id="wL87nltIuz79LZTRfC9LUk"><span class="badge" style="background:#6b7280" data-page-node-id="nfSHQCrxgJUZOeZJmHG0tw">只读/展示</span></td>
-    <td data-page-node-id="BeUmzWvEYFWFFwKYZb0nnk">否</td>
-    <td data-page-node-id="RWbRaCLCahD0oQltLJRIgG">否</td>
-    <td data-page-node-id="ED7K9xu3aBGwRbQ2E0xxRA">0</td>
-    <td data-page-node-id="cve8041TbqCVTULu4PiQAY">否</td>
-    <td class="api" data-page-node-id="HflbPeVhlygXCBTTrIM7Py">—</td>
-    <td class="err" data-page-node-id="d90x552ZTJAVjbKesv0QoH">0</td>
-    <td data-page-node-id="PXREDVvRKAOUJWHitbqLjE">只读/展示页</td>
+<tr>
+    <td class="idx">29</td>
+    <td>成绩档案</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="qEODO9AW5feqQYwk1WMLed">
-    <td class="idx" data-page-node-id="BFZNemSVixUW6i8hVFqAF4">30</td>
-    <td data-page-node-id="qjs58fMBoBzdd4szNBBvpD">成绩分析</td>
-    <td data-page-node-id="XOKdqN2CEWjkI5Ccn7EFZU"><span class="badge" style="background:#6b7280" data-page-node-id="7DCdqH0bck21nyFmORfnVj">只读/展示</span></td>
-    <td data-page-node-id="D0JWZ6uX8qYf57yZb1HmCc">否</td>
-    <td data-page-node-id="YeWCLiP7uJ77EtvzS4N3mS">否</td>
-    <td data-page-node-id="6vNqKADyJ4f7QFp7LlYgf7">0</td>
-    <td data-page-node-id="Nu5rExKCmCMu1x7BhMUtBd">否</td>
-    <td class="api" data-page-node-id="nBAaL99r5PvVxCq0sGBFNp">—</td>
-    <td class="err" data-page-node-id="gdrA5K2NeJKBSjMhxsqKG6">0</td>
-    <td data-page-node-id="3CYRy6PRZ1iYLW0VofG2oh">只读/展示页</td>
+<tr>
+    <td class="idx">30</td>
+    <td>成绩分析</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="lig2IrUmzLJhfGKGRFVRPP">
-    <td class="idx" data-page-node-id="QxfbDaJEshi0700bZ28Q80">31</td>
-    <td data-page-node-id="BhoAU52jtkbPDso829Sq4R">算法分析</td>
-    <td data-page-node-id="ObXD5PxfudjsycJYmpVUL1"><span class="badge" style="background:#6b7280" data-page-node-id="MlFBOkK9A83rSJxBRDgPAi">只读/展示</span></td>
-    <td data-page-node-id="OS6cXLcXeWbTIXGy7VvB03">否</td>
-    <td data-page-node-id="Q1PaifxJDtygsyEftEwc9b">否</td>
-    <td data-page-node-id="Hlenncs1DZn1y0gcWZ5bEZ">0</td>
-    <td data-page-node-id="4eru9Dvq715g4nfFLNAX5q">否</td>
-    <td class="api" data-page-node-id="hvnzagyjVn8PZ3ZgRobtVr">—</td>
-    <td class="err" data-page-node-id="aCIx5qaj5fwEnAOFa1RZIO">0</td>
-    <td data-page-node-id="KenpVoqpqZl1ESAYlPImV9">只读/展示页</td>
+<tr>
+    <td class="idx">31</td>
+    <td>算法分析</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="OuIoCPPcaZCKBD0s606ZYI">
-    <td class="idx" data-page-node-id="EUDDiJ8BT9rS1B40wa79aE">32</td>
-    <td data-page-node-id="PYjTfS4tnJUgsgzSD4wnmt">设备管理</td>
-    <td data-page-node-id="vLsEVeIOSXnwCCVORHjHW6"><span class="badge" style="background:#16a34a" data-page-node-id="3J31Alj4jvBVTpaDeQsdk3">已真实落库</span></td>
-    <td data-page-node-id="2HgGDZCAOKz1snQO34yxBl">是</td>
-    <td data-page-node-id="nn25dNXkOSW3McQKVIFTNr">是</td>
-    <td data-page-node-id="epliJoGMUa3JTkq85JXoHo">2</td>
-    <td data-page-node-id="ASMaBCXBRVgQZ1c1n8siNB">确认添加</td>
-    <td class="api" data-page-node-id="uIWBpF3sGbJAXkN8DqaC54">POST /api/devices → 201</td>
-    <td class="err" data-page-node-id="Q82Sq8XAoS7Y84m1zmfht9">0</td>
-    <td data-page-node-id="vRGdon9Slc05jQft5IxdHW"><br data-page-node-id="cfenscnwZrSidJdsIDulAl">[filled=4]<br data-page-node-id="mqBqWmHQMnxB3uh9KO79nQ">[submit-clicked]<br data-page-node-id="za75vLUE3XyUDWRFQ9UVbz">[edit:该行无编辑按钮]<br data-page-node-id="DwZWu1rn9aLKV6IVuIIidw">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">32</td>
+    <td>设备管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>2</td>
+    <td>确认添加</td>
+    <td class="api">POST /api/devices → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="ja46f4gXaaEq8ShD22Sxqu">
-    <td class="idx" data-page-node-id="TuDW0uxzejQhBscQReoXNL">33</td>
-    <td data-page-node-id="31X08rBki98ewFJp2AzJ6N">设备分组</td>
-    <td data-page-node-id="mCXhrWhdhxuLzvVceswGPC"><span class="badge" style="background:#16a34a" data-page-node-id="jtGhXHS5wLPZCvpDwUzfAu">已真实落库</span></td>
-    <td data-page-node-id="O4DjblVt1GK4xhOhs1OV6n">是</td>
-    <td data-page-node-id="QVdn5eOpsbOUwfqtkpTNPV">是</td>
-    <td data-page-node-id="DrqxPl5ibouL3uZlEvhBEC">6</td>
-    <td data-page-node-id="agFkej1sIcODjoopHBeOA8">创建</td>
-    <td class="api" data-page-node-id="lwAXTBLr80rKHqMAhzEpL9">POST /api/device-group/ → 201</td>
-    <td class="err" data-page-node-id="a73V8cbWXDHfzeHjOKkciL">0</td>
-    <td data-page-node-id="7wLAteRyGhTRvSb4YtOvZg"><br data-page-node-id="MqfyULwA4iA6y5ICshFwSS">[filled=3]<br data-page-node-id="DZG0IhGjJup7zEOg86709L">[submit-clicked]<br data-page-node-id="IIgdw69p5ykTiBAA8pG1Pa">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">33</td>
+    <td>设备分组</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>6</td>
+    <td>创建</td>
+    <td class="api">POST /api/device-group/ → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=3]<br>[submit-clicked]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="YLK9v1BCEIwTrVfgFgYWLl">
-    <td class="idx" data-page-node-id="60jAOEk1qky6l2tZ0nlFt7">34</td>
-    <td data-page-node-id="9wkzZFpkd8ZPsXB253Fsqt">固件管理</td>
-    <td data-page-node-id="QEZ14DM3lOA3NVkBL1hKLj"><span class="badge" style="background:#16a34a" data-page-node-id="RrjZcoAHbsSHGblBt50rHw">已真实落库</span></td>
-    <td data-page-node-id="2iPscDH82pwEIYmA5XfjbC">是</td>
-    <td data-page-node-id="bk3B1gZd7TMMAbqh6kXCG3">是</td>
-    <td data-page-node-id="7StBmZDFOQHkpTMQfZcURa">5</td>
-    <td data-page-node-id="zzu1Mhbz73njOpsSQ8DvpG">上传</td>
-    <td class="api" data-page-node-id="ZN1UtG2braeHGg5xF258NP">POST /api/firmware/upload → 200</td>
-    <td class="err" data-page-node-id="YtFxFy89SNuaPU9pjp7kDH">0</td>
-    <td data-page-node-id="dsVXICHcfkC2o7tMMBa3q4"><br data-page-node-id="LYVo7R3ltYC7DaAH9QKfur">[文件已选]<br data-page-node-id="GD5MAaFbJm5GrbIXdZe2vj">[filled=3]<br data-page-node-id="Eh8AYYImkuhoLg5KeKrR62">[submit-clicked]<br data-page-node-id="S8sLGu92sujEzTlmkHHKJf">[edit:该行无编辑按钮]<br data-page-node-id="AeemIbyMts7Z3vJZa2ZqN4">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">34</td>
+    <td>固件管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>上传</td>
+    <td class="api">POST /api/firmware/upload → 200</td>
+    <td class="err">0</td>
+    <td><br>[文件已选]<br>[filled=3]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="DAhFbG0vehjoBknU0bH85s">
-    <td class="idx" data-page-node-id="NZc82OCc8oZ6s31wmTPfEN">35</td>
-    <td data-page-node-id="i4a57PlSIuUKA0meHjFNlB">通知管理</td>
-    <td data-page-node-id="2MwZcM6HOMLZEupN6E0Jql"><span class="badge" style="background:#16a34a" data-page-node-id="aqAfOu3OOzXcQvQ14MPGQv">已真实落库</span></td>
-    <td data-page-node-id="mdGi4kOgakR3L7k5u6wGMm">是</td>
-    <td data-page-node-id="L6CwEwz2NhqhMrnokt0u7u">是</td>
-    <td data-page-node-id="1qS0FnLS7wv6ZpCASFuvKA">4</td>
-    <td data-page-node-id="xZvMelA5PoeMjac7OShFyn">发送通知</td>
-    <td class="api" data-page-node-id="8tXEH0vZCPJcJiFHMR2Txy">POST /api/admin_notifications/ → 201</td>
-    <td class="err" data-page-node-id="dxjnzeC4TaIp9uoWD3QdEW">0</td>
-    <td data-page-node-id="YfRPLJThnHyaEY8LBcsIbf"><br data-page-node-id="odHeQs85c5m6AJBJztCbtz">[filled=2]<br data-page-node-id="6q0iYB5luQFDR7gcNdB8Qx">[submit-clicked]<br data-page-node-id="ZfmPrE0udVufTUjfGcDizc">[edit:该行无编辑按钮]<br data-page-node-id="aEotRGLbT9hokSEcyPAfTx">[delete:已点删除]<br data-page-node-id="EqnL0Byz61A6UsYfPZzH5A">[delete确认]</td>
+<tr>
+    <td class="idx">35</td>
+    <td>通知管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>4</td>
+    <td>发送通知</td>
+    <td class="api">POST /api/admin_notifications/ → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=2]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:已点删除]<br>[delete确认]</td>
   </tr>
-<tr data-page-node-id="gRLZH29CRpSg6qARBP85uH">
-    <td class="idx" data-page-node-id="YwE3eSEE8BKUxdc0uCkBcl">36</td>
-    <td data-page-node-id="Ktp5LZLr2sPgSd8oZJUKel">审批管理</td>
-    <td data-page-node-id="0zgiFR7E80cYuPkra5MBq9"><span class="badge" style="background:#16a34a" data-page-node-id="URuHh2BtIJaxnAkOEVbF3F">已真实落库</span></td>
-    <td data-page-node-id="xGNWbbFFZBFJcRvfKMtiCT">是</td>
-    <td data-page-node-id="J3MHdJXyOnzktwOWmObKIn">是</td>
-    <td data-page-node-id="lMoNJ2V0YJxt67qfU4KixK">0</td>
-    <td data-page-node-id="bSnOjJpoytLATV0r3ZnsJb">审批管理提交</td>
-    <td class="api" data-page-node-id="IfdFREeijzvKF9CG1BHyLY">POST /api/approvals → 201</td>
-    <td class="err" data-page-node-id="A4NTsAilOhu9ck9LPJLXqp">0</td>
-    <td data-page-node-id="o8ZYcNGRhGjUY1zpwBnIOr"><br data-page-node-id="PEbSXbJDpW6ByU3D6DPyPL">[表单已填]<br data-page-node-id="tuV2HXKuzVs7B6mwxcfH7t">[已提交]<br data-page-node-id="jhrrttT3tKPKVWeIQEtr62">[edit:该行无编辑按钮]<br data-page-node-id="3ApGTqyS784yIcj6fdxePU">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">36</td>
+    <td>审批管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>审批管理提交</td>
+    <td class="api">POST /api/approvals → 201</td>
+    <td class="err">0</td>
+    <td><br>[表单已填]<br>[已提交]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="BM9qC16t4fnSTAffmmTzmz">
-    <td class="idx" data-page-node-id="fLBWtLGDxRbbc2Tj36ZtNS">37</td>
-    <td data-page-node-id="iGwSKE4jEV9i2XG4snlxPJ">远程通知</td>
-    <td data-page-node-id="iSUBysuBkUmWW1moCPy1D2"><span class="badge" style="background:#16a34a" data-page-node-id="F7FaqtojBpZ3XDnFaxhFaM">已真实落库</span></td>
-    <td data-page-node-id="KhhwFH7bm1u1Ck5It61K7B">是</td>
-    <td data-page-node-id="usvTti59YAGfhBA0Q4VRxE">是</td>
-    <td data-page-node-id="6wKXzCfnuA7A7EwIHz1DWH">0</td>
-    <td data-page-node-id="PfV78JZNXgDEv6PWRENfBS">远程通知提交</td>
-    <td class="api" data-page-node-id="0xj2k1AAn8O81ML5V50fsn">POST /api/notify_templates/ → 200</td>
-    <td class="err" data-page-node-id="0UWoLc0Ap1b6TzGdgj16id">0</td>
-    <td data-page-node-id="6Syu1KkpCBSIEtS8NJrBhx"><br data-page-node-id="dMmDrLBniL56QsqJAViikR">[模板表单已填]<br data-page-node-id="r3zAOjY6r4bRI9DlkjBnAS">[已保存模板]<br data-page-node-id="oiX7Ju6UciY3aIKCb1h0wI">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">37</td>
+    <td>远程通知</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>远程通知提交</td>
+    <td class="api">POST /api/notify_templates/ → 200</td>
+    <td class="err">0</td>
+    <td><br>[模板表单已填]<br>[已保存模板]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="cCYAY7RkWrY7DG31ww5qe5">
-    <td class="idx" data-page-node-id="WOn9PnSCMYXbKTd3EHhagv">38</td>
-    <td data-page-node-id="e7B2f9OaGI8v19JNSXyLHv">远程开机</td>
-    <td data-page-node-id="MfHpUutZiW8KUXkXpEPpTG"><span class="badge" style="background:#6b7280" data-page-node-id="4zuhoRg9TEAqR64VnN5aXX">只读/展示</span></td>
-    <td data-page-node-id="gelNE8SB9Dmuz1dYiyttBE">否</td>
-    <td data-page-node-id="b0tahCDxq1GyNgAPDgykTv">否</td>
-    <td data-page-node-id="iCSRI9Ij2XAWICH5iGSN7W">0</td>
-    <td data-page-node-id="r2IeHxcc3WkWC7kKhVpeim">否</td>
-    <td class="api" data-page-node-id="fje7sv9m0Pdnhgz0xb11AT">—</td>
-    <td class="err" data-page-node-id="qgOWGwzUVT3WInk6elAHdI">0</td>
-    <td data-page-node-id="8wT6ydROZ2ajNYnqFJUdB2">只读/展示页</td>
+<tr>
+    <td class="idx">38</td>
+    <td>远程开机</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="7432i2b49lgY0GVbNLjVkX">
-    <td class="idx" data-page-node-id="pjbiQsSGxXrB7sC6hqTyhs">39</td>
-    <td data-page-node-id="BGvDucBFpyyizVJShpPcyr">系统设置</td>
-    <td data-page-node-id="EorNdxwxSK9UmBHzueNfhR"><span class="badge" style="background:#6b7280" data-page-node-id="ItYKowixlTndhOAFECRhhU">只读/展示</span></td>
-    <td data-page-node-id="9DjqXxJqvfUrdHg4P6EdJw">否</td>
-    <td data-page-node-id="ZNmfjvjIDTHA67btSOkp3d">否</td>
-    <td data-page-node-id="eJnwOWi1rnSZHAfpiWvQYk">0</td>
-    <td data-page-node-id="8hGDAJAn8HQx3A5WE61Ifx">否</td>
-    <td class="api" data-page-node-id="KtuCz6kKTvSZupNpu3FhDe">—</td>
-    <td class="err" data-page-node-id="xJHXGawF9narGBldh0IZxL">0</td>
-    <td data-page-node-id="ZFMKexWh2Z2tBVmiQHpdqa">只读/展示页</td>
+<tr>
+    <td class="idx">39</td>
+    <td>系统设置</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="UZMizMcyCJ7VGeZupA5nyc">
-    <td class="idx" data-page-node-id="3nOcJ15ghV01AQpzACvwzw">40</td>
-    <td data-page-node-id="mN7FbJtiP1AAOlGLRnaihQ">权限管理</td>
-    <td data-page-node-id="pqqQFGaFrrdGQgwAqFmz4l"><span class="badge" style="background:#16a34a" data-page-node-id="7IWBxUbE7gzUeD0DOqsV6t">已真实落库</span></td>
-    <td data-page-node-id="7aDs5nV8EoP0yTA5EfH0CN">是</td>
-    <td data-page-node-id="KWm6Say1tC29WT5QshPiSn">是</td>
-    <td data-page-node-id="6Q35qmZ0UA3JIcs52bZ2sZ">5</td>
-    <td data-page-node-id="yMHYo79B0QagWr7gza2Z5e">保存</td>
-    <td class="api" data-page-node-id="hUFol2kaPg0Fl9EiXrzGET">POST /api/admins → 201</td>
-    <td class="err" data-page-node-id="gRX5jelu1949rhJLAXxAr0">0</td>
-    <td data-page-node-id="iLQbrER5cvDv34VCFTGB92"><br data-page-node-id="wN0dSjxsHLrBPObIUtXdgA">[filled=4]<br data-page-node-id="CwcvUih9z8SiyHCu89jJCI">[submit-clicked]<br data-page-node-id="EIPu6FHqcOjJ65uGhdKr5V">[edit:该行无编辑按钮]<br data-page-node-id="D6MhryPWB0e8kJ8XMaXAI1">[delete:该行无删除按钮]</td>
+<tr>
+    <td class="idx">40</td>
+    <td>权限管理</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>5</td>
+    <td>保存</td>
+    <td class="api">POST /api/admins → 201</td>
+    <td class="err">0</td>
+    <td><br>[filled=4]<br>[submit-clicked]<br>[edit:该行无编辑按钮]<br>[delete:该行无删除按钮]</td>
   </tr>
-<tr data-page-node-id="76pUchSdzZPx3Swp5wxNex">
-    <td class="idx" data-page-node-id="1qNYtOYIkeAYKlUdfOIGG0">41</td>
-    <td data-page-node-id="Fz057AJw5Sdtg5GyTaHzCX">数据同步</td>
-    <td data-page-node-id="VneHHQO4wRka299J6s33kw"><span class="badge" style="background:#16a34a" data-page-node-id="IU8nTk7SRM4auQLqTAKPjM">已真实落库</span></td>
-    <td data-page-node-id="2PapdUkEVtZ2J2zp9Ffj60">是</td>
-    <td data-page-node-id="xQXiRBPyJVsbsuK9djeMtO">是</td>
-    <td data-page-node-id="qEtJga5Fj8tzXyyiAabLBD">0</td>
-    <td data-page-node-id="aEaQGOYYYwn5m9NRvi3urp">数据同步提交</td>
-    <td class="api" data-page-node-id="LkLCFQQSzf9RFtVUgVGxE4">POST /api/consistency/fix → 200</td>
-    <td class="err" data-page-node-id="NKmmK1EBUL2CumJVZ6aEZy">0</td>
-    <td data-page-node-id="s1C4AWoBHKyWtHx50E3BQV"><br data-page-node-id="8WkrBBKyLsQgtPtu9NxAey">[数据同步:已执行修复]<br data-page-node-id="GQixZ5aXG8zj3stoGuiFmD">[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
+<tr>
+    <td class="idx">41</td>
+    <td>数据同步</td>
+    <td><span class="badge" style="background:#16a34a">已真实落库</span></td>
+    <td>是</td>
+    <td>是</td>
+    <td>0</td>
+    <td>数据同步提交</td>
+    <td class="api">POST /api/consistency/fix → 200</td>
+    <td class="err">0</td>
+    <td><br>[数据同步:已执行修复]<br>[edit/delete:未发现PBT测试行,跳过,不触碰真实数据]</td>
   </tr>
-<tr data-page-node-id="QRuZuWUiHmIsRw6T6KrbfL">
-    <td class="idx" data-page-node-id="G7L9Jk23cs9TLkEbnUFE2p">42</td>
-    <td data-page-node-id="PN0n5LNhy62u55j21mED9W">运维总览</td>
-    <td data-page-node-id="mH5iodey8sWIGRJjcO023A"><span class="badge" style="background:#6b7280" data-page-node-id="Ao7QuxLzU8KSFDEChlqGMK">只读/展示</span></td>
-    <td data-page-node-id="ij5WXsQbqRWE5Ev0BAh3tj">否</td>
-    <td data-page-node-id="fi9cEcCfTxcBkjEHmbP5eN">否</td>
-    <td data-page-node-id="zkMQmVnSgdmBjRDRQ4zp6B">0</td>
-    <td data-page-node-id="UXcPAMAjSFnfjbfgllvDJW">否</td>
-    <td class="api" data-page-node-id="BOEBUzzVkTSw0eXBpOHQnf">—</td>
-    <td class="err" data-page-node-id="d2mqPo3Kpns8wP0TTwLkOE">0</td>
-    <td data-page-node-id="V6SJj3MGcjUtNLROgWgv8x">只读/展示页</td>
+<tr>
+    <td class="idx">42</td>
+    <td>运维总览</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="dRFx67bRZThwxXPHGEE72b">
-    <td class="idx" data-page-node-id="iDbmqD83nt28TsL3LDjpwG">43</td>
-    <td data-page-node-id="WYhSsAWDFAg2EOe34zluVc">前端遥测</td>
-    <td data-page-node-id="XRaOq8tGddY3o8NaNh69Ag"><span class="badge" style="background:#6b7280" data-page-node-id="PlmcfqHZHbFBPLX7Z3PCwr">只读/展示</span></td>
-    <td data-page-node-id="DrF9kbhMaktb52CPQLTxrf">否</td>
-    <td data-page-node-id="pY7KkbZx3OG7cGCtknF0yy">否</td>
-    <td data-page-node-id="pEHLAEEEb4W7DzeJZbaiiy">0</td>
-    <td data-page-node-id="6hXXJZG69FaHmTD14774pd">否</td>
-    <td class="api" data-page-node-id="KBebQtN50sFlyrP1gr6H8K">—</td>
-    <td class="err" data-page-node-id="WbziZkvECGoaA36rMndHrT">0</td>
-    <td data-page-node-id="oFEiijWFEL8P1B25DWK8uO">只读/展示页</td>
+<tr>
+    <td class="idx">43</td>
+    <td>前端遥测</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="qfXRU9zEEAu7POmSzOKKFE">
-    <td class="idx" data-page-node-id="RmLzd9TEMw0HEUv9ftptaE">44</td>
-    <td data-page-node-id="ANBE5t8GVSFEkCWVAJGrCC">系统指标趋势</td>
-    <td data-page-node-id="TbkZmTSDvl5gjkA7MLAgg2"><span class="badge" style="background:#6b7280" data-page-node-id="HmfXGKO7ljj098aavDp7il">只读/展示</span></td>
-    <td data-page-node-id="UICEhtHMIXA1UssuP6VF8L">否</td>
-    <td data-page-node-id="lfagWNulVKG94rR44mRzKx">否</td>
-    <td data-page-node-id="PEf3QEJG2D3KsDBJkfC1WE">0</td>
-    <td data-page-node-id="p5izdMqlTZ9X2PD5ohEfjl">否</td>
-    <td class="api" data-page-node-id="rPEQ7TWGmvrwCAwOSHG3Ca">—</td>
-    <td class="err" data-page-node-id="C0dDJhjQ5jZzBLBz3W358Z">0</td>
-    <td data-page-node-id="4IXc1FFVpdZIG70Sqe1UYT">只读/展示页</td>
+<tr>
+    <td class="idx">44</td>
+    <td>系统指标趋势</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="EGZOnR8lPvC7xKBeBWnckD">
-    <td class="idx" data-page-node-id="YU4QfUcSRL3OU5n09rlDiP">45</td>
-    <td data-page-node-id="I6vFjaGLcLM2tmdkiG8iJz">系统诊断</td>
-    <td data-page-node-id="HU9jgh6LRyRwReRAgnradA"><span class="badge" style="background:#6b7280" data-page-node-id="0effw4LodapqIRmj7tYSQT">只读/展示</span></td>
-    <td data-page-node-id="1c4ryWD9Xp2cLmxGy9EXGm">否</td>
-    <td data-page-node-id="gF8FEVoDMp0BhEOeAklBJW">否</td>
-    <td data-page-node-id="B16VbAwkCuv1uAefZCZANz">0</td>
-    <td data-page-node-id="dy7txTDWUIIFPEaVGCa3Em">否</td>
-    <td class="api" data-page-node-id="0WBG5HZPUshtHEtwv0EdH8">—</td>
-    <td class="err" data-page-node-id="dOXdFGF21G1HinsNKNfsxQ">0</td>
-    <td data-page-node-id="556g4YlZicpVTGDWbO6pbg">只读/展示页</td>
+<tr>
+    <td class="idx">45</td>
+    <td>系统诊断</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="cqettjKXEGEuanVtxQReFY">
-    <td class="idx" data-page-node-id="IDV8tRtVbCJuTR1hG3X7wJ">46</td>
-    <td data-page-node-id="iNAsP3gbilLq4z5XMgmAy2">安全审计</td>
-    <td data-page-node-id="H7HwimTgFltZkf1kXhGAdw"><span class="badge" style="background:#6b7280" data-page-node-id="uL8x3uiKRsfZERkfO2b10s">只读/展示</span></td>
-    <td data-page-node-id="jTWPrZj4jw3i2H3xQ2Woj9">否</td>
-    <td data-page-node-id="WvRGkTun9CXLz8TVhz9NSW">否</td>
-    <td data-page-node-id="tsTQaaZCY8c9qcSjICUbr0">0</td>
-    <td data-page-node-id="C1vVi00jHqEtEmqYYhmTmI">否</td>
-    <td class="api" data-page-node-id="uIX5aSWHEjNr3BIGBQnYIF">—</td>
-    <td class="err" data-page-node-id="U8rG7omCUG4dJXINGEp3Zm">0</td>
-    <td data-page-node-id="5CPSHXbQ3UEUs4wmSVxpgu">只读/展示页</td>
+<tr>
+    <td class="idx">46</td>
+    <td>安全审计</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="O4FI6Ljryhc0LnTVZLryV8">
-    <td class="idx" data-page-node-id="7LOINSX6LXEjGWMH2VpHBd">47</td>
-    <td data-page-node-id="BvqJQtdXZDDLc9vVGEOYyM">操作日志</td>
-    <td data-page-node-id="ZdikTXvYUH7QX25WRQxDlC"><span class="badge" style="background:#6b7280" data-page-node-id="bLTiJh3hn6O87FkA68ely2">只读/展示</span></td>
-    <td data-page-node-id="WaFJQSLkuE5kqr2lj4gTTI">否</td>
-    <td data-page-node-id="1VxeXVkTqRBeFFtcKd4xDf">否</td>
-    <td data-page-node-id="8VNatPM54vDTrx20B2Tth5">0</td>
-    <td data-page-node-id="m5RT98H81UMcFJGfqqRWBM">否</td>
-    <td class="api" data-page-node-id="90TPUBHm9EjZhoxrefMPZF">—</td>
-    <td class="err" data-page-node-id="2XOULbBNVJ1G2YrBiExYgE">0</td>
-    <td data-page-node-id="rqZtGQGtH9KOr8sdpJ1VUi">只读/展示页</td>
+<tr>
+    <td class="idx">47</td>
+    <td>操作日志</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
-<tr data-page-node-id="I5EOxofrSCrtuVEyYKdryA">
-    <td class="idx" data-page-node-id="vslRDAPk53GG0R47SRth8i">48</td>
-    <td data-page-node-id="VE2Mktuy8UhBLpi4fOG522">帮助中心</td>
-    <td data-page-node-id="QO2OPkONBIWnIm2hEK8IQY"><span class="badge" style="background:#6b7280" data-page-node-id="3uVGlYSHzd0CLoduKNAjal">只读/展示</span></td>
-    <td data-page-node-id="0u2fpLG9iHFzUzZOBZauPc">否</td>
-    <td data-page-node-id="ZXyDjvhZFjMcAgEWFyYeRI">否</td>
-    <td data-page-node-id="Kd4UvhydbTUCEprEqpyuNB">0</td>
-    <td data-page-node-id="Oi4QvKCKLAwPSxPgicdvGS">否</td>
-    <td class="api" data-page-node-id="9wywoApEZCAX9E1HuvWH1o">—</td>
-    <td class="err" data-page-node-id="TvswZs9eqZHBkF56F7Mnpn">0</td>
-    <td data-page-node-id="EsYFmakZizbCGbC6BEjN7Q">只读/展示页</td>
+<tr>
+    <td class="idx">48</td>
+    <td>帮助中心</td>
+    <td><span class="badge" style="background:#6b7280">只读/展示</span></td>
+    <td>否</td>
+    <td>否</td>
+    <td>0</td>
+    <td>否</td>
+    <td class="api">—</td>
+    <td class="err">0</td>
+    <td>只读/展示页</td>
   </tr>
 </tbody>
 </table>

@@ -10,7 +10,7 @@ const rows = raw.map(l => JSON.parse(l));
 
 function classify(r) {
   const isReadOnly = (r.note && r.note.includes('只读/展示页')) || !r.hasAdd;
-  const biz = (r.apiCalls || []).filter(c => !/frontend-performance/.test(c.url));
+  const biz = (r.apiCalls || []).filter(c => !/frontend-performance|socket\.io/.test(c.url));
   const isWrite = c => ['POST','PUT','PATCH','DELETE'].includes(c.m);
   const createOk = biz.some(c => isWrite(c) && c.status >= 200 && c.status < 300);
   const createFail = biz.some(c => isWrite(c) && c.status >= 400);
@@ -36,7 +36,7 @@ const bodyRows = rows.map(r => {
   else if (cls === 'readonly') readonly++; else other++;
   const [label, color] = TAG[cls];
   const errCount = (r.consoleErrors || []).length;
-  const biz = (r.apiCalls || []).filter(c => !/frontend-performance/.test(c.url));
+  const biz = (r.apiCalls || []).filter(c => !/frontend-performance|socket\.io/.test(c.url));
   const apis = biz.map(c => `${c.m} ${c.url.replace('http://127.0.0.1:3000', '')} → ${c.status}`).join('<br>') || '—';
   const errs = (r.consoleErrors || []).slice(0, 3).map(e => e.replace(/http:\/\/127\.0\.0\.1:3000/g, '').slice(0, 120)).join('<br>') || '—';
   return `<tr>
@@ -78,7 +78,7 @@ const html = `<!doctype html>
 </style></head>
 <body>
 <h1>49 页面浏览器实跑验收报告</h1>
-<div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 后端 UNIQUE 冲突转 400 修复 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 + 种子前置数据（学生×8 / 节次 1..7）+ dev 库模式漂移修复（device/firmware_versions/system_config 补 7 列）+ idx37 远程通知专属驱动（fillRemoteNotify）+ idx21 快速记录识别 后全量重跑（full19）｜ ${ok} 页真实落库 / ${fail} 失败 / ${readonly} 只读 / ${other} 其他</div>
+<div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据来源：run15.js 实跑（Playwright + 系统 Chrome）｜ 累计修复：后端 UNIQUE 冲突转 400 + 测试标记唯一化 + 课程表避冲突循环 + A 计划 5 缺口页定向打通 + PUT/PATCH/DELETE 计为落库 + 种子前置数据 + dev 库模式漂移补列 + idx37 远程通知专属驱动 + idx21 快速记录识别 + idx28 成绩录入先建科目 + idx0/idx31 统计接口 NaN 非法 JSON 兜底（algorithm_service._safe_float）｜ 全量重跑 full22（控制台错误归零）｜ ${ok} 页真实落库 / ${fail} 失败 / ${readonly} 只读 / ${other} 其他</div>
 <div class="stats">
   <div class="stat"><b style="color:#16a34a">${ok}</b><span>已真实落库（写接口 2xx）</span></div>
   <div class="stat"><b style="color:#dc2626">${fail}</b><span>提交被拒（4xx/5xx）</span></div>

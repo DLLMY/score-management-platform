@@ -436,6 +436,17 @@ async function fillPhonebox(page, marker, sleep){
 // idx 28 成绩录入：自建"已发布+带科目"考试 → 刷新 → 选考试 → 填首个单元格 → 保存全部
 async function fillScoreEntry(page, marker, sleep){
   let examId=null, dbg='';
+  // 成绩录入页按科目名解析 subject_id（getSubjectId 依赖 Subject 表存在该科目）。
+  // 若科目不在 Subject 表，blur-save 会 POST /api/scores 400 并写入控制台错误。
+  // 故建考试前先确保科目存在，使前端能解析到 subject_id，400 消失。
+  const subjName='测试69614';
+  try{
+    const gl=await page.request.get(BASE+'/api/subjects?page_size=300');
+    let subjList=[]; try{ const gj=await gl.json(); subjList=(gj&&(gj.data||gj.items||gj))||[]; if(!Array.isArray(subjList)) subjList=[]; }catch(_){}
+    if(!subjList.some(s=>s&&s.name===subjName)){
+      await page.request.post(BASE+'/api/subjects', { data: JSON.stringify({name:subjName}), headers:{'Content-Type':'application/json'} }).catch(()=>{});
+    }
+  }catch(e){}
   try{
     const resp=await page.request.post(BASE+'/api/exams', {
       data: JSON.stringify({
