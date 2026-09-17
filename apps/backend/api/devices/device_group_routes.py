@@ -147,7 +147,10 @@ class DeviceGroupItem(Resource):
             return APIResponse.not_found(message="设备分组不存在")
 
         result = group.to_dict()
-        result["devices"] = [m.to_dict() for m in group.devices]
+        mappings = DeviceGroupMapping.query.filter_by(group_id=group_id).all()
+        device_ids = [m.device_id for m in mappings]
+        devices = Device.query.filter(Device.device_id.in_(device_ids)).all() if device_ids else []
+        result["devices"] = [d.to_dict() for d in devices]
         return APIResponse.success(data=result)
 
     @ns_device_group.doc("update_device_group", description="更新设备分组", security="Bearer")
