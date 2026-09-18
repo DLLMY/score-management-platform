@@ -10503,58 +10503,6 @@
         ]
       }
     },
-    "/role-permissions/": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取权限定义列表",
-        "description": "获取权限定义列表\n获取系统中所有角色权限定义的列表。",
-        "operationId": "list_role_permissions",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "role-permissions"
-        ]
-      }
-    },
-    "/role-permissions/{id}": {
-      "parameters": [
-        {
-          "in": "path",
-          "description": "权限定义ID",
-          "name": "id",
-          "required": true,
-          "type": "integer"
-        }
-      ],
-      "get": {
-        "responses": {
-          "404": {
-            "description": "权限定义不存在"
-          },
-          "200": {
-            "description": "成功"
-          }
-        },
-        "summary": "获取权限定义详情",
-        "description": "获取权限定义详情\n根据ID获取角色权限定义的详细信息。\n\n参数：\n- id: 权限定义ID（路径参数）",
-        "operationId": "get_role_permission",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "tags": [
-          "role-permissions"
-        ]
-      }
-    },
     "/rules/": {
       "get": {
         "responses": {
@@ -14347,10 +14295,6 @@
     {
       "name": "sub-accounts",
       "description": "子账号管理相关操作"
-    },
-    {
-      "name": "role-permissions",
-      "description": "角色权限定义相关操作"
     },
     {
       "name": "student",
