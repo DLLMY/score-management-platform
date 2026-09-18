@@ -188,10 +188,12 @@ tools/tmp/
 apps/frontend/_tsc*.txt
 apps/frontend/_bash_marker.txt
 .workbuddy/tmp_scan/
+# 可恢复回收站（调试产物暂存，不入库）
+.workbuddy/_trash_*/
 
 # ================ 本地密钥/临时/上传（禁止入库） ================
-# 含密钥的本地开发计划目录（切勿入库！）
-下一步开发计划-2026-09-15*
+# 含密钥/敏感信息的本地开发计划目录（切勿入库！全角冒号 U+FF1A）
+生成时间：2026-09-15*
 # 后端临时调试脚本（__*_tmp.py）
 apps/backend/__*_tmp.py
 # OTA 固件上传产物（运行时生成，体积大，不入库）
