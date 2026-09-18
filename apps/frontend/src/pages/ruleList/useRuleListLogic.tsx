@@ -20,9 +20,16 @@ import {
 } from '../../hooks';
 import { useConfirm } from '../../components';
 import api, { request } from '../../services/api';
-import { validateForm } from '../../utils/validation';
 import type { RuleViewProps } from '../rule/RuleSections';
-import type { Rule, Category, FormData, FormErrors, RuleTemplate } from '../RuleList';
+import type { Rule, Category, FormData, RuleTemplate } from '../RuleList';
+
+// 统一校验范式（任务 b）：useForm 的 object 规则原生不支持 integer，
+// 用 useForm 支持的 validate 函数承载整数校验，等价于原 validateForm 的 'integer' 规则。
+const integerRule = (value: unknown): string | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const num = Number(value);
+  return !isNaN(num) && Number.isInteger(num) ? undefined : '请输入有效的整数';
+};
 
 /**
  * 评分规则列表页逻辑 hook。
@@ -55,6 +62,7 @@ export function useRuleListLogic(): RuleViewProps {
     resetForm,
     errors: formErrors,
     setErrors: setFormErrors,
+    validateAll,
   } = useForm<FormData>(
     {
       name: '',
@@ -67,10 +75,10 @@ export function useRuleListLogic(): RuleViewProps {
     },
     {
       name: { required: true, maxLength: 100 },
-      score: { required: true, min: -1000, max: 1000 },
+      score: { required: true, min: -1000, max: 1000, validate: integerRule },
       description: { maxLength: 500 },
-      daily_limit: { min: 0, max: 100 },
-      min_interval: { min: 0, max: 1440 },
+      daily_limit: { min: 0, max: 100, validate: integerRule },
+      min_interval: { min: 0, max: 1440, validate: integerRule },
     }
   );
 
@@ -95,17 +103,6 @@ export function useRuleListLogic(): RuleViewProps {
     open: openTemplateModal,
     close: closeTemplateModal,
   } = useModal<null>({});
-
-  const validationRules = useMemo(
-    () => ({
-      name: ['required', { maxLength: 100 }],
-      score: ['required', 'integer', { min: -1000 }, { max: 1000 }],
-      description: [{ maxLength: 500 }],
-      daily_limit: ['integer', { min: 0 }, { max: 100 }],
-      min_interval: ['integer', { min: 0 }, { max: 1440 }],
-    }),
-    []
-  );
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -173,14 +170,11 @@ export function useRuleListLogic(): RuleViewProps {
     async (e?: FormEvent<HTMLFormElement>) => {
       e?.preventDefault();
 
-      const { isValid, errors } = validateForm(formData, validationRules);
-
-      if (!isValid) {
-        setFormErrors(errors as FormErrors);
+      // 统一校验范式（任务 b）：复用 useForm 的 validateAll()（object 格式规则已含 integer 兜底），
+      // 不再单独维护数组格式的 validationRules + validateForm。
+      if (!validateAll()) {
         return;
       }
-
-      setFormErrors({});
 
       const submitData = {
         ...formData,
@@ -207,13 +201,13 @@ export function useRuleListLogic(): RuleViewProps {
         showToast('error', '操作失败: ' + (err as Error).message);
       }
     },
-    [formData, editingRule, showToast, validationRules, rules]
+    [formData, editingRule, showToast, validateAll, rules]
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       const ok = await confirmRef.current({
-        message: '确定要删除该规则吗？此操作不可撤销。',
+        message: '确定要删除该规则吗？此操作不可恢复。',
         confirmText: '确定',
         cancelText: '取消',
         type: 'danger',

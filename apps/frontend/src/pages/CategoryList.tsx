@@ -101,7 +101,7 @@ function CategoryList() {
 
   const handleDelete = async (id: number): Promise<void> => {
     const ok = await confirmRef.current({
-      message: '确定要删除该分类吗？此操作不可撤销。',
+      message: '确定要删除该分类吗？此操作不可恢复。',
       confirmText: '确定',
       cancelText: '取消',
       type: 'danger',

@@ -8,10 +8,17 @@
  * 主文件退化为「hook → UserListView」的薄装配。
  */
 
-import { useReducer, useMemo, useRef } from 'react';
+import { useReducer, useMemo, useRef, useCallback, type FormEvent } from 'react';
 import type { ColumnType } from '../../components';
 import type { User } from '../../types';
-import { useAppState, usePermissions, useStableToast, useUndoRedo } from '../../hooks';
+import type { Rule } from './types';
+import {
+  useAppState,
+  usePermissions,
+  useStableToast,
+  useUndoRedo,
+  useSubmitGuard,
+} from '../../hooks';
 import { useConfirm } from '../../components';
 import { buildUserColumns } from './columns';
 import { initialState, reducer, type Action, type State } from './reducer';
@@ -35,6 +42,8 @@ export function useUserListLogic() {
   const confirmFn = useConfirm();
   const confirmRef = useRef(confirmFn);
   confirmRef.current = confirmFn;
+
+  const { run: runGuard } = useSubmitGuard();
 
   const fetchDomain = useUserListFetch({
     dispatch,
@@ -69,20 +78,51 @@ export function useUserListLogic() {
     selectedUsers: state.selectedUsers,
   });
 
+  // 收敛（任务 a）：userList 此前仅用 wrapAsync 做 loading/错误编排，缺双击防护；
+  // 此处用全站标准的 useSubmitGuard 统一包裹 6 个变更处理器，与 26+ 页面保持一致，杜绝重复提交。
+  const guardedSubmit = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      await runGuard(() => crudDomain.handleSubmit(e));
+    },
+    [runGuard, crudDomain.handleSubmit]
+  );
+  const guardedToggle = useCallback(
+    async (user: User) => {
+      await runGuard(() => crudDomain.handleToggleActive(user));
+    },
+    [runGuard, crudDomain.handleToggleActive]
+  );
+  const guardedDelete = useCallback(
+    async (userId: number) => {
+      await runGuard(() => crudDomain.handleDelete(userId));
+    },
+    [runGuard, crudDomain.handleDelete]
+  );
+  const guardedQuickScore = useCallback(
+    async (rule: Rule) => {
+      await runGuard(() => scoreDomain.handleQuickScore(rule));
+    },
+    [runGuard, scoreDomain.handleQuickScore]
+  );
+  const guardedBatchDelete = useCallback(async () => {
+    await runGuard(() => scoreDomain.handleBatchDelete());
+  }, [runGuard, scoreDomain.handleBatchDelete]);
+  const guardedBatchScore = useCallback(
+    async (scoreChange: number) => {
+      await runGuard(() => scoreDomain.handleBatchScore(scoreChange));
+    },
+    [runGuard, scoreDomain.handleBatchScore]
+  );
+
   const userColumns = useMemo<ColumnType<User>[]>(
     () =>
       buildUserColumns({
         handleOpenQuickScore: scoreDomain.handleOpenQuickScore,
         handleOpenModal: crudDomain.handleOpenModal,
-        handleDelete: crudDomain.handleDelete,
-        handleToggleActive: crudDomain.handleToggleActive,
+        handleDelete: guardedDelete,
+        handleToggleActive: guardedToggle,
       }),
-    [
-      scoreDomain.handleOpenQuickScore,
-      crudDomain.handleOpenModal,
-      crudDomain.handleDelete,
-      crudDomain.handleToggleActive,
-    ]
+    [scoreDomain.handleOpenQuickScore, crudDomain.handleOpenModal, guardedDelete, guardedToggle]
   );
 
   const props = {
@@ -101,14 +141,15 @@ export function useUserListLogic() {
     handlePageChange: fetchDomain.handlePageChange,
     handleOpenModal: crudDomain.handleOpenModal,
     handleCloseModal: crudDomain.handleCloseModal,
-    handleSubmit: crudDomain.handleSubmit,
-    handleToggleActive: crudDomain.handleToggleActive,
-    handleQuickScore: scoreDomain.handleQuickScore,
+    handleSubmit: guardedSubmit,
+    handleToggleActive: guardedToggle,
+    handleQuickScore: guardedQuickScore,
     handleExport: scoreDomain.handleExport,
     handleClearSelection: scoreDomain.handleClearSelection,
     handleSelectionChange: scoreDomain.handleSelectionChange,
-    handleBatchDelete: scoreDomain.handleBatchDelete,
-    handleBatchScore: scoreDomain.handleBatchScore,
+    handleBatchDelete: guardedBatchDelete,
+    handleBatchScore: guardedBatchScore,
+    handleDelete: guardedDelete,
     handleClearFilters: fetchDomain.handleClearFilters,
     handleRetry: fetchDomain.handleRetry,
     fetchUsers: fetchDomain.fetchUsers,

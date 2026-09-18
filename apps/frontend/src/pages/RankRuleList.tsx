@@ -8,10 +8,16 @@ import {
   useSubmitGuard,
   useStableToast,
 } from '../hooks';
-import type { FormErrors as UseFormErrors } from '../hooks';
-import { validateForm } from '../utils/validation';
 import { useConfirm } from '../components';
 import RankRuleListView, { FormData } from './rankRuleList/RankRuleListView';
+
+// 统一校验范式：useForm 的 object 规则原生不支持 integer，
+// 用 useForm 支持的 validate 函数承载整数校验，等价于原 validateForm 的 'integer' 规则。
+const integerRule = (value: unknown): string | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const num = Number(value);
+  return !isNaN(num) && Number.isInteger(num) ? undefined : '请输入有效的整数';
+};
 
 function RankRuleList() {
   const { showToast } = useStableToast();
@@ -34,6 +40,7 @@ function RankRuleList() {
     resetForm,
     errors: formErrors,
     setErrors: setFormErrors,
+    validateAll,
   } = useForm<FormData>(
     {
       name: '',
@@ -48,8 +55,8 @@ function RankRuleList() {
     },
     {
       name: { required: true, maxLength: 50 },
-      min_score: { required: true, min: 0, max: 10000 },
-      max_score: { required: true, min: 0, max: 10000 },
+      min_score: { required: true, min: 0, max: 10000, validate: integerRule },
+      max_score: { required: true, min: 0, max: 10000, validate: integerRule },
       description: { maxLength: 200 },
     }
   );
@@ -65,22 +72,12 @@ function RankRuleList() {
     },
   });
 
-  const validationRules = {
-    name: ['required', { maxLength: 50 }],
-    min_score: ['required', 'integer', { min: 0 }, { max: 10000 }],
-    max_score: ['required', 'integer', { min: 0 }, { max: 10000 }],
-    description: [{ maxLength: 200 }],
-  };
-
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   const handleSubmit = async (e?: FormEvent<HTMLFormElement>): Promise<void> => {
     e?.preventDefault();
 
-    const { isValid, errors } = validateForm(formData, validationRules);
-
-    if (!isValid) {
-      setFormErrors(errors as UseFormErrors<FormData>);
+    if (!validateAll()) {
       return;
     }
 
@@ -110,7 +107,7 @@ function RankRuleList() {
 
   const handleDelete = async (id: number): Promise<void> => {
     const ok = await confirmRef.current({
-      message: '确定要删除该排名规则吗？此操作不可撤销。',
+      message: '确定要删除该排名规则吗？此操作不可恢复。',
       confirmText: '确定',
       cancelText: '取消',
       type: 'danger',

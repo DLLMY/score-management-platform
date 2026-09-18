@@ -40,7 +40,7 @@ export function useDeviceCrudDomain(deps: DeviceManagementSharedDeps) {
     async (id: number) => {
       const ok = await confirmRef.current({
         title: '删除设备',
-        message: '确定要删除这个设备吗？此操作无法撤销。',
+        message: '确定要删除这个设备吗？此操作不可恢复。',
         confirmText: '删除',
         cancelText: '取消',
         type: 'danger',
