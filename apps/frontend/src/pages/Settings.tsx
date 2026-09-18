@@ -129,7 +129,7 @@ function Settings() {
       message: '确定要恢复默认设置吗？当前全部系统配置将被覆盖。',
       confirmText: '确定',
       cancelText: '取消',
-      type: 'warning',
+      type: 'danger',
     });
     if (!ok) return;
     const defaultSettings: SystemSettings = {
@@ -190,7 +190,7 @@ function Settings() {
         message: `确定要从备份文件 ${filename} 恢复数据吗？此操作将覆盖当前数据！`,
         confirmText: '确定',
         cancelText: '取消',
-        type: 'warning',
+        type: 'danger',
       });
       if (!ok) return;
       setLoading((prev: LoadingState) => ({ ...prev, restore: true }));

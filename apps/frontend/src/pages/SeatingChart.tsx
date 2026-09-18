@@ -147,7 +147,7 @@ function SeatingChartPage() {
       message: '自动排列将覆盖当前座次表的全部座位，确定继续吗？',
       confirmText: '确定',
       cancelText: '取消',
-      type: 'warning',
+      type: 'danger',
     });
     if (!ok) return;
     setIsArranging(true);
