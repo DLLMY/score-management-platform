@@ -378,7 +378,7 @@ export function useScoreEntryActions(params: ScoreEntryActionsParams): ScoreEntr
       message: `确定要重置所有学生的 ${batchSubject} 成绩为空吗？`,
       confirmText: '重置',
       cancelText: '取消',
-      type: 'warning',
+      type: 'danger',
     });
     if (!ok) return;
 

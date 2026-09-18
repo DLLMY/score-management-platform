@@ -139,7 +139,7 @@ const ClassPeriodSettings = () => {
       message: '确定要重置为默认节次吗？所有自定义节次将被删除。',
       confirmText: '确定',
       cancelText: '取消',
-      type: 'warning',
+      type: 'danger',
     });
     if (!ok) return;
     try {
