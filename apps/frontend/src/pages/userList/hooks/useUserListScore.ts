@@ -5,12 +5,13 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import type { Dispatch } from 'react';
+import type { Dispatch, MutableRefObject } from 'react';
 import api, { getAuthHeaders } from '../../../services/api';
 import logger from '../../../utils/logger';
 import { downloadBlob } from '../../../utils/download';
 import { withOptimisticUpdate } from '../../../utils/optimisticUpdate';
 import { useAppState, useStableToast, useUndoRedo } from '../../../hooks';
+import { useConfirm } from '../../../components';
 import type { User } from '../../../types';
 import type { UserListAction } from '../reducer';
 import type { Rule } from '../types';
@@ -24,6 +25,7 @@ export interface useUserListScoreParams {
   showToast: ShowToast;
   wrapAsync: WrapAsync;
   addOperation: AddOperation;
+  confirmRef: MutableRefObject<ReturnType<typeof useConfirm>>;
   users: User[];
   quickScoreUser: User | null;
   selectedUsers: Set<number>;
@@ -42,8 +44,16 @@ export interface useUserListScoreResult {
 }
 
 export function useUserListScore(params: useUserListScoreParams): useUserListScoreResult {
-  const { dispatch, showToast, wrapAsync, addOperation, users, quickScoreUser, selectedUsers } =
-    params;
+  const {
+    dispatch,
+    showToast,
+    wrapAsync,
+    addOperation,
+    confirmRef,
+    users,
+    quickScoreUser,
+    selectedUsers,
+  } = params;
 
   const selectedUsersArray = useMemo(() => Array.from(selectedUsers), [selectedUsers]);
   const selectedUsersData = useMemo(
@@ -137,6 +147,15 @@ export function useUserListScore(params: useUserListScoreParams): useUserListSco
   const handleBatchDelete = useCallback(async () => {
     if (selectedUsersArray.length === 0) return;
 
+    const ok = await confirmRef.current({
+      title: '批量删除学生',
+      message: `确定要删除选中的 ${selectedUsersArray.length} 名学生吗？此操作不可恢复。`,
+      confirmText: '删除',
+      cancelText: '取消',
+      type: 'danger',
+    });
+    if (!ok) return;
+
     await wrapAsync(
       'batch-delete-users',
       async () => {
@@ -166,6 +185,18 @@ export function useUserListScore(params: useUserListScoreParams): useUserListSco
   const handleBatchScore = useCallback(
     async (scoreChange: number) => {
       if (selectedUsersArray.length === 0) return;
+
+      const action = scoreChange > 0 ? '加分' : '减分';
+      const ok = await confirmRef.current({
+        title: `批量${action}`,
+        message: `确定要为选中的 ${selectedUsersArray.length} 名学生${action} ${Math.abs(
+          scoreChange
+        )}分吗？`,
+        confirmText: '确定',
+        cancelText: '取消',
+        type: 'warning',
+      });
+      if (!ok) return;
 
       await wrapAsync(
         'batch-score-users',

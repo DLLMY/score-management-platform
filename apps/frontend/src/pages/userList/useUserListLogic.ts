@@ -63,6 +63,7 @@ export function useUserListLogic() {
     showToast,
     wrapAsync,
     addOperation,
+    confirmRef,
     users: state.users,
     quickScoreUser: state.quickScoreUser,
     selectedUsers: state.selectedUsers,
