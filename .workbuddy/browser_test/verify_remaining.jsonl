@@ -1,0 +1,27 @@
+{"summary":{"total":25,"withErrors":0,"totalErrors":0}}
+{"page":"#7 智能评分","button":"解析","effect":"clicked","errors":[]}
+{"page":"#22 文体活动","button":"(无表格行)","effect":"no-row","errors":[]}
+{"page":"#23 班级文化","button":"(无表格行)","effect":"no-row","errors":[]}
+{"page":"#24 学法指导","button":"(无表格行)","effect":"no-row","errors":[]}
+{"page":"#37 远程通知","button":"黑色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"红色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"蓝色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"绿色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"黄色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"紫色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"橙色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"灰色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"深灰","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"深蓝","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"深红","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"金色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"白色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"青色","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"粉红","effect":"clicked","errors":[]}
+{"page":"#37 远程通知","button":"天蓝","effect":"clicked","errors":[]}
+{"page":"#32 设备管理","button":"导出Excel","effect":"clicked","errors":[]}
+{"page":"#32 设备管理","button":"导出PDF","effect":"clicked","errors":[]}
+{"page":"#32 设备管理","button":"导入设备","effect":"clicked","errors":[]}
+{"page":"#32 设备管理","button":"添加设备","effect":"clicked","errors":[]}
+{"page":"#32 设备管理","button":"批量OTA升级","effect":"clicked","errors":[]}
+__DONE__

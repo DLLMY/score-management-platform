@@ -41,12 +41,12 @@ const SEL = 'button,[role=button],a.ant-btn,a[class*=btn],input[type=submit],div
 
 async function enumButtons(page){
   return await page.evaluate((SEL)=>{
-    const vis=e=>{const r=e.getBoundingClientRect();const s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
+    const vis=e=>getComputedStyle(e).display!=='none';
     const inNav=el=>!!el.closest('nav,aside,.sidebar,.ant-menu,[class*=sidebar],[class*=menu],header,.header,[class*=header]');
     const labelOf=el=>(el.innerText||el.getAttribute('title')||el.getAttribute('aria-label')||el.value||'').trim().replace(/\s+/g,' ');
     const els=Array.from(document.querySelectorAll(SEL)).filter(e=>vis(e) && !inNav(e));
     const seen=new Set(); const out=[];
-    for(const e of els){ const t=labelOf(e); if(!t) continue; const key=t+'|'+e.tagName; if(seen.has(key)) continue; seen.add(key); out.push({text:t.slice(0,40), tag:e.tagName, cls:(e.className||'').toString().slice(0,60)}); }
+    for(const e of els){ const t=labelOf(e); if(!t) continue; const key=t+'|'+e.tagName; if(seen.has(key)) continue; seen.add(key); out.push({text:t, tag:e.tagName, cls:(e.className||'').toString().slice(0,60)}); }
     return out;
   }, SEL);
 }
@@ -92,17 +92,41 @@ async function dismissModal(page){
 }
 
 async function clickByText(page, txt){
-  return await page.evaluate((txt)=>{
-    const SEL='button,[role=button],a.ant-btn,a[class*=btn],input[type=submit],div[role=tab],a[role=tab],li[role=tab]';
-    const vis=e=>{const r=e.getBoundingClientRect();const s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
-    const inNav=el=>!!el.closest('nav,aside,.sidebar,.ant-menu,[class*=sidebar],[class*=menu],header,.header,[class*=header]');
-    const labelOf=el=>(el.innerText||el.getAttribute('title')||el.getAttribute('aria-label')||el.value||'').trim().replace(/\s+/g,' ');
-    const els=Array.from(document.querySelectorAll(SEL)).filter(e=>vis(e)&&!inNav(e));
-    const target=els.find(e=>labelOf(e)===txt);
-    if(!target) return false;
-    try{ target.click(); }catch(e){ return false; }
-    return true;
-  }, txt);
+  // 沿用 v4 已被验证有效的「页内 evaluate 精确文本点击」：直接派发真实 click，
+  // 能正确打开 antd Modal/Drawer（v4 实测打开 104 个对话框并取消）。
+  // 改进：① visibility 判定放宽为「display!=='none'」——表格行 hover 才显现的操作按钮
+  //      （CSS visibility:hidden 直到行 hover）原本被拒，放宽后即可真正点中；
+  //   ② 至多 3 次重试；首次失败后尝试点开「更多操作」类 Dropdown 触发器，再次精确匹配，
+  //      以触达 #32 等设备操作的折叠项。
+  for(let attempt=0; attempt<3; attempt++){
+    const ok = await page.evaluate((txt)=>{
+      const SEL='button,[role=button],a.ant-btn,a[class*=btn],input[type=submit],div[role=tab],a[role=tab],li[role=tab]';
+      const vis=e=>getComputedStyle(e).display!=='none';
+      const inNav=el=>!!el.closest('nav,aside,.sidebar,.ant-menu,[class*=sidebar],[class*=menu],header,.header,[class*=header]');
+      const labelOf=el=>(el.innerText||el.getAttribute('title')||el.getAttribute('aria-label')||el.value||'').trim().replace(/\s+/g,' ');
+      const els=Array.from(document.querySelectorAll(SEL)).filter(e=>vis(e) && !inNav(e));
+      // 精确匹配优先，避免「刷新」误中「刷新列表」
+      let target=els.find(e=>labelOf(e)===txt);
+      if(!target) target=els.find(e=>labelOf(e).startsWith(txt+' ') || labelOf(e).endsWith(' '+txt));
+      if(!target) return false;
+      try{ target.click(); }catch(e){ return false; }
+      return true;
+    }, txt);
+    if(ok) return true;
+    // 首次失败：尝试点开一个 Dropdown/“更多操作”触发器，再重试（触达折叠项）
+    if(attempt===0){
+      await page.evaluate(()=>{
+        const SEL='button,[role=button],a.ant-btn,a[class*=btn]';
+        const vis=e=>getComputedStyle(e).display!=='none';
+        const labelOf=el=>(el.innerText||el.getAttribute('title')||'').trim();
+        const trig=Array.from(document.querySelectorAll(SEL)).filter(e=>vis(e)&&/^(更多|操作|更多操作|展开|设置|···|⋮)$|更多操作/.test(labelOf(e)));
+        if(trig.length) trig[0].click();
+      }).catch(()=>{});
+      await sleep(600);
+    }
+    await sleep(400);
+  }
+  return false;
 }
 
 (async () => {
@@ -112,7 +136,13 @@ async function clickByText(page, txt){
   const errBuf=[]; const respBuf=[]; let curRoute=-1;
   page.on('pageerror', e=>errBuf.push({t:'pageerror',m:String(e.message||e).slice(0,200),route:curRoute}));
   page.on('console', m=>{ if(m.type()==='error') errBuf.push({t:'console',m:String(m.text()).slice(0,200),route:curRoute}); });
-  page.on('response', r=>{ const m=r.request().method(); if(['POST','PUT','DELETE','PATCH'].includes(m)) respBuf.push({route:curRoute,m,url:r.url().split('?')[0],status:r.status()}); });
+  // 捕获写操作(POST/PUT/DELETE/PATCH) 与 读操作(GET /api)——后者用于还原「刷新/导出/分页」等
+  // 纯 GET 按钮的真实副作用（原脚本只记写操作，导致这类按钮被误判为 effect=none）。
+  // 点击前的页面初始 GET 已在 beforeResp 切片之外，不会被计入。
+  page.on('response', r=>{ const m=r.request().method(); const u=r.url().split('?')[0];
+    if(m==='GET' && /\/api\//.test(u)) respBuf.push({route:curRoute,m,url:u,status:r.status()});
+    else if(['POST','PUT','DELETE','PATCH'].includes(m)) respBuf.push({route:curRoute,m,url:u,status:r.status()});
+  });
 
   await page.goto(BASE+'/#/login',{waitUntil:'networkidle'}); await sleep(1500);
   await page.fill('input[placeholder="请输入用户名"]','admin');

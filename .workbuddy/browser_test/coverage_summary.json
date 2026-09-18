@@ -1,0 +1,95 @@
+{
+  "parsed": 49,
+  "totalDiscovered": 279,
+  "totalTested": 280,
+  "genuine": 6,
+  "modalOnly": 4,
+  "perPage": [
+    {
+      "idx": 28,
+      "name": "成绩录入",
+      "discovered": 10,
+      "tested": 6,
+      "genuine": [
+        {
+          "text": "批量确认",
+          "where": [
+            "dropdown",
+            "accordion"
+          ]
+        },
+        {
+          "text": "批量重置",
+          "where": [
+            "dropdown",
+            "accordion"
+          ]
+        },
+        {
+          "text": "批量删除",
+          "where": [
+            "dropdown",
+            "accordion"
+          ]
+        }
+      ],
+      "modalCtrl": [
+        "关闭"
+      ]
+    },
+    {
+      "idx": 39,
+      "name": "系统设置",
+      "discovered": 13,
+      "tested": 9,
+      "genuine": [
+        {
+          "text": "已保存",
+          "where": [
+            "dropdown",
+            "accordion"
+          ]
+        }
+      ],
+      "modalCtrl": [
+        "关闭",
+        "取消",
+        "确定"
+      ]
+    },
+    {
+      "idx": 43,
+      "name": "前端遥测",
+      "discovered": 9,
+      "tested": 11,
+      "genuine": [
+        {
+          "text": "67",
+          "where": [
+            "visible",
+            "row-hover",
+            "accordion"
+          ]
+        }
+      ],
+      "modalCtrl": []
+    },
+    {
+      "idx": 47,
+      "name": "操作日志",
+      "discovered": 8,
+      "tested": 9,
+      "genuine": [
+        {
+          "text": "7",
+          "where": [
+            "visible",
+            "row-hover",
+            "accordion"
+          ]
+        }
+      ],
+      "modalCtrl": []
+    }
+  ]
+}
