@@ -15,13 +15,12 @@ import {
   Award,
   History,
   AlertCircle,
-  AlertTriangle,
   RefreshCw,
   X,
   Plus,
   Minus,
 } from 'lucide-react';
-import { EmptyState, Button, PermissionButton } from '../../components';
+import { EmptyState, Button, PermissionButton, ErrorState } from '../../components';
 import type { UserDetailViewProps } from './types';
 
 const UserDetailView: React.FC<UserDetailViewProps> = ({
@@ -238,12 +237,7 @@ const UserDetailView: React.FC<UserDetailViewProps> = ({
             </div>
             <div className='card-body'>
               {recordsError ? (
-                <div className='flex items-center gap-2 p-4 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
-                  <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-                  <p className='text-sm text-amber-700 dark:text-amber-300'>
-                    积分记录加载失败，请返回重试
-                  </p>
-                </div>
+                <ErrorState message='积分记录加载失败' onRetry={fetchRecords} />
               ) : records.length === 0 ? (
                 <EmptyState
                   icon='file'
