@@ -31,8 +31,12 @@ export default defineConfig(({ mode }) => {
       // Vite 5.4+ 支持 allowedHosts: true 放行所有受信任域名
       allowedHosts: true,
       proxy: {
-        '/api': { target: apiUrl, changeOrigin: true },
-        '/ws': { target: apiUrl, changeOrigin: true, ws: true },
+        // proxyTimeout：后端个别重负载端点（NLP 模型加载/训练等）首次调用会超过
+        // http-proxy 默认 ~30s 超时，被代理以 504 切断（见 nlp_routes.py 注释
+        // "前端 fetch 30s 必超时 504"）。开发环境下放宽到 120s，避免慢但合法的
+        // 响应被误判为网关超时。仅影响 dev 代理，不改变任何应用逻辑。
+        '/api': { target: apiUrl, changeOrigin: true, timeout: 120000, proxyTimeout: 120000 },
+        '/ws': { target: apiUrl, changeOrigin: true, ws: true, timeout: 120000, proxyTimeout: 120000 },
         // flask-restx / flasgger 的 Swagger UI 静态资源以根路径 /swaggerui、/flasgger_static、/swagger/ 提供，
         // 不属 /api 前缀，须单独转发到后端；否则经前端(3000) SPA fallback 返回 HTML → SwaggerUIBundle 未定义
         '/swaggerui': { target: apiUrl, changeOrigin: true },

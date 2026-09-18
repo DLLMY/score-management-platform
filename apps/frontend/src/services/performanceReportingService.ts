@@ -72,14 +72,19 @@ class PerformanceReportingService {
           const errorsPayload = this.errorQueue.map((e) => JSON.stringify(e));
 
           if (metricsPayload) {
+            // 关键：sendBeacon 裸字符串会带 text/plain，被后端 @expect 以 415 拒绝；
+            // 必须用 Blob 显式声明 application/json，否则页面卸载时上报必失败。
             navigator.sendBeacon(
               `${API_BASE_URL}/api/system/frontend-performance/batch`,
-              metricsPayload
+              new Blob([metricsPayload], { type: 'application/json' })
             );
           }
 
           errorsPayload.forEach((payload) => {
-            navigator.sendBeacon(`${API_BASE_URL}/api/system/frontend-error`, payload);
+            navigator.sendBeacon(
+              `${API_BASE_URL}/api/system/frontend-error`,
+              new Blob([payload], { type: 'application/json' })
+            );
           });
         } catch {
           // 静默失败，不影响页面卸载
