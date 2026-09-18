@@ -19,8 +19,6 @@ import {
   PermissionButton,
   BatchActionBar,
   AdvancedSearch,
-  EmptyState,
-  TableSkeleton,
   DataTable,
   Button,
   ToggleSwitch,
@@ -172,89 +170,6 @@ function UserListView(props: UserListViewProps) {
     [state.advancedConditions, classList, dispatch]
   );
 
-  if (state.isLoading) {
-    return (
-      <div className='space-y-6'>
-        <div className='flex items-center justify-between'>
-          <div>
-            <div className='h-8 bg-gray-200 rounded w-48 animate-pulse' />
-            <div className='h-4 bg-gray-200 rounded w-64 mt-2 animate-pulse' />
-          </div>
-          <div className='flex gap-2'>
-            <div className='h-10 bg-gray-200 rounded w-28 animate-pulse' />
-            <div className='h-10 bg-gray-200 rounded w-28 animate-pulse' />
-            <div className='h-10 bg-gray-200 rounded w-28 animate-pulse' />
-          </div>
-        </div>
-        <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-4'>
-          <div className='h-12 bg-gray-200 rounded mb-4 animate-pulse' />
-          <TableSkeleton rows={8} columns={6} />
-        </div>
-      </div>
-    );
-  }
-
-  if (state.error) {
-    return (
-      <EmptyState
-        icon='alert'
-        title='加载失败'
-        description={state.error}
-        actionLabel='重试'
-        onAction={handleRetry}
-      />
-    );
-  }
-
-  if (state.users.length === 0) {
-    return (
-      <div className='space-y-6'>
-        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
-          <div>
-            <h1 className='text-2xl font-bold text-gray-900'>学生管理</h1>
-            <p className='text-gray-500 mt-1'>管理学生信息和积分</p>
-          </div>
-          <div className='flex flex-wrap items-center gap-3'>
-            <PermissionButton
-              permission='student.edit'
-              variant='secondary'
-              onClick={() => dispatch({ type: 'SET_SHOW_IMPORT_MODAL', payload: true })}
-            >
-              <Upload className='w-4 h-4 mr-2' />
-              导入学生
-            </PermissionButton>
-            <PermissionButton permission='student.edit' variant='secondary' onClick={handleExport}>
-              <Download className='w-4 h-4 mr-2' />
-              导出学生
-            </PermissionButton>
-            <PermissionButton permission='student.edit' onClick={() => handleOpenModal()}>
-              <Plus className='w-4 h-4 mr-2' />
-              添加学生
-            </PermissionButton>
-          </div>
-        </div>
-
-        <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-4'>
-          <SearchFilter
-            value={state.searchTerm}
-            onChange={handleSearch}
-            placeholder='搜索学生姓名、卡号或手机号'
-            loading={state.isFetching}
-            autoSearch={false}
-          />
-        </div>
-
-        <EmptyState
-          icon='search'
-          title='暂无搜索结果'
-          description='没有找到匹配的用户'
-          actionLabel='清除筛选'
-          onAction={handleClearFilters}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
@@ -356,6 +271,7 @@ function UserListView(props: UserListViewProps) {
           columns={userColumns}
           dataSource={state.users}
           loading={state.isLoading || state.isFetching}
+          error={state.error ? { message: state.error, onRetry: handleRetry } : null}
           total={state.pagination.total}
           page={state.pagination.page}
           pageSize={state.pagination.per_page}
@@ -364,7 +280,13 @@ function UserListView(props: UserListViewProps) {
           selectedRowKeys={selectedUsersArray}
           onSelectChange={handleSelectionChange}
           scroll={{ x: 'max-content' }}
-          empty={{ icon: 'users', title: '暂无学生', description: '添加或导入学生开始管理' }}
+          empty={{
+            icon: 'search',
+            title: '暂无搜索结果',
+            description: '没有找到匹配的用户',
+            actionLabel: '清除筛选',
+            onAction: handleClearFilters,
+          }}
         />
       </div>
 

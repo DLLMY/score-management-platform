@@ -1,16 +1,8 @@
 import React from 'react';
-import { Button, Table, Modal, Form, Input, Select, Switch, Tag, type FormInstance } from 'antd';
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Settings,
-  FileText,
-  AlertTriangle,
-} from 'lucide-react';
+import { Button, Modal, Form, Input, Select, Switch, Tag, type FormInstance } from 'antd';
+import { Plus, Edit2, Trash2, CheckCircle, XCircle, Settings, FileText } from 'lucide-react';
 import { formatDateTime } from '../../utils/format';
+import { DataTable, type ColumnType } from '../../components';
 import type { ImportConfig, FieldMapping, ValidationRule } from '../../services/api';
 
 export interface FieldMappingUI extends FieldMapping {
@@ -240,14 +232,6 @@ const ImportConfigManagementView: React.FC<ImportConfigManagementViewProps> = ({
 
   return (
     <div className='min-h-screen bg-gray-50 dark:bg-slate-900 p-4 md:p-6'>
-      {loadError && (
-        <div className='mb-4 flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30'>
-          <AlertTriangle className='w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0' />
-          <p className='text-sm text-amber-700 dark:text-amber-300'>
-            导入配置加载失败，当前列表可能不完整，请刷新重试
-          </p>
-        </div>
-      )}
       <div className='flex items-center justify-between mb-6'>
         <div className='flex items-center gap-3'>
           <div className='w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900 flex items-center justify-center'>
@@ -276,17 +260,19 @@ const ImportConfigManagementView: React.FC<ImportConfigManagementViewProps> = ({
             </div>
           </div>
         </div>
-        <Table
-          columns={columns}
+        <DataTable<ImportConfig>
+          columns={columns as ColumnType<ImportConfig>[]}
           dataSource={configs}
           rowKey='id'
           loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total: number) => `共 ${total} 条记录`,
+          error={loadError ? { message: '导入配置加载失败，请刷新页面重试' } : null}
+          pageSize={10}
+          pageSizeOptions={[10, 20, 50, 100]}
+          empty={{
+            icon: 'file',
+            title: '暂无导入配置',
+            description: '添加配置开始管理导入方案',
           }}
-          className='px-4'
         />
       </div>
 
