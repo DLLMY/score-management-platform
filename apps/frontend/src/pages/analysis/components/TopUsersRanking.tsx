@@ -96,7 +96,11 @@ export function TopUsersRanking({ users }: { users: UserWithCluster[] }) {
             );
           })}
           {users.length === 0 && (
-            <EmptyState icon='users' title='暂无数据' description='当前筛选条件下没有学生数据' />
+            <EmptyState
+              icon='users'
+              title='暂无学生数据'
+              description='当前筛选条件下没有学生数据'
+            />
           )}
         </div>
       </div>

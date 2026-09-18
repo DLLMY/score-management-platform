@@ -326,7 +326,10 @@ export const SystemMetrics: React.FC = () => {
         {loading ? (
           <div className='h-64 flex items-center justify-center text-gray-400'>加载中...</div>
         ) : pctSeries.length === 0 ? (
-          <EmptyState title='暂无采样数据' description='系统指标采样线程尚未产生数据' />
+          <EmptyState
+            title='暂无采样数据'
+            description='系统指标采样线程尚未产生数据，请稍候或检查后端采样服务'
+          />
         ) : (
           <ResponsiveContainer width='100%' height={280}>
             <LineChart data={pctSeries} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
