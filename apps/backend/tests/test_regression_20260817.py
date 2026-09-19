@@ -345,7 +345,7 @@ class TestS12345678910Regression:
     def test_backup_delete_basename_guard(self):
         """S8: 备份删除必须校验 basename（防路径穿越删除任意文件）"""
         import inspect
-        from api.data.import_export_routes import DeleteBackup
+        from api.data._import_export_part2 import DeleteBackup
 
         src = inspect.getsource(DeleteBackup.delete)
         assert "os.path.basename" in src, "备份删除必须校验文件名"
