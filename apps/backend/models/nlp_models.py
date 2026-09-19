@@ -173,3 +173,28 @@ class NLPCorrection(db.Model):
     learn_count = db.Column(db.Integer, default=0)  # 被归纳学习引用的次数
     last_learned_at = db.Column(db.DateTime, nullable=True)  # 最近一次被归纳学习的时间
     verified_at = db.Column(db.DateTime, nullable=True)  # 审核/确认时间
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "input_text": self.input_text,
+            "original_result": self.original_result,
+            "corrected_result": self.corrected_result,
+            "corrected_by": self.corrected_by,
+            "is_validated": self.is_validated,
+            "validated_at": self.validated_at,
+            "created_at": self.created_at,
+            "original_text": self.original_text,
+            "field_type": self.field_type,
+            "original_value": self.original_value,
+            "corrected_value": self.corrected_value,
+            "status": self.status,
+            "confidence_after": self.confidence_after,
+            "learn_count": self.learn_count,
+            "last_learned_at": self.last_learned_at,
+            "verified_at": self.verified_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

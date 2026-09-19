@@ -23,6 +23,22 @@ class MQTTConfig(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "broker": self.broker,
+            "port": self.port,
+            "client_id": self.client_id,
+            "username": self.username,
+            "ssl": self.ssl,
+            "timeout": self.timeout,
+            "keepalive": self.keepalive,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class ProcessedMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     message_id = db.Column(db.String(100), unique=True, nullable=False)
@@ -183,6 +199,23 @@ class DeviceHeartbeat(db.Model):
     received_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "device_id": self.device_id,
+            "timestamp": self.timestamp,
+            "status": self.status,
+            "wifi_signal": self.wifi_signal,
+            "uptime": self.uptime,
+            "box_a_status": self.box_a_status,
+            "box_b_status": self.box_b_status,
+            "system_state": self.system_state,
+            "received_at": self.received_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class FirmwareVersion(db.Model):
     __tablename__ = "firmware_versions"
 
@@ -247,6 +280,23 @@ class DeviceFirmwareUpdate(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "device_id": self.device_id,
+            "device_name": self.device_name,
+            "from_version": self.from_version,
+            "to_version": self.to_version,
+            "status": self.status,
+            "started_at": self.started_at,
+            "completed_at": self.completed_at,
+            "error_message": self.error_message,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class DeviceGroup(db.Model):
     """设备分组表"""
 

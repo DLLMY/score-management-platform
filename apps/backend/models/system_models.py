@@ -55,6 +55,26 @@ class SystemConfig(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "system_name": self.system_name,
+            "system_logo": self.system_logo,
+            "default_score": self.default_score,
+            "min_score": self.min_score,
+            "max_score": self.max_score,
+            "enable_notifications": self.enable_notifications,
+            "notification_sound": self.notification_sound,
+            "auto_save": self.auto_save,
+            "theme": self.theme,
+            "language": self.language,
+            "device_whitelist_enabled": self.device_whitelist_enabled,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class TimeRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -131,6 +151,18 @@ class AdminClass(db.Model):
     class_info = db.relationship("ClassInfo", backref=db.backref("admin_links", lazy=True))
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "class_info_id": self.class_info_id,
+            "is_primary": self.is_primary,
+            "assigned_at": self.assigned_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class ImportConfig(db.Model):
     """导入配置表"""
 
@@ -189,6 +221,24 @@ class FrontendPerfMetric(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "metric_type": self.metric_type,
+            "name": self.name,
+            "value": self.value,
+            "unit": self.unit,
+            "page": self.page,
+            "user_agent": self.user_agent,
+            "screen_width": self.screen_width,
+            "screen_height": self.screen_height,
+            "detail": self.detail,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class FrontendErrorLog(db.Model):
     """前端错误上报落库（运维中心可查）"""
 
@@ -212,6 +262,27 @@ class FrontendErrorLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "error_type": self.error_type,
+            "message": self.message,
+            "stack": self.stack,
+            "file": self.file,
+            "line": self.line,
+            "column": self.column,
+            "page": self.page,
+            "url": self.url,
+            "method": self.method,
+            "status": self.status,
+            "user_agent": self.user_agent,
+            "detail": self.detail,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class SystemMetric(db.Model):
     """系统指标历史采样（运维中心趋势查看）"""
 

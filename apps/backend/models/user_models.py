@@ -238,6 +238,22 @@ class PermissionLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "operator_id": self.operator_id,
+            "operator_type": self.operator_type,
+            "action": self.action,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "description": self.description,
+            "ip_address": self.ip_address,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class AdminRole(db.Model):
     """管理员角色关联表"""
 
