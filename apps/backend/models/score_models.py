@@ -499,3 +499,23 @@ class WarningConfig(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "risk_type": self.risk_type,
+            "threshold_low": self.threshold_low,
+            "threshold_medium": self.threshold_medium,
+            "threshold_high": self.threshold_high,
+            "is_active": self.is_active,
+            "notification_enabled": self.notification_enabled,
+            "config_key": self.config_key,
+            "config_value": self.config_value,
+            "description": self.description,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

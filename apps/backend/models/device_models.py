@@ -78,6 +78,21 @@ class PhoneBoxPolicy(db.Model):
     )
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "class_info_id": self.class_info_id,
+            "allow_self_unlock": self.allow_self_unlock,
+            "unlock_windows": self.unlock_windows,
+            "override_until": self.override_until,
+            "updated_by": self.updated_by,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(100), unique=True, nullable=False, index=True)

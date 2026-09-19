@@ -128,6 +128,21 @@ class NLPRuleUsage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "rule_id": self.rule_id,
+            "student_id": self.student_id,
+            "input_text": self.input_text,
+            "matched_keyword": self.matched_keyword,
+            "score_change": self.score_change,
+            "is_manual_correction": self.is_manual_correction,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class NLPModelTraining(db.Model):
     """NLP模型训练记录"""
 

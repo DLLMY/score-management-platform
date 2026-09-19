@@ -48,3 +48,23 @@ class NotificationConfig(db.Model):
             "ENABLE_WECHAT_NOTIFICATION": self.enable_wechat_notification,
             "ENABLE_SMS_NOTIFICATION": self.enable_sms_notification,
         }
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "wechat_appid": self.wechat_appid,
+            "template_unlock_success": self.template_unlock_success,
+            "template_unlock_failure": self.template_unlock_failure,
+            "template_score_change": self.template_score_change,
+            "sms_provider": self.sms_provider,
+            "sms_access_key_id": self.sms_access_key_id,
+            "sms_sign_name": self.sms_sign_name,
+            "sms_template_code": self.sms_template_code,
+            "enable_wechat_notification": self.enable_wechat_notification,
+            "enable_sms_notification": self.enable_sms_notification,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
