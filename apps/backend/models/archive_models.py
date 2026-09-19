@@ -30,6 +30,25 @@ class ScoreArchive(db.Model):
     subject_rel = db.relationship("Subject", backref=db.backref("score_archive_records", lazy=True))
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "exam_id": self.exam_id,
+            "student_id": self.student_id,
+            "subject_id": self.subject_id,
+            "score": self.score,
+            "full_score": self.full_score,
+            "status": self.status,
+            "remark": self.remark,
+            "entered_by": self.entered_by,
+            "entered_at": self.entered_at,
+            "updated_at": self.updated_at,
+            "archived_at": self.archived_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class AttendanceArchive(db.Model):
     """考勤历史归档表（P1）：结构与 attendance 一致，额外增加 archived_at 标记归档时间。"""
 
@@ -49,6 +68,25 @@ class AttendanceArchive(db.Model):
     archived_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "class_id": self.class_id,
+            "student_id": self.student_id,
+            "date": self.date,
+            "period": self.period,
+            "status": self.status,
+            "arrive_time": self.arrive_time,
+            "leave_time": self.leave_time,
+            "recorded_by": self.recorded_by,
+            "notes": self.notes,
+            "created_at": self.created_at,
+            "archived_at": self.archived_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class OperationLogArchive(db.Model):
     """操作日志归档"""
 
@@ -60,3 +98,17 @@ class OperationLogArchive(db.Model):
     action = db.Column(db.String(100))
     details = db.Column(db.JSON)
     archived_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "original_id": self.original_id,
+            "admin_id": self.admin_id,
+            "action": self.action,
+            "details": self.details,
+            "archived_at": self.archived_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

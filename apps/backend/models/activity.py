@@ -46,3 +46,16 @@ class ActivityRegistration(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     status = db.Column(db.String(20), default="registered")
     registered_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "activity_id": self.activity_id,
+            "student_id": self.student_id,
+            "status": self.status,
+            "registered_at": self.registered_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

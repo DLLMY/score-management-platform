@@ -70,3 +70,18 @@ class StudentCluster(db.Model):
     features = db.Column(db.JSON)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "cluster_label": self.cluster_label,
+            "cluster_score": self.cluster_score,
+            "features": self.features,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
