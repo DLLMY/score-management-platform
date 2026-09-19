@@ -16,6 +16,25 @@ class OperationLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "operation_type": self.operation_type,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "operator": self.operator,
+            "description": self.description,
+            "before_data": self.before_data,
+            "after_data": self.after_data,
+            "ip_address": self.ip_address,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class SystemConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     system_name = db.Column(db.String(100), default="积分管理平台")
@@ -51,6 +70,26 @@ class TimeRule(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "day_of_week": self.day_of_week,
+            "start_hour": self.start_hour,
+            "start_minute": self.start_minute,
+            "end_hour": self.end_hour,
+            "end_minute": self.end_minute,
+            "is_active": self.is_active,
+            "allow_unlock": self.allow_unlock,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class ClassInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False, index=True)

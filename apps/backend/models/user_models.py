@@ -296,6 +296,18 @@ class RolePermissionMapping(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "role_code": self.role_code,
+            "permission_code": self.permission_code,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class RoleHierarchy(db.Model):
     """角色继承层级表"""
 
@@ -307,6 +319,18 @@ class RoleHierarchy(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "parent_role_code": self.parent_role_code,
+            "child_role_code": self.child_role_code,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class SecurityAudit(db.Model):
     """安全审计日志"""
 

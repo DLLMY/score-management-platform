@@ -385,6 +385,19 @@ class SubjectClass(db.Model):
     __table_args__ = (db.UniqueConstraint("subject_id", "class_info_id", name="uq_subject_class"),)
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "subject_id": self.subject_id,
+            "class_info_id": self.class_info_id,
+            "teacher_id": self.teacher_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class CourseSchedule(db.Model):
     """课程时间表"""
 
