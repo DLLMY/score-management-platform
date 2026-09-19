@@ -1,0 +1,42 @@
+// English language pack. Key structure mirrors zh-CN.ts 1:1.
+const enUS = {
+  common: {
+    cancel: 'Cancel',
+    confirm: 'OK',
+    save: 'Save',
+    delete: 'Delete',
+    search: 'Search',
+    refresh: 'Refresh',
+    loading: 'Loading...',
+    loadFailed: 'Load Failed',
+    refreshPage: 'Refresh Page',
+  },
+  login: {
+    title: 'Score Management Platform',
+    subtitle: 'Please log in to continue',
+    secureHint: 'Secure login - data encrypted',
+    username: 'Username',
+    password: 'Password',
+    usernamePlaceholder: 'Enter username',
+    passwordPlaceholder: 'Enter password',
+    submit: 'Login',
+    copyright: '© 2024 Score Management Platform',
+    errorDefault: 'Login failed. Please check your username and password',
+    passwordMismatch: 'The two passwords do not match',
+    passwordTooShort: 'Password must be at least 6 characters',
+    noUserInfo: 'Unable to get user info',
+    changePasswordFailed: 'Failed to change password',
+    forceChangeTitle: 'Force Password Change',
+    forceChangeDesc: 'First login or password expired, please set a new password',
+    currentPassword: 'Current Password',
+    newPassword: 'New Password',
+    confirmNewPassword: 'Confirm New Password',
+    newPasswordPlaceholder: 'Enter new password (min 6 chars)',
+    confirmPlaceholder: 'Re-enter new password',
+    cancelLogin: 'Cancel Login',
+    changing: 'Changing',
+    changeAndLogin: 'Change Password & Login',
+  },
+};
+
+export default enUS;

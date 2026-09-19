@@ -5,6 +5,7 @@ import { validateForm } from '../utils/validation';
 import { fetchCsrfToken } from '../services/api';
 import { isAdmin } from '../utils/auth';
 import LoginView from './login/LoginView';
+import { useTranslation } from 'react-i18next';
 import type { FormErrors, ApiError } from './login/types';
 
 /**
@@ -25,6 +26,7 @@ function Login() {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [changePasswordLoading, setChangePasswordLoading] = useState<boolean>(false);
   const [changePasswordError, setChangePasswordError] = useState<string>('');
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -111,7 +113,7 @@ function Login() {
       }
     } catch (err) {
       const apiError = err as ApiError;
-      setError(apiError.error || apiError.message || '登录失败，请检查用户名和密码');
+      setError(apiError.error || apiError.message || t('login.errorDefault'));
     } finally {
       setLoading(false);
     }
@@ -141,12 +143,12 @@ function Login() {
     setChangePasswordError('');
 
     if (newPassword !== confirmPassword) {
-      setChangePasswordError('两次输入的密码不一致');
+      setChangePasswordError(t('login.passwordMismatch'));
       return;
     }
 
     if (newPassword.length < 6) {
-      setChangePasswordError('密码长度至少为6位');
+      setChangePasswordError(t('login.passwordTooShort'));
       return;
     }
 
@@ -155,7 +157,7 @@ function Login() {
     try {
       const adminStr = localStorage.getItem('admin');
       if (!adminStr) {
-        setChangePasswordError('无法获取用户信息');
+        setChangePasswordError(t('login.noUserInfo'));
         return;
       }
       const admin = JSON.parse(adminStr);
@@ -172,7 +174,7 @@ function Login() {
       navigate('/');
     } catch (err) {
       const apiError = err as ApiError;
-      setChangePasswordError(apiError.error || apiError.message || '修改密码失败');
+      setChangePasswordError(apiError.error || apiError.message || t('login.changePasswordFailed'));
     } finally {
       setChangePasswordLoading(false);
     }

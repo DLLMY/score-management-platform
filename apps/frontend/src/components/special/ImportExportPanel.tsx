@@ -236,7 +236,8 @@ function ImportExportPanel({
         showToast('success', '导出成功');
       } else {
         setExportProgress(20);
-        const apiUrl = exportUrl || `/api/import_export/export/${RESOURCE_PLURAL[type]}?format=${format}`;
+        const apiUrl =
+          exportUrl || `/api/import_export/export/${RESOURCE_PLURAL[type]}?format=${format}`;
         const response = await fetch(apiUrl, {
           method: 'GET',
           credentials: 'include',

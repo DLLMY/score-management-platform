@@ -1,4 +1,5 @@
 import { Lock, User, LogIn, AlertCircle, Shield, Fingerprint, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ForceChangePasswordModalProps, LoginViewProps } from './types';
 
 /**
@@ -30,6 +31,8 @@ export default function LoginView({
   setNewPassword,
   setConfirmPassword,
 }: LoginViewProps) {
+  const { t, i18n } = useTranslation();
+
   const ForceChangePasswordModal = ({ isOpen, onClose }: ForceChangePasswordModalProps) => {
     if (!isOpen) return null;
 
@@ -45,8 +48,8 @@ export default function LoginView({
               <RefreshCw className='w-6 h-6 text-white' />
             </div>
             <div>
-              <h2 className='text-xl font-bold text-gray-800'>强制修改密码</h2>
-              <p className='text-sm text-gray-500'>首次登录或密码已过期，请设置新密码</p>
+              <h2 className='text-xl font-bold text-gray-800'>{t('login.forceChangeTitle')}</h2>
+              <p className='text-sm text-gray-500'>{t('login.forceChangeDesc')}</p>
             </div>
           </div>
 
@@ -63,7 +66,7 @@ export default function LoginView({
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                当前密码 <span className='text-red-500'>*</span>
+                {t('login.currentPassword')} <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <Lock className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
@@ -72,14 +75,14 @@ export default function LoginView({
                   value={password}
                   disabled
                   className='w-full pl-12 pr-4 py-3 bg-gray-100 border-2 border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-primary-500 transition-all'
-                  placeholder='当前密码'
+                  placeholder={t('login.currentPassword')}
                 />
               </div>
             </div>
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                新密码 <span className='text-red-500'>*</span>
+                {t('login.newPassword')} <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <Lock className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
@@ -87,7 +90,7 @@ export default function LoginView({
                   type='password'
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder='请输入新密码（至少6位）'
+                  placeholder={t('login.newPasswordPlaceholder')}
                   className='w-full pl-12 pr-4 py-3 bg-gray-100 border-2 border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-primary-500 transition-all'
                 />
               </div>
@@ -95,7 +98,7 @@ export default function LoginView({
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                确认新密码 <span className='text-red-500'>*</span>
+                {t('login.confirmNewPassword')} <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <Lock className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
@@ -103,7 +106,7 @@ export default function LoginView({
                   type='password'
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder='请再次输入新密码'
+                  placeholder={t('login.confirmPlaceholder')}
                   className='w-full pl-12 pr-4 py-3 bg-gray-100 border-2 border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:border-primary-500 transition-all'
                 />
               </div>
@@ -115,7 +118,7 @@ export default function LoginView({
                 onClick={onClose}
                 className='flex-1 py-3 px-6 rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-all'
               >
-                取消登录
+                {t('login.cancelLogin')}
               </button>
               <button
                 type='submit'
@@ -125,10 +128,10 @@ export default function LoginView({
                 {changePasswordLoading ? (
                   <span className='flex items-center gap-2'>
                     <div className='w-4 h-4 border-2 border-white/30 rounded-full animate-spin border-t-white' />
-                    修改中
+                    {t('login.changing')}
                   </span>
                 ) : (
-                  '修改密码并登录'
+                  t('login.changeAndLogin')
                 )}
               </button>
             </div>
@@ -139,7 +142,17 @@ export default function LoginView({
   };
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/50 to-purple-50/30 flex items-center justify-center p-4'>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/50 to-purple-50/30 flex items-center justify-center p-4 relative'>
+      <div className='absolute top-4 right-4 z-20'>
+        <select
+          value={i18n.language}
+          onChange={(e) => i18n.changeLanguage(e.target.value)}
+          className='rounded-lg border border-gray-300 bg-white/80 px-3 py-1 text-sm text-gray-700 shadow-sm backdrop-blur focus:border-indigo-400 focus:outline-none'
+        >
+          <option value='zh-CN'>简体中文</option>
+          <option value='en-US'>English</option>
+        </select>
+      </div>
       <div className='fixed inset-0 overflow-hidden pointer-events-none'>
         <div className='absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow' />
         <div
@@ -162,13 +175,13 @@ export default function LoginView({
             className='text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2 animate-fade-in'
             style={{ animationDelay: '100ms' }}
           >
-            积分管理平台
+            {t('login.title')}
           </h1>
           <p
             className='text-sm sm:text-base text-gray-500 animate-fade-in'
             style={{ animationDelay: '200ms' }}
           >
-            请登录以继续
+            {t('login.subtitle')}
           </p>
         </div>
 
@@ -178,7 +191,7 @@ export default function LoginView({
         >
           <div className='flex items-center justify-center gap-2 mb-4 sm:mb-6 text-xs text-gray-500'>
             <Fingerprint className='w-4 h-4 text-green-500' />
-            <span>安全登录 - 数据已加密</span>
+            <span>{t('login.secureHint')}</span>
           </div>
 
           <form onSubmit={handleSubmit} className='space-y-5 sm:space-y-6'>
@@ -196,7 +209,7 @@ export default function LoginView({
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                用户名 <span className='text-red-500'>*</span>
+                {t('login.username')} <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <div
@@ -217,11 +230,11 @@ export default function LoginView({
                   type='text'
                   value={username}
                   onChange={handleUsernameChange}
-                  placeholder='请输入用户名'
+                  placeholder={t('login.usernamePlaceholder')}
                   onFocus={handleUsernameFocus}
                   onBlur={handleUsernameBlur}
                   autoComplete='username'
-                  aria-label='用户名'
+                  aria-label={t('login.username')}
                   aria-required={true}
                   aria-invalid={!!formErrors.username}
                   className={`w-full pl-11 sm:pl-12 pr-4 py-3 sm:py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none transition-all ${
@@ -239,7 +252,7 @@ export default function LoginView({
 
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                密码 <span className='text-red-500'>*</span>
+                {t('login.password')} <span className='text-red-500'>*</span>
               </label>
               <div className='relative'>
                 <div
@@ -260,11 +273,11 @@ export default function LoginView({
                   type='password'
                   value={password}
                   onChange={handlePasswordChange}
-                  placeholder='请输入密码'
+                  placeholder={t('login.passwordPlaceholder')}
                   onFocus={handlePasswordFocus}
                   onBlur={handlePasswordBlur}
                   autoComplete='current-password'
-                  aria-label='密码'
+                  aria-label={t('login.password')}
                   aria-required={true}
                   aria-invalid={!!formErrors.password}
                   className={`w-full pl-11 sm:pl-12 pr-4 py-3 sm:py-3.5 bg-transparent border-2 border-transparent rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none transition-all ${
@@ -290,7 +303,7 @@ export default function LoginView({
               <span
                 className={loading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}
               >
-                {loading ? '' : '登录'}
+                {loading ? '' : t('login.submit')}
               </span>
               {loading && (
                 <span className='absolute inset-0 flex items-center justify-center'>
@@ -302,7 +315,7 @@ export default function LoginView({
         </div>
 
         <div className='text-center mt-4 sm:mt-6 text-xs sm:text-sm text-gray-500'>
-          <p>© 2024 积分管理平台</p>
+          <p>© 2024 {t('login.title')}</p>
         </div>
       </div>
 

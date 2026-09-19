@@ -6,6 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import Login from '../../pages/Login';
+import i18n from '../../i18n';
 
 const mockLocalStorage = () => {
   const store: Record<string, string> = {};
@@ -32,9 +33,10 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('Login Component', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockLocalStorage();
     jest.clearAllMocks();
+    await i18n.changeLanguage('zh-CN');
   });
 
   test('登录页面可以渲染并显示表单', async () => {
@@ -107,9 +109,10 @@ describe('Login Component', () => {
 });
 
 describe('Login Component - Force Password Change', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockLocalStorage();
     jest.clearAllMocks();
+    await i18n.changeLanguage('zh-CN');
   });
 
   test('登录页面初始状态下不显示强制改密弹窗', async () => {
