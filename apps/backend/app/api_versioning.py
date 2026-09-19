@@ -217,6 +217,16 @@ def register_v1_routes(api, app):
     api.add_namespace(ns_admin_notifications)
     api.add_namespace(ns_consistency)
 
+    # 轻量级免鉴权健康检查蓝图（供 Docker/K8s 探活）：修复部署阻断 #1 路径不匹配
+    try:
+        from api.system.health_routes import health_bp
+
+        # 幂等注册（v1 与 default 两次 register_v1_routes 调用，避免重复注册冲突）
+        if "health" not in app.blueprints:
+            app.register_blueprint(health_bp)
+    except Exception as e:
+        logger.warning(f"health_bp 注册失败: {e}", exc_info=True)
+
     from api.analytics.dashboard_routes import ns_dashboard
     from api.algorithm.algorithm_routes import ns_algorithm
     from api.analytics.analysis_routes import ns_analysis
