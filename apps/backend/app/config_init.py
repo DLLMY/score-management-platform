@@ -211,6 +211,9 @@ def init_config(app, lightweight=False):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = config.SQLALCHEMY_ENGINE_OPTIONS
 
+    # T4: 综合分重算异步开关（默认 False，详情见 config.CELERY_ASYNC_SCORE_RECALC）
+    app.config["CELERY_ASYNC_SCORE_RECALC"] = config.CELERY_ASYNC_SCORE_RECALC
+
     app.config["SECRET_KEY"] = config.FLASK_SECRET_KEY
 
     app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH

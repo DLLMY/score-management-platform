@@ -124,6 +124,11 @@ class Config:
     CELERY_WORKER_CONCURRENCY = int(os.getenv("CELERY_WORKER_CONCURRENCY", "4"))
     CELERY_WORKER_PREFETCH_MULTIPLIER = 1
     CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+    # 综合分重算异步开关：显式开启且 broker 可达时走 Celery 异步入队，
+    # 写路径立即返回；未开启 / broker 不可用 / 无 worker 时自动同步回退。
+    # 默认 False，保证测试 / 沙箱 / 本地开发综合分一定被重算，绝不静默漂移。
+    CELERY_ASYNC_SCORE_RECALC = os.getenv("CELERY_ASYNC_SCORE_RECALC", "False").lower() == "true"
     # Celery任务路由
     CELERY_TASK_QUEUES = {
         "mqtt": {
