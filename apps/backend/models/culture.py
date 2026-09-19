@@ -17,6 +17,23 @@ class CultureRecord(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "class_id": self.class_id,
+            "category": self.category,
+            "title": self.title,
+            "content": self.content,
+            "image_url": self.image_url,
+            "display_order": self.display_order,
+            "is_active": self.is_active,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class CultureItem(db.Model):
     __tablename__ = "culture_item"
 
@@ -27,3 +44,16 @@ class CultureItem(db.Model):
     item_type = db.Column(db.String(50))
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "record_id": self.record_id,
+            "item_type": self.item_type,
+            "content": self.content,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
