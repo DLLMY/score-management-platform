@@ -68,8 +68,8 @@ def scheduled_approval_timeout_check(app):
         try:
             from models import db
             db.session.remove()
-        except Exception:
-            pass
+        except Exception as e:
+            log_warning(f"清理 db.session 失败(已忽略): {e}")
 
 
 def scheduled_notify_check(app):
@@ -84,8 +84,8 @@ def scheduled_notify_check(app):
         try:
             from models import db
             db.session.remove()
-        except Exception:
-            pass
+        except Exception as e:
+            log_warning(f"清理 db.session 失败(已忽略): {e}")
 
 
 def shutdown_scheduler():

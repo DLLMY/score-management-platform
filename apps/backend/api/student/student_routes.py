@@ -373,9 +373,9 @@ class StudentPhoneboxUnlock(Resource):
                         # F11 修复: 校验 publish_mqtt 返回值——返回 False（连接不可用但不抛异常）时不得置 dispatched
                         if publish_mqtt(f"phonebox/unlock/{box}", unlock_payload):
                             dispatched = True
-                    except Exception:
+                    except Exception as e:
                         # MQTT 不可用时不阻断请求，仅标记未下发
-                        pass
+                        logger.warning(f"下发解锁指令到 phonebox/unlock/{box} 失败: {e}")
 
         return APIResponse.success(
             data={

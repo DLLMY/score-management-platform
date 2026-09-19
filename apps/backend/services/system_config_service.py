@@ -1,5 +1,6 @@
 from utils.db_session import db_session_scope, db_readonly_scope
 from models import SystemConfig
+from utils.logger import log_warning
 
 
 class SystemConfigService:
@@ -69,8 +70,8 @@ class SystemConfigService:
                 from utils.device_auth import reset_whitelist_flag_cache
 
                 reset_whitelist_flag_cache()
-            except Exception:  # pragma: no cover - 缓存失效失败不应阻断配置更新
-                pass
+            except Exception as e:  # pragma: no cover - 缓存失效失败不应阻断配置更新
+                log_warning(f"设备白名单缓存失效失败(已忽略): {e}")
 
 
     @staticmethod

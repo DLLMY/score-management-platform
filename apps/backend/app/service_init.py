@@ -229,8 +229,8 @@ def _scheduled_heartbeat_check_job(app):
         try:
             from models import db
             db.session.remove()
-        except Exception:
-            pass
+        except Exception as e:
+            log_warning(f"清理 db.session 失败(已忽略): {e}")
 
 
 def init_scheduler(app):
