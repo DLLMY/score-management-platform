@@ -32,8 +32,9 @@ class TestRuleMatcher:
         assert result == []
 
     def test_match_rules_below_threshold(self):
-        """测试置信度低于阈值"""
+        """测试置信度低于阈值：确定性匹配业务默认阈值 0（不做概率门控），此处显式提高阈值验证门控过滤机制。"""
         matcher = RuleMatcher()
+        matcher.match_threshold = 1.0
         model_output = {"recommendations": [{"rule_id": 1, "confidence": 0.5}]}
         result = matcher.match_rules(model_output, {})
         assert result == []

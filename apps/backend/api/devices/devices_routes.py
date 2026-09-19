@@ -214,6 +214,9 @@ class DeviceList(Resource):
         - name: 设备名称（可选，默认"设备 {device_id}"）
         """
         data = ns_devices.payload
+        device_id_raw = data.get("device_id")
+        if not device_id_raw or not str(device_id_raw).strip():
+            return APIResponse.bad_request(message="device_id 为必填项，不能为空")
         try:
             device_id = create_device(data)
         except ValueError as e:

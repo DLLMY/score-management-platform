@@ -276,20 +276,16 @@ class TestDeviceWriteEndpoints:
     def test_create_device_missing_device_id_returns_error(
         self, client, app, auth_headers, db_session
     ):
-        """缺失必填 device_id：Device.device_id NOT NULL 且路由层无前置校验，事务提交抛 IntegrityError。
+        """缺失必填 device_id：路由层显式校验返回 400（4eaf431 起，缺省/冲突统一转 400 避免 500）。
 
-        F17 防腐层仅迁移 db.session，未改动校验契约（生产环境由全局错误处理返回 500，
-        测试环境 TESTING 模式异常上浮）。本断言锁定该行为未被迁移意外改变。
+        device_service 的 create_device 约定「device_id 非空校验由路由负责」，故此处锁定
+        路由层对空 device_id 的前置校验契约（返回 400 而非 500/异常上浮）。
         """
-        from sqlalchemy.exc import IntegrityError
-
         with app.app_context():
-            with pytest.raises(IntegrityError):
-                client.post("/api/devices/", json={"name": "无标识设备"}, headers=auth_headers)
-            # 清理 IntegrityError 后的 PendingRollbackError 状态，避免污染同 session 后续用例
-            from models import db
-
-            db.session.rollback()
+            resp = client.post(
+                "/api/devices/", json={"name": "无标识设备"}, headers=auth_headers
+            )
+            assert resp.status_code == 400
 
     def test_update_device(self, client, app, auth_headers, db_session):
         with app.app_context():
