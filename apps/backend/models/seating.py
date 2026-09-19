@@ -49,3 +49,19 @@ class SeatingSeat(db.Model):
     is_aisle = db.Column(db.Boolean, default=False)
     is_student_seat = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "chart_id": self.chart_id,
+            "row": self.row,
+            "col": self.col,
+            "student_id": self.student_id,
+            "is_aisle": self.is_aisle,
+            "is_student_seat": self.is_student_seat,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
