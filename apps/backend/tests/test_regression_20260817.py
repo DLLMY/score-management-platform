@@ -202,7 +202,7 @@ class TestS12345678910Regression:
     def test_firmware_download_no_admin_required(self):
         """S1: 固件下载端点不应再挂 requires_permission（固件无认证头 → 401 断链）"""
         import inspect
-        from api.devices.firmware_routes import FirmwareDownload
+        from api.devices._firmware_part1 import FirmwareDownload
 
         src = inspect.getsource(FirmwareDownload.get)
         assert "@requires_permission" not in src, "FirmwareDownload.get 不得再挂管理员鉴权"
@@ -210,7 +210,7 @@ class TestS12345678910Regression:
     def test_firmware_upload_uses_real_md5(self):
         """A-P0-2: 固件上传须计算真 MD5（32 位）而非 SHA256（64 位→固件校验静默跳过）"""
         import inspect
-        from api.devices.firmware_routes import FirmwareUpload
+        from api.devices._firmware_part1 import FirmwareUpload
 
         src = inspect.getsource(FirmwareUpload.post)
         assert "hashlib.md5()" in src, "固件上传必须使用 hashlib.md5"

@@ -287,7 +287,7 @@ class TestFirmwareRoutes:
             assert response.status_code == 400
 
     def test_upload_success_with_real_md5(self, client, app, auth_headers, db_session, tmp_path):
-        import api.devices.firmware_routes as fw_mod
+        import api.devices._firmware_part1 as fw_mod
 
         fw_mod.FIRMWARE_UPLOAD_FOLDER = str(tmp_path)
         with app.app_context():
@@ -315,7 +315,7 @@ class TestFirmwareRoutes:
             assert len(fw.md5) == 32
 
     def test_upload_duplicate_version(self, client, app, auth_headers, db_session, tmp_path):
-        import api.devices.firmware_routes as fw_mod
+        import api.devices._firmware_part1 as fw_mod
 
         fw_mod.FIRMWARE_UPLOAD_FOLDER = str(tmp_path)
         with app.app_context():
