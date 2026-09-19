@@ -85,7 +85,7 @@ class TestScoreRecordsRoutes:
         self, client, app, auth_headers, db_session, monkeypatch
     ):
         """T1 回归：综合分重算异常不得污染主数据落库，且响应标记 composite_score=recalculate_failed。"""
-        import api.scores.records_routes as rr
+        import api.scores._records_part1 as rr
 
         def _recalc_boom(user_id):
             raise RuntimeError("recalc boom")
