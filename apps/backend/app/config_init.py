@@ -103,10 +103,10 @@ def _check_redis_connectivity(app):
         logger.warning("[R1] ⚠️  redis 客户端库未安装，缓存降级为内存（非致命）")
         return
     try:
-        host = os.getenv("REDIS_HOST", "localhost")
-        port = int(os.getenv("REDIS_PORT", "6379"))
-        db = int(os.getenv("REDIS_DB", "0"))
-        pwd = os.getenv("REDIS_PASSWORD", "")
+        host = config.REDIS_HOST
+        port = config.REDIS_PORT
+        db = config.REDIS_DB
+        pwd = config.REDIS_PASSWORD
         url = f"redis://:{pwd}@{host}:{port}/{db}" if pwd else f"redis://{host}:{port}/{db}"
         r = redis.Redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
         r.ping()
