@@ -73,7 +73,6 @@ rule_list_response = ns_rules.model(
     },
 )
 
-
 def _validate_rule_create_payload(data):
     """校验创建积分规则的请求体（含分类存在性），返回错误信息列表。"""
     errors = []
@@ -82,7 +81,6 @@ def _validate_rule_create_payload(data):
     _validate_rule_category(data, errors)
     _validate_rule_limits(data, errors)
     return errors
-
 
 def _validate_rule_name(data, errors):
     # 规则名称必填校验
@@ -96,7 +94,6 @@ def _validate_rule_name(data, errors):
     if description and len(description) > ValidationRules.DESCRIPTION_MAX_LEN:
         errors.append(f"规则描述长度不能超过{ValidationRules.DESCRIPTION_MAX_LEN}个字符")
 
-
 def _validate_rule_score(data, errors):
     # 分数校验
     score = data.get("score")
@@ -106,7 +103,6 @@ def _validate_rule_score(data, errors):
         is_valid, error_msg = validate_score(score)
         if not is_valid:
             errors.append(f"分数: {error_msg}")
-
 
 def _validate_rule_category(data, errors):
     # 分类ID校验
@@ -121,7 +117,6 @@ def _validate_rule_category(data, errors):
             if not category:
                 errors.append(f"分类ID {category_id} 不存在")
 
-
 def _validate_rule_limits(data, errors):
     # 每日上限校验（兼容旧字段 max_per_day）
     daily_limit = data.get("daily_limit", data.get("max_per_day", 0))
@@ -135,215 +130,6 @@ def _validate_rule_limits(data, errors):
         is_valid, _error_msg = validate_positive_int(min_interval)
         if not is_valid and min_interval != 0:
             errors.append("最小间隔必须为正整数或0")
-
-
-
-@ns_rules.route("/")
-class RuleList(Resource):
-    @ns_rules.doc(
-        "list_rules",
-        description="获取积分规则列表",
-        params={
-            "page": "页码（默认1）",
-            "per_page": "每页数量（默认100）",
-            "category_id": "分类ID筛选",
-            "is_active": "是否启用筛选（true/false）",
-        },
-    )
-    @ns_rules.response(200, "成功", rule_list_response)
-    @requires_permission("rule.view")
-    @cached_api(ttl=30)
-    def get(self):
-        """
-        获取积分规则列表
-        支持分页、分类筛选和状态筛选。需要规则查看权限。
-        """
-        page, per_page = get_pagination(default=100)
-        category_id = request.args.get("category_id", type=int)
-        is_active = request.args.get("is_active")
-        cache_key = f"rules_list:{page}:{per_page}:{category_id}:{is_active}"
-        cached_result = get_cache_service().get(cache_key)
-        if cached_result is not None:
-            return APIResponse.success(data=cached_result)
-        result = get_rule_list_view(page, per_page, category_id, is_active)
-        get_cache_service().set(cache_key, result, ttl=300, tags=["rules"])
-        return APIResponse.success(data=result)
-
-    @ns_rules.doc("create_rule", description="创建积分规则", security="Bearer")
-    @ns_rules.expect(rule_model)
-    @ns_rules.response(201, "创建成功")
-    @ns_rules.response(400, "请求参数错误")
-    @requires_permission("rule.manage")
-    def post(self):
-        """
-        创建积分规则
-        创建新的积分规则，需要规则管理权限。
-        请求体：
-        - name: 规则名称（必填）
-        - description: 规则描述
-        - category_id: 分类ID
-        - score: 分数（正数加分，负数扣分，必填，范围-1000到1000）
-        - is_active: 是否启用（默认true）
-        - daily_limit: 每日上限（0表示无限制）
-        - min_interval: 最小间隔（秒，0表示无限制）
-        """
-        data = ns_rules.payload
-        # 参数校验
-        errors = _validate_rule_create_payload(data)
-        if errors:
-            return validation_error_response(errors)
-        rule = create_rule(data)
-        log_operation(
-            "rule.create",
-            "rule",
-            rule.id,
-            f"创建积分规则: {rule.name}",
-            after_data=data,
-        )
-        get_cache_service().invalidate_by_tag("rules")
-        invalidate_cache("api:/api/rules/*")
-        return APIResponse.success(
-            data=rule.to_dict(RULE_CREATE_FIELDS),
-            message="规则创建成功",
-            status_code=201,
-        )
-
-
-@ns_rules.route("/<int:id>")
-@ns_rules.param("id", "规则ID")
-class RuleResource(Resource):
-    @ns_rules.doc("get_rule", description="获取单个规则详情")
-    @ns_rules.response(200, "成功", rule_model)
-    @ns_rules.response(404, "规则不存在")
-    @requires_permission("rule.view")
-    def get(self, id):
-        """
-        获取单个规则详情
-        根据规则ID获取规则的详细信息。需要规则查看权限。
-        """
-        cache_key = f"rule:{id}"
-        cached_result = get_cache_service().get(cache_key)
-        if cached_result is not None:
-            return APIResponse.success(data=cached_result)
-        rule = ScoreRule.query.get_or_404(id)
-        result = rule.to_dict()  # 默认输出 = 详情 11 字段契约
-        get_cache_service().set(cache_key, result, ttl=300, tags=["rules"])
-        return APIResponse.success(data=result)
-
-    @ns_rules.doc("update_rule", description="更新规则", security="Bearer")
-    @ns_rules.expect(rule_model)
-    @ns_rules.response(200, "更新成功")
-    @ns_rules.response(404, "规则不存在")
-    @requires_permission("rule.manage")
-    def put(self, id):
-        """
-        更新规则
-        更新指定规则的信息，需要规则管理权限。
-        """
-        rule = ScoreRule.query.get_or_404(id)
-        data = ns_rules.payload
-        update_rule(rule, data)
-        log_operation(
-            "rule.update",
-            "rule",
-            rule.id,
-            f"更新积分规则: {rule.name}",
-            before_data={
-                "name": data.get("name", rule.name),
-                "score": data.get("score", rule.score),
-                "is_active": data.get("is_active", rule.is_active),
-            },
-            after_data=data,
-        )
-        get_cache_service().invalidate_by_tag("rules")
-        invalidate_cache("api:/api/rules/*")
-        return APIResponse.success(message="规则更新成功")
-
-    @ns_rules.doc("delete_rule", description="删除规则", security="Bearer")
-    @ns_rules.response(200, "删除成功")
-    @ns_rules.response(404, "规则不存在")
-    @requires_permission("rule.manage")
-    def delete(self, id):
-        """
-        删除规则
-        删除指定的规则，需要规则管理权限。
-        """
-        rule = ScoreRule.query.get_or_404(id)
-        _deleted_name = rule.name
-        delete_rule(rule)
-        log_operation("rule.delete", "rule", id, f"删除积分规则: {_deleted_name}")
-        get_cache_service().invalidate_by_tag("rules")
-        invalidate_cache("api:/api/rules/*")
-        return APIResponse.success(message="规则删除成功")
-
-
-@ns_rules.route("/export")
-class RuleExport(Resource):
-    @ns_rules.doc("export_rules", description="导出规则列表", security="Bearer")
-    @requires_permission("report.export")
-    def get(self):
-        """
-        导出规则列表
-        返回 JSON 结构，由前端序列化为 .json 文件下载，需要报表导出权限。
-        """
-        rules = ScoreRule.query.all()
-        data = [
-            {
-                "id": rule.id,
-                "name": rule.name,
-                "description": rule.description,
-                "category": rule.category.name if rule.category else "",
-                "category_id": rule.category_id,
-                "score": rule.score,
-                "is_active": rule.is_active,
-                "daily_limit": rule.daily_limit,
-                "min_interval": rule.min_interval,
-            }
-            for rule in rules
-        ]
-        return APIResponse.success(data={"rules": data, "count": len(data)})
-
-
-@ns_rules.route("/import")
-class RuleImport(Resource):
-    @ns_rules.doc("import_rules", description="批量导入规则", security="Bearer")
-    @requires_permission("rule.manage")
-    def post(self):
-        """
-        批量导入规则
-        批量导入规则数据，需要管理员权限。
-        请求体：
-        - rules: 规则数据列表
-        """
-        data = request.get_json()
-        rules_data = data.get("rules", [])
-        if not rules_data:
-            return APIResponse.error(message="没有导入数据", status_code=400)
-        result = import_rules(rules_data)
-        return APIResponse.success(
-            data=result,
-            message=f"导入完成: 成功{result['success_count']}条, 失败{result['failed_count']}条",
-        )
-
-
-@ns_rules.route("/template/download")
-class RuleTemplate(Resource):
-    @ns_rules.doc("download_rule_template", security="Bearer")
-    @requires_permission("rule.view")
-    def get(self):
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["规则名称", "描述", "分类ID", "分数", "是否启用", "每日上限", "最小间隔"])
-        writer.writerow(["作业完成", "完成家庭作业", "1", "5", "是", "3", "60"])
-        writer.writerow(["迟到", "上学迟到", "2", "-2", "是", "0", "0"])
-        output.seek(0)
-        return send_file(
-            io.BytesIO(output.getvalue().encode("utf-8-sig")),
-            mimetype="text/csv",
-            as_attachment=True,
-            download_name="rule_import_template.csv",
-        )
-
 
 RULE_TEMPLATES = [
     {
@@ -544,21 +330,6 @@ RULE_TEMPLATES = [
     },
 ]
 
-
-@ns_rules.route("/templates")
-class RuleTemplates(Resource):
-    @ns_rules.doc("list_rule_templates", description="获取预设规则模板列表", security="Bearer")
-    @ns_rules.response(200, "成功")
-    @requires_permission("rule.view")
-    @cached_api(ttl=30)
-    def get(self):
-        """
-        获取预设规则模板列表
-        返回系统预设的积分规则模板，包含课堂表现、作业管理、纪律管理等多个类别。
-        """
-        return APIResponse.success(data={"templates": RULE_TEMPLATES})
-
-
 apply_template_model = ns_rules.model(
     "ApplyTemplate",
     {
@@ -567,50 +338,5 @@ apply_template_model = ns_rules.model(
     },
 )
 
-
-@ns_rules.route("/templates/apply")
-class ApplyRuleTemplate(Resource):
-    @ns_rules.doc("apply_rule_template", description="应用预设规则模板")
-    @ns_rules.expect(apply_template_model)
-    @ns_rules.response(200, "成功")
-    @requires_permission("rule.manage")
-    @safe_handle(message="应用模板失败", default_status=500)
-    def post(self):
-        """
-        应用预设规则模板
-        根据模板ID批量创建积分规则。如果指定了分类ID，则将所有规则归入该分类；
-        否则会自动创建一个与模板同名的新分类。
-        """
-        data = request.get_json()
-        template_id = data.get("template_id")
-        category_id = data.get("category_id")
-        if not template_id:
-            return APIResponse.error(message="模板ID不能为空", status_code=400)
-        template = next((t for t in RULE_TEMPLATES if t["id"] == template_id), None)
-        if not template:
-            return APIResponse.error(message="模板不存在", status_code=404)
-        result, err = apply_rule_template(template, category_id)
-        if err:
-            return APIResponse.error(message=err, status_code=400)
-        # 清除所有rules相关缓存
-        invalidated_count = get_cache_service().invalidate_by_tag("rules")
-        log_info(f"[Cache] 模板应用后失效了 {invalidated_count} 个rules标签缓存")
-        invalidate_cache("api:/api/rules/*")
-        return APIResponse.success(
-            data=result,
-            message=f"成功应用模板，创建了 {result['created_count']} 条规则",
-        )
-
-
-@ns_rules.route("/statistics")
-class RuleStatistics(Resource):
-    @ns_rules.doc("rule_statistics", description="获取规则使用统计", security="Bearer")
-    @ns_rules.response(200, "成功")
-    @requires_permission("rule.view")
-    @cached_api(ttl=60)
-    def get(self):
-        """
-        获取规则使用统计
-        返回各规则的被使用次数、最近使用时间等信息，帮助了解规则的使用情况。
-        """
-        return APIResponse.success(data=get_rule_statistics_view())
+import api.scores._rules_part1
+import api.scores._rules_part2
