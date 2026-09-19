@@ -465,6 +465,23 @@ class CompositeScore(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "composite_score": self.composite_score,
+            "academic_score": self.academic_score,
+            "behavior_score": self.behavior_score,
+            "attendance_score": self.attendance_score,
+            "social_score": self.social_score,
+            "weights": self.weights,
+            "computed_at": self.computed_at,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class WarningConfig(db.Model):
     """预警配置"""
 
