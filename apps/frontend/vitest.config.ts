@@ -24,5 +24,17 @@ export default defineConfig({
     // Windows + 中文路径下 forks pool 启动 worker 常超时 → 本地用 threads；
     // CI（Linux）threads pool 报 webidl.markAsUncloneable → CI 用默认 forks。
     pool: process.env.CI ? 'forks' : 'threads',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary'],
+      reportsDirectory: 'coverage',
+      // 规避中文路径下 html 报告生成伪影：仅输出 text 摘要 + json-summary
+      exclude: [
+        'src/**/*.test.{js,jsx,ts,tsx}',
+        'src/test-setup.ts',
+        'src/main.tsx',
+        'src/**/*.d.ts',
+      ],
+    },
   },
 });

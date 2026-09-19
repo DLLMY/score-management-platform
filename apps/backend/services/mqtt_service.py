@@ -27,39 +27,47 @@ def __getattr__(name):
 DEFAULT_CONFIG = mqtt_manager.DEFAULT_CONFIG
 
 
+# 限制并发：每次发布都会起一个守护线程并占用一个 DB 连接；全量单进程测试（或生产高并发）
+# 下，大量线程会耗尽 SQLAlchemy 连接池（pool_size=20 + max_overflow=40 = 60），进而与日志锁
+# 形成死锁（请求线程拿不到连接、日志线程拿不到锁）。用信号量把 MQTT 日志的并发 DB 操作收敛到
+# 很小的值，连接池永远不会被 MQTT 日志线程耗尽，从根上消除该死锁。
+_mqtt_log_semaphore = threading.Semaphore(5)
+
+
 def log_mqtt_message_async(client, topic, data, qos=1):
     """异步记录MQTT发送消息日志（不阻塞主流程）"""
 
     def log_task():
-        try:
-            from app import app
-            from models import db, MQTTLog
-
-            with app.app_context():
-                log = MQTTLog(
-                    topic=topic,
-                    message=json.dumps(data) if isinstance(data, dict) else str(data),
-                    direction="send",
-                    timestamp=datetime.now(),
-                )
-                db.session.add(log)
-                db.session.commit()
-
-            mqtt_logs.append(
-                {
-                    "topic": topic,
-                    "message": json.dumps(data) if isinstance(data, dict) else str(data),
-                    "direction": "send",
-                    "qos": qos,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            logger.error(f"记录MQTT消息失败: {e}", exc_info=True)
+        with _mqtt_log_semaphore:
             try:
-                db.session.rollback()  # 防 add/commit 失败遗留 pending 对象
-            except Exception as e2:
-                logger.warning(f"MQTT消息记录回滚失败: {e2}", exc_info=True)
+                from app import app
+                from models import db, MQTTLog
+
+                with app.app_context():
+                    log = MQTTLog(
+                        topic=topic,
+                        message=json.dumps(data) if isinstance(data, dict) else str(data),
+                        direction="send",
+                        timestamp=datetime.now(),
+                    )
+                    db.session.add(log)
+                    db.session.commit()
+
+                mqtt_logs.append(
+                    {
+                        "topic": topic,
+                        "message": json.dumps(data) if isinstance(data, dict) else str(data),
+                        "direction": "send",
+                        "qos": qos,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+            except Exception as e:
+                logger.error(f"记录MQTT消息失败: {e}", exc_info=True)
+                try:
+                    db.session.rollback()  # 防 add/commit 失败遗留 pending 对象
+                except Exception as e2:
+                    logger.warning(f"MQTT消息记录回滚失败: {e2}", exc_info=True)
 
     # 启动后台线程执行日志记录，不阻塞主流程
     thread = threading.Thread(target=log_task, daemon=True)

@@ -5377,7 +5377,7 @@ const api: Api = {
       }) as Promise<Exam>,
     delete: (id) => request(`/api/exams/${id}`, { method: 'DELETE' }) as Promise<void>,
     import: (data: FormData, url?: string) =>
-      request(url || '/api/exams/import', {
+      request(url || '/api/exam-import/execute', {
         method: 'POST',
         body: data,
       }) as Promise<{

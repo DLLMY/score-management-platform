@@ -1,8 +1,11 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from datetime import datetime
 from typing import Any
 from app import create_app
-import os
-import sys
 import time
 import json
 import statistics
@@ -13,7 +16,6 @@ import statistics
 """
 """
 """
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
 class PerformanceBenchmark:
@@ -24,6 +26,23 @@ class PerformanceBenchmark:
         self.client = self.app.test_client()
         self.results: dict[str, dict[str, Any]] = {}
         self.start_time = None
+        # 复用与测试套件相同的管理员令牌签发逻辑，确保基准 GET 命中受 RBAC 保护的端点（否则返回 401）
+        self.headers = self._build_auth_headers()
+
+    @staticmethod
+    def _build_auth_headers() -> dict:
+        """为种子管理员(id=1, test_admin, role=admin)签发合法 JWT，使基准请求命中受保护端点。"""
+        try:
+            from utils.security import generate_tokens
+
+            tokens = generate_tokens(admin_id=1, username="test_admin", role="admin")
+            return {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + tokens["access_token"],
+            }
+        except Exception as e:  # noqa: BLE001
+            print(f"[warn] 无法签发基准认证令牌（{e}），将以免认证方式运行，部分端点可能返回 401")
+            return {"Content-Type": "application/json"}
 
     def run_benchmark(
         self,
@@ -124,7 +143,7 @@ class PerformanceBenchmark:
         ]
         for endpoint_config in endpoints:
             print(f"\n📊 测试: {endpoint_config['method']} {endpoint_config['endpoint']}")
-            result = self.run_benchmark(**endpoint_config)
+            result = self.run_benchmark(headers=self.headers, **endpoint_config)
             self.results[endpoint_config["endpoint"]] = result
             self._print_result(result)
         return self.results
@@ -224,3 +243,4 @@ if __name__ == "__main__":
     benchmark.run_all_benchmarks()
     report = benchmark.generate_report("performance_report.json")
     print(report)
+    os._exit(0)  # 强制退出：create_app 启动的非守护后台线程（性能监控/调度器）会阻止正常退出
