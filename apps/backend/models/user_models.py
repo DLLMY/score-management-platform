@@ -251,6 +251,17 @@ class AdminRole(db.Model):
     admin = db.relationship("Admin", backref=db.backref("role_links", lazy=True))
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "role_code": self.role_code,
+            "assigned_at": self.assigned_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class Permission(db.Model):
     """权限定义表"""
 
@@ -350,6 +361,25 @@ class SecurityAudit(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "event_type": self.event_type,
+            "severity": self.severity,
+            "user_id": self.user_id,
+            "user_type": self.user_type,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+            "request_path": self.request_path,
+            "request_method": self.request_method,
+            "response_status": self.response_status,
+            "event_details": self.event_details,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class LoginAttempt(db.Model):
     """登录尝试记录"""
 

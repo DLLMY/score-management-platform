@@ -125,6 +125,51 @@ class Device(db.Model):
         return is_device_online(self)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "device_id": self.device_id,
+            "name": self.name,
+            "status": self.status,
+            "last_heartbeat": self.last_heartbeat,
+            "wifi_signal": self.wifi_signal,
+            "uptime": self.uptime,
+            "box_a_status": self.box_a_status,
+            "box_b_status": self.box_b_status,
+            "system_state": self.system_state,
+            "class_info_id": self.class_info_id,
+            "admin_id": self.admin_id,
+            "ip_address": self.ip_address,
+            "fw_version": self.fw_version,
+            "platform": self.platform,
+            "device_type": self.device_type,
+            "auto_update": self.auto_update,
+            "ota_status": self.ota_status,
+            "last_ota_push_at": self.last_ota_push_at,
+            "free_heap": self.free_heap,
+            "battery_level": self.battery_level,
+            "temperature": self.temperature,
+            "last_error": self.last_error,
+            "error_count": self.error_count,
+            "alert_enabled": self.alert_enabled,
+            "heartbeat_timeout": self.heartbeat_timeout,
+            "last_seen_ts": self.last_seen_ts,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "mac_address": self.mac_address,
+            "subnet_mask": self.subnet_mask,
+            "broadcast_ip": self.broadcast_ip,
+            "wake_on_lan_enabled": self.wake_on_lan_enabled,
+            "last_wake_time": self.last_wake_time,
+            "wake_count": self.wake_count,
+            "is_active": self.is_active,
+            "wol_port": self.wol_port,
+            "wol_description": self.wol_description,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class DeviceHeartbeat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.String(100), nullable=False)
@@ -246,3 +291,15 @@ class DeviceGroupMapping(db.Model):
     )
     group_id = db.Column(db.Integer, db.ForeignKey("device_groups.id"), nullable=False, index=True)
     added_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "device_id": self.device_id,
+            "group_id": self.group_id,
+            "added_at": self.added_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

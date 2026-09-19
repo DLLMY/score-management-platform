@@ -200,6 +200,34 @@ class NotifyTemplate(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "template": self.template,
+            "text": self.text,
+            "description": self.description,
+            "volume": self.volume,
+            "speak": self.speak,
+            "popup": self.popup,
+            "timeout_sec": self.timeout_sec,
+            "urgent": self.urgent,
+            "bg_color": self.bg_color,
+            "text_color": self.text_color,
+            "font_size": self.font_size,
+            "language": self.language,
+            "category": self.category,
+            "tags": self.tags,
+            "usage_count": self.usage_count,
+            "is_active": self.is_active,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class NotifyHistory(db.Model):
     """通知发送历史"""
 
