@@ -3,7 +3,7 @@ import os
 import json
 from datetime import datetime
 from flask import request, g
-from logging.handlers import RotatingFileHandler
+from utils.log_archiver import GzipRotatingFileHandler
 
 # 创建日志目录
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
@@ -23,7 +23,7 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
 
 # 创建文件处理器（带轮转）
-file_handler = RotatingFileHandler(
+file_handler = GzipRotatingFileHandler(
     os.path.join(LOG_DIR, "app.log"),
     maxBytes=10 * 1024 * 1024,
     backupCount=5,
@@ -33,7 +33,7 @@ file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
 
 # 创建错误日志处理器
-error_handler = RotatingFileHandler(
+error_handler = GzipRotatingFileHandler(
     os.path.join(LOG_DIR, "error.log"),
     maxBytes=5 * 1024 * 1024,
     backupCount=3,
@@ -282,7 +282,7 @@ def log_security_event(event_type, description, **kwargs):
 
         # 创建安全日志处理器（如果不存在）
         if not security_logger.handlers:
-            security_handler = RotatingFileHandler(
+            security_handler = GzipRotatingFileHandler(
                 os.path.join(LOG_DIR, "security.log"),
                 maxBytes=10 * 1024 * 1024,
                 backupCount=10,

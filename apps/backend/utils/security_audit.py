@@ -6,7 +6,7 @@ import io
 from datetime import datetime
 from functools import wraps
 from flask import request
-from logging.handlers import RotatingFileHandler
+from utils.log_archiver import GzipRotatingFileHandler
 
 "\n"
 "安全审计日志增强模块"
@@ -70,7 +70,7 @@ class SecurityLogger:
         logger = logging.getLogger("security_audit")
         logger.setLevel(logging.INFO)
         if not logger.handlers:
-            security_handler = RotatingFileHandler(
+            security_handler = GzipRotatingFileHandler(
                 os.path.join(LOG_DIR, "security_audit.log"),
                 maxBytes=20 * 1024 * 1024,
                 backupCount=20,
@@ -98,7 +98,7 @@ class SecurityLogger:
         self.critical_logger = logging.getLogger("security_critical")
         self.critical_logger.setLevel(logging.WARNING)
         if not self.critical_logger.handlers:
-            critical_handler = RotatingFileHandler(
+            critical_handler = GzipRotatingFileHandler(
                 os.path.join(LOG_DIR, "security_critical.log"),
                 maxBytes=10 * 1024 * 1024,
                 backupCount=30,

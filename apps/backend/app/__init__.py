@@ -85,6 +85,11 @@ def create_app(lightweight=False):
         if limiter:
             configure_rate_limits(app, limiter)
 
+    # D-M1: 日志自动归档（压缩轮转 + 超期清理）启动钩子
+    from utils.log_archiver import setup_log_archiving
+
+    setup_log_archiving(app)
+
     return app
 
 

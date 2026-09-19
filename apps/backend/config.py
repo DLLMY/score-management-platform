@@ -252,6 +252,8 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_MAX_BYTES = 10 * 1024 * 1024  # 10MB
     LOG_BACKUP_COUNT = 30
+    LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", "30"))  # 归档保留天数
+    LOG_ARCHIVE_SUBDIR = os.getenv("LOG_ARCHIVE_SUBDIR", "archive")  # 压缩归档子目录
     # ========== 缓存TTL配置（秒） ==========
     CACHE_TTL = {
         "user": 1800,  # 用户信息 30分钟
