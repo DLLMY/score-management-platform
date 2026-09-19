@@ -35,3 +35,5 @@ export {
   setWorkbenchClassId,
   ALL_CLASSES,
 } from './useWorkbenchClass';
+export { useMediaQuery } from './useMediaQuery';
+export { useIsMobile } from './useIsMobile';

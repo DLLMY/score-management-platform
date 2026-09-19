@@ -35,13 +35,13 @@ export default function DashboardView({
   if (state.loading) return <DashboardSkeleton />;
 
   return (
-    <div className='p-6 space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div>
+    <div className='p-4 sm:p-6 space-y-6'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+        <div className='min-w-0'>
           <h1 className='text-2xl font-bold text-gray-900'>仪表盘</h1>
           <p className='text-gray-500 mt-1'>实时监控系统状态和用户数据</p>
         </div>
-        <div className='flex items-center gap-4'>
+        <div className='flex flex-wrap items-center gap-2 sm:gap-4'>
           <div className='flex items-center gap-2 text-sm text-gray-500'>
             <Clock className='w-4 h-4' />
             <span>{state.lastUpdateTime ? formatDate(state.lastUpdateTime, true) : '—'}</span>
@@ -83,7 +83,7 @@ export default function DashboardView({
       )}
 
       <div
-        className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'
+        className='grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4'
         role='list'
         aria-label='统计数据卡片'
       >
