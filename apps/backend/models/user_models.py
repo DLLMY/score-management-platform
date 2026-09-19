@@ -411,3 +411,21 @@ class LoginAttempt(db.Model):
     user_agent = db.Column(db.Text)
     details = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "username": self.username,
+            "ip_address": self.ip_address,
+            "attempt_count": self.attempt_count,
+            "locked_until": self.locked_until,
+            "last_attempt_at": self.last_attempt_at,
+            "success": self.success,
+            "user_agent": self.user_agent,
+            "details": self.details,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

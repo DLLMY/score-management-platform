@@ -16,3 +16,20 @@ class TeacherComment(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "term": self.term,
+            "comment_type": self.comment_type,
+            "rating": self.rating,
+            "content": self.content,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

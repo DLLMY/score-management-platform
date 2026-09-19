@@ -48,3 +48,24 @@ class ImprovementPlan(db.Model):
     is_completed = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "plan_type": self.plan_type,
+            "subject_id": self.subject_id,
+            "target_score": self.target_score,
+            "current_score": self.current_score,
+            "plan_content": self.plan_content,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "progress": self.progress,
+            "is_completed": self.is_completed,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
