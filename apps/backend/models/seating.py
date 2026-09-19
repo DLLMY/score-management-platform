@@ -20,6 +20,24 @@ class SeatingChart(db.Model):
     seats = db.relationship("SeatingSeat", backref="chart", cascade="all, delete-orphan")
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "class_id": self.class_id,
+            "name": self.name,
+            "rows": self.rows,
+            "columns": self.columns,
+            "strategy": self.strategy,
+            "is_active": self.is_active,
+            "version": self.version,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class SeatingSeat(db.Model):
     __tablename__ = "seating_seat"
 

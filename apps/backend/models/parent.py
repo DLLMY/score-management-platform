@@ -17,6 +17,23 @@ class ParentContact(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "father_name": self.father_name,
+            "father_phone": self.father_phone,
+            "mother_name": self.mother_name,
+            "mother_phone": self.mother_phone,
+            "address": self.address,
+            "email": self.email,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class ContactLog(db.Model):
     __tablename__ = "contact_log"
 
@@ -31,3 +48,20 @@ class ContactLog(db.Model):
     follow_up_needed = db.Column(db.Boolean, default=False)
     follow_up_time = db.Column(db.DateTime, nullable=True)
     is_resolved = db.Column(db.Boolean, default=False)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "parent_id": self.parent_id,
+            "contact_type": self.contact_type,
+            "content": self.content,
+            "contact_time": self.contact_time,
+            "created_by": self.created_by,
+            "follow_up_needed": self.follow_up_needed,
+            "follow_up_time": self.follow_up_time,
+            "is_resolved": self.is_resolved,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

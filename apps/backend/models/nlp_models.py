@@ -228,6 +228,27 @@ class NLPModelTraining(db.Model):
     trained_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "model_name": self.model_name,
+            "status": self.status,
+            "algorithm_type": self.algorithm_type,
+            "training_data_size": self.training_data_size,
+            "accuracy": self.accuracy,
+            "f1_score": self.f1_score,
+            "precision": self.precision,
+            "recall": self.recall,
+            "results": self.results,
+            "trained_by": self.trained_by,
+            "error_message": self.error_message,
+            "created_at": self.created_at,
+            "trained_at": self.trained_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class NLPCorrection(db.Model):
     """NLP纠错记录"""
 

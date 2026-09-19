@@ -113,6 +113,22 @@ class NotifyAudit(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "type": self.type,
+            "target_class_id": self.target_class_id,
+            "admin_id": self.admin_id,
+            "payload": self.payload,
+            "reason_code": self.reason_code,
+            "reason_message": self.reason_message,
+            "force_send": self.force_send,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class ScheduledNotify(db.Model):
     """定时通知"""
 
