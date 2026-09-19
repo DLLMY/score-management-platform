@@ -10,6 +10,18 @@ class MQTTLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "topic": self.topic,
+            "message": self.message,
+            "direction": self.direction,
+            "timestamp": self.timestamp,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class MQTTConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     broker = db.Column(db.String(200), default="nc5233fc.ala.cn-hangzhou.emqxsl.cn")
@@ -48,6 +60,19 @@ class ProcessedMessage(db.Model):
     processed_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "message_id": self.message_id,
+            "record_id": self.record_id,
+            "new_score": self.new_score,
+            "client_id": self.client_id,
+            "processed_at": self.processed_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class PhoneBoxPolicy(db.Model):
     """班主任自助开箱策略：按班级（class_info_id 唯一）配置手机箱自助开箱。
 
