@@ -51,6 +51,32 @@ class NLPScoringRule(db.Model):
             self._behavior_tags = value
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "behavior_keyword": self.behavior_keyword,
+            "behavior_description": self.behavior_description,
+            "score_value": self.score_value,
+            "score_type": self.score_type,
+            "_behavior_tags": self._behavior_tags,
+            "match_pattern": self.match_pattern,
+            "priority": self.priority,
+            "usage_count": self.usage_count,
+            "accuracy_rate": self.accuracy_rate,
+            "is_active": self.is_active,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "last_used_at": self.last_used_at,
+            "rule_name": self.rule_name,
+            "rule_type": self.rule_type,
+            "condition": self.condition,
+            "score_change": self.score_change,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class NLPBehaviorKeyword(db.Model):
     """NLP行为关键词"""
 
@@ -93,6 +119,26 @@ class NLPBehaviorKeyword(db.Model):
             self._synonyms = str(value)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "keyword": self.keyword,
+            "keyword_type": self.keyword_type,
+            "score_weight": self.score_weight,
+            "description": self.description,
+            "is_active": self.is_active,
+            "created_at": self.created_at,
+            "score_type": self.score_type,
+            "default_score": self.default_score,
+            "_synonyms": self._synonyms,
+            "behavior_type": self.behavior_type,
+            "category": self.category,
+            "weight": self.weight,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class NLPMatchResult(db.Model):
     """NLP匹配结果"""
 
@@ -111,6 +157,24 @@ class NLPMatchResult(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "input_text": self.input_text,
+            "matched_rule_id": self.matched_rule_id,
+            "matched_keyword": self.matched_keyword,
+            "intent": self.intent,
+            "confidence": self.confidence,
+            "student_id": self.student_id,
+            "behavior_description": self.behavior_description,
+            "score_change": self.score_change,
+            "is_manual_correction": self.is_manual_correction,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
 class NLPRuleUsage(db.Model):
     """NLP规则使用记录"""
 

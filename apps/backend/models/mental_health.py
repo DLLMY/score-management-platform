@@ -13,3 +13,19 @@ class MentalHealthRecord(db.Model):
     notes = db.Column(db.Text)
     recorded_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "mood_level": self.mood_level,
+            "stress_level": self.stress_level,
+            "sleep_hours": self.sleep_hours,
+            "notes": self.notes,
+            "recorded_by": self.recorded_by,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data

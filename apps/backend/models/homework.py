@@ -48,3 +48,20 @@ class HomeworkSubmission(db.Model):
     notes = db.Column(db.String(500))
     checked_by = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "assignment_id": self.assignment_id,
+            "student_id": self.student_id,
+            "is_submitted": self.is_submitted,
+            "submitted_at": self.submitted_at,
+            "is_late": self.is_late,
+            "notes": self.notes,
+            "checked_by": self.checked_by,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
