@@ -228,6 +228,21 @@ class SystemMetric(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "metric_name": self.metric_name,
+            "metric_value": self.metric_value,
+            "unit": self.unit,
+            "category": self.category,
+            "tags": self.tags,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class RateLimitRecord(db.Model):
     """限流记录"""
 
@@ -239,3 +254,17 @@ class RateLimitRecord(db.Model):
     request_count = db.Column(db.Integer, default=0)
     window_start = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "ip_address": self.ip_address,
+            "endpoint": self.endpoint,
+            "request_count": self.request_count,
+            "window_start": self.window_start.isoformat() if self.window_start else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}

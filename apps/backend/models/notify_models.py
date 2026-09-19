@@ -71,6 +71,28 @@ class Approval(db.Model):
     user = db.relationship("User", backref="approvals")
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "type": self.type,
+            "title": self.title,
+            "description": self.description,
+            "score_change": self.score_change,
+            "status": self.status,
+            "approver_id": self.approver_id,
+            "approve_time": self.approve_time.isoformat() if self.approve_time else None,
+            "comment": self.comment,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "leave_type": self.leave_type,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class NotifyAudit(db.Model):
     """上课时间拦截 / 强制发送审计表"""
 
@@ -121,6 +143,35 @@ class ScheduledNotify(db.Model):
     )  # 定时通知创建人（审计链）；修复历史遗漏：路由早已引用，模型/库表此前缺失
 
 
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "text": self.text,
+            "volume": self.volume,
+            "speak": self.speak,
+            "popup": self.popup,
+            "timeout_sec": self.timeout_sec,
+            "urgent": self.urgent,
+            "send_mode": self.send_mode,
+            "device_id": self.device_id,
+            "scheduled_at": self.scheduled_at.isoformat() if self.scheduled_at else None,
+            "repeat_type": self.repeat_type,
+            "repeat_interval": self.repeat_interval,
+            "repeat_day_of_week": self.repeat_day_of_week,
+            "repeat_end_at": self.repeat_end_at.isoformat() if self.repeat_end_at else None,
+            "status": self.status,
+            "last_sent_at": self.last_sent_at.isoformat() if self.last_sent_at else None,
+            "next_send_at": self.next_send_at.isoformat() if self.next_send_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "template_id": self.template_id,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_by": self.created_by,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
 class NotifyTemplate(db.Model):
     """通知模板"""
 
@@ -169,3 +220,26 @@ class NotifyHistory(db.Model):
     status = db.Column(db.String(20), default="sent")
     sent_by = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "text": self.text,
+            "volume": self.volume,
+            "speak": self.speak,
+            "popup": self.popup,
+            "timeout_sec": self.timeout_sec,
+            "urgent": self.urgent,
+            "send_mode": self.send_mode,
+            "device_id": self.device_id,
+            "topic": self.topic,
+            "template_id": self.template_id,
+            "notification_id": self.notification_id,
+            "status": self.status,
+            "sent_by": self.sent_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
