@@ -1476,8 +1476,8 @@ class EnhancedNLPParserService:
             if rule:
                 # score_type就是意图类型 (add/deduct)
                 return rule.score_type
-        except (ValueError, TypeError):
-            pass
+        except (ValueError, TypeError) as e:
+            logging.getLogger(__name__).warning("get_intent_from_rule_id: rule_id=%r 转换/查库异常，回退已知意图判定: %s", rule_id, e)
         # 如果无法转换，检查是否是已知的意图类别
         known_intents = ["add", "deduct", "query", "reset", "unknown"]
         if str(rule_id) in known_intents:
@@ -1925,8 +1925,8 @@ class EnhancedNLPParserService:
                                 "end": match.end(),
                             }
                         )
-                except ValueError:
-                    pass
+                except ValueError as e:
+                    logging.getLogger(__name__).warning("实体抽取单条匹配异常，跳过: %s", e)
 
     def _extract_entity_dates(self, text, entities):
         date_patterns = [

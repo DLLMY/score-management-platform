@@ -30,7 +30,7 @@ class IntegrationTest:
                 self.user = data.get("user", {})
                 return True
             return False
-        except:
+        except Exception:
             return False
 
     @property
@@ -57,7 +57,7 @@ class IntegrationTest:
             elapsed = (time.time() - t0) * 1000
             try:
                 return r.status_code, r.json(), elapsed, None
-            except:
+            except Exception:
                 return r.status_code, r.text, elapsed, None
         except Exception as e:
             elapsed = (time.time() - t0) * 1000
@@ -236,7 +236,7 @@ class IntegrationTest:
                     break
                 try:
                     responses.append(json.dumps(body, sort_keys=True, ensure_ascii=False))
-                except:
+                except Exception:
                     responses.append(str(body))
             if len(responses) == 3:
                 if len(set(responses)) == 1:
