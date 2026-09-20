@@ -137,6 +137,7 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
         f"开始检查心跳超时设备，超时阈值: {timeout_threshold}, 超时时间: {timeout_seconds}秒"
     )
 
+    result = {"timeout_devices": [], "total_timeout": 0, "alerts_created": 0}
     try:
         timeout_devices = Device.query.filter(
             Device.last_heartbeat.isnot(None),
@@ -181,24 +182,28 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
                 db.session.rollback()
                 logger.error(f"心跳超时告警提交失败: {e}", exc_info=True)
 
+        # 必须在 db.session.remove() 之前构建结果：remove() 会 expire_all()，
+        # 之后访问 device_id 等列属性会触发惰性 reload → DetachedInstanceError。
+        # 构建时对象仍挂载在 session 上，列属性已加载，纯值落入 dict 后不再依赖 session。
+        result = {
+            "timeout_devices": [
+                {
+                    "device_id": d.device_id,
+                    "name": d.name,
+                    "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
+                    "heartbeat_timeout": d.heartbeat_timeout,
+                }
+                for d in timeout_devices
+            ],
+            "total_timeout": len(timeout_devices),
+            "alerts_created": alerts_created,
+        }
     finally:
         # P5: 后台线程（心跳检查每30s）无请求上下文，app_context teardown
         # 不一定可靠释放 scoped session；显式 remove 保证连接归还连接池，
         # 杜绝 QueuePool 耗尽（覆盖 0 超时不 commit 与异常两条泄漏路径）。
         db.session.remove()
-    return {
-        "timeout_devices": [
-            {
-                "device_id": d.device_id,
-                "name": d.name,
-                "last_heartbeat": d.last_heartbeat.isoformat() if d.last_heartbeat else None,
-                "heartbeat_timeout": d.heartbeat_timeout,
-            }
-            for d in timeout_devices
-        ],
-        "total_timeout": len(timeout_devices),
-        "alerts_created": alerts_created,
-    }
+    return result
 
 
 def update_device_heartbeat(device_id: str, heartbeat_data: dict = None) -> bool:

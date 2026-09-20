@@ -212,12 +212,27 @@ class FastNLPParser:
         return None
 
     def _detect_intent(self, text: str) -> str:
-        """检测意图"""
+        """检测意图。
+
+        优先级裁定：deduct > add > query > reset。
+        原因：文本常同时命中加分类泛化词与扣分类强信号（如「作业没交扣5分」含
+        加分类『作业』与扣分类『扣』）。扣分类意图更具体、负向后果更关键，必须
+        优先于泛化加分词，否则会被误判为加分。原实现按 dict 顺序（add 先于
+        deduct）逐词返回首个命中，导致上述误判。
+        """
+        # 1) 收集所有命中的意图
+        matched = set()
         for intent, keywords in self._quick_intent_keywords.items():
             for keyword in keywords:
                 if keyword in text:
-                    return intent
+                    matched.add(intent)
 
+        # 2) 按优先级裁定（扣分类优先）
+        for intent in ("deduct", "add", "query", "reset"):
+            if intent in matched:
+                return intent
+
+        # 3) 退回正则模式匹配
         for intent, patterns in self._intent_patterns.items():
             for pattern in patterns:
                 if pattern.search(text):

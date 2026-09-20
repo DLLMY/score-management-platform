@@ -152,11 +152,40 @@ def app():
     app = _build_test_app()
     db.init_app(app)
 
-    # 测试环境下禁用请求结束时的 session.remove：client 请求触发的 teardown 会分离
-    # 用例内已加载的实例，使 session.refresh(x) 报 "not persistent within this Session"。
-    # 统一关闭后，所有 .refresh() 用法（admin_routes/data_sync/mqtt 等）恢复正常。
+    # 根因修复（D2 后全量回归 QueuePool 耗尽 / 超时死锁 + 9 例 DetachedInstanceError）：
+    # 原实现把全局 db.session.remove 打成空操作，本意是保留「测试 app」的 session 实例
+    # 以兼容 session.refresh()（admin_routes/data_sync/mqtt 等），但其副作用是让
+    # 「真实 app」（config 中 QueuePool 20+40=60）的后台线程（MQTT 日志 / OTA / 调度器等）
+    # 连接永不归还 → 全量串行跑累积耗尽 → 300s 超时死锁（mqtt_service.py 注释已预警）。
+    # 正确做法（双保险）：
+    #   (1) 仅从「测试 app」上摘掉 FSA 注册的 session teardown —— 测试 app 用 StaticPool，
+    #       不会耗尽连接，且需保留实例兼容 refresh；真实 app 的 teardown 保持不动。
+    #   (2) 仅在「测试 app 上下文」内把 db.session.remove 变 no-op（保留实例，兼容 refresh
+    #       及 heartbeat_service 等「显式 remove 后访问 ORM 属性」的写法）；真实 app 上下文
+    #       内照常归还连接 → 泄露根治。两个 app 独立、teardown_appcontext_funcs 各自隔离。
+    #   判别器用 app.config["TESTING"]（测试 app 在 _build_test_app 中显式置 True，真实 app
+    #   不置），而非 current_app is app 身份比较——后者在心跳等服务内 current_app 已解析为
+    #   真实 app 对象时不可靠，导致误判为真实上下文而真实 remove，触发 DetachedInstanceError。
+    _orig_remove = db.session.remove
     try:
-        db.session.remove = lambda *a, **k: None
+        _fsa_teardown = db._teardown_session
+        app.teardown_appcontext_funcs = [
+            f for f in app.teardown_appcontext_funcs if f != _fsa_teardown
+        ]
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        def _patched_remove(*_args, **_kwargs):
+            try:
+                from flask import has_app_context, current_app
+
+                if has_app_context() and current_app.config.get("TESTING"):
+                    return  # 测试 app 上下文：保留实例，兼容 refresh / 显式 remove 后访问属性
+            except Exception:  # noqa: BLE001
+                pass
+            return _orig_remove(*_args, **_kwargs)
+
+        db.session.remove = _patched_remove
     except Exception:  # noqa: BLE001
         pass
 
@@ -169,6 +198,11 @@ def app():
 
         yield app
         db.drop_all()
+        # 还原 db.session.remove，避免闭包(捕获旧 app)跨用例残留
+        try:
+            db.session.remove = _orig_remove
+        except Exception:  # noqa: BLE001
+            pass
         # 清理缓存服务：get_cache_service() 为全局单例，内存/降级模式下跨用例共享，
         # 缓存 key 若未含用例隔离会偶发污染（algorithm/dashboard 统计曾全量偶发读到旧值）
         try:

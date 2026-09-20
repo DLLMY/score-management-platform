@@ -1,7 +1,29 @@
 import pytest
 import time
 from services.nlp_service import NLPService, nlp_service
+from services.nlp_fast_parser import FastNLPParser
 from models import User, ScoreCategory, NLPBehaviorKeyword, NLPScoringRule
+
+
+@pytest.fixture(autouse=True)
+def _force_deterministic_parser():
+    """消除 NLP 解析成功率 flaky 根因（确定性钉固）。
+
+    根因：nlp_service.parse() 优先返回「快速解析器」结果，但 fast parser 由守护线程
+    异步加载——加载完成前会回退到增强解析器，而增强解析器的行为词库来自 DB
+    （_refresh_cache 读 NLPBehaviorKeyword）。在 pytest 夹具的事务隔离下该读取偶发
+    读不到（keywords=[]）→ matched_rules 空 → success=False。于是 parse() 返回的
+    success/intent 取决于「fast parser 是否在解析前加载完」这一竞态 → 时过时不过。
+
+    修复：强制同步加载 fast parser 并清空缓存，使 parse() 走 DB 无关、确定性的快速
+    路径（生产中对这类简单句实际走的也是 fast 路径）。同时修掉 fast parser 的意图
+    优先级 bug（『作业没交扣5分』原被泛化加分词『作业』误判为 add，已改 deduct 优先）。
+    """
+    nlp_service.initialize()
+    nlp_service.clear_cache()
+    nlp_service._fast_parser = FastNLPParser()
+    yield
+    nlp_service.clear_cache()
 
 
 def _ensure_score_categories(session):
