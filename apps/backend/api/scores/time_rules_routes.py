@@ -246,7 +246,7 @@ class TimeRuleCheck(Resource):
             if start_time <= current_time <= end_time:
                 return {
                     "allowed": True,
-                    "rule": {"id": rule.id, "name": rule.name, "allow_unlock": rule.allow_unlock},
+                    "rule": rule.to_dict(fields=["id", "name", "allow_unlock"]),
                 }
 
         return {"allowed": False, "message": "当前时间不允许操作"}
