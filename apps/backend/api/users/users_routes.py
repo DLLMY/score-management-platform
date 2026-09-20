@@ -123,552 +123,6 @@ batch_score_model = ns_users.model(
     },
 )
 
-
-@ns_users.route("/")
-class UserList(Resource):
-    @ns_users.doc(
-        "list_users",
-        description="获取学生列表",
-        security="Bearer",
-        params={
-            "page": "页码，默认1",
-            "per_page": "每页数量，默认100",
-            "search": "搜索关键词（姓名、学号、电话）",
-            "class_name": "班级名称筛选",
-        },
-    )
-    @ns_users.response(200, "成功", user_list_response)
-    @requires_permission("student.view")
-    @cached_api(ttl=30)
-    def get(self):
-        """
-        获取学生列表
-        根据权限返回学生列表。超级管理员可以查看所有学生，教师只能查看所属班级的学生。
-        查询参数：
-        - page: 页码（默认1）
-        - per_page: 每页数量（默认100）
-        - search: 搜索关键词，匹配姓名、卡号、电话
-        - class_name: 班级名称筛选
-        返回分页结果，包含用户列表和分页信息。
-        """
-        admin = get_current_admin()
-        page, per_page = get_pagination(default=100)
-        search = request.args.get("search", "")
-        class_name = request.args.get("class_name", "")
-        class_id = request.args.get("class_id", type=int)
-        skip_cache = request.args.get("skip_cache", "false").lower() == "true"
-        # 高级筛选参数
-        keyword = request.args.get("keyword", "")
-        min_score = request.args.get("min_score", type=int)
-        max_score = request.args.get("max_score", type=int)
-        sort_by = request.args.get("sort_by", "name")
-        sort_order = request.args.get("sort_order", "asc")
-        # 缓存键包含所有筛选参数，处理admin为None和admin.role为None的情况
-        admin_role = admin.role if admin and admin.role else "anonymous"
-        cache_key = (
-            f"users_list:{admin_role}:{page}:{per_page}:{search}:"
-            f"{class_name}:{class_id}:{keyword}:{min_score}:{max_score}:"
-            f"{sort_by}:{sort_order}"
-        )
-        # 如果不跳过缓存，尝试从缓存获取
-        if not skip_cache:
-            cached_result = get_cache_service().get(cache_key)
-            if cached_result is not None:
-                return APIResponse.success(data=cached_result)
-        result = get_user_list_view(
-            admin,
-            page,
-            per_page,
-            search,
-            class_name,
-            class_id,
-            keyword,
-            min_score,
-            max_score,
-            sort_by,
-            sort_order,
-            cache_key,
-        )
-        return APIResponse.success(data=result)
-
-    @ns_users.doc("create_user", description="创建学生", security="Bearer")
-    @ns_users.expect(user_model)
-    @ns_users.response(201, "创建成功")
-    @ns_users.response(400, "参数错误")
-    @requires_permission("student.create")
-    def post(self):
-        """
-        创建新学生
-        创建一个新的学生账户。
-        非管理员用户只能为关联班级创建学生。
-        请求体：
-        - name: 学生姓名（必填）
-        - gender: 性别（可选）
-        - class_name: 班级（可选）
-        - phone: 联系电话（可选）
-        - father_name: 父亲姓名（可选）
-        - father_phone: 父亲电话（可选）
-        - mother_name: 母亲姓名（可选）
-        - mother_phone: 母亲电话（可选）
-        - guardian_name: 监护人姓名（可选）
-        - guardian_phone: 监护人电话（可选）
-        - guardian_relation: 监护关系（可选）
-        - card_id: 学号（必填，8-16位数字）
-        - current_score: 当前积分（可选，默认0，范围-1000到1000）
-        """
-        data = ns_users.payload
-        # 数据隔离检查：只能为关联班级创建学生
-        deny = _check_user_create_class_scope(data)
-        if deny is not None:
-            return deny
-        errors = _validate_create_user_fields(data)
-        if errors:
-            return validation_error_response(errors)
-        user_id = user_service.create_user(data)
-        user = get_by_id(User, user_id)
-        # 更新FTS搜索索引
-        try:
-            from utils.fulltext_search import get_search_engine
-
-            search_engine = get_search_engine()
-            search_engine.add_to_index(
-                user.id, user.name, user.card_id, user.phone, user.class_name
-            )
-        except Exception as e:
-            # 索引更新失败：新数据搜不到（索引与 DB 不一致），须留痕
-            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}", exc_info=True)
-        log_operation(
-            operation_type="create",
-            target_type="user",
-            target_id=user.id,
-            description=f"创建学生: {user.name}",
-            after_data=data,
-        )
-        get_cache_service().invalidate_by_tag("users")
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(
-            data={
-                "user": {
-                    **user.to_dict(USER_CREATE_FIELDS),
-                    "role": "student",
-                }
-            },
-            message="用户创建成功",
-            status_code=201,
-        )
-
-
-@ns_users.route("/<int:id>")
-@ns_users.param("id", "用户ID")
-class UserResource(Resource):
-    @ns_users.doc("get_user", description="获取单个学生信息")
-    @ns_users.response(200, "成功", user_model)
-    @ns_users.response(404, "学生不存在")
-    @requires_permission("student.view")
-    def get(self, id):
-        """
-        获取单个学生详细信息
-        根据学生ID获取详细信息。
-        非管理员用户只能查看关联班级的学生。
-        """
-        user = User.query.get_or_404(id)
-        if not can_access_student(id):
-            return APIResponse.error(message="无权查看该学生", status_code=403)
-        return APIResponse.success(
-            data={
-                **user.to_dict(USER_DETAIL_FIELDS),
-                "score": user.current_score,
-                "role": "student",
-            }
-        )
-
-    @ns_users.doc("update_user", description="更新学生信息", security="Bearer")
-    @ns_users.expect(user_model)
-    @ns_users.response(200, "更新成功")
-    @ns_users.response(404, "学生不存在")
-    @requires_permission("student.edit")
-    def put(self, id):
-        """
-        更新学生信息
-        更新指定学生的信息。
-        非管理员用户只能更新关联班级的学生。
-        请求体参数均为可选，只更新提供的字段。
-        """
-        user = User.query.get_or_404(id)
-        if not can_access_student(id):
-            return APIResponse.error(message="无权更新该学生", status_code=403)
-        before_data = {
-            "name": user.name,
-            "gender": user.gender,
-            "class_name": user.class_name,
-            "phone": user.phone,
-            "card_id": user.card_id,
-            "current_score": user.current_score,
-        }
-        data = ns_users.payload
-        user.name = data.get("name", user.name)
-        user.gender = data.get("gender", user.gender)
-        user.class_name = data.get("class_name", user.class_name)
-        user.phone = data.get("phone", user.phone)
-        user.father_name = data.get("father_name", user.father_name)
-        user.father_phone = data.get("father_phone", user.father_phone)
-        user.mother_name = data.get("mother_name", user.mother_name)
-        user.mother_phone = data.get("mother_phone", user.mother_phone)
-        user.guardian_name = data.get("guardian_name", user.guardian_name)
-        user.guardian_phone = data.get("guardian_phone", user.guardian_phone)
-        user.guardian_relation = data.get("guardian_relation", user.guardian_relation)
-        user.card_id = data.get("card_id", user.card_id)
-        user.current_score = data.get("current_score", user.current_score)
-        user_id = user_service.update_user(id, data)
-        user = get_by_id(User, user_id)
-        # 更新FTS搜索索引
-        try:
-            from utils.fulltext_search import (
-                get_search_engine,
-            )  # 函数内 import（与 create 分支一致，缺失会 NameError）
-
-            search_engine = get_search_engine()
-            search_engine.add_to_index(
-                user.id, user.name, user.card_id, user.phone, user.class_name
-            )
-        except Exception as e:
-            # 索引更新失败：改动后搜不到（索引与 DB 不一致），须留痕
-            logger.warning(f"FTS索引更新失败(user_id={user.id}): {e}", exc_info=True)
-        log_operation(
-            operation_type="update",
-            target_type="user",
-            target_id=user.id,
-            description=f"更新学生信息: {user.name}",
-            before_data=before_data,
-            after_data=data,
-        )
-        get_cache_service().invalidate_by_tag("users")
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(
-            data={
-                "user": {
-                    **user.to_dict(USER_CREATE_FIELDS),
-                    "role": "student",
-                }
-            },
-            message="用户更新成功",
-        )
-
-    @ns_users.doc("delete_user", description="删除学生", security="Bearer")
-    @ns_users.response(200, "删除成功")
-    @ns_users.response(404, "学生不存在")
-    @requires_permission("student.delete")
-    def delete(self, id):
-        """
-        删除学生
-        删除指定的学生账户。
-        非管理员用户只能删除关联班级的学生。
-        """
-        user = User.query.get_or_404(id)
-        if not can_access_student(id):
-            return APIResponse.error(message="无权删除该学生", status_code=403)
-        before_data = {
-            "name": user.name,
-            "class_name": user.class_name,
-            "card_id": user.card_id,
-            "current_score": user.current_score,
-        }
-        # 先清理所有关联子表，避免 SQLite 外键 NOT NULL 约束导致删除失败
-        # （级联清理 + 用户删除同处一个事务，收口至 service）
-        user_service.delete_user(id)
-
-        # 从FTS搜索索引移除
-        try:
-            from utils.fulltext_search import get_search_engine  # 函数内 import（缺失会 NameError）
-
-            search_engine = get_search_engine()
-            search_engine.remove_from_index(id)
-        except Exception as e:
-            # 索引移除失败：已删除用户仍可被搜到（索引残留），须留痕
-            logger.warning(f"FTS索引移除失败(user_id={id}): {e}", exc_info=True)
-        log_operation(
-            operation_type="delete",
-            target_type="user",
-            target_id=id,
-            description=f'删除学生: {before_data["name"]}',
-            before_data=before_data,
-        )
-        get_cache_service().invalidate_by_tag("users")
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(message="用户删除成功")
-
-
-@ns_users.route("/by-card/<string:cardId>")
-@ns_users.param("cardId", "卡片ID")
-class UserByCard(Resource):
-    @ns_users.doc("get_user_by_card", description="通过卡片ID获取学生信息")
-    @ns_users.response(200, "成功")
-    @ns_users.response(404, "未找到用户")
-    @requires_permission("student.view")
-    def get(self, cardId):
-        """
-        通过卡片ID获取学生信息
-        根据学生的卡片ID查询学生信息。
-        非管理员用户只能查看关联班级的学生。
-        """
-        user = User.query.filter_by(card_id=cardId).first()
-        if not user:
-            return APIResponse.error(message="未找到用户", status_code=404)
-        if not can_access_student(user.id):
-            return APIResponse.error(message="无权查看该学生", status_code=403)
-        return APIResponse.success(
-            data={
-                **user.to_dict(USER_BY_CARD_FIELDS),
-            }
-        )
-
-
-@ns_users.route("/import")
-class UserImport(Resource):
-    @ns_users.doc("import_users", description="批量导入学生（JSON格式）", security="Bearer")
-    @ns_users.expect(
-        ns_users.model(
-            "UserImportRequest",
-            {
-                "users": fields.List(
-                    fields.Nested(user_model), required=True, description="学生列表"
-                )
-            },
-        )
-    )
-    @ns_users.response(200, "导入完成")
-    @ns_users.response(400, "没有导入数据")
-    @requires_permission("student.create")
-    def post(self):
-        """
-        批量导入学生（JSON格式）
-        通过JSON格式批量导入学生数据。
-        非管理员用户只能为关联班级导入学生。
-        请求体：
-        - users: 学生列表数组
-        返回导入结果，包含成功和失败数量。
-        """
-        data = request.get_json()
-        users_data = data.get("users", [])
-        if not users_data:
-            return APIResponse.error(message="没有导入数据", status_code=400)
-        imported_count = 0
-        error_count = 0
-        errors = []
-        pending_users = []
-        # R8 修复: 批内 card_id 去重（原只查 DB，同批重复卡号通过预检 → commit IntegrityError 无回滚脏 session）
-        seen_card_ids = set()
-        for idx, user_data in enumerate(users_data):
-            try:
-                user, row_errors, _row_data = _validate_import_user(user_data, idx, seen_card_ids)
-                if row_errors:
-                    error_count += 1
-                    errors.append(
-                        {
-                            "row": idx + 1,
-                            "message": "; ".join(
-                                [f'{err["field"]}: {err["message"]}' for err in row_errors]
-                            ),
-                            "row_data": _row_data,
-                            "error_fields": [err["field"] for err in row_errors],
-                        }
-                    )
-                    continue
-                pending_users.append(user)
-                seen_card_ids.add(str(user_data.get("card_id")).strip())
-                imported_count += 1
-            except Exception as e:
-                error_count += 1
-                errors.append(
-                    {
-                        "row": idx + 1,
-                        "message": str(e),
-                        "row_data": user_data,
-                        "error_fields": ["system"],
-                    }
-                )
-        try:
-            user_service.bulk_create_users(pending_users)
-        except Exception as e:
-            # R8 修复: 唯一约束/数据异常 → 回滚避免脏 session（service 内 db_session_scope 已回滚）
-            return APIResponse.error(
-                message=f"导入失败：数据库写入冲突（{str(e)[:120]}），已回滚",
-                data={"imported": 0, "errors": errors},
-                status_code=400,
-            )
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(
-            data={"imported": imported_count, "errors": errors},
-            message=f"导入完成: 成功{imported_count}条, 失败{error_count}条",
-        )
-
-
-@ns_users.route("/batch-delete")
-class UserBatchDelete(Resource):
-    @ns_users.doc("batch_delete_users", description="批量删除学生", security="Bearer")
-    @ns_users.expect(
-        ns_users.model(
-            "BatchDeleteRequest",
-            {"ids": fields.List(fields.Integer, required=True, description="用户ID列表")},
-        )
-    )
-    @ns_users.response(200, "删除完成")
-    @ns_users.response(400, "没有提供删除ID")
-    @requires_permission("student.delete")
-    def post(self):
-        """
-        批量删除学生
-        批量删除指定的学生。
-        非管理员用户只能删除关联班级的学生。
-        请求体：
-        - ids: 用户ID列表
-        返回删除结果。
-        """
-        data = request.get_json()
-        ids = data.get("ids", [])
-        if not ids:
-            return APIResponse.error(message="没有提供删除ID", status_code=400)
-        target_ids = []
-        for user_id in ids:
-            if not can_access_student(user_id):
-                continue
-            user = get_by_id(User, user_id)
-            if user:
-                target_ids.append(user_id)
-        deleted_count = user_service.bulk_delete_users(target_ids)
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(message=f"批量删除完成: 成功{deleted_count}条")
-
-
-@ns_users.route("/batch-score")
-class UserBatchScore(Resource):
-    @ns_users.doc("batch_update_user_score", description="批量调整学生积分", security="Bearer")
-    @ns_users.expect(batch_score_model)
-    @ns_users.response(200, "调整完成")
-    @ns_users.response(400, "没有提供用户ID")
-    @requires_permission("score.entry")
-    def post(self):
-        """
-        批量调整学生积分
-        为多个学生同时调整积分。
-        非管理员用户只能为关联班级的学生调整积分。
-        请求体：
-        - ids: 用户ID列表（必填）
-        - score_change: 积分变化量（必填，正数加分，负数扣分）
-        - description: 操作描述（可选）
-        返回调整结果。
-        """
-        data = request.get_json()
-        ids = data.get("ids", [])
-        score_change = data.get("score_change", 0)
-        description = data.get("description", "批量积分调整")
-        if not ids:
-            return APIResponse.error(message="没有提供用户ID", status_code=400)
-        # 数据隔离：过滤掉无权操作的学生
-        allowed_ids = [uid for uid in ids if can_access_student(uid)]
-        if not allowed_ids:
-            return APIResponse.error(message="无权为这些学生调整积分", status_code=403)
-        # 性能优化：使用批量更新（写入路径收口至 service）
-        updated_count = user_service.bulk_score_update(allowed_ids, score_change, description)
-        # 发送积分变动通知到远程客户端（积分窗口显示）
-        try:
-            from api.monitoring.mqtt_routes import publish_mqtt
-
-            blocked, check_message, reason_code = ClassTimeChecker.is_broadcast_blocked(
-                force_send=False
-            )
-            if not blocked:
-                users = User.query.filter(User.id.in_(ids)).all()
-                score_change_str = f"{score_change:+g}" if score_change > 0 else str(score_change)
-                for user in users:
-                    score_change_text = (
-                        f"学生:{user.name}, {score_change_str}分, 原因:{description}"
-                    )
-                    score_notification = {
-                        "type": "score_change",
-                        "text": score_change_text,
-                        "popup": True,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                    publish_mqtt("phonebox/remote/notify", score_notification)
-                logger.info(
-                    f"[ScoreChange] 批量积分变动通知已发送: {updated_count}个用户, {score_change_str}分"
-                )
-            else:
-                ClassTimeChecker.log_notify_audit(
-                    "score_change",
-                    None,
-                    None,
-                    {"users": ids},
-                    reason_code or "GLOBAL_TIME_RULE",
-                    check_message,
-                    force_send=False,
-                )
-                logger.info(
-                    f"[ScoreChange] 批量积分变动通知被拦截（上课时间）: {updated_count}个用户, {score_change_str}分"
-                )
-        except Exception as e:
-            logger.warning(f"[ScoreChange] 批量发送积分变动通知失败: {e}", exc_info=True)
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(message=f"批量积分调整完成: 成功{updated_count}条")
-
-
-@ns_users.route("/template/download")
-class UserTemplate(Resource):
-    @ns_users.doc("download_user_template", description="下载导入模板", security="Bearer")
-    @requires_permission("student.view")
-    def get(self):
-        """
-        下载CSV导入模板
-        下载学生批量导入的CSV模板文件。
-        """
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(
-            [
-                "姓名",
-                "性别",
-                "班级",
-                "联系电话",
-                "卡片ID",
-                "父亲姓名",
-                "父亲电话",
-                "母亲姓名",
-                "母亲电话",
-                "监护人姓名",
-                "监护人电话",
-                "监护关系",
-                "初始积分",
-            ]
-        )
-        writer.writerow(
-            [
-                "张三",
-                "男",
-                "一年一班",
-                "13800138000",
-                "CARD001",
-                "张父",
-                "13900139000",
-                "张母",
-                "13700137000",
-                "",
-                "",
-                "",
-                "60",
-            ]
-        )
-        output.seek(0)
-        from flask import send_file
-
-        return send_file(
-            io.BytesIO(output.getvalue().encode("utf-8-sig")),
-            mimetype="text/csv",
-            as_attachment=True,
-            download_name="user_import_template.csv",
-        )
-
-
 def detect_encoding(content_bytes):
     encodings = ["utf-8-sig", "utf-8", "gbk", "gb2312", "gb18030"]
     for encoding in encodings:
@@ -678,139 +132,6 @@ def detect_encoding(content_bytes):
         except UnicodeDecodeError:
             continue
     return None, None
-
-
-@ns_users.route("/import-file", methods=["POST"])
-class UserImportFile(Resource):
-    @ns_users.doc("import_users_file", description="通过CSV文件批量导入学生", security="Bearer")
-    @ns_users.response(200, "导入完成")
-    @ns_users.response(400, "文件错误")
-    @requires_permission("student.create")
-    def post(self):
-        """
-        通过CSV文件批量导入学生
-        上传CSV文件批量导入学生数据。支持UTF-8和GBK编码。
-        非管理员用户只能为关联班级导入学生。
-        请求：multipart/form-data
-        - file: CSV文件
-        CSV文件格式：
-        姓名,性别,班级,联系电话,卡片ID,父亲姓名,父亲电话,母亲姓名,母亲电话,监护人姓名,监护人电话,监护关系,初始积分
-        返回导入结果，包含新增、更新数量和错误信息。
-        """
-        admin = get_current_admin()
-        allowed_classes = get_allowed_classes(admin.id) if admin else None
-        file, err = _check_csv_upload_file(request)
-        if err is not None:
-            return err
-        rows, headers, err = _read_and_parse_csv(file)
-        if err is not None:
-            return err
-        mapping = _CSV_USER_HEADER_MAPPING
-        imported = 0
-        updated = 0
-        errors = []
-        messages = []
-        pending_users = []
-        pending_updates = []
-        try:
-            for idx, row in enumerate(rows[1:]):
-                try:
-                    row_dict, row_data = _build_csv_row_dict(row, headers, mapping)
-                    row_errors = _validate_csv_row(row_dict, allowed_classes)
-                    if row_errors:
-                        error_count = len(errors)
-                        error_msg = "; ".join(
-                            [f'{err2["field"]}: {err2["message"]}' for err2 in row_errors]
-                        )
-                        errors.append(
-                            {
-                                "row": idx + 2,
-                                "message": error_msg,
-                                "row_data": row_data,
-                                "error_fields": [err2["field"] for err2 in row_errors],
-                            }
-                        )
-                        messages.append(
-                            {
-                                "name": row_dict.get("name", "")
-                                or row_dict.get("card_id", "")
-                                or "未知",
-                                "action": "failed",
-                                "message": error_msg,
-                                "row_data": row_data,
-                                "error_fields": [err2["field"] for err2 in row_errors],
-                            }
-                        )
-                        continue
-                    name = row_dict.get("name", "").strip()
-                    card_id = row_dict.get("card_id", "").strip()
-                    class_name = row_dict.get("class_name", "").strip()
-                    gender = row_dict.get("gender", "").strip()
-                    phone = row_dict.get("phone", "").strip()
-                    score_str = row_dict.get("current_score", "0").strip()
-                    current_score_int = int(score_str) if score_str else 0
-                    existing = User.query.filter_by(card_id=card_id).first()
-                    if existing:
-                        updates = _build_csv_user_updates(row_dict, current_score_int)
-                        pending_updates.append((existing.id, updates))
-                        updated += 1
-                        messages.append(
-                            {
-                                "name": name,
-                                "action": "updated",
-                                "message": f'学生"{name}"信息更新成功',
-                            }
-                        )
-                    else:
-                        user = _build_csv_user(row_dict, current_score_int)
-                        pending_users.append(user)
-                        imported += 1
-                        messages.append(
-                            {"name": name, "action": "created", "message": f'学生"{name}"导入成功'}
-                        )
-                except Exception as e:
-                    error_count = len(errors)
-                    error_msg = str(e)
-                    errors.append(
-                        {
-                            "row": idx + 2,
-                            "message": error_msg,
-                            "row_data": row_data if "row_data" in locals() else None,
-                            "error_fields": ["system"],
-                        }
-                    )
-                    messages.append(
-                        {
-                            "name": (
-                                row_dict.get("name", "") or row_dict.get("card_id", "") or "未知"
-                                if "row_dict" in locals()
-                                else "未知"
-                            ),
-                            "action": "failed",
-                            "message": error_msg,
-                            "row_data": row_data if "row_data" in locals() else None,
-                            "error_fields": ["system"],
-                        }
-                    )
-        except Exception as e:
-            logger.error("%s: %s", "导入失败", e, exc_info=True)
-            return APIResponse.error(message="导入失败", status_code=500)
-        user_service.apply_csv_import(pending_users, pending_updates)
-        failed_count = len(errors)
-        invalidate_cache("api:/api/users/*")
-        return APIResponse.success(
-            data={
-                "total": imported + updated + failed_count,
-                "success_count": imported + updated,
-                "failed_count": failed_count,
-                "imported": imported,
-                "updated": updated,
-                "errors": errors,
-                "messages": messages,
-            },
-            message=f"导入完成: 新增{imported}条, 更新{updated}条, 失败{failed_count}条",
-        )
-
 
 def _check_user_create_class_scope(data):
     class_name = data.get("class_name")
@@ -822,7 +143,6 @@ def _check_user_create_class_scope(data):
                 return APIResponse.error(message="无权为该班级创建学生", status_code=403)
     return None
 
-
 def _validate_create_user_fields(data):
     errors = []
     errors.extend(_validate_create_user_name(data))
@@ -832,7 +152,6 @@ def _validate_create_user_fields(data):
     errors.extend(_validate_create_user_card_unique(data))
     return errors
 
-
 def _validate_create_user_name(data):
     errors = []
     name = data.get("name")
@@ -841,7 +160,6 @@ def _validate_create_user_name(data):
     elif len(name) > ValidationRules.NAME_MAX_LEN:
         errors.append(f"学生姓名长度不能超过{ValidationRules.NAME_MAX_LEN}个字符")
     return errors
-
 
 def _validate_create_user_card_id(data):
     errors = []
@@ -853,7 +171,6 @@ def _validate_create_user_card_id(data):
         if not is_valid:
             errors.append(f"卡号: {error_msg}")
     return errors
-
 
 def _validate_create_user_phones(data):
     errors = []
@@ -874,7 +191,6 @@ def _validate_create_user_phones(data):
             errors.append(f"母亲电话: {error_msg}")
     return errors
 
-
 def _validate_create_user_score(data):
     errors = []
     score = data.get("current_score", 0)
@@ -882,7 +198,6 @@ def _validate_create_user_score(data):
     if not is_valid:
         errors.append(f"积分: {error_msg}")
     return errors
-
 
 def _validate_create_user_card_unique(data):
     errors = []
@@ -892,7 +207,6 @@ def _validate_create_user_card_unique(data):
         if existing_user:
             errors.append(f"卡号 {card_id} 已被用户 {existing_user.name} 使用")
     return errors
-
 
 def _validate_import_user(user_data, idx, seen_card_ids):
     row_errors = []
@@ -907,7 +221,6 @@ def _validate_import_user(user_data, idx, seen_card_ids):
     card_id = user_data.get("card_id")
     user = _build_import_user(user_data, card_id)
     return user, None, row_data
-
 
 def _validate_import_user_card_id(user_data, seen_card_ids):
     errors = []
@@ -932,7 +245,6 @@ def _validate_import_user_card_id(user_data, seen_card_ids):
             errors.append({"field": "card_id", "message": f'学号 "{card_id_norm}" 在本批中重复'})
     return errors
 
-
 def _validate_import_user_name(user_data):
     errors = []
     name = user_data.get("name")
@@ -947,7 +259,6 @@ def _validate_import_user_name(user_data):
         if not is_valid:
             errors.append({"field": "name", "message": msg})
     return errors
-
 
 def _validate_import_user_class(user_data):
     errors = []
@@ -965,14 +276,12 @@ def _validate_import_user_class(user_data):
                 )
     return errors
 
-
 def _validate_import_user_gender(user_data):
     errors = []
     gender = user_data.get("gender")
     if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
         errors.append({"field": "gender", "message": '性别值无效，只能是"男"或"女"'})
     return errors
-
 
 def _validate_import_user_phone(user_data):
     errors = []
@@ -985,7 +294,6 @@ def _validate_import_user_phone(user_data):
             if not re.match(r"^1[3-9]\d{9}$", str(phone).strip()):
                 errors.append({"field": "phone", "message": "联系电话格式无效，请输入11位手机号"})
     return errors
-
 
 def _build_import_user(user_data, card_id):
     return User(
@@ -1003,7 +311,6 @@ def _build_import_user(user_data, card_id):
         card_id=str(card_id),
         current_score=user_data.get("current_score", 0),
     )
-
 
 _CSV_USER_HEADER_MAPPING = {
     "姓名": "name",
@@ -1026,7 +333,6 @@ _CSV_USER_HEADER_MAPPING = {
     "积分": "current_score",
 }
 
-
 def _check_csv_upload_file(request):
     if "file" not in request.files:
         return None, APIResponse.error(message="请选择文件", status_code=400)
@@ -1036,7 +342,6 @@ def _check_csv_upload_file(request):
     if not file.filename.lower().endswith(".csv"):
         return None, APIResponse.error(message="请选择CSV格式的文件", status_code=400)
     return file, None
-
 
 def _read_and_parse_csv(file):
     content_bytes = file.read()
@@ -1058,7 +363,6 @@ def _read_and_parse_csv(file):
         return None, None, APIResponse.error(message="文件没有数据", status_code=400)
     return rows, [h.strip() for h in rows[0]], None
 
-
 def _build_csv_row_dict(row, headers, mapping):
     row_dict = {}
     row_data = {}
@@ -1069,7 +373,6 @@ def _build_csv_row_dict(row, headers, mapping):
             row_data[header] = value
     return row_dict, row_data
 
-
 def _validate_csv_row(row_dict, allowed_classes):
     row_errors = []
     row_errors.extend(_csv_validate_card_id(row_dict))
@@ -1079,7 +382,6 @@ def _validate_csv_row(row_dict, allowed_classes):
     row_errors.extend(_csv_validate_phones(row_dict))
     row_errors.extend(_csv_validate_score(row_dict))
     return row_errors
-
 
 def _csv_validate_card_id(row_dict):
     errors = []
@@ -1092,7 +394,6 @@ def _csv_validate_card_id(row_dict):
         errors.append({"field": "card_id", "message": "学号长度超过限制（最大50字符）"})
     return errors
 
-
 def _csv_validate_name(row_dict):
     errors = []
     name = row_dict.get("name", "").strip()
@@ -1103,7 +404,6 @@ def _csv_validate_name(row_dict):
     elif len(name.strip()) > 50:
         errors.append({"field": "name", "message": "姓名长度超过限制（最大50字符）"})
     return errors
-
 
 def _csv_validate_class_name(row_dict, allowed_classes):
     errors = []
@@ -1123,14 +423,12 @@ def _csv_validate_class_name(row_dict, allowed_classes):
             errors.append({"field": "class_name", "message": f'无权为班级 "{class_name}" 导入学生'})
     return errors
 
-
 def _csv_validate_gender(row_dict):
     errors = []
     gender = row_dict.get("gender", "").strip()
     if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
         errors.append({"field": "gender", "message": '性别格式无效，只能是"男"或"女"'})
     return errors
-
 
 def _csv_validate_phones(row_dict):
     errors = []
@@ -1150,7 +448,6 @@ def _csv_validate_phones(row_dict):
         )
     return errors
 
-
 def _csv_validate_score(row_dict):
     errors = []
     current_score = row_dict.get("current_score", "0").strip()
@@ -1162,7 +459,6 @@ def _csv_validate_score(row_dict):
         except ValueError:
             errors.append({"field": "current_score", "message": "初始积分格式无效，必须为整数"})
     return errors
-
 
 def _build_csv_user(row_dict, current_score_int):
     return User(
@@ -1181,7 +477,6 @@ def _build_csv_user(row_dict, current_score_int):
         card_id=row_dict.get("card_id", "").strip(),
         current_score=current_score_int,
     )
-
 
 def _build_csv_user_updates(row_dict, current_score_int):
     spec = [
@@ -1205,3 +500,6 @@ def _build_csv_user_updates(row_dict, current_score_int):
             updates[dst] = val
     updates["current_score"] = current_score_int
     return updates
+
+import api.users._users_part1
+import api.users._users_part2
