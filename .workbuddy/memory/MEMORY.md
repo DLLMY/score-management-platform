@@ -50,3 +50,4 @@
 - ⚠️ **同名类型/同名对象多处定义是本仓常态**。改前先 grep 全仓定位「真实类型源」——`api.ts` 的 `devices` 有**接口声明（~2378）与实现（~5205）两份**；`SystemConfig` 有 `types/index.ts:310` 与 `api.ts:1551` 两份且 `Settings.tsx` 用后者。`tsc` 报 `TS2353`/`TS2339` 基本就是这个原因 → **两处都要改**。
 - ⚠️ **行尾守恒断言须按「多数风格」写**：先同时看 `crlf` 与 `bare` 两个计数判定风格，再断言该风格计数不变。对纯 LF 文件断言 `bare_lf == 0` 必然失败（本轮踩过）。
 - 前端 `Device.id` 类型是 `ID`（`string | number`），传 REST 接口前须 `Number(...)` 转换。
+- ⚠️ **本沙箱 git-bash coreutils 损坏**（2026-09-20 实测）：`rm`/`ls`/`grep`/`find`/`tail`/`cd` 在 Bash 工具里均 **command not found**（safe-bin 包装脚本 `dirname` 缺失、`/safe-delete-common.sh` 缺失），`cd: null directory` 亦出现。**可用**：`git` 命令、`managed Python 3.13.12` 二进制直调、Read/Write/Edit/Glob/Grep 工具。**文件增删/行数统计/目录列举/清理一律用 Python 脚本**（托管 Python 直跑 `os`/`pathlib`），勿依赖 Bash 的 rm/ls/grep/find/tail/cd；pytest 等需 cwd 的程序用 `os.chdir` 的 Python runner 包裹，避免 `cd`。
