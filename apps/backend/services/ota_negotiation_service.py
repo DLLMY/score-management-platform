@@ -603,17 +603,28 @@ def _plan_rollout(eligible, stage_percent, batch_size):
 
     eligible: [(device, firmware), ...]
     返回 [(device, firmware, extra_delay), ...]
-      - 灰度：取前 stage_percent% 个（先随机洗牌，避免每次都是同一批）
-      - 分批：第 b 批（batch_size 个）整体推迟 b * OTA_STAGE_BATCH_INTERVAL_SEC 秒
+      - 灰度：按 device_type 分组后各自随机洗牌，避免每次都是同一批；
+        每组独立取前 stage_percent% 个，保证各设备类型都有灰度覆盖
+        （不会因全局洗牌把小众类型完全挤出样本）。
     """
     if not eligible:
         return []
     pct = max(0, min(100, int(stage_percent)))
-    chosen = list(eligible)
-    if pct < 100:
-        random.shuffle(chosen)
-        k = max(1, int(math.ceil(len(chosen) * pct / 100.0)))
-        chosen = chosen[:k]
+
+    # 按设备类型分组（归一化，None -> phonebox），各组内独立洗牌 + 按比例截取
+    groups = {}
+    for d, fw in eligible:
+        dt = normalize_device_type(getattr(d, "device_type", None))
+        groups.setdefault(dt, []).append((d, fw))
+
+    chosen = []
+    for _dt, items in groups.items():
+        group_items = list(items)
+        if pct < 100:
+            random.shuffle(group_items)
+            k = max(1, int(math.ceil(len(group_items) * pct / 100.0)))
+            group_items = group_items[:k]
+        chosen.extend(group_items)
 
     bs = int(batch_size) if batch_size else 0
     planned = []
