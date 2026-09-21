@@ -403,17 +403,13 @@ class FirmwareUpload(Resource):
                 rollback_to=rollback_to,
             )
 
+            firmware = FirmwareVersion.query.get(firmware_id)
             return {
                 "success": True,
                 "message": "Firmware uploaded successfully",
-                "firmware": {
-                    "id": firmware_id,
-                    "version": version,
-                    "file_size": file_size,
-                    "md5": md5_hex,
-                    "description": description,
-                    "is_mandatory": is_mandatory,
-                },
+                "firmware": firmware.to_dict(
+                    fields=["id", "version", "file_size", "md5", "description", "is_mandatory"]
+                ),
             }
 
         except Exception:
