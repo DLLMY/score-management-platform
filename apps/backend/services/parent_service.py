@@ -71,6 +71,9 @@ class ParentService:
         contact = ParentContact.query.get(contact_id)
         if not contact:
             return {"success": False, "message": "家长信息不存在"}, 404
+        denied = self._ensure_contact_access(contact)
+        if denied:
+            return denied
         for key, value in data.items():
             if hasattr(contact, key) and key not in ("id", "created_at"):
                 setattr(contact, key, value)
@@ -81,10 +84,24 @@ class ParentService:
         contact = ParentContact.query.get(contact_id)
         if not contact:
             return {"success": False, "message": "家长信息不存在"}, 404
+        denied = self._ensure_contact_access(contact)
+        if denied:
+            return denied
         ContactLog.query.filter_by(parent_id=contact_id).delete()
         db.session.delete(contact)
         db.session.commit()
         return {"success": True, "message": "删除成功"}
+
+    def _ensure_contact_access(self, contact):
+        """隐私隔离：非超管仅能操作自己关联班级学生的家长信息（口径与 get_contact 一致）。"""
+        admin = get_current_admin()
+        if admin and admin.role not in ("admin", "super_admin"):
+            allowed_ids = get_admin_class_ids(admin.id)
+            student = User.query.get(contact.student_id)
+            can_access = bool(allowed_ids and student and student.class_info_id in allowed_ids)
+            if not can_access:
+                return {"success": False, "message": "无权操作该家长信息"}, 403
+        return None
 
     def list_contact_logs(self, parent_id=None, is_resolved=None, page=None, per_page=None):
         query = ContactLog.query

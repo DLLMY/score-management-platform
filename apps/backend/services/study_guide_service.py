@@ -57,6 +57,9 @@ class StudyGuideService:
         guide = StudyGuide.query.get(guide_id)
         if not guide:
             return {"success": False, "message": "学法指导不存在"}, 404
+        denied = self._deny_if_class_blocked(guide.class_id)
+        if denied:
+            return denied
         for key, value in data.items():
             if hasattr(guide, key) and key not in ("id", "created_at"):
                 setattr(guide, key, value)
@@ -67,6 +70,9 @@ class StudyGuideService:
         guide = StudyGuide.query.get(guide_id)
         if not guide:
             return {"success": False, "message": "学法指导不存在"}, 404
+        denied = self._deny_if_class_blocked(guide.class_id)
+        if denied:
+            return denied
         db.session.delete(guide)
         db.session.commit()
         return {"success": True, "message": "删除成功"}
@@ -155,6 +161,15 @@ class StudyGuideService:
         db.session.delete(plan)
         db.session.commit()
         return {"success": True, "message": "删除成功"}
+
+    def _deny_if_class_blocked(self, class_id):
+        """隐私隔离：非超管只能操作自己关联班级的数据（detail-by-id 越权防护，对齐 duty/committee）。"""
+        admin = get_current_admin()
+        if admin and admin.role not in ("admin", "super_admin"):
+            allowed_ids = get_admin_class_ids(admin.id)
+            if not allowed_ids or class_id not in allowed_ids:
+                return {"success": False, "message": "无权操作该班级的数据"}, 403
+        return None
 
     def _ensure_plan_access(self, plan):
         """隐私隔离：非超管只能操作自己关联班级学生的改进计划（口径与 parent/mental 一致）。"""

@@ -1,6 +1,6 @@
 from models import db
 from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore
-from utils.permission import get_current_admin
+from utils.permission import get_current_admin, get_admin_class_ids
 from services.entity_names import names
 
 
@@ -33,6 +33,9 @@ class StudyGroupService:
         group = StudyGroup.query.get(group_id)
         if not group:
             return {"success": False, "message": "学习小组不存在"}, 404
+        denied = self._deny_if_class_blocked(group.class_id)
+        if denied:
+            return denied
         for key, value in data.items():
             if hasattr(group, key) and key not in ("id", "created_at", "score"):
                 setattr(group, key, value)
@@ -43,11 +46,23 @@ class StudyGroupService:
         group = StudyGroup.query.get(group_id)
         if not group:
             return {"success": False, "message": "学习小组不存在"}, 404
+        denied = self._deny_if_class_blocked(group.class_id)
+        if denied:
+            return denied
         StudyGroupMember.query.filter_by(group_id=group_id).delete()
         StudyGroupScore.query.filter_by(group_id=group_id).delete()
         db.session.delete(group)
         db.session.commit()
         return {"success": True, "message": "删除成功"}
+
+    def _deny_if_class_blocked(self, class_id):
+        """隐私隔离：非超管只能操作自己关联班级的数据（detail-by-id 越权防护，对齐 duty/committee）。"""
+        admin = get_current_admin()
+        if admin and admin.role not in ("admin", "super_admin"):
+            allowed_ids = get_admin_class_ids(admin.id)
+            if not allowed_ids or class_id not in allowed_ids:
+                return {"success": False, "message": "无权操作该班级的数据"}, 403
+        return None
 
     def add_member(self, group_id, student_id):
         group = StudyGroup.query.get(group_id)

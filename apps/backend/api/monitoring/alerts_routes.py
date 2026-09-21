@@ -112,8 +112,10 @@ class AlertResource(Resource):
             return APIResponse.error(message="告警不存在", status_code=404)
         if "is_read" in data:
             # 写入路径收口至 alert_service（F17 防腐层）：原路由内 is_read/read_at 赋值 + commit 已迁出
-            ok = alert_service.update_alert_status(alert_id, bool(data["is_read"]))
-            if not ok:
+            res = alert_service.update_alert_status(alert_id, bool(data["is_read"]))
+            if isinstance(res, tuple):
+                return res
+            if not res:
                 return APIResponse.error(message="告警不存在", status_code=404)
         invalidate_cache("api:/api/alerts/*")
         return APIResponse.success(message="告警状态更新成功")
@@ -128,6 +130,8 @@ class AlertResource(Resource):
         删除指定的告警记录。
         """
         result = alert_service.delete_alert(alert_id)
+        if isinstance(result, tuple):
+            return result
         if not result:
             return APIResponse.error(message="告警不存在", status_code=404)
         invalidate_cache("api:/api/alerts/*")

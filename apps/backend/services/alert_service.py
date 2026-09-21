@@ -6,8 +6,9 @@
 import time
 import json
 from datetime import datetime, timedelta
-from models import db, Alert
+from models import db, Alert, User
 from utils.logger import log_info, log_error
+from utils.permission import get_current_admin, get_admin_class_ids
 
 
 class AlertService:
@@ -208,14 +209,43 @@ class AlertService:
                 db.session.rollback()
         return False
 
-    def update_alert_status(self, alert_id: int, is_read: bool) -> bool:
+    def _ensure_alert_access(self, alert):
+        """班级隔离（Step B·Alert 全量班级隔离）：
+
+        仅约束班级级角色（teacher），与其余班级隔离服务一致；全局角色
+        admin/super_admin 可管理任意告警（含设备/系统全局运维告警）。
+
+        - 设备/系统告警（student_id 为空）：teacher 无权限；
+        - 学生告警：teacher 仅能操作自己关联班级学生的告警。
+        返回 (dict, 403) 表示越权；返回 None 表示放行。无请求上下文（测试）时跳过。
+        """
+        admin = get_current_admin()
+        if admin is None:
+            return None
+        if admin.role in ("admin", "super_admin"):
+            return None
+        # 以下仅 teacher（班级级角色）需要隔离校验
+        if alert.student_id is None:
+            return {"success": False, "message": "无权操作该告警"}, 403
+        allowed_ids = get_admin_class_ids(admin.id)
+        student = User.query.get(alert.student_id)
+        can_access = bool(allowed_ids and student and student.class_info_id in allowed_ids)
+        if not can_access:
+            return {"success": False, "message": "无权操作该告警"}, 403
+        return None
+
+    def update_alert_status(self, alert_id: int, is_read: bool):
         """更新告警已读状态（PUT /alerts/<id> 写入路径收口，F17 防腐层）。
 
         与路由原内联 alert.is_read/read_at 赋值 + commit 行为完全等价；
-        路由仅保留 404 语义与响应构造。返回 False 表示告警不存在。
+        路由仅保留 404 语义与响应构造。返回 False 表示告警不存在；
+        越权时返回 ({"success": False, "message": ...}, 403)。
         """
         alert = Alert.query.get(alert_id)
         if alert:
+            denied = self._ensure_alert_access(alert)
+            if denied:
+                return denied
             alert.is_read = is_read
             alert.read_at = datetime.now() if is_read else None
             try:
@@ -239,10 +269,14 @@ class AlertService:
             db.session.rollback()
             return None
 
-    def delete_alert(self, alert_id: int) -> bool:
-        """删除告警"""
+    def delete_alert(self, alert_id: int):
+        """删除告警。越权时返回 ({"success": False, "message": ...}, 403)；
+        告警不存在返回 False。"""
         alert = Alert.query.get(alert_id)
         if alert:
+            denied = self._ensure_alert_access(alert)
+            if denied:
+                return denied
             try:
                 db.session.delete(alert)
                 db.session.commit()
