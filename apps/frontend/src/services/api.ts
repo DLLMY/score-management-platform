@@ -1681,6 +1681,8 @@ export interface Firmware {
   min_compatible_version?: string;
   is_mandatory: boolean;
   is_active: boolean;
+  /** 适用设备类型（F1 OTA 多设备类型隔离）。后端响应已含，前端此前未消费。 */
+  device_type?: string;
   created_at: string;
 }
 
@@ -2438,7 +2440,7 @@ export interface Api {
   };
   firmware: {
     getAll: () => Promise<Firmware[]>;
-    getVersions: (params?: { page?: number; per_page?: number }) => Promise<{
+    getVersions: (params?: { page?: number; per_page?: number; device_type?: string }) => Promise<{
       versions: Firmware[];
       total: number;
       page: number;
@@ -5309,10 +5311,11 @@ const api: Api = {
         | Firmware[];
       return Array.isArray(result) ? result : result.versions || [];
     },
-    getVersions: (params: { page?: number; per_page?: number } = {}) => {
+    getVersions: (params: { page?: number; per_page?: number; device_type?: string } = {}) => {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+      if (params.device_type) queryParams.append('device_type', params.device_type);
       const query = queryParams.toString();
       return request(`/api/firmware/versions${query ? '?' + query : ''}`) as Promise<{
         versions: Firmware[];

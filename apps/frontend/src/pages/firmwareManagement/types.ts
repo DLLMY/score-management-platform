@@ -14,6 +14,8 @@ export interface UploadFormData {
   description: string;
   min_compatible_version: string;
   is_mandatory: boolean;
+  /** 适用设备类型（F1 OTA 多设备类型隔离），默认 phonebox */
+  device_type: string;
   [key: string]: unknown;
 }
 
@@ -40,6 +42,9 @@ export interface FirmwareManagementViewProps {
   upgradeRecords: FirmwareRecord[];
   /** 版本表格列定义 */
   versionColumns: ColumnType<Firmware>[];
+  /** 机型筛选当前值（'' = 全部） */
+  deviceTypeFilter: string;
+  setDeviceTypeFilter: React.Dispatch<React.SetStateAction<string>>;
   /** 升级记录表格列定义 */
   recordColumns: ColumnType<FirmwareRecord>[];
   /** 刷新 */

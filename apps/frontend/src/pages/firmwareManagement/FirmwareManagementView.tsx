@@ -21,6 +21,8 @@ const FirmwareManagementView: React.FC<FirmwareManagementViewProps> = ({
   upgradeRecords,
   versionColumns,
   recordColumns,
+  deviceTypeFilter,
+  setDeviceTypeFilter,
   handleRefresh,
   isRefreshing,
   uploadForm,
@@ -104,7 +106,21 @@ const FirmwareManagementView: React.FC<FirmwareManagementViewProps> = ({
       </div>
 
       <div className='card'>
-        <h2 className='text-lg font-semibold mb-4'>固件版本列表</h2>
+        <div className='flex items-center justify-between mb-4'>
+          <h2 className='text-lg font-semibold'>固件版本列表</h2>
+          <div className='flex items-center gap-2'>
+            <label className='text-sm text-gray-600'>适用机型</label>
+            <select
+              value={deviceTypeFilter}
+              onChange={(e) => setDeviceTypeFilter(e.target.value)}
+              className='px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+            >
+              <option value=''>全部</option>
+              <option value='phonebox'>phonebox</option>
+              <option value='doorlock'>doorlock</option>
+            </select>
+          </div>
+        </div>
         <DataTable<Firmware>
           columns={versionColumns}
           dataSource={versions.items}
@@ -173,6 +189,17 @@ const FirmwareManagementView: React.FC<FirmwareManagementViewProps> = ({
               placeholder='例如: v0.8.0'
               className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
             />
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>适用机型</label>
+            <select
+              value={uploadForm.device_type}
+              onChange={(e) => setUploadForm({ device_type: e.target.value })}
+              className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+            >
+              <option value='phonebox'>phonebox</option>
+              <option value='doorlock'>doorlock</option>
+            </select>
           </div>
           <div>
             <label className='flex items-center gap-2'>

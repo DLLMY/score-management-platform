@@ -53,10 +53,14 @@ class FirmwareVersions(Resource):
         """
         page, per_page = get_pagination(default=50)
         is_active = request.args.get("is_active")
+        device_type = request.args.get("device_type")
 
         query = FirmwareVersion.query
         if is_active is not None:
             query = query.filter_by(is_active=is_active.lower() == "true")
+        # F1 阶段 C：按设备类型过滤（不传则不过滤，向后兼容）
+        if device_type:
+            query = query.filter_by(device_type=normalize_device_type(device_type))
 
         pagination = query.order_by(FirmwareVersion.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False

@@ -22,11 +22,16 @@ function FirmwareManagement() {
 
   const [versionsPage, setVersionsPage] = useState(1);
   const [versionsPerPage] = useState(20);
+  const [deviceTypeFilter, setDeviceTypeFilter] = useState('');
   // A 轨：固件版本列表迁 useListFetch（分页独立于 loadData 的 status/records）
   const versions = useListFetch<Firmware>({
-    params: { page: versionsPage, pageSize: versionsPerPage },
+    params: { page: versionsPage, pageSize: versionsPerPage, deviceTypeFilter },
     fetcher: async ({ page, pageSize }) => {
-      const res = await api.firmware.getVersions({ page, per_page: pageSize });
+      const res = await api.firmware.getVersions({
+        page,
+        per_page: pageSize,
+        device_type: deviceTypeFilter || undefined,
+      });
       return { items: res.versions ?? [], total: res.total ?? 0 };
     },
   });
@@ -53,6 +58,7 @@ function FirmwareManagement() {
       description: '',
       min_compatible_version: '',
       is_mandatory: false,
+      device_type: 'phonebox',
     },
     {
       version: { required: true, minLength: 1 },
@@ -136,6 +142,7 @@ function FirmwareManagement() {
       formData.append('description', uploadForm.description);
       formData.append('min_compatible_version', uploadForm.min_compatible_version);
       formData.append('is_mandatory', uploadForm.is_mandatory.toString());
+      formData.append('device_type', uploadForm.device_type);
 
       await api.firmware.upload(formData);
       showToast('success', '固件上传成功');
@@ -255,6 +262,12 @@ function FirmwareManagement() {
         render: (value) => (
           <span className='text-gray-600 text-sm'>{formatDateTime(value as string)}</span>
         ),
+      },
+      {
+        title: '适用机型',
+        key: 'device_type',
+        dataIndex: 'device_type',
+        render: (value) => <Badge variant='default'>{String(value || 'phonebox')}</Badge>,
       },
       {
         title: '操作',
@@ -385,6 +398,8 @@ function FirmwareManagement() {
       upgradeRecords={upgradeRecords}
       versionColumns={versionColumns}
       recordColumns={recordColumns}
+      deviceTypeFilter={deviceTypeFilter}
+      setDeviceTypeFilter={setDeviceTypeFilter}
       handleRefresh={handleRefresh}
       isRefreshing={isRefreshing}
       uploadForm={uploadForm}
