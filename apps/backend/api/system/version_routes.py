@@ -20,24 +20,6 @@ def get_api_version():
         }
     )
 
-
-@version_bp.route("/api/v1/compatibility")
-def v1_compatibility():
-    return APIResponse.success(
-        data={
-            "message": "v1版本已弃用",
-            "replacement": "/api/v2",
-            "deprecation_date": "2024-06-01",
-            "end_of_life": "2025-12-31",
-            "breaking_changes": [
-                "student_id字段更名为card_id",
-                "响应格式增加api_version字段",
-                "分页参数page/size变更为page/per_page",
-            ],
-        }
-    )
-
-
 @version_bp.before_request
 def check_api_version():
     api_version = request.headers.get("X-API-Version")

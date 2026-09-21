@@ -66,10 +66,15 @@ class CompositeScoreService:
 
         from sqlalchemy import func
 
-        query = User.query.filter(User.is_active)
+        # #2 修复（与 #198-B 全局可比对齐）：归一化基准 = 全量活跃学生，与增量重算
+        # recalculate_user_score 一致（避免按班级重算时归一化基数降为班级级，导致该班
+        # composite 与增量重算结果不可比）。返回/落库/计算集合仍按 class_name 收敛。
+        # class_name=None 时 users==all_active_users、ref==target，行为逐字节等价于原实现。
+        all_active_users = User.query.filter(User.is_active).all()
         if class_name:
-            query = query.filter(User.class_name == class_name)
-        users = query.all()
+            users = [u for u in all_active_users if u.class_name == class_name]
+        else:
+            users = all_active_users
         progress["total_students"] = len(users)
 
         if not users:
@@ -84,10 +89,13 @@ class CompositeScoreService:
                 "message": "没有找到学生数据",
             }
 
-        user_ids = [user.id for user in users]
+        all_active_ids = [u.id for u in all_active_users]
+
         progress["progress"] = 15
         progress["message"] = "正在获取学业成绩数据..."
 
+        # 一次聚合全量活跃学生的学业均分（后续按 id 取子集），使归一化基准覆盖全量
+        # 而非仅目标班级（#2 修复，与 recalculate_user_score 一致）。
         academic_map = {}
         score_stats = (
             db.session.query(
@@ -95,7 +103,7 @@ class CompositeScoreService:
                 func.avg(Score.score).label("avg_score"),
             )
             .filter(
-                Score.student_id.in_(user_ids),
+                Score.student_id.in_(all_active_ids),
                 Score.score > 0,
             )
             .group_by(Score.student_id)
@@ -107,6 +115,7 @@ class CompositeScoreService:
         progress["progress"] = 30
         progress["message"] = "正在获取开锁记录数据..."
 
+        # 开锁次数聚合本就是全局（无班级过滤），作为归一化基准的一部分。
         unlock_map = {}
         unlock_counts = (
             db.session.query(
@@ -121,6 +130,8 @@ class CompositeScoreService:
         )
         for count in unlock_counts:
             unlock_map[count.student_id] = count.count
+
+        user_ids = [user.id for user in users]
 
         data = []
         for user in users:
@@ -148,7 +159,16 @@ class CompositeScoreService:
 
         progress["progress"] = 50
         progress["message"] = "正在进行数据预处理..."
-        processed_data = CompositeScoreService._preprocess_data(data)
+        # #2 修复：归一化基准用全量活跃学生（ref_*），与 recalculate_user_score 一致，
+        # 保证按班级重算的 composite 与增量重算结果跨班可比。
+        ref_behaviors = [u.current_score or 0 for u in all_active_users]
+        ref_academics = [academic_map.get(uid, 0) for uid in all_active_ids]
+        ref_max_unlock = max((unlock_map.get(uid, 0) for uid in all_active_ids), default=1)
+        ref_unlock_counts = [unlock_map.get(uid, 0) for uid in all_active_ids]
+        ref_compliance_forward = [ref_max_unlock - u + 1 for u in ref_unlock_counts]
+        processed_data = CompositeScoreService._preprocess_data(
+            data, ref_behaviors, ref_academics, ref_max_unlock, ref_compliance_forward
+        )
 
         progress["progress"] = 65
         progress["message"] = "正在计算熵权..."
@@ -182,24 +202,51 @@ class CompositeScoreService:
         }
 
     @staticmethod
-    def _preprocess_data(data):
+    def _preprocess_data(
+        data,
+        ref_behaviors=None,
+        ref_academics=None,
+        ref_max_unlock=None,
+        ref_compliance_forward=None,
+    ):
         """数据预处理：正向化和归一化
 
         Args:
-            data (list): 原始数据
+            data (list): 原始数据（目标学生集合，一般为某班或全量）
+            ref_behaviors (list, optional): 归一化基准（全量活跃）behavior 列；
+                None 时用 data 自身（向后兼容原行为）。
+            ref_academics (list, optional): 归一化基准 academic 列。
+            ref_max_unlock (int/float, optional): 归一化基准最大开锁次数（全量）；
+                None 时用 data 自身开锁最大值（向后兼容）。
+            ref_compliance_forward (list, optional): 归一化基准 compliance 正向化列。
 
         Returns:
             list: 预处理后的数据
+
+        Note:
+            #2 修复 —— 传入 ref_* 时归一化基准取全量活跃学生，使按班级重算的归一化
+            scale 与增量重算（recalculate_user_score，永远全量基准）一致、结果跨班可比。
+            class_name=None 时调用方传入 ref==data 对应全集，逐字节等价于原实现。
         """
         behaviors = [d["behavior"] for d in data]
         academics = [d["academic"] for d in data]
         unlock_counts = [d["unlock_count"] for d in data]
 
-        behavior_norm = AlgorithmService.normalize_data(behaviors).tolist()
-        academic_norm = AlgorithmService.normalize_data(academics).tolist()
-        max_unlock = max(unlock_counts) if unlock_counts else 1
-        compliance_forward = [max_unlock - u + 1 for u in unlock_counts]
-        compliance_norm = AlgorithmService.normalize_data(compliance_forward).tolist()
+        def _norm(values, ref):
+            if ref is None:
+                return AlgorithmService.normalize_data(values)
+            return CompositeScoreService._normalize_with_ref(values, ref)
+
+        behavior_norm = _norm(behaviors, ref_behaviors).tolist()
+        academic_norm = _norm(academics, ref_academics).tolist()
+        # compliance 正向化与归一化均用全量基准的 max（保证跨班一致）
+        base_max_unlock = (
+            ref_max_unlock
+            if ref_max_unlock is not None
+            else (max(unlock_counts) if unlock_counts else 1)
+        )
+        compliance_forward = [base_max_unlock - u + 1 for u in unlock_counts]
+        compliance_norm = _norm(compliance_forward, ref_compliance_forward).tolist()
 
         for i, d in enumerate(data):
             d["behavior_norm"] = behavior_norm[i]
@@ -207,6 +254,22 @@ class CompositeScoreService:
             d["compliance_norm"] = compliance_norm[i]
 
         return data
+
+    @staticmethod
+    def _normalize_with_ref(values, ref):
+        """以 ref 的 min/max 为基准对 values 做 Min-Max 归一化。
+
+        用于 #2 修复：按班级重算时用全量活跃学生（ref）的 scale 归一化该班子集，
+        保证与增量重算（全量基准）结果可比。ref_range==0 时返回零向量。
+        """
+        values = np.array(values, dtype=float)
+        ref = np.array(ref, dtype=float)
+        ref_min = np.min(ref)
+        ref_max = np.max(ref)
+        ref_range = ref_max - ref_min
+        if ref_range == 0:
+            return np.zeros_like(values)
+        return (values - ref_min) / ref_range
 
     @staticmethod
     def _calculate_scores(data, weights):
@@ -512,6 +575,15 @@ class CompositeScoreService:
             composite.academic_score = round(float(academic_norm_value * 100), 2)
             composite.social_score = round(float(compliance_norm_value * 100), 2)
             composite.composite_score = composite_score
+            # #304 修复：增量更新必须同步回写 weights，使其与本次实际用于算分的
+            # weights（取自 first_composite.weights）一致。否则存的分数字段用新权重算、
+            # 而 weights 字段残留旧值 → get_student_composite_score / get_composite_scores
+            # 上报的权重与该生 composite_score 自相矛盾（尤其在首行权重与其他行不一致时）。
+            composite.weights = {
+                "behavior": round(float(weights[0]), 4),
+                "academic": round(float(weights[1]), 4),
+                "social": round(float(weights[2]), 4),
+            }
             composite.computed_at = datetime.now()
             # P2-6 修复: 原 `db_session_scope(): pass` 空提交 → 真实持久化增量更新
             # 注意：不得用 db_session_scope 包裹 —— 其 finally 会 session.remove() 销毁

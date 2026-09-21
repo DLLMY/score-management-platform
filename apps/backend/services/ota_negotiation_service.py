@@ -620,6 +620,12 @@ def _plan_rollout(eligible, stage_percent, batch_size):
     chosen = []
     for _dt, items in groups.items():
         group_items = list(items)
+        if pct <= 0:
+            # 0% 灰度：明确不推送任何设备。
+            # 不可依赖下方的 max(1, ...) 保底（那是为了 pct∈(0,100] 时
+            # 保证小众设备类型至少抽样 1 台，避免被全局洗牌挤出），
+            # 否则管理员传 0% 想「全部暂停」时仍会误推 1 台/类型。
+            continue
         if pct < 100:
             random.shuffle(group_items)
             k = max(1, int(math.ceil(len(group_items) * pct / 100.0)))
@@ -653,7 +659,16 @@ def resolve_rollback_target(firmware):
         return None
 
     if getattr(firmware, "rollback_to", None):
-        target = FirmwareVersion.query.filter_by(version=firmware.rollback_to).first()
+        # 差异 #1 同源约束：显式回滚目标必须同 device_type，避免 doorlock 的
+        # rollback_to="1.0.0" 误解析到 phonebox 的同名版本（跨类型回滚→变砖）。
+        wanted = normalize_device_type(getattr(firmware, "device_type", None))
+        target = (
+            FirmwareVersion.query.filter(
+                FirmwareVersion.version == firmware.rollback_to,
+                FirmwareVersion.device_type == wanted,
+            )
+            .first()
+        )
         if target is not None:
             return target
 

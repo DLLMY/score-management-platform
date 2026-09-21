@@ -85,3 +85,9 @@ class TestOtaRolloutPlan:
         delays = _delays(planned)
         assert delays[0] == 0 and delays[1] == 0
         assert delays[2] == delays[3] and delays[2] > 0
+
+    def test_zero_percent_schedules_nothing(self):
+        # stage_percent=0 必须不推送任何设备（pct<=0 提前 continue）
+        eligible = _build(9, 1)
+        planned = _plan_rollout(eligible, 0, 0)
+        assert planned == []

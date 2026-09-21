@@ -14,6 +14,7 @@ from models import db, FirmwareVersion
 from services.ota_negotiation_service import (
     get_latest_active_firmware,
     negotiate,
+    resolve_rollback_target,
 )
 
 
@@ -94,3 +95,41 @@ class TestOtaTypeIsolation:
             dec = negotiate(_device("phonebox"), "2.0.0")
             assert dec["action"] == "up_to_date"
             assert "firmware" not in dec
+
+
+class TestOtaRollback:
+    def test_rollback_target_same_type(self, app):
+        # 使用 98.x 唯一版本号，规避测试库跨用例非回滚隔离导致的残留串扰
+        with app.app_context():
+            db.session.add_all([
+                _fw("98.0.0", "doorlock"),
+                _fw("98.0.1", "doorlock"),
+            ])
+            db.session.commit()
+            dl = FirmwareVersion.query.filter_by(
+                version="98.0.1", device_type="doorlock"
+            ).first()
+            dl.rollback_to = "98.0.0"
+            db.session.commit()
+            target = resolve_rollback_target(dl)
+            assert target is not None
+            assert target.device_type == "doorlock"
+            assert target.version == "98.0.0"
+
+    def test_rollback_target_no_cross_type(self, app):
+        # 使用 98.1.x 唯一版本号；phonebox 98.1.0 与 doorlock 98.1.1 共存
+        with app.app_context():
+            db.session.add_all([
+                _fw("98.1.0", "phonebox"),
+                _fw("98.1.1", "doorlock"),
+            ])
+            db.session.commit()
+            dl = FirmwareVersion.query.filter_by(
+                version="98.1.1", device_type="doorlock"
+            ).first()
+            dl.rollback_to = "98.1.0"
+            db.session.commit()
+            # 同名版本仅存在于 phonebox，同类型（doorlock）无目标 -> 必须返回 None，
+            # 绝不能跨类型解析到 phonebox 的 98.1.0（否则门铃被刷成手机箱固件→变砖）。
+            target = resolve_rollback_target(dl)
+            assert target is None

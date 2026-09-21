@@ -90,18 +90,29 @@ class TestCompositeScoreService:
                             assert len(result["rankings"]) == 2
 
     def test_calculate_composite_score_with_class(self, app):
-        """测试计算综合评分-按班级过滤"""
+        """#2 修复：按班级过滤（归一化基准为全量活跃，班级仅收敛返回/落库集合）"""
         with app.app_context():
 
-            mock_user = MagicMock()
-            mock_user.id = 1
-            mock_user.name = "张三"
-            mock_user.class_name = "二班"
-            mock_user.current_score = 80
-            mock_user.is_active = True
+            mock_user_2ban = MagicMock()
+            mock_user_2ban.id = 1
+            mock_user_2ban.name = "张三"
+            mock_user_2ban.class_name = "二班"
+            mock_user_2ban.current_score = 80
+            mock_user_2ban.is_active = True
 
+            mock_user_1ban = MagicMock()
+            mock_user_1ban.id = 2
+            mock_user_1ban.name = "李四"
+            mock_user_1ban.class_name = "一班"
+            mock_user_1ban.current_score = 90
+            mock_user_1ban.is_active = True
+
+            # 全量活跃查询（一次 filter）返回跨班两人；函数内部按 class_name 做 Python 过滤
             with patch("services.composite_score_service.User.query") as mock_query:
-                mock_query.filter.return_value.filter.return_value.all.return_value = [mock_user]
+                mock_query.filter.return_value.all.return_value = [
+                    mock_user_2ban,
+                    mock_user_1ban,
+                ]
 
                 with patch("services.composite_score_service.db.session.query") as mock_db_query:
                     mock_db_query.return_value.filter.return_value.group_by.return_value.all.return_value = (
@@ -120,6 +131,7 @@ class TestCompositeScoreService:
 
                             assert result["method"] == "entropy_weight"
                             assert len(result["rankings"]) == 1
+                            assert result["rankings"][0]["name"] == "张三"
 
     def test_get_composite_scores_empty(self, app):
         """测试获取综合评分-无数据"""
@@ -253,6 +265,36 @@ class TestCompositeScoreService:
             assert "message" in progress
             assert "total_students" in progress
             assert "completed_students" in progress
+
+    def test_preprocess_data_with_ref(self, app):
+        """#2 修复验证：带 ref 时归一化用全量基准；不带 ref 回退原行为（向后兼容）。"""
+        with app.app_context():
+            data = [
+                {"user_id": 1, "name": "A", "class_name": "X", "behavior": 80, "academic": 85, "unlock_count": 2},
+                {"user_id": 2, "name": "B", "class_name": "X", "behavior": 90, "academic": 92, "unlock_count": 1},
+            ]
+            ref_behaviors = [80, 90, 100, 50]          # 全局 min=50 max=100
+            ref_academics = [85, 92, 100, 0]            # 全局 min=0   max=100
+            ref_max_unlock = 5                          # 全量最大开锁次数
+            ref_compliance_forward = [ref_max_unlock - u + 1 for u in [2, 1, 5, 0]]  # [4,5,1,6]
+
+            result = CompositeScoreService._preprocess_data(
+                data, ref_behaviors, ref_academics, ref_max_unlock, ref_compliance_forward
+            )
+            # behavior: (80-50)/50=0.6 ; (90-50)/50=0.8
+            assert abs(result[0]["behavior_norm"] - 0.6) < 1e-9
+            assert abs(result[1]["behavior_norm"] - 0.8) < 1e-9
+            # academic: (85-0)/100=0.85 ; (92-0)/100=0.92
+            assert abs(result[0]["academic_norm"] - 0.85) < 1e-9
+            assert abs(result[1]["academic_norm"] - 0.92) < 1e-9
+            # compliance: forward=[4,5]; ref=[4,5,1,6] min=1 max=6 range=5 -> 4->0.6 ; 5->0.8
+            assert abs(result[0]["compliance_norm"] - 0.6) < 1e-9
+            assert abs(result[1]["compliance_norm"] - 0.8) < 1e-9
+
+            # 不带 ref 时回退原行为（子集 min/max）
+            result2 = CompositeScoreService._preprocess_data(data)
+            assert abs(result2[0]["behavior_norm"] - 0.0) < 1e-9
+            assert abs(result2[1]["behavior_norm"] - 1.0) < 1e-9
 
     def test_preprocess_data(self, app):
         """测试数据预处理"""
