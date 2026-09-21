@@ -34,7 +34,7 @@
 
 ## OTA/手机箱真实状态（2026-09-15 复评修正）
 - **`device_type` 维度已闭合**：`device_models.py:155` 的 `FirmwareVersion` 已加 `device_type` 列（`server_default="phonebox"`, index），`get_latest_active_firmware` 按设备类型精确匹配——这是 06 差异 #1 收官的一部分。**此前「FirmwareVersion 无 device_type 维度」描述已过时，作废。**
-- 仅剩 **F1 五阶段**的 `negotiate()`/`/ota/check` 推送闭环（设备类型主动上报→版本协商→自动推送）**仍按用户明确决定延期**，非技术阻塞。方案见 `docs/特性任务优化方案-20260912.md`。
+- **F1 五阶段 A–C 已于 2026-09-20 复核确认早已实装**（此前未文档同步）：`FirmwareVersion.device_type` 列、`get_latest_active_firmware(device_type)`、`negotiate` 用 `device.device_type`、`negotiate_all_devices` 逐设备协商、`/ota/check` 按类型过滤、`FIRMWARE_FIELDS`/`to_dict` 含 `device_type`；并补 `tests/test_ota_type_isolation.py`（5 例）+ GET `/versions` 加 `device_type` 过滤（不加 `@ns_firmware.param` 避 G5 漂移）+ 前端机型 UI 四闸门全绿。**仅剩 C2（doorlock .ino 固件）判硬件侧、本环境无法烧录验证，F1 方案明确"后端隔离完成后门铃侧可暂缓" → 合理推迟**，非技术阻塞。
 
 ## ESP32 硬件对接文档（唯一入口 `docs/esp32/`）
 - 7 文件套件：README + 01 MQTT 通信协议 / 02 设备识别与注册认证 / 03 积分逻辑 / 04 OTA 升级设计 / 05 其他对接与多设备管理 / 06 差异同步与优化方案。**硬件对接问题先查这里**；`docs/MQTT_INTEGRATION.md`（旧）已过时，仅作历史参考。
@@ -50,4 +50,5 @@
 - ⚠️ **同名类型/同名对象多处定义是本仓常态**。改前先 grep 全仓定位「真实类型源」——`api.ts` 的 `devices` 有**接口声明（~2378）与实现（~5205）两份**；`SystemConfig` 有 `types/index.ts:310` 与 `api.ts:1551` 两份且 `Settings.tsx` 用后者。`tsc` 报 `TS2353`/`TS2339` 基本就是这个原因 → **两处都要改**。
 - ⚠️ **行尾守恒断言须按「多数风格」写**：先同时看 `crlf` 与 `bare` 两个计数判定风格，再断言该风格计数不变。对纯 LF 文件断言 `bare_lf == 0` 必然失败（本轮踩过）。
 - 前端 `Device.id` 类型是 `ID`（`string | number`），传 REST 接口前须 `Number(...)` 转换。
-- ⚠️ **本沙箱 git-bash coreutils 损坏**（2026-09-20 实测）：`rm`/`ls`/`grep`/`find`/`tail`/`cd` 在 Bash 工具里均 **command not found**（safe-bin 包装脚本 `dirname` 缺失、`/safe-delete-common.sh` 缺失），`cd: null directory` 亦出现。**可用**：`git` 命令、`managed Python 3.13.12` 二进制直调、Read/Write/Edit/Glob/Grep 工具。**文件增删/行数统计/目录列举/清理一律用 Python 脚本**（托管 Python 直跑 `os`/`pathlib`），勿依赖 Bash 的 rm/ls/grep/find/tail/cd；pytest 等需 cwd 的程序用 `os.chdir` 的 Python runner 包裹，避免 `cd`。
+- ⚠️ **本沙箱 git-bash coreutils 损坏**（2026-09-20 实测）：`rm`/`ls`/`grep`/`find`/`tail`/`cd` 在 Bash 工具里均 **command not found`（safe-bin 包装脚本 `dirname` 缺失、`/safe-delete-common.sh` 缺失），`cd: null directory` 亦出现。**可用**：`git` 命令、`managed Python 3.13.12` 二进制直调、Read/Write/Edit/Glob/Grep 工具。**文件增删/行数统计/目录列举/清理一律用 Python 脚本**（托管 Python 直跑 `os`/`pathlib`），勿依赖 Bash 的 rm/ls/grep/find/tail/cd；pytest 等需 cwd 的程序用 `os.chdir` 的 Python runner 包裹，避免 `cd`。
+- ⚠️ **`PYTEST_ADDOPTS=--timeout=300` 环境坑**（2026-09-20 实锤）：环境经该变量向 pytest 注入 300s timeout，长批量回归跑到 teardown/`conftest.py:436 os._exit` 前阶段被 300s 杀，表象"跑到末尾卡死/死锁"。正解=CLI 传 **`--timeout=0`**（保留插件、归零计时器）。**勿用 `-p no:timeout`**：环境仍注入 `--timeout=300`，禁掉插件后 pytest 拒识该参 → 全批 `rc=4`、跑 0 例。全量回归须**多独立 pytest 进程分批**（每批重置连接池，规避 QueuePool 20+40 耗尽）+ 每批 `--junitxml` 聚合（XML 在 `os._exit` 前已落盘，可从 testsuite 累加 tests/failures/errors/skipped）。
