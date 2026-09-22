@@ -75,7 +75,7 @@ class SystemPerformance(Resource):
 
         返回CPU、内存、磁盘等系统资源使用情况，以及API性能统计。
         """
-        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_percent = psutil.cpu_percent(interval=None)
         cpu_count = psutil.cpu_count()
         cpu_freq = psutil.cpu_freq()
 

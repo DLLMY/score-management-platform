@@ -269,7 +269,7 @@ frontend_error_model = ns_system.model(
 def _check_system_resources():
     """批量采集 CPU/内存/磁盘；失败返回 (None, None, None) 并标记 degraded。"""
     try:
-        return psutil.cpu_percent(interval=0.05), psutil.virtual_memory(), psutil.disk_usage("/")
+        return psutil.cpu_percent(interval=None), psutil.virtual_memory(), psutil.disk_usage("/")
     except Exception:
         return None, None, None
 

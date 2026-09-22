@@ -27,6 +27,9 @@ _warmup_completed = False
 _auto_start_lock = threading.Lock()
 _auto_start_attempted = False
 
+# Redis 不可达后的冷却窗口（秒）：冷却期内不重复发起阻塞式连接/ping，直接降级为内存缓存
+REDIS_DOWN_COOLDOWN = 30.0
+
 
 def _safe(default):
     """R8 修复: Redis 方法统一降级——连接断开/MISCONF 时返回默认值而非裸抛 ConnectionError。
@@ -50,6 +53,7 @@ def _safe(default):
 class RedisCache:
     def __init__(self, app=None):
         self.client = None
+        self._down_since = 0.0  # 最近一次连接/ping 失败的时间戳（0.0=从未失败）
         self._prefix = "score_management:"
         self._stats = {"hits": 0, "misses": 0, "sets": 0, "deletes": 0}
         if app:
@@ -60,10 +64,17 @@ class RedisCache:
         self._config = {
             "url": app.config.get("REDIS_URL", "redis://localhost:6379/0"),
             "max_connections": app.config.get("REDIS_MAX_CONNECTIONS", 10),
-            "socket_timeout": app.config.get("REDIS_SOCKET_TIMEOUT", 5),
-            "socket_connect_timeout": app.config.get("REDIS_SOCKET_CONNECT_TIMEOUT", 5),
+            "socket_timeout": app.config.get("REDIS_SOCKET_TIMEOUT", 2),
+            "socket_connect_timeout": app.config.get("REDIS_SOCKET_CONNECT_TIMEOUT", 2),
         }
         redis_url = self._config["url"]
+
+        # 冷却期短路：Redis 近期连接失败时，不重复阻塞整段 socket_timeout，直接降级为内存缓存
+        if self._down_since and (time.time() - self._down_since) < REDIS_DOWN_COOLDOWN:
+            logger.info("Redis 近期连接失败，冷却期内直接降级为内存缓存")
+            self.client = None
+            self._register(app)
+            return
 
         # 1) 先尝试直连（Redis 可能已在本机运行）
         if self._connect(redis_url):
@@ -225,16 +236,18 @@ class RedisCache:
             client = redis.from_url(
                 url,
                 decode_responses=True,
-                socket_timeout=5,
-                socket_connect_timeout=5,
+                socket_timeout=2,
+                socket_connect_timeout=2,
                 retry_on_timeout=True,
             )
             client.ping()
             self.client = client
+            self._down_since = 0.0  # 连接成功，清除冷却时间戳
             return True
         except Exception:
             logger.debug("Redis 连接失败（降级）", exc_info=True)
             self.client = None
+            self._down_since = time.time()
             return False
 
     def _key(self, key: str) -> str:
@@ -479,10 +492,15 @@ class RedisCache:
     def ping(self) -> bool:
         if not self.client:
             return False
+        # 冷却期内不再发起阻塞 ping，避免 Redis 抖动时每请求都卡满 socket_timeout
+        if self._down_since and (time.time() - self._down_since) < REDIS_DOWN_COOLDOWN:
+            return False
         try:
             return self.client.ping()
         except Exception:
-            logger.debug("Redis ping 失败（降级为未连接）", exc_info=True)
+            logger.warning("Redis ping 失败（降级为未连接）", exc_info=True)
+            self.client = None
+            self._down_since = time.time()
             return False
 
     @property
