@@ -29,6 +29,7 @@ services:
       - "5000:5000"
     volumes:
       - backend-data:/app/backend/instance
+      - backend-logs:/app/backend/logs
       - ../../apps/backend/.env:/app/backend/.env
     environment:
       - FLASK_ENV=production
@@ -56,6 +57,7 @@ services:
     command: celery -A celery_app worker -Q default,notification,mqtt,export -c 4 --loglevel=info
     volumes:
       - backend-data:/app/backend/instance
+      - backend-logs:/app/backend/logs
       - ../../apps/backend/.env:/app/backend/.env
     environment:
       - FLASK_ENV=production
@@ -79,6 +81,7 @@ services:
     command: celery -A celery_app beat --loglevel=info
     volumes:
       - backend-data:/app/backend/instance
+      - backend-logs:/app/backend/logs
       - ../../apps/backend/.env:/app/backend/.env
     environment:
       - FLASK_ENV=production
@@ -120,4 +123,6 @@ volumes:
   redis-data:
     driver: local
   backend-data:
+    driver: local
+  backend-logs:
     driver: local
