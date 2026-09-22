@@ -31,12 +31,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Create venv and install dependencies
+      - name: Create venv and install dependencies (pinned lock)
         run: |
           python -m venv .venv
           . .venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt
+          # P1-d: 安装确定性锁文件（由 venv 的 pip freeze 生成，含 dev + ML 全量依赖，
+          # 保证 CI 测试环境与本地/已测环境完全一致，消除 requirements.txt 中 >= 的非确定性）。
+          pip install -r requirements.lock.txt
       - name: Run full regression (12 batches, isolated processes)
         run: |
           . .venv/bin/activate
