@@ -91,6 +91,13 @@ def create_app(lightweight=False):
         if limiter:
             configure_rate_limits(app, limiter)
 
+        # P1-监控：暴露 Prometheus 原生 /metrics 端点（免鉴权 scrape）。
+        # 测试 app（TESTING）不注册，避免污染测试并零回归。
+        if not app.config.get("TESTING"):
+            from app.metrics_exporter import init_metrics
+
+            init_metrics(app)
+
     # D-M1: 日志自动归档（压缩轮转 + 超期清理）启动钩子
     from utils.log_archiver import setup_log_archiving
 
