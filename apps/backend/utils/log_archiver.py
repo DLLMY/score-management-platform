@@ -168,7 +168,7 @@ def setup_log_archiving(app=None):
     if app is None:
         return
 
-    if app.config.get("FLASK_ENV") == "production":
+    if app.config.get("APP_ENV") == "production":
         registered = _schedule_retention(app)
         if not registered:
             app.logger.warning(

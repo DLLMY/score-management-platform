@@ -32,7 +32,7 @@ services:
       - backend-logs:/app/backend/logs
       - ../../apps/backend/.env:/app/backend/.env
     environment:
-      - FLASK_ENV=production
+      - APP_ENV=production
       - FLASK_DEBUG=false
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -60,7 +60,7 @@ services:
       - backend-logs:/app/backend/logs
       - ../../apps/backend/.env:/app/backend/.env
     environment:
-      - FLASK_ENV=production
+      - APP_ENV=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379/1
@@ -84,7 +84,7 @@ services:
       - backend-logs:/app/backend/logs
       - ../../apps/backend/.env:/app/backend/.env
     environment:
-      - FLASK_ENV=production
+      - APP_ENV=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379/1

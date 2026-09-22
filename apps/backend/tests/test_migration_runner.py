@@ -24,7 +24,7 @@ _HELPER = textwrap.dedent(
     import os, sys, json
     sys.path.insert(0, sys.argv[2])
     db = sys.argv[1]
-    os.environ.setdefault("FLASK_ENV", "development")
+    os.environ.setdefault("APP_ENV", "development")
     os.environ["FLASK_LIGHTWEIGHT"] = "true"
     os.environ["DATABASE_URI"] = "sqlite:///" + db
     # 触发模块级 get_app(lightweight=True) -> create_app -> init_database ->

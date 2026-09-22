@@ -35,7 +35,7 @@ class SecurityConfig:
     JWT_REFRESH_TOKEN_EXPIRES = 604800
     JWT_ALGORITHM = "HS256"
     # Cookie Secure：显式 SESSION_COOKIE_SECURE 键优先（本机 http 部署可显式 false），
-    # 未设置时按 FLASK_ENV 自动判断（production=True）。
+    # 未设置时按 APP_ENV 自动判断（APP_ENV=production 时强制 True，兼容 FLASK_ENV）。
     SESSION_COOKIE_SECURE = config.SESSION_COOKIE_SECURE
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

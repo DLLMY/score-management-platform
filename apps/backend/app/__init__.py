@@ -25,7 +25,7 @@ def create_app(lightweight=False):
 
     limiter = app.limiter
 
-    if app.config.get("FLASK_ENV") == "production":
+    if app.config.get("APP_ENV") == "production":
 
         @app.before_request
         def enforce_https():

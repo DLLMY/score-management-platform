@@ -41,7 +41,7 @@ def _boot_app():
             load_dotenv(env_file)
     except Exception as e:
         logger.warning("加载 .env 失败（已忽略）: %s", e)
-    os.environ.setdefault("FLASK_ENV", "development")
+    os.environ.setdefault("APP_ENV", "development")
     from app import app
 
     return app

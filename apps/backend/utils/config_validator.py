@@ -9,7 +9,10 @@ class ConfigValidator:
     def __init__(self):
         self.warnings: list[dict[str, str]] = []
         self.errors: list[dict[str, str]] = []
-        self.flask_env = os.getenv("FLASK_ENV", "development").lower()
+        # P2-d: 运行模式以 APP_ENV 为准，兼容 FLASK_ENV 回退（Flask 2.3+ 已弃用 FLASK_ENV）。
+        self.flask_env = (
+            os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development"
+        ).lower()
 
     def _add_warning(self, category: str, message: str):
         self.warnings.append({"category": category, "message": message})

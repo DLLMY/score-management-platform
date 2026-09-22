@@ -44,7 +44,11 @@ def validate_secret_keys(app):
     flask_secret_env = os.getenv("FLASK_SECRET_KEY", "")
     jwt_secret = os.getenv("JWT_SECRET_KEY", "")
     secret_key = app.config.get("SECRET_KEY", "")
-    flask_env = os.getenv("FLASK_ENV", app.config.get("ENV", "development")).lower()
+    flask_env = (
+        os.getenv("APP_ENV")
+        or os.getenv("FLASK_ENV")
+        or app.config.get("ENV", "development")
+    ).lower()
     is_production = flask_env == "production"
 
     validation_errors = []
@@ -250,6 +254,10 @@ def init_config(app, lightweight=False):
     app.config["CELERY_ASYNC_SCORE_RECALC"] = config.CELERY_ASYNC_SCORE_RECALC
 
     app.config["SECRET_KEY"] = config.FLASK_SECRET_KEY
+    # P2-d: 将运行模式（已弃用的 FLASK_ENV 等价物）写入 app.config，供请求钩子 /
+    # 中间件（如生产环境强制 HTTPS）可靠读取，避免此前 FLASK_ENV 从未进入 app.config
+    # 导致生产 HTTPS 重定向静默失效的隐患。
+    app.config["APP_ENV"] = config.APP_ENV
 
     app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
     app.url_map.strict_slashes = False

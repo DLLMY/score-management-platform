@@ -135,7 +135,7 @@ docker-compose -f ops/infra/docker-compose.yml up -d
 
 ### 生产环境配置要点
 
-1. **环境变量**：设置 `FLASK_ENV=production`、`FLASK_DEBUG=false`
+1. **环境变量**：设置 `APP_ENV=production`、`FLASK_DEBUG=false`
 2. **密钥**：务必修改 `SECRET_KEY` 和 `JWT_SECRET_KEY` 为强随机值
 3. **前端构建**：`cd frontend && npm run build`，使用 Nginx 或静态服务器托管 `build/` 目录
 4. **数据库**：建议切换为 MySQL/PostgreSQL，配置 `SQLALCHEMY_DATABASE_URI`

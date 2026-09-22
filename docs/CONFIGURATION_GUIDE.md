@@ -37,7 +37,7 @@
 
 | 配置项 | 用途 | 可选值 / 格式 | 默认值 | 必填 | 示例 |
 |--------|------|----------------|--------|------|------|
-| `FLASK_ENV` | 运行环境：`development`=调试（热重载/详细日志）；`production`=生产（无 reloader，cookie Secure 自动启用） | `development` / `production` | `development` | 生产必填 | `FLASK_ENV=production` |
+| `APP_ENV` | 运行环境：`development`=调试（热重载/详细日志）；`production`=生产（无 reloader，cookie Secure 自动启用） | `development` / `production` | `development` | 生产必填 | `APP_ENV=production` |
 | `FLASK_DEBUG` | 是否开启调试模式（development 下默认 true） | `true` / `false` | `true` | 否 | `FLASK_DEBUG=false` |
 | `FLASK_HOST` | 后端监听地址 | IP / 主机名 | `127.0.0.1` | 局域网部署必填 | `FLASK_HOST=0.0.0.0` |
 | `FLASK_PORT` | 后端端口 | 1-65535 | `5000` | 否 | `FLASK_PORT=5000` |
@@ -52,7 +52,7 @@
 | `JWT_SECRET_KEY` | JWT 签名密钥（泄露可伪造任意身份，**生产必须随机**） | 任意长字符串（建议 64 hex） | 随机生成 | **必填** | `JWT_SECRET_KEY=<64hex>` |
 | `JWT_ACCESS_TOKEN_EXPIRES` | access token 有效期（秒） | 正整数 | `3600`（1h） | 否 | `JWT_ACCESS_TOKEN_EXPIRES=3600` |
 | `JWT_REFRESH_TOKEN_EXPIRES` | refresh token 有效期（秒） | 正整数 | `604800`（7d） | 否 | `JWT_REFRESH_TOKEN_EXPIRES=604800` |
-| `SESSION_COOKIE_SECURE` | HttpOnly cookie 是否仅 HTTPS 传输。**本机 http 部署必须 `false`，否则登录后会话失效**；HTTPS 生产设 `true`。未设置时按 `FLASK_ENV` 自动（production=True） | `true` / `false` | 按 `FLASK_ENV` 自动 | 本机 http 部署必填 `false` | `SESSION_COOKIE_SECURE=false` |
+| `SESSION_COOKIE_SECURE` | HttpOnly cookie 是否仅 HTTPS 传输。**本机 http 部署必须 `false`，否则登录后会话失效**；HTTPS 生产设 `true`。未设置时按 `APP_ENV` 自动（production=True） | `true` / `false` | 按 `APP_ENV` 自动 | 本机 http 部署必填 `false` | `SESSION_COOKIE_SECURE=false` |
 | `ADMIN_INIT_PASSWORD` | **首次启动**自动创建 `admin` 账户时的初始密码；未设置则随机生成并打印在启动日志 | 任意字符串（建议强密码） | 随机生成 | 否（建议设置） | `ADMIN_INIT_PASSWORD=MyAdmin2026!` |
 
 ### 1.3 数据库
@@ -225,7 +225,7 @@
 
 ## 附：快速核对清单（部署前）
 
-- [ ] `FLASK_ENV=production`、`FLASK_DEBUG=false`
+- [ ] `APP_ENV=production`、`FLASK_DEBUG=false`
 - [ ] `FLASK_SECRET_KEY` / `JWT_SECRET_KEY` / `CSRF_SECRET_KEY` 为随机值
 - [ ] 本机 http 部署：`SESSION_COOKIE_SECURE=false`；HTTPS 部署：`true` + `CORS_ORIGINS` 限域名
 - [ ] `DATABASE_URI` 指向生产库（MySQL/PG）或确认 SQLite 路径

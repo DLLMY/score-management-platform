@@ -39,7 +39,7 @@ def test_prod_rejects_placeholder_secret():
 
     strong = "aZ8$kQp2LmX9wRt5VbN7uYc3eF1gH4jKd"  # >=32，仅用于绕过 L40 长度校验
     env = {
-        "FLASK_ENV": "production",
+        "APP_ENV": "production",
         "FLASK_SECRET_KEY": "CHANGE_ME_IN_PRODUCTION_use_at_least_32_characters_strong_key",
         "JWT_SECRET_KEY": "CHANGE_ME_IN_PRODUCTION_use_at_least_32_characters_strong_jwt_key",
         "CSRF_SECRET_KEY": "your_csrf_secret_key_here_different_from_flask_secret",
@@ -57,7 +57,7 @@ def test_prod_rejects_dev_weak_secret():
 
     dev_key = "dev_secret_key_for_local_development_only_change_in_production"
     env = {
-        "FLASK_ENV": "production",
+        "APP_ENV": "production",
         "FLASK_SECRET_KEY": dev_key,
         "JWT_SECRET_KEY": "dev_jwt_secret_for_local_development_only_change",
         "CSRF_SECRET_KEY": "dev_csrf_secret_for_local_development_only_change",
@@ -75,7 +75,7 @@ def test_prod_accepts_strong_secret():
 
     strong = "aZ8$kQp2LmX9wRt5VbN7uYc3eF1gH4jKd"
     env = {
-        "FLASK_ENV": "production",
+        "APP_ENV": "production",
         "FLASK_SECRET_KEY": strong,
         "JWT_SECRET_KEY": "bY9%lWo3KnY8xSu6UcM2vZd4hG2iF5kLe",
         "CSRF_SECRET_KEY": "cX0&mEp4LoZ7yTv7VdN3wAe5jH3kG6mLf",
@@ -91,7 +91,7 @@ def test_dev_allows_weak_secret():
 
     dev_key = "dev_secret_key_for_local_development_only_change_in_production"
     env = {
-        "FLASK_ENV": "development",
+        "APP_ENV": "development",
         "FLASK_SECRET_KEY": dev_key,
         "JWT_SECRET_KEY": "dev_jwt_secret_for_local_development_only_change",
         "CSRF_SECRET_KEY": "dev_csrf_secret_for_local_development_only_change",

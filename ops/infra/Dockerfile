@@ -24,6 +24,9 @@ WORKDIR /app/backend
 
 COPY apps/backend/requirements.txt .
 
+# 生产镜像刻意仅安装轻量运行时依赖（requirements.txt）。
+# 确定性锁文件 requirements.lock.txt（含 dev + ML 全量）用于 CI / 本地开发可复现；
+# ML 重依赖（torch/transformers 等）在运行时为可选、缺失自动降级，故不进入镜像以免体积膨胀。
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 3: Production runtime
@@ -55,7 +58,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Environment variables
-ENV FLASK_ENV=production
+ENV APP_ENV=production
 ENV FLASK_DEBUG=false
 ENV PORT=5000
 ENV PYTHONUNBUFFERED=1

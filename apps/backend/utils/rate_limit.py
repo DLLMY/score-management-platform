@@ -20,7 +20,7 @@ def get_rate_limit_config(limit_name: str, default_value: str) -> str:
     if env_value:
         return env_value
     # 开发环境放宽限流
-    if config.FLASK_ENV == "development":
+    if config.APP_ENV == "development":
         # 开发环境：放宽5-10倍
         if "per minute" in default_value:
             num = int(default_value.split()[0])

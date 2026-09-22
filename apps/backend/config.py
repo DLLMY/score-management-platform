@@ -25,7 +25,10 @@ def _generate_secret_key() -> str:
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-env = os.getenv("FLASK_ENV", "development").lower()
+# P2-d: Flask 2.3+ 已弃用原生 FLASK_ENV（设置它会触发 FlaskDeprecationWarning，且 Flask 3 不再读取）。
+# 改用自管 APP_ENV 作为运行模式权威变量，保留 FLASK_ENV 作为向后兼容回退。优先级：APP_ENV > FLASK_ENV > "development"。
+_app_env = (os.getenv("APP_ENV") or os.getenv("FLASK_ENV") or "development").lower()
+env = _app_env
 env_file = os.path.join(basedir, f".env.{env}")
 if os.path.exists(env_file):
     load_dotenv(env_file)
@@ -41,7 +44,10 @@ class Config:
 
     # ========== Flask应用配置 ==========
     FLASK_APP = os.getenv("FLASK_APP", "app.py")
-    FLASK_ENV = os.getenv("FLASK_ENV", "development")
+    # P2-d: 运行模式权威变量（自管，替代已弃用的 FLASK_ENV）。
+    # FLASK_ENV 保留为只读向后兼容别名（= APP_ENV），勿再作为权威来源使用。
+    APP_ENV = _app_env
+    FLASK_ENV = APP_ENV  # 已弃用别名（Flask 2.3+）— 仅向后兼容，勿用于新逻辑
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "true").lower() == "true"
     FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", _generate_secret_key())
     FLASK_HOST = os.getenv("FLASK_HOST", "127.0.0.1")
@@ -109,7 +115,7 @@ class Config:
         env_uri = os.getenv("RATELIMIT_STORAGE_URI")
         if env_uri:
             return env_uri
-        if self.FLASK_ENV == "production":
+        if self.APP_ENV == "production":
             if self.REDIS_PASSWORD:
                 return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/2"
             return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/2"
@@ -247,7 +253,7 @@ class Config:
     RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "30"))
     RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
     # 开发环境放宽限流
-    if FLASK_ENV == "development":
+    if APP_ENV == "development":
         RATE_LIMIT_PER_MINUTE = 200
         RATE_LIMIT_PER_HOUR = 5000
     # ========== CORS配置 ==========
@@ -261,7 +267,7 @@ class Config:
     PASSWORD_REQUIRE_LOWERCASE = True
     PASSWORD_REQUIRE_DIGIT = True
     PASSWORD_REQUIRE_SPECIAL = False
-    SESSION_COOKIE_SECURE = FLASK_ENV == "production"
+    SESSION_COOKIE_SECURE = APP_ENV == "production"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
@@ -433,7 +439,7 @@ class Config:
         """
         return {
             "flask": {
-                "env": cls.FLASK_ENV,
+                "env": cls.APP_ENV,
                 "debug": cls.FLASK_DEBUG,
                 "host": cls.FLASK_HOST,
                 "port": cls.FLASK_PORT,

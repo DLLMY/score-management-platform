@@ -38,7 +38,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Set production environment variables before importing the app
-os.environ.setdefault("FLASK_ENV", "production")
+# P2-d: 改用自管 APP_ENV（Flask 2.3+ 已弃用 FLASK_ENV，设置它会触发弃用警告）。
+os.environ.setdefault("APP_ENV", "production")
 os.environ.setdefault("FLASK_DEBUG", "false")
 
 try:
@@ -58,7 +59,7 @@ try:
     # 历史手写脚本保留于 apps/backend/migrations/*.py 仅供运维参考，active 路径为 reconcile.py。
 
     logger.info("Flask application loaded successfully")
-    logger.info(f"Environment: {flask_app.config.get('FLASK_ENV', 'unknown')}")
+    logger.info(f"Environment: {flask_app.config.get('APP_ENV', 'unknown')}")
     logger.info(f"Debug mode: {flask_app.config.get('FLASK_DEBUG', 'false')}")
     logger.info(
         f"WebSocket entry: {'enabled (SocketIO WSGI)' if _socketio is not None else 'Flask-only (fallback, WS disabled)'}"

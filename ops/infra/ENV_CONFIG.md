@@ -38,7 +38,7 @@
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `FLASK_APP` | Flask 应用入口 | `app` |
-| `FLASK_ENV` | 运行环境：`development`（热重载/详细日志）/ `production`（无 reloader，cookie 自动 Secure） | `development` |
+| `APP_ENV` | 运行环境：`development`（热重载/详细日志）/ `production`（无 reloader，cookie 自动 Secure） | `development` |
 | `FLASK_DEBUG` | 调试模式开关 | `true` |
 | `FLASK_HOST` | 监听地址 | `127.0.0.1` |
 | `FLASK_PORT` | 后端服务端口 | `5000` |
@@ -52,7 +52,7 @@
 | `JWT_SECRET_KEY` | JWT 签名密钥（生产必须改为随机值） | `change-me-jwt-secret` |
 | `JWT_ACCESS_TOKEN_EXPIRES` | Access Token 有效期（秒） | `3600` |
 | `JWT_REFRESH_TOKEN_EXPIRES` | Refresh Token 有效期（秒） | `604800` |
-| `SESSION_COOKIE_SECURE` | HttpOnly Cookie 是否仅 HTTPS 传输。默认按 `FLASK_ENV` 自动（`production=true`）；本机 http 调试显式设 `false`，HTTPS 生产设 `true` | 自动 |
+| `SESSION_COOKIE_SECURE` | HttpOnly Cookie 是否仅 HTTPS 传输。默认按 `APP_ENV` 自动（`production=true`）；本机 http 调试显式设 `false`，HTTPS 生产设 `true` | 自动 |
 | `ADMIN_INIT_PASSWORD` | 首次初始化管理员密码。后端启动时如无 admin 会自动创建，密码取此变量；**未设置则随机生成并打印在启动日志**，不再固定 123456。初始化完成后建议删除该行 | 空（随机） |
 
 #### 数据库与缓存
@@ -133,7 +133,7 @@ HOST=0.0.0.0
 PORT=3000
 
 # 后端 .env（由 .env.example 复制生成）
-FLASK_ENV=development
+APP_ENV=development
 FLASK_PORT=5000
 DATABASE_URI=sqlite:///instance/score_management.db
 REDIS_HOST=localhost
@@ -209,7 +209,7 @@ PORT=3000
 REACT_APP_API_URL=https://api.yourdomain.com
 
 # 后端生产环境配置
-FLASK_ENV=production
+APP_ENV=production
 FLASK_DEBUG=false
 FLASK_PORT=5000
 DATABASE_URI=postgresql://user:password@db-host:5432/score_db
@@ -246,7 +246,7 @@ export REACT_APP_API_URL=https://api.yourdomain.com
 npm start
 
 # 后端
-export FLASK_ENV=production
+export APP_ENV=production
 export DATABASE_URI=postgresql://user:pass@host:5432/db
 python run.py --env production
 ```
@@ -258,7 +258,7 @@ $env:REACT_APP_API_URL="https://api.yourdomain.com"
 npm start
 
 # 后端
-$env:FLASK_ENV="production"
+$env:APP_ENV="production"
 $env:DATABASE_URI="postgresql://user:pass@host:5432/db"
 python run.py --env production
 ```
@@ -270,7 +270,7 @@ set REACT_APP_API_URL=https://api.yourdomain.com
 npm start
 
 # 后端
-set FLASK_ENV=production
+set APP_ENV=production
 set DATABASE_URI=postgresql://user:pass@host:5432/db
 python run.py --env production
 ```
@@ -300,7 +300,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=production
+      - APP_ENV=production
       - DATABASE_URI=postgresql://user:pass@db:5432/score_db
       - REDIS_HOST=redis
       - FLASK_SECRET_KEY=change-me

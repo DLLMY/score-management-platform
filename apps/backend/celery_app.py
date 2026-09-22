@@ -2,8 +2,9 @@ from celery import Celery
 import os
 
 # 设置Flask应用环境变量
+# P2-d: 改用自管 APP_ENV（避免设置已弃用的 FLASK_ENV 触发警告）。
 os.environ.setdefault("FLASK_APP", "app.py")
-os.environ.setdefault("FLASK_ENV", "development")
+os.environ.setdefault("APP_ENV", "development")
 
 # 创建Celery应用实例
 celery_app = Celery(

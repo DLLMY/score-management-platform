@@ -38,7 +38,7 @@ def main():
     env_file = os.path.join(basedir, ".env")
     if os.path.exists(env_file):
         load_dotenv(env_file)
-    os.environ["FLASK_ENV"] = args.env
+    os.environ["APP_ENV"] = args.env
     host = args.host or os.getenv("FLASK_HOST", "127.0.0.1")
     port = args.port or int(os.getenv("FLASK_PORT", "5000"))
     debug = args.debug or args.env == "development"

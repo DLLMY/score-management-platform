@@ -306,7 +306,11 @@ def main():
             f'http://localhost:{frontend_port},http://127.0.0.1:{frontend_port}',
         )
         # 部署模式：无 reloader 生产模式 + 本机 http 显式关闭 cookie Secure（HTTPS 部署改 true）
-        env_content = env_content.replace('FLASK_ENV=development', 'FLASK_ENV=production')
+        # P2-d: 运行模式统一为自管 APP_ENV（替代已弃用的 FLASK_ENV），消除 Flask 2.3+ 弃用警告。
+        # 兼容源 .env 中 FLASK_ENV / APP_ENV 任意写法与 development/production 任意取值，一律归一到 APP_ENV=production。
+        env_content = env_content.replace('FLASK_ENV=development', 'APP_ENV=production')
+        env_content = env_content.replace('FLASK_ENV=production', 'APP_ENV=production')
+        env_content = env_content.replace('APP_ENV=development', 'APP_ENV=production')
         env_content = env_content.replace('FLASK_DEBUG=true', 'FLASK_DEBUG=false')
         env_content = env_content.replace('# SESSION_COOKIE_SECURE=true', 'SESSION_COOKIE_SECURE=false')
         # 管理员初始密码
