@@ -116,6 +116,9 @@ def main():
     from app import app
     from flask_socketio import SocketIO
 
+    # P0-d：数据库模式对账 + 幂等种子已在 app/db_init.init_database 内随 create_app 自动执行
+    # （ensure_database_ready）。此处不再单独调用脆弱的手写迁移脚本编排器。
+
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
     from services.websocket_service import register_handlers
 
