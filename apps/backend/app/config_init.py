@@ -15,6 +15,25 @@ from utils.logger import logger
 _swagger_initialized = False
 
 
+# P0-a: 已知占位 / 弱密钥模式（生产环境严禁，开发与测试环境允许）
+_SECRET_PLACEHOLDER_PATTERNS = (
+    "CHANGE_ME", "change_me", "change_in_production",
+    "for_local_development", "your_secret_key_here",
+    "your_csrf_secret_key_here", "dev_secret_key",
+    "dev_jwt_secret", "dev_csrf_secret", "dev_",
+)
+
+
+def _is_placeholder_secret(value):
+    """判断是否为占位 / 弱密钥。
+    开发与测试环境允许 dev/CHANGE_ME 类密钥；生产环境（FLASK_ENV=production）严禁。
+    """
+    if not value:
+        return True
+    low = value.lower()
+    return any(p.lower() in low for p in _SECRET_PLACEHOLDER_PATTERNS)
+
+
 def validate_secret_keys(app):
     """验证密钥安全性；生产环境下无效/缺失密钥将拒绝启动（S1 硬失败）。
 
@@ -41,6 +60,22 @@ def validate_secret_keys(app):
         validation_errors.append("FLASK_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
     if not jwt_secret or jwt_secret == DEFAULT_JWT or len(jwt_secret) < 32:
         validation_errors.append("JWT_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
+
+    # P0-a: 生产环境纵深防御——拒绝占位 / 弱密钥（含此前未检查的 CSRF_SECRET_KEY）
+    if is_production:
+        if _is_placeholder_secret(flask_secret_env):
+            validation_errors.append(
+                "FLASK_SECRET_KEY 为占位/弱密钥（生产禁止 CHANGE_ME/dev 类密钥）"
+            )
+        if _is_placeholder_secret(jwt_secret):
+            validation_errors.append(
+                "JWT_SECRET_KEY 为占位/弱密钥（生产禁止 CHANGE_ME/dev 类密钥）"
+            )
+        csrf_secret = os.getenv("CSRF_SECRET_KEY", "")
+        if not csrf_secret or len(csrf_secret) < 32 or _is_placeholder_secret(csrf_secret):
+            validation_errors.append(
+                "CSRF_SECRET_KEY 缺失/过短/占位（生产要求 >=32 位强密钥）"
+            )
 
     if validation_errors:
         logger.error("🔒 密钥安全检查结果: %s", validation_errors)

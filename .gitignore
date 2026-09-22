@@ -38,6 +38,10 @@ apps/frontend/yarn.lock
 # 环境变量（敏感信息不上传，但.env.example可以上传）
 apps/backend/.env
 
+# 环境专用配置文件（含部署参考；真实密钥必须由部署平台注入，禁止入库）
+apps/backend/.env.production
+apps/backend/.env.development
+
 # Python 缓存
 __pycache__/
 *.pyc
