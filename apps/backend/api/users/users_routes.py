@@ -3,6 +3,7 @@ from utils.response import APIResponse
 from utils.pagination import get_pagination
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from config import config
 from models import User, ClassInfo, get_by_id
 from utils.permission import (
     requires_permission,
@@ -34,7 +35,7 @@ from flask_restx import Namespace, Resource, fields
 
 logger = logging.getLogger(__name__)
 
-limiter = Limiter(get_remote_address)
+limiter = Limiter(get_remote_address, storage_uri=config.RATELIMIT_STORAGE_URI)
 ns_users = Namespace("users", description="学生管理相关操作")
 
 # User 响应字段子集（B3 扩展 2026-08-23，对应原各端点内联 dict；role 为端点硬编码常量由路由补）

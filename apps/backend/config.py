@@ -97,6 +97,24 @@ class Config:
             return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
+    @property
+    def RATELIMIT_STORAGE_URI(self) -> str:
+        """限流存储 URI（P1：生产多 gunicorn worker 共享计数）。
+
+        - 显式环境变量 RATELIMIT_STORAGE_URI 优先（便于运维覆盖 / 测试强制内存）。
+        - 生产环境(env=production)使用 Redis DB2，与缓存(DB0)/Celery(DB1) 隔离，
+          保证多 worker 下限流计数全局一致（此前 memory:// 各自计数 → 限流失效）。
+        - 开发 / 测试环境默认内存，避免依赖 Redis 且不污染测试（零回归安全）。
+        """
+        env_uri = os.getenv("RATELIMIT_STORAGE_URI")
+        if env_uri:
+            return env_uri
+        if self.FLASK_ENV == "production":
+            if self.REDIS_PASSWORD:
+                return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/2"
+            return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/2"
+        return "memory://"
+
     # ========== Redis 自动拉起配置 ==========
     # 后端启动时若本机未运行 Redis，是否自动拉起一个本地 redis-server 子进程。
     # 仅对 localhost/127.0.0.1 生效；生产环境(env=production)默认关闭，开发环境默认开启。

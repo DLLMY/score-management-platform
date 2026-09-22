@@ -221,7 +221,7 @@ def init_config(app, lightweight=False):
                 f"{config.RATE_LIMIT_PER_HOUR} per hour",
                 f"{config.RATE_LIMIT_PER_MINUTE} per minute",
             ],
-            storage_uri="memory://",
+            storage_uri=config.RATELIMIT_STORAGE_URI,
         )
         app.limiter = limiter
     else:

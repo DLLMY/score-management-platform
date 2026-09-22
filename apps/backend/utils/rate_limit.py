@@ -43,7 +43,7 @@ default_limiter = Limiter(
         get_rate_limit_config("daily", "200 per day"),
         get_rate_limit_config("hourly", "50 per hour"),
     ],
-    storage_uri="memory://",  # 使用内存存储（生产环境应使用Redis）
+    storage_uri=config.RATELIMIT_STORAGE_URI,  # P1：生产走 Redis DB2 共享计数
     strategy="fixed-window",  # 固定窗口策略
     headers_enabled=True,  # 启用限流响应头
 )
