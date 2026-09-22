@@ -332,9 +332,14 @@ class EnableBackupSchedule(Resource):
     @ns_import_export.doc("enable_backup_schedule")
     @requires_permission("system.settings")
     def post(self):
-        """启用定时备份"""
+        """启用定时备份（兼容保留：真实开关为 BACKUP_ENABLED 环境变量）"""
         backup_scheduler.enable()
-        return APIResponse.success(message="定时备份已启用")
+        return APIResponse.success(
+            message=(
+                "定时备份内存标记已置为启用；但自动备份的真实开关由环境变量 "
+                "BACKUP_ENABLED 决定，请在 .env 设置 BACKUP_ENABLED=true 并重启服务后生效"
+            )
+        )
 
 @ns_import_export.route("/backup/schedule/disable")
 class DisableBackupSchedule(Resource):
@@ -342,9 +347,14 @@ class DisableBackupSchedule(Resource):
     @ns_import_export.doc("disable_backup_schedule")
     @requires_permission("system.settings")
     def post(self):
-        """禁用定时备份"""
+        """禁用定时备份（兼容保留：真实开关为 BACKUP_ENABLED 环境变量）"""
         backup_scheduler.disable()
-        return APIResponse.success(message="定时备份已禁用")
+        return APIResponse.success(
+            message=(
+                "定时备份内存标记已置为禁用；自动备份的真实开关由环境变量 "
+                "BACKUP_ENABLED 决定，未设置或 false 时启动即不注册 02:00 自动备份任务"
+            )
+        )
 
 @ns_import_export.route("/backup/schedule/status")
 class GetBackupScheduleStatus(Resource):
@@ -352,16 +362,19 @@ class GetBackupScheduleStatus(Resource):
     @ns_import_export.doc("get_backup_schedule_status")
     @requires_permission("system.settings")
     def get(self):
-        """获取定时备份状态"""
+        """获取定时备份状态（权威开关为 BACKUP_ENABLED 环境变量，启动时决定）"""
+        from config import Config
+
         return {
             "success": True,
-            "enabled": backup_scheduler.enabled,
-            "schedule_time": backup_scheduler.schedule_time,
-            "last_run_time": (
-                backup_scheduler.last_run_time.isoformat()
-                if backup_scheduler.last_run_time
-                else None
-            ),
+            # 权威开关：自动备份是否真正启用，由 BACKUP_ENABLED 决定（与启动时注册的 cron 一致）
+            "enabled": Config.BACKUP_ENABLED,
+            "source": "BACKUP_ENABLED env var (evaluated at startup)",
+            "schedule": "cron 02:00 daily (create)",
+            "cleanup": "cron 03:00 daily (retention)",
+            # 保留 legacy 内存调度器标记，仅为向后兼容展示，不影响真实 cron
+            "legacy_scheduler_enabled": backup_scheduler.enabled,
+            "legacy_schedule_time": backup_scheduler.schedule_time,
         }
 
 @ns_import_export.route("/backup/schedule/set_time")
@@ -370,11 +383,16 @@ class SetBackupScheduleTime(Resource):
     @ns_import_export.doc("set_backup_schedule_time", params={"time": "定时时间，格式HH:MM"})
     @requires_permission("system.settings")
     def post(self):
-        """设置定时备份时间"""
+        """设置定时备份时间（兼容保留：真实 cron 固定为每日 02:00，详见 BACKUP_STRATEGY.md）"""
         time_str = request.args.get("time", "02:00")
         success = backup_scheduler.set_schedule_time(time_str)
         if success:
-            return APIResponse.success(message=f"定时备份时间已设置为 {time_str}")
+            return APIResponse.success(
+                message=(
+                    f"内存调度器时间已更新为 {time_str}；"
+                    "但真实自动备份 cron 固定为每日 02:00，调整需在部署层（compose cron / 系统计划任务）配置"
+                )
+            )
         return APIResponse.bad_request(message="无效的时间格式，请使用HH:MM格式")
 
 @ns_import_export.route("/backup/clean_old")

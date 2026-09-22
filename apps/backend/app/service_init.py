@@ -188,6 +188,11 @@ def init_mqtt(app):
 
 def _scheduled_backup_job():
     try:
+        # P1-e: 运行时兜底——即使任务被注册，也在执行前确认开关，避免“默认关闭却静默备份”
+        from config import Config
+
+        if not Config.BACKUP_ENABLED:
+            return
         from utils.backup_utils import backup_manager
 
         result = backup_manager.create_backup("full")
@@ -246,8 +251,19 @@ def init_scheduler(app):
         _scheduled_heartbeat_check_job(app)
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(scheduled_backup, "cron", hour=2, minute=0)
-    # 备份保留策略独立于备份创建：每天 3:00 无条件清理过期/超量备份
+    # P1-e: 定时自动备份必须由 BACKUP_ENABLED 门控——默认 false 即不启用自动备份，
+    # 解决此前 cron 无条件注册导致“默认关闭却每天静默备份”的语义脱节（flag 形同虚设）。
+    from config import Config
+
+    if Config.BACKUP_ENABLED:
+        scheduler.add_job(scheduled_backup, "cron", hour=2, minute=0)
+        log_info("定时备份任务已启动，每天凌晨2:00执行（BACKUP_ENABLED=true）")
+    else:
+        log_info(
+            "定时自动备份未启用（BACKUP_ENABLED=false）；"
+            "如需开启请在 .env 设置 BACKUP_ENABLED=true 后重启服务"
+        )
+    # 备份保留策略独立于备份创建：每天 3:00 无条件清理过期/超量备份（防御性，防止磁盘膨胀）
     scheduler.add_job(scheduled_cleanup_backups, "cron", hour=3, minute=0)
     scheduler.add_job(scheduled_heartbeat_check, "interval", seconds=30)
 
@@ -272,7 +288,6 @@ def init_scheduler(app):
         scheduler._thread.daemon = True
     app.scheduler = scheduler
     _ACTIVE_SCHEDULERS.append(scheduler)
-    log_info("定时备份任务已启动，每天凌晨2:00执行")
     log_info("心跳超时检查任务已启动，每30秒执行一次")
 
 
