@@ -90,13 +90,16 @@ class TestLargeDatasetPerformance:
         print(f"  - 响应时间: {elapsed_time:.2f} 秒")
         print(f"  - 文件大小: {file_size / 1024 / 1024:.2f} MB")
 
-        # 性能基线: 10000条 ≤ 30秒
-        if elapsed_time <= 30:
-            print("  - 状态: ✅ 通过 (≤30秒)")
-        else:
-            print("  - 状态: ⚠️ 警告 (>30秒)")
+        # 性能基线: 10000条 ≤ 30秒（coverage 插桩会显著减速，放宽至 60 秒，与同文件 CSV 用例保持一致）
+        import os
 
-        assert elapsed_time <= 30, f"导出耗时 {elapsed_time:.2f}秒 超过30秒基线"
+        excel_timeout = 60 if "COV_CORE_SOURCE" in os.environ else 30
+        if elapsed_time <= excel_timeout:
+            print(f"  - 状态: ✅ 通过 (≤{excel_timeout}秒)")
+        else:
+            print(f"  - 状态: ⚠️ 警告 (>{excel_timeout}秒)")
+
+        assert elapsed_time <= excel_timeout, f"导出耗时 {elapsed_time:.2f}秒 超过{excel_timeout}秒基线"
 
     def test_export_10000_csv_performance(
         self, client, auth_headers, db_session, large_dataset_setup
