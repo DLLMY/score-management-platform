@@ -45,7 +45,12 @@ def verify():
             print("❌ class_info 表缺少 head_teacher_id 字段")
 
 
-if __name__ == "__main__":
+def run_migration():
+    """供 migrations.runner 编排调用（等价于原 __main__ 行为）。"""
     migrate()
     print("")
     verify()
+
+
+if __name__ == "__main__":
+    run_migration()

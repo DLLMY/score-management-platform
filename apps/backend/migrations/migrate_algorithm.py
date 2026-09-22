@@ -70,5 +70,10 @@ def initialize_warning_config():
     print("[OK] 预警配置初始化完成")
 
 
-if __name__ == "__main__":
+def run_migration():
+    """供 migrations.runner 编排调用（等价于原 __main__ 行为）。"""
     migrate()
+
+
+if __name__ == "__main__":
+    run_migration()

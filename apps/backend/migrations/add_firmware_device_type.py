@@ -101,8 +101,8 @@ def _verify_and_report(cursor, changed):
     return True
 
 
-def run_migration():
-    db_path = os.path.join(
+def run_migration(db_path=None):
+    db_path = db_path or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "instance",
         "score_management.db",

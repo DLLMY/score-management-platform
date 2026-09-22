@@ -16,11 +16,11 @@ import sqlite3
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def add_risk_fields():
+def run_migration(db_path=None):
     """
     为User表添加risk_score和last_risk_updated字段
     """
-    db_path = os.path.join(
+    db_path = db_path or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "score_management.db"
     )
 
@@ -65,4 +65,4 @@ def add_risk_fields():
 
 
 if __name__ == "__main__":
-    add_risk_fields()
+    run_migration()

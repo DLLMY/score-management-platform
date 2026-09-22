@@ -1,6 +1,7 @@
 from flask import Flask, request, redirect
 
 import os
+import sys
 from app.api_versioning import api_version_manager
 
 limiter = None
@@ -12,6 +13,11 @@ def create_app(lightweight=False):
     global limiter
 
     app = Flask(__name__)
+
+    # 让迁移脚本 `from app import app` 在初始化阶段即可解析到"当前"实例。
+    # 否则 wsgi/run.py 直接 create_app() 时，模块级 app 属性仍指向 get_app() 首次创建的实例，
+    # 会导致迁移脚本在错误的应用上下文里执行（P0-d 编排器在启动时导入这些脚本）。
+    sys.modules[__name__].app = app
 
     from app.config_init import init_config
 

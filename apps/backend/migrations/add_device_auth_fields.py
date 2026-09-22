@@ -36,8 +36,8 @@ def existing_columns(cursor, table):
     return {row[1] for row in cursor.fetchall()}
 
 
-def main():
-    db_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DB
+def run_migration(db_path=None):
+    db_path = db_path or (sys.argv[1] if len(sys.argv) > 1 else DEFAULT_DB)
     if not os.path.exists(db_path):
         print(f"FAIL: 数据库不存在 {db_path}")
         return 1

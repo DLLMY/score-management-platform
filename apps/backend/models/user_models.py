@@ -38,6 +38,12 @@ class User(db.Model):
     role = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  # R7
+    # P0-d model/migration alignment: risk_score / last_risk_updated were previously
+    # added only by legacy script add_user_risk_fields.py via ALTER TABLE, not in the
+    # model -> fresh DBs miss these columns and risk scoring cannot persist. Now promoted
+    # to model fields maintained by create_all / reconcile.
+    risk_score = db.Column(db.Float, nullable=True, default=0.0)
+    last_risk_updated = db.Column(db.DateTime, nullable=True)
 
     def to_dict(self, fields=None):
         """学生(用户)序列化（B3 扩展 2026-08-23）。

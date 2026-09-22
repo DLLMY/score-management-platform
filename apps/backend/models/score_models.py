@@ -134,6 +134,11 @@ class ScoreRecord(db.Model):
     operator = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
+    # P0-d model/migration alignment: operation_log_id was previously added only by
+    # legacy script add_operation_log_id.py via ALTER TABLE, not in the model -> fresh
+    # DBs miss this column. Now promoted to a model field maintained by create_all / reconcile.
+    operation_log_id = db.Column(db.Integer, nullable=True, index=True)
+
     user = db.relationship("User", backref="records")
     rule = db.relationship("ScoreRule", backref="records")
 

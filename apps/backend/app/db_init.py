@@ -97,4 +97,20 @@ def init_database(app):
         except Exception as e:
             log_error(f"初始化MQTT配置失败: {e}", exception=e)
 
+        # P0-d：元数据驱动模式对账 + 幂等种子（生产就绪）。
+        # 真实 schema 由上方 db.create_all() 维护；本步补全"既有库缺列"等历史演进缺口，
+        # 并补齐 class_periods / warning_configs 默认数据。测试库（TESTING）由 conftest 自行
+        # 构造，不在此处运行，避免污染。
+        if not app.config.get("TESTING"):
+            try:
+                from migrations.reconcile import ensure_database_ready
+
+                ensure_database_ready(app, logger=None, verbose=False)
+                log_info("数据库模式对账与种子补齐完成")
+            except Exception as e:  # noqa: BLE001
+                log_error(
+                    f"数据库模式对账/种子补齐失败（基础表已通过 create_all 创建，请排查）: {e}",
+                    exception=e,
+                )
+
     return db
