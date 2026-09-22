@@ -34,12 +34,12 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # 从构建阶段复制构建产物（Vite 输出到 dist/）
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# 添加健康检查
+# 添加健康检查（探测 80 明文 /health，避免明文根路径 301 跳转干扰探活）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:80/ || exit 1
+    CMD curl -f http://localhost:80/health || exit 1
 
-# 暴露端口
-EXPOSE 80
+# 暴露端口（80 仅 ACME 签发/探活，443 承载应用流量）
+EXPOSE 80 443
 
 # 启动nginx
 CMD ["nginx", "-g", "daemon off;"]

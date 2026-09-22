@@ -68,4 +68,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/api/health || exit 1
 
 # Run application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers=4", "--threads=2", "--timeout=120", "backend.wsgi:application"]
+# 生产入口：Flask-SocketIO 自带 gunicorn worker（threading 模式，无 monkey-patch），
+# 使 WebSocket 与 HTTP 在同一 worker 内服务。单 worker 避免跨进程广播问题；
+# 需水平扩展时，配置 socketio message_queue(redis) + 多 worker。
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "flask_socketio.serving.SocketIOWorker", "--workers", "1", "--threads", "4", "--timeout", "120", "backend.wsgi:application"]
