@@ -1,0 +1,46 @@
+# Prometheus 抓取配置示例（P1-f 监控暴露收尾）
+#
+# 后端已在 APP_ENV != testing 时挂载免鉴权 /metrics 端点（app/metrics_exporter.py +
+# app/__init__.py:96-99），且 docker-compose.yml 已把 backend 的 5000 端口映射到宿主机。
+# 本文件供 Prometheus 抓取该端点，再接 Grafana 做面板与告警。
+#
+# 用法一（独立运行，不改 compose）：
+#   docker run -p 9090:9090 \
+#     -v "$(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml" \
+#     prom/prometheus
+#   浏览器打开 http://localhost:9090 → Status → Targets 应看到 score-backend UP。
+#
+# 用法二（并入 compose 监控栈，可选）：
+#   在 docker-compose.yml 的 services: 下追加：
+#     prometheus:
+#       image: prom/prometheus:latest
+#       container_name: score-management-prometheus
+#       volumes:
+#         - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#       ports:
+#         - "9090:9090"
+#       depends_on:
+#         - backend
+#       restart: unless-stopped
+#   （同 project 网络即可用服务名 backend:5000 抓取，无需改 backend 端口暴露。）
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: score-management
+
+scrape_configs:
+  - job_name: "score-backend"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      # compose 内部用服务名；独立/外部部署改为 host:5000（如 127.0.0.1:5000）
+      - targets: ["backend:5000"]
+        labels:
+          env: production
+
+  # 可选：如需抓取 node 级指标，在目标机部署 node_exporter 后取消注释
+  # - job_name: "node"
+  #   static_configs:
+  #     - targets: ["node-exporter:9100"]
