@@ -204,3 +204,7 @@ apps/backend/__*_tmp.py
 apps/backend/api/uploads/
 # 健康检查临时文件
 .workbuddy/healthcheck.txt
+
+# 回归/覆盖率临时产物（本地校验生成，不入库）
+.workbuddy/regr_xml/
+apps/backend/.coverage_verify
