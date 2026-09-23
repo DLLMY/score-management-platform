@@ -35,6 +35,18 @@ export default defineConfig({
         'src/main.tsx',
         'src/**/*.d.ts',
       ],
+      // ── 覆盖率门控（对齐后端 70% ratchet）──
+      // 阈值 = 实测基线（2026-09-23，全量 39 测试文件）向下取整留极小缓冲：
+      //   Stmts 27.39 / Branch 18.88 / Funcs 20.73 / Lines 28.85
+      // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
+      // 这是「只升不降」的 ratchet 下限：新增代码必须带测试，否则聚合覆盖率下滑会触发失败。
+      // 目标：随关键业务流（登录鉴权 / 评分重算 / 手机箱状态机）补测推进，逐步抬高阈值至 70%。
+      thresholds: {
+        statements: 27,
+        branches: 18,
+        functions: 20,
+        lines: 28,
+      },
     },
   },
 });

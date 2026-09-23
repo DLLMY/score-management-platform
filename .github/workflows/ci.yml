@@ -69,5 +69,7 @@ jobs:
         run: npm run lint
       - name: Format check (prettier)
         run: npx prettier --check "src/**/*.{ts,tsx}"
-      - name: Unit tests (vitest)
-        run: npm test
+      - name: Unit tests + coverage gate (vitest)
+        # --coverage 触发 vitest.config.ts 中的 coverage.thresholds 强制门控：
+        # 任一指标低于阈值即非零退出，CI 变红（对齐后端 70% ratchet 下限）。
+        run: npm test -- --coverage
