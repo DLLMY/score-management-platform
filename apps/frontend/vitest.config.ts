@@ -36,16 +36,20 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
       // ── 覆盖率门控（对齐后端 70% ratchet）──
-      // 阈值 = 实测基线（2026-09-23，全量 39 测试文件）向下取整留极小缓冲：
-      //   Stmts 27.39 / Branch 18.88 / Funcs 20.73 / Lines 28.85
+      // 阈值采用「只升不降」ratchet：每次补测后按实测新基线抬高下限，防止覆盖率回退。
+      // 实测基线（2026-09-23，39 测试文件）：
+      //   首测 Stmts 27.39 / Branch 18.88 / Funcs 20.73 / Lines 28.85
+      //   补钙纯模块测试（config/index + utils/optimisticUpdate，+17 用例）后 ≈
+      //   Stmts 28.1 / Branch 19.1 / Funcs 20.9 / Lines 29.8（v8，不含冷启动 flake UserList）
+      // 本轮仅将确定性达标的 Lines 抬高至 29；其余三项增益落在测量噪声内（±0.5%），
+      // 待后续补测把增益拉开后再行抬高，避免误触发 CI 红。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
-      // 这是「只升不降」的 ratchet 下限：新增代码必须带测试，否则聚合覆盖率下滑会触发失败。
-      // 目标：随关键业务流（登录鉴权 / 评分重算 / 手机箱状态机）补测推进，逐步抬高阈值至 70%。
+      // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
         statements: 27,
         branches: 18,
         functions: 20,
-        lines: 28,
+        lines: 29,
       },
     },
   },
