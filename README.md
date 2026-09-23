@@ -47,7 +47,7 @@
 ### 前端
 - React 18 + TypeScript + Vite
 - Tailwind CSS（统一 DataTable 组件库，56 页全站迁移）
-- Recharts（图表）· Lucide（图标）· Vitest（单测 176 用例）
+- Recharts（图表）· Lucide（图标）· Vitest（单测 + `@vitest/coverage-v8` 覆盖率门控）
 
 ### 后端
 - Flask 2.3 + Flask-RESTX（OpenAPI 契约）+ Flask-SocketIO（WebSocket 实时）
@@ -239,7 +239,8 @@ bash scripts/run_regression.sh
 | 契约信封 | 0 个 5xx + shape 快照 | `pytest tests/test_api_envelope.py` |
 | 关键路由 | 33 条核心业务路由 | 见 run_regression.sh |
 | 索引 | 核心索引齐全 | `scripts/verify_indexes.py` |
-| 前端 | vitest 176 + build + eslint | `cd frontend && npm test && npm run build` |
+| 前端单测 | vitest 全部用例 + build + eslint | `cd frontend && npm test && npm run build` |
+| 前端覆盖率 | ratchet 下限（Stmts 27 / Branch 18 / Funcs 20 / Lines 28） | `cd frontend && npm test -- --coverage` |
 
 一键跑全量：`bash scripts/run_regression.sh`（五步闸门，CI 同款）。
 
