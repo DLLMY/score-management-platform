@@ -28,6 +28,8 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary'],
       reportsDirectory: 'coverage',
+      // 关闭启动期 trash 旧 coverage 目录（沙箱 safe-delete shim 会拦截导致整轮 abort）
+      clean: false,
       // 规避中文路径下 html 报告生成伪影：仅输出 text 摘要 + json-summary
       exclude: [
         'src/**/*.test.{js,jsx,ts,tsx}',
@@ -37,19 +39,19 @@ export default defineConfig({
       ],
       // ── 覆盖率门控（对齐后端 70% ratchet）──
       // 阈值采用「只升不降」ratchet：每次补测后按实测新基线抬高下限，防止覆盖率回退。
-      // 实测基线（2026-09-23，39 测试文件）：
-      //   首测 Stmts 27.39 / Branch 18.88 / Funcs 20.73 / Lines 28.85
-      //   补钙纯模块测试（config/index + utils/optimisticUpdate，+17 用例）后 ≈
-      //   Stmts 28.1 / Branch 19.1 / Funcs 20.9 / Lines 29.8（v8，不含冷启动 flake UserList）
-      // 本轮仅将确定性达标的 Lines 抬高至 29；其余三项增益落在测量噪声内（±0.5%），
-      // 待后续补测把增益拉开后再行抬高，避免误触发 CI 红。
+      // 实测基线演进（v8，全量 npm test --coverage）：
+      //   2026-09-23 首测/补钙            Stmts 28.1 / Branch 19.1 / Funcs 20.9 / Lines 29.8
+      //   + api.coverage 数据驱动 383 用例  Stmts 38.0 / Branch 26.7 / Funcs 36.9 / Lines 39.5
+      //   2026-09-24 补测 4 个 0% 模块      Stmts 42.9 / Branch 28.6 / Funcs 40.0 / Lines 44.6
+      //     （webVitals / useUserListFetch / useScoreEntryActions / useNLPRules，+56 用例全绿）
+      // 本轮将四项阈值统一抬高至「实测值 - 约 1pt 缓冲」，锁住本轮增益、规避 v8 测量噪声（±0.5%）。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 27,
-        branches: 18,
-        functions: 20,
-        lines: 29,
+        statements: 42,
+        branches: 28,
+        functions: 39,
+        lines: 44,
       },
     },
   },
