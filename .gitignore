@@ -208,3 +208,11 @@ apps/backend/api/uploads/
 # 回归/覆盖率临时产物（本地校验生成，不入库）
 .workbuddy/regr_xml/
 apps/backend/.coverage_verify
+# 前端临时诊断/覆盖率日志（vitest 本地校验输出，不入库）
+apps/frontend/cov_*.txt
+apps/frontend/*_tests.txt
+apps/frontend/test_out.txt
+apps/frontend/full_tests.txt
+apps/frontend/hooks_tests.txt
+apps/frontend/store_tests.txt
+apps/frontend/utils_tests.txt
