@@ -15,7 +15,12 @@ describe('optimisticUpdate 纯逻辑', () => {
     const onComplete = vi.fn();
     const apiCall = vi.fn().mockResolvedValue({ ok: true });
 
-    const res = await withOptimisticUpdate({ v: 1 }, apiCall, { update, revert, onSuccess, onComplete });
+    const res = await withOptimisticUpdate({ v: 1 }, apiCall, {
+      update,
+      revert,
+      onSuccess,
+      onComplete,
+    });
 
     expect(update).toHaveBeenCalledWith({ v: 1 });
     expect(apiCall).toHaveBeenCalledTimes(1);

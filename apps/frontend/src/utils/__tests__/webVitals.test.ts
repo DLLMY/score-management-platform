@@ -96,9 +96,7 @@ describe('webVitals · 指标采集', () => {
 
     fire(['paint'], [{ name: 'first-contentful-paint', startTime: 99.5 }]);
     fire(['largest-contentful-paint'], [{ startTime: 250.5 }]);
-    fire(['layout-shift'], [
-      { hadRecentInput: false, value: 0.01, startTime: 100 },
-    ]);
+    fire(['layout-shift'], [{ hadRecentInput: false, value: 0.01, startTime: 100 }]);
     fire(['first-input'], [{ processingStart: 200, startTime: 150 }]);
     fire(['event'], [{ processingEnd: 300, startTime: 100 }]);
 

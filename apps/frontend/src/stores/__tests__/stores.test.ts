@@ -15,9 +15,11 @@ import { useGlobalStore } from '..';
 import { useThemeStore } from '..';
 
 // 与 store 内 `await import()` 取 .default 的方式保持一致
-const rbacApi = (rbacApiNs as unknown as {
-  default: { getAdminRoles: ReturnType<typeof vi.fn> };
-}).default;
+const rbacApi = (
+  rbacApiNs as unknown as {
+    default: { getAdminRoles: ReturnType<typeof vi.fn> };
+  }
+).default;
 
 beforeEach(() => {
   localStorage.clear();

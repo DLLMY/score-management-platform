@@ -40,7 +40,10 @@ describe('RequestCoalescer · 合并与缓存', () => {
   it('并发合并：同一 key 只触发一次 fetcher，多订阅者均获结果', async () => {
     let resolveFn: (v: unknown) => void = () => {};
     const fetcher = vi.fn(
-      () => new Promise((resolve) => { resolveFn = resolve as (v: unknown) => void; })
+      () =>
+        new Promise((resolve) => {
+          resolveFn = resolve as (v: unknown) => void;
+        })
     );
     const p1 = coalescer.coalesce({ url: '/b', method: 'GET' }, fetcher);
     const p2 = coalescer.coalesce({ url: '/b', method: 'GET' }, fetcher);
@@ -64,9 +67,7 @@ describe('RequestCoalescer · 合并与缓存', () => {
   it('fetcher 失败：rejectors 收到错误且 promise 抛错', async () => {
     const err = new Error('boom');
     const fetcher = vi.fn().mockRejectedValue(err);
-    await expect(
-      coalescer.coalesce({ url: '/err', method: 'GET' }, fetcher)
-    ).rejects.toBe(err);
+    await expect(coalescer.coalesce({ url: '/err', method: 'GET' }, fetcher)).rejects.toBe(err);
     // 失败不应写入缓存
     expect(coalescer.getCacheSize()).toBe(0);
   });

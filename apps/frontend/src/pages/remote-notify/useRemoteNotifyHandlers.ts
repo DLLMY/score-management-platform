@@ -209,7 +209,7 @@ export function useRemoteNotifyHandlers(deps: RemoteNotifySharedDeps): RemoteNot
         retry(errMsg);
       } finally {
         setIsSending(false);
-        checkMqttStatus();
+        await checkMqttStatus();
       }
     },
     [clearDraft, showToast, checkMqttStatus]
@@ -328,7 +328,7 @@ export function useRemoteNotifyHandlers(deps: RemoteNotifySharedDeps): RemoteNot
       setLastResult({ success: false, message: errMsg, topic: '' });
     } finally {
       setIsSending(false);
-      checkMqttStatus();
+      await checkMqttStatus();
     }
   }, [form, mode, showToast, checkMqttStatus, scoreForm, clearDraft, forceSend]);
 

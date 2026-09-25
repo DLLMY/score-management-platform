@@ -67,10 +67,7 @@ describe('validation · validateField（单字段）', () => {
 
 describe('validation · validateForm（整表）', () => {
   it('数组式规则：收集错误并标记 isValid=false', () => {
-    const result = validateForm(
-      { name: '', age: 'abc' },
-      { name: ['required'], age: ['numeric'] }
-    );
+    const result = validateForm({ name: '', age: 'abc' }, { name: ['required'], age: ['numeric'] });
     expect(result.isValid).toBe(false);
     expect(result.errors.name).toBe('此字段为必填项');
     expect(result.errors.age).toBe('请输入有效的数字');

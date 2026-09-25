@@ -64,8 +64,7 @@ describe('useOptimizedFetch', () => {
   it('依赖变化：自动重新拉取', async () => {
     const fetcher = vi.fn().mockResolvedValue('a');
     const { rerender } = renderHook(
-      ({ dep }: { dep: string }) =>
-        useOptimizedFetch<string>(fetcher, [dep], { debounceDelay: 0 }),
+      ({ dep }: { dep: string }) => useOptimizedFetch<string>(fetcher, [dep], { debounceDelay: 0 }),
       { initialProps: { dep: 'a' } }
     );
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));

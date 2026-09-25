@@ -33,24 +33,40 @@ describe('useForm · 通用表单状态机', () => {
     const text = document.createElement('input');
     text.type = 'text';
     text.value = '李四';
-    act(() => result.current.handleChangeEvent('name')({ target: text } as unknown as React.ChangeEvent<HTMLInputElement>));
+    act(() =>
+      result.current.handleChangeEvent('name')({
+        target: text,
+      } as unknown as React.ChangeEvent<HTMLInputElement>)
+    );
 
     const num = document.createElement('input');
     num.type = 'number';
     num.value = '42';
-    act(() => result.current.handleChangeEvent('age')({ target: num } as unknown as React.ChangeEvent<HTMLInputElement>));
+    act(() =>
+      result.current.handleChangeEvent('age')({
+        target: num,
+      } as unknown as React.ChangeEvent<HTMLInputElement>)
+    );
     expect(result.current.formData.age).toBe(42);
 
     const emptyNum = document.createElement('input');
     emptyNum.type = 'number';
     emptyNum.value = '';
-    act(() => result.current.handleChangeEvent('age')({ target: emptyNum } as unknown as React.ChangeEvent<HTMLInputElement>));
+    act(() =>
+      result.current.handleChangeEvent('age')({
+        target: emptyNum,
+      } as unknown as React.ChangeEvent<HTMLInputElement>)
+    );
     expect(result.current.formData.age).toBe('' as unknown as number);
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = true;
-    act(() => result.current.handleChangeEvent('email')({ target: cb } as unknown as React.ChangeEvent<HTMLInputElement>));
+    act(() =>
+      result.current.handleChangeEvent('email')({
+        target: cb,
+      } as unknown as React.ChangeEvent<HTMLInputElement>)
+    );
     expect(result.current.formData.email).toBe(true as unknown as string);
   });
 
@@ -68,9 +84,7 @@ describe('useForm · 通用表单状态机', () => {
   });
 
   it('validateAll：数组必填空数组报错', () => {
-    const { result } = renderHook(() =>
-      useForm<FormShape>(initial, { tags: { required: true } })
-    );
+    const { result } = renderHook(() => useForm<FormShape>(initial, { tags: { required: true } }));
     let ok = false;
     act(() => {
       ok = result.current.validateAll();
@@ -85,7 +99,9 @@ describe('useForm · 通用表单状态机', () => {
       email: { pattern: /^\d+$/ },
       age: { min: 1, max: 120 },
     } as const;
-    const { result } = renderHook(() => useForm<FormShape>({ name: 'a', age: 0, tags: [], email: 'x' }, rules));
+    const { result } = renderHook(() =>
+      useForm<FormShape>({ name: 'a', age: 0, tags: [], email: 'x' }, rules)
+    );
 
     act(() => {
       expect(result.current.validateAll()).toBe(false);
@@ -105,7 +121,9 @@ describe('useForm · 通用表单状态机', () => {
 
     // 自定义校验
     const { result: r2 } = renderHook(() =>
-      useForm<FormShape>(initial, { name: { validate: (v) => (v === 'bad' ? '不允许' : undefined) } })
+      useForm<FormShape>(initial, {
+        name: { validate: (v) => (v === 'bad' ? '不允许' : undefined) },
+      })
     );
     act(() => r2.current.setFormData({ name: 'bad' }));
     act(() => expect(r2.current.validateAll()).toBe(false));
@@ -116,7 +134,9 @@ describe('useForm · 通用表单状态机', () => {
     const onSubmit = vi.fn();
     const { result } = renderHook(() => useForm<FormShape>(initial, { name: { required: true } }));
     await act(async () => {
-      await result.current.handleSubmit(onSubmit)({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+      await result.current.handleSubmit(onSubmit)({
+        preventDefault: vi.fn(),
+      } as unknown as React.FormEvent);
     });
     expect(onSubmit).not.toHaveBeenCalled();
     expect(result.current.isSubmitting).toBe(false);
@@ -128,7 +148,9 @@ describe('useForm · 通用表单状态机', () => {
       useForm<FormShape>({ name: 'ok', age: 10, tags: [], email: '1' })
     );
     await act(async () => {
-      await result.current.handleSubmit(onSubmit)({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+      await result.current.handleSubmit(onSubmit)({
+        preventDefault: vi.fn(),
+      } as unknown as React.FormEvent);
     });
     expect(onSubmit).toHaveBeenCalledWith({ name: 'ok', age: 10, tags: [], email: '1' });
     expect(result.current.isSubmitting).toBe(false);

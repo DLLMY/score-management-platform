@@ -11,8 +11,7 @@ describe('useAutoSave', () => {
   it('脏数据自动保存 (onSave) 并标记 lastSaved / isDirty 复位', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const { result, rerender } = renderHook(
-      ({ data }: { data: string }) =>
-        useAutoSave({ key: 'k1', data, onSave, debounceMs: 30 }),
+      ({ data }: { data: string }) => useAutoSave({ key: 'k1', data, onSave, debounceMs: 30 }),
       { initialProps: { data: 'v1' } }
     );
     rerender({ data: 'v2' });
