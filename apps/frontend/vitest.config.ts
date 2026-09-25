@@ -44,14 +44,17 @@ export default defineConfig({
       //   + api.coverage 数据驱动 383 用例  Stmts 38.0 / Branch 26.7 / Funcs 36.9 / Lines 39.5
       //   2026-09-24 补测 4 个 0% 模块      Stmts 42.9 / Branch 28.6 / Funcs 40.0 / Lines 44.6
       //     （webVitals / useUserListFetch / useScoreEntryActions / useNLPRules，+56 用例全绿）
-      // 本轮将四项阈值统一抬高至「实测值 - 约 1pt 缓冲」，锁住本轮增益、规避 v8 测量噪声（±0.5%）。
+      //   2026-09-25 补测 9 个 src/hooks 模块  Stmts 48.5 / Branch 31.8 / Funcs 43.5 / Lines 50.3
+      //     （useOptimizedFetch/useListData/useListFetch 已测 + useModal/useAutoSave/useStableToast/
+      //      useDebouncedValue/useKeyboardShortcut/useUndoRedo/useClassNowStatus，+68 用例全绿）
+      // 本轮将四项阈值统一抬高至「实测值 - 约 1~2pt 缓冲」，锁住本轮增益、规避 v8 测量噪声（±0.5%）。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 42,
-        branches: 28,
-        functions: 39,
-        lines: 44,
+        statements: 47,
+        branches: 30,
+        functions: 42,
+        lines: 49,
       },
     },
   },
