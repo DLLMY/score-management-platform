@@ -47,14 +47,16 @@ export default defineConfig({
       //   2026-09-25 补测 9 个 src/hooks 模块  Stmts 48.5 / Branch 31.8 / Funcs 43.5 / Lines 50.3
       //     （useOptimizedFetch/useListData/useListFetch 已测 + useModal/useAutoSave/useStableToast/
       //      useDebouncedValue/useKeyboardShortcut/useUndoRedo/useClassNowStatus，+68 用例全绿）
-      // 本轮将四项阈值统一抬高至「实测值 - 约 1~2pt 缓冲」，锁住本轮增益、规避 v8 测量噪声（±0.5%）。
+      //   2026-09-25 补测 userList Crud/Score hooks  Stmts 49.88 / Branch 32.77 / Funcs 44.86 / Lines 51.73
+      //     （useUserListCrud/useUserListScore 两个 hook 全参数化测试 +22 用例全绿；全量 947 passed/3 skipped）
+      // 本轮将四项阈值统一抬高至「实测值 - 约 0.8~1pt 缓冲」，锁住本轮增益；两次全量实测完全一致（v8 噪声可忽略）。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 47,
-        branches: 30,
-        functions: 42,
-        lines: 49,
+        statements: 49,
+        branches: 32,
+        functions: 44,
+        lines: 51,
       },
     },
   },
