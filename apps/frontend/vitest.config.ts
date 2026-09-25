@@ -61,13 +61,17 @@ export default defineConfig({
       //      ModeSelector/columns 展示组件测试，共 +19 用例全绿；mock 共享 UI 为 stub 覆盖各面板主路径与条件分支；
       //      remote-notify 模块 Funcs 18.6→37.26、Branch 71.25；全量 1018 passed/3 skipped）
       // 本轮四指标统一抬高锁住增益：Branch 35 缓冲 0.84 / Funcs 47 缓冲 0.18 防 v8 噪声误红。
+      //   2026-09-25 补测 scoreEntry 逻辑层(reducer/derived/batch/data/draft)  Stmts 54.57 / Branch 37.10 / Funcs 48.14 / Lines 56.56
+      //     （reducer.ts / useScoreEntryBatch / useScoreEntryDraft 100%；useScoreEntryData 94.7S/50B、useScoreEntryDerived 98.4S/93.2B；
+      //      5 文件共 +63 用例全绿；全量 1095 passed/3 skipped；scoreEntry 模块 Lines 19.2→76.48 / Stmts 18.5→75.68）
+      //     本轮四指标各 +1 锁住增益：Stmts 54(缓冲0.57) / Branch 36(缓冲1.10) / Funcs 48(缓冲0.14) / Lines 56(缓冲0.56)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 53,
-        branches: 35,
-        functions: 47,
-        lines: 55,
+        statements: 54,
+        branches: 36,
+        functions: 48,
+        lines: 56,
       },
     },
   },
