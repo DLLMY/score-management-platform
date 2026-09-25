@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useForm } from '../useForm';
 
-interface FormShape {
+type FormShape = {
   name: string;
   age: number;
   tags: string[];
   email: string;
-}
+};
 
 const initial: FormShape = { name: '', age: 0, tags: [], email: '' };
 
@@ -33,24 +33,24 @@ describe('useForm · 通用表单状态机', () => {
     const text = document.createElement('input');
     text.type = 'text';
     text.value = '李四';
-    act(() => result.current.handleChangeEvent('name')({ target: text } as unknown as React.ChangeEvent));
+    act(() => result.current.handleChangeEvent('name')({ target: text } as unknown as React.ChangeEvent<HTMLInputElement>));
 
     const num = document.createElement('input');
     num.type = 'number';
     num.value = '42';
-    act(() => result.current.handleChangeEvent('age')({ target: num } as unknown as React.ChangeEvent));
+    act(() => result.current.handleChangeEvent('age')({ target: num } as unknown as React.ChangeEvent<HTMLInputElement>));
     expect(result.current.formData.age).toBe(42);
 
     const emptyNum = document.createElement('input');
     emptyNum.type = 'number';
     emptyNum.value = '';
-    act(() => result.current.handleChangeEvent('age')({ target: emptyNum } as unknown as React.ChangeEvent));
+    act(() => result.current.handleChangeEvent('age')({ target: emptyNum } as unknown as React.ChangeEvent<HTMLInputElement>));
     expect(result.current.formData.age).toBe('' as unknown as number);
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = true;
-    act(() => result.current.handleChangeEvent('email')({ target: cb } as unknown as React.ChangeEvent));
+    act(() => result.current.handleChangeEvent('email')({ target: cb } as unknown as React.ChangeEvent<HTMLInputElement>));
     expect(result.current.formData.email).toBe(true as unknown as string);
   });
 

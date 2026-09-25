@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useUserListFetch } from '../useUserListFetch';
+import type { useUserListFetchParams } from '../useUserListFetch';
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {
@@ -26,13 +27,16 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     showAdvancedSearch: false,
     pagination: { page: 1, per_page: 20, total: 0, pages: 1 },
     ...overrides,
-  } as never;
+  } as unknown as useUserListFetchParams;
 }
 
 describe('useUserListFetch · 用户列表数据拉取', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockApi.classes.getAll.mockResolvedValue([{ id: 1, name: '一班' }, { id: 2, name: '二班' }]);
+    mockApi.classes.getAll.mockResolvedValue([
+      { id: 1, name: '一班' },
+      { id: 2, name: '二班' },
+    ]);
     mockApi.users.getAll.mockResolvedValue({
       users: [{ id: 1, name: 'a' }],
       total: 1,
@@ -52,9 +56,7 @@ describe('useUserListFetch · 用户列表数据拉取', () => {
     expect(mockApi.classes.getAll).toHaveBeenCalled();
     expect(mockApi.rules.getAll).toHaveBeenCalled();
     expect(mockApi.rankRules.getAll).toHaveBeenCalled();
-    expect(params.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'SET_USERS' })
-    );
+    expect(params.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'SET_USERS' }));
   });
 
   it('fetchUsers 收到数组响应时走防御分支（按数组长度兜底 total/pages）', async () => {
@@ -94,7 +96,10 @@ describe('useUserListFetch · 用户列表数据拉取', () => {
 
     act(() => result.current.handlePageChange(3));
     expect(params.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'SET_PAGINATION', payload: expect.objectContaining({ page: 3 }) })
+      expect.objectContaining({
+        type: 'SET_PAGINATION',
+        payload: expect.objectContaining({ page: 3 }),
+      })
     );
 
     act(() => result.current.handleClearFilters());
@@ -151,8 +156,10 @@ describe('useUserListFetch · 用户列表数据拉取', () => {
     mockApi.users.getAll.mockRejectedValue(new Error('boom'));
     const params = makeParams();
     renderHook(() => useUserListFetch(params));
-    await waitFor(() => expect(params.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'SET_ERROR', payload: '加载用户列表失败' })
-    ));
+    await waitFor(() =>
+      expect(params.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'SET_ERROR', payload: '加载用户列表失败' })
+      )
+    );
   });
 });

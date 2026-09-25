@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useNLPAnalysis } from '../useNLPAnalysis';
 
 const { mockApi } = vi.hoisted(() => ({
@@ -27,10 +27,8 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     showToast: vi.fn(),
     setLoadError: vi.fn(),
     ...overrides,
-  } as never;
+  };
 }
-
-const ENV = { code: 0, data: { k: 1 } };
 
 describe('useNLPAnalysis · NLP 算法分析', () => {
   beforeEach(() => {
@@ -38,7 +36,10 @@ describe('useNLPAnalysis · NLP 算法分析', () => {
     mockApi.nlp.getAnalysisIntent.mockResolvedValue({ code: 0, data: { intent: 'a' } });
     mockApi.nlp.getAnalysisPerformance.mockResolvedValue({ code: 0, data: { perf: 'b' } });
     mockApi.nlp.getAnalysisSuggestions.mockResolvedValue({ code: 0, data: [{ s: 1 }] });
-    mockApi.nlp.getOptimizationConfig.mockResolvedValue({ code: 0, data: { strategy: 'balanced' } });
+    mockApi.nlp.getOptimizationConfig.mockResolvedValue({
+      code: 0,
+      data: { strategy: 'balanced' },
+    });
     mockApi.nlp.benchmarkIntentClassifier.mockResolvedValue({ score: 0.9 });
     mockApi.nlp.setOptimizationConfig.mockResolvedValue({ strategy: 'aggressive' });
     mockApi.nlp.resetAnalysis.mockResolvedValue({});
@@ -91,7 +92,10 @@ describe('useNLPAnalysis · NLP 算法分析', () => {
 
   it('updateOptimizationStrategy：更新成功并回刷分析数据', async () => {
     // 更新后 fetchAnalysisData 会回刷 optimizerConfig，服务端应返回新值 → 让 mock 同步
-    mockApi.nlp.getOptimizationConfig.mockResolvedValue({ code: 0, data: { strategy: 'aggressive' } });
+    mockApi.nlp.getOptimizationConfig.mockResolvedValue({
+      code: 0,
+      data: { strategy: 'aggressive' },
+    });
     const params = makeParams();
     const { result } = renderHook(() => useNLPAnalysis(params));
     await act(async () => {

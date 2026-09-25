@@ -29,7 +29,7 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     showToast: vi.fn(),
     confirmRef: { current: mockConfirm },
     ...overrides,
-  } as never;
+  };
 }
 
 const SAMPLE_RULE = {
@@ -41,6 +41,11 @@ const SAMPLE_RULE = {
   behavior_tags: ['纪律'],
   match_pattern: 'late',
   priority: 1,
+  is_active: true,
+  usage_count: 0,
+  accuracy_rate: 0,
+  created_at: '',
+  updated_at: '',
 };
 
 describe('useNLPRules · NLP 规则管理', () => {
@@ -104,7 +109,7 @@ describe('useNLPRules · NLP 规则管理', () => {
       result.current.setNewRule({
         behavior_keyword: 'x',
         behavior_description: 'y',
-        score_value: 999 as never,
+        score_value: 999,
         score_type: 'add',
         behavior_tags: '',
         match_pattern: '',

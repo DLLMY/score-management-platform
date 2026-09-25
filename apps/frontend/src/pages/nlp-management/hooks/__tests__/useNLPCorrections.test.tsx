@@ -25,7 +25,7 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     showToast: vi.fn(),
     confirmRef: { current: mockConfirm },
     ...overrides,
-  } as never;
+  };
 }
 
 const SAMPLE_LIST = { items: [{ id: 1, text: 'c' }], total: 1 };

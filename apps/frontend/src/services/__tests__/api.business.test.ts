@@ -151,11 +151,11 @@ describe('关键业务流 · 手机箱状态机（策略 override / 设备 remot
 
   it('mqtt.unlock：POST /api/mqtt/unlock，body 透传', async () => {
     mockFetch.mockResolvedValue(okEnvelope(null));
-    await api.mqtt.unlock({ device_id: 'dev-01', card_id: '12345678' });
+    await api.mqtt.unlock({ device_id: 'dev-01', box_id: 'A' });
     const [url, opts] = mockFetch.mock.calls[0];
     expect(url).toBe('/api/mqtt/unlock');
     expect(opts.method).toBe('POST');
-    expect(JSON.parse(opts.body)).toEqual({ device_id: 'dev-01', card_id: '12345678' });
+    expect(JSON.parse(opts.body)).toEqual({ device_id: 'dev-01', box_id: 'A' });
   });
 
   it('手机箱控制业务失败：抛错', async () => {

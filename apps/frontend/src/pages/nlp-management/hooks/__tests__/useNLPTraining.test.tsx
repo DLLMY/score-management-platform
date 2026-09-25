@@ -26,7 +26,7 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     showToast: vi.fn(),
     setLoadError: vi.fn(),
     ...overrides,
-  } as never;
+  };
 }
 
 describe('useNLPTraining · NLP 模型训练', () => {
@@ -51,7 +51,7 @@ describe('useNLPTraining · NLP 模型训练', () => {
   it('getAlgorithms 失败 → setLoadError(true)', async () => {
     mockApi.nlp.getAlgorithms.mockRejectedValueOnce(new Error('list failed'));
     const params = makeParams();
-    const { result } = renderHook(() => useNLPTraining(params));
+    renderHook(() => useNLPTraining(params));
     await waitFor(() => expect(mockApi.nlp.getAlgorithms).toHaveBeenCalled());
     expect(params.setLoadError).toHaveBeenCalledWith(true);
   });
@@ -63,7 +63,10 @@ describe('useNLPTraining · NLP 模型训练', () => {
     await act(async () => {
       await result.current.handleTrainModel();
     });
-    expect(params.showToast).toHaveBeenCalledWith('warning', '请先选择算法，或使用「训练全部模型」');
+    expect(params.showToast).toHaveBeenCalledWith(
+      'warning',
+      '请先选择算法，或使用「训练全部模型」'
+    );
     expect(mockApi.nlp.trainModel).not.toHaveBeenCalled();
   });
 

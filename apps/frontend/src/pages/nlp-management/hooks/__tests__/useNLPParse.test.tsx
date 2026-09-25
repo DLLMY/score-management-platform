@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useNLPParse } from '../useNLPParse';
+import type { ParseResult } from '../../types';
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {
@@ -22,17 +23,30 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     showToast: vi.fn(),
     fetchRules: vi.fn(),
     ...overrides,
-  } as never;
+  };
 }
 
-const PARSE_RESULT = {
+const PARSE_RESULT: ParseResult = {
+  success: true,
   input_text: 't',
   intent: 'add',
   confidence: 0.9,
   extracted_name: '张三',
   behavior: '迟到',
+  user_id: null,
   matched_rules: [
-    { rule_id: 1, score_type: 'add', score_value: 5, behavior_tags: [], behavior_description: 'd' },
+    {
+      rule_id: 1,
+      behavior_keyword: '迟到',
+      behavior_description: 'd',
+      score_type: 'add',
+      score_value: 5,
+      behavior_tags: [],
+      match_pattern: '',
+      priority: 1,
+      usage_count: 0,
+      accuracy_rate: 0,
+    },
   ],
   suggestions: [
     { rule_id: 2, description: '相似', score_value: 3, intent: 'add', similarity: 0.8 },
@@ -73,7 +87,13 @@ describe('useNLPParse · NLP 智能解析', () => {
       extracted_name: '张三',
       behavior: '迟到',
       matched_rules: [
-        { rule_id: 1, score_type: 'add', score_value: 5, behavior_tags: [], behavior_description: 'd' },
+        {
+          rule_id: 1,
+          score_type: 'add',
+          score_value: 5,
+          behavior_tags: [],
+          behavior_description: 'd',
+        },
       ],
       suggestions: [
         { rule_id: 2, description: '相似', score_value: 3, intent: 'add', similarity: 0.8 },
@@ -127,7 +147,10 @@ describe('useNLPParse · NLP 智能解析', () => {
     await act(async () => {
       await result.current.parseText();
     });
-    expect(params.showToast).toHaveBeenCalledWith('info', expect.stringContaining('未识别到明确评分规则'));
+    expect(params.showToast).toHaveBeenCalledWith(
+      'info',
+      expect.stringContaining('未识别到明确评分规则')
+    );
   });
 
   it('parseText：接口抛错 → error toast', async () => {
@@ -154,7 +177,7 @@ describe('useNLPParse · NLP 智能解析', () => {
     const params = makeParams();
     const { result } = renderHook(() => useNLPParse(params));
     act(() => result.current.setInputText('hello'));
-    act(() => result.current.setParseResult(PARSE_RESULT as never));
+    act(() => result.current.setParseResult(PARSE_RESULT));
     await waitFor(() => expect(result.current.parseResult).not.toBeNull());
     await act(async () => {
       await result.current.executeScoring();
@@ -172,7 +195,7 @@ describe('useNLPParse · NLP 智能解析', () => {
     const params = makeParams();
     const { result } = renderHook(() => useNLPParse(params));
     act(() => result.current.setInputText('hello'));
-    act(() => result.current.setParseResult(PARSE_RESULT as never));
+    act(() => result.current.setParseResult(PARSE_RESULT));
     await waitFor(() => expect(result.current.parseResult).not.toBeNull());
     await act(async () => {
       await result.current.executeScoring();
@@ -206,7 +229,7 @@ describe('useNLPParse · NLP 智能解析', () => {
     const params = makeParams();
     const { result } = renderHook(() => useNLPParse(params));
     act(() => result.current.setInputText('hello'));
-    act(() => result.current.setParseResult(PARSE_RESULT as never));
+    act(() => result.current.setParseResult(PARSE_RESULT));
     await waitFor(() => expect(result.current.parseResult).not.toBeNull());
     await act(async () => {
       await result.current.handleManualExecute();
@@ -232,7 +255,7 @@ describe('useNLPParse · NLP 智能解析', () => {
     const params = makeParams();
     const { result } = renderHook(() => useNLPParse(params));
     act(() => result.current.setInputText('hello'));
-    act(() => result.current.setParseResult(PARSE_RESULT as never));
+    act(() => result.current.setParseResult(PARSE_RESULT));
     await waitFor(() => expect(result.current.parseResult).not.toBeNull());
     await act(async () => {
       await result.current.handleRecordFeedback();
@@ -246,7 +269,7 @@ describe('useNLPParse · NLP 智能解析', () => {
     const params = makeParams();
     const { result } = renderHook(() => useNLPParse(params));
     act(() => result.current.setInputText('hello'));
-    act(() => result.current.setParseResult(PARSE_RESULT as never));
+    act(() => result.current.setParseResult(PARSE_RESULT));
     await waitFor(() => expect(result.current.parseResult).not.toBeNull());
     await act(async () => {
       await result.current.handleRecordFeedback();

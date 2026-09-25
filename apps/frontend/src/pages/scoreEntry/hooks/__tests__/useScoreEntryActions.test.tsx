@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useScoreEntryActions } from '../useScoreEntryActions';
+import type { ScoreEntryActionsParams } from '../useScoreEntryActions';
 
-const { mockApi, mockConfirm, mockDownloadBlob, mockFetch } = vi.hoisted(() => ({
+const { mockApi, mockConfirm, mockDownloadBlob } = vi.hoisted(() => ({
   mockApi: {
     scores: {
       update: vi.fn(),
@@ -15,7 +16,6 @@ const { mockApi, mockConfirm, mockDownloadBlob, mockFetch } = vi.hoisted(() => (
   },
   mockConfirm: vi.fn(),
   mockDownloadBlob: vi.fn(),
-  mockFetch: vi.fn(),
 }));
 
 vi.mock('../../../../services/api', () => ({
@@ -59,7 +59,7 @@ function makeParams(overrides: Record<string, unknown> = {}) {
     openImportResultModal: vi.fn(),
     closeBatchModal: vi.fn(),
     ...overrides,
-  } as never;
+  } as unknown as ScoreEntryActionsParams;
 }
 
 describe('useScoreEntryActions · 成绩录入写操作', () => {
@@ -68,7 +68,11 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
     mockConfirm.mockResolvedValue(true);
     mockApi.scores.update.mockResolvedValue({ data: { id: 1, score: 90 } });
     mockApi.scores.create.mockResolvedValue({ data: { id: 2, score: 90 } });
-    mockApi.scores.importScores.mockResolvedValue({ success_count: 1, failed_count: 0, errors: [] });
+    mockApi.scores.importScores.mockResolvedValue({
+      success_count: 1,
+      failed_count: 0,
+      errors: [],
+    });
     mockApi.scores.confirmAll.mockResolvedValue({});
     mockApi.export.errors.mockResolvedValue({});
   });
@@ -171,7 +175,9 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
 
   it('handleSaveAll：非法科目名被跳过且失败项保留', async () => {
     const { params, result } = render({
-      pendingChanges: { '1-数[学]': { student_id: 1, subject: '数[学]', subject_id: 2, score: 90 } },
+      pendingChanges: {
+        '1-数[学]': { student_id: 1, subject: '数[学]', subject_id: 2, score: 90 },
+      },
     });
     await act(async () => {
       await result.current.handleSaveAll();
@@ -210,7 +216,7 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
 
   // ── handleImport ──
   it('handleImport：无文件 → 直接返回', async () => {
-    const { params, result } = render({ importFile: null });
+    const { result } = render({ importFile: null });
     await act(async () => {
       await result.current.handleImport();
     });
@@ -242,7 +248,7 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
 
   // ── handleExportErrors ──
   it('handleExportErrors：无 errors → 不调用 export.errors', () => {
-    const { params, result } = render({ importResult: null });
+    const { result } = render({ importResult: null });
     act(() => result.current.handleExportErrors());
     expect(mockApi.export.errors).not.toHaveBeenCalled();
   });
@@ -258,7 +264,7 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
   // ── handleConfirmAll ──
   it('handleConfirmAll：confirm 取消 → 不调用', async () => {
     mockConfirm.mockResolvedValueOnce(false);
-    const { params, result } = render({ selectedExam: '3' });
+    const { result } = render({ selectedExam: '3' });
     await act(async () => {
       await result.current.handleConfirmAll();
     });
@@ -344,10 +350,7 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
   });
 
   it('exportTemplate：接口失败 → 提示', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 500 })
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
     const { params, result } = render({ selectedClass: '5', selectedExam: '3' });
     await act(async () => {
       await result.current.exportTemplate();

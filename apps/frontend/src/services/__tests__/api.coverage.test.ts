@@ -29,7 +29,7 @@ const genData = {
 };
 const ARG = genData as unknown as never;
 
-function okEnv(data) {
+function okEnv(data: unknown) {
   return {
     ok: true,
     status: 200,
@@ -422,7 +422,6 @@ const CALLS: [string, string][] = [
   ['student', 'requestPhoneboxUnlock'],
   ['student', 'getMyRank'],
   ['student', 'getInsights'],
-
 ];
 
 beforeEach(() => {
@@ -434,20 +433,21 @@ beforeEach(() => {
 describe('api.ts 广覆盖（按组批量冒烟，仅验证方法体可执行至 request 层）', () => {
   for (const [g, m] of CALLS) {
     it(`${g}.${m}`, async () => {
-      const grp = (api as unknown as Record<string, Record<string, (...a: unknown[]) => unknown>>)[g];
+      const grp = (api as unknown as Record<string, Record<string, (...a: unknown[]) => unknown>>)[
+        g
+      ];
       const fn = grp?.[m];
       // 部分 [组,方法] 实际位于嵌套子组或属于 URL 构造器，不在 api[组][方法] 直接路径；跳过以免误报
       if (typeof fn !== 'function') return;
       const n = fn.length;
       const args = Array(n).fill(ARG);
-      let threw = false;
       try {
         const r = fn.apply(grp, args);
         if (r && typeof (r as { then?: unknown }).then === 'function') {
           await r;
         }
       } catch {
-        threw = true;
+        // 冒烟验证：方法体可被调用执行即可，异常仅说明该方法不会触达 fetch
       }
       // 仅为冒烟：验证方法体可被调用执行（覆盖其请求构建/返回归一化分支）。
       // 部分方法（URL 构造器、纯同步工具）不会触达 fetch，此处不强制断言。

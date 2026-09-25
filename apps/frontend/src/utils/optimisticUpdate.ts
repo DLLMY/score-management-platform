@@ -131,10 +131,10 @@ export function generateOptimisticId(): string {
   return `optimistic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export function applyOptimisticUpdates<T>(
-  baseState: T,
-  actions: OptimisticAction<T>[],
-  applyAction: (state: T, action: OptimisticAction<T>) => T
-): T {
+export function applyOptimisticUpdates<S, P>(
+  baseState: S,
+  actions: OptimisticAction<P>[],
+  applyAction: (state: S, action: OptimisticAction<P>) => S
+): S {
   return actions.reduce(applyAction, baseState);
 }
