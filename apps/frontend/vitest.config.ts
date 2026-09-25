@@ -52,14 +52,18 @@ export default defineConfig({
       //   2026-09-25 补测 remote-notify handlers  Stmts 51.83 / Branch 33.69 / Funcs 45.61 / Lines 53.82
       //     （useRemoteNotifyHandlers 16 个纯 handler 全参数化测试 +47 用例全绿；另 prettier 收口 10 个历史测试文件；
       //      全量 994 passed/3 skipped）
-      // 本轮将四项阈值统一抬高至「实测值 - 约 0.8~1pt 缓冲」，锁住本轮增益；两次全量实测完全一致（v8 噪声可忽略）。
+      //   2026-09-25 补测 remote-notify 组合根  Stmts 52.68 / Branch 34.04 / Funcs 46.11 / Lines 54.72
+      //     （useRemoteNotifyLogic 真实子 hook 集成测试 +5 用例全绿，装配 ToastProvider + mock services/api；
+      //      覆盖挂载 loader/MQTT 探测/deps 装配/buildHistoryColumns/双 useEffect/isDraftMeaningful 双分支；
+      //      全量 999 passed/3 skipped）
+      // 本轮抬高 Stmts/Funcs/Lines 锁住增益；Branch 维持 33（实测 34.04，+0.04 缓冲过窄，规避 v8 分支噪声误红）。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 51,
+        statements: 52,
         branches: 33,
-        functions: 45,
-        lines: 53,
+        functions: 46,
+        lines: 54,
       },
     },
   },
