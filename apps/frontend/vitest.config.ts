@@ -102,13 +102,20 @@ export default defineConfig({
       //     （preloadService 5.1%→~100%、useAppState 3.3%→98.3%(Branch95.2%/Funcs95.2%)、LazyImage 4.1%→91.8%(Funcs100%)、
       //      imageOptimization 14%→~98%；4 文件共 +45 用例全绿；全量 1408 passed/3 skipped）
       //     本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 66(缓冲~1.1) / Branch 49(缓冲~1.6) / Funcs 60(缓冲~1.3) / Lines 68(缓冲~1.5)。
+      //   2026-09-26 补测 ConfirmDialog/BatchActionBar(纯 UI) + useApiFetch(hook) + errorMonitor/performanceReportingService(单例服务) + useModelLogic(hook)
+      //     Stmts 69.52 / Branch 52.17 / Funcs 63.58 / Lines 71.86（v8 文本报告口径）
+      //     （ConfirmDialog 0%→~100%、BatchActionBar 0%→~98%、useApiFetch 16%→~100%、
+      //      errorMonitor 65.6%→~96%、performanceReportingService 50.5%→~97%、useModelLogic 19%→~100%；
+      //      6 文件共 +115 用例全绿；全量 1523 passed/3 skipped）
+      //     ★ Lines 首次越过 70% 目标线（71.86%）。
+      //     本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 68(缓冲~1.5) / Branch 51(缓冲~1.2) / Funcs 62(缓冲~1.6) / Lines 70(缓冲~1.9)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 66,
-        branches: 49,
-        functions: 60,
-        lines: 68,
+        statements: 68,
+        branches: 51,
+        functions: 62,
+        lines: 70,
       },
     },
   },
