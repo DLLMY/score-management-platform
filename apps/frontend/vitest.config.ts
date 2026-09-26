@@ -90,13 +90,18 @@ export default defineConfig({
       //   2026-09-26 补测 ErrorBoundary + MemoComponents + api 请求层（v8 文本报告口径）  Stmts 60.31 / Branch 44.13 / Funcs 54.81 / Lines 62.68
       //     （ErrorBoundary 0%→92.2%、MemoComponents 0%→92.5%(Funcs100%)、api.ts 65.1%→66.3%(Funcs78%、Branch41.4%)；三者共 +25 用例全绿；全量 1303 passed/3 skipped）
       //     本轮抬高锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 60(缓冲0.31) / Branch 43(缓冲1.13) / Funcs 54(缓冲0.81) / Lines 62(缓冲0.68)。
+      //   2026-09-26 补测 cacheDB(纯逻辑IndexedDB工具) + ImportExportPanel(导入导出模板主链路)  Stmts 62.80 / Branch 46.19 / Funcs 57.02 / Lines 65.29（v8 文本报告口径预估 ~62.3/45.8/56.3/64.8）
+      //     （cacheDB 9 API + 降级 8 用例=17 全绿，覆盖 open/set/get(含过期删除)/delete/clear/byPattern/cleanupExpired/stats + 无 indexedDB 降级；
+      //      ImportExportPanel 17 用例全绿，经 props 回调隔离网络 + vi.mock(Modal/PermissionButton/useToast/download/getAuthHeaders)，覆盖文件校验/导入成功失败/导出/错误详情/失败数据CSV/模板权限分支；
+      //      ImportExportPanel 12.8%→71.7%、cacheDB 24%→~92%；全量 1337 passed/3 skipped）
+      //      本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 62(缓冲~0.3) / Branch 45(缓冲~0.8) / Funcs 56(缓冲~0.3) / Lines 64(缓冲~0.8)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 60,
-        branches: 43,
-        functions: 54,
-        lines: 62,
+        statements: 62,
+        branches: 45,
+        functions: 56,
+        lines: 64,
       },
     },
   },
