@@ -94,14 +94,17 @@ export default defineConfig({
       //     （cacheDB 9 API + 降级 8 用例=17 全绿，覆盖 open/set/get(含过期删除)/delete/clear/byPattern/cleanupExpired/stats + 无 indexedDB 降级；
       //      ImportExportPanel 17 用例全绿，经 props 回调隔离网络 + vi.mock(Modal/PermissionButton/useToast/download/getAuthHeaders)，覆盖文件校验/导入成功失败/导出/错误详情/失败数据CSV/模板权限分支；
       //      ImportExportPanel 12.8%→71.7%、cacheDB 24%→~92%；全量 1337 passed/3 skipped）
-      //      本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 62(缓冲~0.3) / Branch 45(缓冲~0.8) / Funcs 56(缓冲~0.3) / Lines 64(缓冲~0.8)。
+      //   2026-09-26 补测 Header + Sidebar 导航布局组件（mock usePermissionStore/useThemeStore/api/router 隔离）  Stmts 65.42 / Branch 49.53 / Funcs 59.62 / Lines 67.88（v8 JSON 口径；文本报告预估 ~64.9/49.0/59.1/67.4）
+      //     （Header 16 用例覆盖渲染/搜索/通知中心/主题切换/登出 + fetchNotifications 成功失败401；Sidebar 10 用例覆盖渲染/折叠/分组展开/移动抽屉/Esc/登出/权限加载；全量 1363 passed/3 skipped）
+      //      Header 0%→~79%、Sidebar 1.5%→~85%；全局四指标各 +2.5 左右
+      //      本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 64(缓冲~0.9) / Branch 48(缓冲~1.0) / Funcs 58(缓冲~1.1) / Lines 66(缓冲~1.4)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 62,
-        branches: 45,
-        functions: 56,
-        lines: 64,
+        statements: 64,
+        branches: 48,
+        functions: 58,
+        lines: 66,
       },
     },
   },
