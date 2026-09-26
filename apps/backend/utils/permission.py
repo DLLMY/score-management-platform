@@ -396,11 +396,17 @@ def get_current_admin():
     # F6 修复: 仅接受 Authorization: Bearer <token>。
     # 原实现允许 X-Admin-Id 头作 token 回退，且 token 校验失败后直接按 id 查库返回 Admin——
     # 知道 admin id 即可伪造身份（CRITICAL）。现彻底移除该通道，校验失败一律返回 None。
-    auth_header = request.headers.get("Authorization")
-    if (not auth_header or not auth_header.startswith("Bearer ")) and request.cookies.get(
-        "access_token"
-    ):
-        auth_header = f"Bearer {request.cookies.get('access_token')}"
+    # 上下文安全（2026-09-26 修复 fa422d2 引入的 12 例单测 RuntimeError）：service 层方法
+    # （committee/alert/study_guide/study_group/seating 等越权隔离检查）会在无 request 上下文的
+    # 单元测试中直接被调用，此时 request 代理访问会抛 RuntimeError。生产环境路由层必带上下文，
+    # 此分支永不触发；测试环境返回 None 与「校验失败返回 None」契约一致，caller 均已做 None 守卫。
+    try:
+        auth_header = request.headers.get("Authorization")
+        _cookie_token = request.cookies.get("access_token")
+    except RuntimeError:
+        return None
+    if (not auth_header or not auth_header.startswith("Bearer ")) and _cookie_token:
+        auth_header = f"Bearer {_cookie_token}"
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
 
