@@ -98,13 +98,17 @@ export default defineConfig({
       //     （Header 16 用例覆盖渲染/搜索/通知中心/主题切换/登出 + fetchNotifications 成功失败401；Sidebar 10 用例覆盖渲染/折叠/分组展开/移动抽屉/Esc/登出/权限加载；全量 1363 passed/3 skipped）
       //      Header 0%→~79%、Sidebar 1.5%→~85%；全局四指标各 +2.5 左右
       //      本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 64(缓冲~0.9) / Branch 48(缓冲~1.0) / Funcs 58(缓冲~1.1) / Lines 66(缓冲~1.4)。
+      //   2026-09-26 补测 preloadService(纯类) + useAppState(hook) + LazyImage(组件) + imageOptimization(纯函数)  Stmts 67.13 / Branch 50.63 / Funcs 61.34 / Lines 69.53（v8 文本报告口径）
+      //     （preloadService 5.1%→~100%、useAppState 3.3%→98.3%(Branch95.2%/Funcs95.2%)、LazyImage 4.1%→91.8%(Funcs100%)、
+      //      imageOptimization 14%→~98%；4 文件共 +45 用例全绿；全量 1408 passed/3 skipped）
+      //     本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 66(缓冲~1.1) / Branch 49(缓冲~1.6) / Funcs 60(缓冲~1.3) / Lines 68(缓冲~1.5)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 64,
-        branches: 48,
-        functions: 58,
-        lines: 66,
+        statements: 66,
+        branches: 49,
+        functions: 60,
+        lines: 68,
       },
     },
   },
