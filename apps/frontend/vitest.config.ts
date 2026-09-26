@@ -81,13 +81,19 @@ export default defineConfig({
       //      4 文件共 +37 用例全绿；UserTableRow 0%→100%、VirtualList 79.54%→97.72%、AdvancedSearch 0%→100%、userList/columns 0%→100%；
       //      全量 1212 passed/3 skipped）
       //      本轮四指标 +1 锁住增益：Stmts 58(缓冲0.28) / Branch 40(缓冲1.67) / Funcs 51(缓冲1.31) / Lines 60(缓冲0.48)。
+      //   2026-09-26 补测 nlp-management/columns + hooks/useNLPStatistics + 7 个 UI 基础组件  Stmts 59.07 / Branch 43.42 / Funcs 53.81 / Lines 61.34
+      //     （columns 4 工厂 buildRuleColumns/buildTrainingResultColumns/buildPerformanceColumns/buildCorrectionColumns 全分支；useNLPStatistics 成功/失败双分支；
+      //      UI 基础组件 Select/Badge/LoadingSpinner/Switch/Textarea/DateRangeField/ClassStatusBadge 纯渲染+交互；9 文件共 +66 用例全绿；
+      //      Select/Badge/LoadingSpinner/DateRangeField/ClassStatusBadge 0%→100%、Switch 0%→100%、Textarea 0%→100%、nlp columns 31%→87%+、useNLPStatistics 0%→100%；
+      //      全量 1278 passed/3 skipped）
+      //      本轮四指标 +1 锁住增益：Stmts 59(缓冲0.07) / Branch 41(缓冲2.42) / Funcs 52(缓冲1.81) / Lines 61(缓冲0.34)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 58,
-        branches: 40,
-        functions: 51,
-        lines: 60,
+        statements: 59,
+        branches: 41,
+        functions: 52,
+        lines: 61,
       },
     },
   },
