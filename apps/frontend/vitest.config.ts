@@ -70,13 +70,18 @@ export default defineConfig({
       //      高级面板展开/关键字/搜索/重置/保存模态/加载/删除已存搜索/日期-状态-分类-班级-积分-排序字段全分支；23 用例全绿；
       //      SearchFilter 0%→100%、AdvancedSearchFilter 0%→100%；全量 1143 passed/3 skipped）
       //      本轮四指标 +1 锁住增益：Stmts 56(缓冲0.6) / Branch 38(缓冲1.69) / Funcs 49(缓冲1.32) / Lines 58(缓冲0.71)。
+      //   2026-09-26 补测 userList reducer 纯函数 + data-display 动画组件(Skeleton/AnimatedList/AnimatedScore)  Stmts 57.75 / Branch 40.83 / Funcs 51.17 / Lines 59.92
+      //     （reducer 28 action 全分支，含 UPDATE_USER_SCORE 缺分回退为 0、DELETE_USER 总数-1 及页码越界回退；Skeleton 4 个命名导出组件；
+      //      AnimatedList 增删动画 + onItemAppear 首现/新增触发；AnimatedScore rAF 动画 + 颜色阈值 + null 显示“--”；32 用例全绿；
+      //      userList/reducer 0%→100%、Skeleton 0%→100%、AnimatedList 0%→100%、AnimatedScore 0%→94.4%；全量 1175 passed/3 skipped）
+      //      本轮四指标 +1 锁住增益：Stmts 57(缓冲0.75) / Branch 39(缓冲1.83) / Funcs 50(缓冲1.17) / Lines 59(缓冲0.92)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 56,
-        branches: 38,
-        functions: 49,
-        lines: 58,
+        statements: 57,
+        branches: 39,
+        functions: 50,
+        lines: 59,
       },
     },
   },
