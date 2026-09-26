@@ -87,13 +87,16 @@ export default defineConfig({
       //      Select/Badge/LoadingSpinner/DateRangeField/ClassStatusBadge 0%→100%、Switch 0%→100%、Textarea 0%→100%、nlp columns 31%→87%+、useNLPStatistics 0%→100%；
       //      全量 1278 passed/3 skipped）
       //      本轮四指标 +1 锁住增益：Stmts 59(本地59.07/CI58.94→回落58留0.94缓冲，跨环境方差) / Branch 41(缓冲2.42) / Funcs 52(缓冲1.81) / Lines 61(缓冲0.34)。
+      //   2026-09-26 补测 ErrorBoundary + MemoComponents + api 请求层（v8 文本报告口径）  Stmts 60.31 / Branch 44.13 / Funcs 54.81 / Lines 62.68
+      //     （ErrorBoundary 0%→92.2%、MemoComponents 0%→92.5%(Funcs100%)、api.ts 65.1%→66.3%(Funcs78%、Branch41.4%)；三者共 +25 用例全绿；全量 1303 passed/3 skipped）
+      //     本轮抬高锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 60(缓冲0.31) / Branch 43(缓冲1.13) / Funcs 54(缓冲0.81) / Lines 62(缓冲0.68)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 58,
-        branches: 41,
-        functions: 52,
-        lines: 61,
+        statements: 60,
+        branches: 43,
+        functions: 54,
+        lines: 62,
       },
     },
   },
