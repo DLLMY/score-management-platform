@@ -65,13 +65,17 @@ export default defineConfig({
       //     （reducer.ts / useScoreEntryBatch / useScoreEntryDraft 100%；useScoreEntryData 94.7S/50B、useScoreEntryDerived 98.4S/93.2B；
       //      5 文件共 +63 用例全绿；全量 1095 passed/3 skipped；scoreEntry 模块 Lines 19.2→76.48 / Stmts 18.5→75.68）
       //     本轮四指标各 +1 锁住增益：Stmts 54(缓冲0.57) / Branch 36(缓冲1.10) / Funcs 48(缓冲0.14) / Lines 56(缓冲0.56)。
+      //   2026-09-26 补测 scoreEntry columns 工厂 + render 闭包  Stmts 55.26 / Branch 37.92 / Funcs 48.6 / Lines 57.28
+      //     （buildScoreEntryColumns 纯函数：列结构 + 学号/姓名 render + 科目列 onBlur/onInput/onKeyDown/onPaste 全分支，25 用例全绿；
+      //      columns.tsx 0%→100%、scoreEntry 模块 Lines 76.5→~100；全量 1120 passed/3 skipped）
+      //      本轮四指标 +1（Stmts/Branch/Lines 各 +1、Funcs 维持 48）：Stmts 55(缓冲0.26) / Branch 37(缓冲0.92) / Funcs 48(缓冲0.6) / Lines 57(缓冲0.28)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 54,
-        branches: 36,
+        statements: 55,
+        branches: 37,
         functions: 48,
-        lines: 56,
+        lines: 57,
       },
     },
   },
