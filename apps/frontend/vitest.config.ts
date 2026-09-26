@@ -75,13 +75,19 @@ export default defineConfig({
       //      AnimatedList 增删动画 + onItemAppear 首现/新增触发；AnimatedScore rAF 动画 + 颜色阈值 + null 显示“--”；32 用例全绿；
       //      userList/reducer 0%→100%、Skeleton 0%→100%、AnimatedList 0%→100%、AnimatedScore 0%→94.4%；全量 1175 passed/3 skipped）
       //      本轮四指标 +1 锁住增益：Stmts 57(缓冲0.75) / Branch 39(缓冲1.83) / Funcs 50(缓冲1.17) / Lines 59(缓冲0.92)。
+      //   2026-09-26 补测 userList/columns + data-display/UserTableRow/VirtualList + ui/AdvancedSearch 纯组件  Stmts 58.28 / Branch 41.67 / Funcs 52.31 / Lines 60.48
+      //     （columns.buildUserColumns 5 列结构与渲染/排序/操作列 handler；UserTableRow 行渲染/选中/黑名单-启用-禁用/评分编辑删除/memo 比较器；
+      //      VirtualList 虚拟化窗口/autoHeight/scroll 同步 rAF 滑动窗/ResizeObserver 有-无分支/keyExtractor/items 变化 reset；AdvancedSearch 六类字段+清除+footer+自定义 label；
+      //      4 文件共 +37 用例全绿；UserTableRow 0%→100%、VirtualList 79.54%→97.72%、AdvancedSearch 0%→100%、userList/columns 0%→100%；
+      //      全量 1212 passed/3 skipped）
+      //      本轮四指标 +1 锁住增益：Stmts 58(缓冲0.28) / Branch 40(缓冲1.67) / Funcs 51(缓冲1.31) / Lines 60(缓冲0.48)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 57,
-        branches: 39,
-        functions: 50,
-        lines: 59,
+        statements: 58,
+        branches: 40,
+        functions: 51,
+        lines: 60,
       },
     },
   },

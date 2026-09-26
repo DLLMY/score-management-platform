@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { useClassNowStatus } from '../useClassNowStatus';
 
 const { mockGetNow } = vi.hoisted(() => ({ mockGetNow: vi.fn() }));
 
@@ -15,8 +16,6 @@ vi.mock('../../services/api', () => ({
   },
   getAuthHeaders: vi.fn(() => ({})),
 }));
-
-import { useClassNowStatus } from '../useClassNowStatus';
 
 const baseStatus = {
   is_during_class_time: false,

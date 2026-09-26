@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { useStableToast } from '../useStableToast';
 
 const mockShowToast = vi.fn();
 vi.mock('../../context/ToastContext', () => ({
   useToast: () => ({ showToast: mockShowToast, toasts: [], removeToast: vi.fn() }),
 }));
-
-import { useStableToast } from '../useStableToast';
 
 describe('useStableToast', () => {
   it('stableShowToast 调用底层 showToast', () => {

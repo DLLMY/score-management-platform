@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as rbacApiNs from '../../services/rbacApi';
+import { usePermissionStore } from '..';
+import { useToastStore } from '..';
+import { useGlobalStore } from '..';
+import { useThemeStore } from '..';
 
 // 动态 import 的 rbacApi 必须在此 mock（与 store 内 import 同一模块标识）
 vi.mock('../../services/rbacApi', () => ({
@@ -7,12 +12,6 @@ vi.mock('../../services/rbacApi', () => ({
     getAdminRoles: vi.fn(),
   },
 }));
-
-import * as rbacApiNs from '../../services/rbacApi';
-import { usePermissionStore } from '..';
-import { useToastStore } from '..';
-import { useGlobalStore } from '..';
-import { useThemeStore } from '..';
 
 // 与 store 内 `await import()` 取 .default 的方式保持一致
 const rbacApi = (
