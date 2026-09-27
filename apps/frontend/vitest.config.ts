@@ -154,10 +154,16 @@ export default defineConfig({
       //     Stmts 74.67→ratchet 73(缓冲~1.67，+1 会压至 0.67<1.0 故不抬)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
+      //   2026-09-27 B26 补测 RulesTab/StatisticsTab/CorrectionModal 三个 nlp-management 组件（共 30 例全分支）
+      //     Stmts 75.21 / Branch 61.98 / Funcs 70.22 / Lines 77.63（v8 JSON 口径，全量 1847 passed/3 skipped/EXIT=0）
+      //     （RulesTab DataTable+PermissionButton 行操作/列渲染 add/deduct 配色+标签+准确率; StatisticsTab 统计卡片+高频规则+模型指标进度条;
+      //      CorrectionModal 含 api.users.getAll 副作用双 mock：学生下拉匹配/意图三按钮/分数解析/标签逗号分隔/描述备注/取消/反馈disabled/保存执行）
+      //     ratchet 73/60/68/76 → 74/60/69/76：按「缓冲 >=1.0 防 CI 方差」非均匀抬升——
+      //     Stmts 73→74(缓冲~1.21) / Funcs 68→69(缓冲~1.22) 锁增益；Branch 60 与 Lines 76 实测缓冲均 >=1.0 故维持。
       thresholds: {
-        statements: 73,
+        statements: 74,
         branches: 60,
-        functions: 68,
+        functions: 69,
         lines: 76,
       },
     },
