@@ -144,13 +144,21 @@ export default defineConfig({
       //      RuleRecommendTab 36 分支/3 函数 0%→覆盖(impact 正负零配色/字段兜底/confidence 非有限/过滤)；合计 136 分支/13 函数 0%→高覆盖）
       //     本轮四指标各 +1 锁住增益（实测增益 Stmts+0.52/Branch+1.60/Funcs+0.47/Lines+0.57，缓冲均 >=1.0 防 CI 方差）：
       //     Stmts 73(缓冲~1.21) / Branch 56(缓冲~3.23) / Funcs 67(缓冲~1.08) / Lines 75(缓冲~1.56)。
+      //   2026-09-27 B25 补测 ParseTab/AnalysisTab/TrainingTab 三个 nlp-management 纯展示组件（共 36 例全分支）
+      //     Stmts 74.67 / Branch 61.57 / Funcs 69.11 / Lines 77.05（v8 JSON 口径，全量 1817 passed/3 skipped/EXIT=0）
+      //     （三组件各为纯展示、仅消费 deps 零网络零 store：ParseTab 74 分支 0%→覆盖(意图三态/matched_rules>1/相似度 badge/库内匹配/手动修正兜底/纠正记录切换);
+      //      AnalysisTab 73 分支 0%→覆盖(准确率三档/缓存命中率三档/意图明细四态/优化策略三选项/基准四项/慢请求/优化建议三优先级);
+      //      TrainingTab 48 分支 0%→覆盖(评估四指标 null/训练结果/对比表 best 高亮/训练历史四态+auto_ 前缀剥离/F1 null 兜底/算法下拉+交叉验证);
+      //      合计 ~180 分支/0%→高覆盖；测试对 ../../hooks 的 usePermissions 注入 isSuperAdmin:true 以规避 PermissionButton 在测试环境 disabled 导致点击不触发）
+      //     本轮锁定增益（缓冲须 >=1.0 防 CI 跨环境方差）：Branch 56→60(缓冲~1.57) / Funcs 67→68(缓冲~1.11) / Lines 75→76(缓冲~1.05)；
+      //     Stmts 74.67→ratchet 73(缓冲~1.67，+1 会压至 0.67<1.0 故不抬)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
         statements: 73,
-        branches: 56,
-        functions: 67,
-        lines: 75,
+        branches: 60,
+        functions: 68,
+        lines: 76,
       },
     },
   },
