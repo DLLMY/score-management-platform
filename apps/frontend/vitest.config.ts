@@ -109,13 +109,20 @@ export default defineConfig({
       //      6 文件共 +115 用例全绿；全量 1523 passed/3 skipped）
       //     ★ Lines 首次越过 70% 目标线（71.86%）。
       //     本轮四指标各 +2 锁住增益（保守留缓冲防 CI 跨环境方差）：Stmts 68(缓冲~1.5) / Branch 51(缓冲~1.2) / Funcs 62(缓冲~1.6) / Lines 70(缓冲~1.9)。
+      //   2026-09-27 补测 dashboard/helpers(纯函数) + useEngagementLogic/useRuleApplicationLogic(hook) + stores/index(5 个 zustand store)
+      //     Stmts 71.30 / Branch 53.18 / Funcs 64.80 / Lines 73.66（v8 文本报告口径）
+      //     （helpers 8.1%→~100%、useEngagementLogic 33.3%→~98%、useRuleApplicationLogic 27.8%→~100%、
+      //      stores/index 69.8%→~97%（含 WebSocketStore 全部事件 handler，既有 stores.test.ts 未覆盖该 store）；
+      //      4 文件共 +136 用例全绿；全量 1659 passed/3 skipped）
+      //     本轮 Branch/Funcs 实测增益不足 2 点，按「缓冲须 >=1.0」原则只各 +1，避免 CI 跨环境方差变红：
+      //     Stmts 70(缓冲~1.3) / Branch 52(缓冲~1.18) / Funcs 63(缓冲~1.8) / Lines 72(缓冲~1.66)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 68,
-        branches: 51,
-        functions: 62,
-        lines: 70,
+        statements: 70,
+        branches: 52,
+        functions: 63,
+        lines: 72,
       },
     },
   },
