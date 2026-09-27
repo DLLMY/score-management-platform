@@ -116,13 +116,19 @@ export default defineConfig({
       //      4 文件共 +136 用例全绿；全量 1659 passed/3 skipped）
       //     本轮 Branch/Funcs 实测增益不足 2 点，按「缓冲须 >=1.0」原则只各 +1，避免 CI 跨环境方差变红：
       //     Stmts 70(缓冲~1.3) / Branch 52(缓冲~1.18) / Funcs 63(缓冲~1.8) / Lines 72(缓冲~1.66)。
+      //   2026-09-27 B21 补测 DataTable(组件增强 28 例) + useDashboardLogic(hook 10 例) + useAlgorithmAnalysisLogic(hook 11 例)
+      //     Stmts 72.58 / Branch 54.42 / Funcs 65.97 / Lines 74.84（v8 JSON 口径，全量 1698 passed/3 skipped/EXIT=0）
+      //     （DataTable 重写覆盖 error/empty/自定义/虚拟滚动/分页/排序/selectable/对齐等 28 场景；useDashboardLogic 覆盖挂载加载/兜底/推送/刷新/过滤分组；
+      //      useAlgorithmAnalysisLogic 覆盖 Tab 初始/切换自动加载/各算法接口写入/关键词过滤/scrollIntoView；ImportExportPanel 已有 21 例不重复补）
+      //     本轮四指标各 +1 锁住增益（实测增益 ~2.4~3.0，保守留缓冲防 CI 跨环境方差）：
+      //     Stmts 71(缓冲~1.58) / Branch 53(缓冲~1.42) / Funcs 64(缓冲~1.97) / Lines 73(缓冲~1.84)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 70,
-        branches: 52,
-        functions: 63,
-        lines: 72,
+        statements: 71,
+        branches: 53,
+        functions: 64,
+        lines: 73,
       },
     },
   },
