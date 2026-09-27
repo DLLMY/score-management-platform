@@ -35,4 +35,5 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 - ⚠️ **git-bash coreutils 损坏**（rm/ls/grep/find/tail/cd 均 command not found）。文件增删/行数统计/目录列举一律用 Python 脚本（`os`/`pathlib`）；pytest 用 `os.chdir` 包装。
 - ⚠️ **`PYTEST_ADDOPTS=--timeout=300`**：长回归被 300s 杀 → 传 `--timeout=0`（勿 `-p no:timeout`）；全量多独立 pytest 进程分批 + `--junitxml` 聚合。
 - ⚠️ **绝不直接改 `.git` 内部文件**：修 ref 走 git 命令；远程同步只信 `git ls-remote origin <branch>`，不信用 `git status -sb` ahead/behind（沙箱 tracking 假陈旧）。
+- ⚠️ **packed-refs 被写成 CRLF → `badRefName` 损坏（新型沙箱损坏）**：症状 `git fsck` 报 `packed-refs line N: badRefName 'refs/heads/main?'` + `invalid sha1 pointer 0000000...`，commit 时 `geometric repack failed`。根因是 `.git/packed-refs` 为 CRLF（git 要求 LF），尾随 `\r` 污染 refname + 全零 SHA 墓碑行。**`git update-ref -d` 因 `?` 触发 Windows 文件名非法无法用 git 命令删** → 必须用 Python `open(pr,'wb')` 写回**纯 LF** 干净 packed-refs（仅留有效 ref，先备份 `.bak`），再 `git fsck` 核验零报错；随后 push + `ls-remote` 核验（实测见 `memory/2026-09-27.md` B25）。
 - SQLite join User 双 join → ambiguous；conftest 动态 Namespace 须自带 `path`；同名类型多处定义（改前 grep 全仓定位真实源）。
