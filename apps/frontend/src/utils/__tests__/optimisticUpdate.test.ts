@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import {
   withOptimisticUpdate,
   applyOptimisticUpdates,
   generateOptimisticId,
   createOptimisticQueue,
+  useOptimisticState,
   type OptimisticAction,
 } from '../optimisticUpdate';
 
@@ -100,5 +102,37 @@ describe('optimisticUpdate 纯逻辑', () => {
     expect(q.getAllActions().length).toBeLessThanOrEqual(100);
     // 最旧的 0 已被丢弃
     expect(q.getAllActions().some((a) => a.id === '0')).toBe(false);
+  });
+});
+
+describe('optimisticUpdate · useOptimisticState 钩子（B29 补齐）', () => {
+  it('初始 state 与 isOptimistic=false', () => {
+    const { result } = renderHook(() => useOptimisticState({ count: 0 }));
+    expect(result.current.state).toEqual({ count: 0 });
+    expect(result.current.isOptimistic).toBe(false);
+  });
+
+  it('setOptimistic 更新 state 并返回可回滚函数', () => {
+    const { result } = renderHook(() => useOptimisticState<{ count: number }>({ count: 0 }));
+    let rollback: () => void = () => {};
+    act(() => {
+      rollback = result.current.setOptimistic((prev) => ({ count: prev.count + 1 }));
+    });
+    expect(result.current.state).toEqual({ count: 1 });
+    expect(result.current.isOptimistic).toBe(true);
+    act(() => rollback());
+    expect(result.current.state).toEqual({ count: 0 });
+    expect(result.current.isOptimistic).toBe(false);
+  });
+
+  it('reset 回到 previousState 并清除 optimistic 标记', () => {
+    const { result } = renderHook(() => useOptimisticState<{ count: number }>({ count: 0 }));
+    act(() => {
+      result.current.setOptimistic((p) => ({ count: p.count + 5 }));
+    });
+    expect(result.current.state).toEqual({ count: 5 });
+    act(() => result.current.reset());
+    expect(result.current.state).toEqual({ count: 0 });
+    expect(result.current.isOptimistic).toBe(false);
   });
 });

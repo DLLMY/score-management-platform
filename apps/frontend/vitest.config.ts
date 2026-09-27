@@ -175,11 +175,17 @@ export default defineConfig({
 //     本轮仅 Stmts ratchet 抬升（实测 Branch/Funcs/Lines 缓冲均 <1.0 防 CI 方差）：
 //     Stmts 74→75(缓冲~1.4)；
 //     Branch 63.73→ratchet 62(缓冲~1.73，+1 需≥64.0 差0.27 故不抬) / Funcs 71.82→ratchet 70(缓冲~1.82，+1 需≥72.0 差0.18 故不抬) / Lines 78.82→ratchet 77(缓冲~1.82，+1 需≥79.0 差0.18 故不抬)。
+//   2026-09-27 B29 补测 config/index.ts(生产分支) + useNLPParse(corrected_* 分支) + utils/optimisticUpdate(useOptimisticState 钩子) + AdvancedSearchFilter(5 函数)（零/低网络、低风险）
+//     Stmts 76.78 / Branch 64.15 / Funcs 72.07 / Lines 79.22（v8 口径，全量 EXIT=0；B28 基线 1942 passed/3 skipped，本批 +~7 例）
+//     （corrected_* 分支用例因 RTL result.current 快照偶发陈旧，拆入独立文件 useNLPParse.corrected.test.tsx 以隔离 act 环境规避；
+//       AdvancedSearchFilter 原无测试，补齐 5 个未盖函数；optimisticUpdate 补 useOptimisticState 钩子；config/index.prod.test.ts 用 env mock 盖生产分支）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 维持 75(缓冲~1.78)；
+//     Branch 62→63(实测 64.15，缓冲~1.15) / Funcs 70→71(实测 72.07，缓冲~1.07) / Lines 77→78(实测 79.22，缓冲~1.22)。
       thresholds: {
         statements: 75,
-        branches: 62,
-        functions: 70,
-        lines: 77,
+        branches: 63,
+        functions: 71,
+        lines: 78,
       },
     },
   },

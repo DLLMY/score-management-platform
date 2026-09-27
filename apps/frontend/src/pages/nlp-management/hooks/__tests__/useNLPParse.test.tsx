@@ -1,7 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { useNLPParse } from '../useNLPParse';
 import type { ParseResult } from '../../types';
+
+// 显式 cleanup：整文件批量跑时，前序用例挂载的 hook 实例若未及时卸载，会干扰后续用例的
+// act 时序（useCallback 闭包偶发陈旧）。每条用例后卸载，保证 result.current 快照一致。
+afterEach(cleanup);
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {
@@ -275,5 +279,160 @@ describe('useNLPParse · NLP 智能解析', () => {
       await result.current.handleRecordFeedback();
     });
     expect(params.showToast).toHaveBeenCalledWith('error', '记录反馈失败');
+  });
+});
+
+describe('useNLPParse · 补齐分支（B29）', () => {
+  it('parseText：suggestions 无 rule_id → setSuggestedRules([])（filter 非 rule_id 分支）', async () => {
+    mockApi.nlp.parse.mockResolvedValueOnce({
+      input_text: 't',
+      intent: '',
+      confidence: 0,
+      extracted_name: '',
+      behavior: '',
+      matched_rules: [],
+      suggestions: [{ description: '相似', score_value: 3, intent: 'add', similarity: 0.8 }],
+    });
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => result.current.setInputText('hello'));
+    await act(async () => {
+      await result.current.parseText();
+    });
+    expect(result.current.suggestedRules).toHaveLength(0);
+  });
+
+  it('executeScoring：selectedRuleId 命中某规则 → 用该规则的 score_type（find 命中分支）', async () => {
+    const pr: ParseResult = {
+      ...PARSE_RESULT,
+      matched_rules: [
+        {
+          rule_id: 5,
+          behavior_keyword: '迟到',
+          behavior_description: 'd',
+          score_type: 'subtract',
+          score_value: 2,
+          behavior_tags: [],
+          match_pattern: '',
+          priority: 1,
+          usage_count: 0,
+          accuracy_rate: 0,
+        },
+        {
+          rule_id: 1,
+          behavior_keyword: '迟到',
+          behavior_description: 'd',
+          score_type: 'add',
+          score_value: 5,
+          behavior_tags: [],
+          match_pattern: '',
+          priority: 1,
+          usage_count: 0,
+          accuracy_rate: 0,
+        },
+      ],
+    };
+    mockApi.nlp.execute.mockResolvedValueOnce({ results: [{ success: true }] });
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => {
+      result.current.setInputText('hello');
+      result.current.setParseResult(pr);
+      result.current.setSelectedRuleId(5);
+    });
+    await waitFor(() => expect(result.current.parseResult?.matched_rules?.[0]?.rule_id).toBe(5));
+    await act(async () => {
+      await result.current.executeScoring();
+    });
+    expect(mockApi.nlp.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        manual_correction: expect.objectContaining({ intent: 'subtract', score_value: 2 }),
+      })
+    );
+  });
+
+  it('executeScoring：返回 results 为空数组 → “评分成功” 分支', async () => {
+    mockApi.nlp.execute.mockResolvedValueOnce({ results: [] });
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => result.current.setInputText('hello'));
+    act(() => result.current.setParseResult(PARSE_RESULT));
+    await waitFor(() => expect(result.current.parseResult).not.toBeNull());
+    await act(async () => {
+      await result.current.executeScoring();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('success', '评分成功');
+  });
+
+  it('executeScoring：execute 抛错 → error toast', async () => {
+    mockApi.nlp.execute.mockRejectedValue(new Error('exec failed'));
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => result.current.setInputText('hello'));
+    act(() => result.current.setParseResult(PARSE_RESULT));
+    await waitFor(() => expect(result.current.parseResult).not.toBeNull());
+    await act(async () => {
+      await result.current.executeScoring();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('评分失败'));
+  });
+
+  it('applySuggestionAsRule：返回 null → “应用失败”', async () => {
+    mockApi.nlp.execute.mockResolvedValueOnce(null);
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    await act(async () => {
+      await result.current.applySuggestionAsRule({
+        rule_id: 2,
+        intent: 'add',
+        score_value: 3,
+        description: '相似',
+      });
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', '应用失败');
+  });
+
+  it('applySuggestionAsRule：execute 抛错 → error toast', async () => {
+    mockApi.nlp.execute.mockRejectedValue(new Error('apply failed'));
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    await act(async () => {
+      await result.current.applySuggestionAsRule({
+        rule_id: 2,
+        intent: 'add',
+        score_value: 3,
+        description: '相似',
+      });
+    });
+    expect(params.showToast).toHaveBeenCalledWith(
+      'error',
+      expect.stringContaining('应用相似规则失败')
+    );
+  });
+
+  it('handleManualExecute：返回 null → “操作失败”', async () => {
+    mockApi.nlp.execute.mockResolvedValueOnce(null);
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => result.current.setInputText('hello'));
+    act(() => result.current.setParseResult(PARSE_RESULT));
+    await waitFor(() => expect(result.current.parseResult).not.toBeNull());
+    await act(async () => {
+      await result.current.handleManualExecute();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', '操作失败');
+  });
+
+  it('handleManualExecute：execute 抛错 → error toast', async () => {
+    mockApi.nlp.execute.mockRejectedValue(new Error('manual failed'));
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => result.current.setInputText('hello'));
+    act(() => result.current.setParseResult(PARSE_RESULT));
+    await waitFor(() => expect(result.current.parseResult).not.toBeNull());
+    await act(async () => {
+      await result.current.handleManualExecute();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('评分失败'));
   });
 });
