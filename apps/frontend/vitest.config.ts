@@ -168,8 +168,15 @@ export default defineConfig({
       //     ratchet 74/60/69/76 → 74/62/70/77：按「缓冲 >=1.0 防 CI 方差」非均匀抬升——
       //     Branch 60→62(缓冲~1.18) / Funcs 69→70(缓冲~1.0) / Lines 76→77(缓冲~1.17) 锁增益；
       //     Stmts 75.7→ratchet 74(缓冲~1.7，+1 会压至 0.7<1.0 故不抬)。
+//   2026-09-27 B28 补测 config/permissions + components/lazy(ConditionalLazy/LazyComponent) + hooks/useWorkbenchClass 纯逻辑/纯组件（共 4 文件零网络）
+//     Stmts 76.40 / Branch 63.73 / Funcs 71.82 / Lines 78.82（v8 JSON 口径，全量 EXIT=0；B27 基线 1879 passed/3 skipped，本批 +~35 例）
+//     （permissions 9 函数全分支；ConditionalLazy 含条件渲染 + FeatureLazy 工厂(localStorage+动态import)；LazyComponent 含 createLazyComponent 工厂 + ErrorBoundary；
+//      useWorkbenchClass 含模块级 store + sessionStorage 降级 + setWorkbenchClassId 早返；columns.tsx 已于早期批次覆盖故不重复）
+//     本轮仅 Stmts ratchet 抬升（实测 Branch/Funcs/Lines 缓冲均 <1.0 防 CI 方差）：
+//     Stmts 74→75(缓冲~1.4)；
+//     Branch 63.73→ratchet 62(缓冲~1.73，+1 需≥64.0 差0.27 故不抬) / Funcs 71.82→ratchet 70(缓冲~1.82，+1 需≥72.0 差0.18 故不抬) / Lines 78.82→ratchet 77(缓冲~1.82，+1 需≥79.0 差0.18 故不抬)。
       thresholds: {
-        statements: 74,
+        statements: 75,
         branches: 62,
         functions: 70,
         lines: 77,
