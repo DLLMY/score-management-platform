@@ -160,11 +160,19 @@ export default defineConfig({
       //      CorrectionModal 含 api.users.getAll 副作用双 mock：学生下拉匹配/意图三按钮/分数解析/标签逗号分隔/描述备注/取消/反馈disabled/保存执行）
       //     ratchet 73/60/68/76 → 74/60/69/76：按「缓冲 >=1.0 防 CI 方差」非均匀抬升——
       //     Stmts 73→74(缓冲~1.21) / Funcs 68→69(缓冲~1.22) 锁增益；Branch 60 与 Lines 76 实测缓冲均 >=1.0 故维持。
+      //   2026-09-27 B27 补测 PredictionTab/ScorePredictTab/RuleApplicationTab/ModelManagerTab 四个 algorithm-analysis 展示型 Tab（共 32 例全分支）
+      //     Stmts 75.7 / Branch 63.18 / Funcs 71 / Lines 78.17（v8 JSON 口径，全量 1879 passed/3 skipped/EXIT=0）
+      //     （四组件纯 props/deps 驱动、零网络零 store：PredictionTab null 守卫+summary 三计数+风险学生 high 红点/下降箭头/置信度；
+      //      ScorePredictTab avg null→“—”/subjects 空→“综合”/scoreBands 占比/searchKeyword 过滤；RuleApplicationTab 三规则列表+学生/行为 select+应用规则 disabled+分布结果块(均注入 usePermissions isSuperAdmin:true)；
+      //      ModelManagerTab 三模型段 6 个 PermissionButton 的 train/evaluate 回调+training/evaluating 态+训练/评估结果块）
+      //     ratchet 74/60/69/76 → 74/62/70/77：按「缓冲 >=1.0 防 CI 方差」非均匀抬升——
+      //     Branch 60→62(缓冲~1.18) / Funcs 69→70(缓冲~1.0) / Lines 76→77(缓冲~1.17) 锁增益；
+      //     Stmts 75.7→ratchet 74(缓冲~1.7，+1 会压至 0.7<1.0 故不抬)。
       thresholds: {
         statements: 74,
-        branches: 60,
-        functions: 69,
-        lines: 76,
+        branches: 62,
+        functions: 70,
+        lines: 77,
       },
     },
   },
