@@ -357,4 +357,69 @@ describe('useScoreEntryActions · 成绩录入写操作', () => {
     });
     expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('下载模板失败'));
   });
+
+  // ── B30 边角分支补充 ──
+  it('handleScoreBlur：value 为空 → score=null 走 create', async () => {
+    const { params, result } = render({ scores: {} });
+    await act(async () => {
+      await result.current.handleScoreBlur(1, '数学', '');
+    });
+    expect(mockApi.scores.create).toHaveBeenCalledWith(
+      expect.objectContaining({ exam_id: 3, student_id: 1, subject: '数学', score: null })
+    );
+    expect(params.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'UPDATE_SCORE' }));
+  });
+
+  it('handleScoreBlur：existing 无 subject_id → 调 getSubjectId 兜底', async () => {
+    const getSubjectId = vi.fn(() => 11);
+    const { result } = render({ scores: { '1-数学': { id: 5 } }, getSubjectId });
+    await act(async () => {
+      await result.current.handleScoreBlur(1, '数学', '90');
+    });
+    expect(getSubjectId).toHaveBeenCalledWith('数学');
+    expect(mockApi.scores.update).toHaveBeenCalledWith(5, { score: 90 });
+  });
+
+  it('handleExport：接口非 ok → 抛「导出失败」', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    const { result } = render({ selectedExam: '3' });
+    await expect(result.current.handleExport('csv')).rejects.toThrow('导出失败');
+  });
+
+  it('handleConfirmAll：接口抛错 → 提示「确认失败」', async () => {
+    mockApi.scores.confirmAll.mockRejectedValue(new Error('boom'));
+    const { params, result } = render({ selectedExam: '3' });
+    await act(async () => {
+      await result.current.handleConfirmAll();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('确认失败'));
+  });
+
+  it('handleBatchDelete：runBatched 抛错 → 提示「批量删除失败」', async () => {
+    const { params, result } = render({
+      batchSubject: '数学',
+      scores: { '1-数学': { id: 9 } },
+      runBatched: vi.fn(async () => {
+        throw new Error('x');
+      }),
+    });
+    await act(async () => {
+      await result.current.handleBatchDelete();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('批量删除失败'));
+  });
+
+  it('handleBatchReset：runBatched 抛错 → 提示「批量重置失败」', async () => {
+    const { params, result } = render({
+      batchSubject: '数学',
+      scores: { '1-数学': { id: 9 } },
+      runBatched: vi.fn(async () => {
+        throw new Error('x');
+      }),
+    });
+    await act(async () => {
+      await result.current.handleBatchReset();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('批量重置失败'));
+  });
 });

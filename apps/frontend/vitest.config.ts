@@ -181,6 +181,11 @@ export default defineConfig({
 //       AdvancedSearchFilter 原无测试，补齐 5 个未盖函数；optimisticUpdate 补 useOptimisticState 钩子；config/index.prod.test.ts 用 env mock 盖生产分支）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 维持 75(缓冲~1.78)；
 //     Branch 62→63(实测 64.15，缓冲~1.15) / Funcs 70→71(实测 72.07，缓冲~1.07) / Lines 77→78(实测 79.22，缓冲~1.22)。
+//   2026-09-27 B30 补测 useScoreEntryActions(写操作边角/catch 分支) + useRemoteNotifyHandlers(performSend 重发/广播无文本) + PermissionGuard(新建，含未盖 renderForbidden 等)(零/低网络、低风险)
+//     Stmts 76.95 / Branch 64.29 / Funcs 72.11 / Lines 79.41（v8 口径，全量 EXIT=0；B29 基线 1942 passed/3 skipped，本批 +22 例 → 1964 passed/3 skipped）
+//     （PermissionGuard 单测初跑时 fork worker 崩溃退出：真实 react-router-dom 在 vitest worker 下加载致进程异常，改为 vi.mock('react-router-dom') 桩替身后稳定；
+//       useScoreEntryActions 的 handleBatchDelete/Reset catch 分支需 runBatched 抛错（默认 runBatched mock 会吞掉单项错误，故改 mock 为 throw）；
+//       实测 Stmts/Branch/Funcs/Lines 分别 +0.17/+0.14/+0.04/+0.19，均未达到「下一整数 +1.0 缓冲」门槛 → ratchet 维持 75/63/71/78 不抬）
       thresholds: {
         statements: 75,
         branches: 63,

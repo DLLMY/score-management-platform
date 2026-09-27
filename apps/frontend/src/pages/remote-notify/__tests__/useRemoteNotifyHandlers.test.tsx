@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useRemoteNotifyHandlers } from '../useRemoteNotifyHandlers';
 import type { RemoteNotifySharedDeps } from '../useRemoteNotifyHandlers';
 import type { NotifyTemplate } from '../../../services/api';
@@ -728,5 +728,32 @@ describe('useRemoteNotifyHandlers · 16 处理器', () => {
       })
     );
     expect(deps.openScheduledModal).toHaveBeenCalled();
+  });
+
+  // ── B30 边角分支补充 ──
+  it('performSend(失败→确认重发) → 二次调用 broadcast', async () => {
+    mockConfirm.mockResolvedValue(true); // 重试确认
+    mockApi.remoteNotify.broadcast
+      .mockResolvedValueOnce({ success: false, message: 'busy', topic: '' })
+      .mockResolvedValueOnce({ success: true, message: 'ok', topic: 't' });
+    const deps = makeDeps();
+    const { result } = renderHook(() => useRemoteNotifyHandlers(deps));
+    await act(async () => {
+      await result.current.performSend(
+        { text: 'x', speak: true, popup: true, timeout_sec: 8, urgent: false, force_send: false },
+        'broadcast'
+      );
+    });
+    await waitFor(() => expect(mockApi.remoteNotify.broadcast).toHaveBeenCalledTimes(2));
+  });
+
+  it('handleSubmit(broadcast 无内容) → 警告返回（非 score_change/device 分支）', async () => {
+    const deps = makeDeps({ mode: 'broadcast', form: { ...DEFAULT_NOTIFY_FORM, text: '' } });
+    const { result } = renderHook(() => useRemoteNotifyHandlers(deps));
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+    expect(mockShowToast).toHaveBeenCalledWith('warning', '请输入通知内容');
+    expect(mockApi.remoteNotify.preview).not.toHaveBeenCalled();
   });
 });
