@@ -137,13 +137,20 @@ export default defineConfig({
       //      纯 props 驱动零网络零 store 依赖，低风险高 ROI）
       //     本轮锁定增益（缓冲须 >=1.0 防 CI 跨环境方差）：Branch 54→55(缓冲~2.63) / Funcs 65→66(缓冲~1.61)；
       //     Stmts 73.69→ratchet 72(缓冲~1.69，+1 会压至 0.69<1.0 故不抬) / Lines 75.99→ratchet 74(缓冲~1.99，+1 会压至 0.99<1.0 故不抬)。
+      //   2026-09-27 B24 补测 RiskPredictTab/AnomalyTab/RuleRecommendTab 三个算法簇纯展示组件（共 33 例全分支）
+      //     Stmts 74.21 / Branch 59.23 / Funcs 68.08 / Lines 76.56（v8 JSON 口径，全量 1781 passed/3 skipped/EXIT=0）
+      //     （三组件各为纯展示、仅消费 deps 零网络零 store：RiskPredictTab 52 分支/7 函数 0%→覆盖(风险三档/score null/因子 slice>3/actions/导出按钮态/占比)；
+      //      AnomalyTab 48 分支/3 函数 0%→覆盖(severity 三档/字段兜底/score_change 符号与非有限/未知 severity 兜底/过滤)；
+      //      RuleRecommendTab 36 分支/3 函数 0%→覆盖(impact 正负零配色/字段兜底/confidence 非有限/过滤)；合计 136 分支/13 函数 0%→高覆盖）
+      //     本轮四指标各 +1 锁住增益（实测增益 Stmts+0.52/Branch+1.60/Funcs+0.47/Lines+0.57，缓冲均 >=1.0 防 CI 方差）：
+      //     Stmts 73(缓冲~1.21) / Branch 56(缓冲~3.23) / Funcs 67(缓冲~1.08) / Lines 75(缓冲~1.56)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 72,
-        branches: 55,
-        functions: 66,
-        lines: 74,
+        statements: 73,
+        branches: 56,
+        functions: 67,
+        lines: 75,
       },
     },
   },
