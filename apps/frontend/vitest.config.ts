@@ -122,13 +122,20 @@ export default defineConfig({
       //      useAlgorithmAnalysisLogic 覆盖 Tab 初始/切换自动加载/各算法接口写入/关键词过滤/scrollIntoView；ImportExportPanel 已有 21 例不重复补）
       //     本轮四指标各 +1 锁住增益（实测增益 ~2.4~3.0，保守留缓冲防 CI 跨环境方差）：
       //     Stmts 71(缓冲~1.58) / Branch 53(缓冲~1.42) / Funcs 64(缓冲~1.97) / Lines 73(缓冲~1.84)。
+      //   2026-09-27 B22 补测 useAlgorithmAnalysisColumns(纯 hook，4 组列定义 render 闭包全分支)
+      //     Stmts 73.14 / Branch 55.90 / Funcs 67.04 / Lines 75.42（v8 JSON 口径，全量 1721 passed/3 skipped/EXIT=0）
+      //     （useAlgorithmAnalysisColumns 26 未覆盖函数/112 未覆盖分支 0%→全绿；23 例驱动 predictionDetail/scorePredict/attribution/engagement
+      //      四组列每个 render 分支：趋势 up/down/缺省、分数三态着色、has_data 三态、attendance_rate 空值、trend_action 点击/disabled 等；
+      //      纯逻辑零网络零 store 依赖，低风险高 ROI）
+      //     本轮四指标各 +1 锁住增益（实测增益 Stmts+0.56/Branch+1.48/Funcs+1.07/Lines+0.58，保守留缓冲防 CI 方差）：
+      //     Stmts 72(缓冲~1.14) / Branch 54(缓冲~1.9) / Funcs 65(缓冲~2.04) / Lines 74(缓冲~1.42)。
       // 语义：任一指标低于阈值即非零退出 → CI 变红（vitest 默认 100-阈值语义）。
       // 目标：随关键业务流补测推进，逐步抬高阈值至 70%。
       thresholds: {
-        statements: 71,
-        branches: 53,
-        functions: 64,
-        lines: 73,
+        statements: 72,
+        branches: 54,
+        functions: 65,
+        lines: 74,
       },
     },
   },
