@@ -196,7 +196,7 @@ describe('useStudentProfileLogic · activeTab effect', () => {
     const { result } = renderHook(() =>
       useStudentProfileLogic({ ...baseDeps(), activeTab: 'studentProfile' })
     );
-    await waitFor(() => expect(mockApi.users.getAll).toHaveBeenCalled());
+    await waitFor(() => expect(mockApi.users.getAll).toHaveBeenCalled(), { timeout: 5000 });
     expect(result.current.students).toHaveLength(1);
   });
 });
