@@ -198,10 +198,17 @@ export default defineConfig({
 //      ToastContainer 覆盖空态/成功/错误/点击移除分支(5 例)；useDashboardLogic 扩展 devices/records/notifications/getData 抛错兜底(4 例)；useRemoteNotifyLogic 新增 loadError 用例因异步时序不稳已回退）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 77.59→ratchet 76(缓冲~1.59，+1 需≥78.0 差0.41 故不抬) / Funcs 72.39→ratchet 71(缓冲~1.39，+1 需≥73.0 差0.61 故不抬)；
 //     Branch 64.79→65.10 跨 65.0 线 → 63→64(缓冲~1.10) / Lines 79.53→80.01 跨 80.0 线 → 78→79(缓冲~1.01)。
+//   2026-09-28 B33 补测 StudentGrowthTab(纯展示组件) + ToastContext(provider/hook)（零/低网络、低风险）
+//     Stmts 78.08 / Branch 65.92 / Funcs 73.18 / Lines 80.47（v8 JSON 口径，全量 EXIT=0；B32 基线 2004 passed/3 skipped，本批 +30 例 → 2034 passed/3 skipped）
+//     （选源修正：续 B32 排除图表组件 recharts mock 增益小、排除页面级组合根 hook；StudentGrowthTab 为 studentPortal 纯展示、
+//       大量可选链/三元/短路分支(参与度三态/构成三率/趋势 up-down-flat/风险三档/积分趋势正负)，与 B23 StudentProfileTab 同型低风险高 ROI；
+//       ToastContext 为基础 provider，覆盖 showToast 四类型+兜底/removeToast/handleUndo/details+errorFields 展开收起/5s 自动消失(fake timers)/useToast 抛错守卫）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 77.59→78.08 跨 78.0 线 → 76→77(缓冲~1.08) / Funcs 72.39→73.18 跨 73.0 线 → 71→72(缓冲~1.18)；
+//     Branch 65.10→65.92 未达 66.0 → 维持 64(缓冲~1.92) / Lines 80.01→80.47 未达 81.0 → 维持 79(缓冲~1.47)。
       thresholds: {
-        statements: 76,
+        statements: 77,
         branches: 64,
-        functions: 71,
+        functions: 72,
         lines: 79,
       },
     },
