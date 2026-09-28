@@ -308,8 +308,17 @@ export default defineConfig({
 //       快速评分弹窗(rules 加减分支·关闭 dispatch)；零网络低依赖低风险高 ROI）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Funcs 75→76(缓冲~1.03) / Lines 82→83(缓冲~1.27)；
 //     Stmts 81.85→ratchet 80(距 82.0 差0.15) / Branch 70.62→ratchet 69(距 71.0 差0.38) 均不抬。
+//   B45（2026-09-28 深夜，A 选项续）：选 pages/StudentPortal.tsx（页面级逻辑容器，sun=38/bun=48，61.2%/27.8%→高覆盖，共 14 例全绿）
+//     Stmts 81.85 → 82.2（跨 82.0 线）｜ Branch 70.62 → 70.79（距 71.0 差0.21 故不抬）｜ Funcs 77.03 → 77.24（距 78.0 差0.76 故不抬）｜ Lines 84.27 → 84.64（距 85.0 差0.36 故不抬）
+//     （mock hooks(useListFetch 全桩/useStableToast 固定返回单例 showToast) + services/api(默认导出 api.student.*) + react-router-dom(useNavigate 单例) +
+//       StudentPortalView 为 stub 捕获 props 驱动交互；覆盖 mount 读取 localStorage student(成功解析/无效 JSON 不崩溃) / 初始 tab=score 触发 loadScore /
+//       切换 leaves·rank·growth·notifications 各自 loader / submitLeave(缺日期校验失败·成功调用 applyLeave+loadLeaves+showToast·失败 Error 消息·失败非 Error 兜底文案) /
+//       requestUnlock(成功·失败兜底) / handleLogout(清除 localStorage+navigate) / totalChange 按 score_change 累加 / getScore 失败(Error 消息·非 Error 兜底)；
+//       零/低网络依赖、低风险高 ROI；StudentPortal.tsx 单文件 94.89/63.88/93.33/94.56）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 80→81(缓冲~1.2)；
+//     Branch 70.79→ratchet 69(距 71.0 差0.21) / Funcs 77.24→ratchet 76(距 78.0 差0.76) / Lines 84.64→ratchet 83(距 85.0 差0.36) 均不抬。
       thresholds: {
-        statements: 80,
+        statements: 81,
         branches: 69,
         functions: 76,
         lines: 83,
