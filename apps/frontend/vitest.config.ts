@@ -246,8 +246,19 @@ export default defineConfig({
 //     （说明：低风险的纯展示组件已基本补尽，剩余未覆盖多为页面级大组件 / 含 store·路由·网络依赖的 hook，受低风险铁律约束；
 //       若要继续抬升 ratchet，需放宽排除法或接受当前平台期。）
 //   2026-09-28 B37 收尾（ratchet 平台期，阈值不变）：Stmts 78.8/Branch 68.38/Funcs 74.25/Lines 81.22，四指标均缓冲不足 → 维持 77/67/73/80。
+//   2026-09-28 B38（按 B37 建议放宽排除法：挑中等风险但高增益组件，用 vi.mock 隔离后补测）补测 Modal + EntitySelect + StatusTag 三个组件（共 28 例全绿）
+//     Stmts 79.12 / Branch 68.7 / Funcs 74.75 / Lines 81.55（v8 JSON 口径，全量 EXIT=0）
+//     （Modal 为纯展示（createPortal 未使用，仅返回 div）、零依赖低风险高分支 ROI：覆盖 isOpen=false 渲染 null / size sm|md|lg|xl 四档 /
+//       遮罩点击 target===currentTarget 触发 onClose / 内容区点击不触发 / footer 存在与缺省 / 右上角关闭按钮；
+//       EntitySelect 为中等风险（依赖 services/api + 模块级 listCache）：用 vi.resetModules + vi.doMock('../../../services/api') 隔离，
+//       覆盖 ClassSelect/StudentSelect/SubjectSelect 三下拉 + renderOptions（空占位/allowEmpty 空选项/class_name 后缀/onChangeValue 回调）+
+//       useClassOptions/useStudentOptions/useSubjectOptions 成功与 catch(null) 分支 + 选项就绪后自动默认首项 onChange；
+//       StatusTag 为纯展示高分支 ROI：覆盖 tone 五档(默认文案+配色) / toneKey 命中映射+未命中回退 neutral / tone 优先于 toneKey / label 覆盖 / className 透传）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 78.8→79.12 跨 79.0 线 → 77→78(缓冲~1.12)；
+//     Branch 68.7→ratchet 67(缓冲~1.7，+1 需≥69.0 差0.3 故不抬) / Funcs 74.75→ratchet 73(缓冲~1.75，+1 需≥75.0 差0.25 故不抬) /
+//     Lines 81.55→ratchet 80(缓冲~1.55，+1 需≥82.0 差0.45 故不抬)。
       thresholds: {
-        statements: 77,
+        statements: 78,
         branches: 67,
         functions: 73,
         lines: 80,
