@@ -5,6 +5,7 @@ import Header from '../Header';
 import { usePermissionStore } from '../../../stores';
 
 const hoisted = vi.hoisted(() => ({
+  theme: 'light',
   getRecent: vi.fn(),
   markRead: vi.fn(),
   markAllRead: vi.fn(),
@@ -28,7 +29,7 @@ vi.mock('../../../services/api', () => ({
 }));
 
 vi.mock('../../../stores', () => ({
-  useThemeStore: () => ({ theme: 'light', toggleTheme: hoisted.toggleTheme }),
+  useThemeStore: vi.fn(() => ({ theme: hoisted.theme, toggleTheme: hoisted.toggleTheme })),
   usePermissionStore: vi.fn(() => ({
     isAdmin: false,
     hasPermission: hoisted.hasPermission,
@@ -65,6 +66,7 @@ const renderHeader = (entry = '/') =>
 
 beforeEach(() => {
   localStorage.clear();
+  hoisted.theme = 'light';
   hoisted.getRecent.mockReset().mockResolvedValue([]);
   hoisted.markRead.mockReset().mockResolvedValue({ success: true });
   hoisted.markAllRead.mockReset().mockResolvedValue({ success: true });
@@ -251,5 +253,125 @@ describe('Header 主题与退出', () => {
     expect(localStorage.getItem('access_token')).toBeNull();
     expect(hoisted.clearPermissions).toHaveBeenCalled();
     expect(hoisted.navigateFn).toHaveBeenCalledWith('/login');
+  });
+});
+
+describe('Header 扩展覆盖 B48', () => {
+  const mkNotif = (over: Record<string, unknown> = {}) => ({
+    id: 1,
+    type: 'info',
+    title: 'T',
+    message: 'M',
+    is_read: false,
+    priority: 'high',
+    created_at: new Date().toISOString(),
+    ...over,
+  });
+
+  it('通知 type=warning 渲染警告分支', async () => {
+    localStorage.setItem('admin', JSON.stringify({ id: 1, role: 'admin' }));
+    hoisted.getRecent.mockResolvedValue([mkNotif({ id: 2, type: 'warning' })]);
+    renderHeader();
+    fireEvent.click(screen.getByLabelText('通知'));
+    expect(await screen.findByText('T')).toBeInTheDocument();
+  });
+
+  it('通知 type=error 渲染错误分支', async () => {
+    localStorage.setItem('admin', JSON.stringify({ id: 1, role: 'admin' }));
+    hoisted.getRecent.mockResolvedValue([mkNotif({ id: 3, type: 'error' })]);
+    renderHeader();
+    fireEvent.click(screen.getByLabelText('通知'));
+    expect(await screen.findByText('T')).toBeInTheDocument();
+  });
+
+  it('formatTime 各时间档：分钟/小时/天/周前', async () => {
+    localStorage.setItem('admin', JSON.stringify({ id: 1, role: 'admin' }));
+    hoisted.getRecent.mockResolvedValue([
+      mkNotif({ id: 11, title: 'T1', created_at: new Date(Date.now() - 5 * 60000).toISOString() }),
+      mkNotif({
+        id: 12,
+        title: 'T2',
+        created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+      }),
+      mkNotif({
+        id: 13,
+        title: 'T3',
+        created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+      }),
+      mkNotif({
+        id: 14,
+        title: 'T4',
+        created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+      }),
+    ]);
+    const { container } = renderHeader();
+    fireEvent.click(screen.getByLabelText('通知'));
+    await screen.findByText('T1');
+    const t = container.textContent || '';
+    expect(t).toContain('分钟前');
+    expect(t).toContain('小时前');
+    expect(t).toContain('天前');
+    expect(t).toMatch(/\d{4}[/-]\d{1,2}[/-]\d{1,2}/);
+  });
+
+  it('未读>9 时徽标显示 9+', async () => {
+    localStorage.setItem('admin', JSON.stringify({ id: 1, role: 'admin' }));
+    const list = Array.from({ length: 12 }, (_, i) => mkNotif({ id: 100 + i }));
+    hoisted.getRecent.mockResolvedValue(list);
+    renderHeader();
+    fireEvent.click(screen.getByLabelText('通知'));
+    expect((await screen.findAllByText('9+')).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('theme=dark 时渲染 Sun 分支', () => {
+    hoisted.theme = 'dark';
+    renderHeader();
+    fireEvent.click(screen.getByLabelText('切换主题'));
+    expect(hoisted.toggleTheme).toHaveBeenCalled();
+  });
+
+  it('搜索有值时显示清除按钮，点击清空搜索', async () => {
+    renderHeader();
+    const input = screen.getByPlaceholderText(/搜索学生、规则、设备/);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'abc' } });
+    const clear = await screen.findByLabelText('清除搜索');
+    fireEvent.click(clear);
+    await waitFor(() => expect(screen.queryByLabelText('清除搜索')).toBeNull());
+  });
+
+  it('标记已读失败记录日志', async () => {
+    localStorage.setItem('admin', JSON.stringify({ id: 1, role: 'admin' }));
+    hoisted.getRecent.mockResolvedValue([mkNotif({ id: 21, is_read: false })]);
+    hoisted.markRead.mockRejectedValue(new Error('fail'));
+    renderHeader();
+    fireEvent.click(screen.getByLabelText('通知'));
+    const item = await screen.findByText('T');
+    fireEvent.click(item);
+    await waitFor(() => expect(hoisted.loggerError).toHaveBeenCalled());
+  });
+
+  it('快捷键 Ctrl+K 聚焦搜索框', () => {
+    renderHeader();
+    const input = screen.getByPlaceholderText(/搜索学生、规则、设备/);
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true, metaKey: true });
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('搜索聚焦时空格热键 u 跳转 /users', () => {
+    renderHeader();
+    const input = screen.getByPlaceholderText(/搜索学生、规则、设备/);
+    fireEvent.focus(input);
+    fireEvent.keyDown(document, { key: 'u' });
+    expect(hoisted.navigateFn).toHaveBeenCalledWith('/users');
+  });
+
+  it('点击组件外部关闭通知菜单', async () => {
+    localStorage.setItem('admin', JSON.stringify({ id: 1, role: 'admin' }));
+    renderHeader();
+    fireEvent.click(screen.getByLabelText('通知'));
+    expect(await screen.findByText('通知中心')).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    await waitFor(() => expect(screen.queryByText('通知中心')).not.toBeInTheDocument());
   });
 });

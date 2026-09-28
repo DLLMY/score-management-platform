@@ -331,11 +331,17 @@ export default defineConfig({
 //      逐 mode(broadcast/device/test/score_change) 与 form 状态触发全部条件分支：设备ID/通知内容/积分表单/样式设置/语音+音量/弹窗+自动关闭/紧急/预览/lastResult 成功失败/isSending/previewConfirm；
 //      SendForm.tsx 单文件 stmts 15.4%→26.9%、fn 13.7%→25.5%、line 28.6%→50%；因该文件已被父组件 RemoteNotify 部分覆盖且体量小，全局增量未够跨越任一阈值）
 //     本轮四指标均不抬（实测均未达 ratchet+2.0）：Stmts 82.32<83.0 / Branch 71.46<72.0 / Funcs 77.63<78.0 / Lines 84.77<85.0。
+//   B48（2026-09-29 凌晨，A 选项续）：扩展既有 Header.test.tsx 补齐未覆盖分支（共 +10 例，累计 26 例全绿）
+//     Stmts 82.32 → 82.57（距 83.0 差0.43）｜ Branch 71.46 → 71.81（距 72.0 差0.19）｜ Funcs 77.63 → 77.78（距 78.0 差0.22）｜ Lines 84.77 → 85.01（跨 85.0 线）
+//     （复用既有 mock 设施，新增分支：通知 type=warning/error 图标·formatTime 分钟/小时/天/周前四档·未读>9 徽标 9+·theme=dark 渲染 Sun·
+//      搜索值清除按钮·markRead 失败日志·Ctrl+K 聚焦·热键 u 跳转·点击外部关闭菜单；Header.tsx 单文件 line 81.8%→更高）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Lines 83→84（85.01 >= 85.0，缓冲 1.01）；
+//     Stmts 82.57<83.0 / Branch 71.81<72.0 / Funcs 77.78<78.0 均不抬。
       thresholds: {
         statements: 81,
         branches: 70,
         functions: 76,
-        lines: 83,
+        lines: 84,
       },
     },
   },
