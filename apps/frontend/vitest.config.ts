@@ -274,9 +274,16 @@ export default defineConfig({
 //     本轮按「缓冲 >=1.0」非均匀抬升：Funcs 75.64→ratchet 73 跨 75.0 线 → 73→74(缓冲~1.64)；
 //     Lines 82.02→ratchet 80 跨 82.0 线 → 80→81(缓冲~1.02)；
 //     Stmts 79.69→ratchet 78(+1 需≥80.0 差0.31 故不抬) / Branch 68.95→ratchet 67(+1 需≥69.0 仅差0.05 故不抬)。
+//   2026-09-28 B41（按用户选 A 放宽：补页面级组件 pages/Login.tsx，共 16 例全绿）
+//     Stmts 79.69 → 80.29（跨 80.0 线）｜ Branch 68.95 → 69.25（跨 69.0 线）｜ Funcs 75.64 → 75.71（未达 76.0）｜ Lines 82.02 → 82.68（未达 83.0）
+//     （Login 为页面级逻辑组件、依赖干净：桩掉 ./login/LoginView + mock services/api / utils/validation / utils/auth / react-i18next，MemoryRouter 包裹；
+//       覆盖检查认证(admin 命中跳转/空则渲染)/提交校验失败/管理员·非管理员写入/强制改密弹窗/role=dashboard·fromPath 跳转/异常兜底/
+//       输入与焦点回调/强制改密(不一致·过短·无 admin·成功·异常)/关闭弹窗清状态；零/低网络依赖、低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 78→79(缓冲~1.29) / Branch 67→68(缓冲~1.25)；
+//     Funcs 75.71→ratchet 74(距 76.0 差0.29 故不抬) / Lines 82.68→ratchet 81(距 83.0 差0.32 故不抬)。
       thresholds: {
-        statements: 78,
-        branches: 67,
+        statements: 79,
+        branches: 68,
         functions: 74,
         lines: 81,
       },
