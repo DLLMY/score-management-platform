@@ -214,11 +214,21 @@ export default defineConfig({
 //       DeviceCard 覆盖 online/offline 双态配色文案/Wifi 透明度/名称兜底链(device_name→name→device_id)/hover；均为纯 props 零依赖低风险高 ROI）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 65.92→66.99 跨 66.0 线 → 64→65(缓冲~1.99)；
 //     Stmts 78.08→78.44 未达 79.0 → 维持 77(缓冲~1.44) / Funcs 73.18→73.53 未达 74.0 → 维持 72(缓冲~1.53) / Lines 80.47→80.85 未达 81.0 → 维持 79(缓冲~1.85)。
+//   2026-09-28 B35 修复 OptimizedImage 懒加载死锁（源码）+ 补测 Card/Skeleton/Input 三个纯展示 UI 组件（零网络、低风险高 ROI）
+//     Stmts 78.68 / Branch 67.68 / Funcs 74.00 / Lines 81.09（v8 JSON 口径，全量 EXIT=0；本批新增 35 例：OptimizedImage 9 / Card 8 / Skeleton 10 / Input 8）
+//     （【源码修复】OptimizedImage 懒加载死锁：旧实现 observer 绑在 imageSrc 就绪后才挂载的真实 img（imgRef），而 imageSrc 又依赖 observer 回调置值，
+//       守卫 `!lazy || !imgRef.current` 在 imgRef.current 为 null 时提前 return → 观察者永不创建 → isInView 恒 false → 真实 img 永不渲染；
+//       改为 observer 观察始终挂载的包裹 div（containerRef），打破死锁，并补「进入视口触发加载」与「无 IntersectionObserver 环境守卫」两个可达分支测试；
+//       Card 覆盖 title/subtitle/icon/actions 存在性、iconVariant 三态、variant=dark+gradient、hover 切换 isHovered 视觉类、glow 叠加层、delay 内联动画、float/glass/borderGradient/pulse/animate 类名拼接；
+//       Skeleton 覆盖基础 variant/animation/width/height + TableSkeleton/CardSkeleton/FormSkeleton/CategoryCardSkeleton/DashboardSkeleton 条件渲染（showHeader/showAvatar/showSubtitle/showActions/showCharts/count）；
+//       Input 覆盖 label+required 星号、error+errorMessage 关联 aria、icon 左/右位置、focus/blur 切换 isFocused、onChange 回传、disabled/readOnly/aria 透传、onFocus/onBlur 回调）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 66.99→67.68 跨 67.0 线 → 65→66(缓冲~1.68) / Funcs 73.53→74.00 跨 74.0 线 → 72→73(缓冲~1.00，恰好达标仍满足 >=1.0) / Lines 80.85→81.09 跨 81.0 线 → 79→80(缓冲~1.09)；
+//     Stmts 78.44→78.68 未达 79.0 → 维持 77(缓冲~1.68)。
       thresholds: {
         statements: 77,
-        branches: 65,
-        functions: 72,
-        lines: 79,
+        branches: 66,
+        functions: 73,
+        lines: 80,
       },
     },
   },
