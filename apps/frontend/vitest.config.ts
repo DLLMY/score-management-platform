@@ -317,9 +317,17 @@ export default defineConfig({
 //       零/低网络依赖、低风险高 ROI；StudentPortal.tsx 单文件 94.89/63.88/93.33/94.56）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 80→81(缓冲~1.2)；
 //     Branch 70.79→ratchet 69(距 71.0 差0.21) / Funcs 77.24→ratchet 76(距 78.0 差0.76) / Lines 84.64→ratchet 83(距 85.0 差0.36) 均不抬。
+//   B46（2026-09-28 深夜，A 选项续）：选 pages/studentPortal/StudentPortalView.tsx（纯展示渲染层，B45 中作 stub，本批补测，共 17 例全绿）
+//     Stmts 82.2 → 82.26（距 83.0 差0.74 故不抬）｜ Branch 70.79 → 71.44（跨 71.0 线）｜ Funcs 77.24 → 77.42（距 78.0 差0.58 故不抬）｜ Lines 84.64 → 84.7（距 85.0 差0.3 故不抬）
+//     （mock ./components(StudentGrowthTab 桩为 null) 隔离；构造类型安全 props 逐 tab 渲染触发全部条件分支：
+//       header student/class_name 兜底 / 6 个 tab 按钮 onClick setTab / error 条 / score(loading·score??—·流水合计正负号·分页 prev/next 禁用·刷新 refetch) /
+//       notifications(空态·计数·title/status 兜底·刷新) / leaves(空态·状态三态配色·select 变更·提交 disabled) / phonebox(解锁四态 allowed/离线/teacher_disabled/其他·loading) /
+//       rank(myRank null 兜底·ranking 空态·当前用户高亮) / growth(透传 StudentGrowthTab)；StudentPortalView.tsx 单文件 branch 49.5%→100%）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 69→70（71.44 >= 71.0，缓冲 1.44）；
+//     Stmts 82.26→ratchet 81(距 83.0 差0.74) / Funcs 77.42→ratchet 76(距 78.0 差0.58) / Lines 84.7→ratchet 83(距 85.0 差0.3) 均不抬。
       thresholds: {
         statements: 81,
-        branches: 69,
+        branches: 70,
         functions: 76,
         lines: 83,
       },
