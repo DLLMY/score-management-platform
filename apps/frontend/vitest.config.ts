@@ -289,9 +289,18 @@ export default defineConfig({
 //       零/低网络依赖、低风险高 ROI；Branch 因仅差 0.22 未越线，留待后续）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 79→80(缓冲~1.17) / Funcs 74→75(缓冲~1.31) / Lines 81→82(缓冲~1.53)；
 //     Branch 69.78→ratchet 68(距 70.0 差0.22 故不抬)。
+//   B43（2026-09-28 晚，A 选项续）：选 components/special/ImportExportPanel.tsx（sun=53/bun=66，分支最密集，逻辑层+委托 Modal/Button，直接用 fetch+getAuthHeaders+downloadBlob）
+//     Stmts 81.17 → 81.58（距 82.0 差0.42 故不抬）｜ Branch 69.78 → 70.06（跨 70.0 线）｜ Funcs 76.31 → 76.35（距 77.0 差0.65 故不抬）｜ Lines 83.53 → 83.98（距 84.0 仅差0.02 惜败）
+//     （mock services/api(getAuthHeaders) / utils/download(downloadBlob·downloadTextAsFile) / ToastContext(useToast) / PermissionGuard(PermissionButton) + 全局 fetch 桩；覆盖
+//       handleFileChange(无效扩展名·合法xlsx·Excel mimetype·JSON·超50MB) / handleImport(onDataImport成功含failed_count·失败·异常 + fetch路径) /
+//       handleExport(onDataExport成功·异常 + fetch路径 Content-Disposition UTF-8/ASCII/非ok) / handleDownloadTemplate(成功·非ok) /
+//       导入结果面板(错误详情展开·导出错误数据·准备重新导入·下载失败数据CSV) / 渲染开关(show*全关·permissions分支·移除文件)；
+//       Branch 为本轮唯一越线档，主目标（把 Branch 抬过 70.0）达成；Lines 仅差 0.02 未越，留待后续）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 68→69(缓冲~1.06)；
+//     Stmts 81.58→ratchet 80(距 82.0 差0.42) / Funcs 76.35→ratchet 75(距 77.0 差0.65) / Lines 83.98→ratchet 82(距 84.0 差0.02) 均不抬。
       thresholds: {
         statements: 80,
-        branches: 68,
+        branches: 69,
         functions: 75,
         lines: 82,
       },
