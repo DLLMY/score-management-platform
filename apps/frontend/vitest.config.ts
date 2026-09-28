@@ -325,6 +325,12 @@ export default defineConfig({
 //       rank(myRank null 兜底·ranking 空态·当前用户高亮) / growth(透传 StudentGrowthTab)；StudentPortalView.tsx 单文件 branch 49.5%→100%）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 69→70（71.44 >= 71.0，缓冲 1.44）；
 //     Stmts 82.26→ratchet 81(距 83.0 差0.74) / Funcs 77.42→ratchet 76(距 78.0 差0.58) / Lines 84.7→ratchet 83(距 85.0 差0.3) 均不抬。
+//   B47（2026-09-28 深夜，A 选项续）：选 pages/remote-notify/SendForm.tsx（纯展示组件，deps 透传，共 18 例全绿）
+//     Stmts 82.26 → 82.32（距 83.0 差0.68）｜ Branch 71.44 → 71.46（距 72.0 差0.54）｜ Funcs 77.42 → 77.63（距 78.0 差0.37）｜ Lines 84.7 → 84.77（距 85.0 差0.23）
+//     （mock ./ModeSelector·./PreviewConfirmModal·../../components(PermissionButton+ClassStatusBadge) 隔离；构造完整 RemoteNotifyDeps mock，
+//      逐 mode(broadcast/device/test/score_change) 与 form 状态触发全部条件分支：设备ID/通知内容/积分表单/样式设置/语音+音量/弹窗+自动关闭/紧急/预览/lastResult 成功失败/isSending/previewConfirm；
+//      SendForm.tsx 单文件 stmts 15.4%→26.9%、fn 13.7%→25.5%、line 28.6%→50%；因该文件已被父组件 RemoteNotify 部分覆盖且体量小，全局增量未够跨越任一阈值）
+//     本轮四指标均不抬（实测均未达 ratchet+2.0）：Stmts 82.32<83.0 / Branch 71.46<72.0 / Funcs 77.63<78.0 / Lines 84.77<85.0。
       thresholds: {
         statements: 81,
         branches: 70,
