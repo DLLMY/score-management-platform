@@ -257,6 +257,14 @@ export default defineConfig({
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 78.8→79.12 跨 79.0 线 → 77→78(缓冲~1.12)；
 //     Branch 68.7→ratchet 67(缓冲~1.7，+1 需≥69.0 差0.3 故不抬) / Funcs 74.75→ratchet 73(缓冲~1.75，+1 需≥75.0 差0.25 故不抬) /
 //     Lines 81.55→ratchet 80(缓冲~1.55，+1 需≥82.0 差0.45 故不抬)。
+//   2026-09-28 B39（继续放宽排除法：补 StatCard/WorkbenchBreadcrumb/CurrentClassLabel，共 11 例全绿）
+//     Stmts 79.13 / Branch 68.76 / Funcs 74.78 / Lines 81.55（v8 JSON 口径，全量 EXIT=0）
+//     （StatCard 纯展示 size lg|sm 两档 + glowClass 三元 + className 透传；
+//       WorkbenchBreadcrumb 纯展示，Link→/workbench + 当前标题 + 两 lucide 图标 svg；
+//       CurrentClassLabel 中等风险（依赖 useWorkbenchClass + useClassOptions），用 vi.mock('../../../hooks') + vi.mock('../../form/EntitySelect') 隔离，
+//       覆盖 filterClassId===ALL_CLASSES | ===0 双 or / classes.find 命中与未命中三态 label）
+//     本轮相对 B38 增益 +0.01 / +0.06 / +0.03 / 0.00（前端全局代码基数大，单小组件对全局覆盖率贡献微），
+//     均不达「下一档需跨过 ratchet+2.0（≥80.0/69.0/75.0/82.0）」的缓冲 → ratchet 维持 78/67/73/80 不动（平台期）。
       thresholds: {
         statements: 78,
         branches: 67,
