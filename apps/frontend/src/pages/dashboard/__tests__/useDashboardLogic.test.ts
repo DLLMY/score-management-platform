@@ -299,4 +299,92 @@ describe('useDashboardLogic', () => {
     expect(result.current.state.algorithmData.statistics).toBeNull();
     expect(result.current.state.algorithmData.clusters).toEqual({ clusters: [] });
   });
+
+  it('devices.getAll 抛错 → fetchDevices 返回 null，onlineDevices 走 0 兜底分支', async () => {
+    mockApi.classes.getAll.mockResolvedValue([]);
+    mockApi.users.getAll.mockResolvedValue([]);
+    mockApi.devices.getAll.mockRejectedValue(new Error('dev down'));
+    mockApi.notifications.getAll.mockResolvedValue([]);
+    mockApi.records.getAll.mockResolvedValue([]);
+    mockApi.dashboard.getData.mockResolvedValue({
+      total_users: 0,
+      today_records: 0,
+      avg_score: 0,
+      online_devices: 0,
+    });
+    mockApi.algorithm.getStatistics.mockResolvedValue(null);
+    mockApi.algorithm.getClusters.mockResolvedValue(null);
+    mockApi.algorithm.getWarnings.mockResolvedValue(null);
+
+    const { result } = setup();
+    await settle(result);
+    // deviceList 为 null → `deviceList !== null` 假分支 + onlineDevices 兜底 0
+    expect(mockLogger.error).toHaveBeenCalledWith('获取设备数据失败:', expect.any(Error));
+    expect(result.current.state.devices).toHaveLength(0);
+    expect(result.current.state.statistics.onlineDevices).toBe(0);
+  });
+
+  it('records.getAll 抛错 → fetchRecords 返回 null，records 走空兜底分支', async () => {
+    mockApi.classes.getAll.mockResolvedValue([]);
+    mockApi.users.getAll.mockResolvedValue([]);
+    mockApi.devices.getAll.mockResolvedValue([]);
+    mockApi.notifications.getAll.mockResolvedValue([]);
+    mockApi.records.getAll.mockRejectedValue(new Error('rec down'));
+    mockApi.dashboard.getData.mockResolvedValue({
+      total_users: 0,
+      today_records: 0,
+      avg_score: 0,
+      online_devices: 0,
+    });
+    mockApi.algorithm.getStatistics.mockResolvedValue(null);
+    mockApi.algorithm.getClusters.mockResolvedValue(null);
+    mockApi.algorithm.getWarnings.mockResolvedValue(null);
+
+    const { result } = setup();
+    await settle(result);
+    // recordsList 为 null → `recordsList !== null` 假分支
+    expect(mockLogger.error).toHaveBeenCalledWith('获取记录数据失败:', expect.any(Error));
+    expect(result.current.state.records).toHaveLength(0);
+  });
+
+  it('notifications.getAll 抛错 → fetchNotifications 返回 null，notifications 走空兜底分支', async () => {
+    mockApi.classes.getAll.mockResolvedValue([]);
+    mockApi.users.getAll.mockResolvedValue([]);
+    mockApi.devices.getAll.mockResolvedValue([]);
+    mockApi.notifications.getAll.mockRejectedValue(new Error('n down'));
+    mockApi.records.getAll.mockResolvedValue([]);
+    mockApi.dashboard.getData.mockResolvedValue({
+      total_users: 0,
+      today_records: 0,
+      avg_score: 0,
+      online_devices: 0,
+    });
+    mockApi.algorithm.getStatistics.mockResolvedValue(null);
+    mockApi.algorithm.getClusters.mockResolvedValue(null);
+    mockApi.algorithm.getWarnings.mockResolvedValue(null);
+
+    const { result } = setup();
+    await settle(result);
+    // notificationsList 为 null → `notificationsList !== null` 假分支
+    expect(mockLogger.error).toHaveBeenCalledWith('获取通知数据失败:', expect.any(Error));
+    expect(result.current.state.notifications).toHaveLength(0);
+  });
+
+  it('dashboard.getData 抛错（.catch 兜底 null）→ 走 else 分支置 dashboardError 并复位 loading', async () => {
+    mockApi.classes.getAll.mockResolvedValue([]);
+    mockApi.users.getAll.mockResolvedValue([]);
+    mockApi.devices.getAll.mockResolvedValue([]);
+    mockApi.notifications.getAll.mockResolvedValue([]);
+    mockApi.records.getAll.mockResolvedValue([]);
+    mockApi.dashboard.getData.mockRejectedValue(new Error('dash down'));
+    mockApi.algorithm.getStatistics.mockResolvedValue(null);
+    mockApi.algorithm.getClusters.mockResolvedValue(null);
+    mockApi.algorithm.getWarnings.mockResolvedValue(null);
+
+    const { result } = setup();
+    await settle(result);
+    // fetchHighPriorityData 中 dashboardData 经 .catch 兜底为 null → else 分支显示警示条
+    expect(result.current.dashboardError).toBe(true);
+    expect(result.current.state.loading).toBe(false);
+  });
 });

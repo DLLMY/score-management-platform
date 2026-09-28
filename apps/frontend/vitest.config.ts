@@ -191,11 +191,18 @@ export default defineConfig({
 //     （useScoreEntryData Branch 50→78.94、useUserListFetch Branch 52.3→84.09 为主要增益；全局 Branch +0.50；竞态 early-return/abort/AbortError/is_during_class_time 等分支补齐）
 //     本轮仅 Stmts ratchet 抬升（缓冲须 >=1.0 防 CI 跨环境方差）：Stmts 75→76(缓冲~1.11)；
 //     Branch 64.79→ratchet 63(缓冲~1.79，+1 需≥65.0 差0.21 故不抬) / Funcs 72.11→ratchet 71(缓冲~1.11，+1 需≥73.0 差0.89 故不抬) / Lines 79.53→ratchet 78(缓冲~1.53，+1 需≥80.0 差0.47 故不抬)。
+//   2026-09-28 B32 补测 useStudentProfileLogic(纯逻辑 deps 注入 hook) + ToastContainer(纯展示组件) + useDashboardLogic(组合根 hook 扩展兜底分支)(零/低网络、低风险)
+//     Stmts 77.59 / Branch 65.10 / Funcs 72.39 / Lines 80.01（v8 JSON 口径，全量 EXIT=0；B31 基线 1985 passed/3 skipped，本批 +19 例 → 2004 passed/3 skipped）
+//     （放弃图表组件作补齐目标：recharts 的 ResponsiveContainer mock 为 passthrough、内部图元(Pie/Bar/Line 等)返回 null → Tooltip/CustomTooltip/formatter 分支不执行，Branch 真实增益极小；
+//      改用纯逻辑/纯展示低风险高 ROI 模块：useStudentProfileLogic 覆盖 loadClasses/loadStudents/loadStudentProfile 的 try-catch 与三元/短路 + activeTab effect(10 例)；
+//      ToastContainer 覆盖空态/成功/错误/点击移除分支(5 例)；useDashboardLogic 扩展 devices/records/notifications/getData 抛错兜底(4 例)；useRemoteNotifyLogic 新增 loadError 用例因异步时序不稳已回退）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 77.59→ratchet 76(缓冲~1.59，+1 需≥78.0 差0.41 故不抬) / Funcs 72.39→ratchet 71(缓冲~1.39，+1 需≥73.0 差0.61 故不抬)；
+//     Branch 64.79→65.10 跨 65.0 线 → 63→64(缓冲~1.10) / Lines 79.53→80.01 跨 80.0 线 → 78→79(缓冲~1.01)。
       thresholds: {
         statements: 76,
-        branches: 63,
+        branches: 64,
         functions: 71,
-        lines: 78,
+        lines: 79,
       },
     },
   },
