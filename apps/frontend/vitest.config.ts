@@ -224,9 +224,17 @@ export default defineConfig({
 //       Input 覆盖 label+required 星号、error+errorMessage 关联 aria、icon 左/右位置、focus/blur 切换 isFocused、onChange 回传、disabled/readOnly/aria 透传、onFocus/onBlur 回调）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 66.99→67.68 跨 67.0 线 → 65→66(缓冲~1.68) / Funcs 73.53→74.00 跨 74.0 线 → 72→73(缓冲~1.00，恰好达标仍满足 >=1.0) / Lines 80.85→81.09 跨 81.0 线 → 79→80(缓冲~1.09)；
 //     Stmts 78.44→78.68 未达 79.0 → 维持 77(缓冲~1.68)。
+//   2026-09-28 B36 补测 Button/Toast/ToggleSwitch 三个纯展示组件（零网络、低风险高 ROI）
+//     Stmts 78.74 / Branch 68.19 / Funcs 74.14 / Lines 81.15（v8 JSON 口径，全量 EXIT=0；B35 基线 2127... 本批 +41 例 → 2127 passed/3 skipped）
+//     （Button 覆盖 variant 10 型+primary/danger 覆盖+gradient+size 5 档+loading 禁用态+icon 左/右/无+fullWidth+glow+ripple+rounded+type+ariaLabel+ariaDisabled+tabIndex；
+//       Toast 覆盖 type 四态默认文案+自定义 text+details/errorFields 展开收起+关闭按钮 300ms 回调+5s 自动关闭(fake timers)+图标渲染；
+//       ToggleSwitch 覆盖 checked 双态 aria+activeClass/inactiveClass 覆盖+点击 onChange(!checked)+disabled 不触发+size md/lg；
+//       三者均为纯展示、零路由零 store 依赖，低风险高 ROI；PermissionGuard 因依赖 usePermissions hook+react-router+localStorage/window.location 超出低风险原则故排除）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 67.68→68.19 跨 68.0 线 → 66→67(缓冲~1.19)；
+//     Stmts 78.68→78.74 未达 79.0 → 维持 77(缓冲~1.74) / Funcs 74.00→74.14 未达 75.0 → 维持 73(缓冲~1.14) / Lines 81.09→81.15 未达 82.0 → 维持 80(缓冲~1.15)。
       thresholds: {
         statements: 77,
-        branches: 66,
+        branches: 67,
         functions: 73,
         lines: 80,
       },
