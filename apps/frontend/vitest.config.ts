@@ -232,6 +232,20 @@ export default defineConfig({
 //       三者均为纯展示、零路由零 store 依赖，低风险高 ROI；PermissionGuard 因依赖 usePermissions hook+react-router+localStorage/window.location 超出低风险原则故排除）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 67.68→68.19 跨 68.0 线 → 66→67(缓冲~1.19)；
 //     Stmts 78.68→78.74 未达 79.0 → 维持 77(缓冲~1.74) / Funcs 74.00→74.14 未达 75.0 → 维持 73(缓冲~1.14) / Lines 81.09→81.15 未达 82.0 → 维持 80(缓冲~1.15)。
+//   2026-09-28 B37 补测 EmptyState(3 个导出组件) + Pagination + StatusBadge 三个纯展示组件（零网络、低风险）
+//     Stmts 78.8 / Branch 68.38 / Funcs 74.25 / Lines 81.22（v8 JSON 口径，全量 EXIT=0；本批 +34 例）
+//     （EmptyState 覆盖默认/自定义 icon/title/description + icon 兜底(FolderOpen) + 主/次操作按钮(actionLabel+onAction /
+//       secondActionLabel+onSecondAction 双守卫) + className 透传；SearchEmptyState 默认/自定义搜索词/清除按钮；
+//       ErrorState 默认/自定义 message/重试按钮；Pagination 覆盖 totalPages<=1 返回 null + 计数文案 + 页码窗口(首/中/末页)
+//       + 当前页高亮 + 点击页码/上一页/下一页 + 首页上一页禁用/末页下一页禁用 + 中间页两端页码与省略号
+//       (Set 去重使左右 -1 占位合并为单个 "...") + startItem/endItem 计算(末页非整页截断)；
+//       StatusBadge 覆盖 status 命中映射 / 未命中回退 fallbackKey + as div/span + size md/sm/xs + message 三态(前缀 "| "/截断/不渲染)；
+//       三者均为纯 props 驱动、零路由零 store 依赖，低风险高 ROI）
+//     本轮按「缓冲 >=1.0」规则：实测相对 B36 基线增益仅 +0.06 / +0.19 / +0.11 / +0.07，
+//     均未达到「下一档需跨过 ratchet+2.0（即测量值 ≥ 79.0/69.0/75.0/82.0）」的 +1.0 缓冲门槛 → ratchet 维持 77/67/73/80 不动。
+//     （说明：低风险的纯展示组件已基本补尽，剩余未覆盖多为页面级大组件 / 含 store·路由·网络依赖的 hook，受低风险铁律约束；
+//       若要继续抬升 ratchet，需放宽排除法或接受当前平台期。）
+//   2026-09-28 B37 收尾（ratchet 平台期，阈值不变）：Stmts 78.8/Branch 68.38/Funcs 74.25/Lines 81.22，四指标均缓冲不足 → 维持 77/67/73/80。
       thresholds: {
         statements: 77,
         branches: 67,
