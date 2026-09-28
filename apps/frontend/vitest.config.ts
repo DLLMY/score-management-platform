@@ -298,11 +298,21 @@ export default defineConfig({
 //       Branch 为本轮唯一越线档，主目标（把 Branch 抬过 70.0）达成；Lines 仅差 0.02 未越，留待后续）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 68→69(缓冲~1.06)；
 //     Stmts 81.58→ratchet 80(距 82.0 差0.42) / Funcs 76.35→ratchet 75(距 77.0 差0.65) / Lines 83.98→ratchet 82(距 84.0 差0.02) 均不抬。
+//   B44（2026-09-28 续，A 选项续）：选 pages/userList/UserListView.tsx（纯展示组件，sun=35/bun=48，0%→高覆盖，共 17 例全绿）
+//     Stmts 81.58 → 81.85（距 82.0 差0.15 故不抬）｜ Branch 70.06 → 70.62（距 71.0 差0.38 故不抬）｜ Funcs 76.35 → 77.03（跨 77.0 线）｜ Lines 83.98 → 84.27（跨 84.0 线）
+//     （mock 重型子组件 Modal/DataTable/ImportExportPanel/PermissionButton/BatchActionBar/AdvancedSearch/SearchFilter/Button/ToggleSwitch 为 stub，
+//       构造类型安全 mock state(含 users/rules/pagination/formData/advancedConditions/selectedUsers) 与各 handler，逐分支触发：
+//       标题权限按钮 / 高级筛选展开(+AdvancedSearch 字段)与切换 dispatch / 班级 select 变更 / 搜索框变更 /
+//       AdvancedSearch onSearch·onReset(双分支) / BatchActionBar 选中时批量增删减分与清空 / DataTable 错误与 empty onAction /
+//       添加弹窗(表单提交·取消·formErrors·autoSave 提示) / 编辑弹窗(标题切换·ToggleSwitch·启用禁用文案) / 导入弹窗(ImportExportPanel·完成回调) /
+//       快速评分弹窗(rules 加减分支·关闭 dispatch)；零网络低依赖低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Funcs 75→76(缓冲~1.03) / Lines 82→83(缓冲~1.27)；
+//     Stmts 81.85→ratchet 80(距 82.0 差0.15) / Branch 70.62→ratchet 69(距 71.0 差0.38) 均不抬。
       thresholds: {
         statements: 80,
         branches: 69,
-        functions: 75,
-        lines: 82,
+        functions: 76,
+        lines: 83,
       },
     },
   },
