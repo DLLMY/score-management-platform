@@ -154,3 +154,84 @@ describe('useScoreEntryData · 数据拉取域', () => {
     expect(mockApi.users.getAll).not.toHaveBeenCalled();
   });
 });
+
+describe('useScoreEntryData · 补齐分支（B31）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApi.exams.getAll.mockResolvedValue([
+      { id: 3, name: '期中', status: 'published' },
+      { id: 4, name: '草稿', status: 'draft' },
+    ]);
+    mockApi.classes.getAll.mockResolvedValue([{ id: 5, name: '1班' }]);
+    mockApi.subjects.getAll.mockResolvedValue([{ id: 1, name: '语文', exam_id: 3 }]);
+    mockApi.users.getAll.mockResolvedValue([
+      { id: 1, name: '张三', role: 'student' },
+      { id: 2, name: '老师', role: 'teacher' },
+    ]);
+    mockApi.scores.getAll.mockResolvedValue([{ student_id: 1, subject: '语文', score: 90 }]);
+  });
+
+  it('fetchData：classes/subjects 返回 {classes}/{data} 对象形态也能解析', async () => {
+    mockApi.classes.getAll.mockResolvedValue({ classes: [{ id: 5, name: '1班' }] });
+    mockApi.subjects.getAll.mockResolvedValue({ data: [{ id: 1, name: '语文', exam_id: 3 }] });
+    const params = makeParams({ selectedExam: '' });
+    renderHook(() => useScoreEntryData(params));
+    await waitFor(() =>
+      expect(params.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'SET_CLASSES', payload: [{ id: 5, name: '1班' }] })
+      )
+    );
+    expect(params.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'SET_SUBJECTS',
+        payload: [{ id: 1, name: '语文', exam_id: 3 }],
+      })
+    );
+  });
+
+  it('fetchStudentsAndScores：selectedClass 为空 → class_id 不进入参数', async () => {
+    const params = makeParams({ selectedExam: '3', selectedClass: '' });
+    renderHook(() => useScoreEntryData(params));
+    await waitFor(() => expect(mockApi.users.getAll).toHaveBeenCalled());
+    expect(mockApi.users.getAll).toHaveBeenCalledWith(expect.objectContaining({ skipCache: true }));
+  });
+
+  it('fetchStudentsAndScores：users/scores 返回 {users}/{data} 对象形态', async () => {
+    mockApi.users.getAll.mockResolvedValue({
+      users: [{ id: 1, name: '张三', role: 'student' }],
+    });
+    mockApi.scores.getAll.mockResolvedValue({
+      data: [{ student_id: 1, subject: '语文', score: 90 }],
+    });
+    const params = makeParams({ selectedExam: '3', selectedClass: '5' });
+    renderHook(() => useScoreEntryData(params));
+    await waitFor(() =>
+      expect(params.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'SET_STUDENTS',
+          payload: [{ id: 1, name: '张三', role: 'student' }],
+        })
+      )
+    );
+    expect(params.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'SET_SCORES',
+        payload: { '1-语文': { student_id: 1, subject: '语文', score: 90 } },
+      })
+    );
+  });
+
+  it('竞态：连续两次调用，旧请求在拿到 users 后被新 seq 抢占 early-return', async () => {
+    const params = makeParams({ selectedExam: '3', selectedClass: '5' });
+    const { result } = renderHook(() => useScoreEntryData(params));
+    await waitFor(() => expect(mockApi.users.getAll).toHaveBeenCalledTimes(1));
+    mockApi.users.getAll.mockClear();
+    await act(async () => {
+      const p1 = result.current.fetchStudentsAndScores();
+      const p2 = result.current.fetchStudentsAndScores();
+      await Promise.all([p1, p2]);
+    });
+    // p1 在 users 之后因 seq 不等而 early-return（不 dispatch SET_STUDENTS），p2 正常完成
+    expect(params.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'SET_STUDENTS' }));
+  });
+});

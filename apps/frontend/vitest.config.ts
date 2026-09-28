@@ -186,8 +186,13 @@ export default defineConfig({
 //     （PermissionGuard 单测初跑时 fork worker 崩溃退出：真实 react-router-dom 在 vitest worker 下加载致进程异常，改为 vi.mock('react-router-dom') 桩替身后稳定；
 //       useScoreEntryActions 的 handleBatchDelete/Reset catch 分支需 runBatched 抛错（默认 runBatched mock 会吞掉单项错误，故改 mock 为 throw）；
 //       实测 Stmts/Branch/Funcs/Lines 分别 +0.17/+0.14/+0.04/+0.19，均未达到「下一整数 +1.0 缓冲」门槛 → ratchet 维持 75/63/71/78 不抬）
+//   2026-09-28 B31 补测 useScoreEntryData(对象响应形态/竞态 early-return) + useUserListFetch(高级搜索分支/abort/AbortError/数组响应形态) + useNLPParse(无 parseResult 早返/results 非数组) + useClassNowStatus(is_during_class_time/非上课态/竞态)(零/低网络、低风险纯 hook)
+//     Stmts 77.11 / Branch 64.79 / Funcs 72.11 / Lines 79.53（v8 JSON 口径，全量 EXIT=0；B30 基线 1964 passed/3 skipped，本批 +21 例 → 1985 passed/3 skipped）
+//     （useScoreEntryData Branch 50→78.94、useUserListFetch Branch 52.3→84.09 为主要增益；全局 Branch +0.50；竞态 early-return/abort/AbortError/is_during_class_time 等分支补齐）
+//     本轮仅 Stmts ratchet 抬升（缓冲须 >=1.0 防 CI 跨环境方差）：Stmts 75→76(缓冲~1.11)；
+//     Branch 64.79→ratchet 63(缓冲~1.79，+1 需≥65.0 差0.21 故不抬) / Funcs 72.11→ratchet 71(缓冲~1.11，+1 需≥73.0 差0.89 故不抬) / Lines 79.53→ratchet 78(缓冲~1.53，+1 需≥80.0 差0.47 故不抬)。
       thresholds: {
-        statements: 75,
+        statements: 76,
         branches: 63,
         functions: 71,
         lines: 78,

@@ -436,3 +436,60 @@ describe('useNLPParse · 补齐分支（B29）', () => {
     expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('评分失败'));
   });
 });
+
+describe('useNLPParse · 补齐分支（B31）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApi.nlp.parse.mockResolvedValue({
+      input_text: '',
+      intent: '',
+      confidence: 0,
+      extracted_name: '',
+      behavior: '',
+      matched_rules: [],
+      suggestions: [],
+    });
+    mockApi.nlp.execute.mockResolvedValue({ results: [{ success: true }] });
+    mockApi.nlp.recordFeedback.mockResolvedValue({});
+  });
+
+  it('handleManualExecute：无 parseResult → 直接返回', async () => {
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    await act(async () => {
+      await result.current.handleManualExecute();
+    });
+    expect(mockApi.nlp.execute).not.toHaveBeenCalled();
+  });
+
+  it('executeScoring：results 非数组 → okCount=0 走「评分成功」', async () => {
+    mockApi.nlp.execute.mockResolvedValueOnce({ results: 'not-array' });
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    act(() => result.current.setInputText('hello'));
+    act(() => result.current.setParseResult(PARSE_RESULT));
+    await waitFor(() => expect(result.current.parseResult).not.toBeNull());
+    await act(async () => {
+      await result.current.executeScoring();
+    });
+    expect(params.showToast).toHaveBeenCalledWith('success', '评分成功');
+  });
+
+  it('applySuggestionAsRule：results 非数组 → 「已应用相似规则 #id」', async () => {
+    mockApi.nlp.execute.mockResolvedValueOnce({ results: null });
+    const params = makeParams();
+    const { result } = renderHook(() => useNLPParse(params));
+    await act(async () => {
+      await result.current.applySuggestionAsRule({
+        rule_id: 2,
+        intent: 'add',
+        score_value: 3,
+        description: '相似',
+      });
+    });
+    expect(params.showToast).toHaveBeenCalledWith(
+      'success',
+      expect.stringContaining('相似规则 #2')
+    );
+  });
+});
