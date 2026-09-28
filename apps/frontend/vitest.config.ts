@@ -281,11 +281,19 @@ export default defineConfig({
 //       输入与焦点回调/强制改密(不一致·过短·无 admin·成功·异常)/关闭弹窗清状态；零/低网络依赖、低风险高 ROI）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 78→79(缓冲~1.29) / Branch 67→68(缓冲~1.25)；
 //     Funcs 75.71→ratchet 74(距 76.0 差0.29 故不抬) / Lines 82.68→ratchet 81(距 83.0 差0.32 故不抬)。
+//   B42（2026-09-28 晚，A 选项续）：选 pages/Notifications.tsx（页面级逻辑组件，sun=83/bun=48，逻辑层+委托 ./notifications/NotificationsView）
+//     Stmts 80.29 → 81.17（跨 81.0 线）｜ Branch 69.25 → 69.78（仅差 0.22 未越 70.0 故不抬）｜ Funcs 75.71 → 76.31（跨 76.0 线）｜ Lines 82.68 → 83.53（跨 83.0 线）
+//     （桩掉 ./notifications/NotificationsView + mock services/api / hooks(自定义 useListFetch 挂载即真实调用 fetcher 闭包) / components(useConfirm) / utils/logger，MemoryRouter 包裹；
+//       覆盖 fetcher 成功/失败双分支 / 列表填充 / 标记已读(成功·失败) / 全部已读(带 message·失败) / 删除(confirm 取消·成功·失败) / 过滤三字段 / 表单四字段 /
+//       发送(带回 notification 前置插入·无 notification 重拉·失败) / refetch / 模态开闭 / setPage / 各 getType*·getPriority*(全 switch 分支) / adminId localStorage 有·无；
+//       零/低网络依赖、低风险高 ROI；Branch 因仅差 0.22 未越线，留待后续）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 79→80(缓冲~1.17) / Funcs 74→75(缓冲~1.31) / Lines 81→82(缓冲~1.53)；
+//     Branch 69.78→ratchet 68(距 70.0 差0.22 故不抬)。
       thresholds: {
-        statements: 79,
+        statements: 80,
         branches: 68,
-        functions: 74,
-        lines: 81,
+        functions: 75,
+        lines: 82,
       },
     },
   },
