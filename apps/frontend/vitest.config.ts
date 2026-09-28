@@ -337,10 +337,19 @@ export default defineConfig({
 //      搜索值清除按钮·markRead 失败日志·Ctrl+K 聚焦·热键 u 跳转·点击外部关闭菜单；Header.tsx 单文件 line 81.8%→更高）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Lines 83→84（85.01 >= 85.0，缓冲 1.01）；
 //     Stmts 82.57<83.0 / Branch 71.81<72.0 / Funcs 77.78<78.0 均不抬。
+//   B49（2026-09-29，A 选项续）：选 pages/scoreEntry/ScoreEntryView.tsx（纯展示组件，branch 26.7%/fn 4.3%→高覆盖，共 18 例全绿）
+//     Stmts 82.57 → 82.81（距 83.0 差0.19 故不抬）｜ Branch 71.81 → 72.22（跨 72.0 线）｜ Funcs 77.78 → 78.56（跨 78.0 线）｜ Lines 85.01 → 85.26（距 86.0 差0.74 故不抬）
+//     （mock 重型子组件 ../../components(Card/Button/Modal/PermissionButton/DataTable/ImportExportPanel)+react-router useNavigate+formatDateTime 隔离；
+//       构造类型安全 props 逐分支触发：draftAvailable 恢复条/考试时间守卫/进度100查看分析导航/pendingChanges 待保存计数与保存全部门禁/
+//       确认全部 students 门禁/batchProgress 进度与取消/batchFailures 列表与关闭/导入 Modal 文件派发与导入门禁/
+//       批量操作 Modal 科目派发与三按钮门禁/导入结果 Modal 成功失败计数与失败详情与导出错误数据/各筛选 select 派发；
+//       ScoreEntryView.tsx 单文件 branch 26.7%→~100%、Funcs 4.3%→~100%；纯 props 驱动零网络零 store 依赖，低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 70→71(缓冲~1.22) / Funcs 76→77(缓冲~1.56)；
+//     Stmts 82.81→ratchet 81(距 83.0 差0.19) / Lines 85.26→ratchet 84(距 86.0 差0.74) 均不抬。
       thresholds: {
         statements: 81,
-        branches: 70,
-        functions: 76,
+        branches: 71,
+        functions: 77,
         lines: 84,
       },
     },
