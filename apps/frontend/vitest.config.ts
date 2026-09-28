@@ -205,9 +205,18 @@ export default defineConfig({
 //       ToastContext 为基础 provider，覆盖 showToast 四类型+兜底/removeToast/handleUndo/details+errorFields 展开收起/5s 自动消失(fake timers)/useToast 抛错守卫）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 77.59→78.08 跨 78.0 线 → 76→77(缓冲~1.08) / Funcs 72.39→73.18 跨 73.0 线 → 71→72(缓冲~1.18)；
 //     Branch 65.10→65.92 未达 66.0 → 维持 64(缓冲~1.92) / Lines 80.01→80.47 未达 81.0 → 维持 79(缓冲~1.47)。
+//   2026-09-28 B34 补测 OptimizedImage(纯展示+懒加载) + UserCard/DeviceCard(dashboard 纯展示卡片)(零网络、低风险)
+//     Stmts 78.44 / Branch 66.99 / Funcs 73.53 / Lines 80.85（v8 JSON 口径，全量 EXIT=0；B33 基线 2034 passed/3 skipped，本批 +24 例 → 2058 passed/3 skipped）
+//     （OptimizedImage 为纯展示组件，imageOptimization 工具为纯函数无 canvas；覆盖 eager 加载+onLoad 回调/responsive srcSet+sizes/占位符尺寸兜底+fallbackColor/onError 回退；
+//       发现懒加载死锁：imgRef 绑定在 imageSrc 就绪后才挂载的真实 img 上，而 IntersectionObserver 守卫 `!lazy || !imgRef.current` 在 imgRef.current 为 null 时提前返回
+//       → 观察者永不创建、isInView 恒为 false、真实 img 永不渲染，lazy 触发分支与 IO 未定义守卫实际不可达(源缺陷，不在本批次修复)；
+//       UserCard 覆盖 top-three 徽标(Crown/Award/Star)+名次(🥇🥈🥉/数字)/current_score 0 兜底/class_name 兜底/clusters 命中渲染/hover；
+//       DeviceCard 覆盖 online/offline 双态配色文案/Wifi 透明度/名称兜底链(device_name→name→device_id)/hover；均为纯 props 零依赖低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 65.92→66.99 跨 66.0 线 → 64→65(缓冲~1.99)；
+//     Stmts 78.08→78.44 未达 79.0 → 维持 77(缓冲~1.44) / Funcs 73.18→73.53 未达 74.0 → 维持 72(缓冲~1.53) / Lines 80.47→80.85 未达 81.0 → 维持 79(缓冲~1.85)。
       thresholds: {
         statements: 77,
-        branches: 64,
+        branches: 65,
         functions: 72,
         lines: 79,
       },
