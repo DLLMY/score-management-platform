@@ -265,11 +265,20 @@ export default defineConfig({
 //       覆盖 filterClassId===ALL_CLASSES | ===0 双 or / classes.find 命中与未命中三态 label）
 //     本轮相对 B38 增益 +0.01 / +0.06 / +0.03 / 0.00（前端全局代码基数大，单小组件对全局覆盖率贡献微），
 //     均不达「下一档需跨过 ratchet+2.0（≥80.0/69.0/75.0/82.0）」的缓冲 → ratchet 维持 78/67/73/80 不动（平台期）。
+//   2026-09-28 B40（收口组件层最后缺口：GlobalStateComponents/AnimatedList/KeyboardShortcutHelp，共 15 例全绿）
+//     Stmts 79.69 / Branch 68.95 / Funcs 75.64 / Lines 82.02（v8 JSON 口径，全量 EXIT=0，2215 passed / 3 skipped）
+//     （GlobalStateComponents 高 ROI：GlobalStateProvider + 3 消费者(GlobalLoading/GlobalErrorBoundary/NetworkStatusIndicator) + 3 hook
+//       + window online/offline/load 事件监听与清理 + showLoading/hideLoading/clearError + useMemo 三 context value；
+//       AnimatedList 泛型动画列表：新增/移除 item 的 key diff + setTimeout(onItemAppear) + animationDelay=index*50ms + _isNew/_isLeaving 三元；
+//       KeyboardShortcutHelp 纯展示：隐藏触发按钮 + open 状态切换 + 遮罩/关闭按钮/内容 stopPropagation 三路关闭）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Funcs 75.64→ratchet 73 跨 75.0 线 → 73→74(缓冲~1.64)；
+//     Lines 82.02→ratchet 80 跨 82.0 线 → 80→81(缓冲~1.02)；
+//     Stmts 79.69→ratchet 78(+1 需≥80.0 差0.31 故不抬) / Branch 68.95→ratchet 67(+1 需≥69.0 仅差0.05 故不抬)。
       thresholds: {
         statements: 78,
         branches: 67,
-        functions: 73,
-        lines: 80,
+        functions: 74,
+        lines: 81,
       },
     },
   },
