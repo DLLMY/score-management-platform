@@ -406,11 +406,20 @@ export default defineConfig({
 //     本轮四指标按「实测 ≥ ratchet+2.0（Stmts≥84.0/Branch≥75.0/Funcs≥81.0/Lines≥88.0）」判定均不抬，阈值维持 82/73/79/86。
 //     ★ 关键信号：Statements 83.97 与 Functions 80.96 均已逼近抬档线（分别差 0.03% / 0.04%），在「非排除清单」约束下已无可低成本的单文件跨越；
 //       再抬任一档需放宽排除法（攻击 api.ts 540 未覆盖语句 / AttendanceManage 128 未覆盖语句 / 各 Modal 0% 模块）或接受多批边际提交。建议评估收口 B 系列补测战役。
-//   ── 当前生效 ratchet（B58 后维持）──
+//   ── B58 冲刺收口（用户确认「最后冲刺抬双档」）──
+//   选 pages/nlp-management/RuleFormModal.tsx + BatchImportModal.tsx（两个纯 NLPDeps 驱动 Modal，零 hooks/store/router，可复刻模板范式；共 17 例全绿）
+//     Stmts 83.97 → 84.24（跨 84.0 线）｜ Branch 74.09 → 74.29（距 75.0 差0.71）｜ Funcs 80.96 → 81.49（跨 81.0 线）｜ Lines 86.31 → 86.61（距 88.0 差1.39）
+//     （RuleFormModal 13 语句/10 分支/10 函数 0%→100%；BatchImportModal 12 语句/6 分支/5 函数 0%→100%(Branch 83.3%，isImporting 双态已覆盖)；
+//       mock ../../../components(EmptyState/Button/Modal/PermissionButton 桩) + 类型安全 NLPDeps 注入；覆盖 editingRule 空/有值标题切换+按钮文案/Close·取消回调/
+//       各字段 onChange(关键词·描述·score_value parseFloat||0·score_type select·tags·pattern·priority parseInt||0)/保存分支(handleCreateRule·handleEditRule)；
+//       纯 deps 驱动零网络零 store 依赖，低风险高 ROI；实测全局 2488 passed / 3 skipped / EXIT=0）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 82→83（84.24 >= 84.0，缓冲 1.24） / Funcs 79→80（81.49 >= 81.0，缓冲 1.49）；
+//     Branch 74.29→ratchet 73(距 75.0 差0.71) / Lines 86.61→ratchet 86(距 88.0 差1.39) 均不抬。
+//   ── 当前生效 ratchet（B58 冲刺收口后）──
       thresholds: {
-        statements: 82,
+        statements: 83,
         branches: 73,
-        functions: 79,
+        functions: 80,
         lines: 86,
       },
     },
