@@ -397,6 +397,16 @@ export default defineConfig({
 //       error_type 三元三分支(api_error·resource_error·其它)/request 列 method+status+url 组合(全·仅 url·全 null)；单文件 B30.9→高覆盖）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 72→73（73.94 >= 74.0，缓冲 1.94） / Lines 85→86（86.19 >= 86.0，缓冲 1.19）；
 //     Stmts 83.86→ratchet 82(距 84.0 差0.14) / Funcs 80.7→ratchet 79(已超 80.0 维持) 均不抬。
+//   B58（2026-09-29，A 选项续）：选 pages/remote-notify/TemplatesPanel.tsx（纯展示面板，deps 注入零 hooks/store/api；S19.0/B30.8/F11.1，21 条语句仅 4 条已覆盖，ROI 为「非排除清单」内未覆盖语句池最大，是 ScheduledPanel 同级面板，可复刻其 mock 范式；12 例全绿）
+//     Stmts 83.86 → 83.97（距 84.0 差 0.03，≈4 条语句）｜ Branch 73.94 → 74.09（距 75.0 差 0.91）｜ Funcs 80.71 → 80.96（距 81.0 差 0.04，≈2 个函数）｜ Lines 86.19 → 86.31（距 88.0 差 1.69）
+//     （mock ../../components(PermissionButton 桩) + RemoteNotifyDeps 类型安全注入；覆盖 加载态/空态/列表 name+category 三元/点击 name 触发 handleUseTemplate/
+//       新建按钮(setEditingTemplate(null)+setTemplateForm 取 form 默认值+openTemplateModal)/编辑按钮(字段齐全+缺失 || 兜底两分支+openTemplateModal)/删除(handleDeleteTemplate(id))/
+//       showTemplateModal+editingTemplate 双向标题(编辑模板/新建模板)/表单 name·text·category·color 四 onChange/保存(handleSaveTemplate)/取消(closeTemplateModal)；
+//       TemplatesPanel.tsx 单文件 S19→71.4% / B→100% / L25→93.8%；纯 deps 驱动零网络零 store 依赖，低风险高 ROI）
+//     本轮四指标按「实测 ≥ ratchet+2.0（Stmts≥84.0/Branch≥75.0/Funcs≥81.0/Lines≥88.0）」判定均不抬，阈值维持 82/73/79/86。
+//     ★ 关键信号：Statements 83.97 与 Functions 80.96 均已逼近抬档线（分别差 0.03% / 0.04%），在「非排除清单」约束下已无可低成本的单文件跨越；
+//       再抬任一档需放宽排除法（攻击 api.ts 540 未覆盖语句 / AttendanceManage 128 未覆盖语句 / 各 Modal 0% 模块）或接受多批边际提交。建议评估收口 B 系列补测战役。
+//   ── 当前生效 ratchet（B58 后维持）──
       thresholds: {
         statements: 82,
         branches: 73,
