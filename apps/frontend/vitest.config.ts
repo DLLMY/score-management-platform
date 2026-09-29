@@ -356,10 +356,18 @@ export default defineConfig({
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 83.01 虽跨 83.0 线，但本沙箱全量 run 出现 worker 掉文件/前序测试偶发抖动，
 //     为守「保守留缓冲防跨环境方差」原则，Statements 维持 81（缓冲 2.01，放弃薄缓冲 82 以免阈值偶红）；
 //     Branch 72.51→ratchet 71(距 73.0 差0.49) / Funcs 78.99→ratchet 77(距 79.0 差0.01) / Lines 85.46→ratchet 84(距 86.0 差0.54) 均不抬。
+//   B51（2026-09-29，A 选项续）：选 pages/remote-notify/ScheduledPanel.tsx（纯展示面板，branch 68.4%/fn 24.1%→高覆盖，共 12 例全绿）
+//     Stmts 83.01 → 83.05（跨 83.0 线）｜ Branch 72.51 → 72.6（距 73.0 差0.4 故不抬）｜ Funcs 78.99 → 79.1（跨 79.0 线）｜ Lines 85.46 → 85.49（距 86.0 差0.51 故不抬）
+//     （mock ../../components(PermissionButton+ClassStatusBadge) 隔离；构造 deps 逐分支触发：空态/列表项各状态圆点/时间字段(-- 兜底)/
+//       重复类型 daily·weekly·monthly 标签与间隔·结束时间/每周星期按钮点击/发送模式 device 设备ID·broadcast 不显/语音·弹窗·紧急复选框/
+//       新建按钮/列表项 立即发送·取消(仅 pending)·删除/编辑弹窗 标题(editingScheduled)+保存+取消；
+//       ScheduledPanel.tsx 单文件 fn 24.1%→~100%、branch 68.4%→~100%；纯 deps 驱动零网络零 store 依赖，低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 81→82（83.05 >= 83.0，缓冲 1.05） / Funcs 77→78（79.1 >= 79.0，缓冲 1.1）；
+//     Branch 72.6→ratchet 71(距 73.0 差0.4) / Lines 85.49→ratchet 84(距 86.0 差0.51) 均不抬。
       thresholds: {
-        statements: 81,
+        statements: 82,
         branches: 71,
-        functions: 77,
+        functions: 78,
         lines: 84,
       },
     },
