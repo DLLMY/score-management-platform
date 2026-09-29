@@ -383,11 +383,18 @@ export default defineConfig({
 //       四类空态(filteredUsers/devices/notifications/classGroups)/通知优先级三元(high·urgent→红,medium→黄,其它→绿)/算法数据 null+风险 — 兜底/班级分组空态；单文件 S33→高覆盖）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Funcs 78→79（80.02 >= 80.0，缓冲 1.02）；
 //     Stmts 83.6→ratchet 82(距 84.0 差0.4) / Branch 73.49→ratchet 72(距 74.0 差0.51) / Lines 85.95→ratchet 84(距 86.0 差0.05) 均不抬。
+//   B56（2026-09-29，A 选项续）：选 pages/notifications/NotificationsView.tsx（纯展示壳 S16.7/B30.8/F11.1，props 注入零 hooks/store/api，19 例全绿）
+//     Stmts 83.6 → 83.69（差0.31 不抬）｜ Branch 73.49 → 73.73（差0.27 不抬）｜ Funcs 80.02 → 80.27（已跨 80.0 线，缓冲1.27 维持79）｜ Lines 85.95 → 86.06（跨 86.0 线）
+//     （mock ../../components(Card/Button/Modal/PermissionButton 桩，Modal 在 isOpen 渲染 children+关闭按钮)；覆盖 主标题/unreadCount 全部已读分支/加载态/空态引导/
+//       列表 item 渲染(type 三元四分支 success·warning·error·info 默认)/已读圆点/read_at 已读于/分页页码+边界 disabled+setPage/三类筛选 select 派发/handleFilterChange 字段/
+//       刷新按钮 loading 图标+loadNotifications/全部已读/标为已读·删除 handler/发送模态 打开+表单字段 change+submit+sending 态+取消/onClose 重置；单文件 S16.7→高覆盖）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Lines 84→85（86.06 >= 86.0，缓冲 1.06）；
+//     Stmts 83.69→ratchet 82(距 84.0 差0.31) / Branch 73.73→ratchet 72(距 74.0 差0.27) / Funcs 80.27→ratchet 79(已超 80.0 维持) 均不抬。
       thresholds: {
         statements: 82,
         branches: 72,
         functions: 79,
-        lines: 84,
+        lines: 85,
       },
     },
   },
