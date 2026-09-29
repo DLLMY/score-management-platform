@@ -172,7 +172,7 @@ describe('useUserListFetch · 补齐分支（B31）', () => {
       { id: 2, name: '二班' },
     ]);
     mockApi.users.getAll.mockResolvedValue({
-      users: [{ id:1, name:'a' }],
+      users: [{ id: 1, name: 'a' }],
       total: 1,
       pages: 1,
       page: 1,

@@ -238,6 +238,9 @@ class TestBertService:
 
         if "services.bert_service" in sys.modules:
             del sys.modules["services.bert_service"]
+        # 重新加载模块，使 mock 的 torch 被 import 进模块全局命名空间；
+        # 否则 get_embedding 内 `with torch.no_grad()` 会因模块全局 torch 未定义而 NameError。
+        from services.bert_service import BertNLPService
 
         final_embedding = np.array([[1.0, 0.0, 0.0]])
 

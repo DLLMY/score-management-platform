@@ -99,7 +99,11 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const responsiveConfig = responsive && imageSrc ? getResponsiveImage(imageSrc) : null;
 
   return (
-    <div ref={containerRef} className={`relative overflow-hidden ${className}`} style={{ width, height }}>
+    <div
+      ref={containerRef}
+      className={`relative overflow-hidden ${className}`}
+      style={{ width, height }}
+    >
       {/* 占位符 */}
       {!isLoaded && (
         <img

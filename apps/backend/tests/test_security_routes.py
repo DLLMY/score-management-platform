@@ -64,7 +64,9 @@ def test_audit_logs_endpoint(client, app, auth_headers):
 def test_log_security_event_persists(client, app):
     from api.system.security_routes import log_security_event
 
-    with app.app_context():
+    # log_security_event 内部依赖 Flask request 代理（request.remote_addr / headers / path / method），
+    # 必须在请求上下文内调用；否则 request 解析抛 RuntimeError，被 except 吞掉并 rollback，记录丢失。
+    with app.test_request_context("/"):
         log_security_event("test_event", "info", details="test-detail")
         assert SecurityAudit.query.filter_by(event_type="test_event").first() is not None
 
