@@ -415,9 +415,17 @@ export default defineConfig({
 //       纯 deps 驱动零网络零 store 依赖，低风险高 ROI；实测全局 2488 passed / 3 skipped / EXIT=0）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 82→83（84.24 >= 84.0，缓冲 1.24） / Funcs 79→80（81.49 >= 81.0，缓冲 1.49）；
 //     Branch 74.29→ratchet 73(距 75.0 差0.71) / Lines 86.61→ratchet 86(距 88.0 差1.39) 均不抬。
-//   ── 当前生效 ratchet（B58 冲刺收口后）──
+  //   ── 当前生效 ratchet（B58 冲刺收口后）──
+  //   D 线突破（2026-09-29，用户选「前端覆盖率突破地板」）：补测 pages/AttendanceManage.tsx 容器逻辑（24 例全绿）
+  //     实测 Stmts 85.32 / Branch 74.97 / Funcs 81.91 / Lines 87.72（v8 JSON 口径，全量 EXIT=0）
+  //     （AttendanceManage 为 default-export 容器，依赖 api+6 hooks+子组件 AttendanceManageView；新建 AttendanceManage.test.tsx 覆盖
+  //       挂载拉取/记录提交成功·校验失败·API 失败/请假提交/批量记录(无班级·有班级·空学生·成功·API失败)/审批/恢复草稿/空草稿清理 useEffect/
+  //       统计与请假列表 catch/useClientFilter 过滤；关键坑：beforeEach 未清 apiMocks 调用计数致 batchRecord 跨用例泄漏，
+  //       修复为 Object.values(apiMocks).forEach(m=>m.mockClear()) 并给 usersGetAll 默认 mockResolvedValue([])）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：仅 Statements 跨 85.0 线 → 83→84（缓冲 1.32）；
+  //     Branch 74.97(距 75.0 差0.03) / Funcs 81.91(距 82.0 差0.09) / Lines 87.72(距 88.0 差0.28) 均不抬。
       thresholds: {
-        statements: 83,
+        statements: 84,
         branches: 73,
         functions: 80,
         lines: 86,

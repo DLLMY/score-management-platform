@@ -15,7 +15,7 @@
 - ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）。run_regression 5 闸门用 PowerShell 直跑；回归日志剔 `\0` 再 UTF8。
 
 ## 已收官（勿再排期）
-C901 收口(58→47) · safe_handle 收敛 18 处 · F17 路由服务化 · B3 to_dict · E1–E6 · NLP 四塔 · hooks barrel · 班主任工作台(12 子页+聚合 `/workbench`) · M9 分页 · T12 巨型页拆分(≥600 行=0) · 06 差异 17 项全量 · 06 收口轮三项(归档旧 MQTT 文档/补 #4 阶段3 UI/补阶段1 白名单开关)。历史细节见 `memory/2026-09-12.md` 等日志。
+C901 收口(58→47) · safe_handle 收敛 18 处 · F17 路由服务化 · B3 to_dict · E1–E6 · NLP 四塔 · hooks barrel · 班主任工作台(12 子页+聚合 `/workbench`) · M9 分页 · T12 巨型页拆分(≥600 行=0) · 06 差异 17 项全量 · 06 收口轮三项(归档旧 MQTT 文档/补 #4 阶段3 UI/补阶段1 白名单开关) · **P1-f Prometheus `/metrics` 暴露**（`app/metrics_exporter.py` 独立 CollectorRegistry + 免鉴权端点 + 限流豁免 + TESTING 守卫；`app/__init__.py:94` 挂载；`tests/test_metrics_exporter.py` 3 passed）。⚠️ `docs/生产就绪评估-20260922.md` 标 P1-f「未完成」已**过时**，勿据此重复排期。历史细节见 `memory/2026-09-12.md` 等日志。
 
 ## 后端铁律
 - 路由唯一源 `app/api_versioning.py::register_v1_routes`；信封 `{success,code,data}`；create 双元组 `[env,201]`；**未跑回归=重构未完成**。
