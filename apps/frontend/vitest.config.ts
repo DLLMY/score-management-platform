@@ -390,11 +390,18 @@ export default defineConfig({
 //       刷新按钮 loading 图标+loadNotifications/全部已读/标为已读·删除 handler/发送模态 打开+表单字段 change+submit+sending 态+取消/onClose 重置；单文件 S16.7→高覆盖）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Lines 84→85（86.06 >= 86.0，缓冲 1.06）；
 //     Stmts 83.69→ratchet 82(距 84.0 差0.31) / Branch 73.73→ratchet 72(距 74.0 差0.27) / Funcs 80.27→ratchet 79(已超 80.0 维持) 均不抬。
+//   B57（2026-09-29，A 选项续）：选 pages/frontendTelemetry/useFrontendTelemetryLogic.tsx（纯逻辑 hook，S59.6/B30.9/F30.4，29 处未覆盖分支，branch 增益潜力最大；9 例全绿）
+//     Stmts 83.69 → 83.86（差0.14 不抬）｜ Branch 73.73 → 73.94（跨 74.0 线）｜ Funcs 80.27 → 80.7（已超 80.0 维持）｜ Lines 86.06 → 86.19（跨 86.0 线）
+//     （mock ../../hooks(useListFetch 受控桩 + fetchJson vi.fn)；renderHook 测 返回结构/onPerfFilterChange·onErrFilterChange 更新 filters+重置 page/handlePerf·ErrPageChange；
+//       重点测 perfColumns·errColumns render 全部分支：value+unit/value 无 unit/page 有值·null 兜底/created_at 经 formatDateTime/
+//       error_type 三元三分支(api_error·resource_error·其它)/request 列 method+status+url 组合(全·仅 url·全 null)；单文件 B30.9→高覆盖）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 72→73（73.94 >= 74.0，缓冲 1.94） / Lines 85→86（86.19 >= 86.0，缓冲 1.19）；
+//     Stmts 83.86→ratchet 82(距 84.0 差0.14) / Funcs 80.7→ratchet 79(已超 80.0 维持) 均不抬。
       thresholds: {
         statements: 82,
-        branches: 72,
+        branches: 73,
         functions: 79,
-        lines: 85,
+        lines: 86,
       },
     },
   },
