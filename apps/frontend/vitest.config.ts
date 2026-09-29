@@ -424,11 +424,17 @@ export default defineConfig({
   //       修复为 Object.values(apiMocks).forEach(m=>m.mockClear()) 并给 usersGetAll 默认 mockResolvedValue([])）
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：仅 Statements 跨 85.0 线 → 83→84（缓冲 1.32）；
   //     Branch 74.97(距 75.0 差0.03) / Funcs 81.91(距 82.0 差0.09) / Lines 87.72(距 88.0 差0.28) 均不抬。
+  //   D 线突破·第二步（2026-09-30）：补测 services/api.ts executeRequest 错误/边界分支（新建 api.errors.test.ts，8 例全绿，确定性无抖动）
+  //     覆盖 403/404-非GET清理/NetworkError·net::ERR 文案/401 学生态·管理员态分流/CSRF(419)重试成功/type=cancelled 返回 null；
+  //     实测 Stmts 85.65 / Branch 75.18 / Funcs 81.95 / Lines 88.06（v8 JSON 口径，全量 EXIT=0）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
+  //       Branch 跨 75.0 线 → 73→74（缓冲 1.18）；Lines 跨 88.0 线 → 86→87（缓冲 1.06）；
+  //       Statements 85.65(距 86.0 差0.35) / Funcs 81.95(距 82.0 差0.05) 均不抬。
       thresholds: {
         statements: 84,
-        branches: 73,
+        branches: 74,
         functions: 80,
-        lines: 86,
+        lines: 87,
       },
     },
   },
