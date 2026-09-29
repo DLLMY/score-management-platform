@@ -373,10 +373,20 @@ export default defineConfig({
 //       响应缺字段 || 兜底(items/latest/total/pages)；SystemMetrics.tsx 单文件 branch 43.2%→高覆盖；纯 fetchJson 驱动零 store 依赖，低风险高 ROI）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 71→72（73.16 >= 73.0，缓冲 1.16）；
 //     Stmts 83.45→ratchet 82(距 84.0 差0.55) / Funcs 79.63→ratchet 78(距 80.0 差0.37) / Lines 85.82→ratchet 84(距 86.0 差0.18) 均不抬。
+//   B54（2026-09-29，A 选项续）：选 components/layout/Sidebar.tsx（939 行纯展示巨型组件，30 处未覆盖分支，isCollapsed 双向三元从未测 collapsed 态；10 例全绿）
+//     Stmts 83.45 → 83.53（差0.47 不抬）｜ Branch 73.16 → 73.28（差0.72 不抬）｜ Funcs 79.63 → 79.81（差0.19 不抬）｜ Lines 85.82 → 85.88（差0.12 不抬）
+//     （mock ../../stores(usePermissionStore+getState().loadPermissions) + react-router-dom(real+spy useNavigate)；覆盖 默认展开/折叠切换/菜单组展开收起/admin 角色/整组权限拒绝丢弃/
+//       退出登录清 localStorage+navigate/移动抽屉开合/折叠 hover tooltip/Ctrl+B 快捷键/isLoading+已登录触发 loadPermissions；单文件 branch 高覆盖；平台期确认）
+//   B55（2026-09-29，A 选项续）：选 pages/dashboard/DashboardView.tsx（纯展示壳 S33.3/B50.0/F14.3，props 注入零 hooks/store/api，16 例全绿）
+//     Stmts 83.53 → 83.6（差0.4 不抬）｜ Branch 73.28 → 73.49（差0.51 不抬）｜ Funcs 79.81 → 80.02（跨 80.0 线）｜ Lines 85.88 → 85.95（差0.05 不抬）
+//     （mock ./components(StatCard/UserCard/DeviceCard/LiveClock 桩) + ../../components(DashboardSkeleton 桩)；覆盖 loading 骨架/四统计卡/实时时钟/连接态/刷新态/错误条/班级筛选派发/
+//       四类空态(filteredUsers/devices/notifications/classGroups)/通知优先级三元(high·urgent→红,medium→黄,其它→绿)/算法数据 null+风险 — 兜底/班级分组空态；单文件 S33→高覆盖）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Funcs 78→79（80.02 >= 80.0，缓冲 1.02）；
+//     Stmts 83.6→ratchet 82(距 84.0 差0.4) / Branch 73.49→ratchet 72(距 74.0 差0.51) / Lines 85.95→ratchet 84(距 86.0 差0.05) 均不抬。
       thresholds: {
         statements: 82,
         branches: 72,
-        functions: 78,
+        functions: 79,
         lines: 84,
       },
     },
