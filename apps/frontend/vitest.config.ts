@@ -346,6 +346,16 @@ export default defineConfig({
 //       ScoreEntryView.tsx 单文件 branch 26.7%→~100%、Funcs 4.3%→~100%；纯 props 驱动零网络零 store 依赖，低风险高 ROI）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Branch 70→71(缓冲~1.22) / Funcs 76→77(缓冲~1.56)；
 //     Stmts 82.81→ratchet 81(距 83.0 差0.19) / Lines 85.26→ratchet 84(距 86.0 差0.74) 均不抬。
+//   B50（2026-09-29，A 选项续）：选 pages/algorithm-analysis/EngagementTab.tsx（纯展示组件，branch 42.9%/fn 6.7%→高覆盖，共 13 例全绿）
+//     Stmts 82.81 → 83.01（跨 83.0 线）｜ Branch 72.22 → 72.51（距 73.0 差0.49 故不抬）｜ Funcs 78.56 → 78.99（距 79.0 差0.01 惜败）｜ Lines 85.26 → 85.46（距 86.0 差0.54 故不抬）
+//     （mock ./EngagementTrendChart + ../../components(DataTable 桩为逐行按钮以触发 onRowClick) 隔离；构造类型安全 deps 逐分支触发：
+//       控制区班级/天数输入派发/生成按钮(selectedClass+loading 门禁)/导出按钮(exporting+selectedClass 门禁+导出中态)/
+//       清除按钮重置/错误条/无班级提示/汇总卡片(total·with_data·high·failed)/排名表行点击(has_data 触发·否则不触发)/
+//       个人趋势区(trendStudent 命中姓名标题·未命中兜底/周数下拉派发/加载态/图表渲染)；
+//       EngagementTab.tsx 单文件 fn 6.7%→~100%、branch 42.9%→~100%；纯 deps 驱动零网络零 store 依赖，低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 83.01 虽跨 83.0 线，但本沙箱全量 run 出现 worker 掉文件/前序测试偶发抖动，
+//     为守「保守留缓冲防跨环境方差」原则，Statements 维持 81（缓冲 2.01，放弃薄缓冲 82 以免阈值偶红）；
+//     Branch 72.51→ratchet 71(距 73.0 差0.49) / Funcs 78.99→ratchet 77(距 79.0 差0.01) / Lines 85.46→ratchet 84(距 86.0 差0.54) 均不抬。
       thresholds: {
         statements: 81,
         branches: 71,

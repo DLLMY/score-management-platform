@@ -197,6 +197,6 @@ describe('useStudentProfileLogic · activeTab effect', () => {
       useStudentProfileLogic({ ...baseDeps(), activeTab: 'studentProfile' })
     );
     await waitFor(() => expect(mockApi.users.getAll).toHaveBeenCalled(), { timeout: 5000 });
-    expect(result.current.students).toHaveLength(1);
+    await waitFor(() => expect(result.current.students).toHaveLength(1), { timeout: 5000 });
   });
 });
