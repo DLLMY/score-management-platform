@@ -364,9 +364,18 @@ export default defineConfig({
 //       ScheduledPanel.tsx 单文件 fn 24.1%→~100%、branch 68.4%→~100%；纯 deps 驱动零网络零 store 依赖，低风险高 ROI）
 //     本轮按「缓冲 >=1.0」非均匀抬升：Stmts 81→82（83.05 >= 83.0，缓冲 1.05） / Funcs 77→78（79.1 >= 79.0，缓冲 1.1）；
 //     Branch 72.6→ratchet 71(距 73.0 差0.4) / Lines 85.49→ratchet 84(距 86.0 差0.51) 均不抬。
+//   B53（2026-09-29，A 选项续）：选 pages/SystemMetrics.tsx（页面级查看层，sun=72/bun=43，72.2%/43.2%→高覆盖，共 9 例全绿）
+//     Stmts 83.05 → 83.45（距 84.0 差0.55 故不抬）｜ Branch 72.6 → 73.16（跨 73.0 线）｜ Funcs 79.1 → 79.63（距 80.0 差0.37 故不抬）｜ Lines 85.49 → 85.82（距 86.0 差0.18 故不抬）
+//     （mock ../components(PermissionButton+EmptyState) + ../hooks(fetchJson) 隔离；构造 makeRows/makeLatest 逐分支触发：
+//       正常加载 5 卡片值/单位/更新时间/系列非空 / 多页分页循环(page===1 与 all.concat 分支 + while 条件) /
+//       加载失败(fetchJson null → failed 分支 + 错误条 + 重试恢复) / hours 选择变更(hours=6 参数重载) /
+//       刷新按钮重载 / 空数据(5 卡片 — + 两 EmptyState) / 初始加载中态占位 / latest 缺省(无 unit·无 updated_at·缺失 key) /
+//       响应缺字段 || 兜底(items/latest/total/pages)；SystemMetrics.tsx 单文件 branch 43.2%→高覆盖；纯 fetchJson 驱动零 store 依赖，低风险高 ROI）
+//     本轮按「缓冲 >=1.0」非均匀抬升：Branch 71→72（73.16 >= 73.0，缓冲 1.16）；
+//     Stmts 83.45→ratchet 82(距 84.0 差0.55) / Funcs 79.63→ratchet 78(距 80.0 差0.37) / Lines 85.82→ratchet 84(距 86.0 差0.18) 均不抬。
       thresholds: {
         statements: 82,
-        branches: 71,
+        branches: 72,
         functions: 78,
         lines: 84,
       },
