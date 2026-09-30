@@ -71,4 +71,41 @@ describe('useAutoSave', () => {
     expect(result.current.draftAvailable).toBe(false);
     expect(result.current.isDirty).toBe(false);
   });
+
+  it('存在未保存变更时 beforeunload 阻止默认行为', () => {
+    const { rerender } = renderHook(
+      ({ data }: { data: string }) => useAutoSave({ key: 'k7', data, debounceMs: 30 }),
+      { initialProps: { data: 'a' } }
+    );
+    rerender({ data: 'b' });
+    const ev = new Event('beforeunload', { cancelable: true });
+    act(() => {
+      window.dispatchEvent(ev);
+    });
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it('loadDraft 草稿过期返回 null 并清除', () => {
+    localStorage.setItem(
+      'draft_k8',
+      JSON.stringify({ data: 'expired', timestamp: Date.now() - 25 * 60 * 60 * 1000 })
+    );
+    const { result } = renderHook(() => useAutoSave({ key: 'k8', data: 'v1' }));
+    expect(result.current.loadDraft()).toBeNull();
+    expect(localStorage.getItem('draft_k8')).toBeNull();
+  });
+
+  it('二次变化（已保存后）hasUnsavedChanges 因 lastSaved 已存在而保持 false', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderHook(
+      ({ data }: { data: string }) => useAutoSave({ key: 'k9', data, onSave, debounceMs: 30 }),
+      { initialProps: { data: 'a' } }
+    );
+    rerender({ data: 'b' });
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('b'));
+    rerender({ data: 'c' });
+    await waitFor(() => expect(result.current.isDirty).toBe(true));
+    // 源码语义：保存后 lastSaved 非空，后续变化 hasUnsavedChanges 为 false
+    expect(result.current.hasUnsavedChanges).toBe(false);
+  });
 });

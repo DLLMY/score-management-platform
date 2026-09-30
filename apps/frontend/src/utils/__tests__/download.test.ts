@@ -130,4 +130,14 @@ describe('utils/download', () => {
     const resp = { headers: { get: () => null } } as unknown as Response;
     expect(resolveFilenameFromResponse(resp, 'fallback.csv')).toBe('fallback.csv');
   });
+
+  it('fetchAndDownload：非 ok 且 text() 抛错 → 回退状态码', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: () => Promise.reject(new Error('read fail')),
+    });
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
+    await expect(fetchAndDownload('/api/x', 'h.xlsx')).rejects.toThrow('下载失败 (500)');
+  });
 });

@@ -464,8 +464,19 @@ export default defineConfig({
   //       Branch 跨 76.0 线 → 74→75（实测 76.05，缓冲 1.05）；
   //       Lines 跨 89.0 线 → 87→88（实测 89.1，缓冲 1.1）；
   //       Statements 86.71(距 87.0 差0.29) / Funcs 83.2(距 84.0 差0.8) 均不抬。
+  //   D 线突破·第六步（2026-09-30）：补测 5 个低依赖高 ROI hook（usePermissions/useUndoRedo/useKeyboardShortcut/useMediaQuery/useAutoSave）
+  //     + performanceMonitor（纯类，无测试文件）+ download.fetchAndDownload 兜底 共 7 文件（新建/扩展），确定性无抖动
+  //     实测（singleThread 确定性全量）：Stmts 87.02 / Branch 76.29 / Funcs 83.52 / Lines 89.41（全量 EXIT=0）
+  //     （usePermissions 73.3%→高覆盖：error 对象/roles-permissions 取闭包/JSON 损坏；useUndoRedo 80%→高覆盖：maxHistory 截断/undo-redo/Toast；
+  //       useKeyboardShortcut 77.4%→高覆盖：shift/alt/ctrl 等价 + useGlobalKeyboardShortcuts ?/Cmd+N；useMediaQuery 85%→高覆盖：旧浏览器 addListener 兜底；
+  //       useAutoSave 88.6%→高覆盖：beforeunload/loadDraft 过期清除/二次变化语义；performanceMonitor 95.1%→全绿：start/end/recordError·CacheHit·Coalesced/
+  //       updateApiStats/subscribe(含 listener 抛错 catch)/entries 上限/logSummary/setSlowThreshold/reset/monitorApiRequest/withPerformanceMonitoring；
+  //       download.fetchAndDownload 非 ok 且 text() 抛错→回退「下载失败 (500)」catch 分支）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
+  //       Statements 跨 87.0 线 → 85→86（实测 87.02，缓冲 1.02）；
+  //       Branch 76.29(距 77.0 差0.71) / Funcs 83.52(距 84.0 差0.48) / Lines 89.41(距 90.0 差0.59) 均不抬。
       thresholds: {
-        statements: 85,
+        statements: 86,
         branches: 75,
         functions: 82,
         lines: 88,

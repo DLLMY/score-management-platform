@@ -73,6 +73,22 @@ describe('useMediaQuery · 响应式媒体查询', () => {
     });
     expect(result.current).toBe(false);
   });
+
+  it('addEventListener 不可用时回退 addListener 注册', () => {
+    const inst = {
+      matches: true,
+      media: '',
+      onchange: null,
+      addEventListener: undefined,
+      removeEventListener: undefined,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    window.matchMedia = vi.fn().mockReturnValue(inst);
+    renderHook(() => useMediaQuery('(max-width: 767px)'));
+    expect(inst.addListener).toHaveBeenCalledWith(expect.any(Function));
+  });
 });
 
 describe('useIsMobile · 移动端视口 (<768px)', () => {

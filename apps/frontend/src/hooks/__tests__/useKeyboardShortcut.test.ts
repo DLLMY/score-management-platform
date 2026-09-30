@@ -50,6 +50,35 @@ describe('useKeyboardShortcut', () => {
     expect(action).toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
   });
+
+  it('shift 不匹配时不触发', () => {
+    const action = vi.fn();
+    renderHook(() => useKeyboardShortcut([{ key: 'k', shift: true, action }]));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
+    });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('alt 不匹配时不触发', () => {
+    const action = vi.fn();
+    renderHook(() => useKeyboardShortcut([{ key: 'k', alt: true, action }]));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
+    });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('ctrl 等价于 meta', () => {
+    const action = vi.fn();
+    renderHook(() => useKeyboardShortcut([{ key: 's', meta: true, action }]));
+    const event = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, cancelable: true });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(action).toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+  });
 });
 
 describe('useGlobalKeyboardShortcuts', () => {
@@ -80,5 +109,31 @@ describe('useGlobalKeyboardShortcuts', () => {
     });
     expect(clickSpy).toHaveBeenCalled();
     document.body.removeChild(modal);
+  });
+
+  it('? + shift 触发 data-help-modal 点击', () => {
+    const help = document.createElement('div');
+    help.setAttribute('data-help-modal', '');
+    document.body.appendChild(help);
+    const clickSpy = vi.spyOn(help, 'click');
+    renderHook(() => useGlobalKeyboardShortcuts());
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true }));
+    });
+    expect(clickSpy).toHaveBeenCalled();
+    document.body.removeChild(help);
+  });
+
+  it('Cmd/Ctrl+N 点击 data-add-button', () => {
+    const btn = document.createElement('button');
+    btn.setAttribute('data-add-button', '');
+    document.body.appendChild(btn);
+    const clickSpy = vi.spyOn(btn, 'click');
+    renderHook(() => useGlobalKeyboardShortcuts());
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: true }));
+    });
+    expect(clickSpy).toHaveBeenCalled();
+    document.body.removeChild(btn);
   });
 });
