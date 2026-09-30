@@ -443,10 +443,19 @@ export default defineConfig({
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
   //       Statements 跨 86.0 线 → 84→85（确定性基线 86.21，缓冲 1.21）；
   //       Branch 75.35(距 76.0 差0.65) / Funcs 82.31(距 83.0 差0.69) / Lines 88.62(距 89.0 差0.38) 维持。
+  //   D 线突破·第四步（2026-09-30）：补测 services/api.ts 独立纯工具函数（新建 api.utils.test.ts，28 例全绿，确定性无抖动）
+  //     + pages/algorithm-analysis/AlgorithmAnalysisShell.tsx 纯展示壳（新建 AlgorithmAnalysisShell.test.tsx，12 例全绿，11 个 Tab 子组件全部桩掉）
+  //     实测（singleThread 确定性全量 + 还原 json reporter 前已刷新 coverage-final.json 精准排源）：
+  //       Stmts 86.57 / Branch 75.82 / Funcs 83.05 / Lines 88.97（全量 EXIT=0、零失败）
+  //     （api.utils 覆盖 AbortController 工具簇/ETag 缓存清理/getErrorMessage 多分支/unwrapEnvelope·parseEnvelopeSafe/getAuthHeaders·getCsrfToken；
+  //       getCsrfToken 因已被既有 419 retry 测试经 getAuthHeaders 间接覆盖，本批直测未产生净新增语句行 → Lines 卡 88.97 距 89.0 差 0.03%）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
+  //       Functions 跨 83.0 线 → 81→82（实测 83.05 ≥ 83.0，缓冲 1.05）；
+  //       Statements 86.57(距 87.0 差0.43) / Branch 75.82(距 76.0 差0.18) / Lines 88.97(距 89.0 差0.03) 均不抬。
       thresholds: {
         statements: 85,
         branches: 74,
-        functions: 81,
+        functions: 82,
         lines: 87,
       },
     },
