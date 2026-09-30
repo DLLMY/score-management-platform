@@ -452,11 +452,23 @@ export default defineConfig({
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
   //       Functions 跨 83.0 线 → 81→82（实测 83.05 ≥ 83.0，缓冲 1.05）；
   //       Statements 86.57(距 87.0 差0.43) / Branch 75.82(距 76.0 差0.18) / Lines 88.97(距 89.0 差0.03) 均不抬。
+  //   D 线突破·第五步（2026-09-30）：补测 useMemoryUsage（金矿 7.1%→高覆盖）+ useNetworkStatus 扩展连接分支
+  //     （新建 useMemoryUsage.test.ts 4 例；扩展 useNetworkStatus.test.ts 补 2 例 connection 分支）
+  //     实测（singleThread 确定性全量）：Stmts 86.71 / Branch 76.05 / Funcs 83.2 / Lines 89.1（全量 EXIT=0）
+  //     （useMemoryUsage 仅 14 语句、原 7.1% 覆盖（13 未覆盖分支/语句），mock performance.memory 后高覆盖：
+  //       覆盖 enabled=false 早返 / performance.memory 存在(真值+0值兜底双分支) / 不存在 / setInterval+clearInterval；
+  //       vi.useFakeTimers 会伪造 performance 覆盖挂载的 memory → 改真实定时器+unmount 触发清理，确定性通过；
+  //       useNetworkStatus 原有「connection 存在」用例用 truthy effectiveType，本次补「effectiveType 缺失→回退 unknown/null」+「无 connection→全 null」
+  //       覆盖 || null / || 'unknown' 兜底右分支与 if(connection) 三个 false 分支，共 +7 可达分支）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升（双档齐抬）：
+  //       Branch 跨 76.0 线 → 74→75（实测 76.05，缓冲 1.05）；
+  //       Lines 跨 89.0 线 → 87→88（实测 89.1，缓冲 1.1）；
+  //       Statements 86.71(距 87.0 差0.29) / Funcs 83.2(距 84.0 差0.8) 均不抬。
       thresholds: {
         statements: 85,
-        branches: 74,
+        branches: 75,
         functions: 82,
-        lines: 87,
+        lines: 88,
       },
     },
   },

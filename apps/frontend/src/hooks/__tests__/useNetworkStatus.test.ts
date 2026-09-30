@@ -38,4 +38,33 @@ describe('useNetworkStatus · 在线状态 / 连接信息', () => {
     expect(result.current.downlink).toBe(10);
     expect(result.current.rtt).toBe(50);
   });
+
+  it('connection 存在但 effectiveType 缺失/为空：connectionType 回退 unknown，其余字段回退 null', () => {
+    const conn = {
+      effectiveType: '',
+      downlink: undefined,
+      rtt: undefined,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(navigator, 'connection', {
+      value: conn,
+      configurable: true,
+    });
+    const { result } = renderHook(() => useNetworkStatus());
+    expect(result.current.connectionType).toBe('unknown');
+    expect(result.current.effectiveType).toBeNull();
+    expect(result.current.downlink).toBeNull();
+    expect(result.current.rtt).toBeNull();
+  });
+
+  it('无 navigator.connection：connectionType/effectiveType/downlink/rtt 全为 null（不读取连接信息）', () => {
+    // @ts-expect-error 删除 connection 以触发 if(connection) 的 false 分支
+    delete navigator.connection;
+    const { result } = renderHook(() => useNetworkStatus());
+    expect(result.current.connectionType).toBeNull();
+    expect(result.current.effectiveType).toBeNull();
+    expect(result.current.downlink).toBeNull();
+    expect(result.current.rtt).toBeNull();
+  });
 });
