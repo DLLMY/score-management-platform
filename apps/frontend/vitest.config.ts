@@ -485,11 +485,21 @@ export default defineConfig({
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升：
   //       Functions 跨 84.0 线 → 82→83（实测 84.55，缓冲 1.55）；
   //       Statements 87.33(距 88.0 差0.67) / Branch 76.65(距 77.0 差0.35) / Lines 89.7(距 90.0 差0.3) 均不抬。
+  //   D 线突破·第八步（2026-10-01）：攻击 api.ts 核心请求层 —— 新建 api.endpoints.test.ts 覆盖 Api 接口全部 322 个方法成功路径（fetch mock + env 信封，9 个同步 download/export 方法走同步断言）
+  //     实测（singleThread 确定性全量）：Stmts 87.87 / Branch 77.04 / Funcs 85.66 / Lines 90.26（全量 2957 passed/3 skipped/EXIT=0）
+  //     （api.ts 为 6448 行核心请求层，原 495 未覆盖语句/115 未覆盖函数/780 未覆盖分支；按 Api 接口解析出 322 方法（algorithm 58/devices 18/mqtt 8…），
+  //       逐个走 request→executeRequest→fetch(mock) 全链路，覆盖各方法 URL 构建/参数序列化体；mqtt/export 等组均走 HTTP 封装非 WebSocket，fetch mock 全覆盖；
+  //       复用既有 api.errors.test.ts 的 env 信封范式 + vi.mock(errorMonitor)；ident 仅 Stmts 差 0.13% 未跨 88.0）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升（三档齐抬）：
+  //       Branch 跨 77.0 线 → 75→76（实测 77.04，缓冲 2.04）；
+  //       Functions 跨 85.0 线 → 83→84（实测 85.66，缓冲 2.66）；
+  //       Lines 跨 90.0 线 → 88→89（实测 90.26，缓冲 2.26）；
+  //       Statements 87.87(距 88.0 差0.13) 维持 86 不抬。
       thresholds: {
         statements: 86,
-        branches: 75,
-        functions: 83,
-        lines: 88,
+        branches: 76,
+        functions: 84,
+        lines: 89,
       },
     },
   },
