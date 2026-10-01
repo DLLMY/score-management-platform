@@ -372,4 +372,24 @@ describe('pages/Login 逻辑层', () => {
     expect(localStorage.getItem('admin')).toBeNull();
     expect((screen.getByLabelText('newPassword') as HTMLInputElement).value).toBe('');
   });
+
+  it('提交校验失败后修改输入 → 清除对应 formError（触发 updater 分支）', async () => {
+    (validateForm as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      isValid: false,
+      errors: { username: 'required', password: 'required' },
+    });
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
+    );
+    await flush();
+    fireEvent.submit(screen.getByTestId('login-form'));
+    await waitFor(() => expect(screen.getByTestId('error').textContent).toBe(''));
+    // 此时 formErrors.username / formErrors.password 为真，触发 setFormErrors updater
+    const u = screen.getByLabelText('username') as HTMLInputElement;
+    fireEvent.change(u, { target: { value: 'alice' } });
+    fireEvent.change(screen.getByLabelText('password'), { target: { value: 'secret' } });
+    expect(u.value).toBe('alice');
+  });
 });

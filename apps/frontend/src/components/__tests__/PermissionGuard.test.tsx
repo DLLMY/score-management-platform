@@ -194,4 +194,38 @@ describe('PermissionGuard 权限守卫', () => {
     expect(screen.getByText('不可见')).toBeInTheDocument();
     expect(screen.queryByText('内容')).toBeNull();
   });
+
+  it('PermissionView 超级管理员 → 直接渲染 children', () => {
+    mockUsePermissions.isSuperAdmin = true;
+    mockUsePermissions.isLoading = false;
+    mockUsePermissions.permissions = [];
+    wrap(
+      <PermissionView permission='x'>
+        <div>内容</div>
+      </PermissionView>
+    );
+    expect(screen.getByText('内容')).toBeInTheDocument();
+  });
+
+  it('PermissionButton 有权限（非超管）→ 渲染 Button 内容', () => {
+    mockUsePermissions.isSuperAdmin = false;
+    mockUsePermissions.isLoading = false;
+    mockUsePermissions.permissions = ['x'];
+    mockUsePermissions.hasPermission.mockReturnValue(true);
+    wrap(<PermissionButton permission='x'>按钮文字</PermissionButton>);
+    expect(screen.getByText('按钮文字')).toBeInTheDocument();
+  });
+
+  it('PermissionView 有权限（非超管）→ 渲染 children', () => {
+    mockUsePermissions.isSuperAdmin = false;
+    mockUsePermissions.isLoading = false;
+    mockUsePermissions.permissions = ['x'];
+    mockUsePermissions.hasPermission.mockReturnValue(true);
+    wrap(
+      <PermissionView permission='x'>
+        <div>内容</div>
+      </PermissionView>
+    );
+    expect(screen.getByText('内容')).toBeInTheDocument();
+  });
 });

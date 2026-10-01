@@ -92,6 +92,23 @@ describe('RequestCoalescer · 合并与缓存', () => {
     coalescer.destroy();
     coalescer.destroy(); // 幂等
   });
+
+  it('startCleanup 定时器到期清理过期缓存项', async () => {
+    vi.useFakeTimers();
+    let c: RequestCoalescer;
+    try {
+      c = new RequestCoalescer();
+      const fetcher = vi.fn().mockResolvedValue('v');
+      await c.coalesce({ url: '/exp', method: 'GET' }, fetcher, 100);
+      expect(c.getCacheSize()).toBe(1);
+      // 推进超过 30s 清理间隔，触发过期扫描
+      await vi.advanceTimersByTimeAsync(31000);
+      expect(c.getCacheSize()).toBe(0);
+    } finally {
+      if (c) c.destroy();
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('requestCoalescing · 模块级单例导出', () => {

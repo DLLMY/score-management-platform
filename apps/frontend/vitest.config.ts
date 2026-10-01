@@ -542,7 +542,11 @@ export default defineConfig({
   //     实测（bypass sandbox 确定性全量，_cov15）：Stmts 89.56 / Branch 77.54 / Funcs 88.62 / Lines 91.63（相对第十四步 89.39/77.44/88.19/91.45：+0.17/+0.10/+0.43/+0.18；
   //      函数 +12 未越 89.0 线，差 ~11 函数）
   //     本轮四项均未越 +2.0 抬升线 → ratchet 维持（Stmts 88 / Branch 76 / Funcs 87 / Lines 90 不变）。
-  //   ── 当前生效 ratchet（D 线第十四步后，第十五步未抬）──
+  //   2026-10-01 D 线第十六步：攻击 PreloadProvider(0%→100%)/Login/ErrorBoundary/requestCoalescing 内部闭包 + PermissionGuard 分支
+  //     新增 PreloadProvider.test.tsx（mock preloadService，+2 fn）；Login/ErrorBoundary/requestCoalescing 各补 onError/catch/fake-timer 闭包（+2/+2/+3）；
+  //     PermissionGuard 补已授权分支（+0 因既有用例已覆盖）。实测 Stmts 89.73 / Branch 77.62 / Funcs 88.83 / Lines 91.8（全量 3010 passed/3 skipped/EXIT=0）。
+  //     Funcs 88.83 未越 89.0 线（差 ~5 函数）；Stmts/Branch/Lines 距 +2.0 线分别差 0.27/0.38/0.2 → 四项均未越 → ratchet 维持。
+  //   ── 当前生效 ratchet（D 线第十六步后，仍维持）──
   //   Stmts 88 / Branch 76 / Funcs 87 / Lines 90
       thresholds: {
         statements: 88,

@@ -78,6 +78,32 @@ describe('ErrorBoundaryClass', () => {
     fireEvent.click(screen.getByText('返回首页'));
     expect(window.location.hash).toBe('#/');
   });
+
+  it('sendBeacon 缺失时回退到 fetch 上报', async () => {
+    Object.defineProperty(navigator, 'sendBeacon', { configurable: true, value: undefined });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+    const onError = vi.fn();
+    render(
+      <ErrorBoundaryClass onError={onError}>
+        <Boom message='fetch-fallback' />
+      </ErrorBoundaryClass>
+    );
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  });
+
+  it('fetch 上报失败时静默吞掉异常（不掩盖原始错误）', async () => {
+    Object.defineProperty(navigator, 'sendBeacon', { configurable: true, value: undefined });
+    const fetchMock = vi.fn().mockRejectedValue(new Error('net down'));
+    (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+    render(
+      <ErrorBoundaryClass>
+        <Boom message='fetch-err' />
+      </ErrorBoundaryClass>
+    );
+    await waitFor(() => expect(screen.getByText('页面出错了')).toBeInTheDocument());
+  });
 });
 
 describe('ErrorBoundaryFallback', () => {
