@@ -1,0 +1,44 @@
+# Alertmanager 配置示例（P1-f 监控/告警闭环收尾）
+#
+# 与 ops/infra/prometheus.yml 的 alerting.alertmanagers 配合：Prometheus 评估
+# alerting_rules.yml 命中后推送给 Alertmanager，由本文件决定如何分发。
+# 部署 Alertmanager 容器（compose 片段见 prometheus.yml 末尾注释）后生效。
+#
+# ⚠️ 以下 receiver 为占位，请按真实通知渠道（Webhook / 企业微信 / 钉钉 / 邮件）
+#    填充；敏感凭据（Webhook 签名、SMTP 密码）务必经 secret 注入，勿明文入仓。
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: "default-webhook"
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # critical 级单独走高优渠道（建议接企业微信/钉钉机器人）
+    - match:
+        severity: critical
+      receiver: "critical-webhook"
+
+receivers:
+  - name: "default-webhook"
+    webhook_configs:
+      - url: "https://example.com/alert-hook"   # TODO: 替换为真实告警 Webhook
+        send_resolved: true
+  - name: "critical-webhook"
+    webhook_configs:
+      - url: "https://example.com/critical-hook" # TODO: 替换为真实 critical Webhook
+        send_resolved: true
+
+# 邮件示例（按需启用）：
+# receivers:
+#   - name: "email"
+#     email_configs:
+#       - smarthost: "smtp.example.com:587"
+#         from: "alert@example.com"
+#         to: "ops@example.com"
+#         auth_username: "alert@example.com"
+#         auth_password: "<SMTP_PASSWORD>"   # 经 secret 注入，勿明文
+#         require_tls: true

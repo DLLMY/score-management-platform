@@ -1,0 +1,87 @@
+# Prometheus 告警规则（P1-f 监控/告警闭环收尾）
+#
+# 配合 ops/infra/prometheus.yml 的 rule_files 加载；指标由后端
+# app/metrics_exporter.py 暴露（flask_http_* / flask_exceptions_total /
+# score_app_info + ProcessCollector 的 process_*）。
+# 规则触发后由 Alertmanager（ops/infra/alertmanager.yml）分发到通知渠道。
+#
+# 验证：promtool check rules alerting_rules.yml
+
+groups:
+  - name: score-backend-alerts
+    rules:
+      # 实例不可达：Prometheus 对 score-backend 的 scrape 连续失败
+      - alert: BackendDown
+        expr: up{job="score-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "后端服务不可达（scrape 失败）"
+          description: >-
+            Prometheus 对 score-backend 的 scrape 连续失败 1 分钟，实例可能已宕机、
+            进程崩溃或网络隔离。请检查容器状态与 5000 端口暴露。
+
+      # 5xx 错误率过高
+      - alert: HighHTTPErrorRate
+        expr: |
+          sum(rate(flask_http_requests_total{status=~"5.."}[5m]))
+            /
+          sum(rate(flask_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "后端 5xx 错误率过高"
+          description: >-
+            近 5 分钟 5xx 错误率 > 5%（当前 {{ $value | humanizePercentage }}），
+            请排查接口异常与依赖（DB/Redis/MQTT）健康度。
+
+      # 未捕获异常速率偏高
+      - alert: HighUncaughtExceptions
+        expr: rate(flask_exceptions_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "后端未捕获异常速率偏高"
+          description: >-
+            近 5 分钟未捕获异常速率 > 0.1/s（当前 {{ $value }}），
+            关注 flask_exceptions_total 按 exception_type 的分布。
+
+      # P95 请求延迟超阈值
+      - alert: HighRequestLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "后端 P95 请求延迟超阈值"
+          description: >-
+            近 5 分钟 P95 请求延迟 > 1s（当前 {{ $value }}s），
+            可能存在慢接口、锁等待或资源争用。
+
+      # 进程常驻内存偏高（阈值 1.5 GiB，按实际部署调整）
+      - alert: ProcessMemoryHigh
+        expr: process_resident_memory_bytes > 1610612736
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "后端进程常驻内存偏高"
+          description: >-
+            进程常驻内存 > 1.5 GiB 持续 10 分钟，警惕内存泄漏（如缓存无上限增长）。
+
+      # 进程 CPU 使用率偏高
+      - alert: ProcessCPUHigh
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "后端进程 CPU 使用率偏高"
+          description: >-
+            单进程 CPU 使用率 > 80% 持续 10 分钟，关注计算密集路径（NLP/导出/评分）。

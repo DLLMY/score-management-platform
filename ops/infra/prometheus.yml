@@ -30,6 +30,17 @@ global:
   external_labels:
     monitor: score-management
 
+# 告警规则（P1-f 监控/告警闭环收尾）：由 backend metrics_exporter 暴露的指标驱动
+rule_files:
+  - "alerting_rules.yml"
+
+# 告警分发：Prometheus 评估命中后推送给 Alertmanager
+# 注：需同时部署 Alertmanager（compose 片段见本文件末尾注释），否则仅评估不分发
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: "score-backend"
     metrics_path: /metrics
@@ -44,3 +55,37 @@ scrape_configs:
   # - job_name: "node"
   #   static_configs:
   #     - targets: ["node-exporter:9100"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 告警闭环部署片段（P1-f 收尾，可选启用）
+#
+# 1) 在 docker-compose.yml 的 services: 下追加 Alertmanager 服务：
+#
+#   alertmanager:
+#     image: prom/alertmanager:latest
+#     container_name: score-management-alertmanager
+#     volumes:
+#       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+#     ports:
+#       - "9093:9093"
+#     depends_on:
+#       - backend
+#     restart: unless-stopped
+#
+# 2) 如需把 Prometheus 本身也纳入 compose 监控栈，追加：
+#
+#   prometheus:
+#     image: prom/prometheus:latest
+#     container_name: score-management-prometheus
+#     volumes:
+#       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#       - ./alerting_rules.yml:/etc/prometheus/alerting_rules.yml:ro
+#     ports:
+#       - "9090:9090"
+#     depends_on:
+#       - backend
+#     restart: unless-stopped
+#
+# 3) 校验规则语法：promtool check rules alerting_rules.yml
+# 4) 通知渠道（Webhook/邮件/企业微信/钉钉）在 alertmanager.yml 中填充，凭据经 secret 注入。
+# ─────────────────────────────────────────────────────────────────────────────
