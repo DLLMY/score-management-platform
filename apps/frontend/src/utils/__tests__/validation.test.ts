@@ -63,6 +63,26 @@ describe('validation · validateField（单字段）', () => {
     expect(validateField('anything', ['not_a_real_rule'])).toBeNull();
     expect(validateField('x', ['required'])).toBeNull();
   });
+
+  it('numeric/integer/positive/min/max/minLength/maxLength/pattern/cardId/score：空值早返回 null', () => {
+    // 这些校验器首行 `if (!value) return true` 的空值分支此前未被覆盖
+    expect(validateField(null, ['numeric'])).toBeNull();
+    expect(validateField(undefined, ['integer'])).toBeNull();
+    expect(validateField('', ['positive'])).toBeNull();
+    expect(validateField(null, [{ min: 5 }])).toBeNull();
+    expect(validateField('', [{ max: 5 }])).toBeNull();
+    expect(validateField(null, [{ minLength: 3 }])).toBeNull();
+    expect(validateField('', [{ maxLength: 3 }])).toBeNull();
+    expect(validateField(undefined, [{ pattern: '^\\d{4}$' }])).toBeNull();
+    expect(validateField(null, ['cardId'])).toBeNull();
+    expect(validateField('', ['score'])).toBeNull();
+  });
+
+  it('validateField 传入非字符串非对象规则（如数字/布尔）→ 跳过该规则返回 null', () => {
+    // 覆盖 `else if (typeof rule === 'object' && rule !== null)` 的假分支
+    expect(validateField('anything', [123 as unknown as string])).toBeNull();
+    expect(validateField('anything', [true as unknown as string])).toBeNull();
+  });
 });
 
 describe('validation · validateForm（整表）', () => {

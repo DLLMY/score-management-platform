@@ -126,4 +126,26 @@ describe('webVitals · 指标采集', () => {
     };
     expect(() => initVitalsMonitor()).not.toThrow();
   });
+
+  it('measureCLS 多条目累积会话：覆盖 sessionValue 累加与阈值比较分支', () => {
+    const cb = vi.fn();
+    observeVitals(cb);
+    initVitalsMonitor();
+
+    const clsObs = FakePerformanceObserver.instances.find((o) =>
+      o.entryTypes.includes('layout-shift')
+    )!;
+    expect(clsObs).toBeDefined();
+
+    // 第一条：新建会话（else 分支：sessionValue 赋值）
+    clsObs.fire([{ hadRecentInput: false, value: 5.0, startTime: 100 }]);
+    // 第二条：落在同一会话窗口内 → sessionValue 累加（if 真分支）+ 阈值比较为真
+    clsObs.fire([{ hadRecentInput: false, value: 0.1, startTime: 300 }]);
+    // 第三条：超过 5s 窗口 → 新会话（且值小于当前 CLS）→ 阈值比较为假（不再上报）
+    clsObs.fire([{ hadRecentInput: false, value: 0.001, startTime: 6000 }]);
+
+    const clsCalls = mockReportWebVital.mock.calls.filter((c) => c[0] === 'CLS');
+    expect(clsCalls.length).toBeGreaterThanOrEqual(2);
+    expect(clsCalls[clsCalls.length - 1]).toEqual(['CLS', 5.1]);
+  });
 });

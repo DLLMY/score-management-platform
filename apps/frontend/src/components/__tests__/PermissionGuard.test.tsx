@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+
+// 隔离单文件运行时显式清理 DOM（test-setup 未注册 RTL 全局 cleanup）
+afterEach(cleanup);
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { PermissionGuard, PermissionButton, PermissionView } from '../PermissionGuard';
@@ -223,6 +226,63 @@ describe('PermissionGuard 权限守卫', () => {
     mockUsePermissions.hasPermission.mockReturnValue(true);
     wrap(
       <PermissionView permission='x'>
+        <div>内容</div>
+      </PermissionView>
+    );
+    expect(screen.getByText('内容')).toBeInTheDocument();
+  });
+
+  it('权限为空且有 admin 缓存且带 error → 渲染错误信息（{error && ...} 真分支）', () => {
+    mockUsePermissions.permissions = [];
+    mockUsePermissions.error = new Error('加载失败');
+    localStorage.setItem('admin', '1');
+    wrap(
+      <PermissionGuard>
+        <div>机密内容</div>
+      </PermissionGuard>
+    );
+    expect(screen.getByText('权限加载未完成')).toBeInTheDocument();
+    expect(screen.getByText('加载失败')).toBeInTheDocument();
+  });
+
+  it('加载超过 12s 超时 → 渲染超时恢复界面并可重新加载（timer + timedOut 分支）', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      mockUsePermissions.isLoading = true;
+      act(() => {
+        wrap(
+          <PermissionGuard>
+            <div>机密内容</div>
+          </PermissionGuard>
+        );
+      });
+      // advanceTimersByTimeAsync 会递归冲刷 React 调度器排程的后续定时器，
+      // 确保 setStuck(true) 触发后的重渲染在 act 边界内完成。
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(13000);
+      });
+      expect(screen.getByText('权限加载超时，请重试或重新登录')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('重新加载'));
+      expect(mockUsePermissions.reload).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('PermissionButton 既无 permission 也无 permissions → 放行渲染 Button（else if 假分支）', () => {
+    mockUsePermissions.isSuperAdmin = false;
+    mockUsePermissions.isLoading = false;
+    mockUsePermissions.permissions = [];
+    wrap(<PermissionButton>按钮文字</PermissionButton>);
+    expect(screen.getByText('按钮文字')).toBeInTheDocument();
+  });
+
+  it('PermissionView 既无 permission 也无 permissions → 放行渲染 children（else if 假分支）', () => {
+    mockUsePermissions.isSuperAdmin = false;
+    mockUsePermissions.isLoading = false;
+    mockUsePermissions.permissions = [];
+    wrap(
+      <PermissionView>
         <div>内容</div>
       </PermissionView>
     );
