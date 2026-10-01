@@ -501,11 +501,19 @@ export default defineConfig({
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升（单档抬）：
   //       Statements 跨 88.0 线 → 86→87（实测 88.53，缓冲 2.53；抬后缓冲 1.53 ≥1.0）；
   //       Branch 77.3(距 78.0 差0.7) / Funcs 85.84(距 86.0 差0.16) / Lines 90.98(距 91.0 差0.02) 均不抬。
+  //   D 线突破·第十步（2026-10-01）：补测 api.ts executeRequest 剩余高价值分支 + 信封解析纯函数 —— 新建 api.branches2.test.ts 7 例（fetchWithTimeout AbortError→504 /
+  //     网络失败 TypeError('Failed to fetch') / 网络错误 NetworkError / 419 CSRF 重试成功 / refreshToken 冷却守卫 / parseEnvelopeSafe / unwrapEnvelope 各分支），
+  //     全链路 fetch mock + vi.mock(errorMonitor)。注：ETag If-None-Match(854) 与 304 走内存缓存(872-878) 因 request 层对 GET 命中内存 cache 直接短路返回(1105-1113)，
+  //     正常黑盒流程不可达，属防御性分支，不列为靶标。
+  //     实测（singleThread 确定性全量）：Stmts 88.59 / Branch 77.35 / Funcs 85.84 / Lines 91.05（全量 2972 passed/3 skipped/EXIT=0）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升（单档抬）：
+  //       Lines 跨 91.0 线 → 89→90（实测 91.05，缓冲 2.05；抬后缓冲 1.05 ≥1.0）；
+  //       Statements 88.59(距 89.0 差0.41) / Branch 77.35(距 78.0 差0.65) / Funcs 85.84(距 86.0 差0.16) 均不抬。
       thresholds: {
         statements: 87,
         branches: 76,
         functions: 84,
-        lines: 89,
+        lines: 90,
       },
     },
   },
