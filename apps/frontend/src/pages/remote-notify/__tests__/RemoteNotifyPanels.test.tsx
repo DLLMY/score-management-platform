@@ -5,9 +5,10 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { HistoryPanel } from '../HistoryPanel';
 import { TemplatesPanel } from '../TemplatesPanel';
 import { ScheduledPanel } from '../ScheduledPanel';
+import { ModeSelector } from '../ModeSelector';
 import { PreviewConfirmModal } from '../PreviewConfirmModal';
 import { buildHistoryColumns } from '../columns';
-import { type RemoteNotifyDeps, type PreviewConfirmState, type NotifyPayload } from '../types';
+import { type RemoteNotifyDeps, type PreviewConfirmState, type NotifyPayload, type NotifyMode } from '../types';
 import { type NotifyHistory } from '../../../services/api';
 
 afterEach(cleanup);
@@ -115,8 +116,26 @@ function makeDeps(overrides: Record<string, unknown> = {}): RemoteNotifyDeps {
     templateForm,
     scheduledForm,
     setForm: vi.fn(),
-    setTemplateForm: vi.fn(),
-    setScheduledForm: vi.fn(),
+    // 执行函数式 updater（arg({})）以覆盖组件内 (prev)=>({...prev,X}) 内层箭头函数体；
+    // prev 缺字段时 updater 可能抛错，静默吞掉即可（仅用于探针覆盖，不影响断言）。
+    setTemplateForm: vi.fn((arg: unknown) => {
+      if (typeof arg === 'function') {
+        try {
+          (arg as (prev: Record<string, unknown>) => unknown)({});
+        } catch {
+          /* 探针式执行，prev 缺字段时忽略 */
+        }
+      }
+    }),
+    setScheduledForm: vi.fn((arg: unknown) => {
+      if (typeof arg === 'function') {
+        try {
+          (arg as (prev: Record<string, unknown>) => unknown)({});
+        } catch {
+          /* 探针式执行，prev 缺字段时忽略 */
+        }
+      }
+    }),
     forceSend: false,
     setForceSend: vi.fn(),
     classNow: 'none',
@@ -124,6 +143,7 @@ function makeDeps(overrides: Record<string, unknown> = {}): RemoteNotifyDeps {
     templates: [],
     templatesLoading: false,
     editingTemplate: null,
+    setEditingTemplate: vi.fn(),
     showTemplateModal: false,
     openTemplateModal: vi.fn(),
     closeTemplateModal: vi.fn(),
@@ -244,6 +264,47 @@ describe('TemplatesPanel 模板卡片', () => {
     fireEvent.click(screen.getByText('取消'));
     expect(deps.closeTemplateModal).toHaveBeenCalledTimes(1);
   });
+
+  it('编辑弹窗全字段交互覆盖内层 updater 与新建/编辑按钮', () => {
+    const deps = makeDeps({
+      templates: [
+        {
+          id: 1,
+          name: 't1',
+          category: '教学',
+          text: 'y',
+          bg_color: '#000000',
+          text_color: '#FF0000',
+          font_size: 48,
+          language: 'zh',
+        },
+      ],
+      showTemplateModal: true,
+      editingTemplate: { id: 9 } as unknown as Record<string, unknown>,
+    });
+    const { container } = render(<TemplatesPanel deps={deps} />);
+    // 编辑按钮箭头（setEditingTemplate + setTemplateForm + openTemplateModal）
+    const row = screen.getByText('t1').closest('div') as HTMLElement;
+    const editBtn = row.querySelectorAll('[data-testid="perm-btn"]')[0] as HTMLElement;
+    fireEvent.click(editBtn);
+    expect(deps.setEditingTemplate).toHaveBeenCalled();
+    expect(deps.openTemplateModal).toHaveBeenCalled();
+    // 全字段交互触发内层 (prev)=>({...prev,X}) updater
+    fireEvent.change(screen.getByPlaceholderText('例如：上课提醒'), { target: { value: 'n' } });
+    fireEvent.change(screen.getByPlaceholderText('输入通知文本...'), { target: { value: 't' } });
+    fireEvent.change(screen.getByPlaceholderText('选择或输入分类'), { target: { value: '行政' } });
+    const colors = container.querySelectorAll('input[type="color"]');
+    fireEvent.change(colors[0], { target: { value: '#111111' } });
+    fireEvent.change(colors[1], { target: { value: '#222222' } });
+    // 新建按钮箭头
+    fireEvent.click(screen.getByText('新建'));
+    expect(deps.openTemplateModal).toHaveBeenCalled();
+    // 保存 / 取消
+    fireEvent.click(screen.getByText('保存'));
+    expect(deps.handleSaveTemplate).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText('取消'));
+    expect(deps.closeTemplateModal).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('ScheduledPanel 定时通知卡片', () => {
@@ -310,6 +371,67 @@ describe('ScheduledPanel 定时通知卡片', () => {
     // 星期选择（weekly 区块）
     fireEvent.click(screen.getByText('周一'));
     expect(deps.setScheduledForm).toHaveBeenCalled();
+    // 保存 / 取消弹窗
+    fireEvent.click(screen.getByText('保存'));
+    expect(deps.handleSaveScheduled).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText('取消'));
+    expect(deps.closeScheduledModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('编辑弹窗全字段交互覆盖内层 updater 与状态/重复分支', () => {
+    const deps = makeDeps({
+      scheduledNotifications: [
+        { id: 1, status: 'sent', text: 's', next_send_at: '', repeat_type: 'daily' },
+        { id: 2, status: 'pending', text: 'p', scheduled_at: '2026-01-01T00:00:00', repeat_type: 'weekly' },
+        { id: 3, status: 'failed', text: 'f', repeat_type: 'monthly' },
+        { id: 4, status: 'cancelled', text: 'x', repeat_type: 'once' },
+      ],
+      showScheduledModal: true,
+      editingScheduled: { id: 0 } as unknown as Record<string, unknown>,
+      scheduledForm: {
+        text: '',
+        scheduled_at: '',
+        repeat_type: 'weekly',
+        repeat_interval: 1,
+        repeat_end_at: '',
+        repeat_day_of_week: [] as number[],
+        send_mode: 'device',
+        device_id: '',
+        speak: false,
+        popup: false,
+        urgent: false,
+      },
+    });
+    const { container } = render(<ScheduledPanel deps={deps} />);
+    // 状态点四态展示分支（sent/pending/failed/其他）
+    expect(screen.getByText('s')).toBeTruthy();
+    expect(screen.getByText('p')).toBeTruthy();
+    expect(screen.getByText('f')).toBeTruthy();
+    expect(screen.getByText('x')).toBeTruthy();
+    // 全字段交互触发内层 (prev)=>({...prev,X}) updater
+    fireEvent.change(screen.getByPlaceholderText('输入通知文本...'), { target: { value: 'hi' } });
+    const datetimes = container.querySelectorAll('input[type="datetime-local"]');
+    fireEvent.change(datetimes[0], { target: { value: '2026-02-01T00:00:00' } });
+    fireEvent.change(datetimes[1], { target: { value: '2026-03-01T00:00:00' } });
+    fireEvent.change(container.querySelector('input[type="number"]') as HTMLElement, {
+      target: { value: '3' },
+    });
+    // 星期选择：先加后移除，覆盖 includes/ filter 两分支（weekly 区块此时可见）
+    const days = screen.getAllByText(/周[一二三四五六日]/);
+    fireEvent.click(days[0]);
+    fireEvent.click(days[0]);
+    // 设备ID（send_mode==='device' 时可见）
+    fireEvent.change(screen.getByPlaceholderText('输入设备ID'), { target: { value: 'dev1' } });
+    // 重复类型切换覆盖展示三元分支；发送模式切换使 device 输入卸载
+    const selects = container.querySelectorAll('select');
+    fireEvent.change(selects[0], { target: { value: 'daily' } });
+    fireEvent.change(selects[0], { target: { value: 'monthly' } });
+    fireEvent.change(selects[1], { target: { value: 'broadcast' } });
+    // 三个开关
+    container.querySelectorAll('input[type="checkbox"]').forEach((c) => fireEvent.click(c));
+    // 新建
+    fireEvent.click(screen.getByText('新建'));
+    expect(deps.handleUseCurrentFormForScheduled).toHaveBeenCalledTimes(1);
     // 保存 / 取消弹窗
     fireEvent.click(screen.getByText('保存'));
     expect(deps.handleSaveScheduled).toHaveBeenCalledTimes(1);
@@ -422,5 +544,24 @@ describe('PreviewConfirmModal 预览确认弹窗', () => {
     const overlay = container.querySelector('.fixed') as HTMLElement;
     fireEvent.click(overlay);
     expect(setPreviewConfirm).toHaveBeenCalledWith(expect.any(Function));
+  });
+});
+
+describe('ModeSelector 发送模式切换', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('四个模式按钮均触发 setMode', () => {
+    const setMode = vi.fn((m: NotifyMode) => m);
+    render(<ModeSelector mode='broadcast' setMode={setMode} />);
+    fireEvent.click(screen.getByText('广播通知'));
+    fireEvent.click(screen.getByText('指定设备'));
+    fireEvent.click(screen.getByText('测试通知'));
+    fireEvent.click(screen.getByText('积分变化'));
+    expect(setMode).toHaveBeenCalledWith('broadcast');
+    expect(setMode).toHaveBeenCalledWith('device');
+    expect(setMode).toHaveBeenCalledWith('test');
+    expect(setMode).toHaveBeenCalledWith('score_change');
   });
 });

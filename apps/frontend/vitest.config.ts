@@ -527,12 +527,21 @@ export default defineConfig({
   //       Statements 跨 89.0 线 → 87→88（实测 89.09，抬后缓冲 1.09 >= 1.0）；
   //       Functions 跨 87.0 线 → 85→86（实测 87.19，抬后缓冲 1.19 >= 1.0）；
   //       Branch 77.43(距 78.0 差0.57) / Lines 91.31(距 92.0 差0.69) 均不抬。
-  //   ── 当前生效 ratchet（D 线第十三步后）──
-  //   Stmts 88 / Branch 76 / Funcs 86 / Lines 90
+  //   2026-10-01 D 线第十四步：扩展 RemoteNotifyPanels 测试覆盖 ScheduledPanel/TemplatesPanel 内层 updater + 新增 ModeSelector 用例
+  //     （makeDeps 的 setScheduledForm/setTemplateForm 由纯 vi.fn() 改为执行传入函数式 updater(arg({}))，覆盖组件内 (prev)=>({...prev,X}) 箭头；
+  //      与 SendForm 同病同源的覆盖率陷阱闭环。ScheduledPanel 全字段交互 + 状态/重复四态、TemplatesPanel 全字段 + 新建/编辑按钮、ModeSelector 四模式按钮；
+  //      +3 用例，全量 2993 passed/3 skipped/EXIT=0）
+  //     实测（singleThread 确定性全量，_cov14 复验）：Stmts 89.39 / Branch 77.44 / Funcs 88.19 / Lines 91.45（相对第十三步 89.09/77.43/87.19/91.31：+0.30/+0.01/+1.00/+0.14；
+  //      函数 +28 越线 88.0，印证内层 updater 修复生效）
+  //     本轮仅抬 Functions（其余距 +2.0 线均不足）：
+  //       Functions 跨 88.0 线 → 86→87（实测 88.19，抬后缓冲 1.19 >= 1.0）；
+  //       Stmts 89.39(距 90.0 差0.61) / Branch 77.44(距 78.0 差0.56) / Lines 91.45(距 92.0 差0.55) 均不抬。
+  //   ── 当前生效 ratchet（D 线第十四步后）──
+  //   Stmts 88 / Branch 76 / Funcs 87 / Lines 90
       thresholds: {
         statements: 88,
         branches: 76,
-        functions: 86,
+        functions: 87,
         lines: 90,
       },
     },
