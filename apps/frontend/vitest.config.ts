@@ -517,12 +517,22 @@ export default defineConfig({
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
   //       Functions 跨 86.0 线 → 84→85（实测 86.34 ≥ 86.0，抬后缓冲 1.34 ≥ 1.0）；
   //       Statements 88.83(距 89.0 差0.17) / Branch 77.42(距 78.0 差0.58) / Lines 91.31(距 92.0 差0.69) 均不抬。
-  //   ── 当前生效 ratchet（D 线第十二步后）──
-  //   Stmts 87 / Branch 76 / Funcs 85 / Lines 90
+  //   ── D 线突破·第十三步（2026-10-01，SendForm 内层 updater 修复收口 + ratchet 双档齐抬）──
+  //     修复 SendForm.test.tsx 的 makeDeps：setForm/setScoreForm 由纯 vi.fn() 改为真正执行传入的
+  //     函数式 updater（arg({})），覆盖组件内 24 个内联 (prev)=>({...prev,X}) 箭头函数体。
+  //     此前 mock 不执行 updater → 这些箭头零覆盖，SendForm 单文件 fn 仅 ~25%；修复后 SendForm 全函数覆盖。
+  //     实测（singleThread 确定性全量，_cov6 后台复验）：Stmts 89.09 / Branch 77.43 / Funcs 87.19 / Lines 91.31（全量 2990 passed/3 skipped/EXIT=0）
+  //     （相对第十二步基线 88.83/77.42/86.34/91.31：Stmts +0.26 / Branch +0.01 / Funcs +0.85 / Lines 0.00；增益全在语句与函数层，印证内层箭头修复生效）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升（双档齐抬）：
+  //       Statements 跨 89.0 线 → 87→88（实测 89.09，抬后缓冲 1.09 >= 1.0）；
+  //       Functions 跨 87.0 线 → 85→86（实测 87.19，抬后缓冲 1.19 >= 1.0）；
+  //       Branch 77.43(距 78.0 差0.57) / Lines 91.31(距 92.0 差0.69) 均不抬。
+  //   ── 当前生效 ratchet（D 线第十三步后）──
+  //   Stmts 88 / Branch 76 / Funcs 86 / Lines 90
       thresholds: {
-        statements: 87,
+        statements: 88,
         branches: 76,
-        functions: 85,
+        functions: 86,
         lines: 90,
       },
     },

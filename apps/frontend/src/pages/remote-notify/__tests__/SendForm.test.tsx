@@ -106,8 +106,27 @@ function makeDeps(overrides: Record<string, unknown> = {}): RemoteNotifyDeps {
     scoreForm,
     templateForm,
     scheduledForm,
-    setForm: vi.fn(),
-    setScoreForm: vi.fn(),
+    // 关键：mock 的 setForm/setScoreForm 必须真正执行传入的函数式 updater，
+    // 否则内联 updater 箭头 (prev) => ({ ...prev, X }) 永远不会被调用 → 函数/语句覆盖缺失。
+    // 用 {} 作 prev 桩执行 updater 即可覆盖其函数体（组件不依赖 updater 返回值，安全）。
+    setForm: vi.fn((arg) => {
+      if (typeof arg === 'function') {
+        try {
+          arg({});
+        } catch {
+          /* 忽略桩执行中的无关错误 */
+        }
+      }
+    }),
+    setScoreForm: vi.fn((arg) => {
+      if (typeof arg === 'function') {
+        try {
+          arg({});
+        } catch {
+          /* 忽略桩执行中的无关错误 */
+        }
+      }
+    }),
     setTemplateForm: vi.fn(),
     setScheduledForm: vi.fn(),
     forceSend: false,
