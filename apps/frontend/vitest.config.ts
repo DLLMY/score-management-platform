@@ -546,13 +546,23 @@ export default defineConfig({
   //     新增 PreloadProvider.test.tsx（mock preloadService，+2 fn）；Login/ErrorBoundary/requestCoalescing 各补 onError/catch/fake-timer 闭包（+2/+2/+3）；
   //     PermissionGuard 补已授权分支（+0 因既有用例已覆盖）。实测 Stmts 89.73 / Branch 77.62 / Funcs 88.83 / Lines 91.8（全量 3010 passed/3 skipped/EXIT=0）。
   //     Funcs 88.83 未越 89.0 线（差 ~5 函数）；Stmts/Branch/Lines 距 +2.0 线分别差 0.27/0.38/0.2 → 四项均未越 → ratchet 维持。
-  //   ── 当前生效 ratchet（D 线第十六步后，仍维持）──
-  //   Stmts 88 / Branch 76 / Funcs 87 / Lines 90
+  //   D 线突破·第十七步（2026-10-01）：补测 components/special/DevTools.jsx 纯展示组件（新建 DevTools.test.jsx，3 例全绿，0%→高覆盖）
+  //     实测（singleThread 确定性全量，_cov17）：Stmts 90.02 / Branch 77.85 / Funcs 89.05 / Lines 92.09（Test Files 213 passed / 1 skipped / EXIT=0 测试全绿；
+  //     EXIT=1 仅因 safe-delete 守卫在 cleanAfterRun 清理 coverage/.tmp 崩溃，与测试及覆盖率无关，覆盖率数据已正常写出）
+  //     （DevTools 为 0% 函数覆盖的纯展示组件：config/webVitals/useMemoryUsage 受控 mock，覆盖悬浮按钮+展开面板+5 项 Web Vitals+内存块+
+  //       getRating 三档评级(good/needs/poor)+getColor 配色分支+devTools 关闭 early-return；单文件 6 函数/28 语句 0%→全绿，低风险高 ROI）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升（三档齐抬）：
+  //       Statements 跨 90.0 线 → 88→89（实测 90.02，抬后缓冲 1.02）；
+  //       Functions 跨 89.0 线 → 87→88（实测 89.05，抬后缓冲 1.05）；
+  //       Lines 跨 92.0 线 → 90→91（实测 92.09，抬后缓冲 1.09）；
+  //       Branch 77.85(距 78.0 差0.15) 维持 76 不抬。
+  //   ── 当前生效 ratchet（D 线第十七步后）──
+  //   Stmts 89 / Branch 76 / Funcs 88 / Lines 91
       thresholds: {
-        statements: 88,
+        statements: 89,
         branches: 76,
-        functions: 87,
-        lines: 90,
+        functions: 88,
+        lines: 91,
       },
     },
   },
