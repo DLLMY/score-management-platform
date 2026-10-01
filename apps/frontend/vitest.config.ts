@@ -536,7 +536,13 @@ export default defineConfig({
   //     本轮仅抬 Functions（其余距 +2.0 线均不足）：
   //       Functions 跨 88.0 线 → 86→87（实测 88.19，抬后缓冲 1.19 >= 1.0）；
   //       Stmts 89.39(距 90.0 差0.61) / Branch 77.44(距 78.0 差0.56) / Lines 91.45(距 92.0 差0.55) 均不抬。
-  //   ── 当前生效 ratchet（D 线第十四步后）──
+  //   2026-10-01 D 线第十五步：扩展 Button/Crud/Score 测试覆盖 mouse 事件 + onError/undo/revert 内部闭包
+  //     （Button 补 fireEvent mouseEnter/Leave/Down/Up 覆盖 4 个内联箭头；useUserListCrud 补 handleSubmit/handleDelete/handleToggleActive 的 onError + delete 后 undo 闭包；
+  //      useUserListScore 补 handleQuickScore 的 revert+onError 与 handleBatchDelete/handleBatchScore 的 onError 闭包；+8 用例，全量 3001 passed/3 skipped/EXIT=0）
+  //     实测（bypass sandbox 确定性全量，_cov15）：Stmts 89.56 / Branch 77.54 / Funcs 88.62 / Lines 91.63（相对第十四步 89.39/77.44/88.19/91.45：+0.17/+0.10/+0.43/+0.18；
+  //      函数 +12 未越 89.0 线，差 ~11 函数）
+  //     本轮四项均未越 +2.0 抬升线 → ratchet 维持（Stmts 88 / Branch 76 / Funcs 87 / Lines 90 不变）。
+  //   ── 当前生效 ratchet（D 线第十四步后，第十五步未抬）──
   //   Stmts 88 / Branch 76 / Funcs 87 / Lines 90
       thresholds: {
         statements: 88,

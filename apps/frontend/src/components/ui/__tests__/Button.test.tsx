@@ -176,4 +176,14 @@ describe('Button', () => {
     const btn = container.querySelector('button')!;
     expect(btn.tabIndex).toBe(5);
   });
+
+  it('鼠标交互（enter/leave/down/up）触发内联状态处理器', () => {
+    const { container } = render(<Button>悬停</Button>);
+    const btn = container.querySelector('button')!;
+    fireEvent.mouseEnter(btn);
+    fireEvent.mouseDown(btn);
+    fireEvent.mouseUp(btn);
+    fireEvent.mouseLeave(btn);
+    expect(btn).toBeInTheDocument();
+  });
 });

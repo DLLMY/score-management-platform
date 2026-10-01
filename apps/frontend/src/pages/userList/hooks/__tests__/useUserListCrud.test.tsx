@@ -253,4 +253,58 @@ describe('useUserListCrud · 增删改域', () => {
     const { result } = renderHook(() => useUserListCrud(params));
     expect(result.current.autoSaveHasUnsaved).toBe(false);
   });
+
+  it('handleSubmit api 抛错 → onError 提示失败且不派发新增', async () => {
+    mockApi.users.create.mockRejectedValue(new Error('网络错误'));
+    const params = makeParams({ editingUser: null });
+    const { result } = renderHook(() => useUserListCrud(params));
+    const fakeEvent = { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>;
+    await act(async () => {
+      await result.current.handleSubmit(fakeEvent);
+    });
+    expect(mockApi.users.create).toHaveBeenCalledTimes(1);
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('操作失败'));
+    expect(params.dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'ADD_USER' })
+    );
+  });
+
+  it('handleDelete 成功后触发 undo → 调 create 恢复用户并派发 ADD_USER', async () => {
+    const params = makeParams({ users: [sampleUser] });
+    const { result } = renderHook(() => useUserListCrud(params));
+    await act(async () => {
+      await result.current.handleDelete(1);
+    });
+    const op = mockAddOperation.mock.calls[0][0];
+    expect(op.type).toBe('delete');
+    await act(async () => {
+      await op.undo();
+    });
+    expect(mockApi.users.create).toHaveBeenCalledTimes(1);
+    expect(params.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'ADD_USER' })
+    );
+  });
+
+  it('handleDelete api 抛错 → onError 提示删除失败', async () => {
+    mockApi.users.delete.mockRejectedValue(new Error('删除失败'));
+    const params = makeParams({ users: [sampleUser] });
+    const { result } = renderHook(() => useUserListCrud(params));
+    await act(async () => {
+      await result.current.handleDelete(1);
+    });
+    expect(mockApi.users.delete).toHaveBeenCalledWith(1);
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('删除失败'));
+  });
+
+  it('handleToggleActive api 抛错 → onError 提示操作失败', async () => {
+    mockApi.users.toggleActive.mockRejectedValue(new Error('切换失败'));
+    const params = makeParams({ users: [sampleUser] });
+    const { result } = renderHook(() => useUserListCrud(params));
+    await act(async () => {
+      await result.current.handleToggleActive(sampleUser);
+    });
+    expect(mockApi.users.toggleActive).toHaveBeenCalledWith(Number(sampleUser.id));
+    expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('操作失败'));
+  });
 });

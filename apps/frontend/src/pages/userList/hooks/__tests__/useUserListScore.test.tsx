@@ -233,4 +233,37 @@ describe('useUserListScore · 选择与评分域', () => {
       expect.objectContaining({ type: 'SET_SELECTED_USERS', payload: new Set([1, 3]) })
     );
   });
+
+  it('handleQuickScore 接口抛错 → revert 回滚 + onError 提示评分失败', async () => {
+    mockApi.records.create.mockRejectedValue(new Error('评分接口异常'));
+    const params = makeParams({ quickScoreUser: sampleUser });
+    const { result } = renderHook(() => useUserListScore(params));
+    await act(async () => {
+      await result.current.handleQuickScore(plusRule);
+    });
+    expect(mockApi.records.create).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith('error', expect.stringContaining('评分失败'));
+  });
+
+  it('handleBatchDelete 接口抛错 → onError 提示批量删除失败', async () => {
+    mockApi.users.delete.mockRejectedValue(new Error('删除异常'));
+    const params = makeParams({ selectedUsers: new Set<number>([1, 2]) });
+    const { result } = renderHook(() => useUserListScore(params));
+    await act(async () => {
+      await result.current.handleBatchDelete();
+    });
+    expect(mockApi.users.delete).toHaveBeenCalledTimes(2);
+    expect(mockShowToast).toHaveBeenCalledWith('error', expect.stringContaining('批量删除失败'));
+  });
+
+  it('handleBatchScore 接口抛错 → onError 提示批量评分失败', async () => {
+    mockApi.records.create.mockRejectedValue(new Error('评分异常'));
+    const params = makeParams({ selectedUsers: new Set<number>([1, 2]) });
+    const { result } = renderHook(() => useUserListScore(params));
+    await act(async () => {
+      await result.current.handleBatchScore(3);
+    });
+    expect(mockApi.records.create).toHaveBeenCalledTimes(2);
+    expect(mockShowToast).toHaveBeenCalledWith('error', expect.stringContaining('批量评分失败'));
+  });
 });
