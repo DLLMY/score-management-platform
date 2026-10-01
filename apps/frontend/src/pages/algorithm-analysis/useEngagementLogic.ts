@@ -144,7 +144,7 @@ export function useEngagementLogic(deps: EngagementLogicDeps): EngagementLogicRe
     } finally {
       setEngagementTrendLoading(false);
     }
-  }, [engagementTrendUserId, engagementTrendWeeks]);
+  }, [engagementTrendUserId, engagementTrendWeeks, setLoadWarn]);
 
   // 进入班级归因 Tab 且已选班级时，自动批量归因
   useEffect(() => {

@@ -175,7 +175,7 @@ export function useAdminClassLogic(deps: AdminClassLogicDeps): AdminClassLogicRe
         showToast('error', '删除失败: ' + (err as Error).message);
       }
     },
-    [showToast]
+    [showToast, confirmRef]
   );
 
   // ========== Class Handlers ==========
@@ -234,7 +234,7 @@ export function useAdminClassLogic(deps: AdminClassLogicDeps): AdminClassLogicRe
         showToast('error', '删除失败: ' + (err as Error).message);
       }
     },
-    [showToast]
+    [showToast, confirmRef]
   );
 
   // ========== Derived Data ==========

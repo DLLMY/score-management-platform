@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
-
-// 隔离单文件运行时显式清理 DOM（test-setup 未注册 RTL 全局 cleanup）
-afterEach(cleanup);
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { PermissionGuard, PermissionButton, PermissionView } from '../PermissionGuard';
+
+// 隔离单文件运行时显式清理 DOM（test-setup 未注册 RTL 全局 cleanup）
+afterEach(cleanup);
 
 // 单元化守卫逻辑：避免加载真实 react-router-dom（worker 下易导致 fork 进程崩溃），
 // 用最小桩替身覆盖 useLocation / Navigate / MemoryRouter。

@@ -55,7 +55,7 @@ export function useStudentProfileLogic(deps: StudentProfileLogicDeps): StudentPr
       setClasses([]);
       setLoadWarn(true);
     }
-  }, []);
+  }, [setLoadWarn]);
 
   // 加载学生列表（用于学生画像下钻）
   const loadStudents = useCallback(async () => {
