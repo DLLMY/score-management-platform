@@ -472,13 +472,23 @@ export default defineConfig({
   //       useAutoSave 88.6%→高覆盖：beforeunload/loadDraft 过期清除/二次变化语义；performanceMonitor 95.1%→全绿：start/end/recordError·CacheHit·Coalesced/
   //       updateApiStats/subscribe(含 listener 抛错 catch)/entries 上限/logSummary/setSlowThreshold/reset/monitorApiRequest/withPerformanceMonitoring；
   //       download.fetchAndDownload 非 ok 且 text() 抛错→回退「下载失败 (500)」catch 分支）
-  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升：
   //       Statements 跨 87.0 线 → 85→86（实测 87.02，缓冲 1.02）；
   //       Branch 76.29(距 77.0 差0.71) / Funcs 83.52(距 84.0 差0.48) / Lines 89.41(距 90.0 差0.59) 均不抬。
+  //   D 线突破·第七步（2026-10-01）：补测 attendanceManage 三个纯展示 0% 子组件（RecordModal/LeaveModal/PendingLeavesPanel，共 25 例全绿）
+  //     实测（singleThread 确定性全量）：Stmts 87.33 / Branch 76.65 / Funcs 84.55 / Lines 89.7（全量 2635 passed / 3 skipped / EXIT=0）
+  //     （三组件均为纯展示、props 驱动、零内部状态/零 api 调用（AttendanceManage 容器在 AttendanceManageView 整体桩掉致内部三子组件从未渲染 → 0%）；
+  //       用 vi.mock('../../../components') 桩 StudentSelect/DateRangeField，构造类型安全 props 逐分支触发全部内联 handler：
+  //       RecordModal 18 内联 fn 全触发（遮罩/X/取消关闭·字段 change→setRecordForm·提交 runSubmit·验证码/原因校验入口）；
+  //       LeaveModal 13 fn 全触发（含 errors.student_id / DateRangeField startError·endError 错误文案渲染分支）；
+  //       PendingLeavesPanel 8 fn 全触发（空态/列表项/approve·reject·view·分页 onChange + 改变每页条数）；三组件均为低风险高 ROI）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升：
+  //       Functions 跨 84.0 线 → 82→83（实测 84.55，缓冲 1.55）；
+  //       Statements 87.33(距 88.0 差0.67) / Branch 76.65(距 77.0 差0.35) / Lines 89.7(距 90.0 差0.3) 均不抬。
       thresholds: {
         statements: 86,
         branches: 75,
-        functions: 82,
+        functions: 83,
         lines: 88,
       },
     },
