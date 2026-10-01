@@ -509,10 +509,20 @@ export default defineConfig({
   //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升（单档抬）：
   //       Lines 跨 91.0 线 → 89→90（实测 91.05，缓冲 2.05；抬后缓冲 1.05 ≥1.0）；
   //       Statements 88.59(距 89.0 差0.41) / Branch 77.35(距 78.0 差0.65) / Funcs 85.84(距 86.0 差0.16) 均不抬。
+  //   ── D 线突破·第十二步（2026-10-01，转攻非 api.ts 低成本靶标：SendForm 交互补测）──
+  //     扩展 pages/remote-notify/__tests__/SendForm.test.tsx 14→27 例（新增 13 例交互：四模式输入/配色/音量/自动关闭/弹窗·紧急开关/预览/lastResult/score_change +/-与快捷按钮），
+  //     React Testing Library 渲染 + fireEvent 触发内联箭头回调以覆盖 SendForm 内联函数体；修复 jsdom 将 #FFFFFF 规范化为小写 #ffffff 的 color 选取方式。
+  //     实测（singleThread 确定性全量 + 还原 json reporter 后复验）：Stmts 88.83 / Branch 77.42 / Funcs 86.34 / Lines 91.31（全量 EXIT=0）
+  //     （SendForm.tsx 单文件 26.9%→显著提升，内联函数触发使 Funcs 显著上升；Branch 因 0.00 增量维持；Stmts/Lines 单步 <0.2% 不足抬升）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 ≥1.0」非均匀抬升：
+  //       Functions 跨 86.0 线 → 84→85（实测 86.34 ≥ 86.0，抬后缓冲 1.34 ≥ 1.0）；
+  //       Statements 88.83(距 89.0 差0.17) / Branch 77.42(距 78.0 差0.58) / Lines 91.31(距 92.0 差0.69) 均不抬。
+  //   ── 当前生效 ratchet（D 线第十二步后）──
+  //   Stmts 87 / Branch 76 / Funcs 85 / Lines 90
       thresholds: {
         statements: 87,
         branches: 76,
-        functions: 84,
+        functions: 85,
         lines: 90,
       },
     },

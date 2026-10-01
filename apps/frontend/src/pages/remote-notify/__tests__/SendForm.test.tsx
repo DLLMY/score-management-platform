@@ -326,4 +326,130 @@ describe('SendForm 发送表单', () => {
     expect(deps.setForm).toHaveBeenCalled();
     expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
   });
+
+  it('device 模式输入设备ID 调用 setForm', () => {
+    const deps = makeDeps({ mode: 'device' });
+    render(<SendForm deps={deps} />);
+    const input = screen.getByPlaceholderText('输入电脑客户端ID（启动时显示）') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'DEV1' } });
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('修改背景色（color + text 输入）调用 setForm', () => {
+    const deps = makeDeps();
+    const { container } = render(<SendForm deps={deps} />);
+    const colorInputs = container.querySelectorAll('input[type="color"]');
+    const textInputs = container.querySelectorAll('input.font-mono');
+    expect(colorInputs.length).toBeGreaterThanOrEqual(2);
+    expect(textInputs.length).toBeGreaterThanOrEqual(2);
+    fireEvent.change(colorInputs[0] as HTMLInputElement, { target: { value: '#111111' } });
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: '#222222' } });
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('修改文字色（color + text 输入）调用 setForm', () => {
+    const deps = makeDeps();
+    const { container } = render(<SendForm deps={deps} />);
+    const colorInputs = container.querySelectorAll('input[type="color"]');
+    const textInputs = container.querySelectorAll('input.font-mono');
+    expect(colorInputs.length).toBeGreaterThanOrEqual(2);
+    expect(textInputs.length).toBeGreaterThanOrEqual(2);
+    fireEvent.change(colorInputs[1] as HTMLInputElement, { target: { value: '#eeeeee' } });
+    fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: '#dddddd' } });
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('调整音量滑块调用 setForm', () => {
+    const deps = makeDeps();
+    render(<SendForm deps={deps} />);
+    const sliders = screen.getAllByRole('slider') as HTMLInputElement[];
+    expect(sliders.length).toBeGreaterThan(0);
+    fireEvent.change(sliders[0], { target: { value: '0.3' } });
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('调整自动关闭滑块调用 setForm', () => {
+    const deps = makeDeps();
+    render(<SendForm deps={deps} />);
+    const sliders = screen.getAllByRole('slider') as HTMLInputElement[];
+    expect(sliders.length).toBeGreaterThan(1);
+    fireEvent.change(sliders[1], { target: { value: '15' } });
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('切换弹窗显示开关调用 setForm', () => {
+    const deps = makeDeps();
+    render(<SendForm deps={deps} />);
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    fireEvent.click(checkboxes[1]);
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('切换紧急通知开关调用 setForm', () => {
+    const deps = makeDeps();
+    render(<SendForm deps={deps} />);
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    fireEvent.click(checkboxes[2]);
+    expect(deps.setForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('urgent=true 时展示红色全屏弹窗提示', () => {
+    const deps = makeDeps();
+    deps.form = { ...deps.form, urgent: true };
+    render(<SendForm deps={deps} />);
+    expect(screen.getByText('红色全屏弹窗，高优先级')).toBeTruthy();
+  });
+
+  it('speak=false 时隐藏音量控制', () => {
+    const deps = makeDeps();
+    deps.form = { ...deps.form, speak: false };
+    render(<SendForm deps={deps} />);
+    expect(screen.queryByText('音量')).toBeNull();
+  });
+
+  it('popup=false 时隐藏预览效果与自动关闭', () => {
+    const deps = makeDeps();
+    deps.form = { ...deps.form, popup: false };
+    render(<SendForm deps={deps} />);
+    expect(screen.queryByText('预览效果')).toBeNull();
+    expect(screen.queryByText('自动关闭')).toBeNull();
+  });
+
+  it('score_change 模式：输入姓名/原因/课程/设备 + 调整积分调用 setScoreForm', () => {
+    const deps = makeDeps({ mode: 'score_change' });
+    render(<SendForm deps={deps} />);
+    fireEvent.change(screen.getByPlaceholderText('输入学生姓名'), { target: { value: '张三' } });
+    fireEvent.change(screen.getByPlaceholderText('输入积分变动原因（如：课堂表现优秀）'), {
+      target: { value: '优秀' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('输入课程名称（可选）'), {
+      target: { value: '数学' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('设备ID（不填则广播）'), {
+      target: { value: 'D1' },
+    });
+    const numberInput = screen.getByRole('spinbutton') as HTMLInputElement;
+    fireEvent.change(numberInput, { target: { value: '3' } });
+    expect(deps.setScoreForm).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('score_change 模式：点击积分 +/- 与快捷按钮调用 setScoreForm', () => {
+    const deps = makeDeps({ mode: 'score_change' });
+    render(<SendForm deps={deps} />);
+    fireEvent.click(screen.getByText('-'));
+    fireEvent.click(screen.getByText('+'));
+    fireEvent.click(screen.getByText('+5'));
+    fireEvent.click(screen.getByText('+10'));
+    fireEvent.click(screen.getByText('-5'));
+    fireEvent.click(screen.getByText('-10'));
+    expect(deps.setScoreForm).toHaveBeenCalled();
+  });
+
+  it('lastResult 成功且含 topic 时展示主题', () => {
+    render(
+      <SendForm deps={makeDeps({ lastResult: { success: true, message: 'ok', topic: 't/b' } })} />
+    );
+    expect(screen.getByText('发送成功')).toBeTruthy();
+    expect(screen.getByText('主题: t/b')).toBeTruthy();
+  });
 });
