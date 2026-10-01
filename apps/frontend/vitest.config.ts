@@ -495,8 +495,14 @@ export default defineConfig({
   //       Functions 跨 85.0 线 → 83→84（实测 85.66，缓冲 2.66）；
   //       Lines 跨 90.0 线 → 88→89（实测 90.26，缓冲 2.26）；
   //       Statements 87.87(距 88.0 差0.13) 维持 86 不抬。
+  //   D 线突破·第九步（2026-10-01）：补测 api.ts executeRequest 错误/边缘分支 —— 新建 api.branches.test.ts 8 例（ETag 缓存写入 / 304 无缓存 / success:false 信封 /
+  //     401 管理员态 refreshToken 成功·失败重试 / 419 CSRF 重试失败 / 500 兜底文案），全链路 fetch mock + vi.mock(errorMonitor)
+  //     实测（singleThread 确定性全量）：Stmts 88.53 / Branch 77.3 / Funcs 85.84 / Lines 90.98（全量 2965 passed/3 skipped/EXIT=0）
+  //     本轮按「实测 ≥ ratchet+2.0 且缓冲 >=1.0」非均匀抬升（单档抬）：
+  //       Statements 跨 88.0 线 → 86→87（实测 88.53，缓冲 2.53；抬后缓冲 1.53 ≥1.0）；
+  //       Branch 77.3(距 78.0 差0.7) / Funcs 85.84(距 86.0 差0.16) / Lines 90.98(距 91.0 差0.02) 均不抬。
       thresholds: {
-        statements: 86,
+        statements: 87,
         branches: 76,
         functions: 84,
         lines: 89,
