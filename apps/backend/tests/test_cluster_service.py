@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from services.cluster_service import ClusterService
 

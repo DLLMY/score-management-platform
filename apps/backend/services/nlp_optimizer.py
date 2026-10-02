@@ -1,10 +1,12 @@
-import time
-import json
-import threading
-from config.config_loader import config_loader
-import redis
 import hashlib
+import json
 import logging
+import threading
+import time
+
+import redis
+
+from config.config_loader import config_loader
 
 """
 NLP性能优化服务

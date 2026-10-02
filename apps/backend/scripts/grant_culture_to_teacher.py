@@ -10,10 +10,10 @@
 - 运行前自动备份 db。可重复执行。
 """
 
+import datetime
 import os
 import shutil
 import sqlite3
-import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "instance", "score_management.db")
 DB_PATH = os.path.abspath(DB_PATH)

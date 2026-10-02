@@ -12,7 +12,8 @@ execute_scoring 必须返回失败并明确提示"未找到学生"，且不得�
 """
 
 import pytest
-from models import User, NLPScoringRule, NLPMatchResult, NLPRuleUsage, db
+
+from models import NLPMatchResult, NLPRuleUsage, NLPScoringRule, User, db
 from services.nlp_enhanced_service import EnhancedNLPParserService
 
 

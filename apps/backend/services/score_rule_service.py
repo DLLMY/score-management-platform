@@ -7,10 +7,10 @@
 不改变对外契约。缓存失效与操作日志仍由路由负责（与 categories/rank 等子域一致）。
 """
 
-from datetime import datetime
 import logging
+from datetime import datetime
 
-from models import db, ScoreRule, ScoreCategory, ScoreRecord, get_by_id
+from models import ScoreCategory, ScoreRecord, ScoreRule, db, get_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ def update_rule(rule, data):
     rule.min_interval = data.get("min_interval", rule.min_interval)
     rule.updated_at = datetime.now()
     db.session.commit()
-    return
 
 
 def delete_rule(rule):
@@ -54,7 +53,6 @@ def delete_rule(rule):
         logger.warning(f"解除规则历史流水引用失败（跳过）rule_id={rule.id}: {e}", exc_info=True)
     db.session.delete(rule)
     db.session.commit()
-    return
 
 
 def _validate_rule_name(name, existing_names):

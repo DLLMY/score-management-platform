@@ -6,9 +6,9 @@
 由 app/service_init.py::init_system_metric_sampler 在应用启动时拉起（仅生产/非 lightweight 模式）。
 """
 
-import time
-import threading
 import logging
+import threading
+import time
 from datetime import datetime, timedelta
 
 import psutil
@@ -25,7 +25,7 @@ def sample_once(app):
     """执行一次采样并落库（失败静默）。"""
     try:
         with app.app_context():
-            from models import db, SystemMetric
+            from models import SystemMetric, db
 
             cpu = psutil.cpu_percent(interval=0.1)
             mem = psutil.virtual_memory()
@@ -70,7 +70,7 @@ def sample_once(app):
             )
             # S7 修复: 前端性能/错误上报表一并清理（原只清 system_metrics → 两表无限膨胀）
             try:
-                from models import FrontendPerfMetric, FrontendErrorLog
+                from models import FrontendErrorLog, FrontendPerfMetric
 
                 deleted += (
                     db.session.query(FrontendPerfMetric)

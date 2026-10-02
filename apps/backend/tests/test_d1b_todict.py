@@ -1,8 +1,8 @@
 """D1-b 对象级断言：NotifyHistory/Approval/ScheduledNotify/SystemMetric/RateLimitRecord to_dict。"""
 from datetime import date, datetime
 
-from models.notify_models import NotifyHistory, Approval, ScheduledNotify
-from models.system_models import SystemMetric, RateLimitRecord
+from models.notify_models import Approval, NotifyHistory, ScheduledNotify
+from models.system_models import RateLimitRecord, SystemMetric
 
 
 def test_notify_history_to_dict():

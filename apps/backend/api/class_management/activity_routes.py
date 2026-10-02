@@ -1,9 +1,10 @@
-from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_restx import Namespace, Resource, fields
+
 from services.activity_service import activity_service
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.pagination import get_pagination
+from utils.permission import requires_permission
 
 ns_activity = Namespace("activity", description="文体活动管理")
 

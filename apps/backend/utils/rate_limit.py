@@ -1,10 +1,10 @@
+import functools
+
+from flask import Flask, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask import jsonify
-from flask import Flask
-from config import config
 
-import functools
+from config import config
 
 """
 限流配置模块
@@ -101,7 +101,7 @@ class RateLimitStrategy:
     ADMIN = get_rate_limit_config("admin", "60 per minute")  # 每IP每分钟60次
 
 
-def rate_limit(limit_string, message=None):  # noqa: ARG001
+def rate_limit(limit_string, message=None):
     """
     通用限流装饰器
     Args:

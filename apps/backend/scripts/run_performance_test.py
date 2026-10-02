@@ -3,12 +3,13 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from datetime import datetime
-from typing import Any
-from app import create_app
-import time
 import json
 import statistics
+import time
+from datetime import datetime
+from typing import Any
+
+from app import create_app
 
 """
 性能基准测试脚本
@@ -40,7 +41,7 @@ class PerformanceBenchmark:
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + tokens["access_token"],
             }
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"[warn] 无法签发基准认证令牌（{e}），将以免认证方式运行，部分端点可能返回 401")
             return {"Content-Type": "application/json"}
 

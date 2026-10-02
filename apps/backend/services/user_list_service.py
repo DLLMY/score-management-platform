@@ -7,10 +7,11 @@
 保证契约零漂移。
 """
 
-from models import User, ClassInfo
-from utils.permission import get_admin_class_ids
 from pypinyin import lazy_pinyin
+
+from models import ClassInfo, User
 from services.redis_cache_service import get_cache_service
+from utils.permission import get_admin_class_ids
 
 USER_LIST_PY_FIELDS = [
     "id",

@@ -1,6 +1,17 @@
 from datetime import datetime, timedelta
+
 from sqlalchemy import case
-from models import User, Score, ScoreRecord, Alert, WarningConfig, CompositeScore, get_by_id, db
+
+from models import (
+    Alert,
+    CompositeScore,
+    Score,
+    ScoreRecord,
+    User,
+    WarningConfig,
+    db,
+    get_by_id,
+)
 from utils.db_session import db_session_scope
 
 "\n"

@@ -16,6 +16,7 @@ DEFER 时维持原行为不变，因此未配置策略的班级完全无感。
 """
 
 from datetime import datetime, timedelta
+
 from models import PhoneBoxPolicy, db
 
 # 判定结果常量

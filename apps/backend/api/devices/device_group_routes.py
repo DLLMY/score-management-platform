@@ -1,16 +1,17 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from models import DeviceGroup, DeviceGroupMapping, Device, get_by_id
+
+from models import Device, DeviceGroup, DeviceGroupMapping, get_by_id
+from services.device_service import (
+    add_devices_to_group,
+    create_device_group,
+    delete_device_group,
+    remove_device_from_group,
+    update_device_group,
+)
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from services.device_service import (
-    create_device_group,
-    update_device_group,
-    delete_device_group,
-    add_devices_to_group,
-    remove_device_from_group,
-)
 
 # -*- coding: utf-8 -*-
 """

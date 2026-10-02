@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
-from models import Device, Alert, db
 import logging
+from datetime import datetime, timedelta
+
+from models import Alert, Device, db
 
 logger = logging.getLogger(__name__)
 

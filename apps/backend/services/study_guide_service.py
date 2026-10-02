@@ -1,13 +1,13 @@
-from models import db, User
-from models.study_guide import StudyGuide, ImprovementPlan
-from utils.permission import get_current_admin, get_admin_class_ids
+from models import User, db
+from models.study_guide import ImprovementPlan, StudyGuide
+from services.entity_names import names
 from utils.entity_guard import (
-    require_class,
     class_not_found_response,
+    require_class,
     require_student,
     student_not_found_response,
 )
-from services.entity_names import names
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class StudyGuideService:

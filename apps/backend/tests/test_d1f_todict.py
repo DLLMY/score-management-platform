@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """D1-f object-level to_dict tests (no DB needed)."""
 import pytest
+
 from models.activity import Activity
 from models.device_models import PhoneBoxPolicy
 from models.nlp_models import NLPRuleUsage
 from models.notification_config import NotificationConfig
 from models.score_models import WarningConfig
-
 
 
 def test_NotificationConfig_to_dict():

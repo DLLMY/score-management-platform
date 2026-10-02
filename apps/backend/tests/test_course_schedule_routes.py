@@ -1,5 +1,6 @@
 import pytest
-from models import db, Subject, ClassInfo
+
+from models import ClassInfo, Subject, db
 
 
 def _envelope(resp):

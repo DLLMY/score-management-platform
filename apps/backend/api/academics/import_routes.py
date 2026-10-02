@@ -1,16 +1,16 @@
+import io
 import logging
 
-from flask_restx import Namespace, Resource, fields
 from flask import request, send_file
+from flask_restx import Namespace, Resource, fields
+
 from models import ImportConfig, get_by_id
 from services.academics_service import academics_service
-from utils.permission import requires_permission
-from utils.decorators import safe_handle
 from utils.api_cache_middleware import cached_api
+from utils.decorators import safe_handle
 from utils.excel_utils import ExcelTemplateGenerator
-
+from utils.permission import requires_permission
 from utils.response import APIResponse
-import io
 
 logger = logging.getLogger(__name__)
 

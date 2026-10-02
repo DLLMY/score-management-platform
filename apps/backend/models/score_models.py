@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from models import db
 from utils.serialize import serialize_dt
 

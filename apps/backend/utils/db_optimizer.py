@@ -1,12 +1,15 @@
-from typing import Any, TypeVar
+import logging
+import time
 from collections.abc import Callable
-from functools import wraps
 from datetime import datetime
+from functools import wraps
+from typing import Any, TypeVar
+
 from sqlalchemy import text
 from sqlalchemy.orm import Query
+
 from models import db
-import time
-import logging
+
 logger = logging.getLogger(__name__)
 
 """
@@ -250,12 +253,12 @@ class ConnectionPoolOptimizer:
 
 
 __all__ = [
+    "ConnectionPoolOptimizer",
+    "IndexSuggestion",
     "QueryMetrics",
     "QueryProfiler",
-    "profile_query",
     "batch_query",
     "batch_update",
     "get_query_explain",
-    "IndexSuggestion",
-    "ConnectionPoolOptimizer",
+    "profile_query",
 ]

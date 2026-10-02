@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import pytest
-import time
 import io
 import json
+import time
 from datetime import datetime
+
+import pytest
 
 try:
     from models import Subject

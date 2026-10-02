@@ -15,7 +15,7 @@
 迁移核心契约：全部落库由 services/rbac_service 逐字节复刻；G2 闸门保持 68/68。
 """
 
-from models import Permission, RolePermission, RolePermissionMapping, AdminRole
+from models import AdminRole, Permission, RolePermission, RolePermissionMapping
 
 
 def _json(resp):

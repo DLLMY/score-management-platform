@@ -20,11 +20,11 @@
 
 from datetime import datetime
 
-from models import db, ScoreRecord, User, ScoreRule, get_by_id
-from utils.score_utils import atomic_score_update
+from models import ScoreRecord, ScoreRule, User, db, get_by_id
 from utils.logger import log_operation
-from utils.permission import get_allowed_classes, can_access_student
 from utils.params import parse_date_range
+from utils.permission import can_access_student, get_allowed_classes
+from utils.score_utils import atomic_score_update
 
 
 def create_record(data):
@@ -277,7 +277,7 @@ def get_score_statistics(
     语义与原路由 RecordStatistics.get 一致；today_count 与其余指标同样套用班级隔离过滤
     （user_id / class_name / allowed_classes），口径统一，不再泄露跨班数据量。
     """
-    from sqlalchemy import func, case
+    from sqlalchemy import case, func
 
     query = ScoreRecord.query
     if user_id:

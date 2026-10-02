@@ -16,16 +16,16 @@ from typing import Any
 3. 数据验证（迁移后数据完整性检查）
 4. 回滚支持（迁移失败时恢复）
 """
-import os
-import sys
 import json
+import os
 import re
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
-    from sqlalchemy import create_engine, inspect, MetaData, Table, text
-    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy import MetaData, Table, create_engine, inspect, text
     from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.orm import sessionmaker
 except ImportError as e:
     print(f"缺少必要的依赖: {e}")
     print("请安装: pip install pymysql psycopg2-binary")

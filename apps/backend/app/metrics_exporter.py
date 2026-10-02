@@ -14,15 +14,15 @@
 """
 import time
 
-from flask import request, g, Response, signals
+from flask import Response, g, request, signals
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,
-    Histogram,
     Gauge,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
+    Histogram,
     ProcessCollector,
+    generate_latest,
 )
 
 # ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ APP_INFO = Gauge(
 APP_INFO.labels(version="1.0.0").set(1)
 
 
-def _on_request_exception(sender, exception, **_extra):  # noqa: ANN001, ANN202
+def _on_request_exception(sender, exception, **_extra):
     """记录未捕获异常（通过信号，避免覆盖既有 errorhandler）。"""
     EXCEPTION_COUNT.labels(exception_type=type(exception).__name__).inc()
 
@@ -112,5 +112,5 @@ def init_metrics(app):
     if limiter is not None:
         try:
             limiter.exempt(metrics)
-        except Exception:  # noqa: BLE001 - 限流豁免失败不应阻断启动
+        except Exception:
             pass

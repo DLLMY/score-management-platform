@@ -1,11 +1,12 @@
-from celery_app import celery_app
+import os
 from datetime import datetime
 
-import os
+from sqlalchemy import and_
+
 from app import app
+from celery_app import celery_app
 from models import User
 from services.export_service import ExportService
-from sqlalchemy import and_
 
 
 @celery_app.task(bind=True, name="tasks.export_tasks.export_users", queue="export")
@@ -17,8 +18,8 @@ def export_users(self, user_ids=None):
     """
     try:
         from app import app
-        from services.export_service import ExportService
         from models import User
+        from services.export_service import ExportService
 
         with app.app_context():
             query = User.query
@@ -59,8 +60,9 @@ def export_score_records(self, user_id=None, start_date=None, end_date=None):
         end_date: 结束日期
     """
     try:
-        from models import ScoreRecord, ScoreRule
         from sqlalchemy import and_
+
+        from models import ScoreRecord, ScoreRule
 
         with app.app_context():
             query = ScoreRecord.query.join(User, ScoreRecord.student_id == User.id).outerjoin(
@@ -110,7 +112,7 @@ def export_exam_scores(self, exam_id=None, class_id=None):
         class_id: 班级ID（可选）
     """
     try:
-        from models import Score, Exam
+        from models import Exam, Score
 
         with app.app_context():
             query = Score.query.join(User, Score.student_id == User.id).outerjoin(

@@ -2,9 +2,10 @@ from models import ClassInfo
 
 """Tests for Class Service"""
 
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 try:
     from services.class_service import ClassService

@@ -1,5 +1,5 @@
 try:
-    from utils.logger import log_info, log_error, log_debug, log_warning
+    from utils.logger import log_debug, log_error, log_info, log_warning
 except ImportError:
     pass
 
@@ -9,7 +9,7 @@ except ImportError:
     pass
 
 try:
-    from utils.query_optimizer import QueryOptimizer, CacheManager
+    from utils.query_optimizer import CacheManager, QueryOptimizer
 except ImportError:
     pass
 
@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 try:
-    from utils.security import generate_tokens, decode_token
+    from utils.security import decode_token, generate_tokens
 except ImportError:
     pass
 
@@ -42,7 +42,7 @@ except ImportError:
 class TestUtils:
 
     def test_logger(self, app):
-        from utils.logger import log_info, log_error, log_debug, log_warning
+        from utils.logger import log_debug, log_error, log_info, log_warning
 
         log_info("Test info message")
         log_error("Test error message")
@@ -61,7 +61,7 @@ class TestUtils:
 
     def test_query_optimizer(self, app):
         with app.app_context():
-            from utils.query_optimizer import QueryOptimizer, CacheManager
+            from utils.query_optimizer import CacheManager, QueryOptimizer
 
             optimizer = QueryOptimizer()
             assert optimizer is not None
@@ -82,7 +82,7 @@ class TestUtils:
             assert _get_inherited_permissions("teacher") is not None
 
     def test_security_utils(self):
-        from utils.security import generate_tokens, decode_token
+        from utils.security import decode_token, generate_tokens
 
         token_data = generate_tokens(1, "test", "admin")
         assert "access_token" in token_data

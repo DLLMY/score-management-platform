@@ -1,6 +1,6 @@
+import logging
 import os
 import sys
-import logging
 
 """
 WSGI Entry Point for Production Deployment ==========================================
@@ -66,7 +66,7 @@ try:
     )
 
 except Exception as e:
-    logger.error(f"Failed to load Flask application: {str(e)}", exc_info=True)
+    logger.error(f"Failed to load Flask application: {e!s}", exc_info=True)
     raise
 
 if __name__ == "__main__":

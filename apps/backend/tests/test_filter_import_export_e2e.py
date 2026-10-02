@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import pytest
 import io
 import json
+
+import pytest
 
 try:
     from models import Subject
@@ -332,7 +333,7 @@ class TestExportFunctionality:
             "csv" in response.content_type
             or "octet-stream" in response.content_type
             or "text" in response.content_type
-        )  # noqa: E501
+        )
 
         print(f"[PASS] CSV导出成功: 文件大小 {len(response.data)} 字节")
 

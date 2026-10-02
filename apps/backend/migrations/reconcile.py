@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """元数据驱动的模式对账器（生产就绪 P0-d 收口；替代脆弱的手写迁移脚本）。
 
 为什么不再手工编排 migrations/*.py
@@ -20,7 +19,7 @@
 """
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -43,7 +42,7 @@ def resolve_db_path():
 def _compile_type(col, engine):
     try:
         return col.type.compile(dialect=engine.dialect)
-    except Exception:  # noqa: BLE001
+    except Exception:
         # SQLite 动态类型，退化为类名也安全
         return col.type.__class__.__name__
 
@@ -54,6 +53,7 @@ def reconcile_schema(app, logger=None, verbose=True):
     返回 (added_tables, added_columns, added_indexes)。调用方需处于/已建立应用上下文。
     """
     from sqlalchemy import inspect, text
+
     from models import db
 
     def log(level, msg):
@@ -81,7 +81,7 @@ def reconcile_schema(app, logger=None, verbose=True):
             )
             added_tables = len(missing)
             log("INFO", "[RECONCILE] 新建表 %d 张: %s" % (added_tables, ", ".join(missing)))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log("ERROR", "[RECONCILE] 建表失败: %s" % e)
 
     # 2) 既有表缺失的列：ALTER TABLE ADD COLUMN（SQLite 不支持 ALTER COLUMN，仅新增）
@@ -90,7 +90,7 @@ def reconcile_schema(app, logger=None, verbose=True):
             continue
         try:
             db_cols = {c["name"] for c in inspector.get_columns(tname)}
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         for col in table.columns:
             if col.name in db_cols:
@@ -117,7 +117,7 @@ def reconcile_schema(app, logger=None, verbose=True):
                     )
                 else:
                     log("INFO", "[RECONCILE] +列 %s.%s" % (tname, col.name))
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log("ERROR", "[RECONCILE] 加列失败 %s.%s: %s" % (tname, col.name, e))
 
     # 3) 缺失的索引：按 metadata 创建
@@ -126,7 +126,7 @@ def reconcile_schema(app, logger=None, verbose=True):
             continue
         try:
             db_indexes = {ix["name"] for ix in inspector.get_indexes(tname)}
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         for idx in table.indexes:
             if idx.name in db_indexes:
@@ -137,7 +137,7 @@ def reconcile_schema(app, logger=None, verbose=True):
                     conn.commit()
                 added_indexes += 1
                 log("INFO", "[RECONCILE] +索引 %s" % idx.name)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log("ERROR", "[RECONCILE] 建索引失败 %s: %s" % (idx.name, e))
 
     _record_run(engine, added_tables, added_columns, added_indexes)
@@ -187,12 +187,12 @@ def _record_run(engine, tables, columns, indexes):
                 ),
                 {
                     "n": "schema_reconcile",
-                    "t": datetime.now(timezone.utc).isoformat(),
+                    "t": datetime.now(UTC).isoformat(),
                     "d": "tables=%d,columns=%d,indexes=%d" % (tables, columns, indexes),
                 },
             )
             conn.commit()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 

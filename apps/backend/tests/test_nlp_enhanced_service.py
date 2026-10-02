@@ -1,6 +1,6 @@
 """Tests for NLP Enhanced Service"""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 try:
     from services.nlp_enhanced_service import MLIntentClassifier

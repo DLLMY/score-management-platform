@@ -1,5 +1,6 @@
-from celery import Celery
 import os
+
+from celery import Celery
 
 # 设置Flask应用环境变量
 # P2-d: 改用自管 APP_ENV（避免设置已弃用的 FLASK_ENV 触发警告）。

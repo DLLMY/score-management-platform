@@ -1,11 +1,12 @@
-from functools import wraps
-from flask import request, jsonify, make_response
-from services.redis_cache_service import get_cache_service
-from config.config_loader import config_loader
+import hashlib
 import json
 import logging
+from functools import wraps
 
-import hashlib
+from flask import jsonify, make_response, request
+
+from config.config_loader import config_loader
+from services.redis_cache_service import get_cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ def invalidate_cache(path_pattern=None):
         # `users/` ≠ `users:`，前缀永不匹配 → **手动 invalidate 从未真正生效**（幽灵/过期缓存
         # 反复出现的总根源）。统一归一为去尾斜杠/尾星后的单星：`api:/api/users*` 匹配
         # `api:/api/users:hash`。
-        clean = pattern[:-1] if pattern.endswith("*") else pattern  # 去掉已有尾 *
+        clean = pattern.removesuffix("*")  # 去掉已有尾 *
         clean = clean.rstrip("/")  # 去尾斜杠
         cache.flush(clean + "*")
     else:

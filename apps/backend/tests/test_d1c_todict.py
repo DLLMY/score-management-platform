@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-c object-level to_dict tests (no DB needed)."""
 import pytest
-from models.device_models import Device
-from models.device_models import DeviceGroupMapping
-from models.notify_models import NotifyTemplate
-from models.user_models import AdminRole
-from models.user_models import SecurityAudit
 
+from models.device_models import Device, DeviceGroupMapping
+from models.notify_models import NotifyTemplate
+from models.user_models import AdminRole, SecurityAudit
 
 
 def test_Device_to_dict():

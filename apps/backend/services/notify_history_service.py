@@ -7,7 +7,8 @@
 """
 
 from datetime import datetime, timedelta
-from models import db, NotifyHistory
+
+from models import NotifyHistory, db
 
 
 def clean_notify_history(days: int = 30) -> int:

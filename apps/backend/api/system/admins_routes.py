@@ -1,39 +1,46 @@
-from flask import request, make_response, jsonify
+from flask import jsonify, make_response, request
 from flask_restx import Namespace, Resource, fields
-from sqlalchemy.exc import IntegrityError
-from utils.response import APIResponse
 from flask_wtf.csrf import generate_csrf
+from sqlalchemy.exc import IntegrityError
+
+from api.system.security_routes import (
+    check_login_rate_limit,
+    clear_login_attempts,
+    record_failed_login,
+)
 from models import (
-    db,
     Admin,
     AdminClass,
     ClassInfo,
+    db,
     get_by_id,
 )
-from utils.permission import requires_permission, requires_admin, get_current_admin
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.logger import log_operation, log_login_attempt, logger
-from utils.security import (
-    is_strong_password,
-    verify_password,
-    generate_tokens,
-    validate_token,
-    JWT_ACCESS_TOKEN_EXPIRES,
-    set_auth_cookies,
-)
-from api.system.security_routes import (
-    check_login_rate_limit,
-    record_failed_login,
-    clear_login_attempts,
+from services.admins_service import (
+    assign_class_link,
+    change_admin_password,
+    log_admin_permission_action,
+    remove_class_link,
 )
 from services.admins_service import (
     create_admin as _service_create_admin,
-    update_admin as _service_update_admin,
+)
+from services.admins_service import (
     delete_admin as _service_delete_admin,
-    change_admin_password,
-    assign_class_link,
-    remove_class_link,
-    log_admin_permission_action,
+)
+from services.admins_service import (
+    update_admin as _service_update_admin,
+)
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.logger import log_login_attempt, log_operation, logger
+from utils.permission import get_current_admin, requires_admin, requires_permission
+from utils.response import APIResponse
+from utils.security import (
+    JWT_ACCESS_TOKEN_EXPIRES,
+    generate_tokens,
+    is_strong_password,
+    set_auth_cookies,
+    validate_token,
+    verify_password,
 )
 
 try:

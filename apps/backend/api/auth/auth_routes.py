@@ -1,15 +1,21 @@
+from flask import jsonify, make_response, request
 from flask_restx import Namespace, Resource, fields
-from flask import request, make_response, jsonify
 from flask_wtf.csrf import generate_csrf
-from models import Admin
-from utils.security import generate_tokens, verify_password, set_auth_cookies, clear_auth_cookies
-from utils.response import APIResponse
+
 from api.system.security_routes import (
     check_login_rate_limit,
-    record_failed_login,
     clear_login_attempts,
+    record_failed_login,
 )
+from models import Admin
 from utils.logger import log_login_attempt
+from utils.response import APIResponse
+from utils.security import (
+    clear_auth_cookies,
+    generate_tokens,
+    set_auth_cookies,
+    verify_password,
+)
 
 # B3 收敛 2026-09-05：Admin.to_dict 登录响应子集（键序对齐 auth 端点原内联）
 AUTH_ADMIN_FIELDS = [

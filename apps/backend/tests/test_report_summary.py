@@ -12,23 +12,23 @@
 
 import io
 import uuid
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from unittest import mock
 
 import pytest
 from openpyxl import load_workbook
 
 from models import (
-    db,
+    Attendance,
     ClassInfo,
     Exam,
-    Score,
-    Subject,
-    User,
-    Attendance,
     HomeworkAssignment,
     HomeworkSubmission,
+    Score,
     ScoreRecord,
+    Subject,
+    User,
+    db,
 )
 from services.report_summary_service import build_class_summary, summary_to_rows
 

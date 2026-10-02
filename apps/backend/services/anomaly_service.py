@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
+
+import numpy as np
 from sqlalchemy import func
 
-from models import User, ScoreRecord, get_by_id, db
-import numpy as np
+from models import ScoreRecord, User, db, get_by_id
 
 # (空行)
 # 积分异常检测服务模块

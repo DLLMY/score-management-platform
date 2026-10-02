@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 
 from models import (
-    db,
-    User,
-    ClassInfo,
-    Attendance,
     Approval,
+    Attendance,
+    ClassInfo,
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
+    User,
+    db,
 )
 from services.engagement_service import calculate_engagement
 

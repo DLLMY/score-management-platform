@@ -1,6 +1,7 @@
+import json
 import os
 import time
-import json
+
 import jieba
 import numpy as np
 
@@ -10,46 +11,47 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
-import scipy.sparse as sp
-import random
 import pickle
-from models import db
+import random
 from datetime import datetime
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import (
-    train_test_split,
-    GridSearchCV,
-    RandomizedSearchCV,
-    cross_val_score,
-    StratifiedKFold,
-)
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report,
-)
-from sklearn.svm import SVC
+
+import scipy.sparse as sp
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.decomposition import NMF, PCA, TruncatedSVD
 from sklearn.ensemble import (
-    RandomForestClassifier,
-    GradientBoostingClassifier,
     AdaBoostClassifier,
     ExtraTreesClassifier,
-    VotingClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
     StackingClassifier,
+    VotingClassifier,
 )
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_selection import SelectKBest, chi2, f_classif, mutual_info_classif
 from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    f1_score,
+    precision_score,
+    recall_score,
+)
+from sklearn.model_selection import (
+    GridSearchCV,
+    RandomizedSearchCV,
+    StratifiedKFold,
+    cross_val_score,
+    train_test_split,
+)
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.pipeline import Pipeline
-from sklearn.decomposition import TruncatedSVD, PCA, NMF
-from sklearn.feature_selection import SelectKBest, chi2, f_classif, mutual_info_classif
-from sklearn.calibration import CalibratedClassifierCV
-from models import NLPScoringRule, NLPMatchResult, NLPModelTraining
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+
+from models import NLPMatchResult, NLPModelTraining, NLPScoringRule, db
 from utils.db_session import db_session_scope
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "../models/trained")
@@ -84,7 +86,7 @@ except ImportError:
     CATBOOST_INSTALLED = False
 
 try:
-    from gensim.models import Word2Vec, Doc2Vec
+    from gensim.models import Doc2Vec, Word2Vec
     from gensim.models.doc2vec import TaggedDocument
 
     GENSIM_INSTALLED = True
@@ -92,7 +94,7 @@ except ImportError:
     GENSIM_INSTALLED = False
 
 try:
-    from transformers import BertTokenizer, BertModel
+    from transformers import BertModel, BertTokenizer
 
     TRANSFORMERS_INSTALLED = True
 except ImportError:
@@ -102,8 +104,9 @@ TEXTCNN_INSTALLED = True
 BERT_INSTALLED = TRANSFORMERS_INSTALLED
 
 
-from utils.logger import log_warning
 import logging
+
+from utils.logger import log_warning
 
 
 class MLAlgorithmType:
@@ -1739,7 +1742,7 @@ class NLPMLTrainingService:
             }
         except Exception as e:
             log_warning(f"[NLPML] 增量学习失败: {e}", exception=e)
-            return {"success": False, "message": f"增量学习失败: {str(e)}"}
+            return {"success": False, "message": f"增量学习失败: {e!s}"}
 
     def online_train(self, text, label):
         return self.incremental_train([text], [label])

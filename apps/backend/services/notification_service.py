@@ -1,12 +1,14 @@
 import base64
 import hmac
+import json
 import logging
 import time
+from datetime import UTC, datetime
+
 import requests
-import json
-from datetime import datetime, UTC
 from flask import current_app
-from models import db, Notification
+
+from models import Notification, db
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ class NotificationService:
             发送结果
         """
         try:
-            from models import db, User, OperationLog, get_by_id
+            from models import OperationLog, User, db, get_by_id
 
             user = get_by_id(User, user_id)
             if not user:
@@ -409,14 +411,12 @@ def update_notification(notification, data):
     if notification.status == "sent" and not notification.sent_at:
         notification.sent_at = datetime.now()
     db.session.commit()
-    return
 
 
 def delete_notification(notification):
     """删除通知并提交。"""
     db.session.delete(notification)
     db.session.commit()
-    return
 
 
 def mark_notification_read(notification):
@@ -425,7 +425,6 @@ def mark_notification_read(notification):
     notification.is_read = True
     notification.read_at = datetime.now()
     db.session.commit()
-    return
 
 
 def send_notification(data):

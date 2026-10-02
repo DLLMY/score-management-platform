@@ -1,5 +1,5 @@
-import io
 import csv
+import io
 import logging
 from pathlib import Path
 from typing import Any
@@ -8,7 +8,7 @@ from flask import send_file
 
 try:
     from openpyxl import Workbook, load_workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
     OPENPYXL_AVAILABLE = True
 except ImportError:
@@ -81,8 +81,7 @@ class ExcelUtils:
             column = col[0].column_letter
             for cell in col:
                 try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
+                    max_length = max(max_length, len(str(cell.value)))
                 except Exception as e:
                     # 逐单元格列宽计算的热循环：失败（如 formula/error cell）仅跳过该列宽估算，
                     # 属可预期降级。记录 debug（含 traceback），默认不输出不刷屏（T9 评估结论）。
@@ -154,7 +153,7 @@ class ExcelUtils:
 
             return {"headers": headers, "data": data, "sheet_name": ws.title}
         except Exception as e:
-            raise ValueError(f"读取Excel文件失败: {str(e)}") from e
+            raise ValueError(f"读取Excel文件失败: {e!s}") from e
 
     @staticmethod
     def read_csv(file_bytes: bytes) -> dict[str, Any]:
@@ -177,7 +176,7 @@ class ExcelUtils:
 
             return {"headers": headers, "data": data}
         except Exception as e:
-            raise ValueError(f"读取CSV文件失败: {str(e)}") from e
+            raise ValueError(f"读取CSV文件失败: {e!s}") from e
 
     @staticmethod
     def detect_file_type(file_bytes: bytes, filename: str) -> str:

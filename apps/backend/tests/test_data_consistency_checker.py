@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 try:
-    from models import User, Admin, AdminClass, CourseSchedule, ClassInfo, db
+    from models import Admin, AdminClass, ClassInfo, CourseSchedule, User, db
 except ImportError:
     pass
 
@@ -37,7 +37,7 @@ class TestDataConsistencyChecker:
 
     def test_check_all_empty_database(self, app):
         """测试空数据库的一致性检查"""
-        from models import User, Admin, AdminClass, CourseSchedule, ClassInfo, db
+        from models import Admin, AdminClass, ClassInfo, CourseSchedule, User, db
 
         with app.app_context():
             AdminClass.query.delete()

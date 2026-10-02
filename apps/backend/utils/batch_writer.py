@@ -1,12 +1,13 @@
+import atexit
 import logging
 import threading
 import time
+from collections import deque
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from collections.abc import Callable
+
 from models import db
-import atexit
-from collections import deque
 
 """
 批量写入优化模块
@@ -125,8 +126,7 @@ class BatchWriter:
             self._queue.append(msg_data)
             self._stats["total_received"] += 1
             # 更新队列峰值
-            if len(self._queue) > self._stats["queue_peak_size"]:
-                self._stats["queue_peak_size"] = len(self._queue)
+            self._stats["queue_peak_size"] = max(self._stats["queue_peak_size"], len(self._queue))
         # 检查是否需要立即处理
         self._check_flush()
         return True

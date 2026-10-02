@@ -15,14 +15,14 @@ OTA 版本协商 + 自动推送服务
                              （避免下发相对路径导致设备无法下载）。
 """
 
-import os
-import re
-import hmac
 import hashlib
-import random
-import threading
+import hmac
 import logging
 import math
+import os
+import random
+import re
+import threading
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -409,7 +409,7 @@ def schedule_auto_push(device, firmware, extra_delay=0):
     device_id = device.device_id
     try:
         from app import app
-        from models import db, Device
+        from models import Device, db
 
         with app.app_context():
             d = Device.query.filter_by(device_id=device_id).first()
@@ -464,7 +464,7 @@ def _execute_push(device_id, firmware_id):
             return
 
         from app import app
-        from models import db, Device, FirmwareVersion
+        from models import Device, FirmwareVersion, db
 
         with app.app_context():
             device = Device.query.filter_by(device_id=device_id).first()
@@ -628,7 +628,7 @@ def _plan_rollout(eligible, stage_percent, batch_size):
             continue
         if pct < 100:
             random.shuffle(group_items)
-            k = max(1, int(math.ceil(len(group_items) * pct / 100.0)))
+            k = max(1, math.ceil(len(group_items) * pct / 100.0))
             group_items = group_items[:k]
         chosen.extend(group_items)
 

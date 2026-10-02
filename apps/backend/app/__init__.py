@@ -1,7 +1,8 @@
-from flask import Flask, request, redirect
-
 import os
 import sys
+
+from flask import Flask, redirect, request
+
 from app.api_versioning import api_version_manager
 
 limiter = None

@@ -7,18 +7,17 @@ GET /api/reports/class-semester?class_id=<id>&format=excel|csv
 """
 
 import logging
-
 from io import BytesIO
 
 from flask import request, send_file
 from flask_restx import Namespace, Resource
 
 from models import ClassInfo, Exam, Score, User
+from services.report_summary_service import build_class_summary, summary_to_rows
+from utils.decorators import safe_handle
 from utils.excel_utils import ExcelUtils
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from utils.decorators import safe_handle
-from services.report_summary_service import build_class_summary, summary_to_rows
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +81,7 @@ def _check_report_class_scope(class_id):
 
     返回 None 表示放行；否则返回应直接返回的 403 响应对象。
     """
-    from utils.permission import get_current_admin, get_admin_class_ids
+    from utils.permission import get_admin_class_ids, get_current_admin
 
     _admin = get_current_admin()
     if _admin and _admin.role not in ("admin", "super_admin"):

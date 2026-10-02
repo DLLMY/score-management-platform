@@ -9,7 +9,7 @@
                         f"Created firmware version: {firmware.version}")
 """
 
-from models import db, OperationLog
+from models import OperationLog, db
 
 
 def write_operation_log(operation_type, target_type, target_id, description, operator="Admin"):

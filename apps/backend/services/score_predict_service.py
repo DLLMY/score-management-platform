@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 
-from models import User, ScoreRecord, get_by_id
 import numpy as np
+
+from models import ScoreRecord, User, get_by_id
 
 
 class ScorePredictService:

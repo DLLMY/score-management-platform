@@ -155,7 +155,7 @@ class TestRecordsRoutes:
     def test_delete_record_with_confirm_rolls_back(self, client, app, auth_headers, sample_user):
         """DELETE 带 confirm：成功删除并回滚积分（current_score 还原）。"""
         with app.app_context():
-            from models import User, ScoreRecord
+            from models import ScoreRecord, User
 
             before = sample_user.current_score
             create = client.post(

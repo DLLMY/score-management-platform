@@ -9,10 +9,10 @@
 - 结束后用 has_permission 验证 timetable.rule.manage 等关键权限。
 """
 
-import os
-import sys
-import shutil
 import argparse
+import os
+import shutil
+import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,7 +39,7 @@ def main():
 
     app = create_app(lightweight=True)
     with app.app_context():
-        from models import db, Admin, AdminRole
+        from models import Admin, AdminRole, db
         from utils.permission import has_permission
 
         u = Admin.query.filter_by(username=args.username).first()

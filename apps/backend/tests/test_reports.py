@@ -13,7 +13,7 @@ import uuid
 
 import pytest
 
-from models import db, ClassInfo, Exam, Score, Subject, User
+from models import ClassInfo, Exam, Score, Subject, User, db
 from utils.security import generate_student_token
 
 

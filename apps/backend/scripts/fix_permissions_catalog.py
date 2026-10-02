@@ -8,14 +8,14 @@
 """
 
 import os
-import sys
 import shutil
+import sys
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import create_app
 from api.users.rbac_routes import init_default_permissions
+from app import create_app
 from models import Permission
 
 INSTANCE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance")

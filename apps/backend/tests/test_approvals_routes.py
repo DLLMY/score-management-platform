@@ -5,7 +5,7 @@
 学生通知中心落库、数据隔离、分页筛选）。迁移后重跑须全部保持绿，确保零契约漂移。
 """
 
-from models import Approval, User, ScoreRecord, Notification
+from models import Approval, Notification, ScoreRecord, User
 
 
 def _unwrap(payload):

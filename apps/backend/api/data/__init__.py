@@ -6,7 +6,7 @@ from .import_export_routes import ns_import_export
 包含数据导入、导出、下载等路由
 """
 __all__ = [
+    "download_bp",
     "ns_export",
     "ns_import_export",
-    "download_bp",
 ]

@@ -1,7 +1,8 @@
-from celery_app import celery_app
 import json
 from datetime import datetime
-from utils.logger import log_warning, log_debug
+
+from celery_app import celery_app
+from utils.logger import log_debug, log_warning
 
 
 @celery_app.task(bind=True, name="tasks.mqtt_tasks.process_message", queue="mqtt")
@@ -78,7 +79,7 @@ def process_phonebox_telemetry(self, topic, payload):
     """
     try:
         from app import app as flask_app
-        from models import db, MQTTLog
+        from models import MQTTLog, db
         from services.mqtt_message_service import mqtt_message_service
 
         with flask_app.app_context():
@@ -112,7 +113,8 @@ def process_phonebox_telemetry(self, topic, payload):
 def handle_command_message(topic, data):
     """处理命令消息：写入命令日志并发布回执确认（{topic}/ack），设备端据此确认指令已送达。"""
     from datetime import datetime
-    from models import db, MQTTLog
+
+    from models import MQTTLog, db
     from services.mqtt_service import publish_mqtt
 
     try:

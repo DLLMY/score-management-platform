@@ -1,4 +1,5 @@
 import pytest
+
 from models import db
 from models.seating import SeatingChart, SeatingSeat
 from services.seating_service import seating_service

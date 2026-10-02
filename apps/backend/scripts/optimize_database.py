@@ -1,9 +1,11 @@
-from datetime import datetime
-from sqlalchemy import text, Table, MetaData
-from app import app
-from models import db
 import os
 import sys
+from datetime import datetime
+
+from sqlalchemy import MetaData, Table, text
+
+from app import app
+from models import db
 
 """
 数据库索引优化脚本

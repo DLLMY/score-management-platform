@@ -26,9 +26,9 @@ F9-B: 将 admin_notifications 物理合并进 notification 表。
 """
 
 import os
-import sys
 import shutil
 import sqlite3
+import sys
 from datetime import datetime
 
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

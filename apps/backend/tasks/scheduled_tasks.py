@@ -1,12 +1,12 @@
-from celery_app import celery_app
 from datetime import datetime, timedelta
-from config.config_loader import config_loader
-from utils.db_session import db_session_scope
-from services.redis_cache_service import get_cache_service
 
-
-from models import db
 from redis import Redis
+
+from celery_app import celery_app
+from config.config_loader import config_loader
+from models import db
+from services.redis_cache_service import get_cache_service
+from utils.db_session import db_session_scope
 from utils.logger import log_info, log_warning
 
 

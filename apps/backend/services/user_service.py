@@ -12,7 +12,7 @@ get_or_404（404 语义）、请求级校验、缓存失效、操作日志、跨
 
 from datetime import datetime
 
-from models import db, User, cascade_delete_user_related_records
+from models import User, cascade_delete_user_related_records, db
 from utils.db_session import db_session_scope
 
 
@@ -122,6 +122,7 @@ class UserService:
         同处一个事务：批量 update User.current_score + 批量插入 ScoreRecord；返回受影响行数。
         """
         from sqlalchemy import update
+
         from models import ScoreRecord
 
         if not allowed_ids:

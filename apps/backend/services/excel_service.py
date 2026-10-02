@@ -1,12 +1,11 @@
+import csv
 import io
-from datetime import datetime, date
+import math
+import urllib.parse
+from collections.abc import Callable
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
-from collections.abc import Callable
-
-import math
-import csv
-import urllib.parse
 
 """
 统一Excel服务模块
@@ -14,7 +13,7 @@ import urllib.parse
 """
 try:
     from openpyxl import Workbook, load_workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     OPENPYXL_AVAILABLE = True
@@ -109,8 +108,7 @@ class ExcelExportService:
         """
         if not OPENPYXL_AVAILABLE:
             raise ImportError("openpyxl库未安装")
-        if total_count > MAX_EXPORT_ROWS:
-            total_count = MAX_EXPORT_ROWS
+        total_count = min(total_count, MAX_EXPORT_ROWS)
         # 先创建带样式的表头文件
         wb = Workbook()
         ws = wb.active
@@ -177,8 +175,7 @@ class ExcelExportService:
                 value = row_data.get(header, "")
                 converted = ExcelExportService._convert_value(value)
                 cell_len = len(str(converted)) + 2
-                if cell_len > max_len:
-                    max_len = cell_len
+                max_len = max(max_len, cell_len)
             ws.column_dimensions[get_column_letter(col)].width = min(max_len, 50)
 
     @staticmethod
@@ -221,8 +218,7 @@ class ExcelExportService:
                 value = row_data.get(header, "")
                 converted = ExcelExportService._convert_value(value)
                 cell_len = len(str(converted)) + 2
-                if cell_len > max_len:
-                    max_len = cell_len
+                max_len = max(max_len, cell_len)
             ws.column_dimensions[get_column_letter(col)].width = min(max_len, 50)
         wb.save(output)
         output.seek(0)
@@ -319,7 +315,7 @@ class ExcelImportService:
         except Exception as e:
             return {
                 "success": False,
-                "error": f"文件解析失败: {str(e)}",
+                "error": f"文件解析失败: {e!s}",
                 "total_rows": 0,
                 "data": [],
                 "headers": [],

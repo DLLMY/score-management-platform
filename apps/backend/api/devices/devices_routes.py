@@ -1,51 +1,47 @@
-import logging
-
-import time
-import json
-import threading
 import io
+import json
+import logging
+import threading
+import time
+
 import openpyxl
 from flask_restx import Namespace, Resource, fields
-from models import Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
 from sqlalchemy.orm import joinedload
-from utils.permission import requires_permission, get_current_admin, get_admin_class_ids
-from utils.response import APIResponse
+
+from models import Admin, ClassInfo, Device, DeviceHeartbeat, get_by_id
+from services.device_query_service import (
+    get_device_advanced_stats_view,
+    get_device_alerts_view,
+    get_device_list_view,
+    get_device_stats_view,
+)
+from services.device_service import (
+    bind_device_admin,
+    bind_device_class,
+    create_device,
+    delete_device,
+    import_devices,
+    resolve_device_alert,
+    revoke_device_secret,
+    update_device,
+    update_device_settings,
+)
+from services.heartbeat_service import is_device_online
+from services.mqtt_service import publish_mqtt
 from utils.decorators import safe_handle
 from utils.pagination import get_pagination
-from services.mqtt_service import publish_mqtt
-from services.heartbeat_service import is_device_online
-from services.device_service import (
-    create_device,
-    update_device,
-    delete_device,
-    bind_device_class,
-    bind_device_admin,
-    resolve_device_alert,
-    update_device_settings,
-    import_devices,
-    revoke_device_secret,
-)
-from services.device_query_service import (
-    get_device_list_view,
-    get_device_alerts_view,
-    get_device_stats_view,
-    get_device_advanced_stats_view,
-)
+from utils.permission import get_admin_class_ids, get_current_admin, requires_permission
+from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
-from utils.api_cache_middleware import cached_api, invalidate_cache
 from datetime import datetime, timedelta
 
-# 差异 #13：在线设备列表 SQL 粗筛需要 db.session 与聚合函数 func
-from models import db
+from flask import Response, request, send_file
 from sqlalchemy import func
 
-from models import Alert
-
-from flask import request
-
-from flask import send_file
-from flask import Response
+# 差异 #13：在线设备列表 SQL 粗筛需要 db.session 与聚合函数 func
+from models import Alert, db
+from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_devices = Namespace("devices", description="设备管理相关操作")
 

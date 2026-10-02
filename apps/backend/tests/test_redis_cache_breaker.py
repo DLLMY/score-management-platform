@@ -10,7 +10,7 @@ Redis 缓存服务「快速熔断 / 快速失败」专项测试
 """
 
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import redis
 

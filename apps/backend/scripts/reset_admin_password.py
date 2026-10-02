@@ -1,8 +1,8 @@
-from app import create_app
-from models import db, Admin, hash_password
 import os
 import sys
-from models import Admin
+
+from app import create_app
+from models import Admin, db, hash_password
 
 sys.path.insert(0, ".")
 

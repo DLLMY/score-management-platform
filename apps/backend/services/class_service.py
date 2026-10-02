@@ -1,12 +1,22 @@
-from datetime import datetime
-from models import db, ClassInfo, User, Admin, AdminClass, get_by_id, cascade_delete_related_records
-from utils.permission import get_allowed_classes
-from utils.db_session import db_session_scope
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+import io
 import json
 import re
-import io
+from datetime import datetime
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+from models import (
+    Admin,
+    AdminClass,
+    ClassInfo,
+    User,
+    cascade_delete_related_records,
+    db,
+    get_by_id,
+)
+from utils.db_session import db_session_scope
+from utils.permission import get_allowed_classes
 
 
 def _lookup_admin_by_name(head_teacher_name):
@@ -569,7 +579,7 @@ class ClassService:
                         {
                             "name": item.get("name", "未知"),
                             "action": "failed",
-                            "message": f"导入失败: {str(e)}",
+                            "message": f"导入失败: {e!s}",
                         }
                     )
 

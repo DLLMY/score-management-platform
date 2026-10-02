@@ -1,14 +1,15 @@
 from flask_restx import Namespace, Resource, fields
+
 from models import ScoreCategory, ScoreRule
-from utils.permission import requires_permission
-from utils.response import APIResponse
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.query_optimizer import count_by_fk
 from services.score_category_service import (
     create_category,
-    update_category,
     delete_category,
+    update_category,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.permission import requires_permission
+from utils.query_optimizer import count_by_fk
+from utils.response import APIResponse
 
 try:
     from app import csrf_exempt

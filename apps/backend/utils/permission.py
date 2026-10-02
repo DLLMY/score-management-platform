@@ -1,22 +1,24 @@
 import os
 import time
 from functools import wraps
-from flask import request, g
+
+from flask import g, request
+
+from config import config
 from models import (
     Admin,
     AdminClass,
+    AdminRole,
     ClassInfo,
     Device,
-    AdminRole,
-    RolePermissionMapping,
     RoleHierarchy,
+    RolePermissionMapping,
     User,
     db,
 )
-from utils.security import validate_token
 from utils.logger import log_access_denied, log_warning
 from utils.response import APIResponse
-from config import config
+from utils.security import validate_token
 
 # 角色定义
 ROLES = {

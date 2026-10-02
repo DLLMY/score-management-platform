@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from models import db, User, ClassInfo
+from models import ClassInfo, User, db
 from services.attribution_service import AttributionService
 
 

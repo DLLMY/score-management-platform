@@ -1,7 +1,9 @@
 import uuid
-import pytest
 from datetime import datetime
-from models import User, Admin, ScoreRecord, ScoreRule, Device
+
+import pytest
+
+from models import Admin, Device, ScoreRecord, ScoreRule, User
 from services.redis_cache_service import get_cache_service
 
 

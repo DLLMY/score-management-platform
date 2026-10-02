@@ -10,21 +10,22 @@
 本文件与原始 devices_routes / device_group_routes 内的事务逻辑一一对应，行为完全等价。
 """
 
-import openpyxl
 from datetime import datetime
 
+import openpyxl
+from sqlalchemy.exc import IntegrityError
+
 from models import (
-    db,
+    Admin,
+    ClassInfo,
     Device,
     DeviceGroup,
     DeviceGroupMapping,
-    ClassInfo,
-    Admin,
     ScoreRecord,
+    db,
     get_by_id,
 )
 from utils.validation import validate_device_id, validate_name
-from sqlalchemy.exc import IntegrityError
 
 # ============ Device 实体事务 ============
 
@@ -53,14 +54,12 @@ def update_device(device, data):
     device.name = data.get("name", device.name)
     device.updated_at = datetime.now()
     db.session.commit()
-    return
 
 
 def delete_device(device):
     """删除设备并提交。"""
     db.session.delete(device)
     db.session.commit()
-    return
 
 
 def revoke_device_secret(device):
@@ -73,7 +72,6 @@ def revoke_device_secret(device):
     device.secret_issued_at = None
     device.last_seen_ts = None
     db.session.commit()
-    return
 
 
 def bind_device_class(device, class_info_id):
@@ -84,7 +82,6 @@ def bind_device_class(device, class_info_id):
     device.class_info_id = class_info_id
     device.updated_at = datetime.now()
     db.session.commit()
-    return
 
 
 def bind_device_admin(device, admin_id):
@@ -95,7 +92,6 @@ def bind_device_admin(device, admin_id):
     device.admin_id = admin_id
     device.updated_at = datetime.now()
     db.session.commit()
-    return
 
 
 def resolve_device_alert(alert):
@@ -103,7 +99,6 @@ def resolve_device_alert(alert):
     alert.is_resolved = True
     alert.resolved_at = datetime.now()
     db.session.commit()
-    return
 
 
 def update_device_settings(device, data):
@@ -389,7 +384,6 @@ def delete_wol_device(device):
     device.is_active = False
     device.updated_at = datetime.now()
     db.session.commit()
-    return
 
 
 # ============ DeviceGroup 实体事务 ============
@@ -436,7 +430,6 @@ def update_device_group(group, data):
 
     group.updated_at = datetime.now()
     db.session.commit()
-    return
 
 
 def delete_device_group(group):
@@ -444,7 +437,6 @@ def delete_device_group(group):
     DeviceGroupMapping.query.filter_by(group_id=group.id).delete()
     db.session.delete(group)
     db.session.commit()
-    return
 
 
 def add_devices_to_group(group_id, device_ids):
@@ -520,7 +512,7 @@ def _validate_device_import_row(row_dict, device_map, class_map, admin_map):
 
     existing_device = device_map.get(str(device_id))
     if existing_device:
-        row_errors.append({"field": "device_id", "message": f'设备 "{str(device_id)}" 已存在'})
+        row_errors.append({"field": "device_id", "message": f'设备 "{device_id!s}" 已存在'})
 
     class_info = _validate_device_class_field(class_name, class_map, row_errors)
     admin = _validate_device_admin_field(admin_name, admin_map, row_errors)

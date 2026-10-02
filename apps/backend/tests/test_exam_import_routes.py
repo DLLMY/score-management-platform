@@ -10,9 +10,9 @@
 import io
 
 import pytest
-
-from models import db, ClassInfo, Exam, Score, Subject, User
 from openpyxl import Workbook
+
+from models import ClassInfo, Exam, Score, Subject, User, db
 
 
 @pytest.fixture

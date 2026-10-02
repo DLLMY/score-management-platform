@@ -7,7 +7,7 @@ F17 防腐层：收口原 class_periods_routes.py 中的 db.session 写入/事�
 
 from datetime import datetime
 
-from models import db, ClassPeriod, get_by_id
+from models import ClassPeriod, db, get_by_id
 
 # 重置为默认值所用的 12 节次（与路由原逻辑一致）
 DEFAULT_PERIODS = [

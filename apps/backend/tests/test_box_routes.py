@@ -8,7 +8,7 @@
 这些断言在迁移前（原路由）与迁移后（service 化）必须完全一致（零契约漂移）。
 """
 
-from models import Device, User, ScoreRecord
+from models import Device, ScoreRecord, User
 
 
 class TestBoxRoutes:

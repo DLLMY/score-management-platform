@@ -19,8 +19,8 @@ from models import LoginAttempt, SecurityAudit, db
 def test_login_rate_limit_helpers(client, app):
     from api.system.security_routes import (
         check_login_rate_limit,
-        record_failed_login,
         clear_login_attempts,
+        record_failed_login,
     )
 
     with app.app_context():

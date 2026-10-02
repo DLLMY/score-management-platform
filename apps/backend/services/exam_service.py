@@ -5,10 +5,11 @@
 不处理 send_file 等表现层细节（Excel 字节生成前的 rows/headers 在此准备）。
 """
 
-from models import Exam, Score, User, Subject, get_by_id
 from sqlalchemy.orm import joinedload
+
+from models import Exam, Score, Subject, User, get_by_id
 from utils.pagination import get_pagination
-from utils.permission import get_current_admin, get_allowed_classes
+from utils.permission import get_allowed_classes, get_current_admin
 
 
 def _resolve_subject_id(subject_name, subject_id):

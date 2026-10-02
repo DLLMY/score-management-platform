@@ -1,23 +1,23 @@
 import json
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from unittest import mock
 
 from models import (
-    db,
-    User,
-    ClassInfo,
     Attendance,
+    ClassInfo,
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
+    User,
+    db,
 )
+from services import engagement_service
 from services.engagement_service import (
     EngagementService,
+    batch_rank,
     calculate_engagement,
     weekly_trend,
-    batch_rank,
 )
-import services.engagement_service as engagement_service
 
 
 class TestEngagementBatchTrend:

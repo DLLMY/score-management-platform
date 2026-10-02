@@ -1,7 +1,9 @@
-import pytest
 from datetime import date, timedelta
+
+import pytest
+
 from models import db
-from models.duty import DutyGroup, DutyAssignment
+from models.duty import DutyAssignment, DutyGroup
 from services.duty_service import duty_service
 
 

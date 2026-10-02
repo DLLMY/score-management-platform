@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-l object-level to_dict tests."""
 import pytest
-from models.seating import SeatingSeat
-from models.study_group import StudyGroup
-from models.study_group import StudyGroupMember
-from models.study_group import StudyGroupScore
-from models.study_guide import StudyGuide
 
+from models.seating import SeatingSeat
+from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore
+from models.study_guide import StudyGuide
 
 
 def test_SeatingSeat_to_dict():

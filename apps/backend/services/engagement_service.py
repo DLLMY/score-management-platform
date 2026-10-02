@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
 from models import (
-    Attendance,
     Approval,
+    Attendance,
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
@@ -390,7 +390,7 @@ def batch_rank(class_name=None, days=30):
         "days": int(days),
         "total": int(total),
         "with_data": int(sum(1 for r in students if r["has_data"])),
-        "failed": int(len(failed_students)),
+        "failed": len(failed_students),
         "students": students,
         "failed_students": failed_students,
     }

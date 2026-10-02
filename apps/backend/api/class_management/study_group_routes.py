@@ -1,8 +1,9 @@
-from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_restx import Namespace, Resource, fields
+
 from services.study_group_service import study_group_service
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.permission import requires_permission
 
 ns_study_group = Namespace("study_group", description="学习小组管理")
 

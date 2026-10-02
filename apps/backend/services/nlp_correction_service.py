@@ -11,7 +11,7 @@
 不迁移：NLPModelEvaluate.get 的 db.session.execute(SELECT 聚合) 属只读 query，按 F17 铁律暂缓。
 """
 
-from models import db, NLPCorrection
+from models import NLPCorrection, db
 
 
 def record_corrections(corrections, user_id, input_text, confidence):

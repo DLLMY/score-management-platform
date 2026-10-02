@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+
+from sqlalchemy import case, distinct, func
 from sqlalchemy.orm import joinedload
-from sqlalchemy import func, distinct, case
-from models import db, User, ScoreRecord
+
+from models import ScoreRecord, User, db
 
 
 class AnalysisService:

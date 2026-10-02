@@ -1,5 +1,7 @@
-import pytest
 from datetime import date, timedelta
+
+import pytest
+
 from models import db
 from models.homework import HomeworkAssignment, HomeworkSubmission
 from services.homework_service import homework_service

@@ -1,16 +1,18 @@
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from scipy.stats import pearsonr
-from functools import wraps
-import math
-from models import db, User, Score
-from services.redis_cache_service import get_cache_service
-from config.config_loader import config_loader
-from sqlalchemy import func
-import numpy as np
-
-import pandas as pd
 import logging
+import math
+from functools import wraps
+
+import numpy as np
+import pandas as pd
+from scipy.stats import pearsonr
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sqlalchemy import func
+
+from config.config_loader import config_loader
+from models import Score, User, db
+from services.redis_cache_service import get_cache_service
+
 logger = logging.getLogger(__name__)
 
 

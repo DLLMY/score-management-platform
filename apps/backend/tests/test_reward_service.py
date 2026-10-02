@@ -7,8 +7,13 @@
 """
 """
 
-from unittest.mock import patch, MagicMock
-from services.reward_service import PhoneAccessHandler, RewardSystem, RewardInteractionController
+from unittest.mock import MagicMock, patch
+
+from services.reward_service import (
+    PhoneAccessHandler,
+    RewardInteractionController,
+    RewardSystem,
+)
 
 
 class TestPhoneAccessHandler:

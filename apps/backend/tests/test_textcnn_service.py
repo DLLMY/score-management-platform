@@ -1,6 +1,7 @@
-import numpy as np
-import tempfile
 import os
+import tempfile
+
+import numpy as np
 
 try:
     from services.textcnn_service import TextCNNClassifier

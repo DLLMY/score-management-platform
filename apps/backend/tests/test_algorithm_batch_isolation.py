@@ -7,18 +7,17 @@
 单生异常隔离进 failed_students，不影响其余学生与整体响应。
 """
 
+from datetime import date, datetime, timedelta
 from unittest import mock
 
 import numpy as np
 
-from models import db, User, ScoreRecord
-from datetime import datetime, timedelta, date
-
+from models import ScoreRecord, User, db
+from services.algorithm_service import AlgorithmService
+from services.composite_score_service import CompositeScoreService
+from services.prediction_service import PredictionService
 from services.risk_predict_service import RiskPredictService
 from services.score_predict_service import ScorePredictService
-from services.prediction_service import PredictionService
-from services.composite_score_service import CompositeScoreService
-from services.algorithm_service import AlgorithmService
 
 
 def _seed_users(app, users=((1, "A"), (2, "B"))):

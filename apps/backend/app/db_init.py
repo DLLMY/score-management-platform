@@ -1,12 +1,11 @@
-from models import db, Admin, MQTTConfig
-from utils.security import hash_password
-from utils.logger import log_error, log_info, log_warning
-from config import config
 import os
-
-
 import secrets
 import sqlite3
+
+from config import config
+from models import Admin, MQTTConfig, db
+from utils.logger import log_error, log_info, log_warning
+from utils.security import hash_password
 
 
 def init_database(app):
@@ -38,8 +37,8 @@ def init_database(app):
         try:
             # site-packages 存在同名 scripts 包，故将 backend/scripts 显式加入 sys.path 后
             # 直接 import create_indexes（其模块已解耦 app 实例依赖，engine 由上方 init_app 绑定）
-            import sys as _sys
             import os as _os
+            import sys as _sys
 
             _scripts_dir = _os.path.join(
                 _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "scripts"
@@ -107,7 +106,7 @@ def init_database(app):
 
                 ensure_database_ready(app, logger=None, verbose=False)
                 log_info("数据库模式对账与种子补齐完成")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log_error(
                     f"数据库模式对账/种子补齐失败（基础表已通过 create_all 创建，请排查）: {e}",
                     exception=e,

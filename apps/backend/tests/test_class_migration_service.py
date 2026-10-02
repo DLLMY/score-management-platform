@@ -7,8 +7,8 @@ from models import ClassInfo
 """
 """
 
-from unittest.mock import MagicMock
 import uuid
+from unittest.mock import MagicMock
 
 try:
     from services.class_migration_service import ClassMigrationService
@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 try:
-    from models import User, Admin, db
+    from models import Admin, User, db
 except ImportError:
     pass
 
@@ -47,7 +47,7 @@ class TestClassMigrationService:
 
     def test_analyze_existing_data_empty(self, app):
         """测试分析空数据"""
-        from models import User, Admin, db
+        from models import Admin, User, db
 
         with app.app_context():
             User.query.filter(User.class_name.isnot(None)).delete()
@@ -238,7 +238,7 @@ class TestClassMigrationService:
         with app.app_context():
             class_name = f"初一(1)班_{str(uuid.uuid4())[:8]}"
             admin = Admin(
-                username=f"test_admin_{str(uuid.uuid4())}",
+                username=f"test_admin_{uuid.uuid4()!s}",
                 password=hash_password("password"),
                 real_name="测试管理员",
                 class_name=class_name,
@@ -260,7 +260,7 @@ class TestClassMigrationService:
 
         with app.app_context():
             admin = Admin(
-                username=f"test_admin_{str(uuid.uuid4())}",
+                username=f"test_admin_{uuid.uuid4()!s}",
                 password=hash_password("password"),
                 real_name="测试管理员",
                 class_name="不存在的班级",
@@ -297,7 +297,7 @@ class TestClassMigrationService:
             db.session.commit()
 
             admin = Admin(
-                username=f"test_admin_{str(uuid.uuid4())}",
+                username=f"test_admin_{uuid.uuid4()!s}",
                 password=hash_password("password"),
                 real_name="测试管理员",
                 primary_class_id=class_info.id,
@@ -307,7 +307,7 @@ class TestClassMigrationService:
 
             subaccount = SubAccount(
                 parent_admin_id=admin.id,
-                username=f"test_sub_{str(uuid.uuid4())}",
+                username=f"test_sub_{uuid.uuid4()!s}",
                 password=hash_password("password"),
             )
             db.session.add(subaccount)
@@ -342,7 +342,7 @@ class TestClassMigrationService:
                 name="测试用户", card_id=f"TEST{str(uuid.uuid4())[:12]}", class_name=class_name
             )
             admin = Admin(
-                username=f"test_admin_{str(uuid.uuid4())}",
+                username=f"test_admin_{uuid.uuid4()!s}",
                 password=hash_password("password"),
                 real_name="测试管理员",
                 class_name=class_name,

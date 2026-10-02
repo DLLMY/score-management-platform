@@ -1,18 +1,16 @@
 import logging
 
+from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from flask import send_file, request
-from services.class_service import class_service
-from utils.permission import requires_permission, get_current_admin
-from utils.response import APIResponse
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.pagination import get_pagination
-from utils.logger import log_operation
 
-from models import User
-from models import ClassInfo
-from models import get_by_id
+from models import ClassInfo, User, get_by_id
+from services.class_service import class_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.decorators import safe_handle
+from utils.logger import log_operation
+from utils.pagination import get_pagination
+from utils.permission import get_current_admin, requires_permission
+from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
 

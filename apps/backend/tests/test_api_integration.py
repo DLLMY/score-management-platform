@@ -5,7 +5,7 @@ API Integration Tests
 # 测试核心服务流程的端到端集成
 """
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 try:
     from services.redis_cache_service import RedisCache

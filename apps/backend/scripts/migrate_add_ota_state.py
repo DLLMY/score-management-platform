@@ -13,15 +13,16 @@
 """
 
 import os
-import sys
 import sqlite3
+import sys
 
 # 让脚本能 import app / db
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy import text
+
 from app import app
 from models import db
-from sqlalchemy import text
 
 
 def main():

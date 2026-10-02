@@ -50,24 +50,9 @@
   回包到达内存即判定，绝不依赖易被写锁拖死的 mqtt_log 全表扫描。
 """
 
-import atexit
-import hashlib
-import hmac
-import json
-import os
-import ssl
-import sys
-import threading
-import time
-import urllib.request
-import urllib.error
-import logging
+import atexitimport hashlibimport hmacimport jsonimport loggingimport osimport sslimport sysimport threadingimport timeimport urllib.errorimport urllib.requestlogger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
-import paho.mqtt.client as mqtt
-
-# ---------- 配置（环境变量覆盖）----------
+import paho.mqtt.client as mqtt# ---------- 配置（环境变量覆盖）----------
 # 默认对接生产云端 Broker（EMQX Cloud，TLS 8883）；本地干净环境用
 #   MQTT_BROKER=127.0.0.1 MQTT_PORT=1883 MQTT_SSL=false 覆盖。
 BROKER = os.getenv("MQTT_BROKER", "nc5233fc.ala.cn-hangzhou.emqxsl.cn")

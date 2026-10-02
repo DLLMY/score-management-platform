@@ -1,14 +1,4 @@
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFProtect
-from utils.rate_limit import RateLimitStrategy, get_rate_limit_config
-
-
-from utils.logger import log_info
-
-
-def init_cors(app):
+from flask_cors import CORSfrom flask_limiter import Limiterfrom flask_limiter.util import get_remote_addressfrom flask_wtf.csrf import CSRFProtectfrom utils.logger import log_infofrom utils.rate_limit import RateLimitStrategy, get_rate_limit_configdef init_cors(app):
     CORS(
         app,
         supports_credentials=True,

@@ -1,8 +1,9 @@
-import pytest
 import uuid
 from datetime import date, timedelta
-from models import db
-from models import ClassInfo, User
+
+import pytest
+
+from models import ClassInfo, User, db
 from models.attendance import Attendance
 from services.attendance_service import attendance_service
 

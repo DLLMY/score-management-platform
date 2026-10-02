@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """utils.pagination 单元测试（get_pagination / get_limit）。
 
 背景：
@@ -13,7 +12,7 @@
 import pytest
 from flask import Flask
 
-from utils.pagination import get_pagination, get_limit
+from utils.pagination import get_limit, get_pagination
 
 
 @pytest.fixture

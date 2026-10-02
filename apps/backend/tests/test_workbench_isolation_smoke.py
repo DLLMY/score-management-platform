@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 班主任工作台隐私隔离冒烟测试（#814）。
 
@@ -33,11 +32,11 @@ def _items(data, key):
 @pytest.fixture
 def workbench_data(app):
     """构造两个班级、各 2 名学生、家长联系与心理记录、1 名绑定班级 A 的班主任。"""
-    from models import db, Admin, AdminRole, RolePermissionMapping
-    from models.user_models import User
-    from models.system_models import ClassInfo, AdminClass
-    from models.parent import ParentContact, ContactLog
+    from models import Admin, AdminRole, RolePermissionMapping, db
     from models.mental_health import MentalHealthRecord
+    from models.parent import ContactLog, ParentContact
+    from models.system_models import AdminClass, ClassInfo
+    from models.user_models import User
     from utils.security import hash_password
 
     with app.app_context():
@@ -232,7 +231,7 @@ class TestMentalHealthIsolation:
 
     def test_teacher_alert_scope(self, client, app, workbench_data):
         """预警列表同样收敛到关联班级。"""
-        from models import db, Alert
+        from models import Alert, db
 
         with app.app_context():
             for s in workbench_data["students"]:

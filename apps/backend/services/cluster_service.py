@@ -1,9 +1,12 @@
 from datetime import datetime
-from models import User, StudentCluster, Score, db
-from .algorithm_service import AlgorithmService, CACHE_PREFIX, CACHE_TTL
-from .redis_cache_service import get_cache_service
-from utils.db_session import db_session_scope
+
 import numpy as np
+
+from models import Score, StudentCluster, User, db
+from utils.db_session import db_session_scope
+
+from .algorithm_service import CACHE_PREFIX, CACHE_TTL, AlgorithmService
+from .redis_cache_service import get_cache_service
 
 """
 学生分群服务模块

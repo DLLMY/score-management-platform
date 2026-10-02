@@ -1,10 +1,11 @@
-from datetime import datetime, date, timedelta
-from models import db, Approval, User
+from datetime import date, datetime, timedelta
+
+from models import Approval, User, db
 from models.attendance import Attendance
-from utils.permission import get_current_admin, get_admin_class_ids, get_allowed_classes
+from services.entity_names import names
 from utils.datetime_utils import parse_date, parse_datetime
 from utils.entity_guard import require_class, require_student
-from services.entity_names import names
+from utils.permission import get_admin_class_ids, get_allowed_classes, get_current_admin
 
 
 class AttendanceService:

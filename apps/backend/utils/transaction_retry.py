@@ -1,8 +1,9 @@
 import logging
-import time
 import threading
+import time
 from contextlib import contextmanager
 from functools import wraps
+
 from models import db
 
 # -*- coding: utf-8 -*-
@@ -70,13 +71,13 @@ class TransactionRetry:
 
                 if attempt < self.max_retries:
                     logger.warning(
-                        f"事务执行失败 (第{attempt + 1}次), " f"{delay:.2f}秒后重试: {str(e)}"
+                        f"事务执行失败 (第{attempt + 1}次), " f"{delay:.2f}秒后重试: {e!s}"
                     )
                     time.sleep(delay)
                     delay = min(delay * self.backoff_factor, self.max_delay)
                 else:
                     self._stats["failed"] += 1
-                    logger.error(f"事务执行失败 (已达最大重试次数{self.max_retries}): {str(e)}")
+                    logger.error(f"事务执行失败 (已达最大重试次数{self.max_retries}): {e!s}")
 
         raise last_exception
 
@@ -250,7 +251,7 @@ def safe_bulk_insert(records, batch_size=100, max_retries=3):
             logger.info(f"批量插入: 已插入 {total_inserted}/{len(records)} 条")
         except Exception as e:
             db.session.rollback()
-            logger.error(f"批量插入失败: {str(e)}", exc_info=True)
+            logger.error(f"批量插入失败: {e!s}", exc_info=True)
             raise
 
     return total_inserted
@@ -287,7 +288,7 @@ def safe_bulk_update(updates, batch_size=100, max_retries=3):
             total_updated += updated
         except Exception as e:
             db.session.rollback()
-            logger.error(f"批量更新失败: {str(e)}", exc_info=True)
+            logger.error(f"批量更新失败: {e!s}", exc_info=True)
             raise
 
     return total_updated

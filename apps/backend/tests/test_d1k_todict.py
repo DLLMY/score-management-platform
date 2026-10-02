@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
 """D1-k object-level to_dict tests."""
 import pytest
+
 from models.nlp_models import NLPModelTraining
 from models.notify_models import NotifyAudit
-from models.parent import ContactLog
-from models.parent import ParentContact
+from models.parent import ContactLog, ParentContact
 from models.seating import SeatingChart
-
 
 
 def test_NLPModelTraining_to_dict():

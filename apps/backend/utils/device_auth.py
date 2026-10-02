@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """设备认证凭证体系（差异 #4，分阶段落地，全程向后兼容）。
 
 差异背景
@@ -189,8 +188,9 @@ def issue_device_secret(device, length: int = 64, commit: bool = True) -> str:
     调用方负责把明文导出给设备烧录（NVS），此后后端只存密文原值
     （HMAC 场景下密钥必须可读，故不做哈希）。
     """
-    from models import db
     from datetime import datetime as _dt
+
+    from models import db
 
     secret = secrets.token_hex(length // 2)
     device.device_secret = secret

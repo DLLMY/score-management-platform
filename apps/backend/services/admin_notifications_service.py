@@ -7,7 +7,7 @@ create_admin_notification 被 approvals/records 懒加载及 api/system/__init__
 
 from datetime import datetime
 
-from models import db, Notification, Admin, get_by_id
+from models import Admin, Notification, db, get_by_id
 
 
 def create_notification(data):

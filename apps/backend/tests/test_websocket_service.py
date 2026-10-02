@@ -5,7 +5,7 @@ WebSocket Service Test Cases
 # 测试WebSocket实时通信服务的核心功能
 """
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 try:
     from services.websocket_service import WebSocketService

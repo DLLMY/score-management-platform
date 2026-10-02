@@ -12,7 +12,7 @@
 本端点修复该路径不匹配，并额外提供 /api/healthz 与 /healthz 兼容 K8s 惯例。
 """
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from flask import Blueprint, jsonify
 from sqlalchemy import text
@@ -35,7 +35,7 @@ def _probe_database():
         with db.engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return "ok", None
-    except Exception as exc:  # noqa: BLE001 - 探活需吞掉所有异常并转成错误态
+    except Exception as exc:
         logger.warning("健康检查: 数据库连接失败: %s", exc)
         return "error", str(exc)
 
@@ -55,7 +55,7 @@ def _build_health_payload():
         "message": "ok" if ok else "database unavailable",
         "status": db_status,
         "db": db_status,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }, db_status
 
 

@@ -1,27 +1,28 @@
 import logging
 
+from flask import g, request, send_file
 from flask_restx import Namespace, Resource, fields
-from flask import request, g, send_file
-from models import Exam, Score, User, get_by_id
 from sqlalchemy.exc import IntegrityError
+
+from models import Exam, Score, User, get_by_id
+from services.academics_service import academics_service
+from services.exam_service import (
+    _resolve_subject_id,
+    get_class_score_analysis_view,
+    get_exam_detail_view,
+    get_exam_export_data_view,
+    get_exam_list_view,
+    get_exam_rankings_view,
+    get_exam_score_analysis_view,
+    get_score_detail_view,
+    get_score_export_data_view,
+    get_score_list_view,
+    get_student_score_analysis_view,
+)
+from services.export_service import export_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from services.academics_service import academics_service
-from services.export_service import export_service
-from services.exam_service import (
-    get_exam_list_view,
-    get_exam_detail_view,
-    get_score_list_view,
-    get_score_detail_view,
-    get_exam_score_analysis_view,
-    get_exam_rankings_view,
-    get_student_score_analysis_view,
-    get_class_score_analysis_view,
-    get_score_export_data_view,
-    get_exam_export_data_view,
-    _resolve_subject_id,
-)
 
 logger = logging.getLogger(__name__)
 

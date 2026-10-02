@@ -1,11 +1,12 @@
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+
 from services.rule_engine_service import (
-    RuleMatcher,
     ParameterMapper,
-    RulePriorityEngine,
     RuleExecutionEngine,
+    RuleMatcher,
+    RulePriorityEngine,
 )
 
 try:

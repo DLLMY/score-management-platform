@@ -111,7 +111,7 @@ class TestRulesRoutes:
     def test_delete_rule_cascades_score_records(self, client, app, auth_headers):
         """R7 修复回归：删除被历史流水引用的规则须先把流水 rule_id 置空，而非 500。"""
         with app.app_context():
-            from models import db, ScoreRecord
+            from models import ScoreRecord, db
 
             create_response = client.post(
                 "/api/rules/",

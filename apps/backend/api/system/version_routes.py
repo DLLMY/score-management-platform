@@ -1,7 +1,9 @@
-from flask import Blueprint, request
 from functools import wraps
-from utils.response import APIResponse
+
+from flask import Blueprint, request
+
 from utils.api_versioning import version_manager
+from utils.response import APIResponse
 
 """
 API版本路由配置

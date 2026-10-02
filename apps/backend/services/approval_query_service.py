@@ -11,9 +11,10 @@ helper _apply_approval_data_isolation，仅被两处 GET 使用，随查询一�
 注意：paginate 沿用原路由默认值（error_out=True），不传 error_out 以保持 404 行为一致。
 """
 
-from models import Approval, User
 from sqlalchemy.orm import joinedload
-from utils.permission import get_current_admin, get_allowed_classes
+
+from models import Approval, User
+from utils.permission import get_allowed_classes, get_current_admin
 
 
 def _serialize_approval(a, detail=False):

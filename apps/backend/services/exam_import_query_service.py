@@ -4,7 +4,7 @@
 路由层仅负责解析请求参数与信封封装，保持契约不变。
 """
 
-from models import Score, User, Exam, Admin, get_by_id
+from models import Admin, Exam, Score, User, get_by_id
 
 
 def get_import_history_view(exam_id=None, page=1, per_page=20):

@@ -8,7 +8,7 @@
 
 import pytest
 
-from models import db, Admin, AdminClass, ClassInfo
+from models import Admin, AdminClass, ClassInfo, db
 
 
 @pytest.fixture

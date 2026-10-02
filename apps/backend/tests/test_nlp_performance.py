@@ -1,8 +1,10 @@
-import pytest
 import time
-from services.nlp_service import NLPService, nlp_service
+
+import pytest
+
+from models import NLPBehaviorKeyword, NLPScoringRule, ScoreCategory, User
 from services.nlp_fast_parser import FastNLPParser
-from models import User, ScoreCategory, NLPBehaviorKeyword, NLPScoringRule
+from services.nlp_service import NLPService, nlp_service
 
 
 @pytest.fixture(autouse=True)
@@ -118,7 +120,7 @@ def _ensure_scoring_rules(session):
         sr.behavior_keyword: sr
         for sr in NLPScoringRule.query.filter(
             NLPScoringRule.behavior_keyword.in_(
-                ["迟到", "做好事", "作业没交", "帮助同学"]  # noqa: E501
+                ["迟到", "做好事", "作业没交", "帮助同学"]
             )
         ).all()
     }

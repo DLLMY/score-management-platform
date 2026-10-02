@@ -17,8 +17,9 @@ class TestNotifyHistoryRoutes:
 
     def test_clean_notify_history(self, client, app, auth_headers):
         """DELETE /clean 清理 days 天前记录；契约零漂移：返回 success + 整数 deleted_count，且旧记录删除/新记录保留。"""
-        from models import db, NotifyHistory
         from datetime import datetime, timedelta
+
+        from models import NotifyHistory, db
 
         with app.app_context():
             old = NotifyHistory(text="old", created_at=datetime.now() - timedelta(days=90))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """差异 #4 设备认证凭证体系测试：门禁（白名单 + 签名）与密钥签发/吊销。
 
 覆盖：
@@ -11,8 +10,8 @@ import time
 import uuid
 
 import pytest
-from models import Device, SystemConfig, db
 
+from models import Device, SystemConfig, db
 from services.mqtt_manager import MQTTManager
 from utils.device_auth import (
     compute_signature,

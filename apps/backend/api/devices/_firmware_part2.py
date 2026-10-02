@@ -1,18 +1,35 @@
-# -*- coding: utf-8 -*-
 # part of api/devices/firmware_routes.py (D2 split)
 
+import hashlib
 import logging
-from flask import request, send_file
 import os
 import time
+
+from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from models import FirmwareVersion, DeviceFirmwareUpdate, Device
-from utils.logger import log_info
-from utils.permission import requires_permission
 from werkzeug.utils import secure_filename
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-import hashlib
+
+from api.devices.firmware_routes import (
+    ALLOWED_EXTENSIONS,
+    FIRMWARE_FIELDS,
+    FIRMWARE_UPLOAD_FOLDER,
+    allowed_file,
+    ensure_upload_folder,
+    firmware_version_model,
+    logger,
+    ns_firmware,
+    rollback_model,
+)
+from models import Device, DeviceFirmwareUpdate, FirmwareVersion
+from services.firmware_service import (
+    create_firmware_version,
+    create_uploaded_firmware,
+    delete_firmware_version,
+    log_batch_upgrade,
+    log_ota_upgrade,
+    report_ota_status,
+    update_firmware_version,
+)
 from services.mqtt_service import mqtt_manager
 from services.ota_negotiation_service import (
     build_download_url,
@@ -26,17 +43,11 @@ from services.ota_negotiation_service import (
     sign_ota_command,
     verify_download_token,
 )
-from services.firmware_service import (
-    create_firmware_version,
-    update_firmware_version,
-    delete_firmware_version,
-    report_ota_status,
-    create_uploaded_firmware,
-    log_batch_upgrade,
-    log_ota_upgrade,
-)
+from utils.logger import log_info
+from utils.pagination import get_pagination
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
-from api.devices.firmware_routes import FIRMWARE_FIELDS, logger, ns_firmware, firmware_version_model, FIRMWARE_UPLOAD_FOLDER, ALLOWED_EXTENSIONS, allowed_file, ensure_upload_folder, rollback_model
 
 @ns_firmware.route("/batch-upgrade")
 class BatchUpgrade(Resource):

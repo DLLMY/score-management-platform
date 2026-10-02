@@ -7,7 +7,8 @@ Heartbeat Service Test Cases
 """
 import uuid
 from datetime import datetime, timedelta
-from models import Device, Alert
+
+from models import Alert, Device
 
 try:
     from services.heartbeat_service import update_device_heartbeat

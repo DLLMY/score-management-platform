@@ -1,9 +1,15 @@
+from datetime import datetime
+
 from flask_restx import Namespace, Resource, fields
+
 from models import TimeRule
+from services.time_rule_service import (
+    create_time_rule,
+    delete_time_rule,
+    update_time_rule,
+)
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from datetime import datetime
-from services.time_rule_service import create_time_rule, update_time_rule, delete_time_rule
 
 ns_time_rules = Namespace("time-rules", description="时间规则相关操作")
 

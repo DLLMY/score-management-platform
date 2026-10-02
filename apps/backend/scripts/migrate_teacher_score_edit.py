@@ -13,8 +13,8 @@ S1 修复：teacher 角色补授 score.edit（成绩录入闭环）。
 """
 
 import os
-import sys
 import sqlite3
+import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "instance", "score_management.db")

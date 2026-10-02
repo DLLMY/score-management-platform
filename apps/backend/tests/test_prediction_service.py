@@ -6,7 +6,8 @@
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from services.prediction_service import PredictionService
 
 

@@ -1,6 +1,7 @@
 import pytest
+
 from models import db
-from models.parent import ParentContact, ContactLog
+from models.parent import ContactLog, ParentContact
 from services.parent_service import parent_service
 
 

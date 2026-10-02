@@ -26,10 +26,10 @@ import redis
 # 让 services / utils / middleware 可被导入（backend/ 为根）
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services import redis_cache_service as rcs  # noqa: E402
-from services.redis_cache_service import get_cache_service  # noqa: E402
-import middleware.cache_invalidation as ci  # noqa: E402
-from utils.api_cache_middleware import invalidate_cache  # noqa: E402
+import middleware.cache_invalidation as ci
+from services import redis_cache_service as rcs
+from services.redis_cache_service import get_cache_service
+from utils.api_cache_middleware import invalidate_cache
 
 # 独立测试库，避免污染运行环境真实缓存（db=0）
 REDIS_TEST_URL = os.environ.get("CACHE_TEST_REDIS_URL", "redis://127.0.0.1:6379/15")

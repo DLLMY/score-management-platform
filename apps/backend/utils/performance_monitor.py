@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
-from collections import defaultdict, deque
-from flask import request, g
-import time
 import logging
 import threading
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timedelta
+
+from flask import g, request
 
 """
 性能监控服务

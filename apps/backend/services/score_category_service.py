@@ -8,7 +8,7 @@ APIResponse，不改变对外契约。
 
 from datetime import datetime
 
-from models import db, ScoreCategory, ScoreRule
+from models import ScoreCategory, ScoreRule, db
 
 
 def create_category(data):

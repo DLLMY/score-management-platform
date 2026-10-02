@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
-from models import db, Permission
+from models import Permission, db
 
 """
 班主任工作台 - 11个新模块数据库迁移脚本

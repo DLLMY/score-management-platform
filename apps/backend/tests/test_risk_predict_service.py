@@ -7,7 +7,8 @@
 """
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from services.risk_predict_service import RiskPredictService
 
 
@@ -241,7 +242,8 @@ class TestRiskPredictService:
         with app.app_context():
             import uuid
             from datetime import date, timedelta
-            from models import User, Attendance, ClassInfo, db
+
+            from models import Attendance, ClassInfo, User, db
 
             suffix = uuid.uuid4().hex[:10]
             cls = ClassInfo(name="ATTEND_CLASS_" + suffix)

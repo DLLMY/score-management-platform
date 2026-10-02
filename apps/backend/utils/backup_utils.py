@@ -1,11 +1,11 @@
-import shutil
 import json
-import zipfile
 import logging
-from datetime import datetime, timedelta
-from typing import Any
-from pathlib import Path
+import shutil
 import sqlite3
+import zipfile
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class BackupManager:
                     shutil.rmtree(temp_dir)
 
         except Exception as e:
-            return {"success": False, "message": f"备份失败: {str(e)}"}
+            return {"success": False, "message": f"备份失败: {e!s}"}
 
     def _get_db_version(self) -> str:
         """获取数据库版本信息"""
@@ -177,10 +177,10 @@ class BackupManager:
                 if "temp_dir" in locals() and temp_dir.exists():
                     shutil.rmtree(temp_dir)
 
-                return {"success": False, "message": f"恢复失败: {str(e)}"}
+                return {"success": False, "message": f"恢复失败: {e!s}"}
 
         except Exception as e:
-            return {"success": False, "message": f"恢复失败: {str(e)}"}
+            return {"success": False, "message": f"恢复失败: {e!s}"}
 
     def list_backups(self) -> list[dict[str, Any]]:
         """
@@ -265,7 +265,7 @@ class BackupManager:
             return {
                 "success": False,
                 "deleted_count": deleted_count,
-                "message": f"清理失败: {str(e)}",
+                "message": f"清理失败: {e!s}",
             }
 
     def get_backup_stats(self) -> dict[str, Any]:

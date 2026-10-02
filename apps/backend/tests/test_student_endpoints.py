@@ -19,7 +19,15 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from models import User, ScoreRecord, Notification, Approval, ClassInfo, PhoneBoxPolicy, db
+from models import (
+    Approval,
+    ClassInfo,
+    Notification,
+    PhoneBoxPolicy,
+    ScoreRecord,
+    User,
+    db,
+)
 
 
 @pytest.fixture
@@ -33,7 +41,7 @@ def student_user(app_context):
     try:
         db.session.delete(u)
         db.session.commit()
-    except Exception:  # noqa: BLE001
+    except Exception:
         db.session.rollback()
 
 

@@ -8,10 +8,10 @@
 
 import os
 import sys
+import traceback
 
 from app import create_app
 from models import db
-import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

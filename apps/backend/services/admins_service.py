@@ -5,19 +5,20 @@ class_id 必填）/ 登录令牌 / CSRF / 响应构造。sync_admin_rbac_role(s)
 落库一并收口；log_permission_action 由路由保留同名委托函数（模块内 3 处调用）。
 """
 
+import logging
 from datetime import datetime
 
 from models import (
-    db,
     Admin,
     AdminClass,
-    PermissionLog,
     AdminRole,
+    PermissionLog,
     RolePermission,
     cascade_delete_related_records,
+    db,
 )
 from utils.security import hash_password
-import logging
+
 logger = logging.getLogger(__name__)
 
 ROLE_MAPPING = {

@@ -1,7 +1,8 @@
 """全面服务健康检查 V2 - 使用所有正确的API路径"""
 
-import requests
 import time
+
+import requests
 
 BASE = "http://127.0.0.1:5000/api"
 

@@ -3,11 +3,12 @@
 安全中间件 - 添加安全响应头和防护措施
 """
 
-from flask import request, g
-from functools import wraps
-import time
-import re
 import logging
+import re
+import time
+from functools import wraps
+
+from flask import g, request
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,6 @@ class SecurityMiddleware:
                 except Exception as e:
                     logger.warning("请求体JSON解析失败: %s", e, exc_info=True)
 
-        return
 
 
 def rate_limit_exempt(f):
@@ -149,8 +149,9 @@ def check_sql_injection(input_str):
 
 def log_security_event(event_type, details):
     """记录安全事件"""
-    from utils.logger import log_error, log_info
     from flask import request
+
+    from utils.logger import log_error, log_info
 
     client_ip = request.remote_addr if request else "unknown"
     user_agent = request.headers.get("User-Agent", "unknown") if request else "unknown"

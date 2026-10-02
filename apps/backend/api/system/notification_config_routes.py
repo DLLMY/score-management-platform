@@ -1,11 +1,11 @@
-from flask import request
+from datetime import datetime
+
+from flask import current_app, request
 from flask_restx import Namespace, Resource, fields
+
+from services.notification_service import NotificationService
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from flask import current_app
-
-from datetime import datetime
-from services.notification_service import NotificationService
 
 ns_notification_config = Namespace("notification-config", description="通知配置管理")
 

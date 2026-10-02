@@ -1,8 +1,8 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 
 try:
-    from models import User, StudentCluster, db
+    from models import StudentCluster, User, db
 except ImportError:
     pass
 
@@ -51,7 +51,7 @@ class TestModels:
 
     def test_user_model(self, app):
         with app.app_context():
-            from models import User, StudentCluster, db
+            from models import StudentCluster, User, db
 
             user = User(
                 name="Test User",

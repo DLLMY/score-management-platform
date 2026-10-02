@@ -1,8 +1,8 @@
 """实证探测班主任工作台 12 个功能的后端列表端点，定位'全部有问题'的根因。"""
 
 import json
-import urllib.request
 import urllib.error
+import urllib.request
 
 BASE = "http://127.0.0.1:5000"
 

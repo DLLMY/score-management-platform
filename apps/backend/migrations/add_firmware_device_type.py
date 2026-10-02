@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """差异 #1 / #2：firmware_versions 表增加 device_type / is_stable / rollback_to 三列。
 
 执行: python migrations/add_firmware_device_type.py

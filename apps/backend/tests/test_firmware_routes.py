@@ -26,7 +26,7 @@
 import io
 import uuid
 
-from models import FirmwareVersion, DeviceFirmwareUpdate, get_by_id
+from models import DeviceFirmwareUpdate, FirmwareVersion, get_by_id
 
 
 def _unique_version():

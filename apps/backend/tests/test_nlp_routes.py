@@ -273,10 +273,10 @@ def test_train_breaks_stale_running(client, app, auth_headers, monkeypatch):
 def test_cleanup_stale_training_records(app):
     """#912 实机修复：启动清理 status=running 且 created_at 超阈值的悬挂训练记录 → error。"""
     from datetime import datetime, timedelta
-    from utils.startup_cleanup import cleanup_stale_training_records
 
     from models import db
     from models.nlp_models import NLPModelTraining
+    from utils.startup_cleanup import cleanup_stale_training_records
 
     with app.app_context():
         # 注意：必须用 datetime.now()（与生产 train 流程 datetime.now() 写入同基准），

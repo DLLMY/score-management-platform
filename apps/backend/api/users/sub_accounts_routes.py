@@ -1,5 +1,6 @@
-from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_restx import Namespace, Resource, fields
+
 from models import SubAccount
 
 # 子账号响应字段子集（B3 扩展 2026-08-23；to_dict 已排除 _password 敏感字段）
@@ -15,22 +16,22 @@ SUB_ACCOUNT_FIELDS = [
     "created_at",
 ]
 SUB_ACCOUNT_LOGIN_FIELDS = ["id", "username", "role_type", "real_name"]
-from utils.permission import requires_permission, get_current_admin
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.security import verify_password, generate_subaccount_token
-from utils.response import APIResponse
 from api.system.security_routes import (
     check_login_rate_limit,
-    record_failed_login,
     clear_login_attempts,
+    record_failed_login,
 )
 from services.sub_accounts_service import (
     create_sub_account,
-    update_sub_account,
     delete_sub_account,
     log_sub_account_action,
+    update_sub_account,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.logger import logger
+from utils.permission import get_current_admin, requires_permission
+from utils.response import APIResponse
+from utils.security import generate_subaccount_token, verify_password
 
 ns_sub_accounts = Namespace("sub-accounts", description="子账号管理相关操作")
 

@@ -8,9 +8,9 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import func
 
-from models import db, Device, DeviceHeartbeat, Alert
-from utils.permission import get_admin_class_ids
+from models import Alert, Device, DeviceHeartbeat, db
 from services.heartbeat_service import is_device_online
+from utils.permission import get_admin_class_ids
 
 
 def _get_devices_for_admin(admin):

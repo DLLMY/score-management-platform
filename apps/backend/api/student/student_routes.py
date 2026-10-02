@@ -7,29 +7,32 @@
 - 即使学生令牌误发到 Admin 端点，也会被 requires_permission 的 type=access 校验拒绝
 """
 
-from flask_restx import Namespace, Resource, fields
-from flask import request, g, make_response
 import json
 import logging
 from datetime import datetime
-from models import User, ScoreRecord, Notification, Approval
-from utils.security import generate_student_token, validate_card_id
-from utils.permission import requires_student
-from utils.response import APIResponse
-from utils.params import get_int_arg
-from utils.logger import log_login_attempt
-from utils.datetime_utils import parse_date
+
+from flask import g, make_response, request
+from flask_restx import Namespace, Resource, fields
+
 from api.system.security_routes import (
     check_login_rate_limit,
-    record_failed_login,
     clear_login_attempts,
+    record_failed_login,
 )
-from services.attendance_service import attendance_service
-from services.engagement_service import calculate_engagement, EngagementService
-from services.risk_predict_service import RiskPredictService
+from models import Approval, Notification, ScoreRecord, User
 from services import phonebox_policy
-from services.mqtt_service import publish_mqtt
 from services.analysis_service import analysis_service
+from services.attendance_service import attendance_service
+from services.engagement_service import EngagementService, calculate_engagement
+from services.mqtt_service import publish_mqtt
+from services.risk_predict_service import RiskPredictService
+from utils.datetime_utils import parse_date
+from utils.logger import log_login_attempt
+from utils.params import get_int_arg
+from utils.permission import requires_student
+from utils.response import APIResponse
+from utils.security import generate_student_token, validate_card_id
+
 # 差异 #17：开锁原因码唯一命名来源
 from utils.unlock_reasons import UnlockReason, canonicalize
 
@@ -450,8 +453,8 @@ def _build_score_trend(user_id, weeks):
     直接拉取该生全部 ScoreRecord 后在内存按「今天」为锚点分桶，
     避免 SQLite 下 DateTime 列与 date 边界比较的不一致。
     """
-    from datetime import date as _date
     from collections import defaultdict
+    from datetime import date as _date
 
     today = datetime.now().date()
     recs = ScoreRecord.query.filter_by(student_id=user_id).all()

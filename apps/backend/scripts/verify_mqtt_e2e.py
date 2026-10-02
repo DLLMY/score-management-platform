@@ -44,15 +44,15 @@ nc5233fc.ala.cn-hangzhou.emqxsl.cn:8883, TLS, phoneboxtest/123456），
 """
 
 import atexit
+import glob
 import json
+import logging
 import os
-import ssl
 import sqlite3
+import ssl
 import sys
 import threading
 import time
-import glob
-import logging
 
 logger = logging.getLogger(__name__)
 

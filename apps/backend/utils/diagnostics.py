@@ -1,11 +1,12 @@
-from datetime import datetime
-from flask import jsonify
-from functools import wraps
-import os
 import ctypes
-import platform
 import logging
+import os
+import platform
 import time
+from datetime import datetime
+from functools import wraps
+
+from flask import jsonify
 
 """
 问题诊断与性能监控模块
@@ -43,7 +44,7 @@ class HealthChecker:
                 return {"status": "healthy", "message": "数据库连接正常"}
             return {"status": "unknown", "message": "数据库未配置"}
         except Exception as e:
-            return {"status": "unhealthy", "message": f"数据库连接失败: {str(e)}"}
+            return {"status": "unhealthy", "message": f"数据库连接失败: {e!s}"}
 
     def check_redis(self):
         """检查Redis连接"""
@@ -53,7 +54,7 @@ class HealthChecker:
                 return {"status": "healthy", "message": "Redis连接正常"}
             return {"status": "unknown", "message": "Redis未配置"}
         except Exception as e:
-            return {"status": "unhealthy", "message": f"Redis连接失败: {str(e)}"}
+            return {"status": "unhealthy", "message": f"Redis连接失败: {e!s}"}
 
     def check_mqtt(self):
         """检查MQTT连接"""
@@ -64,7 +65,7 @@ class HealthChecker:
                 return {"status": "degraded", "message": "MQTT连接断开"}
             return {"status": "unknown", "message": "MQTT未配置"}
         except Exception as e:
-            return {"status": "unhealthy", "message": f"MQTT连接失败: {str(e)}"}
+            return {"status": "unhealthy", "message": f"MQTT连接失败: {e!s}"}
 
     def check_disk_space(self):
         """检查磁盘空间（跨平台兼容）"""
@@ -95,7 +96,7 @@ class HealthChecker:
                 return {"status": "warning", "message": f"磁盘空间较低: {free_percent:.1f}%"}
             return {"status": "healthy", "message": f"磁盘空间正常: {free_percent:.1f}%"}
         except Exception as e:
-            return {"status": "unknown", "message": f"无法检查磁盘空间: {str(e)}"}
+            return {"status": "unknown", "message": f"无法检查磁盘空间: {e!s}"}
 
     def check_memory_usage(self):
         """检查内存使用"""
@@ -110,7 +111,7 @@ class HealthChecker:
                 return {"status": "warning", "message": f"内存使用率较高: {used_percent}%"}
             return {"status": "healthy", "message": f"内存使用率正常: {used_percent}%"}
         except Exception as e:
-            return {"status": "unknown", "message": f"无法检查内存: {str(e)}"}
+            return {"status": "unknown", "message": f"无法检查内存: {e!s}"}
 
     def check_cpu_usage(self):
         """检查CPU使用"""
@@ -124,7 +125,7 @@ class HealthChecker:
                 return {"status": "warning", "message": f"CPU使用率较高: {cpu_percent}%"}
             return {"status": "healthy", "message": f"CPU使用率正常: {cpu_percent}%"}
         except Exception as e:
-            return {"status": "unknown", "message": f"无法检查CPU: {str(e)}"}
+            return {"status": "unknown", "message": f"无法检查CPU: {e!s}"}
 
     def run_all_checks(self):
         """运行所有健康检查"""
@@ -144,7 +145,7 @@ class HealthChecker:
             except Exception as e:
                 results["checks"][check["name"]] = {
                     "status": "error",
-                    "message": f"检查执行失败: {str(e)}",
+                    "message": f"检查执行失败: {e!s}",
                 }
         # 确定整体状态
         for _check_name, check_result in results["checks"].items():

@@ -1,13 +1,13 @@
 """测试NotifyTemplate写入错误"""
 
-import sys
 import os
+import sys
 import traceback
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app import app
-from models import db, NotifyTemplate
+from models import NotifyTemplate, db
 
 with app.app_context():
     # 测试直接创建模板

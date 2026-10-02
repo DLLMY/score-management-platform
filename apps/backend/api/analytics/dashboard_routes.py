@@ -1,9 +1,10 @@
 from flask_restx import Namespace, Resource
+
 from services.dashboard_service import dashboard_service
-from utils.response import APIResponse
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api
 from utils.decorators import safe_handle
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 ns_dashboard = Namespace("dashboard", description="仪表板数据相关操作")
 

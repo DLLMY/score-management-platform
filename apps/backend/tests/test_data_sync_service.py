@@ -1,5 +1,5 @@
 try:
-    from models import db, ClassInfo, User, Admin
+    from models import Admin, ClassInfo, User, db
 except ImportError:
     pass
 
@@ -28,7 +28,7 @@ class TestDataSyncService:
 
     def test_sync_class_name_change(self, app):
         with app.app_context():
-            from models import db, ClassInfo, User, Admin
+            from models import Admin, ClassInfo, User, db
             from services.data_sync_service import DataSyncService
 
             class_info = ClassInfo(name="旧班级", grade="初一", is_active=True)

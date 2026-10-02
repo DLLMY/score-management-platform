@@ -1,15 +1,15 @@
 import os
 import sys
+
+from dotenv import load_dotenv
+from flasgger import LazyJSONEncoder, LazyString, Swagger
 from flask_compress import Compress
+from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
-from flask_cors import CORS
-from flasgger import Swagger, LazyString, LazyJSONEncoder
-from dotenv import load_dotenv
 
 from config import config
-
 from utils.logger import logger
 
 _swagger_initialized = False
@@ -316,7 +316,10 @@ def init_config(app, lightweight=False):
     # R1: 非致命 Redis 连通性检查
     _check_redis_connectivity(app)
 
-    from utils.performance_monitor import PerformanceMiddleware, start_performance_logger
+    from utils.performance_monitor import (
+        PerformanceMiddleware,
+        start_performance_logger,
+    )
 
     PerformanceMiddleware(app)
     start_performance_logger()

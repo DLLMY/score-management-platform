@@ -48,12 +48,12 @@ def retype_table(conn, tbl):
     )
     index_sqls = [r[0] for r in cur.fetchall()]
 
-    new_create = re.sub(r"\bscore_change\s+INTEGER", "score_change REAL", create_sql, flags=re.I)
+    new_create = re.sub(r"\bscore_change\s+INTEGER", "score_change REAL", create_sql, flags=re.IGNORECASE)
     new_create = re.sub(
         rf"CREATE TABLE\s+\"?{re.escape(tbl)}\"?",
         f"CREATE TABLE {tbl}_new",
         new_create,
-        flags=re.I,
+        flags=re.IGNORECASE,
     )
 
     cur.execute(f"ALTER TABLE {tbl} RENAME TO {tbl}_old")

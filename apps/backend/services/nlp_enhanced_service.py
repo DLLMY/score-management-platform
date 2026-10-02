@@ -1,29 +1,29 @@
+import logging
+import math
 import os
+import pickle
 import re
 import threading
+from datetime import date, datetime, timedelta
+
 import jieba
 import numpy as np
 from numpy import hstack
-import pickle
-import math
-import logging
-from datetime import datetime, timedelta, date
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
+
+from config.config_loader import config_loader
 from models import (
-    NLPScoringRule,
     NLPBehaviorKeyword,
     NLPMatchResult,
     NLPRuleUsage,
+    NLPScoringRule,
     User,
-    get_by_id,
     db,
+    get_by_id,
 )
-from config.config_loader import config_loader
-
-
-from utils.logger import log_warning, log_debug
+from utils.logger import log_debug, log_warning
 
 
 def _coerce_dt(value):

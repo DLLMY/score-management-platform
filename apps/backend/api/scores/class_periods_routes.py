@@ -1,15 +1,15 @@
 from flask_restx import Namespace, Resource, fields
-from models import ClassPeriod
-from utils.permission import requires_permission
 
-from utils.response import APIResponse
+from models import ClassPeriod
 from services.class_period_service import (
-    create_class_period,
-    update_class_period,
-    delete_class_period,
     batch_update_class_periods,
+    create_class_period,
+    delete_class_period,
     reset_class_periods,
+    update_class_period,
 )
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 ns_class_periods = Namespace("class-periods", description="课程节次管理")
 

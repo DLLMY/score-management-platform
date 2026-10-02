@@ -49,7 +49,7 @@ def main():
     args = parser.parse_args()
 
     from app import create_app
-    from models import PhoneBoxPolicy, ClassInfo
+    from models import ClassInfo, PhoneBoxPolicy
     from services import phonebox_policy as svc
     from services.class_time_checker import ClassTimeChecker
 

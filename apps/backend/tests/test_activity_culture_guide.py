@@ -1,9 +1,9 @@
 import pytest
-from models import db
-from models import ClassInfo, User
+
+from models import ClassInfo, User, db
 from models.activity import Activity, ActivityRegistration
 from models.culture import CultureRecord
-from models.study_guide import StudyGuide, ImprovementPlan
+from models.study_guide import ImprovementPlan, StudyGuide
 from services.activity_service import activity_service
 from services.culture_service import culture_service
 from services.study_guide_service import study_guide_service

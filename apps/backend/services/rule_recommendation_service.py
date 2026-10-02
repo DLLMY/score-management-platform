@@ -1,9 +1,10 @@
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from models import ScoreRecord, ScoreRule, ScoreCategory, User
 import numpy as np
-import re
+
+from models import ScoreCategory, ScoreRecord, ScoreRule, User
 
 
 class RuleRecommendationService:

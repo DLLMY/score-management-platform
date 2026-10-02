@@ -1,7 +1,7 @@
 """Tests for Notification Service"""
 
-from unittest.mock import patch, MagicMock
 import json
+from unittest.mock import MagicMock, patch
 
 try:
     from services.notification_service import NotificationService

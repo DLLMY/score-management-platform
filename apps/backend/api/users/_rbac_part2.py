@@ -1,40 +1,57 @@
-# -*- coding: utf-8 -*-
 # part of api/users/rbac_routes.py (D2 split)
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
+
+from api.users.rbac_routes import (
+    admin_role_model,
+    admin_with_roles_model,
+    check_admin_permission,
+    get_inherited_permissions,
+    init_default_permissions,
+    init_default_roles,
+    log_permission_action,
+    ns_rbac,
+    permission_model,
+    role_hierarchy_model,
+    role_permission_mapping_model,
+    role_with_permissions_model,
+)
 from models import (
     Admin,
     AdminRole,
     Permission,
+    RoleHierarchy,
     RolePermission,
     RolePermissionMapping,
-    RoleHierarchy,
     get_by_id,
 )
-from utils.permission import requires_permission, has_permission, get_current_admin
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.response import APIResponse
 from services.rbac_service import (
-    log_rbac_permission_action,
-    create_permission,
-    update_permission,
-    delete_permission,
-    create_role,
-    update_role,
-    delete_role,
-    assign_admin_roles,
     add_admin_role,
-    remove_admin_role,
-    set_role_permissions,
     add_role_permission,
+    assign_admin_roles,
+    create_permission,
+    create_role,
+    delete_permission,
+    delete_role,
+    log_rbac_permission_action,
+    remove_admin_role,
     remove_role_permission,
+    set_role_permissions,
+    update_permission,
+    update_role,
+)
+from services.rbac_service import (
     init_default_permissions as _service_init_default_permissions,
+)
+from services.rbac_service import (
     init_default_roles as _service_init_default_roles,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.logger import logger
+from utils.permission import get_current_admin, has_permission, requires_permission
+from utils.response import APIResponse
 
-from api.users.rbac_routes import ns_rbac, log_permission_action, permission_model, admin_role_model, role_permission_mapping_model, role_hierarchy_model, role_with_permissions_model, admin_with_roles_model, get_inherited_permissions, check_admin_permission, init_default_permissions, init_default_roles
 
 @ns_rbac.route("/admin-roles/<int:admin_id>")
 @ns_rbac.param("admin_id", "管理员ID")

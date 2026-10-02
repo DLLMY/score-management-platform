@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from models import db
 
 
@@ -52,6 +53,8 @@ class SystemConfig(db.Model):
     device_whitelist_enabled = db.Column(
         db.Boolean, default=False, nullable=False, server_default="0"
     )
+    # 审批超时阈值（小时）；scheduler 的 approval_timeout_check 读取此列，缺失时回退 24。
+    approval_timeout_hours = db.Column(db.Integer, default=24)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 

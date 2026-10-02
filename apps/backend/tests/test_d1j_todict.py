@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-j object-level to_dict tests."""
 import pytest
+
 from models.homework import HomeworkSubmission
 from models.mental_health import MentalHealthRecord
-from models.nlp_models import NLPBehaviorKeyword
-from models.nlp_models import NLPMatchResult
-from models.nlp_models import NLPScoringRule
-
+from models.nlp_models import NLPBehaviorKeyword, NLPMatchResult, NLPScoringRule
 
 
 def test_HomeworkSubmission_to_dict():

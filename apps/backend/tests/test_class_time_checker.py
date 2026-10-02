@@ -6,6 +6,7 @@
 """
 
 from datetime import datetime
+
 from services.class_time_checker import ClassTimeChecker
 
 
@@ -57,7 +58,8 @@ class TestClassTimeChecker:
     def test_is_notification_allowed_class_in_session(self, app, db_session):
         """测试按班级课表反查命中上课 -> 拦截 CLASS_IN_SESSION（真实 DB 数据）"""
         from datetime import datetime
-        from models import ClassPeriod, CourseSchedule, ClassInfo, Subject
+
+        from models import ClassInfo, ClassPeriod, CourseSchedule, Subject
 
         now = datetime.now()
         day = now.weekday()

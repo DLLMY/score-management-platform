@@ -8,15 +8,16 @@ F10: WOLDevice 并入 Device（数据迁移 + 建列；WOLDevice 模型类已删
 - SQLite FK 在项目内默认开启，故全程 PRAGMA foreign_keys=OFF 操作、结束恢复。
 """
 
+import json
 import os
 import sys
-import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import text
+
 from app import app
-from models import db, Device
+from models import Device, db
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAP_PATH = os.path.join(BACKEND_DIR, "migration_backups", "migration_wol_id_map.json")

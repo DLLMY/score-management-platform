@@ -60,7 +60,7 @@ def _load_service_stubbed():
 def load_service():
     """优先真实导入；失败（坏沙箱）则回退到 stub 加载。"""
     try:
-        import services.score_record_service as srv  # noqa: F401
+        import services.score_record_service as srv
 
         return srv
     except Exception:

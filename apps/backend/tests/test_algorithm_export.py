@@ -9,19 +9,19 @@
 
 import io
 import uuid
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 
 import pytest
 from openpyxl import load_workbook
 
 from models import (
-    db,
-    ClassInfo,
-    User,
     Attendance,
+    ClassInfo,
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
+    User,
+    db,
 )
 from utils.security import generate_student_token
 

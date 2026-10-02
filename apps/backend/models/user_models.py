@@ -1,7 +1,11 @@
 from datetime import datetime
+
 import bcrypt
-from models import db
-from models import is_bcrypt_hash  # 定义于 __init__（行 98），再导出块之前已就绪
+
+from models import (
+    db,
+    is_bcrypt_hash,  # 定义于 __init__（行 98），再导出块之前已就绪
+)
 from utils.serialize import serialize_dt
 
 

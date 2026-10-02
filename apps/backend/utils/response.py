@@ -1,6 +1,7 @@
-from flask import request
-from datetime import datetime
 import logging
+from datetime import datetime
+
+from flask import request
 
 logger = logging.getLogger(__name__)
 

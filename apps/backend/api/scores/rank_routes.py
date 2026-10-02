@@ -1,10 +1,18 @@
 from flask_restx import Namespace, Resource, fields
+
 from models import ScoreRankRule
+from services.rank_service import (
+    _find_rank_by_score_binary_search,
+    _get_active_rank_rules_cached,
+)
+from services.redis_cache_service import get_cache_service
+from services.score_rank_service import (
+    create_rank_rule,
+    delete_rank_rule,
+    update_rank_rule,
+)
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from services.redis_cache_service import get_cache_service
-from services.rank_service import _find_rank_by_score_binary_search, _get_active_rank_rules_cached
-from services.score_rank_service import create_rank_rule, update_rank_rule, delete_rank_rule
 
 # ⚠️ 与 `api/rank/rank_routes.py`（"积分排行榜"展示）**不是同一模块**，仅文件名同名：
 #   - 本文件  = 排名规则管理（段位阈值/颜色/图标 CRUD，权限 rule.view / undefined，操作 ScoreRankRule 模型）

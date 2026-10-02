@@ -6,7 +6,7 @@ F17 防腐层：仅收口原 time_rules_routes.py 中的 db.session 写入/事�
 
 from datetime import datetime
 
-from models import db, TimeRule
+from models import TimeRule, db
 
 
 def create_time_rule(data):

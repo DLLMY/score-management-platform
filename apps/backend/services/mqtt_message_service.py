@@ -1,33 +1,39 @@
-from datetime import datetime
+import json
 import logging
 import time
+from datetime import datetime
 from functools import wraps
+
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from services.mqtt_service import publish_mqtt, mqtt_manager, mqtt_logs
-from services.class_time_checker import ClassTimeChecker
+
+from models import Approval, ScoreRecord, ScoreRule, User, db, get_by_id
 from services import phonebox_policy
-from services.phonebox_policy import POLICY_BLOCK, POLICY_ALLOW_OVERRIDE, POLICY_ALLOW_WINDOW
+from services.class_time_checker import ClassTimeChecker
+
 # 差异 #3/#11：心跳统一写入 + 设备错误自动告警
 from services.heartbeat_service import (
     apply_heartbeat_to_device,
     check_device_errors,
     is_safe_device_id,
 )
-# 差异 #17：开锁原因码唯一命名来源
-from utils.unlock_reasons import UnlockReason, canonicalize
+from services.mqtt_service import mqtt_logs, mqtt_manager, publish_mqtt
+from services.phonebox_policy import (
+    POLICY_ALLOW_OVERRIDE,
+    POLICY_ALLOW_WINDOW,
+    POLICY_BLOCK,
+)
 from utils.db_session import db_session_scope
 
-
-import json
-from models import ScoreRecord, db, Approval, get_by_id, User, ScoreRule
+# 差异 #17：开锁原因码唯一命名来源
+from utils.unlock_reasons import UnlockReason, canonicalize
 
 logger = logging.getLogger(__name__)
 
 
-from utils.logger import log_warning
 from flask import has_app_context
 
+from utils.logger import log_warning
 
 
 def ensure_app_context(func):
@@ -124,7 +130,7 @@ class MQTTMessageService:
         return False
 
     def check_rule_limit(self, user_id, rule_id):
-        from models import ScoreRule, ScoreRecord
+        from models import ScoreRecord, ScoreRule
 
         rule = get_by_id(ScoreRule, rule_id)
         if not rule:
@@ -885,6 +891,7 @@ class MQTTMessageService:
         if not msg_id:
             return False
         from sqlalchemy.exc import IntegrityError
+
         from models import ProcessedMessage, db
 
         try:

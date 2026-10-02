@@ -145,7 +145,7 @@ def _schedule_retention(app):
         if app is not None:
             app.logger.info("日志归档：定时清理已注册（每日执行）")
         return True
-    except Exception:  # noqa: BLE001 - 调度器依赖缺失/启动失败均静默降级
+    except Exception:
         return False
 
 
@@ -158,7 +158,7 @@ def setup_log_archiving(app=None):
     # 启动即补压一次历史遗留裸轮转，回收既有磁盘占用
     try:
         archive_existing_rotated()
-    except Exception as e:  # noqa: BLE001 - 补压失败不阻断应用启动
+    except Exception as e:
         _LOGGER.warning("日志归档：历史裸轮转补压失败: %s", e)
 
     if _ALREADY_SETUP:

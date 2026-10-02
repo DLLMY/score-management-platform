@@ -10,14 +10,15 @@
 两者 Namespace 不同（`rank` vs `rank-rules`）、URL 前缀不同（`/api/rank/*` vs `/api/rank-rules/*`），不合并。
 """
 
-from flask_restx import Namespace, Resource
 from flask import request
+from flask_restx import Namespace, Resource
+
 from services.analysis_service import analysis_service
+from utils.api_cache_middleware import cached_api
+from utils.decorators import safe_handle
+from utils.params import get_int_arg
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from utils.params import get_int_arg
-from utils.decorators import safe_handle
-from utils.api_cache_middleware import cached_api
 
 ns_rank = Namespace("rank", description="积分排行榜相关操作")
 

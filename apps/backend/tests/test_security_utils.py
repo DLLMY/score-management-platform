@@ -1,31 +1,30 @@
-from utils.security import validate_integer
-from utils.security import validate_gender
-from utils.security import validate_class_name
+from datetime import UTC, datetime, timedelta, timezone
+
 import jwt
-from datetime import datetime, timedelta, timezone
+
 from utils.security import (
-    generate_tokens,
     decode_token,
-    validate_token,
+    generate_tokens,
     hash_password,
-    verify_password,
-    sanitize_input,
-    validate_email,
-    validate_phone,
-    validate_username,
-    validate_password,
-    is_strong_password,
-    validate_card_id,
-    validate_integer,
-    validate_string_length,
-    validate_score,
-    validate_class_name,
-    validate_gender,
-    validate_status,
-    validate_datetime,
-    validate_json,
-    sanitize_filename,
     is_safe_redirect_url,
+    is_strong_password,
+    sanitize_filename,
+    sanitize_input,
+    validate_card_id,
+    validate_class_name,
+    validate_datetime,
+    validate_email,
+    validate_gender,
+    validate_integer,
+    validate_json,
+    validate_password,
+    validate_phone,
+    validate_score,
+    validate_status,
+    validate_string_length,
+    validate_token,
+    validate_username,
+    verify_password,
 )
 
 try:
@@ -64,7 +63,7 @@ class TestSecurityUtils:
         expired_payload = {
             "sub": "1",
             "type": "access",
-            "exp": datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1),
+            "exp": datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=1),
         }
         expired_token = jwt.encode(expired_payload, JWT_SECRET_KEY, algorithm="HS256")
         payload = decode_token(expired_token)

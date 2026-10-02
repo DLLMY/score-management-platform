@@ -1,18 +1,18 @@
 from utils.validation import (
-    validate_phone,
+    validate_chinese_name,
     validate_email,
-    validate_score,
-    validate_id,
-    validate_username,
-    validate_password,
-    validate_mac_address,
-    validate_ip_address,
-    validate_positive_int,
     validate_enum,
+    validate_id,
+    validate_ip_address,
+    validate_mac_address,
+    validate_name,
+    validate_password,
+    validate_phone,
+    validate_positive_int,
+    validate_score,
+    validate_student_id,
+    validate_username,
 )
-from utils.validation import validate_chinese_name
-from utils.validation import validate_student_id
-from utils.validation import validate_name
 
 
 class TestValidationCore:

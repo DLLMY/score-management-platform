@@ -18,7 +18,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
-from models import db, FrontendPerfMetric, FrontendErrorLog, SystemMetric
+from models import FrontendErrorLog, FrontendPerfMetric, SystemMetric, db
 
 
 def main():

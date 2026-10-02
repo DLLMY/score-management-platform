@@ -7,7 +7,7 @@
 import json
 from datetime import datetime
 
-from models import db, NotifyTemplate, NotifyHistory
+from models import NotifyHistory, NotifyTemplate, db
 from utils.logger import log_operation
 
 

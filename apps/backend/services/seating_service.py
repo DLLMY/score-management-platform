@@ -1,7 +1,7 @@
-from models import db, cascade_delete_related_records
+from models import cascade_delete_related_records, db
 from models.seating import SeatingChart, SeatingSeat
-from utils.permission import get_current_admin, get_admin_class_ids
 from services.entity_names import names
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class SeatingService:

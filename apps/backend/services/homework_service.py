@@ -1,8 +1,9 @@
-from datetime import datetime, date
+from datetime import date, datetime
+
 from models import db
 from models.homework import HomeworkAssignment, HomeworkSubmission
-from utils.permission import get_current_admin, get_admin_class_ids
 from services.entity_names import names
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class HomeworkService:

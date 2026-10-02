@@ -8,21 +8,21 @@ ParentService.update/delete_contact。
 隔离机制：patch 三个 service 模块内的 get_current_admin / get_admin_class_ids
 （它们用 `from utils.permission import ...` 本地绑定，必须 patch 模块级引用）。
 """
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from models import db
+from models.alert_models import Alert
+from models.parent import ParentContact
 from models.study_group import StudyGroup
 from models.study_guide import StudyGuide
-from models.parent import ParentContact
-from models.user_models import User
 from models.system_models import ClassInfo
-from models.alert_models import Alert
-
+from models.user_models import User
+from services.alert_service import alert_service
+from services.parent_service import parent_service
 from services.study_group_service import study_group_service
 from services.study_guide_service import study_guide_service
-from services.parent_service import parent_service
-from services.alert_service import alert_service
 
 
 def _make_class_and_student(db_session, class_name, card_id):

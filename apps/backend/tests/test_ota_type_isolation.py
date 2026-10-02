@@ -10,7 +10,7 @@
 """
 from unittest.mock import MagicMock
 
-from models import db, FirmwareVersion
+from models import FirmwareVersion, db
 from services.ota_negotiation_service import (
     get_latest_active_firmware,
     negotiate,

@@ -1,5 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
 import bcrypt
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import delete as _sa_delete
 from sqlalchemy import select as _sa_select
 from sqlalchemy import update as _sa_update
@@ -111,215 +111,202 @@ def get_by_id(model_class, obj_id):
 
 # 班主任工作台 - 座次表
 
-from models.seating import SeatingChart, SeatingSeat
-
-# 班主任工作台 - 值日生表
-
-from models.duty import DutyGroup, DutyAssignment
-
-# 班主任工作台 - 班委名单
-
-from models.committee import ClassCommittee, CommitteeTerm
-
-# 班主任工作台 - 家长联系
-
-from models.parent import ParentContact, ContactLog
-
-# 班主任工作台 - 评语管理（P1 新增）
-
-from models.teacher_comment import TeacherComment
-
-# 班主任工作台 - 作业检查
-
-from models.homework import HomeworkAssignment, HomeworkSubmission
+# 班主任工作台 - 文体活动
+from models.activity import Activity, ActivityRegistration
+from models.alert_models import Alert, StudentCluster
+from models.archive_models import (
+    AttendanceArchive,
+    OperationLogArchive,
+    ScoreArchive,
+)
 
 # 班主任工作台 - 考勤管理
-
 from models.attendance import Attendance
 
-# 班主任工作台 - 学习小组
-
-from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore
-
-# 班主任工作台 - 心理健康
-
-from models.mental_health import MentalHealthRecord
-
-# 班主任工作台 - 文体活动
-
-from models.activity import Activity, ActivityRegistration
+# 班主任工作台 - 班委名单
+from models.committee import ClassCommittee, CommitteeTerm
 
 # 班主任工作台 - 班级文化
-
-from models.culture import CultureRecord, CultureItem
-
-# 班主任工作台 - 学法指导
-
-from models.study_guide import StudyGuide, ImprovementPlan
-
-# 通知配置（单行持久化，替代 current_app.config 内存实现）
-
-from models.notification_config import NotificationConfig
-
-# === F16 拆包：以下为新增子模块再导出（保持 from models import X 兼容）===
-from models.user_models import (
-    User,
-    Admin,
-    SubAccount,
-    RolePermission,
-    PermissionLog,
-    AdminRole,
-    Permission,
-    RolePermissionMapping,
-    RoleHierarchy,
-    SecurityAudit,
-    LoginAttempt,
-)
-from models.score_models import (
-    ScoreCategory,
-    Subject,
-    ScoreRule,
-    ScoreRecord,
-    ScoreRankRule,
-    Exam,
-    Score,
-    ClassPeriod,
-    SubjectClass,
-    CourseSchedule,
-    CompositeScore,
-    WarningConfig,
-)
+from models.culture import CultureItem, CultureRecord
 from models.device_models import (
-    MQTTLog,
-    MQTTConfig,
-    ProcessedMessage,
-    PhoneBoxPolicy,
     Device,
-    DeviceHeartbeat,
-    FirmwareVersion,
     DeviceFirmwareUpdate,
     DeviceGroup,
     DeviceGroupMapping,
+    DeviceHeartbeat,
+    FirmwareVersion,
+    MQTTConfig,
+    MQTTLog,
+    PhoneBoxPolicy,
+    ProcessedMessage,
 )
-from models.system_models import (
-    OperationLog,
-    SystemConfig,
-    TimeRule,
-    ClassInfo,
-    AdminClass,
-    ImportConfig,
-    FrontendPerfMetric,
-    FrontendErrorLog,
-    SystemMetric,
-    RateLimitRecord,
-)
-from models.notify_models import (
-    Notification,
-    Approval,
-    NotifyAudit,
-    ScheduledNotify,
-    NotifyTemplate,
-    NotifyHistory,
-)
-from models.alert_models import Alert, StudentCluster
-from models.archive_models import (
-    ScoreArchive,
-    AttendanceArchive,
-    OperationLogArchive,
-)
+
+# 班主任工作台 - 值日生表
+from models.duty import DutyAssignment, DutyGroup
+
+# 班主任工作台 - 作业检查
+from models.homework import HomeworkAssignment, HomeworkSubmission
+
+# 班主任工作台 - 心理健康
+from models.mental_health import MentalHealthRecord
 from models.nlp_models import (
-    NLPScoringRule,
     NLPBehaviorKeyword,
-    NLPMatchResult,
-    NLPRuleUsage,
-    NLPModelTraining,
     NLPCorrection,
+    NLPMatchResult,
+    NLPModelTraining,
+    NLPRuleUsage,
+    NLPScoringRule,
+)
+
+# 通知配置（单行持久化，替代 current_app.config 内存实现）
+from models.notification_config import NotificationConfig
+from models.notify_models import (
+    Approval,
+    Notification,
+    NotifyAudit,
+    NotifyHistory,
+    NotifyTemplate,
+    ScheduledNotify,
+)
+
+# 班主任工作台 - 家长联系
+from models.parent import ContactLog, ParentContact
+from models.score_models import (
+    ClassPeriod,
+    CompositeScore,
+    CourseSchedule,
+    Exam,
+    Score,
+    ScoreCategory,
+    ScoreRankRule,
+    ScoreRecord,
+    ScoreRule,
+    Subject,
+    SubjectClass,
+    WarningConfig,
+)
+from models.seating import SeatingChart, SeatingSeat
+
+# 班主任工作台 - 学习小组
+from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore
+
+# 班主任工作台 - 学法指导
+from models.study_guide import ImprovementPlan, StudyGuide
+from models.system_models import (
+    AdminClass,
+    ClassInfo,
+    FrontendErrorLog,
+    FrontendPerfMetric,
+    ImportConfig,
+    OperationLog,
+    RateLimitRecord,
+    SystemConfig,
+    SystemMetric,
+    TimeRule,
+)
+
+# 班主任工作台 - 评语管理（P1 新增）
+from models.teacher_comment import TeacherComment
+
+# === F16 拆包：以下为新增子模块再导出（保持 from models import X 兼容）===
+from models.user_models import (
+    Admin,
+    AdminRole,
+    LoginAttempt,
+    Permission,
+    PermissionLog,
+    RoleHierarchy,
+    RolePermission,
+    RolePermissionMapping,
+    SecurityAudit,
+    SubAccount,
+    User,
 )
 
 # 显式导出清单（消除 pyflakes F401 再导出噪音；from models import X 保持兼容）
 __all__ = [
-    "db",
-    "SeatingChart",
-    "SeatingSeat",
-    "DutyGroup",
-    "DutyAssignment",
-    "ClassCommittee",
-    "CommitteeTerm",
-    "ParentContact",
-    "ContactLog",
-    "HomeworkAssignment",
-    "HomeworkSubmission",
-    "Attendance",
-    "StudyGroup",
-    "StudyGroupMember",
-    "StudyGroupScore",
-    "MentalHealthRecord",
     "Activity",
     "ActivityRegistration",
-    "CultureRecord",
-    "CultureItem",
-    "StudyGuide",
-    "ImprovementPlan",
-    "TeacherComment",
-    "NotificationConfig",
-    "User",
     "Admin",
-    "SubAccount",
-    "RolePermission",
-    "PermissionLog",
+    "AdminClass",
     "AdminRole",
-    "Permission",
-    "RolePermissionMapping",
-    "RoleHierarchy",
-    "SecurityAudit",
-    "LoginAttempt",
-    "ScoreCategory",
-    "Subject",
-    "ScoreRule",
-    "ScoreRecord",
-    "ScoreRankRule",
-    "Exam",
-    "Score",
+    "Alert",
+    "Approval",
+    "Attendance",
+    "AttendanceArchive",
+    "ClassCommittee",
+    "ClassInfo",
     "ClassPeriod",
-    "SubjectClass",
-    "CourseSchedule",
+    "CommitteeTerm",
     "CompositeScore",
-    "WarningConfig",
-    "MQTTLog",
-    "MQTTConfig",
-    "ProcessedMessage",
-    "PhoneBoxPolicy",
+    "ContactLog",
+    "CourseSchedule",
+    "CultureItem",
+    "CultureRecord",
     "Device",
-    "DeviceHeartbeat",
-    "FirmwareVersion",
     "DeviceFirmwareUpdate",
     "DeviceGroup",
     "DeviceGroupMapping",
-    "OperationLog",
-    "SystemConfig",
-    "TimeRule",
-    "ClassInfo",
-    "AdminClass",
-    "ImportConfig",
-    "FrontendPerfMetric",
+    "DeviceHeartbeat",
+    "DutyAssignment",
+    "DutyGroup",
+    "Exam",
+    "FirmwareVersion",
     "FrontendErrorLog",
-    "SystemMetric",
-    "RateLimitRecord",
-    "Notification",
-    "Approval",
-    "NotifyAudit",
-    "ScheduledNotify",
-    "NotifyTemplate",
-    "NotifyHistory",
-    "Alert",
-    "StudentCluster",
-    "ScoreArchive",
-    "AttendanceArchive",
-    "OperationLogArchive",
-    "NLPScoringRule",
+    "FrontendPerfMetric",
+    "HomeworkAssignment",
+    "HomeworkSubmission",
+    "ImportConfig",
+    "ImprovementPlan",
+    "LoginAttempt",
+    "MQTTConfig",
+    "MQTTLog",
+    "MentalHealthRecord",
     "NLPBehaviorKeyword",
-    "NLPMatchResult",
-    "NLPRuleUsage",
-    "NLPModelTraining",
     "NLPCorrection",
+    "NLPMatchResult",
+    "NLPModelTraining",
+    "NLPRuleUsage",
+    "NLPScoringRule",
+    "Notification",
+    "NotificationConfig",
+    "NotifyAudit",
+    "NotifyHistory",
+    "NotifyTemplate",
+    "OperationLog",
+    "OperationLogArchive",
+    "ParentContact",
+    "Permission",
+    "PermissionLog",
+    "PhoneBoxPolicy",
+    "ProcessedMessage",
+    "RateLimitRecord",
+    "RoleHierarchy",
+    "RolePermission",
+    "RolePermissionMapping",
+    "ScheduledNotify",
+    "Score",
+    "ScoreArchive",
+    "ScoreCategory",
+    "ScoreRankRule",
+    "ScoreRecord",
+    "ScoreRule",
+    "SeatingChart",
+    "SeatingSeat",
+    "SecurityAudit",
+    "StudentCluster",
+    "StudyGroup",
+    "StudyGroupMember",
+    "StudyGroupScore",
+    "StudyGuide",
+    "SubAccount",
+    "Subject",
+    "SubjectClass",
+    "SystemConfig",
+    "SystemMetric",
+    "TeacherComment",
+    "TimeRule",
+    "User",
+    "WarningConfig",
+    "db",
 ]

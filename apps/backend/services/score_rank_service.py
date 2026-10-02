@@ -6,7 +6,7 @@ F17 防腐层：仅收口原 rank_routes.py 中的 db.session 写入/事务路�
 
 from datetime import datetime
 
-from models import db, ScoreRankRule
+from models import ScoreRankRule, db
 
 
 def create_rank_rule(data):

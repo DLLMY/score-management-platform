@@ -9,7 +9,7 @@
 
 from unittest import mock
 
-from models import db, User, ClassInfo
+from models import ClassInfo, User, db
 from utils.security import generate_student_token
 
 
@@ -102,10 +102,11 @@ class TestHonestErrorHandling:
 class TestRiskAttendanceHonest:
     def test_attendance_stats_exception_returns_all_none(self, app):
         """_get_attendance_stats 异常 → 全 None（rate=None 触发代理回退），不再伪装缺勤 0。"""
-        from services.risk_predict_service import RiskPredictService
         from datetime import date
         from unittest import mock
+
         from models import Attendance
+        from services.risk_predict_service import RiskPredictService
 
         with mock.patch.object(Attendance, "query", spec=["filter"]) as mq:
             mq.filter.side_effect = RuntimeError("db down")
@@ -116,9 +117,10 @@ class TestRiskAttendanceHonest:
 
     def test_predict_risk_attendance_exception_falls_back(self, app, client):
         """考勤读取异常 → predict_risk 仍返回（走代理回退），attendance_rate 为 None 不谎报 0。"""
-        from unittest import mock
         from datetime import date
-        from models import db, User, ClassInfo
+        from unittest import mock
+
+        from models import ClassInfo, User, db
         from utils.security import generate_student_token
 
         with app.app_context():
@@ -134,8 +136,8 @@ class TestRiskAttendanceHonest:
             db.session.add(u)
             db.session.commit()
 
-        from services.risk_predict_service import RiskPredictService
         from models import Attendance
+        from services.risk_predict_service import RiskPredictService
 
         with mock.patch.object(Attendance, "query", spec=["filter"]) as mq:
             mq.filter.side_effect = RuntimeError("db down")

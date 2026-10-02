@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 from app import app
-from models import db, Permission
+from models import Permission, db
 
 """
 RBAC权限系统数据库迁移脚本

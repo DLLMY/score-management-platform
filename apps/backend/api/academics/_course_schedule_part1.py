@@ -1,35 +1,62 @@
-# -*- coding: utf-8 -*-
 # part of api/academics/course_schedule_routes.py (D2 split)
 
-import json
 import io
-from flask_restx import Namespace, Resource, fields
+import json
+import logging
+from datetime import datetime
+
 from flask import request, send_file
-from models import CourseSchedule, ClassInfo, Subject, ClassPeriod, Admin, ImportConfig, get_by_id
+from flask_restx import Namespace, Resource, fields
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+from api.academics.course_schedule_routes import (
+    _DAY_TEXT_MAP,
+    _check_change_conflicts,
+    _check_schedule_update_forbidden,
+    _collect_time_conflicts,
+    _resolve_final_color,
+    _resolve_schedule_update_fields,
+    _resolve_teacher_name,
+    _schedule_time_changed,
+    _schedule_update_response,
+    _validate_day_of_week,
+    _validate_period_number,
+    _validate_teacher_role,
+    _validate_text_field,
+    course_schedule_model,
+    course_schedule_response,
+    logger,
+    ns_course_schedule,
+)
+from models import (
+    Admin,
+    ClassInfo,
+    ClassPeriod,
+    CourseSchedule,
+    ImportConfig,
+    Subject,
+    get_by_id,
+)
 from services.academics_service import academics_service
 from services.course_schedule_service import (
-    get_schedule_list_view,
-    get_schedule_by_class_view,
-    get_schedule_now_view,
-    get_schedule_options_view,
-    check_schedule_conflict_view,
-    build_schedule_export_data,
     _schedule_dict,
+    build_schedule_export_data,
+    check_classroom_conflicts,
+    check_conflicts,
+    check_schedule_conflict_view,
+    check_teacher_conflicts,
     format_day_of_week,
     get_period_info,
-    check_conflicts,
-    check_teacher_conflicts,
-    check_classroom_conflicts,
+    get_schedule_by_class_view,
+    get_schedule_list_view,
+    get_schedule_now_view,
+    get_schedule_options_view,
 )
-from utils.permission import requires_permission, get_allowed_classes, get_current_admin
-from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from datetime import datetime
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-import logging
+from utils.permission import get_allowed_classes, get_current_admin, requires_permission
+from utils.response import APIResponse
 
-from api.academics.course_schedule_routes import logger, ns_course_schedule, course_schedule_model, course_schedule_response, _DAY_TEXT_MAP, _validate_text_field, _validate_day_of_week, _validate_period_number, _validate_teacher_role, _check_schedule_update_forbidden, _resolve_schedule_update_fields, _resolve_teacher_name, _schedule_time_changed, _collect_time_conflicts, _check_change_conflicts, _resolve_final_color, _schedule_update_response
 
 @ns_course_schedule.route("/")
 class CourseScheduleList(Resource):

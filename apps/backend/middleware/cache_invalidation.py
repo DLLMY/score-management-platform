@@ -14,7 +14,6 @@ from flask import request
 
 from utils.logger import logger
 
-
 # 写端点影响的关联集合（防止跨域残留）。宽匹配多清无害、漏清有害。
 CACHE_RELATED_SEGMENTS = {
     "admin-classes": {"classes", "admin-classes"},

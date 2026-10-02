@@ -1,12 +1,13 @@
 from datetime import datetime
+
 from models import (
-    NLPScoringRule,
-    NLPRuleUsage,
+    NLPBehaviorKeyword,
     NLPMatchResult,
     NLPModelTraining,
-    NLPBehaviorKeyword,
-    get_by_id,
+    NLPRuleUsage,
+    NLPScoringRule,
     db,
+    get_by_id,
 )
 from utils.db_session import db_session_scope
 

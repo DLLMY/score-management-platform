@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
-from models import User, ScoreRecord
-from services.redis_cache_service import get_cache_service
+
 import numpy as np
+
+from models import ScoreRecord, User
+from services.redis_cache_service import get_cache_service
 
 # (空行)
 # 学生行为预测服务模块

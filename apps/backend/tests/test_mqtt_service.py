@@ -28,7 +28,7 @@ except ImportError:
     pass
 
 try:
-    import services.mqtt_service as mqtt_service
+    from services import mqtt_service
 except ImportError:
     pass
 
@@ -131,7 +131,7 @@ class TestMQTTService:
 
     def test_clear_mqtt_logs(self):
         """测试清理MQTT日志"""
-        import services.mqtt_service as mqtt_service
+        from services import mqtt_service
 
         mqtt_service.mqtt_logs.append({"topic": "test", "message": "test"})
 

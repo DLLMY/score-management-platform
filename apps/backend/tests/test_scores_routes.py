@@ -1,5 +1,5 @@
 try:
-    from models import User, ScoreRecord
+    from models import ScoreRecord, User
 except ImportError:
     User = None
     ScoreRecord = None

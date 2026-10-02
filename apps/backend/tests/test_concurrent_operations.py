@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import pytest
-import threading
-import time
 import io
 import json
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import pytest
 
 try:
     from models import Subject, db

@@ -1,10 +1,11 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
+
 from models import Admin, AdminClass, ClassInfo, get_by_id
+from services.academics_service import academics_service
+from utils.api_cache_middleware import invalidate_cache
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from utils.api_cache_middleware import invalidate_cache
-from services.academics_service import academics_service
 
 ns_admin_classes = Namespace("admin-classes", description="管理员班级关联相关操作")
 

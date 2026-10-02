@@ -5,12 +5,13 @@ confidence_interval 计算：正常结构、边界（历史不足 / 零方差收
 后端区间计算逻辑已在 service 内联实现且天然健壮，这里做回归保护。
 """
 
-import pytest
 from datetime import datetime, timedelta
 
+import pytest
+
 from models import ScoreRecord, User
-from services.score_predict_service import ScorePredictService
 from services.prediction_service import PredictionService
+from services.score_predict_service import ScorePredictService
 
 
 def _make_user(db_session, card_id, current_score=75):

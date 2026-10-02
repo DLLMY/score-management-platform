@@ -13,11 +13,11 @@ P0-2 迁移：scores.subject 文本列 -> subject_id 外键（指向 subject.id�
 幂等：若 scores 已无 subject 列，则视为已完成，直接退出。
 """
 
+import logging
 import os
-import sys
 import shutil
 import sqlite3
-import logging
+import sys
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

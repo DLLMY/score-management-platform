@@ -1,8 +1,8 @@
 from flask_restx import Namespace, Resource, fields
-from utils.permission import requires_permission
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from services.alert_service import alert_service
 
+from services.alert_service import alert_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.permission import requires_permission
 from utils.response import APIResponse
 
 """告警管理API路由"""

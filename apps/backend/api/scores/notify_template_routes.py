@@ -1,21 +1,22 @@
 import logging
-
-from flask_restx import Namespace, Resource, fields
-from flask import g
-from models import NotifyTemplate, Device
-from services.class_time_checker import ClassTimeChecker
-from utils.permission import requires_permission, has_permission
 from datetime import datetime
+
+from flask import g
+from flask_restx import Namespace, Resource, fields
+
+from models import Device, NotifyTemplate
+from services.class_time_checker import ClassTimeChecker
 from services.mqtt_service import publish_mqtt
-from utils.response import APIResponse
-from utils.serialize import serialize_dt
 from services.notify_template_service import (
     create_template,
-    update_template,
     delete_template,
-    record_template_usage,
     get_categories,
+    record_template_usage,
+    update_template,
 )
+from utils.permission import has_permission, requires_permission
+from utils.response import APIResponse
+from utils.serialize import serialize_dt
 
 logger = logging.getLogger(__name__)
 import json

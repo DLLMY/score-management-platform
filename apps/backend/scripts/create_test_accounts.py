@@ -1,13 +1,14 @@
 """创建多角色测试账号"""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app import app
-from models import db, Admin
 from werkzeug.security import generate_password_hash
+
+from app import app
+from models import Admin, db
 
 with app.app_context():
     # 检查现有的管理员账号

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-m object-level to_dict tests."""
 import pytest
+
 from models.study_guide import ImprovementPlan
 from models.teacher_comment import TeacherComment
 from models.user_models import LoginAttempt
-
 
 
 def test_ImprovementPlan_to_dict():

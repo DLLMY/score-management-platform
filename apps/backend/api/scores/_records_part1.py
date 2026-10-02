@@ -1,35 +1,37 @@
-# -*- coding: utf-8 -*-
 # part of api/scores/records_routes.py (D2 split)
 
 import logging
+from datetime import datetime
+
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-from models import ScoreRecord, User, ScoreRule, get_by_id
-from utils.permission import (
-    requires_permission,
-    get_current_admin,
-    get_allowed_classes,
-    can_access_student,
-)
-from utils.logger import log_operation
-from services.redis_cache_service import get_cache_service
-from utils.api_cache_middleware import cached_api, invalidate_cache
+
+from models import ScoreRecord, ScoreRule, User, get_by_id
 from services.class_time_checker import ClassTimeChecker
+from services.redis_cache_service import get_cache_service
+from services.score_recalc import enqueue_or_recalc_user_score
 from services.score_record_service import (
+    commit_batch_score_entry,
     create_record,
     create_score_entry,
     delete_record,
-    commit_batch_score_entry,
-    serialize_score_record,
-    get_record_statistics_view,
-    get_record_list_view,
     get_record_list_by_user_view,
+    get_record_list_view,
+    get_record_statistics_view,
     get_score_entry_view,
+    serialize_score_record,
 )
-from services.score_recalc import enqueue_or_recalc_user_score
-from datetime import datetime
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.logger import log_operation
+from utils.pagination import get_pagination
+from utils.permission import (
+    can_access_student,
+    get_allowed_classes,
+    get_current_admin,
+    requires_permission,
+)
+from utils.response import APIResponse
+
 try:
     from app import csrf_exempt
 except ImportError:
@@ -45,22 +47,28 @@ except ImportError:
         logging.getLogger(__name__).warning(
             "admin_notifications_routes 导入失败，成绩变动相关的管理员通知被静默丢弃"
         )
-        return
-from .score_record_orchestration import (
-    check_rule_limits,
-    _resolve_score_entry_change,
-    _compute_rank_change,
-    _notify_rank_change,
-    _notify_score_change,
-    _invalidate_score_caches,
-    _recalc_composite_score,
-    _resolve_batch_entry_rule,
-    _build_batch_record,
-    _validate_batch_entry,
-    _recalc_composite_scores_after_batch,
+from api.scores.records_routes import (
+    logger,
+    ns_records,
+    record_list_response,
+    record_model,
+    record_statistics_response,
 )
 
-from api.scores.records_routes import logger, ns_records, record_model, record_list_response, record_statistics_response
+from .score_record_orchestration import (
+    _build_batch_record,
+    _compute_rank_change,
+    _invalidate_score_caches,
+    _notify_rank_change,
+    _notify_score_change,
+    _recalc_composite_score,
+    _recalc_composite_scores_after_batch,
+    _resolve_batch_entry_rule,
+    _resolve_score_entry_change,
+    _validate_batch_entry,
+    check_rule_limits,
+)
+
 
 @ns_records.route("/")
 class RecordList(Resource):

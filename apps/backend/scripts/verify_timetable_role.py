@@ -14,7 +14,7 @@ from app import create_app
 app = create_app(lightweight=True)
 
 with app.app_context():
-    from models import db, Admin, AdminRole
+    from models import Admin, AdminRole, db
     from utils.permission import has_permission
     from utils.security import hash_password
 

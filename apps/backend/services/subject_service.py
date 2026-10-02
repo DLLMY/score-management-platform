@@ -8,7 +8,7 @@ SubjectExport.get 的 Excel/CSV/JSON 格式分派与 send_file 留在路由层�
 本服务只准备纯数据 export_data（list of dict）。
 """
 
-from models import db, Subject, SubjectClass, ClassInfo, Admin, get_by_id
+from models import Admin, ClassInfo, Subject, SubjectClass, db, get_by_id
 from utils.pagination import get_pagination
 from utils.query_optimizer import count_by_fk
 

@@ -3,9 +3,10 @@
 执行方式：python -m migrations.add_head_teacher_id
 """
 
+from sqlalchemy import text
+
 from app import app
 from models import db
-from sqlalchemy import text
 
 
 def migrate():
@@ -37,7 +38,7 @@ def verify():
     with app.app_context():
         print("🔍 验证数据库字段...")
 
-        result = db.session.execute(text("PRAGMA table_info(class_info)"))  # noqa: F841
+        result = db.session.execute(text("PRAGMA table_info(class_info)"))
         columns = [row[1] for row in result]
         if "head_teacher_id" in columns:
             print("✅ class_info 表包含 head_teacher_id 字段")
@@ -48,7 +49,7 @@ def verify():
 def run_migration():
     """供 migrations.runner 编排调用（等价于原 __main__ 行为）。"""
     migrate()
-    print("")
+    print()
     verify()
 
 

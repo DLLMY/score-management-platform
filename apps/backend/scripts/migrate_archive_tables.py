@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
-from models import db, ScoreArchive, AttendanceArchive
+from models import AttendanceArchive, ScoreArchive, db
 
 RETENTION_DAYS = int(os.getenv("ARCHIVE_RETENTION_DAYS", "365"))
 BATCH = 2000

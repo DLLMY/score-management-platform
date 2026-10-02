@@ -16,9 +16,10 @@
 """
 
 import uuid
+
 import pytest
 
-from models import db, Exam, User, Notification, Score, Subject
+from models import Exam, Notification, Score, Subject, User, db
 from utils.security import generate_student_token
 
 

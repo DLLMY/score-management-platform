@@ -1,20 +1,23 @@
-from flask_restx import Resource, fields, Namespace, marshal
-from datetime import datetime
-from utils.permission import requires_permission, has_permission
-from utils.response import APIResponse
-from flask import request, g
-from utils.pagination import get_pagination
-
-from services.wol_service import wake_on_lan, is_valid_mac
-from services.device_service import create_wol_device, update_wol_device, delete_wol_device
-from models import Device
-from services.class_time_checker import ClassTimeChecker
-
-import subprocess
-import re
-import platform
 import logging
-from models import get_by_id
+import platform
+import re
+import subprocess
+from datetime import datetime
+
+from flask import g, request
+from flask_restx import Namespace, Resource, fields, marshal
+
+from models import Device, get_by_id
+from services.class_time_checker import ClassTimeChecker
+from services.device_service import (
+    create_wol_device,
+    delete_wol_device,
+    update_wol_device,
+)
+from services.wol_service import is_valid_mac, wake_on_lan
+from utils.pagination import get_pagination
+from utils.permission import has_permission, requires_permission
+from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
 

@@ -17,10 +17,10 @@
     python scripts/verify_class_time_lock.py [--class-info-id 23] [--live]
 """
 
-import os
-import sys
 import argparse
 import logging
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -153,8 +153,8 @@ def verify(app, class_info_id=None):
 def verify_live(class_info_id=None, base_url="http://127.0.0.1:5000"):
     """探测正在运行的后端 /api/course-schedules/now 端点（只读，需有效 token）。"""
     import json
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     print()
     print("=" * 64)

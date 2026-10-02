@@ -38,7 +38,7 @@ except ImportError:
     pass
 
 try:
-    from utils.db_session import db_session_scope, db_readonly_scope
+    from utils.db_session import db_readonly_scope, db_session_scope
 except ImportError:
     pass
 
@@ -135,7 +135,7 @@ class TestBusinessIntegration:
 
     def test_db_session_scope_availability(self):
         """Test db_session_scope utility is available"""
-        from utils.db_session import db_session_scope, db_readonly_scope
+        from utils.db_session import db_readonly_scope, db_session_scope
 
         assert callable(db_session_scope)
         assert callable(db_readonly_scope)

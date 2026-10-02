@@ -16,13 +16,13 @@ from datetime import datetime, timedelta
 scheduler = None
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_debug, log_info, log_warning
 
 
 def scheduled_approval_timeout_check(app):
     try:
-        from models import Approval, SystemConfig
         from api.monitoring.mqtt_routes import publish_mqtt
+        from models import Approval, SystemConfig
 
         with app.app_context():
             config = SystemConfig.query.first()

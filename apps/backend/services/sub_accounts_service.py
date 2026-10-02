@@ -6,7 +6,7 @@
 
 from datetime import datetime
 
-from models import db, SubAccount, PermissionLog
+from models import PermissionLog, SubAccount, db
 from utils.security import hash_password
 
 

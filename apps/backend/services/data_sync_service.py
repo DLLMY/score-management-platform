@@ -1,5 +1,6 @@
 import logging
-from models import db, User, Admin, ClassInfo, AdminClass, get_by_id
+
+from models import Admin, AdminClass, ClassInfo, User, db, get_by_id
 from services.class_migration_service import ClassMigrationService
 
 "\n"

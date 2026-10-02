@@ -3,11 +3,12 @@
 pytest配置文件 - 提供测试夹具和配置
 """
 
-import pytest
 import os
 import sys
 import tempfile
 import threading
+
+import pytest
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, basedir)
@@ -20,7 +21,7 @@ for _k, _v in list(os.environ.items()):
     if len(_v) > 32767:
         try:
             del os.environ[_k]
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
@@ -30,13 +31,14 @@ for _k, _v in list(os.environ.items()):
 _API_MODULE_NAMES = []
 try:
     import pkgutil as _pkgutil
+
     import api as _api_pkg_disc
 
     for _finder, _modname, _ispkg in _pkgutil.walk_packages(
         _api_pkg_disc.__path__, _api_pkg_disc.__name__ + "."
     ):
         _API_MODULE_NAMES.append(_modname)
-except Exception:  # noqa: BLE001
+except Exception:
     _API_MODULE_NAMES = []
 
 
@@ -66,10 +68,11 @@ def _build_test_app():
 
 def _register_api_and_blueprints(app):
     """注册 api 包下所有 Flask-RESTX 命名空间与独立 Blueprint。"""
-    from flask_restx import Api
     import importlib
     import inspect
+
     import flask_restx as _frx
+    from flask_restx import Api
 
     # 创建API并注册路由
     api = Api(app, version="1.0", title="测试API", prefix="/api")
@@ -82,7 +85,7 @@ def _register_api_and_blueprints(app):
     for _modname in _API_MODULE_NAMES:
         try:
             _mod = importlib.import_module(_modname)
-        except Exception as _e:  # noqa: BLE001
+        except Exception as _e:
             print("[conftest] 跳过模块 %s: %s" % (_modname, _e))
             continue
         for _name, _obj in inspect.getmembers(_mod):
@@ -90,7 +93,7 @@ def _register_api_and_blueprints(app):
                 try:
                     api.add_namespace(_obj)
                     _registered += 1
-                except Exception:  # noqa: BLE001 - 重名/重复注册忽略
+                except Exception:
                     pass
     print("[conftest] 已注册命名空间数量: %d" % _registered)
 
@@ -100,7 +103,7 @@ def _register_api_and_blueprints(app):
         from api.data.download_routes import download_bp
 
         app.register_blueprint(download_bp)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     return api
 
@@ -172,21 +175,21 @@ def app():
         app.teardown_appcontext_funcs = [
             f for f in app.teardown_appcontext_funcs if f != _fsa_teardown
         ]
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     try:
         def _patched_remove(*_args, **_kwargs):
             try:
-                from flask import has_app_context, current_app
+                from flask import current_app, has_app_context
 
                 if has_app_context() and current_app.config.get("TESTING"):
                     return  # 测试 app 上下文：保留实例，兼容 refresh / 显式 remove 后访问属性
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             return _orig_remove(*_args, **_kwargs)
 
         db.session.remove = _patched_remove
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     _register_api_and_blueprints(app)
@@ -201,7 +204,7 @@ def app():
         # 还原 db.session.remove，避免闭包(捕获旧 app)跨用例残留
         try:
             db.session.remove = _orig_remove
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         # 清理缓存服务：get_cache_service() 为全局单例，内存/降级模式下跨用例共享，
         # 缓存 key 若未含用例隔离会偶发污染（algorithm/dashboard 统计曾全量偶发读到旧值）
@@ -209,7 +212,7 @@ def app():
             from services.redis_cache_service import get_cache_service
 
             get_cache_service().flush_all()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
@@ -242,8 +245,9 @@ def session(app):
 @pytest.fixture
 def sample_user(db_session):
     """创建示例用户"""
-    from models import User
     import uuid
+
+    from models import User
 
     # 使用uuid确保唯一性
     unique_card_id = "TEST" + str(uuid.uuid4())[:12]
@@ -258,9 +262,10 @@ def sample_user(db_session):
 @pytest.fixture
 def sample_admin(db_session):
     """创建示例管理员（供 test_admin_routes / test_auth_service 等使用）"""
+    import uuid
+
     from models import Admin, AdminRole, RolePermissionMapping
     from utils.security import hash_password
-    import uuid
 
     unique_username = "TESTADMIN" + str(uuid.uuid4())[:12]
     admin = Admin(username=unique_username, password=hash_password("test123456"), role="admin")
@@ -279,8 +284,9 @@ def sample_admin(db_session):
 @pytest.fixture
 def sample_category(db_session):
     """创建示例分类"""
-    from models import ScoreCategory
     from datetime import datetime
+
+    from models import ScoreCategory
 
     # 检查是否已存在同名分类
     existing = ScoreCategory.query.filter_by(name="测试分类").first()
@@ -321,8 +327,9 @@ def sample_rule(db_session, sample_category):
 @pytest.fixture
 def sample_class(db_session):
     """创建示例班级（ClassInfo），供 test_admin_routes 等使用。"""
-    from models import ClassInfo
     import uuid
+
+    from models import ClassInfo
 
     unique_name = "TESTCLASS" + str(uuid.uuid4())[:8]
     cls = ClassInfo(name=unique_name, grade="高一", description="测试班级")
@@ -335,7 +342,7 @@ def sample_class(db_session):
 @pytest.fixture
 def clean_db(app):
     """清空业务数据（保留 Admin 种子），供 *_empty 测试使用。"""
-    from models import db, Admin
+    from models import Admin, db
     from utils.security import hash_password
 
     with app.app_context():
@@ -417,13 +424,13 @@ def pytest_unconfigure(config):
         from app.service_init import shutdown_all_schedulers
 
         shutdown_all_schedulers()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     try:
         from tasks.scheduler import shutdown_scheduler
 
         shutdown_scheduler()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     lingering = [

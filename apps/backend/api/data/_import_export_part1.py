@@ -1,27 +1,37 @@
-# -*- coding: utf-8 -*-
 # part of api/data/import_export_routes.py (D2 split)
 
-from flask_restx import Namespace, Resource, fields
+import io
+import logging
+import os
+from datetime import datetime
+
 from flask import request, send_file
-from models import User, ScoreRule, ScoreCategory, ScoreRecord
+from flask_restx import Namespace, Resource, fields
+
+from api.data.import_export_routes import (
+    backup_list_response,
+    backup_manager,
+    backup_response,
+    backup_scheduler,
+    export_response,
+    import_response,
+    logger,
+    ns_import_export,
+)
+from models import ScoreCategory, ScoreRecord, ScoreRule, User
+from services.import_export_service import (
+    ImportCommitError,
+    bulk_import_categories,
+    bulk_import_rules,
+    bulk_import_users,
+)
+from utils.backup_utils import BackupManager, BackupScheduler
+from utils.decorators import safe_handle
+from utils.excel_utils import ExcelTemplateGenerator, ExcelUtils
 from utils.permission import requires_permission
 from utils.response import APIResponse
-from utils.decorators import safe_handle
-from utils.excel_utils import ExcelUtils, ExcelTemplateGenerator
-from utils.backup_utils import BackupManager, BackupScheduler
 from utils.transaction_retry import get_import_guard
-from services.import_export_service import (
-    bulk_import_users,
-    bulk_import_rules,
-    bulk_import_categories,
-    ImportCommitError,
-)
-from datetime import datetime
-import logging
-import io
-import os
 
-from api.data.import_export_routes import logger, ns_import_export, export_response, import_response, backup_response, backup_list_response, backup_manager, backup_scheduler
 
 @ns_import_export.route("/export/users")
 class ExportUsers(Resource):
@@ -85,8 +95,8 @@ class ExportRecords(Resource):
         if user_id:
             query = query.filter_by(student_id=int(user_id))
         # S3 修复: 班主任仅可导出本班记录（原全校 → 越权）
-        from utils.permission import get_current_admin, get_allowed_classes
         from models import User as _U
+        from utils.permission import get_allowed_classes, get_current_admin
 
         admin = get_current_admin()
         if admin and admin.role not in ("admin", "super_admin"):

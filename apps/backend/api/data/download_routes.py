@@ -1,9 +1,10 @@
+import io
+import json
 import logging
 
-import json
-import io
 import openpyxl
 from flask import Blueprint, request, send_file
+
 from utils.decorators import safe_handle
 
 logger = logging.getLogger(__name__)

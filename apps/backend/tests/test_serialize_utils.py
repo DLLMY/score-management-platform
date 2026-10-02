@@ -4,14 +4,14 @@
 确保 `/api/scores/*` 与通知模板序列化在字段为空时不抛 500。
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 
-from utils.serialize import serialize_dt, serialize_date, serialize_timedelta
+from utils.serialize import serialize_date, serialize_dt, serialize_timedelta
 
 
 def test_serialize_dt_none():

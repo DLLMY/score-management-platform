@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from datetime import datetime
 import os
 import shutil
 import sys
+from datetime import datetime
 
 # -*- coding: utf-8 -*-
 """

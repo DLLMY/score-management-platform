@@ -5,8 +5,9 @@
 契约（返回结构、字段子集、缓存语义）与原路由内联实现逐字一致。
 """
 
-from models import db, ScoreRule, ScoreRecord
 from sqlalchemy import func
+
+from models import ScoreRecord, ScoreRule, db
 
 # B3 收敛 2026-09-05：ScoreRule.to_dict(fields) 子集常量（逐字对齐各端点既有响应契约）
 RULE_LIST_FIELDS = [

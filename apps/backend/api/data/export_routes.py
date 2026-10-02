@@ -1,17 +1,19 @@
 import io
 import logging
+from datetime import datetime, timedelta
+
 from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from models import User, ScoreRule, Device, ScoreRecord, ScoreCategory
-from utils.permission import requires_permission
-from utils.response import APIResponse
+from sqlalchemy.orm import joinedload
+
+from models import Device, ScoreCategory, ScoreRecord, ScoreRule, User
+from services.export_service import export_service
+from services.heartbeat_service import is_device_online
 from utils.decorators import safe_handle
 from utils.excel_utils import build_attachment_response
 from utils.pagination import get_limit
-from services.export_service import export_service
-from services.heartbeat_service import is_device_online
-from datetime import datetime, timedelta
-from sqlalchemy.orm import joinedload
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +77,11 @@ export_format_model = ns_export.model(
 
 def _admin_scope():
     """S3 修复: 导出班级隔离。返回 (allowed_class_names, allowed_class_ids)；超管/admin 为 (None, None) 表示全量。"""
-    from utils.permission import get_current_admin, get_allowed_classes, get_admin_class_ids
+    from utils.permission import (
+        get_admin_class_ids,
+        get_allowed_classes,
+        get_current_admin,
+    )
 
     admin = get_current_admin()
     if not admin or admin.role in ("admin", "super_admin"):
@@ -482,7 +488,7 @@ class ExportErrors(Resource):
         返回错误数据Excel文件下载。
         """
         from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.styles import Alignment, Font, PatternFill
 
         data = request.get_json()
         errors = data.get("errors", [])
@@ -554,8 +560,7 @@ def _autosize_worksheet_columns(ws):
         column = col[0].column_letter
         for cell in col:
             try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
+                max_length = max(max_length, len(str(cell.value)))
             except Exception:
                 # 与 utils/excel_utils.py 同理：逐单元格列宽热循环，失败仅跳过该列估算，
                 # 属可预期降级。改为 logger 会刷屏，保留静默并显式说明（T9 评估结论）。

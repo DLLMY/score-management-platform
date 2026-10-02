@@ -6,10 +6,10 @@
 fixture：client / app / auth_headers 来自 tests/conftest.py（function 级隔离内存库 + admin id=1）。
 """
 
-import io
 import csv
+import io
 
-from models import db, User, ScoreRecord
+from models import ScoreRecord, User, db
 from services.user_service import user_service
 
 

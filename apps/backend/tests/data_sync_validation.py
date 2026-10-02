@@ -12,29 +12,29 @@ from typing import Dict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import (
-    db,
-    User,
-    ScoreCategory,
-    ScoreRule,
-    ScoreRecord,
-    Device,
-    Approval,
     Admin,
-    OperationLog,
-    SystemConfig,
-    MQTTConfig,
+    Approval,
     ClassInfo,
-    Subject,
-    Exam,
-    Score,
     CourseSchedule,
-    ScoreRankRule,
-    TimeRule,
+    Device,
+    Exam,
+    MQTTConfig,
     NLPScoringRule,
+    OperationLog,
+    Score,
+    ScoreCategory,
+    ScoreRankRule,
+    ScoreRecord,
+    ScoreRule,
+    Subject,
+    SystemConfig,
+    TimeRule,
+    User,
+    db,
 )
 
 
-def get_db_model_fields(model) -> Dict[str, str]:
+def get_db_model_fields(model) -> dict[str, str]:
     """获取数据库模型字段及其类型"""
     fields = {}
     for col in model.__table__.columns:
@@ -86,7 +86,7 @@ def _parse_ts_field_line(line: str):
     return field_name, _normalize_ts_field_type(field_type)
 
 
-def read_frontend_types() -> Dict[str, Dict[str, str]]:
+def read_frontend_types() -> dict[str, dict[str, str]]:
     """读取前端TypeScript类型定义"""
     type_file = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -176,8 +176,8 @@ def _is_type_compatible(field: str, db_type: str, frontend_type: str) -> bool:
 
 
 def compare_models(
-    db_fields: Dict[str, str], frontend_fields: Dict[str, str], model_name: str
-) -> Dict:
+    db_fields: dict[str, str], frontend_fields: dict[str, str], model_name: str
+) -> dict:
     """比较数据库模型和前端类型"""
     db_keys = set(db_fields.keys())
     frontend_keys = set(frontend_fields.keys())
@@ -292,7 +292,7 @@ def compare_models(
     }
 
 
-def validate_api_endpoints() -> Dict:
+def validate_api_endpoints() -> dict:
     """验证API端点一致性"""
     api_endpoints = {
         "/users": ["GET", "POST"],
@@ -325,7 +325,7 @@ def validate_api_endpoints() -> Dict:
     return {"endpoints": api_endpoints, "total": len(api_endpoints)}
 
 
-def check_data_integrity() -> Dict:
+def check_data_integrity() -> dict:
     """检查数据库数据完整性"""
     results = {}
 
@@ -381,7 +381,7 @@ def check_data_integrity() -> Dict:
     return results
 
 
-def run_validation() -> Dict:
+def run_validation() -> dict:
     """执行完整的数据同步验证"""
     print("=" * 70)
     print("数据同步验证报告")
@@ -485,7 +485,7 @@ def run_validation() -> Dict:
     return report
 
 
-def print_report(report: Dict):
+def print_report(report: dict):
     """打印验证报告"""
     print()
     print("=" * 70)

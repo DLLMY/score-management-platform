@@ -1,5 +1,6 @@
-from models import User, Admin, SubAccount, ClassInfo, AdminClass, db
 import logging
+
+from models import Admin, AdminClass, ClassInfo, SubAccount, User, db
 
 """
 班级数据迁移服务

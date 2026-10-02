@@ -3,7 +3,11 @@
 2) 审计所有工作台表里的"测试残留"：文本含测试标记 OR 关联测试学生(id)。仅扫描，不删除。
 """
 
-import json, urllib.request, urllib.error, sqlite3, os
+import json
+import os
+import sqlite3
+import urllib.error
+import urllib.request
 
 BASE = "http://127.0.0.1:5000"
 db = os.path.join("instance", "score_management.db")

@@ -1,5 +1,6 @@
 from datetime import datetime
-from models import ScoreRecord, User, get_by_id, db
+
+from models import ScoreRecord, User, db, get_by_id
 from utils.db_session import db_session_scope
 
 

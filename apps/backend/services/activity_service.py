@@ -1,9 +1,10 @@
-from datetime import datetime, date
+from datetime import date, datetime
+
 from models import db
 from models.activity import Activity, ActivityRegistration
-from utils.permission import get_current_admin, get_admin_class_ids
-from utils.entity_guard import require_class, class_not_found_response
 from services.entity_names import names
+from utils.entity_guard import class_not_found_response, require_class
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class ActivityService:

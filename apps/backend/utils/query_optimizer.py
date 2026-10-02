@@ -2,13 +2,15 @@
 数据库查询优化工具 - 提供查询分析和优化建议
 """
 
+import logging
+import time
+from datetime import UTC
 from functools import wraps
-from models import db
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-import time
-import logging
-from datetime import UTC
+
+from models import db
 
 logger = logging.getLogger(__name__)
 
@@ -171,8 +173,9 @@ class QueryOptimizer:
     @staticmethod
     def get_score_stats():
         """积分统计（兼容旧测试）。"""
-        from models import User, ScoreRecord
         from sqlalchemy import func
+
+        from models import ScoreRecord, User
 
         try:
             total_users = User.query.count()
@@ -192,9 +195,11 @@ class QueryOptimizer:
     @staticmethod
     def get_daily_score_trend(days=7):
         """按日聚合积分变化趋势（兼容旧测试）。"""
-        from models import ScoreRecord
-        from sqlalchemy import func
         from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import func
+
+        from models import ScoreRecord
 
         since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
         rows = (
@@ -300,7 +305,8 @@ def optimize_statistics_query(user_id=None, class_name=None, start_date=None, en
     优化积分统计查询
     使用单个聚合查询代替多次查询
     """
-    from sqlalchemy import func, case
+    from sqlalchemy import case, func
+
     from models import ScoreRecord, User
 
     query = db.session.query(
@@ -335,6 +341,7 @@ def optimize_user_records_query(user_id, page=1, per_page=50):
     使用JOIN和预加载减少查询次数
     """
     from sqlalchemy.orm import joinedload
+
     from models import ScoreRecord
 
     query = (

@@ -5,9 +5,10 @@
 """
 """
 
-import pytest
+from unittest.mock import MagicMock, patch
+
 import numpy as np
-from unittest.mock import patch, MagicMock
+import pytest
 
 try:
     from services.bert_service import BertNLPService

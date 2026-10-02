@@ -1,8 +1,7 @@
-from models import TimeRule, CourseSchedule, ClassPeriod, User
-from datetime import datetime
 import json
+from datetime import datetime
 
-
+from models import ClassPeriod, CourseSchedule, TimeRule, User
 from utils.logger import log_warning
 
 
@@ -219,7 +218,7 @@ class ClassTimeChecker:
     ):
         """记录拦截 / 强制发送审计（失败不影响主流程）"""
         try:
-            from models import db, NotifyAudit
+            from models import NotifyAudit, db
 
             if not isinstance(payload, str):
                 try:

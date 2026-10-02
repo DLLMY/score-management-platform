@@ -1,8 +1,7 @@
+import math
+
 from models import User
 from utils.db_session import db_session_scope
-
-
-import math
 
 
 class ScoreDistributionController:
@@ -26,9 +25,9 @@ class ScoreDistributionController:
 
         # 按目标比例确定各档在降序排序中的分界索引（不再强制每档至少 1 人），
         # 避免小班级各档人数累加超过 n 导致 cutoff 全部塌缩到最高分。
-        n_exc = int(round(n * 0.10))
-        n_good = int(round(n * 0.30))
-        n_med = int(round(n * 0.40))
+        n_exc = round(n * 0.10)
+        n_good = round(n * 0.30)
+        n_med = round(n * 0.40)
         idx_exc = max(0, min(n_exc, n - 1))
         idx_good = max(idx_exc, min(idx_exc + n_good, n - 1))
         idx_med = max(idx_good, min(idx_good + n_med, n - 1))

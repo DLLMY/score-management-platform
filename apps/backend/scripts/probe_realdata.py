@@ -5,7 +5,9 @@
 不破坏既有数据（建表后删表）。
 """
 
-import json, urllib.request, urllib.error
+import json
+import urllib.error
+import urllib.request
 
 BASE = "http://127.0.0.1:5000"
 

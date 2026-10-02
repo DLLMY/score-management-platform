@@ -1,11 +1,12 @@
 import json
-import os
 import logging
+import os
 import time
-from datetime import datetime, timedelta, timezone, UTC
+from datetime import UTC, datetime, timedelta, timezone
 
-from models import User, ScoreRecord, get_by_id, db
 import numpy as np
+
+from models import ScoreRecord, User, db, get_by_id
 
 
 class RiskPredictService:
@@ -308,7 +309,7 @@ class RiskPredictService:
             - leave_days：统计窗口内已批准请假天数（不计入缺勤风险）。
         """
         try:
-            from models import Attendance, Approval
+            from models import Approval, Attendance
 
             s_date = start_date.date() if isinstance(start_date, datetime) else start_date
             e_date = end_date.date() if isinstance(end_date, datetime) else end_date

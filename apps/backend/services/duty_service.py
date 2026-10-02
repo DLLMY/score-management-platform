@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
+
 from models import db
-from models.duty import DutyGroup, DutyAssignment
-from utils.datetime_utils import parse_date
-from utils.permission import get_current_admin, get_admin_class_ids
+from models.duty import DutyAssignment, DutyGroup
 from services.entity_names import names
+from utils.datetime_utils import parse_date
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class DutyService:

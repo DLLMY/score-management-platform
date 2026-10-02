@@ -14,7 +14,7 @@ bulk_import_categories）由 services/import_export_service 逐字节复刻；�
 import csv
 import io
 
-from models import User, ScoreRule, ScoreCategory, db
+from models import ScoreCategory, ScoreRule, User, db
 
 
 def _csv_bytes(headers, data_rows):

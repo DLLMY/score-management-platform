@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import text
 
 from app import app
-from models import db, ScoreRecord
+from models import ScoreRecord, db
 
 TABLE = (
     ScoreRecord.__tablename__

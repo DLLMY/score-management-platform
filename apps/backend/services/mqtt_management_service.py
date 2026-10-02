@@ -1,6 +1,7 @@
 from datetime import datetime
-from utils.db_session import db_session_scope
+
 from models import MQTTConfig
+from utils.db_session import db_session_scope
 
 
 class MQTTManagementService:

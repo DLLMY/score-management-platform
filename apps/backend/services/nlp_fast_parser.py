@@ -1,6 +1,6 @@
-from typing import Any
-from functools import lru_cache
 import re
+from functools import lru_cache
+from typing import Any
 
 """
 NLP轻量级解析器 - 快速路径

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from models import db, User, ScoreRecord, Device, ScoreRule, Admin
+
+from models import Admin, Device, ScoreRecord, ScoreRule, User, db
 from services.redis_cache_service import get_cache_service
 
 

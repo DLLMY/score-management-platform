@@ -1,10 +1,11 @@
-from flask_restx import Namespace, Resource
 from flask import request
+from flask_restx import Namespace, Resource
+
 from services.analysis_service import analysis_service
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api
-from utils.response import APIResponse
 from utils.params import get_int_arg
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 ns_analysis = Namespace("analysis", description="数据分析相关操作")
 

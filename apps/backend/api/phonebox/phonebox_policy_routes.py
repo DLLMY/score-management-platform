@@ -12,14 +12,16 @@ logger = logging.getLogger(__name__)
 评估逻辑在服务层 services/phonebox_policy.py，本路由只负责校验、存取与序列化。
 """
 
+from datetime import datetime
+
+from flask import g, request
 from flask_restx import Namespace, Resource, fields
-from flask import request, g
+
 from models import ClassInfo
 from services import phonebox_policy as policy_service
-from utils.permission import requires_permission, get_current_admin
-from utils.response import APIResponse
 from utils.decorators import safe_handle
-from datetime import datetime
+from utils.permission import get_current_admin, requires_permission
+from utils.response import APIResponse
 
 ns_phonebox_policy = Namespace("phonebox-policy", description="班主任手机箱开箱策略")
 

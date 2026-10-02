@@ -12,6 +12,7 @@ F5: device_id 全项目统一 String(100)（语义迁移）。
 
 import os
 import sys
+
 from sqlalchemy import text
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -12,10 +12,9 @@
 """
 
 from flask import current_app
+
 from models import db
 from models.notification_config import NotificationConfig
-
-
 from utils.logger import log_info, log_warning
 
 

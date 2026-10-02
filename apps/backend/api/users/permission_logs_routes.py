@@ -1,9 +1,10 @@
 from flask import request
 from flask_restx import Namespace, Resource
+
 from models import PermissionLog
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api
 from utils.pagination import get_pagination
+from utils.permission import requires_permission
 from utils.response import APIResponse
 
 ns_permission_logs = Namespace("permission-logs", description="权限操作日志相关操作")

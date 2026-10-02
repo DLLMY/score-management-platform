@@ -1,11 +1,13 @@
-import os
-import sys
+import io
 import json
 import logging
-import io
+import os
+import sys
 from datetime import datetime
 from functools import wraps
+
 from flask import request
+
 from utils.log_archiver import GzipRotatingFileHandler
 
 "\n"
@@ -134,7 +136,7 @@ class SecurityLogger:
     def _save_to_database(self, event_data):
         """保存到数据库"""
         try:
-            from models import db, OperationLog
+            from models import OperationLog, db
 
             operator = event_data.get("operator", "system")
             ip_address = event_data.get("ip_address", request.remote_addr if request else "unknown")

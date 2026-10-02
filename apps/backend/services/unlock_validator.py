@@ -1,7 +1,7 @@
-from models import db, User, TimeRule, ScoreRankRule, ScoreRecord
-from utils.unlock_reasons import UnlockReason
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 
+from models import ScoreRankRule, ScoreRecord, TimeRule, User, db
+from utils.unlock_reasons import UnlockReason
 
 # 差异 #8：每日开锁次数默认上限（用户级 daily_unlock_limit 为空时使用）。
 # 历史实现硬编码为 5（常量 DAILY_LIMIT=10 从未生效）；此处把它显式命名为常量，

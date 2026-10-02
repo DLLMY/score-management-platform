@@ -1,12 +1,13 @@
-import logging
-import paho.mqtt.client as mqtt
 import json
+import logging
+import ssl
 import threading
 import time
-import ssl
+from collections import deque
 from datetime import datetime
 from enum import Enum
-from collections import deque
+
+import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,8 @@ class MQTTManager:
 
     def load_config_from_db(self):
         try:
-            from models import MQTTConfig
             from app import app
+            from models import MQTTConfig
 
             with app.app_context():
                 config = MQTTConfig.query.first()
@@ -312,7 +313,7 @@ class MQTTManager:
             data = None
         try:
             from app import app as flask_app
-            from models import db, MQTTLog
+            from models import MQTTLog, db
 
             with flask_app.app_context():
                 try:
@@ -479,7 +480,7 @@ class MQTTManager:
             return
 
         from app import app
-        from models import MQTTLog, Device, db
+        from models import Device, MQTTLog, db
 
         with app.app_context():
             try:
@@ -542,7 +543,7 @@ class MQTTManager:
             fw_version = data.get("fw_version")
 
             from app import app
-            from models import db, Device
+            from models import Device, db
 
             with app.app_context():
                 device = Device.query.filter_by(device_id=device_id).first()
@@ -605,7 +606,7 @@ class MQTTManager:
             )
 
             from app import app
-            from models import db, Device
+            from models import Device, db
 
             with app.app_context():
                 device = Device.query.filter_by(device_id=device_id).first()
@@ -761,9 +762,12 @@ class MQTTManager:
                 from models import Device, DeviceHeartbeat, db
 
                 # 差异 #3/#11：心跳统一写入 + 设备错误自动告警
-                from services.heartbeat_service import apply_heartbeat_to_device, check_device_errors
                 # 差异 #15：宽松 device_id 兜底校验
-                from services.heartbeat_service import is_safe_device_id
+                from services.heartbeat_service import (
+                    apply_heartbeat_to_device,
+                    check_device_errors,
+                    is_safe_device_id,
+                )
 
                 if not is_safe_device_id(device_id):
                     logger.warning(f"[心跳] device_id 非法，已忽略: {device_id!r}")

@@ -1,18 +1,6 @@
 """安全工具模块 - 提供CSRF保护、输入验证、JWT认证等功能"""
 
-import re
-import jwt
-import bcrypt
-import logging
-from datetime import datetime, timedelta, timezone, UTC
-from typing import Any
-import json
-import os
-from flask import request
-from utils.logger import log_warning
-from config import config
-
-logger = logging.getLogger(__name__)
+import jsonimport loggingimport osimport refrom datetime import UTC, datetime, timedelta, timezonefrom typing import Anyimport bcryptimport jwtfrom flask import requestfrom config import configfrom utils.logger import log_warninglogger = logging.getLogger(__name__)
 
 # JWT配置
 # F5 修复: 移除弱密钥兜底 "your_secret_key_here"。env 缺失时：
@@ -460,36 +448,5 @@ def get_request_param(key: str, default: Any = None) -> Any:
 # ==================== 导出 ====================
 
 __all__ = [
-    # JWT认证
-    "generate_tokens",
-    "decode_token",
-    "validate_token",
-    "generate_student_token",
-    # 密码处理
-    "hash_password",
-    "verify_password",
-    "is_strong_password",
-    # 验证函数
-    "validate_email",
-    "validate_phone",
-    "validate_card_id",
-    "validate_username",
-    "validate_password",
-    "validate_integer",
-    "validate_string_length",
-    "validate_score",
-    "validate_class_name",
-    "validate_gender",
-    "validate_status",
-    "validate_datetime",
-    "validate_json",
-    # 验证器类
-    "InputValidator",
-    # 安全辅助函数
-    "sanitize_input",
-    "sanitize_filename",
-    "is_safe_redirect_url",
-    # 请求参数提取
-    "get_request_data",
-    "get_request_param",
+    # 验证器类    "InputValidator",    "decode_token",    "generate_student_token",    # JWT认证    "generate_tokens",    # 请求参数提取    "get_request_data",    "get_request_param",    # 密码处理    "hash_password",    "is_safe_redirect_url",    "is_strong_password",    "sanitize_filename",    # 安全辅助函数    "sanitize_input",    "validate_card_id",    "validate_class_name",    "validate_datetime",    # 验证函数    "validate_email",    "validate_gender",    "validate_integer",    "validate_json",    "validate_password",    "validate_phone",    "validate_score",    "validate_status",    "validate_string_length",    "validate_token",    "validate_username",    "verify_password",
 ]

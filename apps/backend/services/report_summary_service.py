@@ -11,13 +11,14 @@
   与算法 Tab 数据口径完全一致。
 """
 
+import logging
 from collections import defaultdict
 from datetime import datetime
 
+from services.attribution_service import AttributionService
 from services.engagement_service import batch_rank
 from services.risk_predict_service import RiskPredictService
-from services.attribution_service import AttributionService
-import logging
+
 logger = logging.getLogger(__name__)
 
 

@@ -1,12 +1,12 @@
 """清除登录锁定"""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app import app
-from models import db, LoginAttempt
+from models import LoginAttempt, db
 
 with app.app_context():
     # 删除所有登录尝试记录

@@ -16,7 +16,7 @@
 
 from unittest.mock import patch
 
-from models import NotifyTemplate, NotifyHistory
+from models import NotifyHistory, NotifyTemplate
 
 
 def _json(resp):

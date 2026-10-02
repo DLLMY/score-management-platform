@@ -1,7 +1,7 @@
 """RBAC种子数据初始化 - 直接写入数据库"""
 
-import sqlite3
 import os
+import sqlite3
 
 db_path = os.path.join(os.path.dirname(__file__), "instance", "score_management.db")
 conn = sqlite3.connect(db_path)

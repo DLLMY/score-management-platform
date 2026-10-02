@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
 """D1-d object-level to_dict tests (no DB needed)."""
 import pytest
-from models.device_models import DeviceFirmwareUpdate
-from models.device_models import DeviceHeartbeat
+
+from models.device_models import DeviceFirmwareUpdate, DeviceHeartbeat
 from models.nlp_models import NLPCorrection
 from models.system_models import FrontendPerfMetric
 from models.user_models import PermissionLog
-
 
 
 def test_NLPCorrection_to_dict():

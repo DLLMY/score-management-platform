@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 前后端接口契约测试（防命名/路径漂移）。
 
@@ -16,6 +15,7 @@ import re
 import sys
 
 import pytest
+
 
 # ----------------------------------------------------------------------------
 # 归一化工具（与三层审计 analyze.py 保持一致）
@@ -123,7 +123,7 @@ def extract_frontend_calls(api_ts_path):
         raw = re.split(r"\$\{[^}]*`[^}]*\}", raw)[0]
         raw = re.split(r"\$\{[^}]*[\?'\"+.(][^}]*\}", raw)[0]
         raw = raw.split("?")[0]
-        mmeth = re.search(r"method:\s*['\"](get|post|put|delete|patch)['\"]", calltext, re.I)
+        mmeth = re.search(r"method:\s*['\"](get|post|put|delete|patch)['\"]", calltext, re.IGNORECASE)
         verb = mmeth.group(1).lower() if mmeth else "get"
         verb_inline = bool(mmeth)
 

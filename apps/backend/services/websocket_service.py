@@ -6,9 +6,10 @@ WebSocket实时通信服务
 """
 
 import json
-from flask_socketio import emit, join_room, leave_room
-from flask import request
 from threading import Lock
+
+from flask import request
+from flask_socketio import emit, join_room, leave_room
 
 NOTIFICATION_EVENT = "notification"
 DEVICE_STATUS_EVENT = "device_status"
@@ -17,7 +18,7 @@ ALERT_EVENT = "alert"
 SYSTEM_EVENT = "system"
 
 
-from utils.logger import log_info, log_debug
+from utils.logger import log_debug, log_info
 
 
 def _ws_handle_connect():

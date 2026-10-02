@@ -1,6 +1,6 @@
+import logging
 from contextlib import contextmanager
 
-import logging
 from models import db
 
 logger = logging.getLogger(__name__)
@@ -15,8 +15,9 @@ def db_session_scope(auto_commit=True, detach=True):
     detach=False，否则调用方后续访问已提交 ORM 对象/g.current_user 抛 DetachedInstanceError
     （2026-08-20 已因此修复 composite_score_service / nlp_enhanced_service / user_service）。
     """
-    from models import db
     from flask import current_app
+
+    from models import db
 
     session = db.session
     try:
@@ -25,7 +26,7 @@ def db_session_scope(auto_commit=True, detach=True):
             session.commit()
     except Exception as e:
         session.rollback()
-        logger.error(f"Database transaction failed: {str(e)}", exc_info=True)
+        logger.error(f"Database transaction failed: {e!s}", exc_info=True)
         raise
     finally:
         try:
@@ -46,7 +47,7 @@ def db_readonly_scope():
     try:
         yield session
     except Exception as e:
-        logger.error(f"Database read operation failed: {str(e)}", exc_info=True)
+        logger.error(f"Database read operation failed: {e!s}", exc_info=True)
         raise
 
 

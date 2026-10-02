@@ -18,15 +18,15 @@ class TestRuleLimitRegression:
 
     def test_box_routes_rule_limit_uses_first(self):
         """box_routes 刷卡限流分支同样补 .first()"""
-        import api.devices.box_routes as box_routes
+        from api.devices import box_routes
 
         src = inspect.getsource(box_routes)
         assert ".first()" in src, "box_routes 限流分支必须调用 .first()"
 
     def test_check_rule_limits_returns_tuple_with_valid_rule(self, app, db_session):
         """配置 min_interval 的规则调用 check_rule_limits 不再抛 AttributeError"""
-        from models import User, ScoreRule, ScoreRecord
         from api.scores.records_routes import check_rule_limits
+        from models import ScoreRecord, ScoreRule, User
 
         with app.app_context():
             student = User.query.filter_by(role="student").first()
@@ -77,7 +77,7 @@ class TestR1R9ReviewRegression:
 
     def test_score_to_dict_no_rank(self, app, db_session):
         """R7 复核: Score.to_dict 不得访问已删的 rank 列（原访问 self.rank → 有成绩即 AttributeError）"""
-        from models import User, Subject, Exam, Score
+        from models import Exam, Score, Subject, User
 
         with app.app_context():
             student = User(
@@ -109,7 +109,8 @@ class TestR1R9ReviewRegression:
     def test_approve_leave_generates_attendance(self, app, db_session):
         """P1-4 复核: 请假审批通过后生成考勤记录（status=leave），否则考勤统计漏掉请假"""
         from datetime import date, timedelta
-        from models import User, Approval
+
+        from models import Approval, User
         from models.attendance import Attendance
         from services.attendance_service import attendance_service
 
@@ -202,6 +203,7 @@ class TestS12345678910Regression:
     def test_firmware_download_no_admin_required(self):
         """S1: 固件下载端点不应再挂 requires_permission（固件无认证头 → 401 断链）"""
         import inspect
+
         from api.devices._firmware_part1 import FirmwareDownload
 
         src = inspect.getsource(FirmwareDownload.get)
@@ -210,6 +212,7 @@ class TestS12345678910Regression:
     def test_firmware_upload_uses_real_md5(self):
         """A-P0-2: 固件上传须计算真 MD5（32 位）而非 SHA256（64 位→固件校验静默跳过）"""
         import inspect
+
         from api.devices._firmware_part1 import FirmwareUpload
 
         src = inspect.getsource(FirmwareUpload.post)
@@ -223,6 +226,7 @@ class TestS12345678910Regression:
         断言更强，防表存在却漏项），并校验 _process_ota_status 实际引用该常量。
         """
         import inspect
+
         from services.mqtt_manager import MQTTManager
 
         failure_statuses = MQTTManager._OTA_FAILURE_STATUSES
@@ -247,6 +251,7 @@ class TestS12345678910Regression:
         execute_scoring 确实分派到它们（防 helper 存在却未被调用）。
         """
         import inspect
+
         from services.nlp_enhanced_service import EnhancedNLPParserService
 
         persist_src = inspect.getsource(EnhancedNLPParserService._persist_score_records)
@@ -264,6 +269,7 @@ class TestS12345678910Regression:
         经 _resolve_manual_rule/_resolve_auto_rule 调用）。
         """
         import inspect
+
         from services.nlp_enhanced_service import EnhancedNLPParserService
 
         norm_src = inspect.getsource(EnhancedNLPParserService._normalize_score_sign)
@@ -284,6 +290,7 @@ class TestS12345678910Regression:
         _compute_final_score）。
         """
         import inspect
+
         from services.nlp_enhanced_service import EnhancedNLPParserService
 
         compound_src = inspect.getsource(EnhancedNLPParserService._try_compound_scoring)
@@ -304,6 +311,7 @@ class TestS12345678910Regression:
         否定前缀过滤已下沉到 _collect_intent_rule_hits（determine_intent 仅做分派）。
         """
         import inspect
+
         from services.nlp_enhanced_service import EnhancedNLPParserService
 
         collect_src = inspect.getsource(EnhancedNLPParserService._collect_intent_rule_hits)
@@ -320,6 +328,7 @@ class TestS12345678910Regression:
         并校验 post 确实分派到它们（防 helper 存在却未被调用）。
         """
         import inspect
+
         from api.data import export_routes
 
         scoped_helpers = (
@@ -345,6 +354,7 @@ class TestS12345678910Regression:
     def test_backup_delete_basename_guard(self):
         """S8: 备份删除必须校验 basename（防路径穿越删除任意文件）"""
         import inspect
+
         from api.data._import_export_part2 import DeleteBackup
 
         src = inspect.getsource(DeleteBackup.delete)

@@ -5,8 +5,9 @@
 """
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 try:
     from services.nlp_rule_service import NLPRuleManagementService

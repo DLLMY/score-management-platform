@@ -1,8 +1,9 @@
-from flask_restx import Namespace, Resource
 from flask import request
+from flask_restx import Namespace, Resource
+
 from services.committee_service import committee_service
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.permission import requires_permission
 
 ns_committee = Namespace("committee", description="班委名单管理")
 

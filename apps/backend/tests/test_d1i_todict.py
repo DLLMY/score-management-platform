@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-i object-level to_dict tests."""
 import pytest
-from models.device_models import MQTTLog
-from models.device_models import ProcessedMessage
-from models.duty import DutyAssignment
-from models.duty import DutyGroup
-from models.homework import HomeworkAssignment
 
+from models.device_models import MQTTLog, ProcessedMessage
+from models.duty import DutyAssignment, DutyGroup
+from models.homework import HomeworkAssignment
 
 
 def test_MQTTLog_to_dict():

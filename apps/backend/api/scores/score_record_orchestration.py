@@ -1,32 +1,34 @@
 import logging
+from datetime import datetime
+
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-from models import ScoreRecord, User, ScoreRule, get_by_id
-from utils.permission import (
-    requires_permission,
-    get_current_admin,
-    get_allowed_classes,
-    can_access_student,
-)
-from utils.logger import log_operation
-from services.redis_cache_service import get_cache_service
-from utils.api_cache_middleware import cached_api, invalidate_cache
+
+from models import ScoreRecord, ScoreRule, User, get_by_id
 from services.class_time_checker import ClassTimeChecker
+from services.redis_cache_service import get_cache_service
+from services.score_recalc import enqueue_or_recalc_user_score
 from services.score_record_service import (
+    commit_batch_score_entry,
     create_record,
     create_score_entry,
     delete_record,
-    commit_batch_score_entry,
-    serialize_score_record,
-    get_record_statistics_view,
-    get_record_list_view,
     get_record_list_by_user_view,
+    get_record_list_view,
+    get_record_statistics_view,
     get_score_entry_view,
+    serialize_score_record,
 )
-from services.score_recalc import enqueue_or_recalc_user_score
-from datetime import datetime
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.logger import log_operation
+from utils.pagination import get_pagination
+from utils.permission import (
+    can_access_student,
+    get_allowed_classes,
+    get_current_admin,
+    requires_permission,
+)
+from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +49,6 @@ except ImportError:
         logging.getLogger(__name__).warning(
             "admin_notifications_routes 导入失败，成绩变动相关的管理员通知被静默丢弃"
         )
-        return
 def check_rule_limits(user_id, rule_id):
     """
     检查规则的每日上限和最小间隔限制

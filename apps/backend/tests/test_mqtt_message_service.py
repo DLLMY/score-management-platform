@@ -1,7 +1,7 @@
 """MQTT消息服务单元测试"""
 
-from unittest.mock import Mock, patch
 import json
+from unittest.mock import Mock, patch
 
 try:
     from services.mqtt_message_service import MQTTMessageService

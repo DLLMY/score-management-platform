@@ -3,15 +3,18 @@
 基于熵权法实现多维度综合评分计算。
 """
 
-from datetime import datetime
 import logging
 import threading
 import uuid
+from datetime import datetime
+
 import numpy as np
-from models import db, User, Score, ScoreRecord, CompositeScore, get_by_id
-from utils.db_session import db_session_scope
-from .algorithm_service import AlgorithmService
 from sqlalchemy import func
+
+from models import CompositeScore, Score, ScoreRecord, User, db, get_by_id
+from utils.db_session import db_session_scope
+
+from .algorithm_service import AlgorithmService
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,7 @@ _DEFAULT_PROGRESS = {
 }
 
 
-from utils.logger import log_info, log_warning, log_debug
+from utils.logger import log_debug, log_info, log_warning
 
 
 class CompositeScoreService:

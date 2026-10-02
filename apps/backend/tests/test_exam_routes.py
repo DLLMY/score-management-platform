@@ -11,10 +11,11 @@
 注意：单条 create 用 APIResponse.success → 200（与 subject create 的 201 区分）。
 """
 
-import pytest
 from datetime import date
 
-from models import db, Subject, User, Exam, Score
+import pytest
+
+from models import Exam, Score, Subject, User, db
 
 
 @pytest.fixture

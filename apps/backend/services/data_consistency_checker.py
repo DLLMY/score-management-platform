@@ -1,6 +1,7 @@
 import logging
-from models import db, User, Admin, ClassInfo, AdminClass, CourseSchedule
 from datetime import datetime
+
+from models import Admin, AdminClass, ClassInfo, CourseSchedule, User, db
 
 "\n"
 "数据一致性校验服务"

@@ -1,8 +1,9 @@
 """Tests for NLP ML Service"""
 
-from unittest.mock import patch, MagicMock
-import numpy as np
 import os
+from unittest.mock import MagicMock, patch
+
+import numpy as np
 
 try:
     from services.nlp_ml_service import MLAlgorithmType
@@ -311,8 +312,8 @@ class TestNLPMLTrainingService:
 
     def test_get_feature_importance(self):
         """Test _get_feature_importance"""
-        from sklearn.tree import DecisionTreeClassifier
         from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.tree import DecisionTreeClassifier
 
         service = NLPMLTrainingService()
 

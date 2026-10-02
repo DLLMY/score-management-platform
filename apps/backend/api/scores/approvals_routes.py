@@ -1,36 +1,37 @@
-from flask import request
 import json
 import logging
-from flask_restx import Namespace, Resource, fields
-from models import Approval, User, SystemConfig, get_by_id
-from utils.permission import (
-    requires_permission,
-    can_access_student,
-)
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from services.class_time_checker import ClassTimeChecker
 from datetime import datetime
 
-from services.approval_service import (
-    create_approval,
-    update_approval,
-    delete_approval,
-    approve_approval,
-    reject_approval,
-)
+from flask import request
+from flask_restx import Namespace, Resource, fields
+
+from models import Approval, SystemConfig, User, get_by_id
 from services.approval_query_service import (
+    _serialize_approval,
+    get_approval_detail_view,
     get_approval_list_view,
     get_pending_approvals_view,
-    get_approval_detail_view,
-    _serialize_approval,
 )
+from services.approval_service import (
+    approve_approval,
+    create_approval,
+    delete_approval,
+    reject_approval,
+    update_approval,
+)
+from services.class_time_checker import ClassTimeChecker
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.logger import log_warning
+from utils.pagination import get_pagination
+from utils.permission import (
+    can_access_student,
+    requires_permission,
+)
+from utils.response import APIResponse
 
 try:
-    from services.mqtt_manager import mqtt_manager
     from api.monitoring.mqtt_routes import publish_mqtt
+    from services.mqtt_manager import mqtt_manager
 
     mqtt_available = True
 except ImportError:
@@ -45,7 +46,6 @@ except ImportError:
         logging.getLogger(__name__).warning(
             "admin_notifications_routes 导入失败，审批相关的管理员通知被静默丢弃"
         )
-        return
 
 
 ns_approvals = Namespace("approvals", description="审批相关操作")
@@ -119,7 +119,9 @@ def _execute_reject(approval, data):
     # D3/R4: 拒绝结果写入学生通知中心
     if user:
         try:
-            from services.notification_service import create_approval_result_notification
+            from services.notification_service import (
+                create_approval_result_notification,
+            )
 
             create_approval_result_notification(
                 user_id=user.id,

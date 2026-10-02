@@ -5,8 +5,8 @@
 - werkzeug HTTPException（401/403/404）→ 透传不吞，维持鉴权/错误中间件语义
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

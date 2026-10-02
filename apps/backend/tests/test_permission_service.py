@@ -7,11 +7,12 @@
 """
 
 import pytest
+
 from utils.permission import (
-    has_permission,
-    get_admin_permissions,
     PERMISSIONS,
     ROLES,
+    get_admin_permissions,
+    has_permission,
 )
 
 

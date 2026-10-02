@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """启动种子数据（生产就绪 P0-d 收口）。
 
 背景
@@ -93,10 +92,10 @@ def seed_defaults(app, logger=None, verbose=True):
             log("INFO", "[SEED] 已插入默认预警配置 %d 条" % added_configs)
         else:
             log("INFO", "[SEED] warning_configs 配置齐全，跳过插入")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         try:
             db.session.rollback()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         log("ERROR", "[SEED] 种子数据补齐失败（不影响启动）: %s" % e)
 

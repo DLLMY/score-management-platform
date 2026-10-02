@@ -1,5 +1,6 @@
 import pytest
-from models import db, Alert
+
+from models import Alert, db
 from models.mental_health import MentalHealthRecord
 from services.mental_health_service import mental_health_service
 

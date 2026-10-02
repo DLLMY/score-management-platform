@@ -5,16 +5,17 @@ TextCNN意图分类器服务
 用于意图分类和语义相似度计算。
 """
 
+import json
 import os
 import sys
-import numpy as np
 import time
-import json
+
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from utils.logger import log_info, log_debug
+from utils.logger import log_debug, log_info
 
 
 class TextCNNClassifier:

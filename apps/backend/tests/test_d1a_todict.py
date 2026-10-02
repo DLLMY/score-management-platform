@@ -5,9 +5,9 @@
 - to_dict(fields=[...]) 仅返回指定键；
 - 字段值与原生构造值一致（零行为破坏）。
 """
-from models.system_models import OperationLog, TimeRule
 from models.score_models import SubjectClass
-from models.user_models import RolePermissionMapping, RoleHierarchy
+from models.system_models import OperationLog, TimeRule
+from models.user_models import RoleHierarchy, RolePermissionMapping
 
 
 def test_operation_log_to_dict():

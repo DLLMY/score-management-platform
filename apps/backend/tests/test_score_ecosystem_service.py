@@ -5,8 +5,8 @@
 """
 """
 
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 try:
     from services.score_ecosystem_service import ScoreEcosystem

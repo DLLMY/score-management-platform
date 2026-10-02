@@ -1,30 +1,41 @@
-import json
 import io
-from flask_restx import Namespace, Resource, fields
+import json
+import logging
+from datetime import datetime
+
 from flask import request, send_file
-from models import CourseSchedule, ClassInfo, Subject, ClassPeriod, Admin, ImportConfig, get_by_id
+from flask_restx import Namespace, Resource, fields
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+from models import (
+    Admin,
+    ClassInfo,
+    ClassPeriod,
+    CourseSchedule,
+    ImportConfig,
+    Subject,
+    get_by_id,
+)
 from services.academics_service import academics_service
 from services.course_schedule_service import (
-    get_schedule_list_view,
-    get_schedule_by_class_view,
-    get_schedule_now_view,
-    get_schedule_options_view,
-    check_schedule_conflict_view,
-    build_schedule_export_data,
     _schedule_dict,
+    build_schedule_export_data,
+    check_classroom_conflicts,
+    check_conflicts,
+    check_schedule_conflict_view,
+    check_teacher_conflicts,
     format_day_of_week,
     get_period_info,
-    check_conflicts,
-    check_teacher_conflicts,
-    check_classroom_conflicts,
+    get_schedule_by_class_view,
+    get_schedule_list_view,
+    get_schedule_now_view,
+    get_schedule_options_view,
 )
-from utils.permission import requires_permission, get_allowed_classes, get_current_admin
-from utils.response import APIResponse
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from datetime import datetime
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-import logging
+from utils.permission import get_allowed_classes, get_current_admin, requires_permission
+from utils.response import APIResponse
+
 logger = logging.getLogger(__name__)
 
 ns_course_schedule = Namespace("course-schedules", description="课程表相关操作")

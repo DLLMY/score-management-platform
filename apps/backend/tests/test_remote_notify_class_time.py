@@ -11,8 +11,8 @@
 3. 拥有 all 权限的管理员以 force_send=True 可绕过拦截（success=True，并写 FORCE 审计）。
 """
 
+from models import ClassInfo, Device, NotifyAudit
 from services.class_time_checker import ClassTimeChecker
-from models import NotifyAudit, Device, ClassInfo
 
 
 def _patch_allow_blocked(

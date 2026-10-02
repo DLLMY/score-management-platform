@@ -15,9 +15,9 @@
 import logging
 import re
 
-from models import db, User, ScoreRule, ScoreCategory, ClassInfo
-from utils.validation import validate_name, validate_student_id
+from models import ClassInfo, ScoreCategory, ScoreRule, User, db
 from utils.transaction_retry import TransactionRetry
+from utils.validation import validate_name, validate_student_id
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ def _commit_imported_rows(imported_count, failed_count):
         retry.execute(db.session.commit)
     except Exception as e:
         db.session.rollback()
-        logger.error(f"数据提交失败（已重试{retry.retry_count}次）: {str(e)}")
+        logger.error(f"数据提交失败（已重试{retry.retry_count}次）: {e!s}")
         raise ImportCommitError(str(e), imported_count, failed_count) from e
 
 

@@ -1,8 +1,10 @@
+import json
 import logging
 import os
-import json
 from datetime import datetime
-from flask import request, g
+
+from flask import g, request
+
 from utils.log_archiver import GzipRotatingFileHandler
 
 # 创建日志目录
@@ -134,7 +136,7 @@ def log_operation(
     before/after 序列化带 default=str 兜底（datetime/ORM 对象不再导致审计丢失）。
     """
     try:
-        from models import db, OperationLog
+        from models import OperationLog, db
 
         user_id = None
         if operator is None:

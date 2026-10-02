@@ -12,21 +12,23 @@
 RolePermissionMapping（与 init_default_roles 一致），并验证静态回退 PERMISSIONS['teacher']。
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 
 from services import phonebox_policy as svc
 from services.phonebox_policy import (
-    POLICY_DEFER,
-    POLICY_BLOCK,
     POLICY_ALLOW_OVERRIDE,
     POLICY_ALLOW_WINDOW,
+    POLICY_BLOCK,
+    POLICY_DEFER,
 )
 
 
 def _make_class(db_session):
-    from models import ClassInfo
     import uuid
+
+    from models import ClassInfo
 
     cls = ClassInfo(name="PHONECLASS" + uuid.uuid4().hex[:6], grade="高一", description="测试班")
     db_session.add(cls)
@@ -273,8 +275,9 @@ class TestNormalizeWindows:
 
 def _make_student(db_session, class_info_id, score=100):
     """建一个绑定班级、有卡号、积分充足的学生。"""
-    from models import User
     import uuid
+
+    from models import User
 
     user = User(
         name="测试学生",
@@ -310,6 +313,7 @@ def _make_time_rule(db_session, allow_unlock, now=None):
 def _capture_unlock(monkeypatch):
     """拦截 publish_mqtt，捕获下发给设备的开箱结果。"""
     import json as _json
+
     import services.mqtt_message_service as mms
 
     captured = {}

@@ -39,8 +39,9 @@ class FullTextSearch:
 
     def _ensure_fts_table(self):
         """确保FTS5虚拟表存在（需在应用上下文中调用）"""
-        from models import db
         from flask import has_app_context
+
+        from models import db
 
         if not has_app_context():
             logger.warning("[FullTextSearch] 需在应用上下文中初始化，跳过")

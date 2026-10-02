@@ -3,15 +3,7 @@
 收集代码规模、质量、性能、安全、架构等多维度指标
 """
 
-import ast
-import json
-import logging
-import os
-import re
-from collections import defaultdict
-from datetime import datetime
-
-logger = logging.getLogger(__name__)
+import astimport jsonimport loggingimport osimport refrom collections import defaultdictfrom datetime import datetimelogger = logging.getLogger(__name__)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 BACKEND_DIR = os.path.join(PROJECT_ROOT, "apps", "backend")

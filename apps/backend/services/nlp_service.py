@@ -1,17 +1,4 @@
-from typing import Any
-from enum import Enum
-
-
-import concurrent.futures
-import hashlib
-import threading
-
-
-from utils.logger import log_info, log_warning
-import logging
-
-
-class NLPParserType(Enum):
+import concurrent.futuresimport hashlibimport loggingimport threadingfrom enum import Enumfrom typing import Anyfrom utils.logger import log_info, log_warningclass NLPParserType(Enum):
     RULE_BASED = "rule_based"
     ML_BASED = "ml_based"
     ENHANCED = "enhanced"
@@ -228,7 +215,7 @@ class NLPService:
                 return result
             return self._unknown_result("解析结果格式错误")
         except Exception as e:
-            return self._unknown_result(f"解析失败: {str(e)}")
+            return self._unknown_result(f"解析失败: {e!s}")
 
 
 
@@ -269,7 +256,7 @@ class NLPService:
             optimizer = NLPOptimizer()
             return optimizer.optimize(text)
         except Exception as e:
-            return {"success": False, "message": f"优化失败: {str(e)}"}
+            return {"success": False, "message": f"优化失败: {e!s}"}
 
     def get_stats(self) -> dict[str, Any]:
         total = self._cache_hits + self._cache_misses
@@ -361,8 +348,7 @@ def get_match_results_evaluation():
     P0-1 数据诚信：仅统计自动匹配（非人工校正且 intent != 'unknown'）占比，
     不伪造准确率。返回 {total_count, correct_count}，响应构造与 null 逻辑保留路由层。
     """
-    from models import db
-    from sqlalchemy import text
+    from sqlalchemy import text    from models import db
 
     row = db.session.execute(
         text(

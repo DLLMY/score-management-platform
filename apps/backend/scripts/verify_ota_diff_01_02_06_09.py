@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """差异 #1/#2/#6/#9 的等价性与行为验证脚本（只读 + 临时内存库，不触碰生产数据）。
 
 覆盖验证点：
@@ -113,8 +112,8 @@ print("=" * 70)
 # 用内存库隔离验证，完全不触碰 instance/score_management.db
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
-from app import app  # noqa: E402
-from models import db, FirmwareVersion  # noqa: E402
+from app import app
+from models import FirmwareVersion, db
 
 with app.app_context():
     db.create_all()

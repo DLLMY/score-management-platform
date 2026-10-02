@@ -1,11 +1,12 @@
-from flask import request, g
+from flask import g, request
 from flask_restx import Namespace, Resource, fields
+
 from models import Notification, User
 from utils.permission import (
-    requires_permission,
-    has_permission,
-    get_current_admin,
     get_allowed_classes,
+    get_current_admin,
+    has_permission,
+    requires_permission,
 )
 
 # 通知响应字段子集（B3 扩展 2026-08-23）：
@@ -48,17 +49,17 @@ def _notification_dict(n):
     return {**n.to_dict(NOTIFICATION_FIELDS), "user_name": n.user.name if n.user else None}
 
 
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-from utils.api_cache_middleware import cached_api, invalidate_cache
 from services.notification_service import (
+    batch_send_notifications,
     create_user_notification,
-    update_notification,
     delete_notification,
     mark_notification_read,
     send_notification,
-    batch_send_notifications,
+    update_notification,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_pagination
+from utils.response import APIResponse
 
 ns_notifications = Namespace("notifications", description="通知相关操作")
 

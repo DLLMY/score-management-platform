@@ -1,5 +1,5 @@
 try:
-    from models import db, User
+    from models import User, db
 except ImportError:
     pass
 
@@ -23,7 +23,7 @@ class TestNLPParserService:
 
     def test_extract_name_from_database(self, app):
         with app.app_context():
-            from models import db, User
+            from models import User, db
             from services.nlp_parser_service import NLPParserService
 
             user = User(name="测试学生", card_id="NLP001", class_name="测试班级", current_score=100)
@@ -158,7 +158,7 @@ class TestNLPParserService:
 
     def test_match_rule(self, app):
         with app.app_context():
-            from models import NLPScoringRule, NLPBehaviorKeyword
+            from models import NLPBehaviorKeyword, NLPScoringRule
 
             # 自包含：注入行为关键词，使 extract_behavior 能提取出“迟到”，
             # 否则 function 级隔离下无其它测试泄漏的关键词行，match_rule 查不到规则。

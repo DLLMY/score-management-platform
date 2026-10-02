@@ -4,9 +4,10 @@ Export Service Tests
 
 import io
 import os
-import pytest
 from datetime import datetime
 from unittest.mock import patch
+
+import pytest
 
 try:
     from services.export_service import ExportService
@@ -39,8 +40,9 @@ class TestExportServiceCSV:
 
     def test_export_to_csv_with_filepath(self):
         """Test export to CSV with filepath"""
-        from services.export_service import ExportService
         import tempfile
+
+        from services.export_service import ExportService
 
         data = [
             {"name": "张三", "score": 85},

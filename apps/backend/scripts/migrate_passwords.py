@@ -3,8 +3,9 @@
 密码迁移脚本 - 将现有明文密码转换为bcrypt哈希
 """
 
-import sqlite3
 import os
+import sqlite3
+
 import bcrypt
 
 

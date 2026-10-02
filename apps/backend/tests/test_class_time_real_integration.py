@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 上课时间拦截 - 真实集成测试（B+C 闭环）
 
@@ -17,10 +16,11 @@
 publish_mqtt 被 monkeypatch 为 no-op，使测试不依赖本地 MQTT broker。
 """
 
-import pytest
 from datetime import datetime
 
-from models import TimeRule, NotifyAudit, db
+import pytest
+
+from models import NotifyAudit, TimeRule, db
 
 
 @pytest.fixture

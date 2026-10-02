@@ -1,8 +1,9 @@
+import argparse
 import os
 import sys
 import threading
-import argparse
 import traceback
+
 from dotenv import load_dotenv
 
 "\n"
@@ -50,8 +51,9 @@ def main():
     print(f"  调试: {debug}")
     print("=" * 60)
     print()
-    from app import app
     from flask_socketio import SocketIO
+
+    from app import app
 
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
     from services.websocket_service import register_handlers

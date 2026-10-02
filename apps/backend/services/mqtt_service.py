@@ -1,8 +1,9 @@
-from services.mqtt_manager import MQTTManager
 import json
 import logging
-from datetime import datetime
 import threading
+from datetime import datetime
+
+from services.mqtt_manager import MQTTManager
 
 # 使用TCP实例作为默认连接（优先使用更稳定的TCP连接）
 mqtt_manager = MQTTManager("tcp")
@@ -41,7 +42,7 @@ def log_mqtt_message_async(client, topic, data, qos=1):
         with _mqtt_log_semaphore:
             try:
                 from app import app
-                from models import db, MQTTLog
+                from models import MQTTLog, db
 
                 with app.app_context():
                     log = MQTTLog(
@@ -78,7 +79,7 @@ def log_operation_detail(operation_type, details, success=True):
     """记录操作详情日志"""
     try:
         from app import app
-        from models import db, OperationLog
+        from models import OperationLog, db
 
         with app.app_context():
             log = OperationLog(

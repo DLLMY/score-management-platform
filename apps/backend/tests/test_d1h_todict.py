@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-h object-level to_dict tests."""
 import pytest
-from models.attendance import Attendance
-from models.committee import ClassCommittee
-from models.committee import CommitteeTerm
-from models.culture import CultureItem
-from models.culture import CultureRecord
 
+from models.attendance import Attendance
+from models.committee import ClassCommittee, CommitteeTerm
+from models.culture import CultureItem, CultureRecord
 
 
 def test_Attendance_to_dict():

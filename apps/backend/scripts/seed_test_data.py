@@ -3,38 +3,38 @@
 预置一个完整班级的测试数据
 """
 
-import sys
 import os
 import random
+import sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
-from models import db
 from models import (
-    User,
+    Activity,
+    Approval,
+    Attendance,
+    ClassCommittee,
     ClassInfo,
+    ContactLog,
+    CultureRecord,
+    DutyAssignment,
+    DutyGroup,
+    HomeworkAssignment,
+    MentalHealthRecord,
+    ParentContact,
     ScoreCategory,
-    Subject,
-    ScoreRule,
     ScoreRecord,
+    ScoreRule,
     SeatingChart,
     SeatingSeat,
-    DutyGroup,
-    DutyAssignment,
-    ClassCommittee,
-    ParentContact,
-    ContactLog,
-    HomeworkAssignment,
-    Attendance,
-    Approval,
     StudyGroup,
     StudyGroupMember,
-    MentalHealthRecord,
-    Activity,
-    CultureRecord,
     StudyGuide,
+    Subject,
+    User,
+    db,
 )
 
 # 配置

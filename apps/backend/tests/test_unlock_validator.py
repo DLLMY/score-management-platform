@@ -1,6 +1,7 @@
 import uuid
-from datetime import datetime, date, timedelta
-from models import User, TimeRule, ScoreRankRule
+from datetime import date, datetime, timedelta
+
+from models import ScoreRankRule, TimeRule, User
 
 try:
     from services.unlock_validator import UnlockValidator

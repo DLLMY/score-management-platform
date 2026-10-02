@@ -1,9 +1,9 @@
-from typing import Any
+import re
 from collections.abc import Callable
 from functools import wraps
-from flask import request, jsonify
+from typing import Any
 
-import re
+from flask import jsonify, request
 
 """
 统一参数校验模块
@@ -491,7 +491,7 @@ def validate_request(*validators: Callable) -> Callable:
                     result = validator(json_data, query_params)
                     _interpret_validator_result(result, errors)
                 except Exception as e:
-                    errors.append(f"校验异常: {str(e)}")
+                    errors.append(f"校验异常: {e!s}")
 
             if errors:
                 return jsonify({"success": False, "message": "参数校验失败", "errors": errors}), 400

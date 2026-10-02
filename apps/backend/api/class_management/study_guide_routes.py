@@ -1,9 +1,10 @@
-from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_restx import Namespace, Resource, fields
+
 from services.study_guide_service import study_guide_service
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.pagination import get_pagination
+from utils.permission import requires_permission
 
 # path 显式下沉到 Namespace：与 api_versioning 的 add_namespace(path="/study-guide") 一致，
 # 保证 tests/conftest.py 动态注册时 URL 仍为连字符 /study-guide。

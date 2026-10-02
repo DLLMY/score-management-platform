@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from flask import request
 
-from models import db, SecurityAudit, RateLimitRecord, LoginAttempt
+from models import LoginAttempt, RateLimitRecord, SecurityAudit, db
 
 
 def check_login_rate_limit(username, ip_address, max_attempts=5, lockout_minutes=15):

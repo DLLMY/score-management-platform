@@ -12,7 +12,7 @@
 
 from datetime import datetime
 
-from models import db, Approval, User, ScoreRecord, SystemConfig, get_by_id
+from models import Approval, ScoreRecord, SystemConfig, User, db, get_by_id
 from utils.score_utils import atomic_score_update
 
 
@@ -47,7 +47,6 @@ def update_approval(approval, data):
     except Exception:
         db.session.rollback()
         raise
-    return
 
 
 def delete_approval(approval):
@@ -58,7 +57,6 @@ def delete_approval(approval):
     except Exception:
         db.session.rollback()
         raise
-    return
 
 
 def approve_approval(approval, data):

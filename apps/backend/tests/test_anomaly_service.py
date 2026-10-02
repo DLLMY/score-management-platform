@@ -1,5 +1,5 @@
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 try:
     from services.anomaly_service import AnomalyDetector

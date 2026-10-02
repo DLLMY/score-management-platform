@@ -1,36 +1,44 @@
 import logging
-
 from io import BytesIO
 
-from flask_restx import Namespace, Resource
 from flask import request, send_file
-from utils.permission import requires_permission
-from utils.response import APIResponse
-from utils.params import get_int_arg
+from flask_restx import Namespace, Resource
+
+from services.algorithm_export_service import build_algorithm_export_rows
+from services.algorithm_service import AlgorithmService
+from services.anomaly_service import AnomalyService
+from services.attribution_service import AttributionService
+from services.cluster_service import ClusterService
+from services.composite_score_service import CompositeScoreService
+from services.engagement_service import EngagementService
+from services.prediction_service import PredictionService
+from services.reward_service import (
+    PhoneAccessHandler,
+    RewardInteractionController,
+    RewardSystem,
+)
+from services.risk_predict_service import RiskPredictService
+from services.rule_engine_service import RuleExecutionEngine
+from services.rule_recommendation_service import RuleRecommendationService
+from services.score_distribution_service import (
+    ScoreDistributionController,
+    ScoreValidator,
+)
+from services.score_ecosystem_service import ScoreEcosystem
+from services.score_predict_service import ScorePredictService
+from services.warning_service import WarningService
 from utils.api_cache_middleware import cached_api
 from utils.decorators import safe_handle
 from utils.excel_utils import ExcelUtils
-from services.algorithm_service import AlgorithmService
-from services.cluster_service import ClusterService
-from services.composite_score_service import CompositeScoreService
-from services.warning_service import WarningService
-from services.prediction_service import PredictionService
-from services.anomaly_service import AnomalyService
-from services.rule_recommendation_service import RuleRecommendationService
-from services.score_predict_service import ScorePredictService
-from services.risk_predict_service import RiskPredictService
-from services.attribution_service import AttributionService
-from services.engagement_service import EngagementService
-from services.rule_engine_service import RuleExecutionEngine
-from services.score_distribution_service import ScoreDistributionController, ScoreValidator
-from services.score_ecosystem_service import ScoreEcosystem
-from services.reward_service import PhoneAccessHandler, RewardSystem, RewardInteractionController
-from services.algorithm_export_service import build_algorithm_export_rows
+from utils.params import get_int_arg
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 ns_algorithm = Namespace("algorithm", description="算法分析相关操作")
 from .algorithm_routes import ns_algorithm
+
 
 @ns_algorithm.route("/rule-recommend/optimization")
 class RuleOptimization(Resource):

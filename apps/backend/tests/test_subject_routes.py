@@ -10,7 +10,7 @@
 
 import pytest
 
-from models import db, Admin, ClassInfo, Subject, SubjectClass
+from models import Admin, ClassInfo, Subject, SubjectClass, db
 
 
 @pytest.fixture

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """【已弃用 / 仅供运维参考】手写迁移脚本编排器。
 
 重要（P0-d 设计变更）
@@ -19,7 +18,7 @@ import importlib
 import os
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 # 让 `python migrations/runner.py` 独立运行时也能 import 同级模块与项目根
 BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -69,22 +68,22 @@ def resolve_db_path():
 
 def _ensure_tracking_table(conn):
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS {} ("
-        "name TEXT PRIMARY KEY, applied_at TEXT)".format(SCHEMA_MIGRATIONS_TABLE)
+        f"CREATE TABLE IF NOT EXISTS {SCHEMA_MIGRATIONS_TABLE} ("
+        "name TEXT PRIMARY KEY, applied_at TEXT)"
     )
     conn.commit()
 
 
 def _record(conn, name):
     conn.execute(
-        "INSERT OR IGNORE INTO {} (name, applied_at) VALUES (?, ?)".format(SCHEMA_MIGRATIONS_TABLE),
-        (name, datetime.now(timezone.utc).isoformat()),
+        f"INSERT OR IGNORE INTO {SCHEMA_MIGRATIONS_TABLE} (name, applied_at) VALUES (?, ?)",
+        (name, datetime.now(UTC).isoformat()),
     )
     conn.commit()
 
 
 def _applied_set(conn):
-    rows = conn.execute("SELECT name FROM {}".format(SCHEMA_MIGRATIONS_TABLE)).fetchall()
+    rows = conn.execute(f"SELECT name FROM {SCHEMA_MIGRATIONS_TABLE}").fetchall()
     return {r[0] for r in rows}
 
 
@@ -108,7 +107,7 @@ def run_all_migrations(logger=None, verbose=True):
         applied = skipped = errors = 0
         for name in MIGRATIONS:
             try:
-                mod = importlib.import_module("migrations.{}".format(name))
+                mod = importlib.import_module(f"migrations.{name}")
                 fn = getattr(mod, "run_migration", None)
                 if fn is not None:
                     try:
@@ -122,13 +121,13 @@ def run_all_migrations(logger=None, verbose=True):
                     applied += 1
                 else:
                     skipped += 1
-                log("INFO", "[MIG] 已应用/确认: {}".format(name))
-            except Exception as e:  # noqa: BLE001
+                log("INFO", f"[MIG] 已应用/确认: {name}")
+            except Exception as e:
                 errors += 1
-                log("ERROR", "[MIG] 迁移失败: {} -> {}".format(name, e))
+                log("ERROR", f"[MIG] 迁移失败: {name} -> {e}")
         log(
             "INFO",
-            "[MIG] 完成：新增应用 {}，已存在跳过 {}，失败 {}".format(applied, skipped, errors),
+            f"[MIG] 完成：新增应用 {applied}，已存在跳过 {skipped}，失败 {errors}",
         )
         return applied, skipped, errors
     finally:

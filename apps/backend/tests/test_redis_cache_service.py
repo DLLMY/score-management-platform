@@ -2,9 +2,10 @@
 Tests for Redis Cache Service
 """
 
-import redis
-from unittest.mock import patch, MagicMock
 import pickle
+from unittest.mock import MagicMock, patch
+
+import redis
 
 try:
     from services.redis_cache_service import RedisCache
@@ -17,7 +18,7 @@ except ImportError:
     pass
 
 try:
-    from services.redis_cache_service import get_cache_service, cache
+    from services.redis_cache_service import cache, get_cache_service
 except ImportError:
     pass
 
@@ -32,7 +33,7 @@ except ImportError:
     pass
 
 try:
-    from services.redis_cache_service import warmup_cache, _warmup_completed
+    from services.redis_cache_service import _warmup_completed, warmup_cache
 except ImportError:
     pass
 
@@ -747,7 +748,7 @@ class TestRedisCacheConvenienceFunctions:
 
     def test_get_cache_service(self):
         """Test get_cache_service function"""
-        from services.redis_cache_service import get_cache_service, cache
+        from services.redis_cache_service import cache, get_cache_service
 
         result = get_cache_service()
 
@@ -1152,7 +1153,7 @@ class TestRedisCacheWarmup:
 
     def test_warmup_already_completed(self):
         """Test warmup_cache skips when already completed"""
-        from services.redis_cache_service import warmup_cache, _warmup_completed
+        from services.redis_cache_service import _warmup_completed, warmup_cache
 
         original = _warmup_completed
         _warmup_completed = True

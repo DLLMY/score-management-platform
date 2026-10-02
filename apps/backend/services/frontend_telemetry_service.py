@@ -12,7 +12,7 @@ validate_performance_data 请求级校验、限流、响应构造。
 
 import logging
 
-from models import db, FrontendPerfMetric, FrontendErrorLog
+from models import FrontendErrorLog, FrontendPerfMetric, db
 
 logger = logging.getLogger(__name__)
 

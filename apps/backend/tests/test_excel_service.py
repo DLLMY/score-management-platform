@@ -9,12 +9,17 @@ excel_service.py 单元测试
 import io
 import os
 import sys
-import pytest
 from datetime import datetime
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.excel_service import ExcelExportService, ExcelImportService, MAX_EXPORT_ROWS
+from services.excel_service import (
+    MAX_EXPORT_ROWS,
+    ExcelExportService,
+    ExcelImportService,
+)
 
 try:
     from openpyxl import Workbook, load_workbook

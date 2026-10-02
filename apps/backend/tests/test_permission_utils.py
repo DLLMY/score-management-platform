@@ -1,19 +1,19 @@
 from models import Admin
 from utils.permission import (
-    get_access_token,
-    has_permission,
-    get_admin_permissions,
-    get_current_admin,
-    get_allowed_classes,
-    get_admin_class_ids,
-    is_admin_or_super_admin,
-    ROLES,
     PERMISSIONS,
+    ROLES,
     _get_inherited_permissions,
+    can_access_device,
+    get_access_token,
+    get_admin_class_ids,
+    get_admin_permissions,
+    get_allowed_classes,
+    get_current_admin,
+    has_permission,
+    is_admin_or_super_admin,
     requires_admin,
     requires_permission,
     requires_role,
-    can_access_device,
 )
 
 

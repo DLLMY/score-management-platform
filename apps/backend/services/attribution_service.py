@@ -283,9 +283,9 @@ class AttributionService:
             "class_name": class_name or "",
             "days": int(days),
             "total": int(total),
-            "analyzed": int(len(students)),
+            "analyzed": len(students),
             "with_data": int(with_data),
-            "failed": int(len(failed_students)),
+            "failed": len(failed_students),
             "students": students,
             "failed_students": failed_students,
         }

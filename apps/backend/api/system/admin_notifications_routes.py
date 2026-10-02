@@ -8,18 +8,21 @@ F9-B 合并说明：
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
+
 from models import Notification
-from utils.permission import requires_permission
-from utils.response import APIResponse
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.pagination import get_pagination, get_limit
+from services.admin_notifications_service import (
+    create_admin_notification as _service_create_admin_notification,
+)
 from services.admin_notifications_service import (
     create_notification,
     delete_notification,
-    mark_notification_read,
     mark_all_read,
-    create_admin_notification as _service_create_admin_notification,
+    mark_notification_read,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.pagination import get_limit, get_pagination
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 ns_admin_notifications = Namespace("admin_notifications", description="管理员通知中心")
 

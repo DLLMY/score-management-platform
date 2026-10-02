@@ -1,7 +1,8 @@
-import pytest
 from datetime import date
-from models import db
-from models import ClassInfo, User
+
+import pytest
+
+from models import ClassInfo, User, db
 from models.committee import ClassCommittee, CommitteeTerm
 from services.committee_service import committee_service
 

@@ -6,8 +6,8 @@
 导出行拼装逻辑集中在此，路由 AlgorithmExport.get 仅保留参数解析、文件流与鉴权薄壳。
 """
 
-from services.engagement_service import EngagementService
 from services.attribution_service import AttributionService
+from services.engagement_service import EngagementService
 from services.risk_predict_service import RiskPredictService
 
 

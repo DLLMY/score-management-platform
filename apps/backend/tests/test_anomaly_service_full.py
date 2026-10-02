@@ -5,7 +5,7 @@
 """
 """
 
-from services.anomaly_service import AnomalyDetector, AnomalyService, ANOMALY_TYPES
+from services.anomaly_service import ANOMALY_TYPES, AnomalyDetector, AnomalyService
 
 
 class TestAnomalyDetectorFull:

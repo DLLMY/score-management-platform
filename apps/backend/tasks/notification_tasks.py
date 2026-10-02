@@ -1,6 +1,7 @@
-from celery_app import celery_app
 import json
 import time
+
+from celery_app import celery_app
 from utils.logger import log_info
 
 

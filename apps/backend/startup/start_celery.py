@@ -1,8 +1,8 @@
+import argparse
 import os
+import subprocess
 import sys
 import time
-import subprocess
-import argparse
 import traceback
 
 # \nCelery启动脚本\n

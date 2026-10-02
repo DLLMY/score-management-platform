@@ -1,10 +1,11 @@
 from datetime import datetime
+
 from models import db
 from models.committee import ClassCommittee, CommitteeTerm
+from services.entity_names import names
 from utils.datetime_utils import parse_date
 from utils.entity_guard import require_class, require_student
-from utils.permission import get_current_admin, get_admin_class_ids
-from services.entity_names import names
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class CommitteeService:

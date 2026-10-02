@@ -13,19 +13,19 @@ import re
 from datetime import datetime
 
 from models import (
-    db,
     Admin,
     AdminClass,
     ClassInfo,
+    CourseSchedule,
+    Exam,
+    ImportConfig,
+    Score,
     Subject,
     SubjectClass,
-    Score,
     User,
-    Exam,
-    CourseSchedule,
-    ImportConfig,
-    get_by_id,
     cascade_delete_related_records,
+    db,
+    get_by_id,
 )
 from utils.datetime_utils import parse_date, parse_datetime
 from utils.db_session import db_session_scope
@@ -127,7 +127,7 @@ class AcademicsService:
                 success_count += 1
             except Exception as e:
                 failed_count += 1
-                errors.append(f"行{i+2}: {str(e)}")
+                errors.append(f"行{i+2}: {e!s}")
 
         try:
             db.session.commit()
@@ -303,7 +303,7 @@ class AcademicsService:
                         {
                             "name": item.get("name", "未知"),
                             "action": "failed",
-                            "message": f"导入失败: {str(e)}",
+                            "message": f"导入失败: {e!s}",
                             "row_data": item,
                             "error_fields": ["system"],
                         }

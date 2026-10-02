@@ -11,6 +11,8 @@
 
 from datetime import datetime
 
+from sqlalchemy.orm import joinedload
+
 from models import (
     ClassInfo,
     ClassPeriod,
@@ -18,7 +20,6 @@ from models import (
     Subject,
     get_by_id,
 )
-from sqlalchemy.orm import joinedload
 from services.class_time_checker import ClassTimeChecker
 from utils.pagination import get_pagination
 from utils.permission import get_allowed_classes, get_current_admin

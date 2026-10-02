@@ -1,18 +1,20 @@
+import logging
 import re
-import jieba
 from datetime import datetime
+
+import jieba
+
 from models import (
-    NLPScoringRule,
     NLPBehaviorKeyword,
     NLPMatchResult,
     NLPRuleUsage,
+    NLPScoringRule,
     User,
-    get_by_id,
     db,
+    get_by_id,
 )
 from utils.db_session import db_session_scope
 
-import logging
 logger = logging.getLogger(__name__)
 
 

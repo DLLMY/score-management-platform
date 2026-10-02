@@ -1,4 +1,5 @@
-import urllib.request, json
+import json
+import urllib.request
 
 BASE = "http://127.0.0.1:5000"
 

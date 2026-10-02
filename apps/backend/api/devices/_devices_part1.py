@@ -1,49 +1,60 @@
-# -*- coding: utf-8 -*-
 # part of api/devices/devices_routes.py (D2 split)
 
-import logging
-import time
-import json
-import threading
 import io
-import openpyxl
-from flask_restx import Namespace, Resource, fields
-from models import Device, DeviceHeartbeat, ClassInfo, Admin, get_by_id
-from sqlalchemy.orm import joinedload
-from utils.permission import requires_permission, get_current_admin, get_admin_class_ids
-from utils.response import APIResponse
-from utils.decorators import safe_handle
-from utils.pagination import get_pagination
-from services.heartbeat_service import is_device_online
-from services.device_service import (
-    create_device,
-    update_device,
-    delete_device,
-    bind_device_class,
-    bind_device_admin,
-    resolve_device_alert,
-    update_device_settings,
-    import_devices,
-    revoke_device_secret,
-)
-from services.device_query_service import (
-    get_device_list_view,
-    get_device_alerts_view,
-    get_device_stats_view,
-    get_device_advanced_stats_view,
-)
-from utils.api_cache_middleware import cached_api, invalidate_cache
+import json
+import logging
+import threading
+import time
 from datetime import datetime, timedelta
-from models import db
+
+import openpyxl
+from flask import Response, request, send_file
+from flask_restx import Namespace, Resource, fields
 from sqlalchemy import func
-from models import Alert
-from flask import request
-from flask import send_file
-from flask import Response
+from sqlalchemy.orm import joinedload
 
 import api.devices.devices_routes as _mod
+from api.devices.devices_routes import (
+    _UNLOCK_SPECS,
+    _publish_unlock_retry,
+    _restart_command_payload,
+    _send_device_restart,
+    _start_smart_unlock,
+    bind_admin_model,
+    bind_class_model,
+    device_list_response,
+    device_model,
+    device_stats_response,
+    logger,
+    ns_devices,
+    ota_upgrade_model,
+    send_ota_upgrade_command,
+)
+from models import Admin, Alert, ClassInfo, Device, DeviceHeartbeat, db, get_by_id
+from services.device_query_service import (
+    get_device_advanced_stats_view,
+    get_device_alerts_view,
+    get_device_list_view,
+    get_device_stats_view,
+)
+from services.device_service import (
+    bind_device_admin,
+    bind_device_class,
+    create_device,
+    delete_device,
+    import_devices,
+    resolve_device_alert,
+    revoke_device_secret,
+    update_device,
+    update_device_settings,
+)
+from services.heartbeat_service import is_device_online
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.decorators import safe_handle
+from utils.pagination import get_pagination
+from utils.permission import get_admin_class_ids, get_current_admin, requires_permission
+from utils.response import APIResponse
 
-from api.devices.devices_routes import logger, ns_devices, send_ota_upgrade_command, device_model, device_list_response, device_stats_response, bind_class_model, bind_admin_model, _UNLOCK_SPECS, _restart_command_payload, _send_device_restart, _publish_unlock_retry, _start_smart_unlock, ota_upgrade_model
 
 @ns_devices.route("/")
 class DeviceList(Resource):

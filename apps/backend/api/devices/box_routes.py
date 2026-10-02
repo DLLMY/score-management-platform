@@ -1,12 +1,13 @@
-from flask import request
-from flask_restx import Namespace, Resource, fields
-from models import User, ScoreRule, Device, ScoreRecord, get_by_id
-from utils.permission import requires_permission
-from utils.response import APIResponse
 from datetime import datetime
 
+from flask import request
+from flask_restx import Namespace, Resource, fields
+
+from models import Device, ScoreRecord, ScoreRule, User, get_by_id
 from services.device_service import box_add_score
 from services.heartbeat_service import is_device_online
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
 ns_box = Namespace("box", description="积分盒子相关操作")
 

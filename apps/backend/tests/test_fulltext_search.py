@@ -1,5 +1,5 @@
-from models import db, User, ClassInfo
-from utils.fulltext_search import get_search_engine, FullTextSearch
+from models import ClassInfo, User, db
+from utils.fulltext_search import FullTextSearch, get_search_engine
 
 
 class TestFullTextSearch:

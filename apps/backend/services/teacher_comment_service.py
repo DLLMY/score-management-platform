@@ -1,7 +1,7 @@
-from models import db, User
+from models import User, db
 from models.teacher_comment import TeacherComment
-from utils.permission import get_current_admin, get_admin_class_ids
 from services.entity_names import names
+from utils.permission import get_admin_class_ids, get_current_admin
 
 
 class TeacherCommentService:

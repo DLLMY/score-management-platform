@@ -1,8 +1,9 @@
-from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_restx import Namespace, Resource, fields
+
 from services.seating_service import seating_service
-from utils.permission import requires_permission
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.permission import requires_permission
 
 ns_seating = Namespace("seating", description="座次表管理")
 

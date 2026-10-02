@@ -7,8 +7,9 @@
 """
 """
 
-from app import app, db
 from sqlalchemy import text
+
+from app import app, db
 
 
 def add_indexes():

@@ -5,17 +5,17 @@
 """
 
 import json
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from unittest import mock
 
 from models import (
-    db,
-    User,
-    ClassInfo,
     Attendance,
+    ClassInfo,
     HomeworkAssignment,
     HomeworkSubmission,
     ScoreRecord,
+    User,
+    db,
 )
 from utils.security import generate_student_token
 

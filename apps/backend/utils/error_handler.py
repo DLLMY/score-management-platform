@@ -1,8 +1,9 @@
 """全局异常处理模块 - 统一错误响应格式和异常处理"""
 
-from flask import jsonify, request
-import traceback
 import logging
+import traceback
+
+from flask import jsonify, request
 
 logger = logging.getLogger(__name__)
 
@@ -198,13 +199,13 @@ def register_error_handlers(app):
 __all__ = [
     # 异常类
     "APIError",
-    "NotFoundError",
-    "UnauthorizedError",
-    "ForbiddenError",
-    "ValidationError",
-    "DatabaseError",
     "BusinessError",
+    "DatabaseError",
+    "ForbiddenError",
+    "NotFoundError",
     "RateLimitError",
+    "UnauthorizedError",
+    "ValidationError",
     # 函数
     "make_error_response",
     "register_error_handlers",

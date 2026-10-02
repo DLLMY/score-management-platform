@@ -3,7 +3,10 @@
 运行前自动备份 db。幂等可重跑。
 """
 
-import sqlite3, os, shutil, datetime
+import datetime
+import os
+import shutil
+import sqlite3
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 db = os.path.join(BASE, "instance", "score_management.db")

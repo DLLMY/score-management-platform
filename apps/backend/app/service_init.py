@@ -1,6 +1,7 @@
-import time
-import threading
 import contextlib
+import threading
+import time
+
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from utils.logger import log_error, log_info, log_warning
@@ -142,7 +143,9 @@ def init_mqtt(app):
                             # register_mqtt_message_handler 注册的也是这个）；api.monitoring.mqtt_routes 里
                             # 不存在同名函数——此前 import 错符号导致每条 query/unlock 消息 ImportError 被吞，
                             # 设备刷卡查询/开锁请求永远得不到响应。
-                            from services.mqtt_message_service import mqtt_message_service
+                            from services.mqtt_message_service import (
+                                mqtt_message_service,
+                            )
 
                             mqtt_message_service.handle_mqtt_message(None, topic, message)
                     except Exception as e:
@@ -208,8 +211,8 @@ def _scheduled_backup_job():
 def _scheduled_cleanup_backups_job():
     """独立备份保留策略清理（不依赖备份创建是否成功，防止磁盘膨胀）"""
     try:
-        from utils.backup_utils import backup_manager
         from config import Config
+        from utils.backup_utils import backup_manager
 
         result = backup_manager.clean_old_backups(max_count=Config.BACKUP_MAX_COUNT)
         if result["deleted_count"] > 0:
@@ -272,7 +275,10 @@ def init_scheduler(app):
     # 复用 tasks/scheduler 已有实现（已带 app_context + try/except），仅注册两个新任务，
     # 不引入其备份/心跳（避免与上面重复执行）。
     try:
-        from tasks.scheduler import scheduled_approval_timeout_check, scheduled_notify_check
+        from tasks.scheduler import (
+            scheduled_approval_timeout_check,
+            scheduled_notify_check,
+        )
 
         scheduler.add_job(lambda: scheduled_approval_timeout_check(app), "interval", minutes=5)
         scheduler.add_job(lambda: scheduled_notify_check(app), "interval", seconds=10)
@@ -293,7 +299,7 @@ def init_scheduler(app):
 
 def shutdown_all_schedulers():
     """关闭所有由 init_scheduler 启动的调度器（供测试 teardown 调用，避免残留线程挂起进程）。"""
-    for sched in list(_ACTIVE_SCHEDULERS):
+    for sched in _ACTIVE_SCHEDULERS:
         with contextlib.suppress(Exception):
             sched.shutdown(wait=False)
     _ACTIVE_SCHEDULERS.clear()
@@ -355,6 +361,7 @@ def init_notification_config(app):
 def init_websocket(app):
     try:
         from flask_socketio import SocketIO
+
         from services.websocket_service import register_handlers
 
         socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")

@@ -28,7 +28,6 @@ def test_async_enabled_enqueues_and_skips_sync(app, monkeypatch):
 
         def fake_delay(user_id):
             calls.append(user_id)
-            return None
 
         monkeypatch.setattr(st.recalc_user_score, "delay", fake_delay)
 
@@ -40,7 +39,6 @@ def test_async_enabled_enqueues_and_skips_sync(app, monkeypatch):
 
         def spy_sync(user_id):
             sync_calls.append(user_id)
-            return None
 
         monkeypatch.setattr(
             cs.CompositeScoreService, "recalculate_user_score", staticmethod(spy_sync)

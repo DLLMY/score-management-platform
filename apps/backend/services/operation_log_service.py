@@ -6,8 +6,9 @@
 
 from datetime import datetime
 
-from models import db, OperationLog
 from sqlalchemy import case, func
+
+from models import OperationLog, db
 
 
 def get_stats(start_time, end_time):

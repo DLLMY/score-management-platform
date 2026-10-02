@@ -122,7 +122,7 @@ def _apply_fixes(conn, cur, seed_permissions, seed_role_map, db_perms, db_roles)
             )
             fixed += 1
         # 补齐该角色的映射（seed csv + 关键 teacher 权限）
-        perms_to_add = set(seed_role_map[role_code][3].split(",")) | (
+        perms_to_add = set(role[3].split(",")) | (
             set(KEY_TEACHER_PERMS) if role_code == "teacher" else set()
         )
         for pc in perms_to_add:

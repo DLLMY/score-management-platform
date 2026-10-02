@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-e object-level to_dict tests (no DB needed)."""
 import pytest
+
 from models.device_models import MQTTConfig
 from models.score_models import CompositeScore
-from models.system_models import AdminClass
-from models.system_models import FrontendErrorLog
-from models.system_models import SystemConfig
-
+from models.system_models import AdminClass, FrontendErrorLog, SystemConfig
 
 
 def test_AdminClass_to_dict():

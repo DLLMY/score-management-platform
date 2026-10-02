@@ -1,6 +1,11 @@
 """认证服务单元测试"""
 
-from utils.security import generate_tokens, validate_token, hash_password, verify_password
+from utils.security import (
+    generate_tokens,
+    hash_password,
+    validate_token,
+    verify_password,
+)
 
 
 class TestSecurityUtils:

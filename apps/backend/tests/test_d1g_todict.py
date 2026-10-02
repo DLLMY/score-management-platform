@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """D1-g object-level to_dict tests."""
 import pytest
+
 from models.activity import ActivityRegistration
 from models.alert_models import StudentCluster
-from models.archive_models import AttendanceArchive
-from models.archive_models import OperationLogArchive
-from models.archive_models import ScoreArchive
-
+from models.archive_models import AttendanceArchive, OperationLogArchive, ScoreArchive
 
 
 def test_ActivityRegistration_to_dict():

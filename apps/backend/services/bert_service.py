@@ -1,7 +1,8 @@
 import os
 import time
-import psutil
+
 import numpy as np
+import psutil
 
 try:
     import torch
@@ -15,15 +16,16 @@ BERT服务模块 - 意图分类与语义相似度计算
 基于bert-base-chinese模型，支持INT8量化、预热和批量推理
 """
 try:
-    from transformers import AutoTokenizer, AutoModel
+    from transformers import AutoModel, AutoTokenizer
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 
-from utils.logger import log_info, log_warning
 import logging
+
+from utils.logger import log_info, log_warning
 
 
 class BertNLPService:

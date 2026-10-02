@@ -9,13 +9,13 @@
 from datetime import datetime
 
 from models import (
-    db,
     AdminRole,
     Permission,
     PermissionLog,
+    RoleHierarchy,
     RolePermission,
     RolePermissionMapping,
-    RoleHierarchy,
+    db,
 )
 
 

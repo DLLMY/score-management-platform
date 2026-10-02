@@ -1,4 +1,5 @@
 import pytest
+
 from models import db
 from models.study_group import StudyGroup, StudyGroupMember, StudyGroupScore
 from services.study_group_service import study_group_service

@@ -7,18 +7,19 @@
 - 捕获所有错误并报告
 """
 
-import sys
-import os
 import json
+import os
+import sys
 import traceback
 from datetime import datetime
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, basedir)
 
 from flask import Flask
 from flask_restx import Api
+
 from models import db
 
 try:
@@ -98,16 +99,16 @@ def register_test_routes(app):
     """注册班级管理相关路由"""
     api = Api(app, version="1.0", title="测试API", prefix="/api")
 
-    from api.class_management.seating_routes import ns_seating
-    from api.class_management.duty_routes import ns_duty
-    from api.class_management.committee_routes import ns_committee
-    from api.class_management.parent_routes import ns_parent
-    from api.class_management.homework_routes import ns_homework
-    from api.class_management.attendance_routes import ns_attendance
-    from api.class_management.study_group_routes import ns_study_group
-    from api.class_management.mental_health_routes import ns_mental_health
     from api.class_management.activity_routes import ns_activity
+    from api.class_management.attendance_routes import ns_attendance
+    from api.class_management.committee_routes import ns_committee
     from api.class_management.culture_routes import ns_culture
+    from api.class_management.duty_routes import ns_duty
+    from api.class_management.homework_routes import ns_homework
+    from api.class_management.mental_health_routes import ns_mental_health
+    from api.class_management.parent_routes import ns_parent
+    from api.class_management.seating_routes import ns_seating
+    from api.class_management.study_group_routes import ns_study_group
     from api.class_management.study_guide_routes import ns_study_guide
 
     api.add_namespace(ns_seating, path="/seating")

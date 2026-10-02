@@ -1,35 +1,53 @@
-# -*- coding: utf-8 -*-
 # part of api/nlp/nlp_routes.py (D2 split)
 
-from flask import request, g, current_app
-import time
+import itertools
 import json
 import logging
 import threading
-import itertools
-from flask_restx import Namespace, Resource, fields
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-from services.nlp_rule_service import NLPRuleManagementService
-from services.nlp_service import get_match_results_evaluation
-from services.nlp_analyzer_service import nlp_analyzer, AlgorithmBenchmark
-from services.nlp_optimizer import get_nlp_optimizer, warmup_nlp
-from config.nlp_algorithm import nlp_optimizer, OptimizationStrategy, get_optimizer
-from models import NLPCorrection
-from utils.permission import requires_permission
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.decorators import safe_handle
+import time
 from datetime import datetime
-from services.redis_cache_service import get_cache_service
-from services.nlp_correction_service import (
-    record_corrections,
-    update_correction_status,
-    delete_correction,
-)
+
+from flask import current_app, g, request
+from flask_restx import Namespace, Resource, fields
 
 import api.nlp.nlp_routes as _mod
+from api.nlp.nlp_routes import (
+    MAX_INFERENCE_CONCURRENCY,
+    TRAIN_TASK_MAX_RUNNING_SECONDS,
+    _acquire_inference_slot,
+    _break_stale_training_tasks,
+    _build_feedback_corrections,
+    _inference_semaphore,
+    _resolve_feedback_user_id,
+    execute_input_model,
+    get_context_memory,
+    inference_slot_guard,
+    logger,
+    ns_nlp,
+    parse_input_model,
+    parse_output_model,
+    rule_model,
+    save_context_memory,
+    train_input_model,
+)
+from config.nlp_algorithm import OptimizationStrategy, get_optimizer, nlp_optimizer
+from models import NLPCorrection
+from services.nlp_analyzer_service import AlgorithmBenchmark, nlp_analyzer
+from services.nlp_correction_service import (
+    delete_correction,
+    record_corrections,
+    update_correction_status,
+)
+from services.nlp_optimizer import get_nlp_optimizer, warmup_nlp
+from services.nlp_rule_service import NLPRuleManagementService
+from services.nlp_service import get_match_results_evaluation
+from services.redis_cache_service import get_cache_service
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.decorators import safe_handle
+from utils.pagination import get_pagination
+from utils.permission import requires_permission
+from utils.response import APIResponse
 
-from api.nlp.nlp_routes import logger, ns_nlp, MAX_INFERENCE_CONCURRENCY, _inference_semaphore, TRAIN_TASK_MAX_RUNNING_SECONDS, _break_stale_training_tasks, _acquire_inference_slot, inference_slot_guard, get_context_memory, save_context_memory, parse_input_model, parse_output_model, rule_model, execute_input_model, train_input_model, _build_feedback_corrections, _resolve_feedback_user_id
 
 @ns_nlp.route("/model/predict")
 class NLPModelPredict(Resource):

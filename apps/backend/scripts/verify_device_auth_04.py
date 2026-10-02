@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """差异 #4 验证：设备认证凭证体系（阶段 1 白名单 + 阶段 2 签名 + 阶段 3 下发）。
 
 纯逻辑验证，不依赖 Flask app_context —— 用轻量 stub 替代 Device 实例。
@@ -9,7 +8,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.device_auth import (  # noqa: E402
+from utils.device_auth import (
     DEVICE_SIGNATURE_MAX_SKEW_SEC,
     compute_signature,
     should_register_unknown_device,

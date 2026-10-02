@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 无缝 OTA 端到端验证（pytest 版，默认对接生产云端 Broker）。
 
@@ -229,9 +228,10 @@ class TestOTAE2ELocalBroker:
 
     def test_publish_receive_signature_status_loop(self, broker, monkeypatch):
         import paho.mqtt.client as mqtt
+
         import services.ota_negotiation_service as svc
-        from services.ota_negotiation_service import sign_ota_command
         from services.mqtt_manager import mqtt_manager
+        from services.ota_negotiation_service import sign_ota_command
 
         host, port = broker
         monkeypatch.setattr(svc, "OTA_SIGNING_SECRET", SECRET)

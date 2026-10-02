@@ -14,25 +14,25 @@ M11: 索引纳入部署闸门——新增 verify_indexes()/--verify，
 create_indexes() 保持幂等（已存在跳过）。
 """
 
+import datetime
 import os
 import sys
-import datetime
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import (
-    db,
-    User,
-    ScoreRecord,
+    Alert,
+    Approval,
     Device,
     DeviceHeartbeat,
     Exam,
-    Score,
     Notification,
-    Approval,
-    Alert,
     OperationLog,
+    Score,
+    ScoreRecord,
+    User,
+    db,
 )
 
 
@@ -42,7 +42,7 @@ def _get_app_db():
     - db_init 启动自举：已有 app context（init_app 已执行）→ 直接取 current_app，不递归；
     - 脚本直跑（--verify/--create / 闸门）：无 context → get_app() 完成初始化并 push。
     """
-    from flask import has_app_context, current_app
+    from flask import current_app, has_app_context
 
     if not has_app_context():
         from app import get_app

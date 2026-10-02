@@ -1,5 +1,5 @@
-from utils.db_session import db_session_scope, db_readonly_scope
 from models import SystemConfig
+from utils.db_session import db_readonly_scope, db_session_scope
 from utils.logger import log_warning
 
 

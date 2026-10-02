@@ -4,11 +4,12 @@ API版本管理模块
 支持v1和v2版本共存，提供版本迁移和兼容性支持
 """
 
-from functools import wraps
-from flask import request, jsonify, Blueprint
-from typing import Any
 from collections.abc import Callable
+from functools import wraps
+from typing import Any
+
 import semver
+from flask import Blueprint, jsonify, request
 
 
 class APIVersionManager:

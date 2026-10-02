@@ -3,8 +3,9 @@
 执行方式：python -m models.migrations.001_add_class_info_fk
 """
 
-from app import app, db
 from sqlalchemy import text
+
+from app import app, db
 
 
 def _add_column_with_index(table, column, index_name, label):
@@ -31,7 +32,7 @@ def _ensure_user_fk():
         db.session.execute(text("PRAGMA foreign_keys=OFF"))
 
         # 检查外键约束是否已存在
-        result = db.session.execute(text("PRAGMA foreign_key_list(user)"))  # noqa: F841
+        result = db.session.execute(text("PRAGMA foreign_key_list(user)"))
         fk_exists = False
         for row in result:
             if row[2] == "class_info_id" and row[3] == "class_info.id":
@@ -69,7 +70,7 @@ def migrate():
 
         print("-" * 50)
         print("🎉 数据库迁移完成!")
-        print("")
+        print()
         print("📋 下一步操作:")
         print("   1. 运行数据迁移脚本: python -m models.migrations.002_migrate_class_data")
         print("   2. 验证迁移结果: 检查 User/Admin 表中的 class_info_id 字段")
@@ -81,7 +82,7 @@ def verify():
         print("🔍 验证数据库字段...")
 
         # 检查 User 表
-        result = db.session.execute(text("PRAGMA table_info(user)"))  # noqa: F841
+        result = db.session.execute(text("PRAGMA table_info(user)"))
         columns = [row[1] for row in result]
         if "class_info_id" in columns:
             print("✅ User 表包含 class_info_id 字段")
@@ -89,7 +90,7 @@ def verify():
             print("❌ User 表缺少 class_info_id 字段")
 
         # 检查 Admin 表
-        result = db.session.execute(text("PRAGMA table_info(admin)"))  # noqa: F841
+        result = db.session.execute(text("PRAGMA table_info(admin)"))
         columns = [row[1] for row in result]
         if "primary_class_id" in columns:
             print("✅ Admin 表包含 primary_class_id 字段")
@@ -97,7 +98,7 @@ def verify():
             print("❌ Admin 表缺少 primary_class_id 字段")
 
         # 检查 SubAccount 表
-        result = db.session.execute(text("PRAGMA table_info(sub_account)"))  # noqa: F841
+        result = db.session.execute(text("PRAGMA table_info(sub_account)"))
         columns = [row[1] for row in result]
         if "primary_class_id" in columns:
             print("✅ SubAccount 表包含 primary_class_id 字段")
@@ -107,5 +108,5 @@ def verify():
 
 if __name__ == "__main__":
     migrate()
-    print("")
+    print()
     verify()

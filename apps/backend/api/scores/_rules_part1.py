@@ -1,40 +1,54 @@
-# -*- coding: utf-8 -*-
 # part of api/scores/rules_routes.py (D2 split)
 
+import csv
+import io
 import logging
+from datetime import datetime
+
 from flask import request, send_file
 from flask_restx import Namespace, Resource, fields
-from models import ScoreRule, ScoreCategory, get_by_id
-from utils.permission import requires_permission
-from utils.decorators import safe_handle
-from utils.logger import log_info, log_operation
-from utils.response import APIResponse
-from utils.pagination import get_pagination
-from utils.validation import (
-    ValidationRules,
-    validate_score,
-    validate_id,
-    validate_positive_int,
-    validation_error_response,
+
+from api.scores.rules_routes import (
+    RULE_CREATE_FIELDS,
+    RULE_TEMPLATES,
+    _validate_rule_category,
+    _validate_rule_create_payload,
+    _validate_rule_limits,
+    _validate_rule_name,
+    _validate_rule_score,
+    apply_template_model,
+    logger,
+    ns_rules,
+    rule_list_response,
+    rule_model,
 )
+from models import ScoreCategory, ScoreRule, get_by_id
 from services.redis_cache_service import get_cache_service
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from services.score_rule_service import (
-    create_rule,
-    update_rule,
-    delete_rule,
-    import_rules,
-    apply_rule_template,
-)
 from services.score_rule_query_service import (
     get_rule_list_view,
     get_rule_statistics_view,
 )
-from datetime import datetime
-import io
-import csv
+from services.score_rule_service import (
+    apply_rule_template,
+    create_rule,
+    delete_rule,
+    import_rules,
+    update_rule,
+)
+from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.decorators import safe_handle
+from utils.logger import log_info, log_operation
+from utils.pagination import get_pagination
+from utils.permission import requires_permission
+from utils.response import APIResponse
+from utils.validation import (
+    ValidationRules,
+    validate_id,
+    validate_positive_int,
+    validate_score,
+    validation_error_response,
+)
 
-from api.scores.rules_routes import logger, RULE_CREATE_FIELDS, ns_rules, rule_model, rule_list_response, _validate_rule_create_payload, _validate_rule_name, _validate_rule_score, _validate_rule_category, _validate_rule_limits, RULE_TEMPLATES, apply_template_model
 
 @ns_rules.route("/")
 class RuleList(Resource):

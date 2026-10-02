@@ -2,8 +2,8 @@
 安全配置模块 - 集中管理安全相关配置
 """
 
-from utils.logger import log_warning
 from config import config
+from utils.logger import log_warning
 
 
 class SecurityConfig:

@@ -1,10 +1,12 @@
+import logging
+
 from flask_restx import Namespace, Resource, fields
-from services.data_consistency_checker import DataConsistencyChecker
+
 from services.class_migration_service import ClassMigrationService
+from services.data_consistency_checker import DataConsistencyChecker
+from utils.decorators import safe_handle
 from utils.permission import requires_permission
 from utils.response import APIResponse
-import logging
-from utils.decorators import safe_handle
 
 """数据一致性校验 API"""
 logger = logging.getLogger(__name__)
