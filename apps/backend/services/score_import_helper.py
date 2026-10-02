@@ -1,5 +1,7 @@
 """成绩导入辅助函数（从 api/academics/exam_import_routes 下沉，消除 services → api 反向依赖）。"""
 
+from typing import ClassVar
+
 from models import Subject
 
 
@@ -18,7 +20,7 @@ def _resolve_subject_id(subject_name, subject_id):
 
 
 class ScoreImportHelper:
-    HEADER_MAPPING = {
+    HEADER_MAPPING: ClassVar[dict] = {
         "card_id": ["card_id", "学号", "卡号", "id", "学生id"],
         "student_name": ["student_name", "姓名", "学生姓名"],
         "class_name": ["class_name", "班级", "班级名称"],

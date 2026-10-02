@@ -2,79 +2,30 @@
 
 import csv
 import io
-import logging
-import re
-from datetime import datetime
 
 from flask import request
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Resource
 
 from api.users.users_routes import (
     _CSV_USER_HEADER_MAPPING,
-    USER_BY_CARD_FIELDS,
-    USER_CREATE_FIELDS,
-    USER_DETAIL_FIELDS,
     _build_csv_row_dict,
     _build_csv_user,
     _build_csv_user_updates,
-    _build_import_user,
     _check_csv_upload_file,
-    _check_user_create_class_scope,
-    _csv_validate_card_id,
-    _csv_validate_class_name,
-    _csv_validate_gender,
-    _csv_validate_name,
-    _csv_validate_phones,
-    _csv_validate_score,
     _read_and_parse_csv,
-    _validate_create_user_card_id,
-    _validate_create_user_card_unique,
-    _validate_create_user_fields,
-    _validate_create_user_name,
-    _validate_create_user_phones,
-    _validate_create_user_score,
     _validate_csv_row,
-    _validate_import_user,
-    _validate_import_user_card_id,
-    _validate_import_user_class,
-    _validate_import_user_gender,
-    _validate_import_user_name,
-    _validate_import_user_phone,
-    batch_score_model,
-    detect_encoding,
-    limiter,
     logger,
-    login_model,
     ns_users,
-    user_list_response,
-    user_model,
 )
-from models import ClassInfo, User, get_by_id
-from services.class_time_checker import ClassTimeChecker
-from services.redis_cache_service import get_cache_service
-from services.user_list_service import get_user_list_view
+from models import User
 from services.user_service import user_service
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.logger import log_operation
-from utils.pagination import get_pagination
+from utils.api_cache_middleware import invalidate_cache
 from utils.permission import (
-    can_access_student,
     get_allowed_classes,
     get_current_admin,
     requires_permission,
 )
 from utils.response import APIResponse
-from utils.validation import (
-    ValidationRules,
-    validate_card_id,
-    validate_name,
-    validate_phone,
-    validate_score,
-    validate_student_id,
-    validation_error_response,
-)
 
 
 @ns_users.route("/template/download")

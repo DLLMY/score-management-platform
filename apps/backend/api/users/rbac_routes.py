@@ -1,29 +1,11 @@
 from flask import request
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, fields
 
 from models import (
-    Admin,
     AdminRole,
-    Permission,
     RoleHierarchy,
     RolePermission,
     RolePermissionMapping,
-    get_by_id,
-)
-from services.rbac_service import (
-    add_admin_role,
-    add_role_permission,
-    assign_admin_roles,
-    create_permission,
-    create_role,
-    delete_permission,
-    delete_role,
-    log_rbac_permission_action,
-    remove_admin_role,
-    remove_role_permission,
-    set_role_permissions,
-    update_permission,
-    update_role,
 )
 from services.rbac_service import (
     init_default_permissions as _service_init_default_permissions,
@@ -31,10 +13,11 @@ from services.rbac_service import (
 from services.rbac_service import (
     init_default_roles as _service_init_default_roles,
 )
-from utils.api_cache_middleware import cached_api, invalidate_cache
+from services.rbac_service import (
+    log_rbac_permission_action,
+)
 from utils.logger import logger
-from utils.permission import get_current_admin, has_permission, requires_permission
-from utils.response import APIResponse
+from utils.permission import get_current_admin
 
 """RBAC权限管理系统路由"""
 ns_rbac = Namespace("rbac", description="RBAC权限管理")

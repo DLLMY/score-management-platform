@@ -12,7 +12,7 @@
 本端点修复该路径不匹配，并额外提供 /api/healthz 与 /healthz 兼容 K8s 惯例。
 """
 import logging
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from flask import Blueprint, jsonify
 from sqlalchemy import text

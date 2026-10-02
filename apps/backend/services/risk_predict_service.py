@@ -2,7 +2,8 @@ import json
 import logging
 import os
 import time
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import ClassVar
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from models import ScoreRecord, User, db, get_by_id
 
 
 class RiskPredictService:
-    RISK_LEVELS = {
+    RISK_LEVELS: ClassVar[dict] = {
         "high": {
             "name": "高风险",
             "color": "red",
@@ -31,7 +32,7 @@ class RiskPredictService:
         },
     }
 
-    RISK_TYPES = {
+    RISK_TYPES: ClassVar[dict] = {
         "academic": {"name": "学业风险", "description": "成绩下降趋势"},
         "behavior": {"name": "行为风险", "description": "积分持续下降"},
         "attendance": {"name": "出勤风险", "description": "出勤率偏低"},
@@ -39,12 +40,12 @@ class RiskPredictService:
     }
 
     # 综合风险类型默认权重（未被 train_risk_model 训练覆盖时回退使用）
-    DEFAULT_WEIGHTS = {"academic": 0.4, "behavior": 0.35, "attendance": 0.25}
+    DEFAULT_WEIGHTS: ClassVar[dict] = {"academic": 0.4, "behavior": 0.35, "attendance": 0.25}
 
     # RP5：班级聚合缓存（按 (class_name, days) 复用，60s TTL），
     # 避免每个学生都全量加载同班同学导致的 O(学生×班级人数) 查询放大。
-    _class_agg_cache = {}
-    _class_agg_cache_ts = {}
+    _class_agg_cache: ClassVar[dict] = {}
+    _class_agg_cache_ts: ClassVar[dict] = {}
     _class_agg_cache_ttl = 60
 
     @staticmethod

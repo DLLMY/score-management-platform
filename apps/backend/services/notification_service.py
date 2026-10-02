@@ -163,7 +163,6 @@ class NotificationService:
     def _send_aliyun_sms(phone: str, message: str, config: dict) -> dict:
         try:
             import uuid
-            from datetime import timezone
 
             access_key_id = config.get("access_key_id")
             access_key_secret = config.get("access_key_secret")

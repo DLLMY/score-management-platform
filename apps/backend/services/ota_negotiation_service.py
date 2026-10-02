@@ -19,7 +19,6 @@ import hashlib
 import hmac
 import logging
 import math
-import os
 import random
 import re
 import threading

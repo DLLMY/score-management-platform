@@ -1,24 +1,8 @@
-import io
 import logging
-import os
-from datetime import datetime
 
-from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, fields
 
-from models import ScoreCategory, ScoreRecord, ScoreRule, User
-from services.import_export_service import (
-    ImportCommitError,
-    bulk_import_categories,
-    bulk_import_rules,
-    bulk_import_users,
-)
 from utils.backup_utils import BackupManager, BackupScheduler
-from utils.decorators import safe_handle
-from utils.excel_utils import ExcelTemplateGenerator, ExcelUtils
-from utils.permission import requires_permission
-from utils.response import APIResponse
-from utils.transaction_retry import get_import_guard
 
 logger = logging.getLogger(__name__)
 

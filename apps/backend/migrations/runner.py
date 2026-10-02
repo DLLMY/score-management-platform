@@ -18,7 +18,7 @@ import importlib
 import os
 import sqlite3
 import sys
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 # 让 `python migrations/runner.py` 独立运行时也能 import 同级模块与项目根
 BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

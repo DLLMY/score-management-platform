@@ -2,29 +2,20 @@
 
 import io
 import json
-import logging
 from datetime import datetime
 
 from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Resource
 
 from api.academics.subject_routes import (
-    _build_subject_import_config,
-    _map_subject_excel_rows,
-    _map_subject_row,
-    _parse_subject_excel_file,
-    _parse_subject_json_file,
-    _parse_subject_multipart_file,
-    _resolve_subject_import_config,
-    logger,
     ns_subjects,
     subject_class_model,
     subject_model,
     subject_response,
 )
-from models import Admin, ClassInfo, ImportConfig, Subject, SubjectClass, get_by_id
+from models import Admin, ClassInfo, Subject, SubjectClass, get_by_id
 from services.academics_service import academics_service
-from services.excel_service import excel_export_service, excel_import_service
+from services.excel_service import excel_export_service
 from services.subject_service import (
     get_subject_classes_view,
     get_subject_detail_view,
@@ -32,7 +23,6 @@ from services.subject_service import (
     get_subject_list_view,
 )
 from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.decorators import safe_handle
 from utils.permission import requires_permission
 from utils.response import APIResponse
 

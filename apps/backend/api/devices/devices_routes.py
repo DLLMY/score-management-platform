@@ -1,47 +1,18 @@
-import io
 import json
 import logging
 import threading
 import time
 
-import openpyxl
-from flask_restx import Namespace, Resource, fields
-from sqlalchemy.orm import joinedload
+from flask_restx import Namespace, fields
 
-from models import Admin, ClassInfo, Device, DeviceHeartbeat, get_by_id
-from services.device_query_service import (
-    get_device_advanced_stats_view,
-    get_device_alerts_view,
-    get_device_list_view,
-    get_device_stats_view,
-)
-from services.device_service import (
-    bind_device_admin,
-    bind_device_class,
-    create_device,
-    delete_device,
-    import_devices,
-    resolve_device_alert,
-    revoke_device_secret,
-    update_device,
-    update_device_settings,
-)
-from services.heartbeat_service import is_device_online
+from models import Device
 from services.mqtt_service import publish_mqtt
-from utils.decorators import safe_handle
-from utils.pagination import get_pagination
-from utils.permission import get_admin_class_ids, get_current_admin, requires_permission
 from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
 from datetime import datetime, timedelta
 
-from flask import Response, request, send_file
-from sqlalchemy import func
-
 # 差异 #13：在线设备列表 SQL 粗筛需要 db.session 与聚合函数 func
-from models import Alert, db
-from utils.api_cache_middleware import cached_api, invalidate_cache
 
 ns_devices = Namespace("devices", description="设备管理相关操作")
 

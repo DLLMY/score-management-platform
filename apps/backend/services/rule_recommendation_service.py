@@ -1,6 +1,7 @@
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import ClassVar
 
 import numpy as np
 
@@ -8,7 +9,7 @@ from models import ScoreCategory, ScoreRecord, ScoreRule, User
 
 
 class RuleRecommendationService:
-    RECOMMENDATION_TYPES = {
+    RECOMMENDATION_TYPES: ClassVar[dict] = {
         "new_rule": {
             "name": "新规则推荐",
             "description": "发现新的行为模式，建议创建新规则",

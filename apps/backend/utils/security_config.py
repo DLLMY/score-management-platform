@@ -2,6 +2,8 @@
 安全配置模块 - 集中管理安全相关配置
 """
 
+from typing import ClassVar
+
 from config import config
 from utils.logger import log_warning
 
@@ -15,8 +17,8 @@ class SecurityConfig:
             "安全警告: CORS配置允许所有来源('*')！"
             "生产环境建议通过 CORS_ORIGINS 环境变量设置具体域名"
         )
-    CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    CORS_HEADERS = [
+    CORS_METHODS: ClassVar[list] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    CORS_HEADERS: ClassVar[list] = [
         "Content-Type",
         "Authorization",
         "X-Admin-Id",
@@ -41,17 +43,17 @@ class SecurityConfig:
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_ENABLED = True
     CSRF_TOKEN_LENGTH = 32
-    SQL_INJECTION_PATTERNS = [
+    SQL_INJECTION_PATTERNS: ClassVar[list] = [
         "(\\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION)\\b)",
         "(--|/\\*|\\*/|;--)",
         "(OR|AND)\\s+\\d+\\s*=\\s*\\d+",
         "\\'\\s*(OR|AND)\\s*\\'",
         "1\\s*=\\s*1",
     ]
-    XSS_PATTERNS = ["<script[^>]*>.*?</script>", "javascript:", "onerror=", "onload=", "onclick="]
-    FORBIDDEN_FILENAMES = ["..", ".htaccess", ".htpasswd", "web.config", "httpd.conf"]
+    XSS_PATTERNS: ClassVar[list] = ["<script[^>]*>.*?</script>", "javascript:", "onerror=", "onload=", "onclick="]
+    FORBIDDEN_FILENAMES: ClassVar[list] = ["..", ".htaccess", ".htpasswd", "web.config", "httpd.conf"]
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gi", "image/webp"]
+    ALLOWED_IMAGE_TYPES: ClassVar[list] = ["image/jpeg", "image/png", "image/gi", "image/webp"]
     MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
     @classmethod

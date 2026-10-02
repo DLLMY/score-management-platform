@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import ClassVar
 
 from sqlalchemy import case
 
@@ -23,7 +24,7 @@ from utils.db_session import db_session_scope
 class WarningService:
     """风险预警服务类"""
 
-    DEFAULT_CONFIG = {
+    DEFAULT_CONFIG: ClassVar[dict] = {
         "score_threshold": "30",
         "unlock_daily_limit": "5",
         "no_positive_days": "7",
@@ -32,7 +33,7 @@ class WarningService:
     }
 
     # 风险等级严重度，数值越大越严重
-    RISK_SEVERITY = {"low": 0, "medium": 1, "high": 2}
+    RISK_SEVERITY: ClassVar[dict] = {"low": 0, "medium": 1, "high": 2}
 
     @staticmethod
     def escalate_risk_level(current, candidate):

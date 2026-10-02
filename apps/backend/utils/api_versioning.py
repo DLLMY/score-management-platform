@@ -6,7 +6,7 @@ API版本管理模块
 
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
+from typing import Any, ClassVar
 
 import semver
 from flask import Blueprint, jsonify, request
@@ -140,7 +140,7 @@ class APIVersionResponse:
 
 
 class VersionMigration:
-    MIGRATIONS = {
+    MIGRATIONS: ClassVar[dict] = {
         "v1_to_v2": {
             "user": {"old_field": "student_id", "new_field": "card_id", "transform": lambda x: x},
             "response": {

@@ -1,32 +1,23 @@
 # part of api/scores/records_routes.py (D2 split)
 
 import logging
-from datetime import datetime
 
 from flask import request
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Resource
 
-from models import ScoreRecord, ScoreRule, User, get_by_id
-from services.class_time_checker import ClassTimeChecker
 from services.redis_cache_service import get_cache_service
 from services.score_recalc import enqueue_or_recalc_user_score
 from services.score_record_service import (
-    commit_batch_score_entry,
     create_record,
-    create_score_entry,
-    delete_record,
     get_record_list_by_user_view,
     get_record_list_view,
     get_record_statistics_view,
-    get_score_entry_view,
-    serialize_score_record,
 )
 from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.logger import log_operation
 from utils.pagination import get_pagination
 from utils.permission import (
     can_access_student,
-    get_allowed_classes,
     get_current_admin,
     requires_permission,
 )
@@ -53,20 +44,6 @@ from api.scores.records_routes import (
     record_list_response,
     record_model,
     record_statistics_response,
-)
-
-from .score_record_orchestration import (
-    _build_batch_record,
-    _compute_rank_change,
-    _invalidate_score_caches,
-    _notify_rank_change,
-    _notify_score_change,
-    _recalc_composite_score,
-    _recalc_composite_scores_after_batch,
-    _resolve_batch_entry_rule,
-    _resolve_score_entry_change,
-    _validate_batch_entry,
-    check_rule_limits,
 )
 
 

@@ -105,6 +105,7 @@ BERT_INSTALLED = TRANSFORMERS_INSTALLED
 
 
 import logging
+from typing import ClassVar
 
 from utils.logger import log_warning
 
@@ -195,32 +196,32 @@ class MLAlgorithmType:
 
 
 class HyperparameterConfig:
-    SVM_PARAMS = {
+    SVM_PARAMS: ClassVar[dict] = {
         "C": [0.1, 1, 10, 100],
         "kernel": ["linear", "rbf", "poly"],
         "gamma": ["scale", "auto", 0.1, 1],
         "degree": [2, 3, 4],
     }
-    RANDOM_FOREST_PARAMS = {
+    RANDOM_FOREST_PARAMS: ClassVar[dict] = {
         "n_estimators": [100, 200, 300, 500],
         "max_depth": [10, 20, 30, None],
         "min_samples_split": [2, 5, 10],
         "min_samples_leaf": [1, 2, 4],
         "max_features": ["sqrt", "log2", None],
     }
-    LOGISTIC_REGRESSION_PARAMS = {
+    LOGISTIC_REGRESSION_PARAMS: ClassVar[dict] = {
         "C": [0.01, 0.1, 1, 10, 100],
         "penalty": ["l1", "l2", "elasticnet", None],
         "solver": ["lbfgs", "liblinear", "saga"],
         "max_iter": [500, 1000, 2000],
     }
-    GRADIENT_BOOSTING_PARAMS = {
+    GRADIENT_BOOSTING_PARAMS: ClassVar[dict] = {
         "n_estimators": [100, 200, 300],
         "learning_rate": [0.01, 0.05, 0.1, 0.2],
         "max_depth": [3, 5, 7, 9],
         "subsample": [0.6, 0.8, 1.0],
     }
-    XGBOOST_PARAMS = {
+    XGBOOST_PARAMS: ClassVar[dict] = {
         "n_estimators": [100, 200, 300],
         "learning_rate": [0.01, 0.05, 0.1],
         "max_depth": [3, 5, 7],
@@ -230,7 +231,7 @@ class HyperparameterConfig:
         "reg_alpha": [0, 0.1, 1],
         "reg_lambda": [1, 10, 100],
     }
-    LIGHTGBM_PARAMS = {
+    LIGHTGBM_PARAMS: ClassVar[dict] = {
         "n_estimators": [100, 200, 300],
         "learning_rate": [0.01, 0.05, 0.1],
         "max_depth": [3, 5, 7, -1],
@@ -238,20 +239,20 @@ class HyperparameterConfig:
         "subsample": [0.6, 0.8, 1.0],
         "colsample_bytree": [0.6, 0.8, 1.0],
     }
-    CATBOOST_PARAMS = {
+    CATBOOST_PARAMS: ClassVar[dict] = {
         "iterations": [100, 200, 300],
         "learning_rate": [0.01, 0.05, 0.1],
         "depth": [4, 6, 8, 10],
         "l2_leaf_reg": [1, 3, 5, 10],
         "subsample": [0.6, 0.8, 1.0],
     }
-    EXTRA_TREES_PARAMS = {
+    EXTRA_TREES_PARAMS: ClassVar[dict] = {
         "n_estimators": [100, 200, 300],
         "max_depth": [10, 20, 30, None],
         "min_samples_split": [2, 5, 10],
         "min_samples_leaf": [1, 2, 4],
     }
-    MLP_PARAMS = {
+    MLP_PARAMS: ClassVar[dict] = {
         "hidden_layer_sizes": [
             (64,),
             (128, 64),

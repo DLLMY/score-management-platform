@@ -1,28 +1,16 @@
 import csv
-import io
 import logging
 import re
-from datetime import datetime
 
-from flask import request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, fields
 
 from config import config
-from models import ClassInfo, User, get_by_id
-from services.class_time_checker import ClassTimeChecker
-from services.redis_cache_service import get_cache_service
-from services.user_list_service import get_user_list_view
-from services.user_service import user_service
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.logger import log_operation
-from utils.pagination import get_pagination
+from models import ClassInfo, User
 from utils.permission import (
-    can_access_student,
     get_allowed_classes,
     get_current_admin,
-    requires_permission,
 )
 from utils.response import APIResponse
 from utils.validation import (
@@ -32,7 +20,6 @@ from utils.validation import (
     validate_phone,
     validate_score,
     validate_student_id,
-    validation_error_response,
 )
 
 logger = logging.getLogger(__name__)

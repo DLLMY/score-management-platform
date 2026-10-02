@@ -2,16 +2,14 @@
 
 import io
 import json
-import logging
 from datetime import datetime
 
 from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Resource
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from api.academics.course_schedule_routes import (
-    _DAY_TEXT_MAP,
     _check_change_conflicts,
     _check_schedule_update_forbidden,
     _collect_time_conflicts,
@@ -20,10 +18,6 @@ from api.academics.course_schedule_routes import (
     _resolve_teacher_name,
     _schedule_time_changed,
     _schedule_update_response,
-    _validate_day_of_week,
-    _validate_period_number,
-    _validate_teacher_role,
-    _validate_text_field,
     course_schedule_model,
     course_schedule_response,
     logger,
@@ -32,9 +26,7 @@ from api.academics.course_schedule_routes import (
 from models import (
     Admin,
     ClassInfo,
-    ClassPeriod,
     CourseSchedule,
-    ImportConfig,
     Subject,
     get_by_id,
 )

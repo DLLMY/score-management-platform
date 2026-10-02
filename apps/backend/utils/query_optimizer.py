@@ -195,7 +195,7 @@ class QueryOptimizer:
     @staticmethod
     def get_daily_score_trend(days=7):
         """按日聚合积分变化趋势（兼容旧测试）。"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         from sqlalchemy import func
 

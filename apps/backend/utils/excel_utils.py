@@ -2,7 +2,7 @@ import csv
 import io
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from flask import send_file
 
@@ -208,7 +208,7 @@ class ExcelUtils:
 class ExcelTemplateGenerator:
     """Excel模板生成器"""
 
-    USER_TEMPLATE = {
+    USER_TEMPLATE: ClassVar[dict] = {
         "headers": ["姓名", "性别", "班级", "联系电话", "饭卡号", "备注"],
         "examples": [
             ["张三", "男", "25电气五年制", "13800138001", "CARD001", "测试学生"],
@@ -225,7 +225,7 @@ class ExcelTemplateGenerator:
         ],
     }
 
-    RULE_TEMPLATE = {
+    RULE_TEMPLATE: ClassVar[dict] = {
         "headers": [
             "规则名称",
             "描述",
@@ -251,7 +251,7 @@ class ExcelTemplateGenerator:
         ],
     }
 
-    CATEGORY_TEMPLATE = {
+    CATEGORY_TEMPLATE: ClassVar[dict] = {
         "headers": ["分类名称", "描述", "颜色"],
         "examples": [
             ["日常行为", "学生日常行为表现", "#3B82F6"],

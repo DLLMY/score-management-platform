@@ -1,33 +1,16 @@
 import json
 import logging
-import os
-import shutil
 import threading
 import time
-from datetime import datetime, timedelta
 
 import psutil
-from flask import current_app, request
-from flask_restx import Namespace, Resource, fields
-from flask_wtf.csrf import generate_csrf
+from flask import request
+from flask_restx import Namespace, fields
 from sqlalchemy import text
 
-from config import Config
-from models import FrontendErrorLog, FrontendPerfMetric, SystemMetric, db
-from services.frontend_telemetry_service import (
-    bulk_persist_perf_metrics,
-    persist_frontend_error,
-    persist_perf_metric,
-)
+from models import db
 from services.mqtt_service import mqtt_manager
 from services.redis_cache_service import get_cache_service
-from services.system_config_service import SystemConfigService
-from utils.api_cache_middleware import cached_api
-from utils.decorators import safe_handle
-from utils.pagination import get_pagination
-from utils.params import get_int_arg
-from utils.performance_monitor import performance_monitor
-from utils.permission import requires_permission
 from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
@@ -42,7 +25,6 @@ RATE_LIMIT = {
 
 rate_limit_store: dict[str, dict[str, float | int]] = {}
 
-from utils.logger import log_warning
 
 
 def cleanup_rate_limit_store():

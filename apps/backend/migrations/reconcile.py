@@ -18,8 +18,7 @@
 （需手工一次性脚本或表重建），普通可空/带默认列均自动补全。
 """
 import os
-import sqlite3
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

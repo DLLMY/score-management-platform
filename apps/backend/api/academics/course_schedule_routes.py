@@ -1,39 +1,19 @@
-import io
-import json
 import logging
-from datetime import datetime
 
-from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from flask_restx import Namespace, fields
 
 from models import (
     Admin,
-    ClassInfo,
-    ClassPeriod,
-    CourseSchedule,
-    ImportConfig,
     Subject,
     get_by_id,
 )
-from services.academics_service import academics_service
 from services.course_schedule_service import (
-    _schedule_dict,
-    build_schedule_export_data,
     check_classroom_conflicts,
     check_conflicts,
-    check_schedule_conflict_view,
     check_teacher_conflicts,
     format_day_of_week,
-    get_period_info,
-    get_schedule_by_class_view,
-    get_schedule_list_view,
-    get_schedule_now_view,
-    get_schedule_options_view,
 )
-from utils.api_cache_middleware import cached_api, invalidate_cache
-from utils.permission import get_allowed_classes, get_current_admin, requires_permission
+from utils.permission import get_allowed_classes, get_current_admin
 from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)

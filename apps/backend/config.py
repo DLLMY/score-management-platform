@@ -1,6 +1,7 @@
 import os
 import secrets
 from datetime import timedelta
+from typing import ClassVar
 
 from dotenv import load_dotenv
 
@@ -64,7 +65,7 @@ class Config:
     else:
         DATABASE_URI = _db_uri_from_env or f"sqlite:///{_default_db_path}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
+    SQLALCHEMY_ENGINE_OPTIONS: ClassVar[dict] = {
         "connect_args": {
             "timeout": 30,
             "check_same_thread": False,
@@ -80,7 +81,7 @@ class Config:
             "stream_results": False,
         },
     }
-    SQLITE_CONFIG = {
+    SQLITE_CONFIG: ClassVar[dict] = {
         "journal_mode": "WAL",
         "cache_size": -100000,
         "temp_store": "memory",
@@ -142,7 +143,7 @@ class Config:
     CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
     CELERY_TASK_SERIALIZER = "json"
     CELERY_RESULT_SERIALIZER = "json"
-    CELERY_ACCEPT_CONTENT = ["json"]
+    CELERY_ACCEPT_CONTENT: ClassVar[list] = ["json"]
     CELERY_TIMEZONE = "Asia/Shanghai"
     CELERY_ENABLE_UTC = True
     # Celery并发配置
@@ -155,7 +156,7 @@ class Config:
     # 默认 False，保证测试 / 沙箱 / 本地开发综合分一定被重算，绝不静默漂移。
     CELERY_ASYNC_SCORE_RECALC = os.getenv("CELERY_ASYNC_SCORE_RECALC", "False").lower() == "true"
     # Celery任务路由
-    CELERY_TASK_QUEUES = {
+    CELERY_TASK_QUEUES: ClassVar[dict] = {
         "mqtt": {
             "exchange": "mqtt",
             "exchange_type": "direct",
@@ -177,13 +178,13 @@ class Config:
             "routing_key": "default",
         },
     }
-    CELERY_TASK_ROUTES = {
+    CELERY_TASK_ROUTES: ClassVar[dict] = {
         "tasks.mqtt_tasks.*": {"queue": "mqtt"},
         "tasks.export_tasks.*": {"queue": "export"},
         "tasks.notification_tasks.*": {"queue": "notification"},
     }
     # Celery定时任务（Celery Beat）
-    CELERY_BEAT_SCHEDULE = {
+    CELERY_BEAT_SCHEDULE: ClassVar[dict] = {
         "clean-expired-results": {
             "task": "tasks.scheduled_tasks.clean_expired_results",
             "schedule": timedelta(hours=24),
@@ -285,7 +286,7 @@ class Config:
     LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", "30"))  # 归档保留天数
     LOG_ARCHIVE_SUBDIR = os.getenv("LOG_ARCHIVE_SUBDIR", "archive")  # 压缩归档子目录
     # ========== 缓存TTL配置（秒） ==========
-    CACHE_TTL = {
+    CACHE_TTL: ClassVar[dict] = {
         "user": 1800,  # 用户信息 30分钟
         "device": 300,  # 设备状态 5分钟
         "rule": 3600,  # 积分规则 1小时
@@ -310,7 +311,7 @@ class Config:
         "warning": 1800,  # 预警 30分钟
     }
     # ========== API缓存TTL配置（秒） ==========
-    API_CACHE_TTL = {
+    API_CACHE_TTL: ClassVar[dict] = {
         "/api/users": 60,  # 用户列表 60秒
         "/api/devices": 5,  # 设备列表 5秒
         "/api/rules": 300,  # 规则列表 5分钟

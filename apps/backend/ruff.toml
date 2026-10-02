@@ -27,6 +27,12 @@ select = [
     "FURB188", # 用 decimal 替代浮点货币运算
     "PERF101", # 循环内不必要推导
 ]
+# 分规则处理（D 阶段 1 决策）：DTZ / BLE001 明确不纳入门禁。
+# - DTZ（naive datetime，约 598 处）：本仓库时区为单一本地时区，SQLite 全程存储 naive datetime，
+#   与 legacy 比较逻辑一致；改为 tz-aware 需同步迁移 DB 字段与大量比较点，属独立大工程，故不强制。
+# - BLE001（裸 except Exception，约 406 处）：错误处理以 @safe_handle 集中兜底 + 路由层 broad except
+#   为主，属刻意的 fail-closed 惯例；逐处收窄风险高、收益低，故不强制。
+ignore = ["DTZ", "BLE001"]
 # 动态作用域目录：migrations 用 exec()、api/algorithm 用 Namespace 拼装，ruff 误报率高，整体移出门禁
 exclude = ["migrations", "api/algorithm", ".workbuddy"]
 # 测试目录：可用性探测 import（importorskip 模式）误报 F401/SIM117，豁免

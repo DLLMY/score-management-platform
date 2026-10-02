@@ -1,11 +1,8 @@
 import logging
 import os
-import time
 
-from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, fields
 
-from models import Device, DeviceFirmwareUpdate, FirmwareVersion
 from utils.logger import log_info
 
 # 响应序列化字段子集（不含 created_by；OTA 命令 payload 字段集不同，不经由此处）
@@ -25,37 +22,10 @@ FIRMWARE_FIELDS = [
     "rollback_to",
     "created_at",
 ]
-import hashlib
 
-from werkzeug.utils import secure_filename
 
-from services.mqtt_service import mqtt_manager
-from services.ota_negotiation_service import (
-    build_download_url,
-    compare_versions,
-    get_latest_active_firmware,
-    negotiate_all_devices,
-    normalize_device_type,
-    resolve_rollback_target,
-    rollback_all_devices,
-    rollback_device,
-    sign_ota_command,
-    verify_download_token,
-)
-from utils.pagination import get_pagination
-from utils.permission import requires_permission
-from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
-from services.firmware_service import (
-    create_firmware_version,
-    create_uploaded_firmware,
-    delete_firmware_version,
-    log_batch_upgrade,
-    log_ota_upgrade,
-    report_ota_status,
-    update_firmware_version,
-)
 
 ns_firmware = Namespace("firmware", description="Firmware management operations")
 

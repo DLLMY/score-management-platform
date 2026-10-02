@@ -1,50 +1,28 @@
 # part of api/devices/firmware_routes.py (D2 split)
 
-import hashlib
-import logging
-import os
-import time
 
-from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
-from werkzeug.utils import secure_filename
+from flask import request
+from flask_restx import Resource, fields
 
 from api.devices.firmware_routes import (
-    ALLOWED_EXTENSIONS,
-    FIRMWARE_FIELDS,
-    FIRMWARE_UPLOAD_FOLDER,
-    allowed_file,
-    ensure_upload_folder,
-    firmware_version_model,
-    logger,
     ns_firmware,
     rollback_model,
 )
 from models import Device, DeviceFirmwareUpdate, FirmwareVersion
 from services.firmware_service import (
-    create_firmware_version,
-    create_uploaded_firmware,
-    delete_firmware_version,
     log_batch_upgrade,
     log_ota_upgrade,
-    report_ota_status,
-    update_firmware_version,
 )
 from services.mqtt_service import mqtt_manager
 from services.ota_negotiation_service import (
     build_download_url,
-    compare_versions,
-    get_latest_active_firmware,
     negotiate_all_devices,
     normalize_device_type,
     resolve_rollback_target,
     rollback_all_devices,
     rollback_device,
     sign_ota_command,
-    verify_download_token,
 )
-from utils.logger import log_info
-from utils.pagination import get_pagination
 from utils.permission import requires_permission
 from utils.response import APIResponse
 

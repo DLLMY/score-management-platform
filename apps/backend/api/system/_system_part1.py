@@ -1,61 +1,27 @@
 # part of api/system/system_routes.py (D2 split)
 
-import json
-import logging
 import os
 import shutil
-import threading
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import psutil
-from flask import current_app, request
-from flask_restx import Namespace, Resource, fields
+from flask import current_app
+from flask_restx import Resource
 from flask_wtf.csrf import generate_csrf
 from sqlalchemy import text
 
 from api.system.system_routes import (
-    RATE_LIMIT,
-    _check_database_health,
-    _check_mqtt_health,
-    _check_redis_health,
-    _check_system_resources,
-    _fill_cpu_component,
-    _fill_disk_component,
-    _fill_memory_component,
-    _resource_status,
-    backup_info_model,
     backup_restore_model,
-    cleanup_interval,
-    cleanup_rate_limit_store,
-    frontend_error_model,
-    frontend_performance_batch_model,
-    frontend_performance_model,
     logger,
     ns_system,
-    rate_limit,
-    rate_limit_store,
-    start_rate_limit_cleanup,
     system_config_model,
-    validate_error_data,
-    validate_performance_data,
 )
 from config import Config
-from models import FrontendErrorLog, FrontendPerfMetric, SystemMetric, db
-from services.frontend_telemetry_service import (
-    bulk_persist_perf_metrics,
-    persist_frontend_error,
-    persist_perf_metric,
-)
-from services.mqtt_service import mqtt_manager
+from models import db
 from services.redis_cache_service import get_cache_service
 from services.system_config_service import SystemConfigService
 from utils.api_cache_middleware import cached_api
 from utils.decorators import safe_handle
 from utils.logger import log_warning
-from utils.pagination import get_pagination
-from utils.params import get_int_arg
-from utils.performance_monitor import performance_monitor
 from utils.permission import requires_permission
 from utils.response import APIResponse
 

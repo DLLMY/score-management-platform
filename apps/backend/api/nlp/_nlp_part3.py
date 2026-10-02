@@ -1,34 +1,18 @@
 # part of api/nlp/nlp_routes.py (D2 split)
 
-import itertools
-import json
 import logging
-import threading
 import time
 from datetime import datetime
 
-from flask import current_app, g, request
-from flask_restx import Namespace, Resource, fields
+from flask import request
+from flask_restx import Resource
 
 import api.nlp.nlp_routes as _mod
 from api.nlp.nlp_routes import (
-    MAX_INFERENCE_CONCURRENCY,
-    TRAIN_TASK_MAX_RUNNING_SECONDS,
-    _acquire_inference_slot,
-    _break_stale_training_tasks,
     _build_feedback_corrections,
-    _inference_semaphore,
     _resolve_feedback_user_id,
-    execute_input_model,
     get_context_memory,
-    inference_slot_guard,
-    logger,
     ns_nlp,
-    parse_input_model,
-    parse_output_model,
-    rule_model,
-    save_context_memory,
-    train_input_model,
 )
 from config.nlp_algorithm import OptimizationStrategy, get_optimizer, nlp_optimizer
 from models import NLPCorrection
@@ -39,10 +23,6 @@ from services.nlp_correction_service import (
     update_correction_status,
 )
 from services.nlp_optimizer import get_nlp_optimizer, warmup_nlp
-from services.nlp_rule_service import NLPRuleManagementService
-from services.nlp_service import get_match_results_evaluation
-from services.redis_cache_service import get_cache_service
-from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.decorators import safe_handle
 from utils.pagination import get_pagination
 from utils.permission import requires_permission

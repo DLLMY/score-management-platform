@@ -1,36 +1,17 @@
 # part of api/data/import_export_routes.py (D2 split)
 
 import io
-import logging
-import os
 from datetime import datetime
 
 from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Resource
 
 from api.data.import_export_routes import (
-    backup_list_response,
-    backup_manager,
-    backup_response,
-    backup_scheduler,
-    export_response,
-    import_response,
-    logger,
     ns_import_export,
 )
 from models import ScoreCategory, ScoreRecord, ScoreRule, User
-from services.import_export_service import (
-    ImportCommitError,
-    bulk_import_categories,
-    bulk_import_rules,
-    bulk_import_users,
-)
-from utils.backup_utils import BackupManager, BackupScheduler
-from utils.decorators import safe_handle
 from utils.excel_utils import ExcelTemplateGenerator, ExcelUtils
 from utils.permission import requires_permission
-from utils.response import APIResponse
-from utils.transaction_retry import get_import_guard
 
 
 @ns_import_export.route("/export/users")

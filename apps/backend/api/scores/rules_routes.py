@@ -1,40 +1,17 @@
 import logging
 
-from flask import request, send_file
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, fields
 
-from models import ScoreCategory, ScoreRule, get_by_id
-from utils.decorators import safe_handle
-from utils.logger import log_info, log_operation
-from utils.pagination import get_pagination
-from utils.permission import requires_permission
-from utils.response import APIResponse
+from models import ScoreCategory, get_by_id
 from utils.validation import (
     ValidationRules,
     validate_id,
     validate_positive_int,
     validate_score,
-    validation_error_response,
 )
 
 logger = logging.getLogger(__name__)
-import csv
-import io
-from datetime import datetime
 
-from services.redis_cache_service import get_cache_service
-from services.score_rule_query_service import (
-    get_rule_list_view,
-    get_rule_statistics_view,
-)
-from services.score_rule_service import (
-    apply_rule_template,
-    create_rule,
-    delete_rule,
-    import_rules,
-    update_rule,
-)
-from utils.api_cache_middleware import cached_api, invalidate_cache
 
 # B3 收敛 2026-09-05：ScoreRule.to_dict(fields) 子集常量。
 # 列表/统计字段子集已下沉至 services/score_rule_query_service.py；
