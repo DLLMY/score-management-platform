@@ -33,8 +33,10 @@ select = [
 # - BLE001（裸 except Exception，约 406 处）：错误处理以 @safe_handle 集中兜底 + 路由层 broad except
 #   为主，属刻意的 fail-closed 惯例；逐处收窄风险高、收益低，故不强制。
 ignore = ["DTZ", "BLE001"]
-# 动态作用域目录：migrations 用 exec()、api/algorithm 用 Namespace 拼装，ruff 误报率高，整体移出门禁
-exclude = ["migrations", "api/algorithm", ".workbuddy"]
+# 动态作用域目录：migrations 用 exec()、api/algorithm 用 Namespace 拼装，ruff 误报率高，整体移出门禁。
+# 注意：ruff 的 exclude 目录模式需写成递归 glob（"dir/**"）才能真正匹配子文件，
+# 旧写法 "migrations" 仅匹配目录自身、对子文件失效（导致 reconcile/seed_defaults 的 C901 仍进门禁）。
+exclude = ["migrations/**", "api/algorithm/**", ".workbuddy/**"]
 # 测试目录：可用性探测 import（importorskip 模式）误报 F401/SIM117，豁免
 [lint.per-file-ignores]
 "tests/**" = ["F401", "SIM117"]

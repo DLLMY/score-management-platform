@@ -75,6 +75,54 @@ def _extract_call_text(src, start):
     return src[i + 1:]
 
 
+
+def _nearest(lst, idx):
+    cur = None
+    for pos, name in lst:
+        if pos <= idx:
+            cur = name
+        else:
+            break
+    return cur
+
+
+def _parse_one_call(calltext, line_idx, svc_at, meth_at):
+    um = re.search(r"(['\"`])((?:\\.|(?!\1).)*?)\1", calltext)
+    if not um:
+        return None
+    url = um.group(2)
+    api_match = re.search(r"/api/.+", url)
+    if not api_match:
+        return None
+    raw = api_match.group(0)
+    raw = raw.split("`")[0]
+    raw = re.split(r"\$\{[A-Za-z_]\w*\s*\?", raw)[0]
+    raw = re.split(r"\$\{[^}]*`[^}]*\}", raw)[0]
+    raw = re.split(r"\$\{[^}]*[\?'\"+.(][^}]*\}", raw)[0]
+    raw = raw.split("?")[0]
+    mmeth = re.search(r"method:\s*['\"](get|post|put|delete|patch)['\"]", calltext, re.IGNORECASE)
+    verb = mmeth.group(1).lower() if mmeth else "get"
+    verb_inline = bool(mmeth)
+
+    pre_base = re.sub(r"\$\{[^}]*\}", "", raw)
+    base_clean = re.sub(r"[^/:\w-]", "", pre_base)
+    base_clean = re.sub(r":\w+", "", base_clean).rstrip("/")
+    base_clean = re.sub(r"/+", "/", base_clean).rstrip("/")
+
+    pre_param = re.sub(r"\$\{([A-Za-z_]\w*)\}", "/:param", raw)
+    pre_param = re.sub(r"\$\{[^}]*\}", "", pre_param)
+    param_clean = re.sub(r"[^/:\w-]", "", pre_param).rstrip("/")
+
+    return {
+        "service": _nearest(svc_at, line_idx),
+        "method": _nearest(meth_at, line_idx),
+        "verb": verb,
+        "verb_inline": verb_inline,
+        "url": param_clean,
+        "tmpl": norm_template(param_clean),
+        "base": base_clean,
+    }
+
 def extract_frontend_calls(api_ts_path):
     src = open(api_ts_path, encoding="utf-8").read()
     lines = src.split("\n")
@@ -96,60 +144,20 @@ def extract_frontend_calls(api_ts_path):
         if mm:
             meth_at.append((i, mm.group(1)))
 
-    def nearest(lst, idx):
-        cur = None
-        for pos, name in lst:
-            if pos <= idx:
-                cur = name
-            else:
-                break
-        return cur
-
     calls = []
     for m in re.finditer(r"(request|fetch)\(", src):
         start = m.start()
         line_idx = src[:start].count("\n")
         calltext = _extract_call_text(src, start)
-        um = re.search(r"(['\"`])((?:\\.|(?!\1).)*?)\1", calltext)
-        if not um:
-            continue
-        url = um.group(2)
-        api_match = re.search(r"/api/.+", url)
-        if not api_match:
-            continue
-        raw = api_match.group(0)
-        raw = raw.split("`")[0]
-        raw = re.split(r"\$\{[A-Za-z_]\w*\s*\?", raw)[0]
-        raw = re.split(r"\$\{[^}]*`[^}]*\}", raw)[0]
-        raw = re.split(r"\$\{[^}]*[\?'\"+.(][^}]*\}", raw)[0]
-        raw = raw.split("?")[0]
-        mmeth = re.search(r"method:\s*['\"](get|post|put|delete|patch)['\"]", calltext, re.IGNORECASE)
-        verb = mmeth.group(1).lower() if mmeth else "get"
-        verb_inline = bool(mmeth)
-
-        pre_base = re.sub(r"\$\{[^}]*\}", "", raw)
-        base_clean = re.sub(r"[^/:\w-]", "", pre_base)
-        base_clean = re.sub(r":\w+", "", base_clean).rstrip("/")
-        base_clean = re.sub(r"/+", "/", base_clean).rstrip("/")
-
-        pre_param = re.sub(r"\$\{([A-Za-z_]\w*)\}", "/:param", raw)
-        pre_param = re.sub(r"\$\{[^}]*\}", "", pre_param)
-        param_clean = re.sub(r"[^/:\w-]", "", pre_param).rstrip("/")
-
-        calls.append({
-            "service": nearest(svc_at, line_idx),
-            "method": nearest(meth_at, line_idx),
-            "verb": verb,
-            "verb_inline": verb_inline,
-            "url": param_clean,
-            "tmpl": norm_template(param_clean),
-            "base": base_clean,
-        })
+        c = _parse_one_call(calltext, line_idx, svc_at, meth_at)
+        if c:
+            calls.append(c)
     dedup = {}
     for c in calls:
         k = (c["service"], c["method"], c["verb"], c["tmpl"])
         dedup.setdefault(k, c)
     return list(dedup.values())
+
 
 
 # ----------------------------------------------------------------------------
