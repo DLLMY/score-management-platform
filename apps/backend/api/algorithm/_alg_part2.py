@@ -8,7 +8,7 @@ from services.engagement_service import EngagementService
 from services.prediction_service import PredictionService
 from services.rule_recommendation_service import RuleRecommendationService
 from utils.api_cache_middleware import cached_api
-from utils.decorators import safe_handle
+from ._algo_common import algo_safe_handle
 from utils.params import get_int_arg
 from utils.permission import requires_permission
 from utils.response import APIResponse
@@ -26,7 +26,7 @@ class RiskStudents(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取有下降风险的学生
@@ -43,7 +43,7 @@ class UserAnomaly(Resource):
     @ns_algorithm.param("days", "历史天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取用户异常检测
@@ -61,7 +61,7 @@ class BatchAnomaly(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         批量获取异常检测
@@ -79,7 +79,7 @@ class SuddenChange(Resource):
     @ns_algorithm.param("days", "历史天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         检测突变异常
@@ -96,7 +96,7 @@ class TrendAnomaly(Resource):
     @ns_algorithm.param("days", "历史天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         检测趋势异常
@@ -113,7 +113,7 @@ class GroupAnomaly(Resource):
     @ns_algorithm.param("days", "历史天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         检测群体异常
@@ -131,7 +131,7 @@ class BatchEngagement(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         批量计算某班级（或全部）学生的参与度指数并排名。
@@ -150,7 +150,7 @@ class UserEngagement(Resource):
     @ns_algorithm.param("days", "历史天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取学生参与度指数（0-100）
@@ -168,7 +168,7 @@ class UserEngagementTrend(Resource):
     @ns_algorithm.param("weeks", "历史周数，默认8")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取学生参与度周趋势（由远及近的时间序列，用于折线图展示）。
@@ -185,7 +185,7 @@ class RuleRecommend(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取积分规则推荐
@@ -203,7 +203,7 @@ class NewRuleRecommend(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取新规则推荐

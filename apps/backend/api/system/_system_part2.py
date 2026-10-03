@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import psutil
 from flask import request
 from flask_restx import Resource
+from sqlalchemy import func
 
 from api.system.system_routes import (
     _check_database_health,
@@ -23,7 +24,7 @@ from api.system.system_routes import (
     validate_error_data,
     validate_performance_data,
 )
-from models import FrontendErrorLog, FrontendPerfMetric, SystemMetric
+from models import FrontendErrorLog, FrontendPerfMetric, SystemMetric, db
 from services.frontend_telemetry_service import (
     bulk_persist_perf_metrics,
     persist_frontend_error,
@@ -367,21 +368,34 @@ class SystemMetricsList(Resource):
             since = datetime.now() - timedelta(hours=hours)
             query = query.filter(SystemMetric.created_at >= since)
 
-        # 各指标最新值（用于趋势卡片）
+        # 各指标最新值（用于趋势卡片）：一次性取每个指标的最新采样，替代按指标名循环查询（原最多 5 次 → 1 次）
         latest = {}
         names = (
             [metric_name]
             if metric_name
             else ["cpu_percent", "memory_percent", "disk_percent", "net_sent", "net_recv"]
         )
-        for nm in names:
-            row = (
-                SystemMetric.query.filter(SystemMetric.metric_name == nm)
-                .order_by(SystemMetric.created_at.desc())
-                .first()
+        if names:
+            latest_subq = (
+                db.session.query(
+                    SystemMetric.metric_name,
+                    func.max(SystemMetric.created_at).label("max_ts"),
+                )
+                .filter(SystemMetric.metric_name.in_(names))
+                .group_by(SystemMetric.metric_name)
+                .subquery()
             )
-            if row:
-                latest[nm] = {
+            latest_rows = (
+                db.session.query(SystemMetric)
+                .join(
+                    latest_subq,
+                    (SystemMetric.metric_name == latest_subq.c.metric_name)
+                    & (SystemMetric.created_at == latest_subq.c.max_ts),
+                )
+                .all()
+            )
+            for row in latest_rows:
+                latest[row.metric_name] = {
                     "value": row.metric_value,
                     "unit": row.unit,
                     "updated_at": row.created_at.isoformat() if row.created_at else None,

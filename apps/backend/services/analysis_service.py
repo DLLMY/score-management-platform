@@ -192,38 +192,51 @@ class AnalysisService:
             .all()
         )
 
+        # 批量预取各班级近 30 天开锁次数与开锁消耗，避免按班级循环查询（原实现每班 2 次 SQL → 共 2N 次）
+        unlock_counts = dict(
+            db.session.query(User.class_name, func.count(ScoreRecord.id))
+            .join(User)
+            .filter(
+                User.class_name.isnot(None),
+                ScoreRecord.description.like("%开锁%"),
+                ScoreRecord.created_at >= last_30_days,
+            )
+            .group_by(User.class_name)
+            .all()
+        )
+        unlock_costs = dict(
+            db.session.query(
+                User.class_name,
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (ScoreRecord.score_change < 0, func.abs(ScoreRecord.score_change)),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ),
+            )
+            .join(User)
+            .filter(
+                User.class_name.isnot(None),
+                ScoreRecord.description.like("%开锁%"),
+                ScoreRecord.created_at >= last_30_days,
+            )
+            .group_by(User.class_name)
+            .all()
+        )
+
         ranking_data = []
         for stat in class_stats:
-            unlock_count = (
-                ScoreRecord.query.join(User)
-                .filter(
-                    User.class_name == stat.class_name,
-                    ScoreRecord.description.like("%开锁%"),
-                    ScoreRecord.created_at >= last_30_days,
-                )
-                .count()
-            )
-
             ranking_data.append(
                 {
                     "class_name": stat.class_name,
                     "student_count": stat.student_count,
                     "total_score": stat.total_score or 0,
                     "avg_score": round(stat.avg_score or 0, 2),
-                    "unlock_count_30d": unlock_count,
-                    "unlock_cost_30d": abs(
-                        sum(
-                            r.score_change
-                            for r in ScoreRecord.query.join(User)
-                            .filter(
-                                User.class_name == stat.class_name,
-                                ScoreRecord.description.like("%开锁%"),
-                                ScoreRecord.created_at >= last_30_days,
-                            )
-                            .all()
-                            if r.score_change < 0
-                        )
-                    ),
+                    "unlock_count_30d": int(unlock_counts.get(stat.class_name, 0) or 0),
+                    "unlock_cost_30d": abs(float(unlock_costs.get(stat.class_name, 0) or 0)),
                 }
             )
 
@@ -306,81 +319,78 @@ class AnalysisService:
         start_date = datetime.now() - timedelta(days=days)
 
         compare_data = []
+        # 批量聚合：用 in_ + group_by 一次性取出各班级的 3 类聚合，替代按班级循环查询（原每班 3 次 → 共 3 次）
+        class_stats_map = dict(
+            db.session.query(
+                User.class_name,
+                func.count(User.id).label("student_count"),
+                func.coalesce(func.sum(User.current_score), 0).label("total_score"),
+                func.coalesce(func.avg(User.current_score), 0).label("avg_score"),
+                func.max(User.current_score).label("max_score"),
+                func.min(User.current_score).label("min_score"),
+            )
+            .filter(User.class_name.in_(class_names))
+            .group_by(User.class_name)
+            .all()
+        )
+        period_records_map = dict(
+            db.session.query(
+                User.class_name,
+                func.count(ScoreRecord.id).label("total_records"),
+                func.coalesce(func.sum(ScoreRecord.score_change), 0).label("total_change"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (ScoreRecord.score_change > 0, ScoreRecord.score_change),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("total_add"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (ScoreRecord.score_change < 0, ScoreRecord.score_change),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("total_subtract"),
+                func.count(distinct(ScoreRecord.student_id)).label("active_students"),
+            )
+            .join(User)
+            .filter(User.class_name.in_(class_names), ScoreRecord.created_at >= start_date)
+            .group_by(User.class_name)
+            .all()
+        )
+        unlock_stats_map = dict(
+            db.session.query(
+                User.class_name,
+                func.count(ScoreRecord.id).label("unlock_count"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (ScoreRecord.score_change < 0, ScoreRecord.score_change),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("unlock_cost"),
+            )
+            .join(User)
+            .filter(
+                User.class_name.in_(class_names),
+                ScoreRecord.description.like("%开锁%"),
+                ScoreRecord.created_at >= start_date,
+            )
+            .group_by(User.class_name)
+            .all()
+        )
+
         for class_name in class_names:
-            class_stats = (
-                db.session.query(
-                    func.count(User.id).label("student_count"),
-                    func.coalesce(func.sum(User.current_score), 0).label("total_score"),
-                    func.coalesce(func.avg(User.current_score), 0).label("avg_score"),
-                    func.max(User.current_score).label("max_score"),
-                    func.min(User.current_score).label("min_score"),
-                )
-                .filter(User.class_name == class_name)
-                .first()
-            )
-
-            period_records = (
-                db.session.query(
-                    func.count(ScoreRecord.id).label("total_records"),
-                    func.coalesce(func.sum(ScoreRecord.score_change), 0).label("total_change"),
-                    func.coalesce(
-                        func.sum(
-                            case(
-                                (
-                                    ScoreRecord.score_change > 0,
-                                    ScoreRecord.score_change,
-                                ),
-                                else_=0,
-                            )
-                        ),
-                        0,
-                    ).label("total_add"),
-                    func.coalesce(
-                        func.sum(
-                            case(
-                                (
-                                    ScoreRecord.score_change < 0,
-                                    ScoreRecord.score_change,
-                                ),
-                                else_=0,
-                            )
-                        ),
-                        0,
-                    ).label("total_subtract"),
-                    func.count(distinct(ScoreRecord.student_id)).label("active_students"),
-                )
-                .join(User)
-                .filter(
-                    User.class_name == class_name,
-                    ScoreRecord.created_at >= start_date,
-                )
-                .first()
-            )
-
-            unlock_stats = (
-                db.session.query(
-                    func.count(ScoreRecord.id).label("unlock_count"),
-                    func.coalesce(
-                        func.sum(
-                            case(
-                                (
-                                    ScoreRecord.score_change < 0,
-                                    ScoreRecord.score_change,
-                                ),
-                                else_=0,
-                            )
-                        ),
-                        0,
-                    ).label("unlock_cost"),
-                )
-                .join(User)
-                .filter(
-                    User.class_name == class_name,
-                    ScoreRecord.description.like("%开锁%"),
-                    ScoreRecord.created_at >= start_date,
-                )
-                .first()
-            )
+            class_stats = class_stats_map.get(class_name)
+            period_records = period_records_map.get(class_name)
+            unlock_stats = unlock_stats_map.get(class_name)
 
             daily_trend = (
                 db.session.query(

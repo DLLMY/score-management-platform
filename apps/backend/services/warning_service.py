@@ -136,18 +136,20 @@ class WarningService:
             int: 连续天数
         """
         today = datetime.now().date()
+        # 一次性取出该生近 30 天内的全部正向积分记录日期，避免按天循环查询（原实现最多 30 次 SQL）
+        since = datetime.now() - timedelta(days=30)
+        positive_dates = {
+            r.created_at.date()
+            for r in ScoreRecord.query.filter(
+                ScoreRecord.student_id == user_id,
+                ScoreRecord.score_change > 0,
+                ScoreRecord.created_at >= since,
+            ).all()
+        }
         days_count = 0
         for i in range(30):
             check_date = today - timedelta(days=i)
-            records = ScoreRecord.query.filter(
-                ScoreRecord.student_id == user_id,
-                ScoreRecord.score_change > 0,
-                ScoreRecord.created_at
-                >= datetime(check_date.year, check_date.month, check_date.day),
-                ScoreRecord.created_at
-                <= datetime(check_date.year, check_date.month, check_date.day, 23, 59, 59),
-            ).first()
-            if records:
+            if check_date in positive_dates:
                 break
             days_count += 1
         return days_count

@@ -60,6 +60,8 @@ class CourseScheduleImport(Resource):
 
         max_period = ClassPeriod.query.filter_by(is_active=True).count()
 
+        # Phase 1: 校验 + 冲突检测，收集有效行上下文（此阶段不查 existing，避免重复解析）
+        valid_rows = []
         for row_idx, item in enumerate(import_list, start=2):
             try:
                 (row_errors, class_info, subject, day_of_week, period_number,
@@ -120,37 +122,18 @@ class CourseScheduleImport(Resource):
                     failed_count += 1
                     continue
 
-                existing = CourseSchedule.query.filter(
-                    CourseSchedule.class_info_id == class_info.id,
-                    CourseSchedule.day_of_week == day_of_week,
-                    CourseSchedule.period_number == period_number,
-                ).first()
-
-                action, payload, message = _resolve_existing_course(
-                    existing, item, class_info, subject, day_of_week,
-                    period_number, teacher_name, classroom, conflict_strategy
+                valid_rows.append(
+                    {
+                        "row_idx": row_idx,
+                        "item": item,
+                        "class_info": class_info,
+                        "subject": subject,
+                        "day_of_week": day_of_week,
+                        "period_number": period_number,
+                        "teacher_name": teacher_name,
+                        "classroom": classroom,
+                    }
                 )
-                if action == "skip":
-                    messages.append(message)
-                    continue
-                if action == "error":
-                    messages.append(message)
-                    errors.append(
-                        {
-                            "row": row_idx,
-                            "message": message["message"],
-                            "row_data": item,
-                            "error_fields": ["conflict"],
-                        }
-                    )
-                    failed_count += 1
-                    continue
-                if action == "update":
-                    updates.append(payload)
-                elif action == "create":
-                    creates.append(payload)
-                messages.append(message)
-                success_count += 1
             except Exception as e:
                 error_msg = str(e)
                 messages.append(
@@ -173,6 +156,13 @@ class CourseScheduleImport(Resource):
                 )
                 failed_count += 1
 
+        # Phase 2: 批量预取已存在课表行（一次 in_ 查询覆盖所有涉及班级），替代逐行 .first()
+        sc_delta, fc_delta = _apply_imported_rows(
+            valid_rows, conflict_strategy, creates, updates, messages, errors
+        )
+        success_count += sc_delta
+        failed_count += fc_delta
+
         academics_service.apply_course_schedule_import(creates, updates)
         invalidate_cache("api:/api/course-schedules/*")
 
@@ -185,6 +175,57 @@ class CourseScheduleImport(Resource):
                 "messages": messages,
             }
         )
+
+def _apply_imported_rows(valid_rows, conflict_strategy, creates, updates, messages, errors):
+    """Phase 2（从 import 端点抽出以降低圈复杂度）：批量预取已存在课表行，并依据冲突策略落库决策。
+
+    直接追加到传入的 messages/errors/creates/updates 列表（可变对象，原地修改），
+    返回 (success_delta, failed_delta)。
+    """
+    success_count = 0
+    failed_count = 0
+    if not valid_rows:
+        return success_count, failed_count
+    class_ids = {r["class_info"].id for r in valid_rows}
+    existing_rows = CourseSchedule.query.filter(
+        CourseSchedule.class_info_id.in_(class_ids)
+    ).all()
+    existing_map = {
+        (row.class_info_id, row.day_of_week, row.period_number): row
+        for row in existing_rows
+    }
+    for r in valid_rows:
+        row_idx = r["row_idx"]
+        item = r["item"]
+        key = (r["class_info"].id, r["day_of_week"], r["period_number"])
+        existing = existing_map.get(key)
+        action, payload, message = _resolve_existing_course(
+            existing, item, r["class_info"], r["subject"], r["day_of_week"],
+            r["period_number"], r["teacher_name"], r["classroom"], conflict_strategy
+        )
+        if action == "skip":
+            messages.append(message)
+            continue
+        if action == "error":
+            messages.append(message)
+            errors.append(
+                {
+                    "row": row_idx,
+                    "message": message["message"],
+                    "row_data": item,
+                    "error_fields": ["conflict"],
+                }
+            )
+            failed_count += 1
+            continue
+        if action == "update":
+            updates.append(payload)
+        elif action == "create":
+            creates.append(payload)
+        messages.append(message)
+        success_count += 1
+    return success_count, failed_count
+
 
 def _load_course_import_config(config_id, strategy_param):
     """加载导入配置：指定 config_id 优先，否则取默认配置；返回映射/策略/默认值。"""

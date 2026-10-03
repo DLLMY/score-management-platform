@@ -248,52 +248,9 @@ def setup_cache_middleware(app):
         app: Flask应用实例
     """
 
-    @app.before_request
-    def before_request_cache():
-        """请求前处理"""
-        # 可以在这里添加缓存预热逻辑
-
     @app.after_request
     def after_request_cache(response):
         """请求后处理"""
-        # 添加缓存统计信息
         if "X-Cache" not in response.headers:
             response.headers["X-Cache"] = "BYPASS"
         return response
-
-
-class CacheStatistics:
-    """缓存统计类"""
-
-    def __init__(self):
-        self.hit_count = 0
-        self.miss_count = 0
-        self.bypass_count = 0
-
-    def record_hit(self):
-        self.hit_count += 1
-
-    def record_miss(self):
-        self.miss_count += 1
-
-    def record_bypass(self):
-        self.bypass_count += 1
-
-    def get_stats(self):
-        total = self.hit_count + self.miss_count + self.bypass_count
-        hit_rate = (self.hit_count / total * 100) if total > 0 else 0
-        return {
-            "hit_count": self.hit_count,
-            "miss_count": self.miss_count,
-            "bypass_count": self.bypass_count,
-            "total_requests": total,
-            "hit_rate": round(hit_rate, 2),
-        }
-
-    def reset(self):
-        self.hit_count = 0
-        self.miss_count = 0
-        self.bypass_count = 0
-
-
-cache_stats = CacheStatistics()

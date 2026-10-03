@@ -9,7 +9,7 @@ from services.score_distribution_service import (
     ScoreDistributionController,
 )
 from services.score_predict_service import ScorePredictService
-from utils.decorators import safe_handle
+from ._algo_common import algo_safe_handle
 from utils.params import get_int_arg
 from utils.permission import requires_permission
 from utils.response import APIResponse
@@ -26,7 +26,7 @@ class ScorePredictEvaluate(Resource):
     @ns_algorithm.param("days", "评估数据天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         评估成绩预测模型
@@ -43,7 +43,7 @@ class RiskPredict(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         预测学生风险
@@ -60,7 +60,7 @@ class BatchRiskPredict(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         批量预测风险
@@ -77,7 +77,7 @@ class HighRiskStudents(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取高风险学生
@@ -93,7 +93,7 @@ class RiskPredictTrain(Resource):
     @ns_algorithm.param("days", "训练数据天数，默认90")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         训练风险预测模型
@@ -109,7 +109,7 @@ class RiskPredictEvaluate(Resource):
     @ns_algorithm.param("days", "评估数据天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         评估风险预测模型
@@ -124,7 +124,7 @@ class RuleEngineExecute(Resource):
     @ns_algorithm.doc("post_rule_engine_execute", description="执行规则引擎")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         执行规则引擎
@@ -142,7 +142,7 @@ class RuleEngineApplyByBehavior(Resource):
     @ns_algorithm.doc("post_rule_engine_apply_by_behavior", description="根据行为类型应用规则")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         根据行为类型应用规则
@@ -162,7 +162,7 @@ class ScoreDistributionStats(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取评分分布统计
@@ -179,7 +179,7 @@ class ScoreDistributionAdjust(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         调整评分分布
@@ -195,7 +195,7 @@ class ScoreDistributionValidate(Resource):
     @ns_algorithm.doc("post_score_distribution_validate", description="验证评分分布")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         验证评分分布

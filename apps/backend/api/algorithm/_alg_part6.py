@@ -12,7 +12,7 @@ from services.reward_service import (
     RewardInteractionController,
 )
 from services.warning_service import WarningService
-from utils.decorators import safe_handle
+from ._algo_common import algo_safe_handle
 from utils.excel_utils import ExcelUtils
 from utils.params import get_int_arg
 from utils.permission import requires_permission
@@ -30,7 +30,7 @@ class RewardDailyUsage(Resource):
     @ns_algorithm.doc("get_reward_daily_usage", description="获取用户今日奖励使用情况")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取用户今日奖励使用情况
@@ -45,7 +45,7 @@ class AlgorithmAll(Resource):
     @ns_algorithm.doc("get_all_algorithm_data", description="获取所有算法数据")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取所有算法数据
@@ -63,7 +63,7 @@ class AlgorithmRun(Resource):
     @ns_algorithm.doc("run_algorithm_analysis", description="运行算法分析")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         运行算法分析
@@ -77,7 +77,7 @@ class ClusterRecalculate(Resource):
     @ns_algorithm.doc("recalculate_clusters", description="重新计算分群")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         重新计算学生分群
@@ -92,7 +92,7 @@ class CompositeScoreRecalculate(Resource):
     @ns_algorithm.doc("recalculate_composite_scores", description="重新计算综合评分")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         重新计算所有学生的综合评分
@@ -107,7 +107,7 @@ class WarningEvaluate(Resource):
     @ns_algorithm.doc("evaluate_warnings", description="评估风险预警")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         评估所有风险预警

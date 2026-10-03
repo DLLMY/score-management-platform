@@ -11,7 +11,7 @@ from services.score_distribution_service import (
     ScoreValidator,
 )
 from services.score_ecosystem_service import ScoreEcosystem
-from utils.decorators import safe_handle
+from ._algo_common import algo_safe_handle
 from utils.permission import requires_permission
 from utils.response import APIResponse
 
@@ -26,7 +26,7 @@ class ScoreValidatorDetectOutliers(Resource):
     @ns_algorithm.doc("post_score_validator_detect_outliers", description="检测离群值")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         检测离群值
@@ -43,7 +43,7 @@ class ScoreValidatorValidateAndCorrect(Resource):
     @ns_algorithm.doc("post_score_validator_validate_and_correct", description="校验并修正分数")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         校验并修正分数
@@ -60,7 +60,7 @@ class ScoreEcosystemEarn(Resource):
     @ns_algorithm.doc("post_score_ecosystem_earn", description="获取积分")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         获取积分
@@ -79,7 +79,7 @@ class ScoreEcosystemSpend(Resource):
     @ns_algorithm.doc("post_score_ecosystem_spend", description="消费积分")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         消费积分
@@ -98,7 +98,7 @@ class ScoreEcosystemEarningRules(Resource):
     @ns_algorithm.doc("get_score_ecosystem_earning_rules", description="获取积分获取规则")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取积分获取规则
@@ -113,7 +113,7 @@ class ScoreEcosystemSpendingRules(Resource):
     @ns_algorithm.doc("get_score_ecosystem_spending_rules", description="获取积分消费规则")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取积分消费规则
@@ -129,7 +129,7 @@ class ScoreEcosystemBalance(Resource):
     @ns_algorithm.doc("get_score_ecosystem_balance", description="获取用户积分余额")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取用户积分余额
@@ -144,7 +144,7 @@ class RewardPhoneAccess(Resource):
     @ns_algorithm.doc("post_reward_phone_access", description="处理手机拿取请求")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         处理手机拿取请求
@@ -162,7 +162,7 @@ class RewardTypes(Resource):
     @ns_algorithm.doc("get_reward_types", description="获取所有奖励类型")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取所有奖励类型
@@ -178,7 +178,7 @@ class RewardEligible(Resource):
     @ns_algorithm.doc("get_reward_eligible", description="获取用户可兑换的奖励")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取用户可兑换的奖励
@@ -193,7 +193,7 @@ class RewardRedeem(Resource):
     @ns_algorithm.doc("post_reward_redeem", description="兑换奖励")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         兑换奖励

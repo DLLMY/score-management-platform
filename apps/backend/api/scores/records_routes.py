@@ -2,8 +2,6 @@ import logging
 
 from flask_restx import Namespace, fields
 
-from .score_record_orchestration import check_rule_limits
-
 logger = logging.getLogger(__name__)
 
 try:

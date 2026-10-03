@@ -142,7 +142,6 @@ def _parse_subject_excel_file(file, field_mappings, default_values):
         return None, APIResponse.error(
             message=parse_result.get("error", "文件解析失败"), status_code=400
         )
-    headers = parse_result.get("headers", [])
     parsed_rows = parse_result.get("data", [])
     import_list = _map_subject_excel_rows(parsed_rows, field_mappings, default_values)
     return import_list, None

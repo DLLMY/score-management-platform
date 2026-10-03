@@ -9,7 +9,7 @@ from services.composite_score_service import CompositeScoreService
 from services.prediction_service import PredictionService
 from services.warning_service import WarningService
 from utils.api_cache_middleware import cached_api
-from utils.decorators import safe_handle
+from ._algo_common import algo_safe_handle
 from utils.params import get_int_arg
 from utils.permission import requires_permission
 from utils.response import APIResponse
@@ -27,7 +27,7 @@ class Statistics(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取综合统计分析
@@ -45,7 +45,7 @@ class Cluster(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取学生分群结果
@@ -59,7 +59,7 @@ class Cluster(Resource):
     @ns_algorithm.param("n_clusters", "聚类数量(默认4)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         触发分群重新计算
@@ -76,7 +76,7 @@ class ClusterByUser(Resource):
     @ns_algorithm.doc("get_cluster_by_user", description="获取单个学生的分群信息")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取单个学生的分群信息
@@ -93,7 +93,7 @@ class CompositeScore(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取综合评分排名
@@ -106,7 +106,7 @@ class CompositeScore(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         重新计算综合评分
@@ -122,7 +122,7 @@ class CompositeScoreByUser(Resource):
     @ns_algorithm.doc("get_composite_score_by_user", description="获取单个学生的综合评分")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取单个学生的综合评分
@@ -138,7 +138,7 @@ class CompositeScoreProgress(Resource):
     @ns_algorithm.doc("get_composite_score_progress", description="获取综合评分计算进度")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取综合评分计算进度
@@ -155,7 +155,7 @@ class Warning(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=30)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取风险预警列表
@@ -168,7 +168,7 @@ class Warning(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         执行风险评估
@@ -184,7 +184,7 @@ class WarningConfig(Resource):
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
     @cached_api(ttl=60)
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取预警配置
@@ -195,7 +195,7 @@ class WarningConfig(Resource):
     @ns_algorithm.doc("post_warning_config", description="更新预警配置")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         更新预警配置
@@ -222,7 +222,7 @@ class WarningResolve(Resource):
     @ns_algorithm.param("warning_id", "预警ID")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self, warning_id):
         """
         处理预警
@@ -241,7 +241,7 @@ class StudentPrediction(Resource):
     @ns_algorithm.param("days", "预测天数，默认7")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         获取学生积分预测
@@ -258,7 +258,7 @@ class BatchPrediction(Resource):
     @ns_algorithm.param("days", "预测天数，默认7")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         批量获取预测

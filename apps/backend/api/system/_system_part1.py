@@ -139,7 +139,6 @@ class SystemBackupsList(Resource):
 
         获取所有可用数据库备份文件的列表。
         """
-        basedir = os.path.abspath(os.path.dirname(__file__))
         backup_dir = Config.BACKUP_DIR
 
         if not os.path.exists(backup_dir):

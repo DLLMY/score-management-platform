@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+from sqlalchemy import func
+
 from models import Admin, AdminClass, ClassInfo, CourseSchedule, User, db
 
 "\n"
@@ -264,10 +266,26 @@ class DataConsistencyChecker:
         issues = []
         all_classes = ClassInfo.query.filter_by(is_active=True).all()
         self.stats["classes"] = {"total": len(all_classes)}
+        # 批量按 class_info_id 聚合计数，避免逐班级 3 次 COUNT（原实现 3N 次 SQL → 3 次）
+        user_counts = dict(
+            db.session.query(User.class_info_id, func.count(User.id))
+            .group_by(User.class_info_id)
+            .all()
+        )
+        admin_counts = dict(
+            db.session.query(AdminClass.class_info_id, func.count(AdminClass.id))
+            .group_by(AdminClass.class_info_id)
+            .all()
+        )
+        schedule_counts = dict(
+            db.session.query(CourseSchedule.class_info_id, func.count(CourseSchedule.id))
+            .group_by(CourseSchedule.class_info_id)
+            .all()
+        )
         for class_info in all_classes:
-            user_count = User.query.filter_by(class_info_id=class_info.id).count()
-            admin_count = AdminClass.query.filter_by(class_info_id=class_info.id).count()
-            schedule_count = CourseSchedule.query.filter_by(class_info_id=class_info.id).count()
+            user_count = user_counts.get(class_info.id, 0)
+            admin_count = admin_counts.get(class_info.id, 0)
+            schedule_count = schedule_counts.get(class_info.id, 0)
             if user_count == 0 and admin_count == 0 and (schedule_count == 0):
                 issues.append(
                     {

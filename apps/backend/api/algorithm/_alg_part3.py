@@ -6,7 +6,7 @@ from flask_restx import Namespace, Resource
 from services.attribution_service import AttributionService
 from services.rule_recommendation_service import RuleRecommendationService
 from services.score_predict_service import ScorePredictService
-from utils.decorators import safe_handle
+from ._algo_common import algo_safe_handle
 from utils.params import get_int_arg
 from utils.permission import requires_permission
 from utils.response import APIResponse
@@ -24,7 +24,7 @@ class RuleOptimization(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取规则优化建议
@@ -44,7 +44,7 @@ class RuleCombination(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取规则组合建议
@@ -61,7 +61,7 @@ class RuleStatistics(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取规则统计信息
@@ -77,7 +77,7 @@ class RuleRecommendTrain(Resource):
     @ns_algorithm.param("days", "训练数据天数，默认90")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         训练规则推荐模型
@@ -93,7 +93,7 @@ class RuleRecommendEvaluate(Resource):
     @ns_algorithm.param("days", "评估数据天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         评估规则推荐模型
@@ -110,7 +110,7 @@ class ScorePredict(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         预测学生考试成绩
@@ -127,7 +127,7 @@ class BatchScoreAttribution(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         批量分析某班级全部学生的成绩波动归因（近期 vs 前期：
@@ -146,7 +146,7 @@ class ScoreAttribution(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self, user_id):
         """
         分析学生成绩波动归因（近期 vs 前期：学业成绩/行为积分/出勤/作业完成）
@@ -163,7 +163,7 @@ class BatchScorePredict(Resource):
     @ns_algorithm.param("days", "统计天数，默认30")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         批量预测考试成绩
@@ -180,7 +180,7 @@ class ScoreDistribution(Resource):
     @ns_algorithm.param("class_name", "班级名称(可选)")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.view")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def get(self):
         """
         获取成绩分布预测
@@ -196,7 +196,7 @@ class ScorePredictTrain(Resource):
     @ns_algorithm.param("days", "训练数据天数，默认90")
     @ns_algorithm.response(200, "成功")
     @requires_permission("algorithm.manage")
-    @safe_handle(default_status=400, message="算法计算失败，请稍后重试")
+    @algo_safe_handle
     def post(self):
         """
         训练成绩预测模型

@@ -134,8 +134,6 @@ class CompositeScoreService:
         for count in unlock_counts:
             unlock_map[count.student_id] = count.count
 
-        user_ids = [user.id for user in users]
-
         data = []
         for user in users:
             behavior_score = user.current_score or 0

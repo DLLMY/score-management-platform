@@ -1,5 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
+from sqlalchemy import func
 
 from models import Device, DeviceGroup, DeviceGroupMapping, get_by_id
 from services.device_service import (
@@ -281,11 +282,17 @@ class DeviceGroupStats(Resource):
         # 获取每个分组的设备数量
         group_stats = []
         groups = DeviceGroup.query.all()
+        # 批量按 group_id 聚合设备数量，避免逐分组 COUNT（原实现每分组 1 次 SQL → 共 N 次）
+        counts = dict(
+            DeviceGroupMapping.query.with_entities(
+                DeviceGroupMapping.group_id, func.count(DeviceGroupMapping.id)
+            )
+            .group_by(DeviceGroupMapping.group_id)
+            .all()
+        )
         for group in groups:
             stats = group.to_dict()
-            stats["actual_device_count"] = DeviceGroupMapping.query.filter_by(
-                group_id=group.id
-            ).count()
+            stats["actual_device_count"] = counts.get(group.id, 0)
             group_stats.append(stats)
 
         return APIResponse.success(
