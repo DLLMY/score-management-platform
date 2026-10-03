@@ -38,3 +38,8 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 - ⚠️ **packed-refs 被写成 CRLF → `badRefName` 损坏（新型沙箱损坏）**：症状 `git fsck` 报 `packed-refs line N: badRefName 'refs/heads/main?'` + `invalid sha1 pointer 0000000...`，commit 时 `geometric repack failed`。根因是 `.git/packed-refs` 为 CRLF（git 要求 LF），尾随 `\r` 污染 refname + 全零 SHA 墓碑行。**`git update-ref -d` 因 `?` 触发 Windows 文件名非法无法用 git 命令删** → 必须用 Python `open(pr,'wb')` 写回**纯 LF** 干净 packed-refs（仅留有效 ref，先备份 `.bak`），再 `git fsck` 核验零报错；随后 push + `ls-remote` 核验（实测见 `memory/2026-09-27.md` B25）。
 - SQLite join User 双 join → ambiguous；conftest 动态 Namespace 须自带 `path`；同名类型多处定义（改前 grep 全仓定位真实源）。
 - ⚠️ **前端 `vitest run --coverage` 结束清理 `coverage/.tmp` 触发 safe-delete 守卫崩溃**（NEW）：删除 `.tmp`（216 原始 v8 文件 > 50 阈值）触发 `[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED]` Unhandled Error → 退出码非 0，**但覆盖率已算完、报告已写、测试全绿**。根因：守卫由 `node-language-shim.cjs`（经 `NODE_OPTIONS --require` 预载）注入，且 **vitest re-spawn node 用原始 env 重构** → `NODE_OPTIONS=` / `export` / `env -u` 清 safe-delete 相关 env 均**无法**在 vitest 进程内禁用（旧笔记「`CODEBUDDY_SAFE_DELETE_ENABLED=0` 可屏蔽」对 vitest **无效**，勿再信）。**绕过**：① 跑完直接读 `coverage/coverage-summary.json`（json-summary 在崩溃前已写出）取权威四指标，无 `threshold` 报错 + 无 FAIL 即 gate 通过；② 不带 `--coverage` 跑 `vitest run` 可干净 EXIT=0 验证零失败。
+
+## 项目现状快照（2026-10-03 评估更新）
+- **项目已无大型工程债可推进**：功能完成 + 生产就绪（P0 全收官）+ 技术债基本清零。D0/D1/D2 清理战役、F17 路由服务化、班主任工作台、ESP32 phonebox OTA、前端 D 线覆盖率均已收官。
+- ⚠️ **两份旧规划文档已严重过时，勿据此排期**：`docs/下一步开发计划-20260919.md`（D1–D6）与 `docs/TECH_DEBT_LEDGER.md`（DEBT-001）。2026-10-03 实测：D1 to_dict 83/83 全覆盖、D2 路由 0 文件 >600 行、D3 静默吞异常 0 处、D5 裸 except 实为注释误报（真实代码用 `except Exception`）、DEBT-001 腾讯云短信 P2-3 已移除 stub 并明确报错、`security.py` 第3行格式损坏亦已修复入库（git diff 空）。
+- 下一步方向由「产品新需求」或「极小残留债/文档审计」驱动；若用户无新功能需求，可转向刷新/归档过期文档（避免误导后续会话）。
