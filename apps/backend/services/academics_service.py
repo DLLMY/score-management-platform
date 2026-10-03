@@ -213,10 +213,17 @@ class AcademicsService:
             db.session.delete(link)
 
     def update_subject_order(self, data):
-        """批量更新科目排序；异常由 db_session_scope 回滚并上抛，路由捕获后回 500。"""
+        """批量更新科目排序；异常由 db_session_scope 回滚并上抛，路由捕获后回 500。
+
+        优化点评估 2026-10-03：将逐条 Subject.query.get 的 N 次查询收敛为一次 in_() 批量预取，
+        避免批量排序端点的 N+1（写路径非热路径，但量级随科目数线性增长）。
+        """
         with db_session_scope(detach=False):
+            ids = [item.get("id") for item in data if item.get("id") is not None]
+            subjects = Subject.query.filter(Subject.id.in_(ids)).all() if ids else []
+            by_id = {s.id: s for s in subjects}
             for item in data:
-                subject = Subject.query.get(item.get("id"))
+                subject = by_id.get(item.get("id"))
                 if subject:
                     subject.sort_order = item.get("order", 0)
 

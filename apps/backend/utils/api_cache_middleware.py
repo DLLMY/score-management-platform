@@ -3,7 +3,7 @@ import json
 import logging
 from functools import wraps
 
-from flask import jsonify, make_response, request
+from flask import g, jsonify, make_response, request
 
 from config.config_loader import config_loader
 from services.redis_cache_service import get_cache_service
@@ -14,10 +14,35 @@ DEFAULT_CACHE_TTL = config_loader.get_config("CACHE_TTL", {}).get("default", 60)
 API_CACHE_TTL = config_loader.get_config("API_CACHE_TTL", 300)
 
 
+def _cache_user_dimension():
+    """提取缓存键的用户维度（user_id + role），独立于装饰器执行顺序，杜绝跨用户缓存越权读取。
+
+    - 优先：g.current_user（requires_permission / requires_role 已挂载的已认证管理员）；
+    - 降级：直接从 Authorization Bearer 头解码 JWT（utils.security.decode_token），
+      与装饰器顺序无关，保证缓存键始终含用户身份；
+    - 无认证请求归为 'anon'（与 RBAC 无关的公共端点共享缓存，可接受）。
+    """
+    cu = getattr(g, "current_user", None)
+    if cu is not None:
+        return str(getattr(cu, "id", "anon")), str(getattr(cu, "role", "anon"))
+    try:
+        auth = request.headers.get("Authorization")
+        if auth and auth.startswith("Bearer "):
+            # 延迟导入，规避与 utils.security 的循环依赖
+            from utils.security import decode_token
+
+            payload = decode_token(auth.replace("Bearer ", "", 1))
+            if payload and "sub" in payload:
+                return str(payload["sub"]), str(payload.get("role", "anon"))
+    except Exception:
+        pass
+    return "anon", "anon"
+
+
 def generate_cache_key(prefix="api"):
     """
     生成API缓存键
-    基于请求方法、路径和查询参数生成唯一缓存键。
+    基于请求方法、路径、查询参数与【当前用户身份】生成唯一缓存键。
     Args:
         prefix: 缓存键前缀
     Returns:
@@ -32,8 +57,11 @@ def generate_cache_key(prefix="api"):
     dynamic_params = ["_", "timestamp", "t", "nocache"]
     for param in dynamic_params:
         args.pop(param, None)
+    # 用户维度：将 user_id/role 纳入键，防止返回与当前用户相关数据的 GET 端点
+    # 在 Redis / 多 gunicorn worker 下出现跨用户缓存越权读取（与 RBAC / 班级隔离铁律一致）。
+    uid, role = _cache_user_dimension()
     # 生成唯一键
-    data = f"{method}:{path}:{json.dumps(args, sort_keys=True)}"
+    data = f"{method}:{path}:{json.dumps(args, sort_keys=True)}:{uid}:{role}"
     hash_key = hashlib.sha256(data.encode()).hexdigest()
     return f"{prefix}:{path}:{hash_key}"
 

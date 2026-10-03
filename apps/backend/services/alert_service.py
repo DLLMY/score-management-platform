@@ -309,11 +309,15 @@ class AlertService:
             # 未读告警数
             unread = Alert.query.filter(Alert.is_read == False).count()
 
-            # 按级别统计
-            severity_stats = {}
-            for severity in self.SEVERITY_LEVELS:
-                count = Alert.query.filter(Alert.severity == severity).count()
-                severity_stats[severity] = count
+            # 按级别统计：一次 group_by 聚合替代逐级别 N 次 count（N+1 收敛）
+            severity_stats = {sev: 0 for sev in self.SEVERITY_LEVELS}
+            rows = (
+                db.session.query(Alert.severity, db.func.count())
+                .group_by(Alert.severity)
+                .all()
+            )
+            for sev, cnt in rows:
+                severity_stats[sev] = cnt
 
             # 今日告警数
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

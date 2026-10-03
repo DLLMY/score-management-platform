@@ -140,6 +140,13 @@ class ScoreRecord(db.Model):
     # DBs miss this column. Now promoted to a model field maintained by create_all / reconcile.
     operation_log_id = db.Column(db.Integer, nullable=True, index=True)
 
+    # 优化点评估 2026-10-03：复合索引 (student_id, created_at) 覆盖分析类高频时间范围查询
+    # WHERE student_id=? AND created_at BETWEEN ? AND ?，避免单列索引下的回表/扫描。
+    # 由 reconcile（生产）/ create_all（开发·测试）自动建索引，幂等。
+    __table_args__ = (
+        db.Index("ix_score_record_student_created", "student_id", "created_at"),
+    )
+
     user = db.relationship("User", backref="records")
     rule = db.relationship("ScoreRule", backref="records")
 

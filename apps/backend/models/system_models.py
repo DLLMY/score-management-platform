@@ -15,6 +15,14 @@ class OperationLog(db.Model):
     ip_address = db.Column(db.String(50))
     user_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    # 优化点评估 2026-10-03：OperationLog 此前 user_id / created_at 均无索引，
+    # 分析类时间范围查询（按 created_at 全量扫描 / 按 user_id+created_at 范围）缺覆盖索引。
+    # 补两个索引：ix_operation_log_created_at（全局时间范围）与
+    # ix_operation_log_user_created（用户维度时间范围），幂等建索引。
+    __table_args__ = (
+        db.Index("ix_operation_log_created_at", "created_at"),
+        db.Index("ix_operation_log_user_created", "user_id", "created_at"),
+    )
 
 
 
