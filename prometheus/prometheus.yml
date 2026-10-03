@@ -1,0 +1,24 @@
+# Prometheus 抓取配置 —— 成绩管理系统后端监控
+# 后端在 apps/backend/app/metrics_exporter.py 暴露 /metrics（Prometheus 原生，免鉴权）
+# 启动：prometheus --config.file=prometheus.yml
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "score-management"
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  - job_name: "score_backend"
+    metrics_path: "/metrics"
+    scheme: "http"
+    static_configs:
+      # 后端默认监听 127.0.0.1:5000（FLASK_HOST/FLASK_PORT 可覆盖）
+      # 生产经 nginx 反代时，可改为 nginx 地址（需确保 /metrics 可达且免鉴权）
+      - targets: ["localhost:5000"]
+        labels:
+          service: "score-backend"
+          env: "production"

@@ -1,0 +1,60 @@
+name: Dependency Audit
+
+# 依赖安全扫描固化闸门（对应 docs/reports/依赖安全扫描报告-20261003.md §5 加固建议）
+# - 后端 Python：pip-audit 扫 requirements.lock.txt（116 个 ==pin 包）
+#     · PyPI 源：主闸门，发现已知漏洞即非零退出（PR 时阻断合入）
+#     · OSV 源：交叉校验，网络偶发失败时仅告警（continue-on-error），不阻断
+# - 前端 npm：官方源 registry.npmjs.org 跑 npm audit
+#     （本机 npmmirror 镜像未实现安全审计端点，故 CI 强制走官方源）
+# - 触发：每月 1 日定时复扫 + 依赖/审计配置变更时的 push/PR
+on:
+  schedule:
+    - cron: "17 3 1 * *"   # 每月 1 日凌晨 03:17（避开整点高峰）
+  push:
+    paths:
+      - "apps/backend/requirements*.txt"
+      - "scripts/audit_deps.py"
+      - ".github/workflows/dependency-audit.yml"
+  pull_request:
+    paths:
+      - "apps/backend/requirements*.txt"
+      - "scripts/audit_deps.py"
+      - ".github/workflows/dependency-audit.yml"
+
+jobs:
+  python-audit:
+    name: Backend pip-audit (PyPI + OSV cross-check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip pip-audit
+      - name: pip-audit (PyPI source) — 主闸门
+        # 发现已知漏洞即非零退出，PR 时阻断合入；schedule 失败时发失败通知
+        run: python -m pip_audit -r requirements.lock.txt --service pypi --desc on --progress-spinner off
+      - name: pip-audit (OSV cross-check) — 仅告警
+        continue-on-error: true
+        run: python -m pip_audit -r requirements.lock.txt --service osv --desc on --progress-spinner off
+
+  frontend-audit:
+    name: Frontend npm audit (official registry)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (official registry)
+        # 强制官方源，绕过本机 npmmirror 不支持审计端点的限制
+        run: npm audit --registry=https://registry.npmjs.org/

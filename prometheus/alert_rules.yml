@@ -1,0 +1,55 @@
+# Prometheus 告警规则 —— 成绩管理系统后端
+# 由 prometheus.yml 的 rule_files 引用。需配套 Alertmanager 发送通知。
+groups:
+  - name: score_backend_alerts
+    rules:
+      - alert: TargetDown
+        expr: up{job="score_backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "后端监控目标不可达"
+          description: "Prometheus 抓取 score_backend 失败超过 1 分钟（/metrics 不可达或服务宕机）。"
+
+      - alert: High5xxErrorRate
+        expr: |
+          sum(rate(flask_http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(flask_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx 错误率过高"
+          description: "近 5 分钟 5xx 错误率超过 5%（当前 {{ $value | humanizePercentage }}），后端可能存在系统性故障。"
+
+      - alert: HighRequestLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(flask_http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 请求延迟过高"
+          description: "近 5 分钟 P95 延迟超过 1 秒（当前 {{ $value | humanizeDuration }}）。"
+
+      - alert: ExceptionRateSpike
+        expr: sum(rate(flask_exceptions_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "未捕获异常速率突增"
+          description: "近 5 分钟未捕获异常速率超过 0.1/s（当前 {{ $value | humanize }}），请排查异常堆栈。"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 500000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "进程常驻内存偏高"
+          description: "进程 RSS 超过 500MB 并持续 10 分钟（当前 {{ $value | humanize1024 }}B），警惕内存泄漏。"
