@@ -100,6 +100,8 @@ class MQTTManager:
             # 重启指令此前无任何回执、下发成功与否不可观测的问题；覆盖
             # phonebox/control/restart/ack 与 phonebox/control/restart/ack/{device_id}。
             ("phonebox/control/restart/ack/#", 1),
+            # 请假（硬件端）三 topic：req/cancel/query，控制连接即时派发
+            ("phonebox/leave/#", 1),
         ]
         self.TELEMETRY_SUBSCRIPTIONS = [
             ("phonebox/#", 0),
@@ -112,6 +114,7 @@ class MQTTManager:
             "phonebox/ota/",
             "phonebox/points/",
             "phonebox/control/restart/ack/",
+            "phonebox/leave/",
         )
 
     @property
@@ -255,6 +258,7 @@ class MQTTManager:
                 or topic.startswith("phonebox/ota/")
                 or topic.startswith("phonebox/points/")
                 or topic.startswith("phonebox/control/restart/ack/")
+                or topic.startswith("phonebox/leave/")
             ):
                 self._process_critical_message(topic, message)
         except Exception as e:
@@ -786,6 +790,7 @@ class MQTTManager:
                 from services.heartbeat_service import (
                     apply_heartbeat_to_device,
                     check_device_errors,
+                    extract_heartbeat_timestamp,
                     is_safe_device_id,
                     mark_device_offline_by_lwt,
                 )
@@ -826,7 +831,7 @@ class MQTTManager:
                     # 更新或创建心跳记录
                     heartbeat = DeviceHeartbeat.query.filter_by(device_id=device_id).first()
                     if heartbeat:
-                        heartbeat.timestamp = data.get("timestamp")
+                        heartbeat.timestamp = extract_heartbeat_timestamp(data)
                         heartbeat.status = data.get("status")
                         heartbeat.wifi_signal = data.get("wifi_signal")
                         heartbeat.uptime = data.get("uptime")
@@ -836,7 +841,7 @@ class MQTTManager:
                     else:
                         heartbeat = DeviceHeartbeat(
                             device_id=device_id,
-                            timestamp=data.get("timestamp"),
+                            timestamp=extract_heartbeat_timestamp(data),
                             status=data.get("status"),
                             wifi_signal=data.get("wifi_signal"),
                             uptime=data.get("uptime"),

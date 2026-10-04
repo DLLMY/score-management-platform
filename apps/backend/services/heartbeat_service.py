@@ -56,6 +56,32 @@ def is_safe_device_id(device_id) -> bool:
     return not any(ch in _DEVICE_ID_FORBIDDEN for ch in text)
 
 
+def extract_heartbeat_timestamp(data, now=None):
+    """从心跳 payload 提取 device_heartbeat.timestamp（Integer, NOT NULL）。
+
+    背景：DeviceHeartbeat.timestamp 列为 Integer NOT NULL，记录设备上报的
+    Unix 秒级时间戳。但部分设备固件（如手机箱 pbB8F8626222D0）的心跳 payload
+    不含 timestamp 字段，直接用 data.get('timestamp') 会得到 None，触发
+    sqlite3.IntegrityError: NOT NULL constraint failed: device_heartbeat.timestamp，
+    导致整条心跳事务回滚——设备 last_heartbeat 永不刷新、前端永远显示离线。
+
+    兜底策略：timestamp 缺失 / 为空 / 非整数时，回退为「心跳到达的服务端时刻」
+    （Unix 秒级），保证落库成功且语义合理（设备此刻确实在线）。
+    """
+    if not isinstance(data, dict):
+        base = now or datetime.now()
+        return int(base.timestamp())
+    raw = data.get("timestamp")
+    if raw is None or raw == "":
+        base = now or datetime.now()
+        return int(base.timestamp())
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        base = now or datetime.now()
+        return int(base.timestamp())
+
+
 def apply_heartbeat_to_device(device, heartbeat_data, now=None, touch_status=True):
     """把心跳 payload 写入 Device 实例（差异 #3：统一心跳落库语义）。
 

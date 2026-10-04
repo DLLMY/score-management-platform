@@ -14,6 +14,7 @@ from services.class_time_checker import ClassTimeChecker
 # 差异 #3/#11：心跳统一写入 + 设备错误自动告警
 from services.heartbeat_service import (
     apply_heartbeat_to_device,
+    extract_heartbeat_timestamp,
     check_device_errors,
     is_safe_device_id,
     mark_device_offline_by_lwt,
@@ -434,7 +435,7 @@ class MQTTMessageService:
     @ensure_app_context
     def handle_heartbeat_message(self, data):
         device_id = data.get("device_id")
-        timestamp = data.get("timestamp")
+        timestamp = extract_heartbeat_timestamp(data)
         status = data.get("status")
         wifi_signal = data.get("wifi_signal")
         uptime = data.get("uptime")
