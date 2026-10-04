@@ -1,6 +1,7 @@
 """MQTT消息服务单元测试"""
 
 import json
+from datetime import datetime
 from unittest.mock import Mock, patch
 
 try:
@@ -232,11 +233,84 @@ class TestMQTTMessageService:
         assert payload["success"]
         assert payload.get("new_points") == 90
 
+    # ---------- G3: points/result 下行补 device_id（新固件 v1.6.0+ 定向校验） ----------
+
+    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message_service.mqtt_manager")
+    def test_g3_points_query_success_includes_device_id(self, mock_manager, mock_publish):
+        """G3: 积分查询成功下行 payload 应包含 device_id（多设备定向）。"""
+        mock_user = Mock()
+        mock_user.current_score = 90
+        mock_user.id = 1
+        mock_user.name = "Test User"
+        mock_manager.get_cached_user.return_value = mock_user
+
+        service = MQTTMessageService()
+        service.handle_points_query({"card_id": "123", "device_id": "dev1", "request_id": "req001"})
+
+        mock_publish.assert_called_once()
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert payload["success"]
+        assert payload["device_id"] == "dev1"
+
+    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message_service.mqtt_manager")
+    def test_g3_points_query_no_card_includes_device_id(self, mock_manager, mock_publish):
+        """G3: 积分查询缺 card_id 的错误下行也应带 device_id。"""
+        service = MQTTMessageService()
+        service.handle_points_query({"device_id": "dev1", "request_id": "req001"})
+
+        mock_publish.assert_called_once()
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert not payload["success"]
+        assert payload["device_id"] == "dev1"
+
+    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message_service.mqtt_manager")
+    def test_g3_points_query_no_device_id_omits_field(self, mock_manager, mock_publish):
+        """G3: 旧设备不上行 device_id 时，下行 payload 不应含该字段（零破坏）。"""
+        mock_user = Mock()
+        mock_user.current_score = 90
+        mock_user.id = 1
+        mock_user.name = "Test User"
+        mock_manager.get_cached_user.return_value = mock_user
+
+        service = MQTTMessageService()
+        service.handle_points_query({"card_id": "123", "request_id": "req001"})
+
+        mock_publish.assert_called_once()
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert "device_id" not in payload
+
+    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message_service.mqtt_manager")
+    def test_g3_points_add_no_card_includes_device_id(self, mock_manager, mock_publish):
+        """G3: 积分加分（无 card_id 错误分支）下行带 device_id。"""
+        service = MQTTMessageService()
+        service.handle_points_add({"device_id": "dev1", "amount": 5})
+
+        mock_publish.assert_called_once()
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert not payload["success"]
+        assert payload["device_id"] == "dev1"
+
+    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message_service.mqtt_manager")
+    def test_g3_points_sub_no_card_includes_device_id(self, mock_manager, mock_publish):
+        """G3: 积分减分（无 card_id 错误分支）下行带 device_id。"""
+        service = MQTTMessageService()
+        service.handle_points_sub({"device_id": "dev1", "amount": 5})
+
+        mock_publish.assert_called_once()
+        payload = json.loads(mock_publish.call_args[0][1])
+        assert not payload["success"]
+        assert payload["device_id"] == "dev1"
+
     @patch("services.mqtt_message_service.publish_mqtt")
     @patch("services.mqtt_message_service.mqtt_manager")
     @patch("models.TimeRule")
     def test_handle_unlock_message_not_in_time(self, mock_time_rule, mock_manager, mock_publish):
-        """测试解锁消息-不在允许时间内"""
+        """测试解锁消息-不在允许时间内（G8：时段判定强制用服务器时钟，忽略设备上行 hour/minute）"""
         mock_rule = Mock()
         mock_rule.day_of_week = -1
         mock_rule.start_hour = 9
@@ -246,8 +320,18 @@ class TestMQTTMessageService:
         mock_rule.allow_unlock = False
         mock_time_rule.query.filter_by.return_value.all.return_value = [mock_rule]
 
-        service = MQTTMessageService()
-        service.handle_unlock_message({"box_id": "A", "card_id": "123", "hour": 14, "minute": 30})
+        # 服务器时钟为 14:30（落在 deny 窗口外 → not_in_time）；
+        # 设备上行 hour=10/minute=0 处于窗口内，必须被忽略，以证明 G8 生效。
+        class _FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 1, 1, 14, 30, 0)
+
+        with patch("services.mqtt_message_service.datetime", _FixedDateTime):
+            service = MQTTMessageService()
+            service.handle_unlock_message(
+                {"box_id": "A", "card_id": "123", "hour": 10, "minute": 0}
+            )
 
         mock_publish.assert_called_once()
         payload = json.loads(mock_publish.call_args[0][1])
@@ -469,6 +553,75 @@ class TestMQTTMessageService:
                 }
             )
 
+        assert True
+
+    def test_auth_gate_bypasses_lwt_offline_signature(self):
+        """G7: 已发放密钥的设备，LWT 离线遗嘱（无签名）跳过签名校验被放行；在线数据仍须签名。"""
+        from services.mqtt_manager import MQTTManager
+
+        class _Dev:
+            device_secret = "already-issued-secret"
+
+        dev = _Dev()
+        # 离线遗嘱：broker 断线后代发，无 ts/nonce/sig
+        offline_data = {"device_id": "devX", "status": "offline"}
+        assert (
+            MQTTManager._passes_device_auth_gate(dev, offline_data, "devX", kind="心跳") is True
+        )
+        # 在线数据但无签名：仍须被签名门禁拒绝
+        online_data = {"device_id": "devX", "status": "online"}
+        assert (
+            MQTTManager._passes_device_auth_gate(dev, online_data, "devX", kind="心跳") is False
+        )
+        # 非心跳类（如 OTA 注册）的离线消息不应触发 bypass
+        assert (
+            MQTTManager._passes_device_auth_gate(dev, offline_data, "devX", kind="OTA 注册")
+            is False
+        )
+
+    @patch("services.mqtt_message_service.publish_mqtt")
+    def test_handle_heartbeat_lwt_offline_marks_device_offline(self, mock_publish, app):
+        """G7: 收到 broker 代发的离线遗嘱，设备秒级置 offline（不强制 online、不自动注册）。"""
+        service = MQTTMessageService()
+        with app.app_context():
+            from models import Device, db
+
+            dev = Device(device_id="lwt-dev-1", name="LWT", status="online", device_secret="sec")
+            db.session.add(dev)
+            db.session.commit()
+            device_id = dev.device_id
+
+            # 离线遗嘱 payload（无签名，模拟 broker 代发）
+            service.handle_heartbeat_message({"device_id": device_id, "status": "offline"})
+
+            reloaded = Device.query.filter_by(device_id=device_id).first()
+            assert reloaded is not None
+            assert reloaded.status == "offline"
+            # 不应被 touch_status 强制回 online
+            assert reloaded.status != "online"
+
+    def test_mark_device_offline_by_lwt_helper(self):
+        """G7: 共享辅助函数 mark_device_offline_by_lwt 将设备置 offline 并记录最后心跳（None 安全）。"""
+
+        class _Dev:
+            status = "online"
+            last_heartbeat = None
+            updated_at = None
+
+        dev = _Dev()
+        # 注入固定时间，避免依赖 datetime.now()
+        from datetime import datetime
+
+        from services.heartbeat_service import mark_device_offline_by_lwt
+
+        fixed = datetime(2026, 1, 1, 12, 0, 0)
+        mark_device_offline_by_lwt(dev, now=fixed)
+        assert dev.status == "offline"
+        assert dev.last_heartbeat == fixed
+        assert dev.updated_at == fixed
+
+        # None 设备不报错（离线遗嘱对应未知设备时无需置位）
+        mark_device_offline_by_lwt(None)
         assert True
 
     @patch("services.mqtt_message_service.publish_mqtt")
