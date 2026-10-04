@@ -100,6 +100,8 @@ apps/backend/logs/*.log.*
 apps/backend/logs/*.json.*
 apps/backend/logs/.__*.lock
 apps/backend/logs/*.json
+# 整目录显式忽略（防御性：任何运行期产物均不入库，避免日后误提交）
+apps/backend/logs/
 
 
 # ================ 系统和 IDE ================
