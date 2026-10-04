@@ -9,8 +9,8 @@ class TestRuleLimitRegression:
     """F1: check_rule_limits 缺 .first() → min_interval 规则 500 的回归"""
 
     def test_check_rule_limits_uses_first(self):
-        """records_routes.check_rule_limits 的 min_interval 分支必须调用 .first()（Query 恒真 bug）"""
-        from api.scores.records_routes import check_rule_limits
+        """score_record_orchestration.check_rule_limits 的 min_interval 分支必须调用 .first()（Query 恒真 bug）"""
+        from api.scores.score_record_orchestration import check_rule_limits
 
         src = inspect.getsource(check_rule_limits)
         # 原 bug：query 未 .first()，last_record 为 Query 对象恒真 → .created_at 抛 AttributeError
@@ -25,7 +25,7 @@ class TestRuleLimitRegression:
 
     def test_check_rule_limits_returns_tuple_with_valid_rule(self, app, db_session):
         """配置 min_interval 的规则调用 check_rule_limits 不再抛 AttributeError"""
-        from api.scores.records_routes import check_rule_limits
+        from api.scores.score_record_orchestration import check_rule_limits
         from models import ScoreRecord, ScoreRule, User
 
         with app.app_context():

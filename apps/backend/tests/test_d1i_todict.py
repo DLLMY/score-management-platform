@@ -17,7 +17,7 @@ def test_MQTTLog_to_dict():
 def test_ProcessedMessage_to_dict():
     obj = ProcessedMessage()
     out = obj.to_dict()
-    expected = ['id', 'message_id', 'record_id', 'new_score', 'client_id', 'processed_at']
+    expected = ['id', 'message_id', 'record_id', 'new_score', 'client_id', 'processed_at', 'success', 'result_reason']
     assert set(out.keys()) == set(expected)
     assert all('secret' not in k and k != 'password' for k in out.keys())
     assert set(obj.to_dict(fields=['id']).keys()) == {'id'}

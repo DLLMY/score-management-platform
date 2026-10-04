@@ -9,7 +9,7 @@ from models.user_models import AdminRole, SecurityAudit
 def test_Device_to_dict():
     obj = Device()
     out = obj.to_dict()
-    expected = ['id', 'device_id', 'name', 'status', 'last_heartbeat', 'wifi_signal', 'uptime', 'box_a_status', 'box_b_status', 'system_state', 'class_info_id', 'admin_id', 'ip_address', 'fw_version', 'platform', 'device_type', 'auto_update', 'ota_status', 'last_ota_push_at', 'free_heap', 'battery_level', 'temperature', 'last_error', 'error_count', 'alert_enabled', 'heartbeat_timeout', 'last_seen_ts', 'created_at', 'updated_at', 'mac_address', 'subnet_mask', 'broadcast_ip', 'wake_on_lan_enabled', 'last_wake_time', 'wake_count', 'is_active', 'wol_port', 'wol_description']
+    expected = ['id', 'device_id', 'name', 'status', 'last_heartbeat', 'wifi_signal', 'uptime', 'box_a_status', 'box_b_status', 'system_state', 'class_info_id', 'admin_id', 'ip_address', 'fw_version', 'platform', 'device_type', 'auto_update', 'ota_status', 'last_ota_push_at', 'ota_protect_until', 'free_heap', 'battery_level', 'temperature', 'last_error', 'error_count', 'alert_enabled', 'heartbeat_timeout', 'last_seen_ts', 'created_at', 'updated_at', 'mac_address', 'subnet_mask', 'broadcast_ip', 'wake_on_lan_enabled', 'last_wake_time', 'wake_count', 'is_active', 'wol_port', 'wol_description']
     assert set(out.keys()) == set(expected)
     # secret columns never leaked
     assert all('secret' not in k and k != 'password' for k in out.keys())
