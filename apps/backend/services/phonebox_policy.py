@@ -122,8 +122,9 @@ def _normalize_window_item(item, idx):
     if err:
         return None, err
 
-    if (sh, sm) > (eh, em):
-        return None, f"第 {idx + 1} 个时段的结束时间不能早于开始时间"
+    # 支持跨午夜时段：start > end 视为「当天 start ~ 次日 end」（如 23:00~01:00）。
+    # 这是合法的产品需求（晚自习后/凌晨时段），不应被拒绝。
+    cross_day = (sh, sm) > (eh, em)
 
     return {
         "day": day,
@@ -131,6 +132,7 @@ def _normalize_window_item(item, idx):
         "start_minute": sm,
         "end_hour": eh,
         "end_minute": em,
+        "cross_day": cross_day,
     }, None
 
 
@@ -138,8 +140,10 @@ def _now_in_windows(windows, now):
     """判断 now 是否落在任一预设时段内。
 
     windows 形如 [{"day":-1,"start_hour":10,"start_minute":0,
-                   "end_hour":10,"end_minute":20}, ...]
+                   "end_hour":10,"end_minute":20,"cross_day":false}, ...]
     day=-1 表示每天；0~6 表示周一~周日。
+    cross_day=true 表示跨午夜时段（如 23:00~01:00）：覆盖当天 start~24:00
+    与次日 00:00~end；指定 day 时，次日尾段归属 (day+1)%7。
     """
     if not windows:
         return False
@@ -147,22 +151,24 @@ def _now_in_windows(windows, now):
     t = now.time()
     for w in windows:
         day = w.get("day", -1)
-        if day != -1 and day != wd:
-            continue
-        start = t.replace(
-            hour=int(w.get("start_hour", 0)),
-            minute=int(w.get("start_minute", 0)),
-            second=0,
-            microsecond=0,
-        )
-        end = t.replace(
-            hour=int(w.get("end_hour", 0)),
-            minute=int(w.get("end_minute", 0)),
-            second=0,
-            microsecond=0,
-        )
-        if start <= t <= end:
-            return True
+        sh, sm = int(w.get("start_hour", 0)), int(w.get("start_minute", 0))
+        eh, em = int(w.get("end_hour", 0)), int(w.get("end_minute", 0))
+        start = t.replace(hour=sh, minute=sm, second=0, microsecond=0)
+        end = t.replace(hour=eh, minute=em, second=0, microsecond=0)
+        if w.get("cross_day", False):
+            if day == -1:
+                # 每天：t 在 start 之后 或 end 之前（任一日内都算命中）
+                if t >= start or t <= end:
+                    return True
+            else:
+                # 指定 weekday：当天 start 之后，或次日尾段 end 之前
+                if (wd == day and t >= start) or (wd == (day + 1) % 7 and t <= end):
+                    return True
+        else:
+            if day != -1 and day != wd:
+                continue
+            if start <= t <= end:
+                return True
     return False
 
 

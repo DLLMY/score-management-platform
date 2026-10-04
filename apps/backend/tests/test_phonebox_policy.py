@@ -134,6 +134,43 @@ class TestPhoneBoxPolicyEvaluate:
         res = svc.evaluate(cls.id)
         assert res["decision"] == POLICY_DEFER
 
+    def test_cross_midnight_window_everyday(self, db_session):
+        """跨午夜时段（23:00~01:00，每天）在当天深夜与次日小时间均应命中。"""
+        cls = _make_class(db_session)
+        svc.set_policy(
+            cls.id,
+            allow_self_unlock=True,
+            unlock_windows=[{"day": -1, "start_hour": 23, "start_minute": 0,
+                             "end_hour": 1, "end_minute": 0}],
+            updated_by=1,
+        )
+        # 当天 23:30 命中
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 5, 23, 30))["decision"] == POLICY_ALLOW_WINDOW
+        # 次日 00:30 命中（小时间尾段）
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 6, 0, 30))["decision"] == POLICY_ALLOW_WINDOW
+        # 02:00 不命中
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 6, 2, 0))["decision"] == POLICY_DEFER
+
+    def test_cross_midnight_window_specific_weekday(self, db_session):
+        """指定 weekday 的跨午夜时段：当天尾段与次日首段分别归属正确。"""
+        cls = _make_class(db_session)
+        # 周一(0) 23:00~次日 01:00
+        svc.set_policy(
+            cls.id,
+            allow_self_unlock=True,
+            unlock_windows=[{"day": 0, "start_hour": 23, "start_minute": 0,
+                             "end_hour": 1, "end_minute": 0}],
+            updated_by=1,
+        )
+        # 周一 23:30 命中
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 5, 23, 30))["decision"] == POLICY_ALLOW_WINDOW
+        # 周二 00:30 命中（次日尾段）
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 6, 0, 30))["decision"] == POLICY_ALLOW_WINDOW
+        # 周二 02:00 不命中
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 6, 2, 0))["decision"] == POLICY_DEFER
+        # 周三完全不命中
+        assert svc.evaluate(cls.id, check_time=datetime(2026, 1, 7, 23, 30))["decision"] == POLICY_DEFER
+
 
 # ---------------- 路由层：班主任班级隔离与读写 ----------------
 
@@ -177,7 +214,11 @@ class TestPhoneBoxPolicyRoutes:
         body = resp.get_json()
         assert resp.status_code == 200
         assert body["data"]["allow_self_unlock"] is True
-        assert body["data"]["unlock_windows"] == windows
+        # 归一化后回传会补 cross_day 字段
+        assert body["data"]["unlock_windows"] == [
+            {"day": -1, "start_hour": 12, "start_minute": 0,
+             "end_hour": 12, "end_minute": 20, "cross_day": False}
+        ]
 
     def test_teacher_one_click_override(self, client, db_session):
         cls, teacher = self._setup_teacher(db_session)
@@ -245,13 +286,24 @@ class TestNormalizeWindows:
             "start_minute": 5,
             "end_hour": 10,
             "end_minute": 15,
+            "cross_day": False,
         }
 
-    def test_rejects_end_before_start(self):
+    def test_accepts_cross_midnight_window(self):
+        """跨午夜时段（start > end）现在被接受并标记 cross_day，不再被拒绝。"""
         out, err = svc.normalize_windows(
-            [{"day": -1, "start_hour": 15, "start_minute": 0, "end_hour": 14, "end_minute": 0}]
+            [{"day": -1, "start_hour": 23, "start_minute": 0, "end_hour": 1, "end_minute": 0}]
         )
-        assert out is None and "结束时间不能早于开始时间" in err
+        assert err is None
+        assert out[0]["cross_day"] is True
+        assert out[0]["start_hour"] == 23 and out[0]["end_hour"] == 1
+
+    def test_rejects_invalid_range(self):
+        """超出时分取值范围仍被拒绝（与是否跨午夜无关）。"""
+        out, err = svc.normalize_windows(
+            [{"day": -1, "start_hour": 25, "start_minute": 0, "end_hour": 14, "end_minute": 0}]
+        )
+        assert out is None and err is not None
 
     def test_rejects_out_of_range_hour(self):
         out, err = svc.normalize_windows(
@@ -383,18 +435,19 @@ class TestStudentUnlockUsesTeacherPolicy:
         _make_time_rule(db_session, allow_unlock=False)  # 全局禁止
 
         now = datetime.now()
-        start = now - timedelta(minutes=10)
-        end = now + timedelta(minutes=10)
+        # 预设时段覆盖全天（day=-1, 00:00~23:59），确保「now 命中预设时段」这一前置
+        # 对任意执行时刻恒成立；同时避免原写法用 now±10min 在临近午夜时跨越零点，
+        # 导致 start/end 跨日、被 normalize_windows 判为 end<start 而抛 ValueError。
         svc.set_policy(
             cls.id,
             allow_self_unlock=True,
             unlock_windows=[
                 {
                     "day": -1,
-                    "start_hour": start.hour,
-                    "start_minute": start.minute,
-                    "end_hour": end.hour,
-                    "end_minute": end.minute,
+                    "start_hour": 0,
+                    "start_minute": 0,
+                    "end_hour": 23,
+                    "end_minute": 59,
                 }
             ],
             updated_by=None,
