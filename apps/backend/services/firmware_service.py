@@ -17,10 +17,28 @@ OperationLog 写入与原始实现一致并入同一事务单元（原实现固�
 均属写路径缺陷修复，未改动任何契约语义。
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from models import DeviceFirmwareUpdate, FirmwareVersion, db
+from models import Device, DeviceFirmwareUpdate, FirmwareVersion, db
 from utils.audit_log import write_operation_log
+
+
+def _apply_ota_protect_window(device_id, protect_until):
+    """G4: 设置/清除设备 OTA 离线保护窗。
+
+    protect_until 为 datetime 表示开启保护窗；为 None 表示升级结束解除。
+    设备不存在时静默跳过；提交失败回滚，不影响主流程。
+    """
+    if not device_id:
+        return
+    device = Device.query.filter_by(device_id=device_id).first()
+    if device is None:
+        return
+    device.ota_protect_until = protect_until
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def create_firmware_version(data, created_by=None):
@@ -116,6 +134,8 @@ def report_ota_status(
         )
         db.session.add(update_record)
         db.session.commit()
+        # G4: 开启 OTA 离线保护窗（now+10min），升级期间心跳中断不判离线/不告警
+        _apply_ota_protect_window(device_id, datetime.now() + timedelta(minutes=10))
         return
 
     if status == "completed":
@@ -130,6 +150,9 @@ def report_ota_status(
             update_record.status = "completed"
             update_record.completed_at = datetime.now()
             db.session.commit()
+
+        # G4: 升级结束，解除离线保护窗
+        _apply_ota_protect_window(device_id, None)
 
         write_operation_log(
             "firmware_upgrade",
@@ -153,6 +176,9 @@ def report_ota_status(
             update_record.completed_at = datetime.now()
             update_record.error_message = error_message
             db.session.commit()
+
+        # G4: 升级失败，解除离线保护窗
+        _apply_ota_protect_window(device_id, None)
 
         write_operation_log(
             "firmware_upgrade",

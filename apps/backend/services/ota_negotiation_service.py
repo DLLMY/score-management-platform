@@ -19,6 +19,7 @@ import hashlib
 import hmac
 import logging
 import math
+import os
 import random
 import re
 import threading
@@ -227,6 +228,42 @@ def build_download_url(firmware, request=None, with_token=None):
         if base:
             return f"{base}{rel}"
     return rel
+
+
+def check_ota_deploy_config(force=False):
+    """G5: OTA 部署自检。
+
+    生产环境（或 force=True，用于测试）下，校验 OTA_FIRMWARE_BASE_URL 是否已配置为可用的
+    绝对 http(s) 地址。缺失或不是 http(s) 绝对地址时，记录高优告警——否则 MQTT 自动推送下发的
+    固件下载地址将是相对路径 / 无 scheme 地址，ESP32 设备无法直连下载，无缝 OTA「最后一公里」会失效。
+
+    该函数设计为「只告警、绝不抛错」，可在应用启动时安全调用，不影响正常启动流程。
+    """
+    is_production = (os.getenv("APP_ENV", "").lower() == "production") or force
+    if not is_production:
+        # 开发 / 测试环境不做强制校验（手动 GitHub OTA 不依赖该地址）
+        return True
+
+    if OTA_FIRMWARE_BASE_URL and OTA_FIRMWARE_BASE_URL.startswith(("http://", "https://")):
+        logger.info("[OTA自检] OTA_FIRMWARE_BASE_URL 已正确配置：%s", OTA_FIRMWARE_BASE_URL)
+        return True
+
+    if not OTA_FIRMWARE_BASE_URL:
+        logger.warning(
+            "[OTA自检][高优] 生产环境未配置 OTA_FIRMWARE_BASE_URL！\n"
+            "  后果：MQTT 自动推送下发的固件下载地址为相对路径，ESP32 设备无法直连下载，"
+            "无缝 OTA「最后一公里」将失败。\n"
+            "  修复：在 .env / 部署环境变量中设置 "
+            "OTA_FIRMWARE_BASE_URL=https://<公网域名>（不含末尾斜杠）。"
+        )
+    else:
+        logger.warning(
+            "[OTA自检][高优] OTA_FIRMWARE_BASE_URL 配置非法：%r 不是 http(s) 绝对地址！\n"
+            "  后果：下发的固件下载地址缺少协议头，ESP32 设备无法解析，无缝 OTA「最后一公里」将失败。\n"
+            "  修复：将 OTA_FIRMWARE_BASE_URL 设置为以 http:// 或 https:// 开头的公网可访问地址。",
+            OTA_FIRMWARE_BASE_URL,
+        )
+    return False
 
 
 def _parse_hhmm(s):

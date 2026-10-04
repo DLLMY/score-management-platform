@@ -306,11 +306,12 @@ String makeMsgId(const char* action) {
 }
 ```
 
-> ⚠️ **重要**：`phonebox/unlock/*`、`phonebox/heartbeat` 的**处理路径不做 `msg_id` 去重**
-> （心跳本身是周期覆盖写，开箱走 `UnlockValidator` 的日/周限额做约束）。
-> **重复发送 `phonebox/heartbeat` 是安全的；重复发送 `phonebox/unlock/{box}` 会重复扣分！**
-> 实际保护来自 `UnlockValidator` 的 `DAILY_LIMIT=10` / `WEEKLY_LIMIT=5`。
-> **设备侧必须实现「一次刷卡只发一次 unlock」**，禁止在未收到回包时盲目重试 unlock。
+> ⚠️ **重要**：`phonebox/heartbeat` 为周期覆盖写、不做去重（本身安全）；
+> `phonebox/unlock/*` **现已支持 `msg_id` 幂等去重**（G2 修复：同 `msg_id` 重投只扣一次分、并重发同一结果，
+> `msg_id` 为空时跳过去重以保持历史行为）。
+> **重复发送 `phonebox/heartbeat` 是安全的；重复发送 `phonebox/unlock/{box}` 带相同 `msg_id` 会被后端去重，
+> 但不带 `msg_id` 仍会重复扣分！** 实际保护还来自 `UnlockValidator` 的 `DAILY_LIMIT` / `WEEKLY_LIMIT`。
+> **设备侧强烈建议每次 unlock 带上唯一 `msg_id`，并在未收到回包时谨慎重试。**
 
 ---
 
@@ -562,6 +563,7 @@ return device.status == "online"
 
 > **注意**：`phonebox/points/*` 三条指令的回包 topic **统一是 `phonebox/points/result`**（不带设备后缀）。
 > 多台设备同时在线时，设备侧必须**用 `card_id` / `request_id` 自行过滤**是否是自己关心的回包。
+> 回包现已额外携带 `device_id` 字段（G3 修复，仅当设备上行带 `device_id` 时下发），多设备场景可直接据此过滤。
 
 ---
 
@@ -600,6 +602,7 @@ return device.status == "online"
 ```
 
 > 设备侧应展示「已提交，等待老师审批」，**不要**直接显示分数已加。
+> 回包同时携带 `device_id`（G3 修复，仅当上行带 `device_id` 时），便于多设备定向识别。
 
 ---
 
@@ -779,21 +782,23 @@ return device.status == "online"
 | `success` / `completed` | `idle`（且 `fw_version` 更新为 `to_version`） |
 | `failed` / `error` / `download_failed` / `space_insufficient` / `begin_failed` / `signature_failed` / `version_check_failed` / `resume_exhausted` / `incomplete` | `failed` |
 
+> **部署强约束（G5）**：OTA 升级指令中的固件下载地址为**平台自有直链**
+> `https://<OTA_FIRMWARE_BASE_URL>/api/firmware/download/{id}`（绝对地址，设备可直连）。
+> **生产环境必须配置 `OTA_FIRMWARE_BASE_URL`**，否则后端无法生成可解析的绝对 URL、自动推送会中止（详见《06-差异同步与优化方案》G5）。
+
 ---
 
 ### 6.11 重启指令 — `phonebox/control/restart`
 
-**方向**：后端 → 设备（**广播**，不带 device_id）
+**方向**：后端 → 设备（**定向**，payload 带 `device_id`；topic 仍为广播 `phonebox/control/restart` 以兼容旧设备，设备按 `device_id` 自行判定）
 
-后端在 `POST /api/devices/{id}/remote-control` 且 `action=restart` 时下发：
+后端在 `POST /api/devices/{id}/remote-control` 且 `action=restart` 时下发（P0 #5 修复：补 `device_id`）：
 
 ```json
-{ "command": "restart" }
+{ "command": "restart", "device_id": "esp32_box_001" }
 ```
 
-> ⚠️ **当前实现是广播 topic `phonebox/control/restart`**，即**发给所有设备**。
-> 设备侧收到后**必须自行判断**是否是自己被重启——但当前 payload **不含 `device_id`**，
-> 无法区分！详见《06-差异同步与优化方案》§5。
+> 设备侧收到后**按 payload 中的 `device_id` 比对自身**，仅当一致时才执行重启，避免广播误重启其他设备。
 
 ---
 

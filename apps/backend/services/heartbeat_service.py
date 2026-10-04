@@ -116,10 +116,34 @@ def is_device_online(device, now=None, default_timeout_seconds: int = 60) -> boo
     if device.last_heartbeat is None:
         return False
     now = now or datetime.now()
+    # G4: OTA 离线保护窗 —— 升级下载/重启时心跳中断属正常，保护窗内强制视为在线，
+    # 避免 OTA 期间被误判离线（否则 check_heartbeat_timeout 会把 status 改 offline，
+    # 连带 is_device_online 也返回 False，保护窗失效）。
+    protect_until = getattr(device, "ota_protect_until", None)
+    if protect_until is not None and now < protect_until:
+        return True
     threshold = device.heartbeat_timeout or default_timeout_seconds
     if (now - device.last_heartbeat).total_seconds() > threshold:
         return False
     return device.status == "online"
+
+
+def mark_device_offline_by_lwt(device, now=None):
+    """G7: LWT 遗嘱到达 —— 设备确已离线，直接置 offline 并记录最后心跳时刻。
+
+    与 apply_heartbeat_to_device(touch_status=True) 的语义相反：遗嘱代表设备已断线，
+    绝不能强制回 online。仅在保护窗外生效（保护窗内 is_device_online 已优先判在线）。
+
+    Args:
+        device: Device 模型实例（可为 None，此时无操作）
+        now: 当前时间（默认 datetime.now()，便于测试注入）
+    """
+    if device is None:
+        return
+    now = now or datetime.now()
+    device.status = "offline"
+    device.last_heartbeat = now
+    device.updated_at = now
 
 
 def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
@@ -145,6 +169,8 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
             Device.last_heartbeat < timeout_threshold,
             Device.status == "online",
             Device.alert_enabled,
+            # G4: OTA 保护窗内的设备不判超时（升级期心跳中断属正常，避免误告警/误置 offline）
+            (Device.ota_protect_until.is_(None) | (Device.ota_protect_until < datetime.now())),
         ).all()
 
         logger.info(f"发现 {len(timeout_devices)} 台设备心跳超时")

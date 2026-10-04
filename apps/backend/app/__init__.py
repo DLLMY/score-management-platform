@@ -99,12 +99,29 @@ def create_app(lightweight=False):
 
             init_metrics(app)
 
+        # G5: OTA 部署自检（生产环境未配置 OTA_FIRMWARE_BASE_URL 则高优告警）。
+        # TESTING 环境跳过，避免测试噪声；生产判定由函数内部完成。
+        # 自检失败绝不影响启动流程（仅告警）。
+        _run_ota_deploy_self_check(app)
+
     # D-M1: 日志自动归档（压缩轮转 + 超期清理）启动钩子
     from utils.log_archiver import setup_log_archiving
 
     setup_log_archiving(app)
 
     return app
+
+
+def _run_ota_deploy_self_check(app):
+    """G5: 启动期 OTA 部署自检（失败安全）。仅非 TESTING 应用调用，异常绝不阻断启动。"""
+    if app.config.get("TESTING"):
+        return
+    try:
+        from services.ota_negotiation_service import check_ota_deploy_config
+
+        check_ota_deploy_config()
+    except Exception as e:  # 自检异常不阻断启动
+        app.logger.warning(f"OTA 部署自检执行异常（已忽略）: {e}")
 
 
 def get_app(lightweight=False):

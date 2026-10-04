@@ -4,7 +4,7 @@ import ssl
 import threading
 import time
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 import paho.mqtt.client as mqtt
@@ -422,6 +422,13 @@ class MQTTManager:
             logger.warning(f"[设备认证] 白名单已开启，拒绝未登记设备{kind}注册: {device_id}")
             return False
 
+        # G7: LWT 遗嘱（broker 在设备断线后代发，payload 含 status=offline）。
+        # broker 已做传输层认证（设备确实建立过连接），且设备无法在断线瞬间
+        # 重新计算 HMAC 签名，故对离线遗嘱跳过应用层签名校验，直接放行以便秒级置 offline。
+        # 仅对心跳类且 status=offline 的消息生效，其他门禁语义不变。
+        if kind == "心跳" and isinstance(data, dict) and data.get("status") == "offline":
+            return True
+
         from utils.device_auth import verify_device_signature
 
         sig_ok, sig_reason = verify_device_signature(device, data)
@@ -653,7 +660,10 @@ class MQTTManager:
         )
 
     def _handle_ota_started(self, device, device_id, from_version, to_version):
-        """开始升级：落一条 in_progress 记录，设备在线时置为 upgrading。"""
+        """开始升级：落一条 in_progress 记录，设备在线时置为 upgrading。
+
+        G4: 同时开启 OTA 离线保护窗（now+10min），升级期间心跳中断不判离线/不告警。
+        """
         from models import DeviceFirmwareUpdate, db
 
         record = DeviceFirmwareUpdate(
@@ -668,6 +678,12 @@ class MQTTManager:
         logger.info(f"[OTA] 设备 {device_id} 开始升级: {from_version} -> {to_version}")
 
         if device:
+            # G4: 开启离线保护窗，避免下载/重启期心跳中断被误判离线
+            device.ota_protect_until = datetime.now() + timedelta(minutes=10)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
             return "upgrading"
         return None
 
@@ -711,6 +727,8 @@ class MQTTManager:
             if to_version:
                 device.fw_version = to_version
             device.last_ota_push_at = None
+            # G4: 升级结束，解除离线保护窗，恢复常规心跳判定
+            device.ota_protect_until = None
 
         log = OperationLog(
             operation_type="firmware_upgrade_success",
@@ -749,6 +767,8 @@ class MQTTManager:
         device_ota_status = None
         if device:
             device_ota_status = "failed"
+            # G4: 升级失败，解除离线保护窗
+            device.ota_protect_until = None
         return device_ota_status
 
     def _process_heartbeat(self, topic, message):
@@ -767,6 +787,7 @@ class MQTTManager:
                     apply_heartbeat_to_device,
                     check_device_errors,
                     is_safe_device_id,
+                    mark_device_offline_by_lwt,
                 )
 
                 if not is_safe_device_id(device_id):
@@ -779,6 +800,13 @@ class MQTTManager:
 
                     # 差异 #4：白名单 + 签名准入（默认关闭/无密钥 ⇒ 放行，零行为变化）
                     if not self._passes_device_auth_gate(device, data, device_id, kind="心跳"):
+                        return
+
+                    # G7: LWT 遗嘱（status=offline）→ 设备确已离线，直接置 offline 后返回，
+                    # 不自动注册、不强制 online。
+                    if data.get("status") == "offline":
+                        mark_device_offline_by_lwt(device)
+                        db.session.commit()
                         return
 
                     if not device:

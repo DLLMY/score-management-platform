@@ -58,6 +58,9 @@ class ProcessedMessage(db.Model):
     record_id = db.Column(db.Integer)
     new_score = db.Column(db.Integer)
     client_id = db.Column(db.String(100))
+    # G2 开锁结果幂等缓存：记录首次下发的成功/失败与原因码，重复 msg_id 时原样重发。
+    success = db.Column(db.Boolean, nullable=True)
+    result_reason = db.Column(db.String(64), nullable=True)
     processed_at = db.Column(db.DateTime, default=datetime.now)
 
 
@@ -69,6 +72,8 @@ class ProcessedMessage(db.Model):
             "record_id": self.record_id,
             "new_score": self.new_score,
             "client_id": self.client_id,
+            "success": self.success,
+            "result_reason": self.result_reason,
             "processed_at": self.processed_at,
         }
         if fields:
@@ -139,6 +144,8 @@ class Device(db.Model):
     auto_update = db.Column(db.Boolean, default=True)  # 是否允许后端自动推送 OTA
     ota_status = db.Column(db.String(20), default="idle")  # idle/pending/upgrading/failed
     last_ota_push_at = db.Column(db.DateTime)  # 最近一次自动推送指令下发时间
+    # G4: OTA 期间离线保护窗（升级下载/重启时心跳中断属正常，保护窗内不判离线/不告警）
+    ota_protect_until = db.Column(db.DateTime, nullable=True)
     free_heap = db.Column(db.Integer)
     battery_level = db.Column(
         db.Float
@@ -204,6 +211,7 @@ class Device(db.Model):
             "auto_update": self.auto_update,
             "ota_status": self.ota_status,
             "last_ota_push_at": self.last_ota_push_at,
+            "ota_protect_until": self.ota_protect_until,
             "free_heap": self.free_heap,
             "battery_level": self.battery_level,
             "temperature": self.temperature,
