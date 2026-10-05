@@ -47,6 +47,11 @@ beat_scheduler = CELERY_BEAT_SCHEDULER
 beat_schedule_filename = CELERY_BEAT_SCHEDULE_FILENAME
 task_time_limit = CELERY_TASK_TIME_LIMIT
 task_soft_time_limit = CELERY_TASK_SOFT_TIME_LIMIT
+# 无 broker（如开发/沙箱未运行 Redis）时：让 .delay() 立即失败（不重试、短超时），
+# 触发 mqtt_manager 的同步兜底路径处理遥测，避免阻塞 MQTT 回调线程；
+# broker 可达时此配置无副作用。
+broker_connection_max_retries = 0
+broker_connection_timeout = 2
 worker_log_format = "%(asctime)s - %(levelname)s - %(message)s"
 worker_task_log_format = "%(asctime)s - %(levelname)s - %(task_name)s - %(task_id)s - %(message)s"
 imports = ("tasks",)
