@@ -1179,6 +1179,25 @@ export interface PhoneBoxPolicy {
   override_active: boolean;
   updated_by: number | null;
   updated_at: string | null;
+  /** 请假审批模式：true=请假需审批（F2/F3） */
+  leave_approval_required?: boolean;
+  /** 请假免扣分：true=请假期间开箱不扣分（F3 免扣） */
+  leave_exempt_deduction?: boolean;
+}
+
+/** 硬件端请假记录（Approval type='leave'）序列化结构，对应 /api/leave/* 端点 */
+export interface PhoneBoxLeave {
+  id: number;
+  student_id: number;
+  user_name: string | null;
+  leave_type: string;
+  status: string;
+  start_time: string | null;
+  end_time: string | null;
+  card_id: string | null;
+  device_id: string | null;
+  created_at: string | null;
+  reason?: string | null;
 }
 
 export interface ClassPeriod {
@@ -2080,15 +2099,28 @@ export interface Api {
   phoneBoxPolicy: {
     /** 获取本班（班主任）或指定班级（admin）的手机箱开箱策略 */
     get: (classInfoId?: number) => Promise<PhoneBoxPolicy>;
-    /** 更新总开关 / 预设时段（班主任仅本班，admin 可指定班级） */
+    /** 更新总开关 / 预设时段 / 请假开关（班主任仅本班，admin 可指定班级） */
     update: (
-      data: { allow_self_unlock?: boolean; unlock_windows?: UnlockWindow[] },
+      data: {
+        allow_self_unlock?: boolean;
+        unlock_windows?: UnlockWindow[];
+        leave_approval_required?: boolean;
+        leave_exempt_deduction?: boolean;
+      },
       classInfoId?: number
     ) => Promise<PhoneBoxPolicy>;
     /** 一键临时放行本班开箱 minutes 分钟（含上课期间） */
     override: (minutes: number, classInfoId?: number) => Promise<PhoneBoxPolicy>;
     /** 取消一键临时放行 */
     cancelOverride: (classInfoId?: number) => Promise<PhoneBoxPolicy>;
+  };
+  leave: {
+    /** 当前生效中的请假列表（F6，供班主任/管理端查看） */
+    getActive: () => Promise<PhoneBoxLeave[]>;
+    /** 待审批的请假列表（F2 审批模式） */
+    getPending: () => Promise<PhoneBoxLeave[]>;
+    /** 教师代销假（取消待审批/生效中的请假） */
+    cancel: (leaveId: number) => Promise<PhoneBoxLeave>;
   };
   mqtt: {
     getConfig: () => Promise<MQTTConfig>;
@@ -4309,6 +4341,12 @@ const api: Api = {
           : '/api/phonebox-policy/cancel-override',
         { method: 'POST' }
       ) as Promise<PhoneBoxPolicy>,
+  },
+  leave: {
+    getActive: () => request('/api/leave/active') as Promise<PhoneBoxLeave[]>,
+    getPending: () => request('/api/leave/pending') as Promise<PhoneBoxLeave[]>,
+    cancel: (leaveId: number) =>
+      request(`/api/leave/${leaveId}/cancel`, { method: 'POST' }) as Promise<PhoneBoxLeave>,
   },
   mqtt: {
     getConfig: () => request('/api/mqtt/config') as Promise<MQTTConfig>,

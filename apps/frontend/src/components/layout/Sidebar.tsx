@@ -513,6 +513,12 @@ function Sidebar({ isMobileMenuOpen: externalMobileMenuOpen, onCloseMobileMenu }
             icon: Smartphone,
             permission: 'phonebox.unlock.manage',
           },
+          {
+            path: '/leave-management',
+            label: '请假管理',
+            icon: Calendar,
+            permission: 'phonebox.unlock.manage',
+          },
         ],
       },
       {

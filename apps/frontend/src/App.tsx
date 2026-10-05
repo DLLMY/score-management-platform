@@ -108,6 +108,7 @@ const RankRuleList = createLazyComponent(() => import('./pages/RankRuleList'));
 const CategoryList = createLazyComponent(() => import('./pages/CategoryList'));
 const TimeRuleList = createLazyComponent(() => import('./pages/TimeRuleList'));
 const PhoneBoxPolicy = createLazyComponent(() => import('./pages/PhoneBoxPolicy'));
+const LeaveManagement = createLazyComponent(() => import('./pages/LeaveManagement'));
 const ClassPeriodSettings = createLazyComponent(() => import('./pages/ClassPeriodSettings'));
 const ClassManagement = createLazyComponent(() => import('./pages/ClassManagement'));
 const SubjectManagement = createLazyComponent(() => import('./pages/SubjectManagement'));
@@ -463,6 +464,14 @@ function App() {
                     element={
                       <PermissionGuard requiredPermission='phonebox.unlock.manage'>
                         <PhoneBoxPolicy />
+                      </PermissionGuard>
+                    }
+                  />
+                  <Route
+                    path='leave-management'
+                    element={
+                      <PermissionGuard requiredPermission='phonebox.unlock.manage'>
+                        <LeaveManagement />
                       </PermissionGuard>
                     }
                   />

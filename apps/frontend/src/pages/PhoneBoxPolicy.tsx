@@ -48,6 +48,9 @@ const PhoneBoxPolicyInner: React.FC = () => {
   const [allowSelfUnlock, setAllowSelfUnlock] = useState(true);
   const [windows, setWindows] = useState<UnlockWindow[]>([]);
   const [minutes, setMinutes] = useState<number>(15);
+  // 请假设置（硬件端请假，F2/F3）
+  const [leaveApprovalRequired, setLeaveApprovalRequired] = useState(false);
+  const [leaveExemptDeduction, setLeaveExemptDeduction] = useState(false);
   const [saving, setSaving] = useState(false);
   const [overriding, setOverriding] = useState(false);
   // 无法定位班级时（管理员未选班 / 班主任未绑班）展示空状态，而不是给一个点了就报错的表单
@@ -79,6 +82,8 @@ const PhoneBoxPolicyInner: React.FC = () => {
         setPolicy(data);
         setAllowSelfUnlock(data.allow_self_unlock);
         setWindows(data.unlock_windows || []);
+        setLeaveApprovalRequired(data.leave_approval_required ?? false);
+        setLeaveExemptDeduction(data.leave_exempt_deduction ?? false);
       })
       .catch((err) => {
         // 班主任未绑定班级时后端返回 403，用空状态提示替代错误弹窗
@@ -106,7 +111,12 @@ const PhoneBoxPolicyInner: React.FC = () => {
     setSaving(true);
     try {
       const data = await api.phoneBoxPolicy.update(
-        { allow_self_unlock: allowSelfUnlock, unlock_windows: windows },
+        {
+          allow_self_unlock: allowSelfUnlock,
+          unlock_windows: windows,
+          leave_approval_required: leaveApprovalRequired,
+          leave_exempt_deduction: leaveExemptDeduction,
+        },
         classInfoId
       );
       setPolicy(data);
@@ -268,6 +278,37 @@ const PhoneBoxPolicyInner: React.FC = () => {
                 </p>
               </div>
               <Switch checked={allowSelfUnlock} onChange={setAllowSelfUnlock} />
+            </div>
+          </Card>
+
+          {/* 请假设置（硬件端请假，F2/F3） */}
+          <Card className='p-5'>
+            <div className='flex items-center gap-2 mb-3'>
+              <Smartphone className='w-5 h-5 text-primary-600' />
+              <h2 className='text-lg font-semibold text-gray-800 dark:text-slate-100'>请假设置</h2>
+            </div>
+            <p className='text-sm text-gray-500 dark:text-slate-400 mb-4'>
+              硬件端刷卡因请假开箱时的处理规则：是否要求先审批、是否免除扣分。
+            </p>
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='font-medium text-gray-800 dark:text-slate-200'>请假需审批</p>
+                  <p className='text-xs text-gray-500 dark:text-slate-400 mt-1'>
+                    开启后，学生的硬件端请假需教师审批通过才生效。
+                  </p>
+                </div>
+                <Switch checked={leaveApprovalRequired} onChange={setLeaveApprovalRequired} />
+              </div>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='font-medium text-gray-800 dark:text-slate-200'>请假免扣分</p>
+                  <p className='text-xs text-gray-500 dark:text-slate-400 mt-1'>
+                    开启后，请假生效期间学生刷卡开箱不计入扣分（防滥用默认关闭）。
+                  </p>
+                </div>
+                <Switch checked={leaveExemptDeduction} onChange={setLeaveExemptDeduction} />
+              </div>
             </div>
           </Card>
 
