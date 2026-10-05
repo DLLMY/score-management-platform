@@ -117,7 +117,7 @@ export function GlobalLoading(): JSX.Element | null {
   if (!state.isLoading) return null;
 
   return (
-    <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-50'>
+    <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-[200]'>
       <div className='bg-white rounded-lg p-6 shadow-xl flex flex-col items-center'>
         <div className='w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4'></div>
         <p className='text-gray-700'>{state.message}</p>
@@ -132,7 +132,7 @@ export function GlobalErrorBoundary(): JSX.Element | null {
   if (!state.hasError) return null;
 
   return (
-    <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-50'>
+    <div className='fixed inset-0 bg-black/30 flex items-center justify-center z-[200]'>
       <div className='bg-white rounded-lg p-6 shadow-xl max-w-md'>
         <div className='flex items-center mb-4'>
           <div className='w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3'>

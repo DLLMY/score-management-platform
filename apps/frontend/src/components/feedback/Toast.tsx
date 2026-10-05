@@ -91,7 +91,7 @@ const Toast = memo<ToastProps>(({ message, onClose }) => {
 
   return (
     <div
-      className={`fixed top-6 right-6 z-50 w-full max-w-sm ${
+      className={`fixed top-6 right-6 z-[200] w-full max-w-sm ${
         isClosing ? 'animate-slide-out' : 'animate-slide-in'
       }`}
     >

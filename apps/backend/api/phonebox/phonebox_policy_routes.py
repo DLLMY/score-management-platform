@@ -35,6 +35,12 @@ policy_model = ns_phonebox_policy.model(
             "[{'day':-1,'start_hour':10,'start_minute':0,"
             "'end_hour':10,'end_minute':20}]"
         ),
+        "leave_approval_required": fields.Boolean(
+            description="硬件端请假是否需要审批（默认 False 直生效）"
+        ),
+        "leave_exempt_deduction": fields.Boolean(
+            description="硬件端请假生效期间开锁是否免扣分（默认 False 正常扣）"
+        ),
     },
 )
 
@@ -59,6 +65,8 @@ policy_response = ns_phonebox_policy.model(
         "override_active": fields.Boolean,
         "updated_by": fields.Integer,
         "updated_at": fields.String,
+        "leave_approval_required": fields.Boolean,
+        "leave_exempt_deduction": fields.Boolean,
     },
 )
 
@@ -134,6 +142,8 @@ def _serialize(policy, class_info_id):
             "override_active": False,
             "updated_by": None,
             "updated_at": None,
+            "leave_approval_required": None,
+            "leave_exempt_deduction": None,
         }
     now = datetime.now()
     return {
@@ -145,6 +155,8 @@ def _serialize(policy, class_info_id):
         "override_active": bool(policy.override_until and policy.override_until > now),
         "updated_by": policy.updated_by,
         "updated_at": policy.updated_at.isoformat() if policy.updated_at else None,
+        "leave_approval_required": policy.leave_approval_required,
+        "leave_exempt_deduction": policy.leave_exempt_deduction,
     }
 
 
@@ -179,12 +191,16 @@ class PhoneBoxPolicyResource(Resource):
         data = ns_phonebox_policy.payload or {}
         allow = data.get("allow_self_unlock")
         windows = data.get("unlock_windows")
+        leave_approval_required = data.get("leave_approval_required")
+        leave_exempt_deduction = data.get("leave_exempt_deduction")
         admin = _current_admin()
         try:
             policy = policy_service.set_policy(
                 cid,
                 allow_self_unlock=allow if allow is not None else None,
                 unlock_windows=windows if windows is not None else None,
+                leave_approval_required=leave_approval_required if leave_approval_required is not None else None,
+                leave_exempt_deduction=leave_exempt_deduction if leave_exempt_deduction is not None else None,
                 updated_by=admin.id if admin else None,
             )
             return APIResponse.success(data=_serialize(policy, cid))
@@ -192,8 +208,9 @@ class PhoneBoxPolicyResource(Resource):
             # 时段格式非法属于用户输入问题，返回 400 并带上具体原因
             logger.error("phonebox_policy_routes.py: %s", e)
             return APIResponse.error(message="操作失败，请稍后重试", status_code=400)
-        except Exception as e:
-            return APIResponse.error(message=f"更新失败: {e}", status_code=500)
+        except Exception:
+            logger.exception("更新手机箱策略失败")
+            return APIResponse.error(message="更新失败，请稍后重试", status_code=500)
 
 
 @ns_phonebox_policy.route("/override")

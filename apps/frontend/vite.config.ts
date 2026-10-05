@@ -44,6 +44,20 @@ export default defineConfig(({ mode }) => {
         '/swagger/': { target: apiUrl, changeOrigin: true },
       },
     },
+    optimizeDeps: {
+      // 显式预构建稳定核心依赖，减少 dev 冷启动时逐个 ESM 转换的请求数（缓解模块瀑布首屏）。
+      // antd / recharts 已由 build.manualChunks 分包处理，不在此重复预构建，避免与按需 tree-shake 冲突。
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'zustand',
+        'axios',
+        'lucide-react',
+        'dayjs',
+        'clsx',
+      ],
+    },
     build: {
       outDir: 'dist',
       sourcemap: false,
