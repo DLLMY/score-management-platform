@@ -218,3 +218,11 @@ apps/frontend/full_tests.txt
 apps/frontend/hooks_tests.txt
 apps/frontend/store_tests.txt
 apps/frontend/utils_tests.txt
+
+# ================ 2026-10-05 工作树收口 ================
+# Celery beat 调度器运行时产物（持久化调度状态，体积大且不入库）
+apps/backend/celerybeat-schedule.*
+# 根级运行日志（服务/celery 运行期日志，不入库）
+/logs/
+# 可恢复隔离目录（诊断脚本暂存，保留本地、不删不入库）
+.quarantine/
