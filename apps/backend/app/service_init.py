@@ -1,10 +1,17 @@
 import contextlib
+import os
+import sys
 import threading
 import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from utils.logger import log_error, log_info, log_warning
+
+# 是否为 Celery Worker 进程：启动命令固定为 `python -m celery worker -A celery_app ...`，
+# argv 中必含 "worker" 与 "celery_app"。Worker 只需 DB/Redis 上下文处理任务，不应再初始化
+# MQTT 双连接与 APScheduler（否则会共用后端 client_id 撞车、EMQX 互踢、遥测订阅抖动丢心跳）。
+_IS_CELERY_WORKER = "worker" in sys.argv[1:] and "celery_app" in sys.argv
 
 # 记录由 init_scheduler 启动的调度器实例，供测试 teardown（pytest_unconfigure）
 # 统一关闭，避免非守护线程挂起 pytest 进程。
@@ -16,8 +23,14 @@ def init_services(app, lightweight=False):
         init_redis_cache(app)
         init_di_container(app)
         init_config_watcher(app)
-        init_mqtt(app)
-        init_scheduler(app)
+        # 在 Celery Worker 进程中跳过 MQTT 连接与调度器：
+        # worker 仅需 DB/Redis 上下文处理异步任务，自建 MQTT 双连接会与后端共用
+        # 同一 client_id 前缀（int(time.time()) 1 秒精度）撞车，导致 EMQX 互踢、
+        # 后端遥测订阅反复抖动、QoS0 心跳丢帧，设备永远刷新不到在线状态。
+        # 仅当本进程是 celery worker（argv 含 "worker" + "celery_app"）时跳过。
+        if not _IS_CELERY_WORKER:
+            init_mqtt(app)
+            init_scheduler(app)
         init_cache_warmup(app)
         init_nlp_service(app)
         init_websocket(app)
@@ -107,31 +120,64 @@ def init_mqtt(app):
                 from models import MQTTConfig
 
                 mqtt_config = MQTTConfig.query.first()
-                if not mqtt_config:
-                    log_info("MQTT配置未找到，跳过MQTT连接")
-                    return
+                if mqtt_config:
+                    cfg = {
+                        "broker": mqtt_config.broker,
+                        "client_id": mqtt_config.client_id,
+                        "username": mqtt_config.username,
+                        "password": mqtt_config.password,
+                        "timeout": mqtt_config.timeout,
+                        "keepalive": mqtt_config.keepalive,
+                    }
+                    log_info(
+                        f"[MQTT] 使用数据库配置: broker={mqtt_config.broker}, "
+                        f"client_id={mqtt_config.client_id}, "
+                        f"username={'***' if mqtt_config.username else '(空)'}"
+                    )
+                else:
+                    # 差异：未配置 MQTTConfig 时回退到 MQTTManager.DEFAULT_CONFIG（含正确 broker），
+                    # 避免「配置缺失 → 静默跳过 → 永远收不到心跳」的哑故障；凭据缺失会在连接阶段
+                    # 以 rc 日志暴露，便于定位。
+                    from services.mqtt_manager import MQTTManager
+
+                    _def = MQTTManager().DEFAULT_CONFIG
+                    cfg = {
+                        k: _def[k]
+                        for k in (
+                            "broker",
+                            "client_id",
+                            "username",
+                            "password",
+                            "timeout",
+                            "keepalive",
+                        )
+                    }
+                    log_warning(
+                        "[MQTT] 数据库 MQTTConfig 未配置，回退到 MQTTManager.DEFAULT_CONFIG "
+                        f"(broker={cfg['broker']})；若 EMQX 需要鉴权，请先在管理端配置 MQTT 凭据"
+                    )
 
                 tcp_mqtt_config = {
-                    "broker": mqtt_config.broker,
+                    "broker": cfg["broker"],
                     "port": 8883,
-                    "client_id": mqtt_config.client_id + "_tcp",
-                    "username": mqtt_config.username,
-                    "password": mqtt_config.password,
+                    "client_id": cfg["client_id"] + "_tcp",
+                    "username": cfg["username"],
+                    "password": cfg["password"],
                     "ssl": True,
-                    "timeout": min(5, mqtt_config.timeout),
-                    "keepalive": mqtt_config.keepalive,
+                    "timeout": min(5, cfg["timeout"]),
+                    "keepalive": cfg["keepalive"],
                     "transport": "tcp",
                 }
 
                 ws_mqtt_config = {
-                    "broker": mqtt_config.broker,
+                    "broker": cfg["broker"],
                     "port": 8084,
-                    "client_id": mqtt_config.client_id + "_ws",
-                    "username": mqtt_config.username,
-                    "password": mqtt_config.password,
+                    "client_id": cfg["client_id"] + "_ws",
+                    "username": cfg["username"],
+                    "password": cfg["password"],
                     "ssl": True,
-                    "timeout": mqtt_config.timeout,
-                    "keepalive": mqtt_config.keepalive,
+                    "timeout": cfg["timeout"],
+                    "keepalive": cfg["keepalive"],
                     "transport": "websockets",
                     "ws_path": "/mqtt",
                 }
@@ -176,10 +222,30 @@ def init_mqtt(app):
                     chosen = "websocket"
 
                 app.mqtt_manager = manager
+                from services.mqtt_manager import MQTTConnectionState
+
+                # 遥测连接（负责接收 phonebox/# 心跳）必须建立，否则设备永远刷不到在线状态。
+                # 旧逻辑只判断 control(is_connected)，遥测失败时会被「已连接」假象掩盖。
+                if manager._telemetry_state != MQTTConnectionState.CONNECTED:
+                    log_warning(
+                        "[MQTT] 控制连接已建立但【遥测连接未建立】，重试一次订阅 phonebox/# ..."
+                    )
+                    try:
+                        manager._connect_telemetry()
+                    except Exception as _te:
+                        log_error(f"[MQTT] 遥测连接重试失败: {_te}", exception=_te)
                 log_info(
                     f"后台线程：默认MQTT管理器已设置: {chosen}, "
-                    f"connected={mqtt_service.mqtt_manager.is_connected}"
+                    f"control_connected={manager.is_connected}, "
+                    f"telemetry_state={manager._telemetry_state.value}, "
+                    f"telemetry_subscribed={manager._telemetry_subscribed_topics}, "
+                    f"control_subscribed={manager._subscribed_topics}"
                 )
+                if manager._telemetry_state != MQTTConnectionState.CONNECTED:
+                    log_error(
+                        "[MQTT] 遥测连接最终未建立！将无法接收 phonebox/# 心跳，"
+                        "设备在线状态不会刷新——请检查 broker/凭据/网络是否可达 EMQX:8883"
+                    )
 
         except Exception as e:
             # exception=e 会一并记录堆栈，替代原 traceback.print_exc() 直出
@@ -282,6 +348,14 @@ def init_scheduler(app):
 
         scheduler.add_job(lambda: scheduled_approval_timeout_check(app), "interval", minutes=5)
         scheduler.add_job(lambda: scheduled_notify_check(app), "interval", seconds=10)
+        # 请假（硬件端）周期过期双保险之一（另一为读时惰性过期，见 leave_service）
+        try:
+            from tasks.scheduler import scheduled_leave_expiry
+
+            scheduler.add_job(lambda: scheduled_leave_expiry(app), "interval", minutes=1)
+            log_info("请假过期检查任务已启动，每1分钟执行一次")
+        except Exception as e:
+            log_error(f"请假过期任务注册失败（不影响其他定时任务）: {e}", exception=e)
         log_info("审批超时检查任务已启动，每5分钟执行一次")
         log_info("定时通知检查任务已启动，每10秒执行一次")
     except Exception as e:
