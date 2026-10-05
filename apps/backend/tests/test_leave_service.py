@@ -65,7 +65,7 @@ def _active_leave(db_session, user, hours=2):
     return a
 
 
-def _make_teacher(db_session, username="leaveteacher"):
+def _make_teacher(db_session, username="leaveteacher", class_info_id=None):
     from models import Admin, AdminRole, RolePermissionMapping
     from utils.security import hash_password
 
@@ -74,7 +74,7 @@ def _make_teacher(db_session, username="leaveteacher"):
         password=hash_password("test123456"),
         role="teacher",
         real_name="班主任",
-        primary_class_id=None,
+        primary_class_id=class_info_id,
     )
     db_session.add(admin)
     db_session.commit()
@@ -304,7 +304,7 @@ class TestLeaveRoutes:
         cls = _make_class(db_session)
         user = _make_user(db_session, cls.id)
         _active_leave(db_session, user, hours=3)
-        teacher = _make_teacher(db_session)
+        teacher = _make_teacher(db_session, class_info_id=cls.id)
         resp = client.get("/api/leave/active", headers=_teacher_headers(teacher))
         assert resp.status_code == 200
         body = resp.get_json()
@@ -328,7 +328,7 @@ class TestLeaveRoutes:
             )
         )
         db_session.commit()
-        teacher = _make_teacher(db_session)
+        teacher = _make_teacher(db_session, class_info_id=cls.id)
         resp = client.get("/api/leave/pending", headers=_teacher_headers(teacher))
         assert resp.status_code == 200
         body = resp.get_json()
@@ -338,7 +338,7 @@ class TestLeaveRoutes:
         cls = _make_class(db_session)
         user = _make_user(db_session, cls.id)
         a = _active_leave(db_session, user, hours=3)
-        teacher = _make_teacher(db_session)
+        teacher = _make_teacher(db_session, class_info_id=cls.id)
         resp = client.post(
             f"/api/leave/{a.id}/cancel", headers=_teacher_headers(teacher)
         )

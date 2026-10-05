@@ -67,6 +67,9 @@ def test_correction_update_status(client, app, auth_headers):
     assert body["success"] is True
     assert "纠正状态已更新" in body["message"]
     with app.app_context():
+        # expire_all：强制重新 SELECT，避免同一 session 的 identity map 在
+        # 多文件 + --cov 场景下返回未过期对象的幽灵实例（与 test_correction_delete 同一偶发假失败）
+        db.session.expire_all()
         rec = NLPCorrection.query.get(cid)
         assert rec.status == "approved"
         assert rec.confidence_after == 1.0

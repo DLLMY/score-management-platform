@@ -1,0 +1,229 @@
+{
+  "approval": {
+    "req": {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/approvals/2/approve",
+      "status": null
+    },
+    "id": 2
+  },
+  "delNotif": {
+    "create": {
+      "status": 201,
+      "title": "E2E_DEL_1791196833823",
+      "id": 58
+    },
+    "deleteReq": {
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/58",
+      "status": null
+    },
+    "id": 58
+  },
+  "editCat": {
+    "beforeName": "E2E_EDIT_1791196751440",
+    "req": {
+      "method": "PUT",
+      "url": "http://127.0.0.1:3000/api/score-categories/1",
+      "status": null
+    },
+    "afterName": "E2E_EDIT_1791196865459",
+    "id": 1
+  },
+  "_reqs": [
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/auth/login",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/recent?admin_id=1&limit=10",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/dashboard/data",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/approvals?page=1&per_page=20",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/classes",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/approvals/2/approve",
+      "_st": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/?admin_id=1&page=1&per_page=20",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rules",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/",
+      "_st": 201
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/score-categories",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/subjects",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/recent?admin_id=1&limit=10",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/?admin_id=1&page=1&per_page=20",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/dashboard/data",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/classes",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rules",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/score-categories",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/subjects",
+      "_st": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/class-periods",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/time-rules",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/users?page=1&per_page=20",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/system/config",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rank-rules",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/devices",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": null
+    },
+    {
+      "method": "DELETE",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/58",
+      "_st": 200
+    },
+    {
+      "method": "PUT",
+      "url": "http://127.0.0.1:3000/api/score-categories/1",
+      "_st": null
+    }
+  ],
+  "_log": [
+    "loggedIn=true",
+    "dashboard visible",
+    "approval= {\"req\":{\"method\":\"POST\",\"url\":\"http://127.0.0.1:3000/api/approvals/2/approve\",\"status\":null},\"id\":2}",
+    "delNotif.create= {\"status\":201,\"title\":\"E2E_DEL_1791196833823\",\"id\":58}",
+    "delNotif.marked= true",
+    "delNotif= {\"create\":{\"status\":201,\"title\":\"E2E_DEL_1791196833823\",\"id\":58},\"deleteReq\":{\"method\":\"DELETE\",\"url\":\"http://127.0.0.1:3000/api/admin_notifications/58\",\"status\":null},\"id\":58}",
+    "editCat= {\"beforeName\":\"E2E_EDIT_1791196751440\",\"req\":{\"method\":\"PUT\",\"url\":\"http://127.0.0.1:3000/api/score-categories/1\",\"status\":null},\"afterName\":\"E2E_EDIT_1791196865459\",\"id\":1}"
+  ]
+}

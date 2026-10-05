@@ -1,0 +1,200 @@
+{
+  "rule": {
+    "name": "E2E_RULE_1791198704446",
+    "post": {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/rules",
+      "_st": 201
+    }
+  },
+  "schedule": {
+    "classroom": "E2E教室865",
+    "post": null
+  },
+  "parentContact": {
+    "fname": "E2E_F21901",
+    "post": {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/parent/contacts",
+      "_st": null
+    }
+  },
+  "_reqs": [
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/auth/login",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/admin_notifications/recent?admin_id=1&limit=10",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rbac/admin-roles/1",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/dashboard/data",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rules?page=1&per_page=50",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/score-categories",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rules/templates",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/classes",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/rules",
+      "_st": 201
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rules",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/subjects",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/course-schedules?per_page=200",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/class-periods",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/classes/",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/subjects?per_page=200",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/admins",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/time-rules",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/users?page=1&per_page=20",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/system/config",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/rank-rules",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/devices",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/course-schedules?class_info_id=2&per_page=200",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/course-schedules/check-conflict?class_info_id=2&classroom=E2E%E6%95%99%E5%AE%A4865&day_of_week=0&period_number=1",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+      "_st": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/parent/contacts?page=1&per_page=50",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/users?per_page=500&skip_cache=true",
+      "_st": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:3000/api/users?per_page=500&skip_cache=true",
+      "_st": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/parent/contacts",
+      "_st": null
+    }
+  ],
+  "_log": [
+    "loggedIn=true",
+    "rule= {\"name\":\"E2E_RULE_1791198704446\",\"post\":{\"method\":\"POST\",\"url\":\"http://127.0.0.1:3000/api/rules\",\"_st\":null}}",
+    "schedule= {\"classroom\":\"E2E教室865\",\"post\":null}",
+    "parentContact= {\"fname\":\"E2E_F21901\",\"post\":{\"method\":\"POST\",\"url\":\"http://127.0.0.1:3000/api/parent/contacts\",\"_st\":null}}"
+  ]
+}

@@ -20,7 +20,7 @@ def test_NotificationConfig_to_dict():
 def test_PhoneBoxPolicy_to_dict():
     obj = PhoneBoxPolicy()
     out = obj.to_dict()
-    expected = ['id', 'class_info_id', 'allow_self_unlock', 'unlock_windows', 'override_until', 'updated_by', 'created_at', 'updated_at']
+    expected = ['id', 'class_info_id', 'allow_self_unlock', 'unlock_windows', 'override_until', 'leave_approval_required', 'leave_exempt_deduction', 'updated_by', 'created_at', 'updated_at']
     assert set(out.keys()) == set(expected)
     assert all('secret' not in k and k != 'password' for k in out.keys())
     sub = obj.to_dict(fields=['id'])

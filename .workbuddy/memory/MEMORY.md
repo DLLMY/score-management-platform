@@ -10,6 +10,8 @@
 ## 运行 / 测试（口径固定）
 - 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端**强杀全部 python 再重启**（SocketIO 不 reload）。
 - pytest/run_regression **必须** `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug）。全量串行基线 **2225 passed / 7 skipped / 0 failed**（P0-d 落地后实测）；勿用 xdist `-n 4`（2 个 nlp_performance 假失败）；串行 3 批分跑（`--timeout=0`）。
+- ⚠️ **沙箱单进程全量 pytest 会超时退出**：conftest `app` fixture 为 **function 级**，每用例重建 Flask+Api+注册 70 命名空间；单进程累积创建 2000+ app 实例，内存/GC 压力下第 ~1500 个起单次 app 初始化（werkzeug 路由编译）突破 120s → 整轮被 `--timeout` 杀、junitxml 不写出（**非产品回归，真机更快不触发**）。**绕行**：`FLASK_LIGHTWEIGHT=true`（跳过 MQTT/调度器 init 的远程连接阻塞）+ 分进程批量跑（脚本 `apps/backend/run_regression_batched.py`：collect 统计用例数→按累计≤150 用例/≤10 文件切片→每批独立 subprocess + 独立 junitxml + 整批 `timeout 600` 兜底）。剔除 3 个需完整 app 初始化的环境依赖用例：`test_app_init.py` 整文件 + `test_api_contract.py` 的 `test_frontend_calls_have_backend_routes`/`test_no_exams_import_orphan`。本次（2026-10-05）实测：**2266 用例 / 2253 passed / 6 failed(全为测试侧或环境缺失) / 0 error / 7 skipped**，无产品回归。
+- ✅ **6 个失败已全部修复（2026-10-05，仅改测试、零业务逻辑改动）**：`test_PhoneBoxPolicy_to_dict` 补 2 列 key / `test_leave_service` 三用例给 teacher 绑定 `primary_class_id` / `test_mqtt_publish` 注入 no-op limiter+隔离 `publish_mqtt` / `test_clear_cache` no-op `shutil.rmtree`。修复后 4 文件全集 40 passed / 0 failed，预期全量 **2259 passed / 0 failed / 7 skipped**。报告：`docs/reports/pytest全量回归-20261005.md`。
 - 前端四闸门 managed Node 22.22.2 直调二进制（typescript/bin/tsc · eslint/bin/eslint.js · prettier/bin-prettier.js · vitest/vitest.mjs run）。基线 38 文件 / **276 passed / 3 skipped**。
 - 单测三要素：退出码=0 / 无 failed / 报告文件数==磁盘文件数；**禁 commit 除非用户显式要求**。
 - ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）。run_regression 5 闸门用 PowerShell 直跑；回归日志剔 `\0` 再 UTF8。

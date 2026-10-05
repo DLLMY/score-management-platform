@@ -1,0 +1,43 @@
+{
+  "report": [
+    {
+      "step": "login",
+      "ok": true
+    },
+    {
+      "domain": "notification",
+      "marker": "E2E_NOTIF_1791190928656",
+      "btnReady": true,
+      "modal": true,
+      "post": [
+        "http://127.0.0.1:3000/api/admin_notifications/",
+        "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+        "http://127.0.0.1:3000/api/score-categories"
+      ],
+      "status": 201,
+      "body": "{\n    \"success\": true,\n    \"code\": 0,\n    \"message\": \"\\u901a\\u77e5\\u521b\\u5efa\\u6210\\u529f\",\n    \"data\": {\n        \"notification\": {\n            \"id\": 32,\n            \"title\": \"E2E_NOTIF_1791190928656"
+    },
+    {
+      "domain": "class_period",
+      "marker": "E2E_PERIOD_1791190933159",
+      "btnReady": true,
+      "modal": true,
+      "post": [
+        "http://127.0.0.1:3000/api/system/frontend-performance/batch",
+        "http://127.0.0.1:3000/api/score-categories"
+      ],
+      "status": null
+    },
+    {
+      "domain": "score_category",
+      "marker": "E2E_CAT_1791190944718",
+      "btnReady": true,
+      "modal": true,
+      "post": [
+        "http://127.0.0.1:3000/api/score-categories"
+      ],
+      "status": null
+    }
+  ],
+  "errors": []
+}

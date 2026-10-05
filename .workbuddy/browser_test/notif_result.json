@@ -1,0 +1,16 @@
+{
+  "log": [
+    "loggedIn=true",
+    "sendBtnReady=true",
+    "diag=disabled=false; text=发送通知",
+    "modalOpened=true",
+    "inputVals={\"title\":\"E2E_UI_NOTIF_1791190666931\",\"msg\":\"由浏览器自动化真实点击发送的通知\"}",
+    "requests=[\"POST http://127.0.0.1:3000/api/admin_notifications/\"]",
+    "postStatus=201",
+    "postBody={\n    \"success\": true,\n    \"code\": 0,\n    \"message\": \"\\u901a\\u77e5\\u521b\\u5efa\\u6210\\u529f\",\n    \"data\": {\n        \"notification\": {\n            \"id\": 31,\n            \"title\": \"E2E_UI_NOTIF_1791190666931\",\n            \"message\": \"\\u7531\\u6d4f\\u89c8\\u5668\\u81ea\\u52a8\\u5316\\u771f\\u5b9e\\u70b9\\u51fb\\u53d1\\u9001\\u7684\\u901a\\u77e5\",\n            \"type\": \"info\",\n            \"priority\": \"medium\",\n         "
+  ],
+  "errors": [],
+  "modalOpened": true,
+  "postStatus": 201,
+  "postBody": "{\n    \"success\": true,\n    \"code\": 0,\n    \"message\": \"\\u901a\\u77e5\\u521b\\u5efa\\u6210\\u529f\",\n    \"data\": {\n        \"notification\": {\n            \"id\": 31,\n            \"title\": \"E2E_UI_NOTIF_1791190666931\",\n            \"message\": \"\\u7531\\u6d4f\\u89c8\\u5668\\u81ea\\u52a8\\u5316\\u771f\\u5b9e\\u70b9\\u51fb\\u53d1\\u9001\\u7684\\u901a\\u77e5\",\n            \"type\": \"info\",\n            \"priority\": \"medium\",\n            \"is_read\": false,\n            \"created_at\": \"2026-10-05T16:57:50.097459\"\n        }\n    }\n}\n"
+}

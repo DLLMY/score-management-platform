@@ -1,0 +1,71 @@
+{
+  "periodInputs": {
+    "modalFound": true,
+    "labels": [
+      "节次名称 *",
+      "节次编号 *",
+      "排序顺序",
+      "开始时间 *",
+      "结束时间 *",
+      "描述说明",
+      "启用此节次"
+    ],
+    "inputs": [
+      {
+        "idx": 0,
+        "type": "text",
+        "max": "",
+        "min": "",
+        "ph": "例如：第一节课、早自习",
+        "parentLabel": "节次名称 *"
+      },
+      {
+        "idx": 1,
+        "type": "number",
+        "max": "20",
+        "min": "1",
+        "ph": "",
+        "parentLabel": "节次编号 *"
+      },
+      {
+        "idx": 2,
+        "type": "number",
+        "max": "100",
+        "min": "0",
+        "ph": "",
+        "parentLabel": "排序顺序"
+      },
+      {
+        "idx": 3,
+        "type": "checkbox",
+        "max": "",
+        "min": "",
+        "ph": "",
+        "parentLabel": "启用此节次"
+      }
+    ],
+    "submitBtns": [
+      "取消",
+      "添加节次"
+    ]
+  },
+  "userBtns": [
+    {
+      "t": "导入学生",
+      "disabled": false
+    },
+    {
+      "t": "导出学生",
+      "disabled": false
+    },
+    {
+      "t": "添加学生",
+      "disabled": false
+    }
+  ],
+  "_log": [
+    "loggedIn",
+    "periodInputs= {\n \"modalFound\": true,\n \"labels\": [\n  \"节次名称 *\",\n  \"节次编号 *\",\n  \"排序顺序\",\n  \"开始时间 *\",\n  \"结束时间 *\",\n  \"描述说明\",\n  \"启用此节次\"\n ],\n \"inputs\": [\n  {\n   \"idx\": 0,\n   \"type\": \"text\",\n   \"max\": \"\",\n   \"min\": \"\",\n   \"ph\": \"例如：第一节课、早自习\",\n   \"parentLabel\": \"节次名称 *\"\n  },\n  {\n   \"idx\": 1,\n   \"type\": \"number\",\n   \"max\": \"20\",\n   \"min\": \"1\",\n   \"ph\": \"\",\n   \"parentLabel\": \"节次编号 *\"\n  },\n  {\n   \"idx\": 2,\n   \"type\": \"number\",\n   \"max\": \"100\",\n   \"min\": \"0\",\n   \"ph\": \"\",\n   \"parentLabel\": \"排序顺序\"\n  },\n  {\n   \"idx\": 3,\n   \"type\": \"checkbox\",\n   \"max\": \"\",\n   \"min\": \"\",\n   \"ph\": \"\",\n   \"parentLabel\": \"启用此节次\"\n  }\n ],\n \"submitBtns\": [\n  \"取消\",\n  \"添加节次\"\n ]\n}",
+    "userBtns= [{\"t\":\"导入学生\",\"disabled\":false},{\"t\":\"导出学生\",\"disabled\":false},{\"t\":\"添加学生\",\"disabled\":false}]"
+  ]
+}

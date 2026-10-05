@@ -1,0 +1,53 @@
+{
+  "report": [
+    {
+      "step": "login",
+      "ok": true
+    },
+    {
+      "domain": "user",
+      "marker": "E2E_USER_1791194969060",
+      "card": "1194969060",
+      "btnReady": true,
+      "modal": true,
+      "post": "POST http://127.0.0.1:3000/api/users",
+      "status": 201,
+      "body": "{\n    \"success\": true,\n    \"code\": 0,\n    \"message\": \"\\u7528\\u6237\\u521b\\u5efa\\u6210\\u529f\",\n    \"data\": {\n        \"user\": {\n            \"id\": 18,\n            \"name\": \"E2E_USER_1791194969060\",\n            \"gender\": \"\\u7537\",\n            \"class_name\": \"PBT08_bp"
+    },
+    {
+      "domain": "class_info",
+      "marker": "E2E_CLASS_1791194974903",
+      "btnReady": true,
+      "modal": true,
+      "post": null,
+      "status": null
+    },
+    {
+      "domain": "seating_chart",
+      "marker": "E2E_SEAT_1791194985441",
+      "btnReady": true,
+      "modal": true,
+      "post": "POST http://127.0.0.1:3000/api/seating/charts",
+      "status": 201,
+      "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 10,\n        \"name\": \"E2E_SEAT_1791194985441\",\n        \"rows\": 6,\n        \"columns\": 7,\n        \"strategy\": \"height_vision\",\n        \"is_active\": true,\n        \"version\": 1,\n        \"seats\": [\n            {\n   "
+    },
+    {
+      "domain": "duty_group",
+      "marker": "E2E_DUTY_1791194989844",
+      "btnReady": true,
+      "modal": true,
+      "post": "POST http://127.0.0.1:3000/api/duty/groups",
+      "status": 201,
+      "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 12,\n        \"class_id\": 2,\n        \"class_name\": \"PBT08_bpis7c\",\n        \"name\": \"E2E_DUTY_1791194989844\",\n        \"day_of_week\": \"monday\",\n        \"area\": \"classroom\",\n        \"is_active\": true,\n        \"crea"
+    },
+    {
+      "domain": "phone_box_policy",
+      "marker": "override",
+      "classSelected": true,
+      "btnReady": true,
+      "post": null,
+      "status": null
+    }
+  ],
+  "errors": []
+}

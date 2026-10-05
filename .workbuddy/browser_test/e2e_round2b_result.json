@@ -1,0 +1,47 @@
+{
+  "report": [
+    {
+      "domain": "class",
+      "marker": "E2E_CLASS_1791195141066",
+      "btnReady": true,
+      "modal": true,
+      "nameVal": "E2E_CLASS_1791195141066",
+      "saveBtns": [
+        "",
+        "",
+        "取消",
+        "保存"
+      ],
+      "newReqs": [
+        "POST http://127.0.0.1:3000/api/classes"
+      ]
+    },
+    {
+      "domain": "phonebox",
+      "marker": "override",
+      "classSelected": true,
+      "btnReady": true,
+      "btns": [
+        "立即允许本班开箱:",
+        "取消放行:"
+      ],
+      "newReqs": [
+        "POST http://127.0.0.1:3000/api/phonebox-policy/override?class_info_id=10",
+        "POST http://127.0.0.1:3000/api/system/frontend-performance/batch"
+      ]
+    }
+  ],
+  "allReqs": [
+    "POST http://127.0.0.1:3000/api/auth/login",
+    "POST http://127.0.0.1:3000/api/system/frontend-performance/batch",
+    "POST http://localhost:5000/socket.io/?EIO=4&transport=polling&t=3byh265s&sid=skz8ka39Z-laODoBAAA9",
+    "POST http://127.0.0.1:3000/api/system/frontend-performance/batch",
+    "POST http://127.0.0.1:3000/api/system/frontend-performance/batch",
+    "POST http://127.0.0.1:3000/api/system/frontend-performance/batch",
+    "POST http://127.0.0.1:3000/api/classes",
+    "POST http://127.0.0.1:3000/api/system/frontend-performance/batch",
+    "POST http://127.0.0.1:3000/api/phonebox-policy/override?class_info_id=10",
+    "POST http://127.0.0.1:3000/api/system/frontend-performance/batch"
+  ],
+  "errors": []
+}

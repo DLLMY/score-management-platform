@@ -1,3 +1,5 @@
+import shutil
+
 class TestSystemRoutes:
 
     def test_get_health_check(self, client, app, auth_headers):
@@ -29,7 +31,10 @@ class TestSystemRoutes:
             response = client.post("/api/system/backup", headers=auth_headers)
             assert response.status_code in [200, 400, 404]
 
-    def test_clear_cache(self, client, app, auth_headers):
+    def test_clear_cache(self, client, app, auth_headers, monkeypatch):
+        # 隔离副作用：处理器会递归删除项目 __pycache__，批跑同进程内删除已加载模块的
+        # 编译缓存会引发顺序相关崩溃。测试仅验证端点契约（清理成功返回 200），故 no-op 删除。
+        monkeypatch.setattr(shutil, "rmtree", lambda *a, **k: None)
         with app.app_context():
             response = client.post("/api/system/clear-cache", headers=auth_headers)
             assert response.status_code == 200 or response.status_code == 400
