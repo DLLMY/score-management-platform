@@ -88,6 +88,28 @@ def scheduled_notify_check(app):
             log_warning(f"清理 db.session 失败(已忽略): {e}")
 
 
+def scheduled_leave_expiry(app):
+    """请假（硬件端）周期过期：每分钟扫描已审批且 end_time 过期的请假并置 expired。
+
+    这是 F5 双保险中的周期任务；读时惰性过期由 leave_service.resolve_active_leave 兜底。
+    """
+    try:
+        from services.leave_service import expire_leaves
+
+        with app.app_context():
+            count = expire_leaves()
+            if count:
+                log_info(f"[Leave] 周期过期 {count} 条请假")
+    except Exception as e:
+        log_warning(f"请假过期检查异常: {e}", exception=e)
+    finally:
+        try:
+            from models import db
+            db.session.remove()
+        except Exception:
+            pass
+
+
 def shutdown_scheduler():
     if scheduler:
         scheduler.shutdown()

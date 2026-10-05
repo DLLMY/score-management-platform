@@ -68,6 +68,12 @@ class Approval(db.Model):
     leave_type = db.Column(db.String(20))
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
+    # F1/F4 请假（硬件端）扩展字段：精确到时分秒的起止 + 设备维度。
+    # 保留 start_date/end_date(Date) 兼容既有审批视图，新增 DateTime 支撑请假时长计算。
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    card_id = db.Column(db.String(50))
+    device_id = db.Column(db.String(100))
 
     user = db.relationship("User", backref="approvals")
 
@@ -90,6 +96,10 @@ class Approval(db.Model):
             "leave_type": self.leave_type,
             "start_date": self.start_date.isoformat() if self.start_date else None,
             "end_date": self.end_date.isoformat() if self.end_date else None,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "card_id": self.card_id,
+            "device_id": self.device_id,
         }
         if fields is None:
             return data

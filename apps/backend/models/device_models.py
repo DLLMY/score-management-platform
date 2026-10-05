@@ -100,6 +100,9 @@ class PhoneBoxPolicy(db.Model):
     allow_self_unlock = db.Column(db.Boolean, default=True)
     unlock_windows = db.Column(db.JSON, default=list)
     override_until = db.Column(db.DateTime, nullable=True)
+    # 请假（硬件端）班级级开关（F2 审批模式 / F3 免扣分规则）
+    leave_approval_required = db.Column(db.Boolean, default=False)
+    leave_exempt_deduction = db.Column(db.Boolean, default=False)
     updated_by = db.Column(db.Integer, db.ForeignKey("admin.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
@@ -118,6 +121,8 @@ class PhoneBoxPolicy(db.Model):
             "unlock_windows": self.unlock_windows,
             "override_until": self.override_until,
             "updated_by": self.updated_by,
+            "leave_approval_required": self.leave_approval_required,
+            "leave_exempt_deduction": self.leave_exempt_deduction,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

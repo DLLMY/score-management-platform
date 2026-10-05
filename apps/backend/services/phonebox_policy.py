@@ -216,6 +216,8 @@ def set_policy(
     class_info_id,
     allow_self_unlock=None,
     unlock_windows=None,
+    leave_approval_required=None,
+    leave_exempt_deduction=None,
     updated_by=None,
 ):
     """新增或更新某班策略。返回 PhoneBoxPolicy。"""
@@ -231,6 +233,10 @@ def set_policy(
         if err:
             raise ValueError(err)
         policy.unlock_windows = normalized
+    if leave_approval_required is not None:
+        policy.leave_approval_required = bool(leave_approval_required)
+    if leave_exempt_deduction is not None:
+        policy.leave_exempt_deduction = bool(leave_exempt_deduction)
     policy.updated_by = updated_by
     policy.updated_at = datetime.now()
     db.session.commit()

@@ -269,6 +269,11 @@ def register_v1_routes(api, app):
 
     api.add_namespace(ns_phonebox_policy, path="/phonebox-policy")
 
+    # 请假（硬件端）管理：当前请假列表 / 待审批 / 教师代销假
+    from api.phonebox.leave_routes import ns_leave
+
+    api.add_namespace(ns_leave, path="/leave")
+
     try:
         from api.system.diagnostics_routes import ns_diagnostics
 
