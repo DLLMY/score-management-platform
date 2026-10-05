@@ -8,7 +8,12 @@ import { ScheduledPanel } from '../ScheduledPanel';
 import { ModeSelector } from '../ModeSelector';
 import { PreviewConfirmModal } from '../PreviewConfirmModal';
 import { buildHistoryColumns } from '../columns';
-import { type RemoteNotifyDeps, type PreviewConfirmState, type NotifyPayload, type NotifyMode } from '../types';
+import {
+  type RemoteNotifyDeps,
+  type PreviewConfirmState,
+  type NotifyPayload,
+  type NotifyMode,
+} from '../types';
 import { type NotifyHistory } from '../../../services/api';
 
 afterEach(cleanup);
@@ -382,7 +387,13 @@ describe('ScheduledPanel 定时通知卡片', () => {
     const deps = makeDeps({
       scheduledNotifications: [
         { id: 1, status: 'sent', text: 's', next_send_at: '', repeat_type: 'daily' },
-        { id: 2, status: 'pending', text: 'p', scheduled_at: '2026-01-01T00:00:00', repeat_type: 'weekly' },
+        {
+          id: 2,
+          status: 'pending',
+          text: 'p',
+          scheduled_at: '2026-01-01T00:00:00',
+          repeat_type: 'weekly',
+        },
         { id: 3, status: 'failed', text: 'f', repeat_type: 'monthly' },
         { id: 4, status: 'cancelled', text: 'x', repeat_type: 'once' },
       ],

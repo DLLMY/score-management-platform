@@ -95,7 +95,7 @@ describe('RequestCoalescer · 合并与缓存', () => {
 
   it('startCleanup 定时器到期清理过期缓存项', async () => {
     vi.useFakeTimers();
-    let c: RequestCoalescer;
+    let c: RequestCoalescer | null = null;
     try {
       c = new RequestCoalescer();
       const fetcher = vi.fn().mockResolvedValue('v');

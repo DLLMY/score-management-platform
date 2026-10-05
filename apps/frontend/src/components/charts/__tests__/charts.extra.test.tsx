@@ -60,7 +60,9 @@ describe('PieChart', () => {
     expect(screen.getByText('B')).toBeInTheDocument();
   });
   it('renders custom title + innerRadius branch', () => {
-    render(<PieChart data={data} title='分类占比' innerRadius={30} dataKey='value' nameKey='name' />);
+    render(
+      <PieChart data={data} title='分类占比' innerRadius={30} dataKey='value' nameKey='name' />
+    );
     expect(screen.getByText('分类占比')).toBeInTheDocument();
   });
 });
@@ -89,7 +91,7 @@ describe('ScatterChart', () => {
     expect(screen.getByText('相关性')).toBeInTheDocument();
   });
   it('renders without title (title falsy branch) without throwing', () => {
-    const { container } = render(<ScatterChart data={data} xKey='x' yKey='y' />);
+    const { container } = render(<ScatterChart data={data} xKey='x' yKey='y' title='' />);
     expect(container).toBeTruthy();
   });
 });
@@ -104,7 +106,7 @@ describe('ClusterScatterChart', () => {
     expect(screen.getByText('群体分布')).toBeInTheDocument();
   });
   it('renders without title without throwing', () => {
-    const { container } = render(<ClusterScatterChart data={data} />);
+    const { container } = render(<ClusterScatterChart data={data} title='' />);
     expect(container).toBeTruthy();
   });
 });
@@ -116,7 +118,7 @@ describe('RadarChart (RadarPlot)', () => {
     expect(screen.getByText('能力雷达')).toBeInTheDocument();
   });
   it('renders without title without throwing', () => {
-    const { container } = render(<RadarChart data={data} />);
+    const { container } = render(<RadarChart data={data} title='' />);
     expect(container).toBeTruthy();
   });
 });
@@ -131,7 +133,7 @@ describe('MultiRadarChart', () => {
     expect(screen.getByText('对比')).toBeInTheDocument();
   });
   it('renders without title without throwing', () => {
-    const { container } = render(<MultiRadarChart data={data} />);
+    const { container } = render(<MultiRadarChart data={data} title='' />);
     expect(container).toBeTruthy();
   });
 });
@@ -143,7 +145,7 @@ describe('CompositeScoreRadar', () => {
     expect(screen.getByText('综合')).toBeInTheDocument();
   });
   it('renders without title without throwing', () => {
-    const { container } = render(<CompositeScoreRadar scores={scores} />);
+    const { container } = render(<CompositeScoreRadar scores={scores} title='' />);
     expect(container).toBeTruthy();
   });
 });

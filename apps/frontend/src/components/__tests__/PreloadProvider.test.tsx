@@ -22,9 +22,7 @@ describe('PreloadProvider', () => {
         <PreloadProvider />
       </MemoryRouter>
     );
-    await waitFor(() =>
-      expect(preloadService.recordVisit).toHaveBeenCalledWith('/dashboard')
-    );
+    await waitFor(() => expect(preloadService.recordVisit).toHaveBeenCalledWith('/dashboard'));
     expect(preloadService.preloadDependencies).toHaveBeenCalledWith('/dashboard');
   });
 
@@ -34,9 +32,7 @@ describe('PreloadProvider', () => {
         <PreloadProvider />
       </MemoryRouter>
     );
-    await waitFor(() =>
-      expect(preloadService.recordVisit).toHaveBeenCalledWith('/settings')
-    );
+    await waitFor(() => expect(preloadService.recordVisit).toHaveBeenCalledWith('/settings'));
     expect(preloadService.preloadDependencies).toHaveBeenCalledWith('/settings');
   });
 });

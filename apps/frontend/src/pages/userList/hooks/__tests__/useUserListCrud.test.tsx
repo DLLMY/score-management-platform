@@ -264,9 +264,7 @@ describe('useUserListCrud · 增删改域', () => {
     });
     expect(mockApi.users.create).toHaveBeenCalledTimes(1);
     expect(params.showToast).toHaveBeenCalledWith('error', expect.stringContaining('操作失败'));
-    expect(params.dispatch).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'ADD_USER' })
-    );
+    expect(params.dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'ADD_USER' }));
   });
 
   it('handleDelete 成功后触发 undo → 调 create 恢复用户并派发 ADD_USER', async () => {
@@ -281,9 +279,7 @@ describe('useUserListCrud · 增删改域', () => {
       await op.undo();
     });
     expect(mockApi.users.create).toHaveBeenCalledTimes(1);
-    expect(params.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'ADD_USER' })
-    );
+    expect(params.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'ADD_USER' }));
   });
 
   it('handleDelete api 抛错 → onError 提示删除失败', async () => {

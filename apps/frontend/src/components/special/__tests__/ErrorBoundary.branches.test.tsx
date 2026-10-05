@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
-import ErrorBoundaryClass, {
-  ErrorBoundaryFallback,
-  ErrorBoundaryWrapper,
-} from '../ErrorBoundary';
+import ErrorBoundaryClass, { ErrorBoundaryFallback, ErrorBoundaryWrapper } from '../ErrorBoundary';
 
 // 隔离单文件运行时显式清理 DOM（test-setup 未注册 RTL 全局 cleanup）
 afterEach(cleanup);
