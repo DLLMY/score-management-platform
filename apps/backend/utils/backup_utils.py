@@ -107,11 +107,10 @@ class BackupManager:
         """获取数据库版本信息"""
         try:
             db_path = self._get_db_path()
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT sqlite_version()")
-            version = cursor.fetchone()[0]
-            conn.close()
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT sqlite_version()")
+                version = cursor.fetchone()[0]
             return version
         except Exception as e:
             logger.warning("获取数据库版本失败: %s", e, exc_info=True)

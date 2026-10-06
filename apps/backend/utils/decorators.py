@@ -33,7 +33,7 @@ def safe_handle(default_status=500, log_trace=True, message=None, error_code=Non
     """包装路由方法：捕获非 HTTP 异常，返回标准错误信封。
 
     - default_status：错误响应状态码（⚠️ 与原 `APIResponse.error(...)` 默认 400 对齐时须显式传 400）
-    - message：固定错误文案；不传时回退异常自带 message，最后回退 '服务器内部错误'
+    - message：固定错误文案；不传时不再回退 str(e)（避免泄露 SQL/路径/堆栈等内部细节），仅透传异常显式 .message，否则回退 '服务器内部错误'
       （传固定文案可避免 str(e) 泄露异常细节，与既有"不直返异常细节"修复一致）
     - error_code：错误码标识（如 "INTERNAL_ERROR"）。用于对齐既有 `APIResponse.server_error(...)`；
       不传（None）时响应体不含 `error_code` 键，与 `APIResponse.error` 默认行为一致（向后兼容）
@@ -55,7 +55,7 @@ def safe_handle(default_status=500, log_trace=True, message=None, error_code=Non
                     logger.error("路由 %s 执行异常: %s", name, e)
                 code = getattr(e, "code", -1)
                 status = getattr(e, "status_code", default_status)
-                error_message = message or getattr(e, "message", None) or str(e) or "服务器内部错误"
+                error_message = message or getattr(e, "message", None) or "服务器内部错误"
                 return APIResponse.error(
                     message=error_message, code=code, status_code=status, error_code=error_code
                 )

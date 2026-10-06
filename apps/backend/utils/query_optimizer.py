@@ -4,7 +4,6 @@
 
 import logging
 import time
-from datetime import UTC
 from functools import wraps
 
 from sqlalchemy import event
@@ -193,15 +192,23 @@ class QueryOptimizer:
         }
 
     @staticmethod
-    def get_daily_score_trend(days=7):
-        """按日聚合积分变化趋势（兼容旧测试）。"""
+    def get_daily_score_trend(days=7, now=None):
+        """按日聚合积分变化趋势（兼容旧测试）。
+
+        now: 可选基准时间（naive 本地时区）。仅用于测试注入固定时间，
+        生产路径保持默认 datetime.now()，与 ScoreRecord.created_at 同基准。
+        """
         from datetime import datetime, timedelta
 
         from sqlalchemy import func
 
         from models import ScoreRecord
 
-        since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
+        # R7 修复：created_at 由模型 default=datetime.now() 以本地 naive 存储，
+        # 故 since 必须以同一基准（datetime.now()）计算；此前误用 datetime.now(UTC)，
+        # 在 UTC+8 环境下 since 比本地 now 早 8 小时，导致 7 日趋势只返回最近约 8 小时。
+        current = now if now is not None else datetime.now()
+        since = current - timedelta(days=days)
         rows = (
             db.session.query(
                 func.date(ScoreRecord.created_at),
@@ -347,7 +354,7 @@ def optimize_user_records_query(user_id, page=1, per_page=50):
     query = (
         ScoreRecord.query.options(joinedload(ScoreRecord.user), joinedload(ScoreRecord.rule))
         .filter(ScoreRecord.student_id == user_id)
-        .order_by(ScoreRecord.created_at.desc())
+        .order_by(ScoreRecord.created_at.desc(), ScoreRecord.id.desc())
     )
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     return {
@@ -393,7 +400,7 @@ def optimize_search_query(search_term, admin_role=None, allowed_classes=None, pa
                 User.phone.like(search_pattern),
             )
         )
-    pagination = query.order_by(User.created_at.desc()).paginate(
+    pagination = query.order_by(User.created_at.desc(), User.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     return {

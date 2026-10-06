@@ -36,13 +36,6 @@ from utils.db_optimizer import (
 )
 from utils.rate_limit import (
     RateLimitStrategy,
-    admin_rate_limit,
-    default_limiter,
-    login_rate_limit,
-    mqtt_rate_limit,
-    mutation_rate_limit,
-    query_rate_limit,
-    rate_limit,
 )
 from utils.validation import (
     ValidationRules,
@@ -81,12 +74,10 @@ __all__ = [
     "ResponseCache",
     # Validation
     "ValidationRules",
-    "admin_rate_limit",
     "batch_query",
     "batch_update",
     "cached",
     "clear_cache",
-    "default_limiter",
     "error_response",
     "get_cache_stats",
     "get_default_cache",
@@ -94,13 +85,8 @@ __all__ = [
     "get_operation_log_writer",
     "get_query_explain",
     "invalidate_cache",
-    "login_rate_limit",
-    "mqtt_rate_limit",
-    "mutation_rate_limit",
     "optimize_batch_size",
     "profile_query",
-    "query_rate_limit",
-    "rate_limit",
     "shutdown_all_writers",
     "success_response",
     "validate_card_id",

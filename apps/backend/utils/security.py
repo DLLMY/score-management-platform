@@ -147,9 +147,14 @@ def set_auth_cookies(response, access_token: str, refresh_token: str = None):
 
 
 def clear_auth_cookies(response):
-    """清除认证Cookie"""
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    """清除认证相关 Cookie（与设置端策略一致：Secure/SameSite/路径对齐）"""
+    from flask import current_app
+
+    # 删除属性需与设置端一致，确保生产环境 Secure Cookie 被彻底清除
+    secure = current_app.config.get("SESSION_COOKIE_SECURE", False)
+    samesite = current_app.config.get("SESSION_COOKIE_SAMESITE", "Lax")
+    for key in ("access_token", "refresh_token", "student_token", "csrf_token"):
+        response.delete_cookie(key, path="/", secure=secure, samesite=samesite)
     return response
 
 

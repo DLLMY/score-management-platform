@@ -275,7 +275,7 @@ class FullTextSearch:
                 )
             )
 
-        pagination = query.order_by(User.created_at.desc()).paginate(
+        pagination = query.order_by(User.created_at.desc(), User.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 

@@ -16,6 +16,26 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# R22 公式注入（CSV/Formula Injection）防护：Excel/CSV 单元格中以 = + - @ 或
+# 制表符/回车开头的文本，打开文件时会被表格软件当作公式执行（DDE → 可达 RCE）。
+# 攻击路径：本系统分类名/描述/学生姓名等为用户自由输入，导出时原样落盘，
+# 他人下载并打开即触发。业界标准处置是在前缀加单引号强制按文本处理。
+_FORMULA_TRIGGER_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def sanitize_spreadsheet_value(value: Any) -> Any:
+    """将可能被表格软件解释为公式的值转为安全文本（非字符串原样返回）。
+
+    仅对 str 生效；数值/日期/None/布尔等保持原类型，避免破坏既有导出格式。
+    以 = + - @ 或 Tab/CR 开头的字符串前置单引号（Excel 文本标记），
+    单引号在 CSV 场景同样能阻止多数表格软件将其识别为公式。
+    """
+    if not isinstance(value, str):
+        return value
+    if value.startswith(_FORMULA_TRIGGER_PREFIXES):
+        return "'" + value
+    return value
+
 
 class ExcelUtils:
     """Excel文件处理工具类"""
@@ -47,7 +67,12 @@ class ExcelUtils:
 
             for row_idx, row in enumerate(data, start=2):
                 for col_idx, cell_value in enumerate(row, start=1):
-                    ws.cell(row=row_idx, column=col_idx, value=cell_value)
+                    # R22 公式注入防护：用户可控文本（分类名/描述/姓名等）不得以公式形态落盘
+                    ws.cell(
+                        row=row_idx,
+                        column=col_idx,
+                        value=sanitize_spreadsheet_value(cell_value),
+                    )
 
             ExcelUtils._auto_adjust_columns(ws)
 
@@ -120,8 +145,11 @@ class ExcelUtils:
         """
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(headers)
-        writer.writerows(data)
+        # R22 公式注入防护：表头与数据均做公式形态中和（CSV 同样会被 Excel 打开并执行公式）
+        writer.writerow([sanitize_spreadsheet_value(h) for h in headers])
+        writer.writerows(
+            [[sanitize_spreadsheet_value(cell) for cell in row] for row in data]
+        )
         output.seek(0)
         return output.getvalue().encode("utf-8-sig")
 

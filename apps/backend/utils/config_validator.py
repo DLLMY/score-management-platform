@@ -21,18 +21,27 @@ class ConfigValidator:
         self.errors.append({"category": category, "message": message})
 
     def validate_jwt_secret(self) -> None:
-        jwt_secret = os.getenv("JWT_SECRET_KEY", "")
-        if not jwt_secret:
-            self._add_error("security", "JWT_SECRET_KEY 未设置")
+        jwt_secret_env = os.getenv("JWT_SECRET_KEY", "")
+        flask_secret_env = os.getenv("FLASK_SECRET_KEY", "")
+        # 实际生效密钥：对齐 config.py 回退（JWT 未设 → 回退 FLASK_SECRET_KEY）
+        effective_jwt = jwt_secret_env or flask_secret_env
+        if not effective_jwt:
+            self._add_error("security", "JWT_SECRET_KEY 未设置且 FLASK_SECRET_KEY 回退也未提供")
             return
 
-        if len(jwt_secret) < 32:
+        if len(effective_jwt) < 32:
             self._add_warning(
-                "security", f"JWT_SECRET_KEY 长度不足32字节（当前{len(jwt_secret)}字节）"
+                "security", f"JWT_SECRET_KEY 长度不足32字节（当前{len(effective_jwt)}字节）"
             )
 
-        if jwt_secret == "CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p":
+        if effective_jwt == "CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p":
             self._add_error("security", "JWT_SECRET_KEY 使用默认值，生产环境必须修改")
+
+        # 回退到 FLASK：实际生效密钥已就绪，仅提示（非错误）
+        if not jwt_secret_env and flask_secret_env:
+            self._add_warning(
+                "security", "JWT_SECRET_KEY 未显式设置，已回退使用 FLASK_SECRET_KEY"
+            )
 
     def validate_flask_secret(self) -> None:
         flask_secret = os.getenv("FLASK_SECRET_KEY", "")

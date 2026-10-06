@@ -450,6 +450,32 @@ def validate_name(name: str) -> tuple[bool, str]:
     return False, "姓名格式无效，请输入中文或英文姓名"
 
 
+# 性别归一化映射：导入层（Excel/CSV）历史上接受英文/缩写写法并原样落库，
+# 而 validate_gender 及前端表单只认「男/女」，导致同一字段在库中口径不一致
+# （下游按中文比对时英文值被视为空/不匹配）。此处仅做「别名→规范值」归一化，
+# 不做跨语义合并，未知值一律原样返回交由 validate_gender 报错。
+GENDER_NORMALIZE_MAP = {
+    "male": "男",
+    "m": "男",
+    "female": "女",
+    "f": "女",
+}
+
+
+def normalize_gender(gender: Any) -> Any:
+    """将英文/缩写性别写法归一化为中文规范值；未知值原样返回。
+
+    Args:
+        gender: 原始性别值（None/空/中文/英文/缩写均可）
+
+    Returns:
+        归一化后的值；空值与未知值原样返回
+    """
+    if not isinstance(gender, str):
+        return gender
+    return GENDER_NORMALIZE_MAP.get(gender.strip().lower(), gender)
+
+
 # ==================== 装饰器式校验器 ====================
 
 
