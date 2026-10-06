@@ -26,12 +26,6 @@ from utils.permission import (
 from utils.response import APIResponse
 
 try:
-    from app import csrf_exempt
-except ImportError:
-
-    def csrf_exempt(f):
-        return f
-try:
     from api.system.admin_notifications_routes import create_admin_notification
 except ImportError:
     import logging

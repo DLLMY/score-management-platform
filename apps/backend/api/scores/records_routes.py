@@ -4,12 +4,6 @@ from flask_restx import Namespace, fields
 
 logger = logging.getLogger(__name__)
 
-try:
-    from app import csrf_exempt
-except ImportError:
-
-    def csrf_exempt(f):
-        return f
 
 try:
     from api.system.admin_notifications_routes import create_admin_notification

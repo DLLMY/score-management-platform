@@ -43,14 +43,6 @@ from utils.security import (
     verify_password,
 )
 
-try:
-    from app import csrf_exempt
-except ImportError:
-
-    def csrf_exempt(func):
-        return func
-
-
 # B3 收敛 2026-09-05：Admin.to_dict(fields) 子集常量（逐字对齐既有端点契约）
 ADMIN_LIST_FIELDS = [
     "id",
@@ -291,7 +283,6 @@ class AdminLogin(Resource):
     @ns_admins.expect(login_model)
     @ns_admins.response(200, "登录成功", login_response)
     @ns_admins.response(401, "用户名或密码错误")
-    @csrf_exempt
     def post(self):
         """
         管理员登录

@@ -11,14 +11,6 @@ from utils.permission import requires_permission
 from utils.query_optimizer import count_by_fk
 from utils.response import APIResponse
 
-try:
-    from app import csrf_exempt
-except ImportError:
-
-    def csrf_exempt(f):
-        return f
-
-
 # B3 收敛 2026-09-05：ScoreRule.to_dict 字段子集（分类下规则 7 字段，逐字对齐原内联）
 CATEGORY_RULE_FIELDS = [
     "id",
