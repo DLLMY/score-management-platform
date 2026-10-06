@@ -295,6 +295,9 @@ class RestoreBackup(Resource):
     @requires_permission("system.settings")
     def post(self, filename):
         """恢复备份"""
+        # S8 对称防护：路径穿越防护，与 DeleteBackup 一致（纵深防御由 restore_backup 内部 realpath 校验承担）
+        if filename != os.path.basename(filename) or not filename:
+            return APIResponse.error(message="备份文件名非法", status_code=400)
         result = backup_manager.restore_backup(filename)
         if result.get("success"):
             return APIResponse.success(data=result, message=result.get("message"))
@@ -312,6 +315,11 @@ class DeleteBackup(Resource):
         if filename != os.path.basename(filename) or not filename:
             return APIResponse.error(message="备份文件名非法", status_code=400)
         backup_path = backup_manager.backup_dir / os.path.basename(filename)
+        # 纵深防御：解析后绝对路径必须位于备份目录内（覆盖 ".." / 符号链接等）
+        _dres = backup_path.resolve()
+        _dbase = backup_manager.backup_dir.resolve()
+        if str(_dres) != str(_dbase) and not str(_dres).startswith(str(_dbase) + os.sep):
+            return APIResponse.error(message="备份文件名非法", status_code=400)
         if backup_path.exists():
             backup_path.unlink()
             return APIResponse.success(message="备份文件已删除")

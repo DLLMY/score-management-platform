@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import shutil
 import sqlite3
 import zipfile
@@ -125,6 +126,13 @@ class BackupManager:
         """
         try:
             backup_path = self.backup_dir / backup_filename
+
+            # 路径穿越防护：解析后的绝对路径必须严格位于备份目录内
+            # （覆盖 ".." / 符号链接 / 反斜杠等 os.path.basename 漏判的穿越形态）
+            _resolved = backup_path.resolve()
+            _base = self.backup_dir.resolve()
+            if str(_resolved) != str(_base) and not str(_resolved).startswith(str(_base) + os.sep):
+                return {"success": False, "message": "备份文件名非法"}
 
             if not backup_path.exists():
                 return {"success": False, "message": "备份文件不存在"}
