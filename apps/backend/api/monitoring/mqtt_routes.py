@@ -23,9 +23,32 @@ def get_flask_app():
 
 
 def get_limiter():
-    from app import limiter
+    """获取全局限流器；未启用/未初始化时返回 None（调用方须容忍）。"""
+    try:
+        from app import limiter
+    except ImportError:
+        return None
 
     return limiter
+
+
+def rate_limited(strategy):
+    """按策略施加限流装饰；限流器不可用时退化为「不限流」而非抛异常。
+
+    背景：模块级 `app.limiter` 在限流未启用（RATELIMIT_ENABLED=False）或
+    轻量测试未走 create_app() 时为 None，直接 `@limiter.limit(...)` 会抛
+    AttributeError 使整个端点 500。此处显式退化，保证功能可用性优先。
+    """
+    instance = get_limiter()
+    if instance is None:
+        logger.warning("[mqtt] 限流器不可用，本次调用不做限流")
+
+        def _passthrough(func):
+            return func
+
+        return _passthrough
+
+    return instance.limit(strategy)
 
 
 def get_app_context():
@@ -162,9 +185,8 @@ class MQTTPublish(Resource):
     @ns_mqtt.response(429, "Rate limited")
     @requires_permission("device.manage")
     def post(self):
-        limiter = get_limiter()
 
-        @limiter.limit(RateLimitStrategy.MQTT_PUBLISH)
+        @rate_limited(RateLimitStrategy.MQTT_PUBLISH)
         def _do_publish(topic, message):
             return publish_mqtt(
                 topic, json.dumps(message) if isinstance(message, dict) else str(message)

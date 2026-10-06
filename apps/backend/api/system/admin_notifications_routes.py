@@ -87,7 +87,7 @@ class AdminNotificationList(Resource):
         if priority:
             query = query.filter_by(priority=priority)
 
-        pagination = query.order_by(Notification.created_at.desc()).paginate(
+        pagination = query.order_by(Notification.created_at.desc(), Notification.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
@@ -218,7 +218,7 @@ class AdminNotificationRecent(Resource):
         if admin_id:
             query = query.filter_by(admin_id=admin_id)
 
-        notifications = query.order_by(Notification.created_at.desc()).limit(limit).all()
+        notifications = query.order_by(Notification.created_at.desc(), Notification.id.desc()).limit(limit).all()
 
         return [_serialize(n) for n in notifications]
 

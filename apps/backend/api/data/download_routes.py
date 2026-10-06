@@ -6,6 +6,8 @@ import openpyxl
 from flask import Blueprint, request, send_file
 
 from utils.decorators import safe_handle
+from utils.excel_utils import sanitize_spreadsheet_value
+from utils.pagination import get_limit
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +15,10 @@ logger = logging.getLogger(__name__)
 文件下载路由模块
 """
 download_bp = Blueprint("download", __name__)
+
+# 成绩模板单次生成的学生行数上限（与 export_routes 的 get_limit(10000) 口径一致）。
+# 无上限时全表加载 + 逐行写 xlsx 会随数据量线性放大内存/CPU（DoS 面），故硬性设限。
+MAX_TEMPLATE_ROWS = 10000
 
 
 @download_bp.route("/api/scores/template/download")
@@ -57,16 +63,29 @@ def _resolve_template_subjects(exam):
 
 
 def _query_template_students(user_model, class_id, class_name):
-    """按 class_id > class_name > 全部 的优先级取学生列表。"""
+    """按 class_id > class_name > 全部 的优先级取学生列表（受 MAX_TEMPLATE_ROWS 截断）。
+
+    未传参时为「全校」语义，历史上无上限全表加载；现统一走 get_limit 硬上限，
+    避免数据量增长后 xlsx 逐行构建导致的内存/CPU 放大。
+    """
+    limit = get_limit(default=MAX_TEMPLATE_ROWS, max_limit=MAX_TEMPLATE_ROWS)
     if class_id:
         return (
             user_model.query.filter(user_model.class_info_id == class_id)
             .order_by(user_model.card_id)
+            .limit(limit)
             .all()
         )
     if class_name:
-        return user_model.query.filter_by(class_name=class_name).order_by(user_model.card_id).all()
-    return user_model.query.order_by(user_model.class_name, user_model.card_id).all()
+        return (
+            user_model.query.filter_by(class_name=class_name)
+            .order_by(user_model.card_id)
+            .limit(limit)
+            .all()
+        )
+    return (
+        user_model.query.order_by(user_model.class_name, user_model.card_id).limit(limit).all()
+    )
 
 
 def _build_score_template_workbook(subjects, students):
@@ -89,9 +108,10 @@ def _fill_score_sheet(sheet, subjects, students):
     for col_idx, header in enumerate(headers, 1):
         sheet.cell(row=1, column=col_idx, value=header)
     for row_idx, student in enumerate(students, 2):
-        sheet.cell(row=row_idx, column=1, value=student.card_id)
-        sheet.cell(row=row_idx, column=2, value=student.name)
-        sheet.cell(row=row_idx, column=3, value=student.class_name)
+        # R22 公式注入防护：学号/姓名/班级为用户可控文本，不得以公式形态落入 xlsx
+        sheet.cell(row=row_idx, column=1, value=sanitize_spreadsheet_value(student.card_id))
+        sheet.cell(row=row_idx, column=2, value=sanitize_spreadsheet_value(student.name))
+        sheet.cell(row=row_idx, column=3, value=sanitize_spreadsheet_value(student.class_name))
         # 科目分数列留空，由教师填写
         for col_offset in range(len(subjects)):
             sheet.cell(row=row_idx, column=4 + col_offset, value="")

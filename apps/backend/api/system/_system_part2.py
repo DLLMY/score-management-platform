@@ -273,7 +273,7 @@ class FrontendMetricsList(Resource):
             since = datetime.now() - timedelta(hours=hours)
             query = query.filter(FrontendPerfMetric.created_at >= since)
 
-        pagination = query.order_by(FrontendPerfMetric.created_at.desc()).paginate(
+        pagination = query.order_by(FrontendPerfMetric.created_at.desc(), FrontendPerfMetric.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         items = [
@@ -319,7 +319,7 @@ class FrontendErrorList(Resource):
             since = datetime.now() - timedelta(hours=hours)
             query = query.filter(FrontendErrorLog.created_at >= since)
 
-        pagination = query.order_by(FrontendErrorLog.created_at.desc()).paginate(
+        pagination = query.order_by(FrontendErrorLog.created_at.desc(), FrontendErrorLog.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         items = [
@@ -401,7 +401,7 @@ class SystemMetricsList(Resource):
                     "updated_at": row.created_at.isoformat() if row.created_at else None,
                 }
 
-        pagination = query.order_by(SystemMetric.created_at.desc()).paginate(
+        pagination = query.order_by(SystemMetric.created_at.desc(), SystemMetric.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         items = [

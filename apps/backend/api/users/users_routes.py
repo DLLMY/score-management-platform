@@ -14,7 +14,9 @@ from utils.permission import (
 )
 from utils.response import APIResponse
 from utils.validation import (
+    GENDER_NORMALIZE_MAP,
     ValidationRules,
+    normalize_gender,
     validate_card_id,
     validate_name,
     validate_phone,
@@ -269,7 +271,8 @@ def _validate_import_user_class(user_data):
 def _validate_import_user_gender(user_data):
     errors = []
     gender = user_data.get("gender")
-    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
+    # 大小写不敏感：与 normalize_gender 口径一致（'F'/'MALE' 应视为合法）
+    if gender and str(gender).strip().lower() not in ("男", "女", *GENDER_NORMALIZE_MAP):
         errors.append({"field": "gender", "message": '性别值无效，只能是"男"或"女"'})
     return errors
 
@@ -416,7 +419,8 @@ def _csv_validate_class_name(row_dict, allowed_classes):
 def _csv_validate_gender(row_dict):
     errors = []
     gender = row_dict.get("gender", "").strip()
-    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
+    # 大小写不敏感：与 normalize_gender 口径一致（'F'/'MALE' 应视为合法）
+    if gender and gender.lower() not in ("男", "女", *GENDER_NORMALIZE_MAP):
         errors.append({"field": "gender", "message": '性别格式无效，只能是"男"或"女"'})
     return errors
 
@@ -453,7 +457,7 @@ def _csv_validate_score(row_dict):
 def _build_csv_user(row_dict, current_score_int):
     return User(
         name=row_dict.get("name", "").strip(),
-        gender=row_dict.get("gender", "").strip(),
+        gender=normalize_gender(row_dict.get("gender", "").strip()),
         class_name=row_dict.get("class_name", "").strip(),
         phone=row_dict.get("phone", "").strip(),
         parent_info=row_dict.get("parent_info", ""),
@@ -488,6 +492,9 @@ def _build_csv_user_updates(row_dict, current_score_int):
         val = row_dict.get(src, "")
         if val:
             updates[dst] = val
+    # 性别归一化：英文/缩写写法统一落库为中文，与 validate_gender / 前端口径一致
+    if "gender" in updates:
+        updates["gender"] = normalize_gender(updates["gender"])
     updates["current_score"] = current_score_int
     return updates
 

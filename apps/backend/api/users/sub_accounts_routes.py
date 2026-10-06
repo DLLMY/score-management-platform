@@ -1,4 +1,4 @@
-from flask import request
+from flask import abort, request
 from flask_restx import Namespace, Resource, fields
 
 from models import SubAccount
@@ -50,6 +50,16 @@ def log_permission_action(action, target_id=None, description=None):
         )
     except Exception as e:
         logger.warning("记录子账号操作日志失败 action=%s: %s", action, e, exc_info=True)
+
+
+def _ensure_sub_account_owner(account):
+    """横向越权防护：子账号仅其父管理员可访问/修改/删除。
+
+    归属不匹配统一返回 404（而非 403），避免向非属主泄露资源存在性。
+    """
+    current_admin = get_current_admin()
+    if current_admin is None or account.parent_admin_id != current_admin.id:
+        abort(404)
 
 
 sub_account_model = ns_sub_accounts.model(
@@ -111,7 +121,12 @@ class SubAccountList(Resource):
 
         获取系统中所有子账号的列表。
         """
-        accounts = SubAccount.query.all()
+        current_admin = get_current_admin()
+        if current_admin is None:
+            return APIResponse.error(message="未认证", status_code=401)
+        accounts = SubAccount.query.filter_by(
+            parent_admin_id=current_admin.id
+        ).all()
         return APIResponse.success(
             data={"sub_accounts": [a.to_dict(SUB_ACCOUNT_FIELDS) for a in accounts]}
         )
@@ -171,6 +186,7 @@ class SubAccountResource(Resource):
         - id: 子账号ID（路径参数）
         """
         account = SubAccount.query.get_or_404(id)
+        _ensure_sub_account_owner(account)
         return APIResponse.success(data=account.to_dict())
 
     @ns_sub_accounts.doc("update_sub_account", description="更新子账号", security="Bearer")
@@ -189,6 +205,7 @@ class SubAccountResource(Resource):
         - id: 子账号ID（路径参数）
         """
         account = SubAccount.query.get_or_404(id)
+        _ensure_sub_account_owner(account)
         data = ns_sub_accounts.payload
         update_sub_account(account, data)
 
@@ -212,6 +229,7 @@ class SubAccountResource(Resource):
         - id: 子账号ID（路径参数）
         """
         account = SubAccount.query.get_or_404(id)
+        _ensure_sub_account_owner(account)
         username = account.username
         delete_sub_account(account)
 

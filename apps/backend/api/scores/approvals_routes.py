@@ -420,9 +420,10 @@ def _approve_publish_score_change(user, approval):
     if not (mqtt_available and user):
         return
     try:
-        score_change_str = (
-            f"{approval.score_change:+g}" if approval.score_change > 0 else str(approval.score_change)
-        )
+        # score_change 在 DB 中可为空（审批类型非积分调整时），None > 0 会抛 TypeError
+        # 导致整条通知被外层 except 吞掉而静默丢失；此处统一按 0 处理。
+        change = approval.score_change if approval.score_change is not None else 0
+        score_change_str = f"{change:+g}" if change > 0 else str(change)
         score_change_text = (
             f"学生:{user.name}, {score_change_str}分, 原因:审批通过-{approval.title}"
         )
@@ -460,7 +461,7 @@ def _approve_publish_score_change(user, approval):
                 "approval_id": approval.id,
                 "user_id": approval.student_id,
                 "user_name": user.name,
-                "score_change": approval.score_change,
+                "score_change": change,
                 "title": approval.title,
             },
         )

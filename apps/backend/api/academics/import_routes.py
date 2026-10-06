@@ -6,7 +6,7 @@ from flask_restx import Namespace, Resource, fields
 
 from models import ImportConfig, get_by_id
 from services.academics_service import academics_service
-from utils.api_cache_middleware import cached_api
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.decorators import safe_handle
 from utils.excel_utils import ExcelTemplateGenerator
 from utils.permission import requires_permission
@@ -114,6 +114,9 @@ class ImportConfigList(Resource):
 
         config_id = academics_service.create_import_config(data)
         config = get_by_id(ImportConfig, config_id)
+        # R25 缓存一致性：ImportConfigList.get 有 @cached_api(ttl=60)，
+        # 写端点必须失效列表缓存，否则最长 60 秒仍返回旧列表（含已删/已改记录）。
+        invalidate_cache("api:/api/import/configs*")
 
         return APIResponse.success(data=config.to_dict(), message="配置创建成功", status_code=201)
 
@@ -147,6 +150,7 @@ class ImportConfigDetail(Resource):
 
         academics_service.update_import_config(id, data)
         config = get_by_id(ImportConfig, id)
+        invalidate_cache("api:/api/import/configs*")  # R25 缓存一致性
 
         return APIResponse.success(data=config.to_dict())
 
@@ -160,6 +164,7 @@ class ImportConfigDetail(Resource):
             return APIResponse.error(message="默认配置不能删除", status_code=400)
 
         academics_service.delete_import_config(id)
+        invalidate_cache("api:/api/import/configs*")  # R25 缓存一致性
 
         return APIResponse.success(message="配置已删除")
 
@@ -191,6 +196,7 @@ class ImportConfigSetDefault(Resource):
 
         academics_service.set_default_import_config(id)
         config = get_by_id(ImportConfig, id)
+        invalidate_cache("api:/api/import/configs*")  # R25 缓存一致性（设置默认会改变列表 is_default 展示）
 
         return APIResponse.success(
             message=f"{config.config_name} 已设置为 {config.module_name} 模块的默认配置"

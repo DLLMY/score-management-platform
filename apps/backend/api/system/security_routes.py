@@ -16,10 +16,8 @@ from services.security_service import (
 )
 from services.security_service import (
     clear_rate_limit_records,
-    create_rate_limit_record,
     get_audit_stats,
     get_suspicious_ips,
-    increment_rate_limit_request,
 )
 from services.security_service import (
     log_security_event as _service_log_security_event,
@@ -32,6 +30,7 @@ from utils.pagination import get_pagination
 from utils.params import get_int_arg
 from utils.permission import requires_permission
 from utils.response import APIResponse
+from utils.security import JWT_SECRET_KEY
 
 ns_security = Namespace("security", description="安全加固相关操作")
 
@@ -105,40 +104,6 @@ def verify_request_signature():
     return decorator
 
 
-def rate_limit(max_requests=100, window_minutes=1):
-    """
-    请求频率限制装饰器
-    """
-
-    def decorator(f):
-
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            ip = request.remote_addr
-            endpoint = request.endpoint or request.path
-            now = datetime.now()
-            window_start = now - timedelta(minutes=window_minutes)
-
-            record = RateLimitRecord.query.filter_by(ip_address=ip, endpoint=endpoint).filter(
-                RateLimitRecord.window_start >= window_start
-            )
-
-            if record:
-                if record.request_count >= max_requests:
-                    log_security_event("rate_limit_exceeded", "warning", details=f"{endpoint}")
-                    return APIResponse.error(message="请求过于频繁，请稍后再试", status_code=429)
-
-                increment_rate_limit_request(record)
-            else:
-                create_rate_limit_record(ip, endpoint, now)
-
-            return f(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
-
-
 def log_security_event(
     event_type, severity="info", user_id=None, user_type="unknown", details=None
 ):
@@ -154,10 +119,10 @@ def verify_token_expiry(token):
     验证JWT令牌时效性
     """
     try:
-        secret = current_app.config.get("SECRET_KEY")
+        secret = JWT_SECRET_KEY
         if not secret:
-            # 缺失 SECRET_KEY 时拒绝解码（fail-closed），禁止使用默认弱密钥
-            raise RuntimeError("SECRET_KEY 未配置，无法安全校验 JWT")
+            # 缺失 JWT_SECRET_KEY 时拒绝解码（fail-closed），禁止使用默认弱密钥
+            raise RuntimeError("JWT_SECRET_KEY 未配置，无法安全校验 JWT")
         payload = jwt.decode(token, secret, algorithms=["HS256"])
 
         exp = payload.get("exp")
@@ -232,7 +197,7 @@ class SecurityAuditLogs(Resource):
         if user_id:
             query = query.filter(SecurityAudit.user_id == int(user_id))
 
-        pagination = query.order_by(SecurityAudit.created_at.desc()).paginate(
+        pagination = query.order_by(SecurityAudit.created_at.desc(), SecurityAudit.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
@@ -322,7 +287,7 @@ class RateLimitStatus(Resource):
             query.with_entities(db.func.sum(RateLimitRecord.request_count)).scalar() or 0
         )
         page, per_page = get_pagination(default=20)
-        pagination = query.order_by(RateLimitRecord.window_start.desc()).paginate(
+        pagination = query.order_by(RateLimitRecord.window_start.desc(), RateLimitRecord.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         records = pagination.items

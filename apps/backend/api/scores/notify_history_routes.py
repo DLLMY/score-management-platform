@@ -44,7 +44,7 @@ class HistoryList(Resource):
         page, per_page = get_pagination(default=20)
         status = request.args.get("status")
         days = request.args.get("days")
-        query = NotifyHistory.query.order_by(NotifyHistory.created_at.desc())
+        query = NotifyHistory.query.order_by(NotifyHistory.created_at.desc(), NotifyHistory.id.desc())
         if status:
             query = query.filter(NotifyHistory.status == status)
         if days:

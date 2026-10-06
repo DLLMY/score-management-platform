@@ -46,6 +46,7 @@ from services.course_schedule_service import (
     get_schedule_options_view,
 )
 from utils.api_cache_middleware import cached_api, invalidate_cache
+from utils.excel_utils import sanitize_spreadsheet_value
 from utils.permission import get_allowed_classes, get_current_admin, requires_permission
 from utils.response import APIResponse
 
@@ -427,17 +428,25 @@ class CourseScheduleExport(Resource):
 
             # 写入数据
             for row_idx, item in enumerate(export_data, 2):
-                ws.cell(row=row_idx, column=1, value=item["class_name"]).border = thin_border
-                ws.cell(row=row_idx, column=2, value=item["class_grade"]).border = thin_border
-                ws.cell(row=row_idx, column=3, value=item["subject_name"]).border = thin_border
-                ws.cell(row=row_idx, column=4, value=item["day_of_week_text"]).border = thin_border
-                ws.cell(row=row_idx, column=5, value=item["period_number"]).border = thin_border
-                ws.cell(row=row_idx, column=6, value=item["period_name"]).border = thin_border
-                ws.cell(row=row_idx, column=7, value=item["teacher_name"]).border = thin_border
-                ws.cell(row=row_idx, column=8, value=item["classroom"]).border = thin_border
-                ws.cell(row=row_idx, column=9, value=item["description"]).border = thin_border
-                ws.cell(row=row_idx, column=10, value=item["is_active"]).border = thin_border
-                ws.cell(row=row_idx, column=11, value=item["created_at"]).border = thin_border
+                # R22 公式注入防护：整行经 sanitize 中和（班级/科目/教师/教室等均为用户可控）
+                safe_item = {k: sanitize_spreadsheet_value(v) for k, v in item.items()}
+                for col, key in enumerate(
+                    [
+                        "class_name",
+                        "class_grade",
+                        "subject_name",
+                        "day_of_week_text",
+                        "period_number",
+                        "period_name",
+                        "teacher_name",
+                        "classroom",
+                        "description",
+                        "is_active",
+                        "created_at",
+                    ],
+                    start=1,
+                ):
+                    ws.cell(row=row_idx, column=col, value=safe_item.get(key)).border = thin_border
 
             # 调整列宽
             column_widths = [15, 10, 12, 10, 8, 15, 12, 12, 30, 10, 20]

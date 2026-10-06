@@ -1,6 +1,6 @@
 import logging
 
-from flask_restx import Namespace, fields
+from flask_restx import Namespace, fields, inputs
 
 from models import (
     Admin,
@@ -31,7 +31,13 @@ ns_course_schedule.parser.add_argument(
     "period_number", type=int, location="args", required=False, help="节次编号"
 )
 ns_course_schedule.parser.add_argument(
-    "is_active", type=bool, location="args", required=False, help="是否启用"
+    # R23：原为 type=bool，而 Python bool("false") is True —— 传入 "false"/"0" 都会被判为 True。
+    # 改用 flask-restx 的 inputs.boolean（仅接受 true/false/1/0 等合法布尔字面量）。
+    "is_active",
+    type=inputs.boolean,
+    location="args",
+    required=False,
+    help="是否启用（true/false）",
 )
 ns_course_schedule.parser.add_argument(
     "teacher_name", type=str, location="args", required=False, help="教师姓名"

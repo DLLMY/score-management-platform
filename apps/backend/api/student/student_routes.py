@@ -11,7 +11,7 @@ import json
 import logging
 from datetime import datetime
 
-from flask import g, make_response, request
+from flask import current_app, g, make_response, request
 from flask_restx import Namespace, Resource, fields
 
 from api.system.security_routes import (
@@ -128,7 +128,7 @@ class StudentLogin(Resource):
             "student_token",
             value=token_data["token"],
             httponly=True,
-            secure=False,  # 生产经 SESSION_COOKIE_SECURE 配置；开发 http 需 False
+            secure=current_app.config.get("SESSION_COOKIE_SECURE", False),
             samesite="Lax",
             max_age=int(token_data.get("expires_in", 86400)),
             path="/",

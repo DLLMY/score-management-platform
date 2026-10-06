@@ -96,7 +96,7 @@ class NotificationList(Resource):
             query = query.join(User, Notification.student_id == User.id).filter(
                 User.class_name.in_(allowed)
             )
-        pagination = query.order_by(Notification.created_at.desc()).paginate(
+        pagination = query.order_by(Notification.created_at.desc(), Notification.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
@@ -255,7 +255,7 @@ class UserNotifications(Resource):
 
         pagination = (
             Notification.query.filter_by(student_id=user_id, recipient_type="user")
-            .order_by(Notification.created_at.desc())
+            .order_by(Notification.created_at.desc(), Notification.id.desc())
             .paginate(page=page, per_page=per_page, error_out=False)
         )
 

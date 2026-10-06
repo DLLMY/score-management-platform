@@ -286,7 +286,7 @@ class NLPCorrectionsList(Resource):
         if status:
             query = query.filter(NLPCorrection.status == status)
 
-        query = query.order_by(NLPCorrection.created_at.desc())
+        query = query.order_by(NLPCorrection.created_at.desc(), NLPCorrection.id.desc())
 
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 

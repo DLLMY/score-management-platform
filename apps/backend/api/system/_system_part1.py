@@ -249,10 +249,26 @@ class SystemClearCache(Resource):
         if os.path.exists(cache_dir):
             _clear_pycache(cache_dir)
 
-        for root, dirs, _files in os.walk(os.path.join(basedir, "..")):
-            for dir in dirs:
+        # 原地 os.walk 会遍历 node_modules/.venv 等巨型目录（耗时且无意义）。
+        # 改为自顶向下剪枝：命中跳过目录即不再深入，语义等价但数量级更快。
+        skip_dirs = {
+            "node_modules",
+            ".venv",
+            "venv",
+            "env",
+            ".git",
+            "instance",
+            "logs",
+            "migrations",
+        }
+        root_dir = os.path.abspath(os.path.join(basedir, ".."))
+        for root, dirs, _files in os.walk(root_dir):
+            # 原地修改 dirs 以剪枝；先处理 __pycache__，再整体排除跳过目录
+            for dir in list(dirs):
                 if dir == "__pycache__":
                     _clear_pycache(os.path.join(root, dir))
+                    dirs.remove(dir)
+            dirs[:] = [d for d in dirs if d not in skip_dirs]
 
         return APIResponse.success(message="缓存清理成功")
 

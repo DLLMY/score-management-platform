@@ -1,4 +1,4 @@
-from flask import jsonify, make_response, request
+from flask import current_app, jsonify, make_response, request
 from flask_restx import Namespace, Resource, fields
 from flask_wtf.csrf import generate_csrf
 from sqlalchemy.exc import IntegrityError
@@ -357,7 +357,7 @@ class AdminCsrfToken(Resource):
             "csrf_token",
             value=csrf_token,
             httponly=False,
-            secure=False,
+            secure=current_app.config.get("SESSION_COOKIE_SECURE", False),
             samesite="Lax",
             max_age=3600,
             path="/",

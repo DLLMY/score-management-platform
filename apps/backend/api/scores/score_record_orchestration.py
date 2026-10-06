@@ -44,16 +44,20 @@ def check_rule_limits(user_id, rule_id):
     now = datetime.now()
     today_start = datetime.combine(now.date(), datetime.min.time())
 
-    if rule.daily_limit > 0:
+    # daily_limit / min_interval 模型有 default=0，但 DB 列可空；None 比较会抛 TypeError。
+    daily_limit = rule.daily_limit or 0
+    min_interval = rule.min_interval or 0
+
+    if daily_limit > 0:
         today_count = ScoreRecord.query.filter(
             ScoreRecord.student_id == user_id,
             ScoreRecord.rule_id == rule_id,
             ScoreRecord.created_at >= today_start,
         ).count()
-        if today_count >= rule.daily_limit:
-            return False, f"该规则今日已使用{today_count}次，达到上限{rule.daily_limit}次"
+        if today_count >= daily_limit:
+            return False, f"该规则今日已使用{today_count}次，达到上限{daily_limit}次"
 
-    if rule.min_interval > 0:
+    if min_interval > 0:
         # F1 修复: Query 对象恒真，须 .first() 取记录，否则 last_record.created_at 抛 AttributeError → 500
         last_record = (
             ScoreRecord.query.filter(
@@ -64,8 +68,8 @@ def check_rule_limits(user_id, rule_id):
         )
         if last_record:
             time_diff = (now - last_record.created_at).total_seconds()
-            if time_diff < rule.min_interval:
-                remaining = int(rule.min_interval - time_diff)
+            if time_diff < min_interval:
+                remaining = int(min_interval - time_diff)
                 return False, f"距离上次使用该规则还需{remaining}秒"
 
     return True, None

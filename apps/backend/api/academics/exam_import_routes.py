@@ -25,7 +25,8 @@ exam_import_request = ns_exam_import.model(
         "exam_id": fields.Integer(required=True, description="考试ID"),
         "entered_by": fields.Integer(description="录入人ID"),
         "update_existing": fields.Boolean(description="是否更新已存在的成绩", default=True),
-        "validate_score": fields.Boolean(description="是否验证分数范围", default=True),
+        # R27：该入参已移除（分数范围校验为强制），保留字段仅为兼容旧客户端文档
+        "validate_score": fields.Boolean(description="[已废弃] 分数范围校验现为强制启用", default=True),
     },
 )
 
@@ -173,7 +174,13 @@ class ExecuteImport(Resource):
         exam_id = request.form.get("exam_id", type=int)
         entered_by = request.form.get("entered_by", type=int, default=1)
         update_existing = request.form.get("update_existing", "true").lower() == "true"
-        validate_score = request.form.get("validate_score", "true").lower() == "true"
+        # R27 数据完整性：分数范围校验**不再允许请求方关闭**。
+        # 原实现 `request.form.get("validate_score", "true")...` 使任何持 score.entry
+        # 权限的用户都能传 validate_score=false 绕过范围校验，导入负分/超满分成绩
+        # （真机实证：可写入 -50 / 150）。范围校验属写入端的完整性闸门，不应由
+        # 数据录入者自行关闭，故固定为 True。若确需放宽满分倍数，应调整
+        # ScoreImportHelper.validate_score_range 的统一口径，而非在此处开口子。
+        validate_score = True
 
         if not exam_id:
             return APIResponse.error(message="缺少考试ID"), 400

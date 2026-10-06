@@ -22,7 +22,7 @@ class PermissionLogList(Resource):
         operator_type = request.args.get("operator_type")
         action = request.args.get("action")
 
-        query = PermissionLog.query.order_by(PermissionLog.created_at.desc())
+        query = PermissionLog.query.order_by(PermissionLog.created_at.desc(), PermissionLog.id.desc())
         if operator_id:
             query = query.filter(PermissionLog.operator_id == operator_id)
         if operator_type:

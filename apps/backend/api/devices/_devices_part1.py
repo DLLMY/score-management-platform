@@ -179,7 +179,7 @@ class DeviceHeartbeats(Resource):
         device = Device.query.get_or_404(id)
         pagination = (
             DeviceHeartbeat.query.filter_by(device_id=device.device_id)
-            .order_by(DeviceHeartbeat.received_at.desc())
+            .order_by(DeviceHeartbeat.received_at.desc(), DeviceHeartbeat.id.desc())
             .paginate(page=page, per_page=per_page, error_out=False)
         )
 
@@ -229,7 +229,7 @@ class DeviceHeartbeatsByDeviceId(Resource):
         device = Device.query.filter_by(device_id=device_id).first_or_404()
         pagination = (
             DeviceHeartbeat.query.filter_by(device_id=device.device_id)
-            .order_by(DeviceHeartbeat.received_at.desc())
+            .order_by(DeviceHeartbeat.received_at.desc(), DeviceHeartbeat.id.desc())
             .paginate(page=page, per_page=per_page, error_out=False)
         )
 

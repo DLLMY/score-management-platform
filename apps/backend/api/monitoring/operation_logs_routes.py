@@ -48,7 +48,11 @@ class OperationLogList(Resource):
         result = request.args.get("result")
         page, per_page = get_pagination(default=20)
 
-        query = OperationLog.query.order_by(OperationLog.created_at.desc())
+        # R21 排序稳定性：追加唯一键 tiebreaker（同秒写入的日志 created_at 完全相同，
+        # 缺 tiebreaker 时并列行顺序未定义 → 跨页重复/漏项）。
+        query = OperationLog.query.order_by(
+            OperationLog.created_at.desc(), OperationLog.id.desc()
+        )
         query = _apply_operation_log_filters(
             query, operation_type, target_type, start_time, end_time,
             operator, device_id, event_type,

@@ -24,6 +24,7 @@ RATE_LIMIT = {
 }
 
 rate_limit_store: dict[str, dict[str, float | int]] = {}
+rate_limit_lock = threading.Lock()
 
 
 
@@ -32,12 +33,15 @@ def cleanup_rate_limit_store():
     max_age = 300
     expired_keys = []
 
-    for store_key, entry in rate_limit_store.items():
-        if now - entry["start_time"] > max_age:
-            expired_keys.append(store_key)
+    # R29 修复：加锁保护，避免与请求线程并发插入/删除触发
+    # "dictionary changed size during iteration" RuntimeError（原被 broad except 吞掉）。
+    with rate_limit_lock:
+        for store_key, entry in rate_limit_store.items():
+            if now - entry["start_time"] > max_age:
+                expired_keys.append(store_key)
 
-    for key in expired_keys:
-        del rate_limit_store[key]
+        for key in expired_keys:
+            del rate_limit_store[key]
 
     if expired_keys:
         logger.debug(f"清理过期限流记录: {len(expired_keys)} 条")
@@ -70,26 +74,30 @@ def rate_limit(key: str):
 
             client_ip = request.remote_addr or "unknown"
             store_key = f"{key}_{client_ip}"
-            now = time.time()
 
-            entry = rate_limit_store.get(store_key)
-            if entry is None:
-                entry = {"count": 0, "start_time": now}
-                rate_limit_store[store_key] = entry
+            # R29 修复：整段"读取-检查-自增"加锁原子化，消除并发丢更新 /
+            # 越限绕过；同时与 cleanup 互斥，杜绝迭代中改字典的 RuntimeError。
+            with rate_limit_lock:
+                now = time.time()
+                entry = rate_limit_store.get(store_key)
+                if entry is None:
+                    entry = {"count": 0, "start_time": now}
+                    rate_limit_store[store_key] = entry
 
-            if now - entry["start_time"] > config["window"]:
-                entry["count"] = 0
-                entry["start_time"] = now
+                if now - entry["start_time"] > config["window"]:
+                    entry["count"] = 0
+                    entry["start_time"] = now
 
-            if entry["count"] >= config["limit"]:
-                wait_time = int(config["window"] - (now - entry["start_time"]))
-                return APIResponse.error(
-                    message="请求过于频繁，请稍后再试",
-                    status_code=429,
-                    headers={"Retry-After": str(wait_time)},
-                )
+                if entry["count"] >= config["limit"]:
+                    wait_time = int(config["window"] - (now - entry["start_time"]))
+                    return APIResponse.error(
+                        message="请求过于频繁，请稍后再试",
+                        status_code=429,
+                        headers={"Retry-After": str(wait_time)},
+                    )
 
-            entry["count"] += 1
+                entry["count"] += 1
+
             return f(*args, **kwargs)
 
         return wrapper

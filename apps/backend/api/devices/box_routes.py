@@ -49,17 +49,22 @@ def check_rule_limits(user_id, rule_id):
     start_of_day = datetime.combine(today, datetime.min.time())
     end_of_day = datetime.combine(today, datetime.max.time())
 
-    if rule.daily_limit > 0:
+    # daily_limit / min_interval 在模型有 default=0，但 DB 列可空（历史/直写数据可能为 NULL）。
+    # None > 0 会抛 TypeError 中断刷卡校验 → 统一按 0（= 不限制）处理。
+    daily_limit = rule.daily_limit or 0
+    min_interval = rule.min_interval or 0
+
+    if daily_limit > 0:
         today_count = ScoreRecord.query.filter(
             ScoreRecord.student_id == user_id,
             ScoreRecord.rule_id == rule_id,
             ScoreRecord.created_at >= start_of_day,
             ScoreRecord.created_at <= end_of_day,
         ).count()
-        if today_count >= rule.daily_limit:
-            return False, f"今日已达到上限({rule.daily_limit}次)"
+        if today_count >= daily_limit:
+            return False, f"今日已达到上限({daily_limit}次)"
 
-    if rule.min_interval > 0:
+    if min_interval > 0:
         # F1 修复: 补 .first()，原 Query 恒真导致 last_record.created_at 抛 AttributeError → 刷卡 500
         last_record = (
             ScoreRecord.query.filter(
@@ -71,9 +76,9 @@ def check_rule_limits(user_id, rule_id):
 
         if last_record:
             time_since_last = datetime.now() - last_record.created_at
-            if time_since_last.total_seconds() < rule.min_interval * 60:
+            if time_since_last.total_seconds() < min_interval * 60:
                 remaining_minutes = int(
-                    (rule.min_interval * 60 - time_since_last.total_seconds()) / 60
+                    (min_interval * 60 - time_since_last.total_seconds()) / 60
                 )
                 return False, f"请等待{remaining_minutes}分钟后再操作"
 

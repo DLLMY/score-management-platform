@@ -60,7 +60,7 @@ class FirmwareVersions(Resource):
         if device_type:
             query = query.filter_by(device_type=normalize_device_type(device_type))
 
-        pagination = query.order_by(FirmwareVersion.created_at.desc()).paginate(
+        pagination = query.order_by(FirmwareVersion.created_at.desc(), FirmwareVersion.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
@@ -289,7 +289,7 @@ class UpgradeRecords(Resource):
         if status:
             query = query.filter_by(status=status)
 
-        pagination = query.order_by(DeviceFirmwareUpdate.created_at.desc()).paginate(
+        pagination = query.order_by(DeviceFirmwareUpdate.created_at.desc(), DeviceFirmwareUpdate.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
         records = pagination.items
@@ -482,7 +482,7 @@ class FirmwareLatest(Resource):
         """
         latest_firmware = (
             FirmwareVersion.query.filter(FirmwareVersion.is_active)
-            .order_by(FirmwareVersion.created_at.desc())
+            .order_by(FirmwareVersion.created_at.desc(), FirmwareVersion.id.desc())
             .first()
         )
 
