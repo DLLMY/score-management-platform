@@ -34,6 +34,11 @@ def _is_placeholder_secret(value):
     return any(p.lower() in low for p in _SECRET_PLACEHOLDER_PATTERNS)
 
 
+def _is_weak_secret(value):
+    """密钥是否缺失 / 长度不足32位 / 占位（占位判定复用 _is_placeholder_secret）。"""
+    return not value or len(value) < 32 or _is_placeholder_secret(value)
+
+
 def validate_secret_keys(app):
     """验证密钥安全性；生产环境下无效/缺失密钥将拒绝启动（S1 硬失败）。
 
@@ -42,8 +47,11 @@ def validate_secret_keys(app):
     否则每次重启都会轮换密钥导致会话/Cookie 全部失效（fail-open）。
     """
     flask_secret_env = os.getenv("FLASK_SECRET_KEY", "")
-    jwt_secret = os.getenv("JWT_SECRET_KEY", "")
-    secret_key = app.config.get("SECRET_KEY", "")
+    jwt_secret_env = os.getenv("JWT_SECRET_KEY", "")
+    csrf_secret_env = os.getenv("CSRF_SECRET_KEY", "")
+    # 实际生效的 JWT 密钥：对齐 config.py 回退语义（JWT 未设 → 回退 FLASK_SECRET_KEY）。
+    # 基于运行时环境变量推导（patch 友好，且确保与 security.py 实际签发密钥同源）。
+    effective_jwt = jwt_secret_env or flask_secret_env
     flask_env = (
         os.getenv("APP_ENV")
         or os.getenv("FLASK_ENV")
@@ -52,34 +60,27 @@ def validate_secret_keys(app):
     is_production = flask_env == "production"
 
     validation_errors = []
-    DEFAULT_SECRET = "your_secret_key_here_change_in_production"
-    DEFAULT_JWT = "CHANGE_ME_JWT_SECRET_0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p"
 
-    # 生产环境必须显式通过环境变量提供密钥，禁止自动生成的临时密钥（fail-closed）
-    if is_production and not flask_secret_env:
+    # 生产环境纵深防御：FLASK 必须显式 env 提供且非占位且 >=32（禁止自动生成的临时密钥 fail-open）
+    if is_production and _is_weak_secret(flask_secret_env):
+        validation_errors.append("FLASK_SECRET_KEY 缺失 / 占位或弱密钥 / 长度不足32位")
+
+    # JWT_SECRET_KEY：以实际生效值为准（允许回退到 FLASK_SECRET_KEY）。
+    # 生产严格校验（弱密钥即报错）；非生产宽松（与原契约一致：开发允许 dev 弱密钥，仅检查回退后是否仍为空）。
+    if not effective_jwt:
+        validation_errors.append("JWT_SECRET_KEY 未设置且 FLASK_SECRET_KEY 回退也未提供")
+    elif is_production and _is_weak_secret(effective_jwt):
         validation_errors.append(
-            "FLASK_SECRET_KEY 未通过环境变量提供（生产环境禁止自动生成临时密钥）"
+            "JWT_SECRET_KEY（或回退的 FLASK_SECRET_KEY）为占位/弱密钥（生产禁止 CHANGE_ME/dev 类密钥）"
         )
-    if not secret_key or secret_key == DEFAULT_SECRET or len(secret_key) < 32:
-        validation_errors.append("FLASK_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
-    if not jwt_secret or jwt_secret == DEFAULT_JWT or len(jwt_secret) < 32:
-        validation_errors.append("JWT_SECRET_KEY 缺失 / 使用默认值 / 长度不足32位")
 
-    # P0-a: 生产环境纵深防御——拒绝占位 / 弱密钥（含此前未检查的 CSRF_SECRET_KEY）
-    if is_production:
-        if _is_placeholder_secret(flask_secret_env):
-            validation_errors.append(
-                "FLASK_SECRET_KEY 为占位/弱密钥（生产禁止 CHANGE_ME/dev 类密钥）"
-            )
-        if _is_placeholder_secret(jwt_secret):
-            validation_errors.append(
-                "JWT_SECRET_KEY 为占位/弱密钥（生产禁止 CHANGE_ME/dev 类密钥）"
-            )
-        csrf_secret = os.getenv("CSRF_SECRET_KEY", "")
-        if not csrf_secret or len(csrf_secret) < 32 or _is_placeholder_secret(csrf_secret):
-            validation_errors.append(
-                "CSRF_SECRET_KEY 缺失/过短/占位（生产要求 >=32 位强密钥）"
-            )
+    # 回退提示（非错误）：明确告知运维实际密钥来源，消除「只设 FLASK_SECRET_KEY」的误报
+    if not jwt_secret_env and effective_jwt and effective_jwt == flask_secret_env:
+        logger.info("JWT_SECRET_KEY 未显式设置，已回退使用 FLASK_SECRET_KEY（两者现同源）")
+
+    # 生产环境纵深防御——拒绝占位 / 弱 CSRF 密钥
+    if is_production and _is_weak_secret(csrf_secret_env):
+        validation_errors.append("CSRF_SECRET_KEY 缺失/过短/占位（生产要求 >=32 位强密钥）")
 
     if validation_errors:
         logger.error("🔒 密钥安全检查结果: %s", validation_errors)

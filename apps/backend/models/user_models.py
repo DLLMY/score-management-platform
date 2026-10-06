@@ -106,6 +106,18 @@ class Admin(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
+    # 索引：Admin 表随部署规模增长，且以下字段是高频过滤条件。
+    # - primary_class_id：班级隔离铁律的核心过滤字段（班主任/任课教师按班级查管理员）
+    # - role / is_active：管理端按角色/启用状态筛选
+    # - class_name：历史字段（data_sync_service 按旧班级名迁移查询）
+    # 由 migrations/reconcile.py 在启动时按元数据幂等补建，无需手写迁移。
+    __table_args__ = (
+        db.Index("ix_admin_primary_class_id", "primary_class_id"),
+        db.Index("ix_admin_role", "role"),
+        db.Index("ix_admin_is_active", "is_active"),
+        db.Index("ix_admin_class_name", "class_name"),
+    )
+
     @property
     def password(self):
         return self._password
@@ -412,7 +424,14 @@ class LoginAttempt(db.Model):
     __tablename__ = "login_attempts"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), index=True)
+    # R19 并发安全：username 加唯一约束。
+    # 防爆破逻辑（security_service）以 filter_by(username=...).first() 读写**单行**，
+    # 而 clear_login_attempts 用 delete() 删全部行 —— 代码已隐含「一个 username 一行」的设计意图，
+    # 但缺 DB 约束时并发首次失败会 check-then-insert 出多行同 username 记录，
+    # 计数被拆分到多行 → 5 次锁定阈值永不触发（锁定可被绕过）。
+    # 注：reconcile.py 明确跳过 unique 列（只补普通列），故存量库不做 DDL 变更，
+    # 改由 record_failed_login 读路径去重兜底（见 services/security_service.py）。
+    username = db.Column(db.String(100), unique=True, index=True)
     ip_address = db.Column(db.String(45), index=True)
     attempt_count = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime)

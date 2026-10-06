@@ -21,6 +21,31 @@ def is_env(msg: str) -> bool:
     return any(k in m for k in ENV_KEYS)
 
 
+def _int(suite, key):
+    v = suite.get(key)
+    return int(v) if v is not None else 0
+
+
+def _collect_failures(suite, real_fail, env_fail):
+    """解析单个 testsuite 节点中的失败/错误用例，按「环境性 vs 真实逻辑」分类入参列表。"""
+    for tc in suite.iter("testcase"):
+        fnode = enode = None
+        for child in tc:
+            tag = child.tag
+            if isinstance(tag, str):
+                if tag.endswith("failure"):
+                    fnode = child
+                elif tag.endswith("error"):
+                    enode = child
+        if fnode is None and enode is None:
+            continue
+        node = fnode if fnode is not None else enode
+        msg = (node.get("message") or "") + "\n" + (node.text or "")
+        # 取前 400 字符作为证据
+        entry = (tc.get("classname", ""), tc.get("name", ""), msg[:400].replace("\n", " "))
+        (env_fail if is_env(msg) else real_fail).append(entry)
+
+
 def main():
     tot = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
     real_fail = []   # (file, class::name, snippet)
@@ -32,35 +57,11 @@ def main():
         suites = root.findall("testsuite") or [root]
         c_tests = c_fail = c_err = c_skip = 0
         for s in suites:
-            def gi(k):
-                v = s.get(k)
-                return int(v) if v is not None else 0
-            c_tests += gi("tests")
-            c_fail += gi("failures")
-            c_err += gi("errors")
-            c_skip += gi("skipped")
-            for tc in s.iter("testcase"):
-                cls = tc.get("classname", "")
-                name = tc.get("name", "")
-                fnode = None
-                enode = None
-                for child in tc:
-                    tag = child.tag
-                    if isinstance(tag, str):
-                        if tag.endswith("failure"):
-                            fnode = child
-                        elif tag.endswith("error"):
-                            enode = child
-                if fnode is not None or enode is not None:
-                    node = fnode if fnode is not None else enode
-                    msg = (node.get("message") or "") + "\n" + (node.text or "")
-                    # 取前 400 字符作为证据
-                    snippet = msg[:400].replace("\n", " ")
-                    entry = (cls, name, snippet)
-                    if is_env(msg):
-                        env_fail.append(entry)
-                    else:
-                        real_fail.append(entry)
+            c_tests += _int(s, "tests")
+            c_fail += _int(s, "failures")
+            c_err += _int(s, "errors")
+            c_skip += _int(s, "skipped")
+            _collect_failures(s, real_fail, env_fail)
         tot["tests"] += c_tests
         tot["failures"] += c_fail
         tot["errors"] += c_err

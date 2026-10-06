@@ -259,9 +259,15 @@ class Config:
         RATE_LIMIT_PER_MINUTE = 200
         RATE_LIMIT_PER_HOUR = 5000
     # ========== CORS配置 ==========
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(
-        ", "
-    )
+    # 兼容逗号分隔（允许可选空格）：统一按逗号切分并对每个元素 strip，
+    # 避免 "a.com,b.com"（无空格）被当作单个 origin 的解析缺陷（此前 split(", ") 要求空格）。
+    CORS_ORIGINS = [
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+        ).split(",")
+        if o.strip()
+    ]
     # ========== 安全配置 ==========
     PASSWORD_MIN_LENGTH = 6
     PASSWORD_MAX_LENGTH = 128

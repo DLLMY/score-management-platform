@@ -76,13 +76,16 @@ def get_all_indexes():
             ],
         ),
         # ScoreRecord 表（已存在：user_id, rule_id, score_change, created_at）
+        # R6 修复：ix_score_record_user_created（同列重复 student_created）已移除；
+        # created_at 单列索引以规范名 ix_score_record_created_at 在此统一管理
+        # （reconcile 不托管该单列索引，避免与模型索引同名异构造成重复索引）。
         (
             record_table,
             [
-                ("ix_score_record_user_created", ["student_id", "created_at"]),
-                ("ix_score_record_created_desc", ["created_at"]),
+                ("ix_score_record_created_at", ["created_at"]),
             ],
         ),
+
         # Device 表（已存在：device_id, status, last_heartbeat, class_info_id, admin_id）
         (
             device_table,
@@ -147,11 +150,12 @@ def get_all_indexes():
             ],
         ),
         # OperationLog 表
+        # 注：created_at 索引现由模型 system_models.OperationLog.__table_args__ 统一管理
+        # （ix_operation_log_created_at，reconcile 幂等建索引），故此处不再定义 ix_log_created_desc。
         (
             log_table,
             [
                 ("ix_log_operation_type", ["operation_type"]),
-                ("ix_log_created_desc", ["created_at"]),
                 ("ix_log_operator", ["operator"]),
             ],
         ),

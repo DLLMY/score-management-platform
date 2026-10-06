@@ -23,9 +23,8 @@ def init_database(app):
             )
 
             try:
-                test_conn = sqlite3.connect(db_path)
-                log_info("SQLite直接连接成功")
-                test_conn.close()
+                with sqlite3.connect(db_path) as test_conn:
+                    log_info("SQLite直接连接成功")
             except Exception as e:
                 log_error(f"SQLite直接连接失败: {e}", exception=e)
 

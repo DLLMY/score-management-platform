@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from models import db
+from utils.crypto_field import EncryptedString
 
 
 class MQTTLog(db.Model):
@@ -29,7 +30,7 @@ class MQTTConfig(db.Model):
     port = db.Column(db.Integer, default=8883)
     client_id = db.Column(db.String(100), default="score_backend")
     username = db.Column(db.String(100), default="phoneboxtest")
-    password = db.Column(db.String(100), default="123456")
+    password = db.Column(EncryptedString(100), default="123456")
     ssl = db.Column(db.Boolean, default=True)
     timeout = db.Column(db.Integer, default=10)
     keepalive = db.Column(db.Integer, default=60)
@@ -163,7 +164,7 @@ class Device(db.Model):
     # ---- 差异 #4 阶段 2：设备认证凭证 ----
     # device_secret 为 NULL ⇒ 未发放密钥，验签直接放行（灰度兼容）；
     # 非 NULL ⇒ 该设备上行必须携带 ts/nonce/sig 并通过 HMAC-SHA256 校验。
-    device_secret = db.Column(db.String(64), nullable=True)
+    device_secret = db.Column(EncryptedString(64), nullable=True)
     secret_issued_at = db.Column(db.DateTime, nullable=True)
     last_seen_ts = db.Column(db.BigInteger, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)

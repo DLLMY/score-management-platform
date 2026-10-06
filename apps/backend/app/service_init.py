@@ -53,9 +53,9 @@ def init_index_check(app):
         inspector = db.inspect(engine)
         core_indexes = {
             "user": ["ix_user_card_id_is_active", "ix_user_created_at"],
-            "score_record": ["ix_score_record_created_desc", "ix_score_record_user_created"],
+            "score_record": ["ix_score_record_student_created", "ix_score_record_created_at"],
             "score": ["ix_score_exam_student"],
-            "operation_log": ["ix_log_created_desc", "ix_log_operation_type"],
+            "operation_log": ["ix_operation_log_created_at", "ix_log_operation_type"],
             "alert": ["ix_alert_created_desc"],
             "device": ["ix_device_last_heartbeat"],
             "exam": ["ix_exam_start_time"],
