@@ -22,7 +22,7 @@ class HomeworkService:
             query = query.filter_by(subject_id=subject_id)
         if is_completed is not None:
             query = query.filter_by(is_completed=is_completed)
-        query = query.order_by(HomeworkAssignment.due_date.desc())
+        query = query.order_by(HomeworkAssignment.due_date.desc(), HomeworkAssignment.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {
@@ -92,7 +92,8 @@ class HomeworkService:
             return denied
         date_fields = ("assigned_date", "due_date")
         for key, value in data.items():
-            if hasattr(assignment, key) and key not in ("id", "created_at"):
+            # R24 防批量赋值越权：class_id 为班级归属字段，禁止经通用更新接口改写
+            if hasattr(assignment, key) and key not in ("id", "created_at", "class_id"):
                 if key in date_fields:
                     setattr(assignment, key, self._parse_date(value))
                 else:

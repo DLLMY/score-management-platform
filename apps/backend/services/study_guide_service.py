@@ -21,7 +21,7 @@ class StudyGuideService:
             query = query.filter_by(guide_type=guide_type)
         if is_published is not None:
             query = query.filter_by(is_published=is_published)
-        query = query.order_by(StudyGuide.created_at.desc())
+        query = query.order_by(StudyGuide.created_at.desc(), StudyGuide.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {
@@ -61,7 +61,8 @@ class StudyGuideService:
         if denied:
             return denied
         for key, value in data.items():
-            if hasattr(guide, key) and key not in ("id", "created_at"):
+            # R24 防批量赋值越权：class_id 为班级归属字段，禁止经通用更新接口改写
+            if hasattr(guide, key) and key not in ("id", "created_at", "class_id", "created_by"):
                 setattr(guide, key, value)
         db.session.commit()
         return {"success": True, "data": self._build_guide_response(guide)}
@@ -87,7 +88,7 @@ class StudyGuideService:
             query = query.filter_by(plan_type=plan_type)
         if is_completed is not None:
             query = query.filter_by(is_completed=is_completed)
-        query = query.order_by(ImprovementPlan.start_date.desc())
+        query = query.order_by(ImprovementPlan.start_date.desc(), ImprovementPlan.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {

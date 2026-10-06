@@ -38,7 +38,7 @@ def get_device_list_view(admin, page, per_page, device_id, name, status, class_i
         query = query.filter(Device.status == status)
     if class_id:
         query = query.filter(Device.class_info_id == class_id)
-    pagination = query.order_by(Device.created_at.desc()).paginate(
+    pagination = query.order_by(Device.created_at.desc(), Device.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     devices = pagination.items
@@ -83,7 +83,7 @@ def get_device_alerts_view(resolved, severity, page, per_page):
         query = query.filter(Alert.is_resolved == False)
     if severity:
         query = query.filter(Alert.severity == severity)
-    pagination = query.order_by(Alert.created_at.desc()).paginate(
+    pagination = query.order_by(Alert.created_at.desc(), Alert.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     alerts = pagination.items

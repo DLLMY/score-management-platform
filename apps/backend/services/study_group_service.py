@@ -10,7 +10,9 @@ class StudyGroupService:
         if class_id:
             query = query.filter_by(class_id=class_id)
         if is_active is not None:
-            query = query.filter_by(is_active=is_active)
+            # R23 类型修正：query string 为字符串，需归一为 bool 后再与 Boolean 列比较
+            # （直接传字符串会生成 `WHERE is_active = 'false'` → 恒空集）。
+            query = query.filter_by(is_active=is_active.lower() == "true")
         groups = query.order_by(StudyGroup.score.desc()).all()
         return {"success": True, "data": [self._build_group_response(g) for g in groups]}
 
@@ -37,7 +39,8 @@ class StudyGroupService:
         if denied:
             return denied
         for key, value in data.items():
-            if hasattr(group, key) and key not in ("id", "created_at", "score"):
+            # R24 防批量赋值越权：class_id 为班级归属字段，禁止经通用更新接口改写
+            if hasattr(group, key) and key not in ("id", "created_at", "score", "class_id"):
                 setattr(group, key, value)
         db.session.commit()
         return {"success": True, "data": self._build_group_response(group)}

@@ -7,6 +7,8 @@ import io
 from datetime import datetime
 from typing import Any
 
+from utils.excel_utils import sanitize_spreadsheet_value
+
 try:
     import xlsxwriter
 
@@ -532,8 +534,13 @@ class ExportService:
         import io as _io
 
         # 投影为仅含 headers 列的字典，避免 DictWriter 因多余字段报错
+        # R22 公式注入防护：在投影阶段中和公式形态，一次覆盖 file/buffer 两条分支
         projected = [
-            {h: (row.get(h, "") if isinstance(row, dict) else "") for h in headers} for row in data
+            {
+                h: sanitize_spreadsheet_value(row.get(h, "") if isinstance(row, dict) else "")
+                for h in headers
+            }
+            for row in data
         ]
         if filepath:
             with open(filepath, "w", encoding="utf-8-sig", newline="") as f:

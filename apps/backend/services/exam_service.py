@@ -34,7 +34,7 @@ def get_exam_list_view(class_id=None, status=None):
     if status:
         query = query.filter_by(status=status)
     page, per_page = get_pagination(default=20)
-    pagination = query.order_by(Exam.start_time.desc()).paginate(
+    pagination = query.order_by(Exam.start_time.desc(), Exam.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     return {
@@ -72,7 +72,7 @@ def get_score_list_view(exam_id=None, student_id=None, subject=None, subject_id=
     # N+1 修复：to_dict 访问 subject_rel.name，预加载避免逐行查询
     pagination = (
         query.options(joinedload(Score.subject_rel))
-        .order_by(Score.score.desc())
+        .order_by(Score.score.desc(), Score.id.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
     return {
@@ -121,7 +121,7 @@ def get_exam_rankings_view(exam_id, subject=None, subject_id=None, page=1, per_p
     sid = _resolve_subject_id(subject, subject_id)
     if sid:
         query = query.filter_by(subject_id=sid)
-    pagination = query.order_by(Score.score.desc()).paginate(
+    pagination = query.order_by(Score.score.desc(), Score.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     rankings = pagination.items

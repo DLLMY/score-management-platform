@@ -29,7 +29,9 @@ class AttendanceService:
             query = query.filter_by(date=date)
         if status:
             query = query.filter_by(status=status)
-        query = query.order_by(Attendance.date.desc())
+        # R21 排序稳定性：Attendance.date 是日期列，同一班级同一天全部学生考勤
+        # 共享该值（必然并列），缺 tiebreaker 时跨页会重复/漏掉整条考勤记录。
+        query = query.order_by(Attendance.date.desc(), Attendance.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {
@@ -117,7 +119,7 @@ class AttendanceService:
             query = query.filter_by(student_id=student_id)
         if status:
             query = query.filter_by(status=status)
-        query = query.order_by(Approval.start_date.desc())
+        query = query.order_by(Approval.start_date.desc(), Approval.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {

@@ -7,6 +7,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
+from utils.excel_utils import sanitize_spreadsheet_value
+
 """
 统一Excel服务模块
 支持：大数据量分批导出、格式验证、错误定位、中文文件名
@@ -157,7 +159,10 @@ class ExcelExportService:
             for row_data in batch_data:
                 for col_idx, header in enumerate(headers, 1):
                     value = row_data.get(header, "")
-                    converted = ExcelExportService._convert_value(value)
+                    # R22 公式注入防护：转换后再中和公式形态（用户可控文本不得以公式落盘）
+                    converted = sanitize_spreadsheet_value(
+                        ExcelExportService._convert_value(value)
+                    )
                     cell = ws.cell(row=current_row, column=col_idx, value=converted)
                     cell.alignment = center_align
                 current_row += 1
@@ -191,7 +196,10 @@ class ExcelExportService:
         for row_idx, row_data in enumerate(data, start=2):
             for col, header in enumerate(headers, 1):
                 value = row_data.get(header, "")
-                converted = ExcelExportService._convert_value(value)
+                # R22 公式注入防护
+                converted = sanitize_spreadsheet_value(
+                    ExcelExportService._convert_value(value)
+                )
                 cell = ws.cell(row=row_idx, column=col, value=converted)
                 cell.alignment = center_align
                 cell.border = thin_border
@@ -230,12 +238,15 @@ class ExcelExportService:
         headers: list[str],
         filename: str = None,
     ) -> io.StringIO:
-        """CSV导出"""
+        """CSV导出。R28 公式注入（CSV/Formula Injection）防护：表头与数据单元格均经
+        sanitize_spreadsheet_value 中和，避免以 = + - @ 或 Tab/CR 开头的文本在 Excel 中被执行。"""
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(headers)
+        writer.writerow([sanitize_spreadsheet_value(h) for h in headers])
         for row_data in data:
-            writer.writerow([row_data.get(h, "") for h in headers])
+            writer.writerow(
+                [sanitize_spreadsheet_value(row_data.get(h, "")) for h in headers]
+            )
         output.seek(0)
         return output
 

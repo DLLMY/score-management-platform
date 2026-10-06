@@ -54,7 +54,8 @@ class DutyService:
         if denied:
             return denied
         for key, value in data.items():
-            if hasattr(group, key) and key not in ("id", "created_at"):
+            # R24 防批量赋值越权：class_id 为班级归属字段，禁止经通用更新接口改写
+            if hasattr(group, key) and key not in ("id", "created_at", "class_id"):
                 setattr(group, key, value)
         db.session.commit()
         return {"success": True, "data": self._build_group_response(group)}
@@ -83,7 +84,7 @@ class DutyService:
             query = query.filter_by(date=date)
         if is_completed is not None:
             query = query.filter_by(is_completed=is_completed)
-        query = query.order_by(DutyAssignment.date.desc())
+        query = query.order_by(DutyAssignment.date.desc(), DutyAssignment.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {

@@ -177,6 +177,10 @@ def _apply_user_sort(query, sort_by, sort_order):
         query = query.order_by(order_col.desc())
     else:
         query = query.order_by(order_col.asc())
+    # R21 排序稳定性：追加唯一键 tiebreaker。
+    # 默认排序键是 User.name（姓名天然并列：同名/重名学生很常见），score/created_at 亦可能并列。
+    # 缺 tiebreaker 时并列行顺序未定义 → 跨页会出现同一学生重复出现或整条漏掉。
+    query = query.order_by(User.id.asc())
     return query
 
 

@@ -17,7 +17,7 @@ def get_import_history_view(exam_id=None, page=1, per_page=20):
     if exam_id:
         query = query.filter_by(exam_id=exam_id)
 
-    pagination = query.order_by(Score.entered_at.desc()).paginate(
+    pagination = query.order_by(Score.entered_at.desc(), Score.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
 

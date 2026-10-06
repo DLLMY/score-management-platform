@@ -56,7 +56,8 @@ class CommitteeService:
         for key, value in data.items():
             if key in ("term_start", "term_end"):
                 value = parse_date(value)
-            if hasattr(member, key) and key not in ("id", "created_at"):
+            # R24 防批量赋值越权：class_id / student_id 均为归属字段，禁止经通用更新接口改写
+            if hasattr(member, key) and key not in ("id", "created_at", "class_id", "student_id"):
                 setattr(member, key, value)
         db.session.commit()
         return {"success": True, "data": self._build_member_response(member)}

@@ -44,7 +44,7 @@ def get_rule_list_view(page, per_page, category_id, is_active):
         query = query.filter(ScoreRule.category_id == category_id)
     if is_active is not None:
         query = query.filter(ScoreRule.is_active == (is_active.lower() == "true"))
-    pagination = query.order_by(ScoreRule.created_at.desc()).paginate(
+    pagination = query.order_by(ScoreRule.created_at.desc(), ScoreRule.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     return {

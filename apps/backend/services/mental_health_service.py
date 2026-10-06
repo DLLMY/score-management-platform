@@ -26,7 +26,7 @@ class MentalHealthService:
                 query = query.filter(User.class_info_id == class_id)
         if student_id:
             query = query.filter_by(student_id=student_id)
-        query = query.order_by(MentalHealthRecord.created_at.desc())
+        query = query.order_by(MentalHealthRecord.created_at.desc(), MentalHealthRecord.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {
@@ -78,7 +78,7 @@ class MentalHealthService:
             query = query.filter_by(student_id=student_id)
         if is_resolved is not None:
             query = query.filter_by(is_resolved=is_resolved)
-        query = query.order_by(Alert.created_at.desc())
+        query = query.order_by(Alert.created_at.desc(), Alert.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {

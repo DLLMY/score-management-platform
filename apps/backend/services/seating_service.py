@@ -59,7 +59,14 @@ class SeatingService:
         if denied:
             return denied
         for key, value in data.items():
-            if hasattr(chart, key) and key not in ("id", "created_at", "created_by"):
+            # R24 防批量赋值越权：class_id 是班级归属字段，禁止经通用更新接口改写
+            # （否则可把记录挂到无权限班级，绕过班级数据隔离；转班应走专门接口）
+            if hasattr(chart, key) and key not in (
+                "id",
+                "created_at",
+                "created_by",
+                "class_id",
+            ):
                 setattr(chart, key, value)
         chart.version += 1
         db.session.commit()

@@ -71,6 +71,17 @@ def _find_active_leave(user_id):
     """返回该生活效请假（approved 且未过期），惰性过期已过期项并落库。
 
     返回 Approval 或 None。
+
+    R26 事务边界：原实现惰性过期后在for 循环内裸 `db.session.commit()`，
+    会**提前提交调用方尚未完成的事务**（部分提交）——若本函数在未来被接入
+    开箱事务链（如 resolve_leave_for_unlock → 扣分/流水），后续步骤失败将无法回滚。
+    现改为：惰性过期写入交给 db_session_scope 统一提交（detach=False，
+    避免销毁调用方 session），对外"返回前已落库"的语义保持不变。
+    与孪生函数 _find_active_leave_in_session 的事务策略现已一致。
+
+    R26 附带修正：原实现按 end_time.desc() 排序后在**首条未过期记录处直接 return**，
+    导致其后的过期记录永远不会被惰性置为 expired（desc 序下未过期项在前）。
+    现改为：**扫描全部**记录，先把所有已过期的标记，再返回第一条未过期的。
     """
     now = datetime.now()
     leaves = (
@@ -78,27 +89,42 @@ def _find_active_leave(user_id):
         .order_by(Approval.end_time.desc())
         .all()
     )
+    active = None
+    has_expired = False
     for leave in leaves:
         if leave.end_time and leave.end_time <= now:
-            leave.status = "expired"
-            db.session.commit()
+            leave.status = "expired"  # 惰性过期（下方统一提交）
+            has_expired = True
             continue
-        return leave
-    return None
+        if active is None:
+            active = leave
+    if has_expired:
+        with db_session_scope(detach=False):
+            pass  # 上面已改 status 的改动在此统一提交
+    return active
 
 
 def _find_active_leave_in_session(user_id):
-    """同上，但不在本函数内提交（交由外层 db_session_scope 统一提交）。"""
+    """同上，但不在本函数内提交（交由外层 db_session_scope 统一提交）。
+
+    R26 附带修正：原实现用 `.first()` 只取一条（desc 序下未过期项在前），
+    其后的过期记录不会被惰性置expired。现改为扫描全部：先标记所有过期项，
+    再返回第一条未过期的。
+    """
     now = datetime.now()
-    leave = (
+    leaves = (
         Approval.query.filter_by(student_id=user_id, type="leave", status="approved")
         .order_by(Approval.end_time.desc())
-        .first()
+        .all()
     )
-    if leave and leave.end_time and leave.end_time <= now:
-        leave.status = "expired"  # 惰性过期，外层 scope 提交
-        return None
-    return leave
+    active = None
+    for leave in leaves:
+        if leave.end_time and leave.end_time <= now:
+            leave.status = "expired"  # 惰性过期，外层 scope 提交
+            continue
+        if active is None:
+            active = leave
+    return active
 
 
 def is_on_leave(user_id):
@@ -144,9 +170,10 @@ def resolve_leave_for_unlock(user):
         # 纯免扣：保留请假，本次不扣分（F3 备选开关）
         return True, 0, False
     # 默认自动销假 + 正常扣 10（F3 默认，防滥用）
+    # R26 事务边界：销假状态变更不再在此裸commit（原会在扣分/流水之前提前提交，
+    # 后续失败无法回滚）；交由调用方所在事务统一提交，保持与 _find_active_leave 一致。
     leave.status = "cancelled"
     leave.approver_id = None
-    db.session.commit()
     return False, LEAVE_UNLOCK_COST, True
 
 

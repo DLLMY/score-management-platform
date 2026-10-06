@@ -121,7 +121,7 @@ class ParentService:
             query = query.filter_by(parent_id=parent_id)
         if is_resolved is not None:
             query = query.filter_by(is_resolved=is_resolved)
-        query = query.order_by(ContactLog.contact_time.desc())
+        query = query.order_by(ContactLog.contact_time.desc(), ContactLog.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {

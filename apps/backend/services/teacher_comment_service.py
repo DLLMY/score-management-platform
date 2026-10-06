@@ -25,7 +25,7 @@ class TeacherCommentService:
             query = query.filter_by(student_id=student_id)
         if term:
             query = query.filter_by(term=term)
-        query = query.order_by(TeacherComment.created_at.desc())
+        query = query.order_by(TeacherComment.created_at.desc(), TeacherComment.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {

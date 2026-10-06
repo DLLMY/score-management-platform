@@ -14,8 +14,8 @@ from services.class_time_checker import ClassTimeChecker
 # 差异 #3/#11：心跳统一写入 + 设备错误自动告警
 from services.heartbeat_service import (
     apply_heartbeat_to_device,
-    extract_heartbeat_timestamp,
     check_device_errors,
+    extract_heartbeat_timestamp,
     is_safe_device_id,
     mark_device_offline_by_lwt,
 )
@@ -138,7 +138,9 @@ class MQTTMessageService:
         if not rule:
             return {"allow": False, "message": "Rule not found"}
 
-        if rule.daily_limit <= 0:
+        # daily_limit 模型有 default=0 但 DB 列可空；None <= 0 会抛 TypeError。
+        daily_limit = rule.daily_limit or 0
+        if daily_limit <= 0:
             return {"allow": True, "message": "No limit"}
 
         today = datetime.now().date()
@@ -149,13 +151,14 @@ class MQTTMessageService:
         ).all()
 
         total_score = sum(r.score_change for r in records)
-        if total_score >= rule.daily_limit:
+        if total_score >= daily_limit:
             return {
                 "allow": False,
-                "message": (f"Daily limit reached ({total_score}/" f"{rule.daily_limit})"),
+                "message": (f"Daily limit reached ({total_score}/" f"{daily_limit})"),
             }
 
-        if rule.min_interval > 0:
+        min_interval = rule.min_interval or 0
+        if min_interval > 0:
             last_record = (
                 ScoreRecord.query.filter(
                     ScoreRecord.student_id == user_id,
@@ -168,10 +171,10 @@ class MQTTMessageService:
             # R8 修复: 判空顺序（原先算 time_diff 再判 last_record → 首笔使用 AttributeError 且无回包）
             if last_record:
                 time_diff = (datetime.now() - last_record.created_at).total_seconds()
-                if time_diff < rule.min_interval:
+                if time_diff < min_interval:
                     return {
                         "allow": False,
-                        "message": (f"Too frequent, wait {rule.min_interval}s"),
+                        "message": (f"Too frequent, wait {min_interval}s"),
                     }
 
         return {"allow": True, "message": "Allowed"}

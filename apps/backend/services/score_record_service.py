@@ -258,7 +258,7 @@ def query_score_records(
     if end_dt:
         query = query.filter(ScoreRecord.created_at <= end_dt)
     query = _apply_isolation_filter(query, allowed_classes)
-    return query.order_by(ScoreRecord.created_at.desc()).paginate(
+    return query.order_by(ScoreRecord.created_at.desc(), ScoreRecord.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
 

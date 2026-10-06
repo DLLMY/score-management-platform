@@ -82,14 +82,21 @@ class ScoreImportHelper:
 
     @staticmethod
     def validate_score_range(score: float, full_score: float = 100) -> tuple:
-        """验证分数是否在合理范围内"""
+        """验证分数是否在合理范围内。
+
+        R27 口径统一：原为 `score > full_score * 1.5`（允许 150% 超满分），与
+        单条录入（exam_routes:219）与更新（academics_service:470）的严格
+        `0 ~ full_score` 口径**矛盾** —— 同一份成绩表经导入可写入 150 分
+        （满分 100），经更新接口又会被拒。故统一为多数口径的严格上界。
+        """
         if score is None:
             return False, "分数为空"
 
         if score < 0:
             return False, "分数不能为负数"
 
-        if score > full_score * 1.5:
-            return False, f"分数超过满分的150% ({full_score * 1.5})"
+        # full_score 缺失/非正数时不做上界约束（与 update_score 的 `full > 0` 判定一致）
+        if full_score and full_score > 0 and score > full_score:
+            return False, f"成绩需在 0 ~ {full_score} 之间"
 
         return True, "valid"

@@ -16,6 +16,7 @@ from models import (
     get_by_id,
 )
 from utils.db_session import db_session_scope
+from utils.excel_utils import sanitize_spreadsheet_value
 from utils.permission import get_allowed_classes
 
 
@@ -440,15 +441,31 @@ class ClassService:
                 cell.border = thin_border
 
             for row_idx, item in enumerate(export_data, 2):
-                ws.cell(row=row_idx, column=1, value=item["name"]).border = thin_border
-                ws.cell(row=row_idx, column=2, value=item["grade"]).border = thin_border
-                ws.cell(row=row_idx, column=3, value=item["description"]).border = thin_border
-                ws.cell(row=row_idx, column=4, value=item["head_teacher_id"]).border = thin_border
-                ws.cell(row=row_idx, column=5, value=item["head_teacher_name"]).border = thin_border
-                ws.cell(row=row_idx, column=6, value=item["student_count"]).border = thin_border
-                ws.cell(row=row_idx, column=7, value=item["is_active"]).border = thin_border
-                ws.cell(row=row_idx, column=8, value=item["created_at"]).border = thin_border
-                ws.cell(row=row_idx, column=9, value=item["updated_at"]).border = thin_border
+                # R22 公式注入防护：整行经 sanitize 中和（name/description/班主任姓名均为用户可控）
+                safe_item = {k: sanitize_spreadsheet_value(v) for k, v in item.items()}
+                ws.cell(row=row_idx, column=1, value=safe_item.get("name")).border = thin_border
+                ws.cell(row=row_idx, column=2, value=safe_item.get("grade")).border = thin_border
+                ws.cell(
+                    row=row_idx, column=3, value=safe_item.get("description")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=4, value=safe_item.get("head_teacher_id")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=5, value=safe_item.get("head_teacher_name")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=6, value=safe_item.get("student_count")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=7, value=safe_item.get("is_active")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=8, value=safe_item.get("created_at")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=9, value=safe_item.get("updated_at")
+                ).border = thin_border
 
             column_widths = [15, 10, 30, 12, 12, 10, 10, 20, 20]
             for i, width in enumerate(column_widths, 1):

@@ -170,7 +170,7 @@ class NLPRuleManagementService:
     def get_rule_usage(self, rule_id, page=1, per_page=20):
         """获取规则使用记录"""
         query = NLPRuleUsage.query.filter(NLPRuleUsage.rule_id == rule_id)
-        pagination = query.order_by(NLPRuleUsage.created_at.desc()).paginate(
+        pagination = query.order_by(NLPRuleUsage.created_at.desc(), NLPRuleUsage.id.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
 
@@ -305,7 +305,7 @@ class NLPRuleManagementService:
 
     def get_training_history(self, page=1, per_page=10):
         """获取模型训练历史"""
-        query = NLPModelTraining.query.order_by(NLPModelTraining.created_at.desc())
+        query = NLPModelTraining.query.order_by(NLPModelTraining.created_at.desc(), NLPModelTraining.id.desc())
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
         return {

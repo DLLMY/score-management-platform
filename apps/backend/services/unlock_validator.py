@@ -1,5 +1,7 @@
 from datetime import date, datetime, time
 
+from sqlalchemy import func
+
 from models import ScoreRankRule, ScoreRecord, TimeRule, User, db
 from utils.unlock_reasons import UnlockReason
 
@@ -220,33 +222,49 @@ class UnlockValidator:
     @staticmethod
     def record_unlock(user: User) -> None:
         """开锁记账：扣分 + 日/周计数 + 写积分流水（统一写端，描述词与统计 like('%开锁%') 一致，R2）"""
+        # ── R18 并发安全：原子增量替代 Python 读-改-写 ──
+        # 原实现把 4 个字段（分数/日计数/周计数/时间戳）在 Python 内算完再 flush，
+        # 并发开箱（MQTT 重连/重复上报）会互相覆盖 → 漏扣分 + 计数丢失；
+        # 计数丢失更会绕过每日/每周开锁上限（业务规则可被并发绕过）。
+        # 现改为单条 UPDATE 原子表达式（与 user_service.bulk_score_update 同范式）：
+        #   - current_score 用 func.max(0, ...) 在 SQL 内保住「不为负」下限语义；
+        #   - 计数自增同样在 SQL 内完成，杜绝 lost update。
+        # 日期滚动重置（日/周清零）仍按原语义在 Python 侧判断后写入。
         today = date.today()
-
-        if user.last_unlock_date != today:
-            user.today_unlock_count = 0
-            user.last_unlock_date = today
-
-        today_iso = date.today()
         current_week_start = (
-            today_iso.isoformat()[:4] + "-W" + str(today_iso.isocalendar()[1]).zfill(2)
+            today.isoformat()[:4] + "-W" + str(today.isocalendar()[1]).zfill(2)
         )
-        if user.week_start_date:
-            user_week_start = (
-                user.week_start_date.isoformat()[:4]
-                + "-W"
-                + str(user.week_start_date.isocalendar()[1]).zfill(2)
+
+        # 1) 跨日/跨周：需要重置计数时，先原子清零对应计数（条件更新，避免覆盖并发增量）
+        if user.last_unlock_date != today:
+            db.session.query(User).filter(User.id == user.id).update(
+                {User.today_unlock_count: 0, User.last_unlock_date: today},
+                synchronize_session=False,
             )
-        else:
-            user_week_start = None
+        if user.week_start_date is None or (
+            user.week_start_date.isoformat()[:4]
+            + "-W"
+            + str(user.week_start_date.isocalendar()[1]).zfill(2)
+        ) != current_week_start:
+            db.session.query(User).filter(User.id == user.id).update(
+                {User.weekly_unlock_count: 0, User.week_start_date: today},
+                synchronize_session=False,
+            )
 
-        if user_week_start != current_week_start:
-            user.weekly_unlock_count = 0
-            user.week_start_date = today
-
-        user.today_unlock_count = (user.today_unlock_count or 0) + 1
-        user.weekly_unlock_count = (user.weekly_unlock_count or 0) + 1
-        user.current_score = max(0, (user.current_score or 0) - UnlockValidator.UNLOCK_COST)
-        user.updated_at = datetime.now()
+        # 2) 原子自增：分数扣减保底 0，计数各 +1
+        db.session.query(User).filter(User.id == user.id).update(
+            {
+                User.current_score: func.max(
+                    0, func.coalesce(User.current_score, 0) - UnlockValidator.UNLOCK_COST
+                ),
+                User.today_unlock_count: func.coalesce(User.today_unlock_count, 0) + 1,
+                User.weekly_unlock_count: func.coalesce(User.weekly_unlock_count, 0) + 1,
+                User.updated_at: datetime.now(),
+            },
+            synchronize_session=False,
+        )
+        # 同步内存态，避免调用方（同一 session 内）继续读到旧值
+        db.session.refresh(user)
 
         # 积分流水：描述词统一"开锁扣分"（analysis/composite 统计均按 like('%开锁%') 匹配）
         record = ScoreRecord(

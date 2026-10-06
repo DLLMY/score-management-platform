@@ -17,7 +17,12 @@ import re
 
 from models import ClassInfo, ScoreCategory, ScoreRule, User, db
 from utils.transaction_retry import TransactionRetry
-from utils.validation import validate_name, validate_student_id
+from utils.validation import (
+    GENDER_NORMALIZE_MAP,
+    normalize_gender,
+    validate_name,
+    validate_student_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +113,9 @@ def _validate_user_row(name, gender, class_name, phone, card_id):
     row_errors = []
     _append_user_name_error(name, row_errors)
 
-    if gender and gender not in ["男", "女", "male", "female", "m", "f"]:
+    # 大小写不敏感：与 normalize_gender 的口径保持一致（此前白名单大小写敏感，
+    # 导致 'F'/'MALE' 被判无效，而归一化层却支持这些写法 → 两层口径矛盾）。
+    if gender and gender.strip().lower() not in ("男", "女", *GENDER_NORMALIZE_MAP):
         row_errors.append({"field": "gender", "message": "性别值无效"})
 
     _append_user_class_error(class_name, row_errors)
@@ -185,9 +192,12 @@ def bulk_import_users(rows):
 
     try:
         for row_idx, row in enumerate(rows, start=2):
+            # 预绑定：行短于 5 列时 row[0] 抛 IndexError，若在 except 中引用未绑定的
+            # name/row_data 会抛 UnboundLocalError 逃逸出循环，导致整批回滚（违背逐行容错设计）。
+            # 对齐 CSV 导入（_users_part2.py）的 locals() 守卫做法。
+            name = ""
+            row_data = {}
             try:
-                row_data = {}
-
                 name = str(row[0]).strip() if row[0] else ""
                 gender = str(row[1]).strip() if row[1] else ""
                 class_name = str(row[2]).strip() if row[2] else ""
@@ -204,7 +214,9 @@ def bulk_import_users(rows):
                     )
                     continue
 
-                create_user_row(name, gender, class_name, phone, card_id)
+                create_user_row(
+                    name, normalize_gender(gender), class_name, phone, card_id
+                )
                 imported_count += 1
                 messages.append(
                     {"name": name, "action": "created", "message": f"学生 {name} 导入成功"}

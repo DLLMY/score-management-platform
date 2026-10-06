@@ -18,8 +18,17 @@ class CultureService:
         if category:
             query = query.filter_by(category=category)
         if is_active is not None:
-            query = query.filter_by(is_active=is_active)
-        query = query.order_by(CultureRecord.display_order, CultureRecord.created_at.desc())
+            # R23 类型修正：is_active 来自 query string（原始字符串），直接传入 Boolean 列
+            # 会生成 `WHERE is_active = 'false'`（字符串 vs 布尔比较）→ 恒空集且静默丢数据。
+            # 与其余 7 处筛选统一口径：显式 lower()=="true" 归一为 bool。
+            query = query.filter_by(is_active=is_active.lower() == "true")
+        # R21 排序稳定性：批量录入时 display_order 常相同（且 created_at 秒级并列），
+        # 缺 tiebreaker 时并列行顺序未定义 → 跨页重复/漏项。
+        query = query.order_by(
+            CultureRecord.display_order,
+            CultureRecord.created_at.desc(),
+            CultureRecord.id.desc(),
+        )
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             return {
@@ -60,7 +69,13 @@ class CultureService:
         if denied:
             return denied
         for key, value in data.items():
-            if hasattr(record, key) and key not in ("id", "created_at"):
+            # R24 防批量赋值越权：class_id / created_by 为归属与审计字段，禁止经通用更新接口改写
+            if hasattr(record, key) and key not in (
+                "id",
+                "created_at",
+                "class_id",
+                "created_by",
+            ):
                 setattr(record, key, value)
         db.session.commit()
         return {"success": True, "data": self._build_record_response(record)}

@@ -15,7 +15,9 @@ from models import LoginAttempt, RateLimitRecord, SecurityAudit, db
 def check_login_rate_limit(username, ip_address, max_attempts=5, lockout_minutes=15):
     """检查登录频率限制，返回 (is_allowed, message, retry_after_seconds)。"""
     now = datetime.now()
-    record = LoginAttempt.query.filter_by(username=username).first()
+    # 同 record_failed_login：先去重，保证 .first() 读到权威锁定/计数行（R19）
+    # commit=True：让去重结果即刻落库，本函数不依赖调用方后续是否提交
+    record = _collapse_duplicate_attempts(username, commit=True)
 
     if record and record.locked_until and record.locked_until > now:
         retry_after = int((record.locked_until - now).total_seconds())
@@ -31,10 +33,37 @@ def check_login_rate_limit(username, ip_address, max_attempts=5, lockout_minutes
     return True, None, 0
 
 
+def _collapse_duplicate_attempts(username, commit=False):
+    """把同一 username 的重复 LoginAttempt 行合并为一行（R19 并发兜底）。
+
+    背景：record_failed_login 是 check-then-insert，缺 unique 约束时并发首次失败
+    会插入多行同 username 记录；此后 .first() 只操作其中一行，attempt_count 被拆分
+    → 5 次锁定阈值永不触发（防爆破可被绕过）。
+
+    合并策略：保留 attempt_count 最大的一行为准（其 locked_until 亦最严），
+    删除其余行，保证「一个 username 一行」语义，使 .first() 读到权威计数。
+    幂等：仅在确有重复行时才执行删除；无重复时既不 flush 也不 commit（纯读路径零开销）。
+    commit=True 时提交去重结果（供 check_login_rate_limit 自洽使用，不依赖调用方兜底）。
+    """
+    records = LoginAttempt.query.filter_by(username=username).all()
+    if len(records) <= 1:
+        return records[0] if records else None
+    keeper = max(records, key=lambda r: (r.attempt_count or 0, r.id or 0))
+    for r in records:
+        if r.id != keeper.id:
+            db.session.delete(r)
+    if commit:
+        db.session.commit()
+    else:
+        db.session.flush()
+    return keeper
+
+
 def record_failed_login(username, ip_address, max_attempts=5, lockout_minutes=15):
     """记录失败的登录尝试。"""
     now = datetime.now()
-    record = LoginAttempt.query.filter_by(username=username).first()
+    # 读路径先去重（存量库无 unique 索引时兜底；全新库有约束时为恒等操作）
+    record = _collapse_duplicate_attempts(username)
 
     if not record:
         record = LoginAttempt(
