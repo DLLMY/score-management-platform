@@ -6,3 +6,5 @@ export { default as Header } from './Header';
 export { default as Sidebar } from './Sidebar';
 export { default as PageTransition } from './PageTransition';
 export { default as KeyboardShortcutHelp } from './KeyboardShortcutHelp';
+// 侧边栏导航静态配置与类型（供测试/其它布局组件复用）
+export { MENU_GROUPS, type MenuGroup, type MenuItemData } from './menuConfig';
