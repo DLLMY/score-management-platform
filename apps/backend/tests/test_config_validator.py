@@ -16,22 +16,36 @@ class TestConfigValidator:
     """配置验证器测试"""
 
     def test_validate_jwt_secret_empty(self):
-        """测试JWT密钥为空时返回错误"""
+        """测试JWT密钥为空且FLASK也未提供时返回错误"""
         from utils.config_validator import ConfigValidator
 
-        real_getenv = os.getenv
-
-        def fake_getenv(key, default=None):
-            if key == "JWT_SECRET_KEY":
-                return ""
-            return real_getenv(key, default)
-
         validator = ConfigValidator()
-        with patch("utils.config_validator.os.getenv", side_effect=fake_getenv):
+        with patch.dict(
+            os.environ, {"JWT_SECRET_KEY": "", "FLASK_SECRET_KEY": ""}, clear=False
+        ):
             validator.validate_jwt_secret()
 
         assert len(validator.errors) == 1
         assert validator.errors[0]["category"] == "security"
+
+    def test_validate_jwt_secret_falls_back_to_flask(self):
+        """JWT_SECRET_KEY 未设但 FLASK_SECRET_KEY 已设时，应回退（warning 而非 error）。"""
+        from utils.config_validator import ConfigValidator
+
+        validator = ConfigValidator()
+        with patch.dict(
+            os.environ,
+            {"JWT_SECRET_KEY": "", "FLASK_SECRET_KEY": "valid_flask_secret_key_at_least_32_chars_long"},
+            clear=False,
+        ):
+            validator.validate_jwt_secret()
+
+        # 回退场景下不应产生错误（实际生效密钥已就绪）
+        assert len(validator.errors) == 0
+        assert any(
+            w["message"].startswith("JWT_SECRET_KEY 未显式设置")
+            for w in validator.warnings
+        )
 
     def test_validate_jwt_secret_short(self):
         """测试JWT密钥过短时返回警告"""

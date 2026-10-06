@@ -18,7 +18,7 @@ class TestMQTTRoutes:
             assert response.status_code in [200, 401, 403]
 
     def test_mqtt_publish(self, client, app, auth_headers, monkeypatch):
-        import api.monitoring.mqtt_routes as mqtt_routes
+        from api.monitoring import mqtt_routes
 
         # 隔离外部依赖：限流器（测试 app 未初始化）+ MQTT 实际下发（沙箱无 broker）
         monkeypatch.setattr(mqtt_routes, "get_limiter", lambda: _NoOpLimiter())
