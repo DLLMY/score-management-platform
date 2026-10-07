@@ -109,7 +109,7 @@ class PhoneBoxPolicy(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     class_info = db.relationship(
-        "ClassInfo", backref=db.backref("phone_box_policy", uselist=False, lazy=True)
+        "ClassInfo", backref=db.backref("phone_box_policy", uselist=False, lazy=True), lazy="selectin"
     )
 
 
@@ -181,8 +181,8 @@ class Device(db.Model):
     wol_port = db.Column(db.Integer, default=9)
     wol_description = db.Column(db.String(500))
 
-    class_info = db.relationship("ClassInfo", backref=db.backref("devices", lazy=True))
-    admin = db.relationship("Admin", backref=db.backref("devices", lazy=True))
+    class_info = db.relationship("ClassInfo", backref=db.backref("devices", lazy=True), lazy="selectin")
+    admin = db.relationship("Admin", backref=db.backref("devices", lazy=True), lazy="selectin")
 
     @property
     def is_online(self) -> bool:

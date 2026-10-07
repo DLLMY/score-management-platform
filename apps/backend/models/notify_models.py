@@ -21,7 +21,7 @@ class Notification(db.Model):
     read_at = db.Column(db.DateTime)
     extra_data = db.Column(db.JSON)
 
-    user = db.relationship("User", backref="notifications")
+    user = db.relationship("User", backref="notifications", lazy="selectin")
 
     def to_dict(self, fields=None):
         """基础字段序列化（B3 扩展 2026-08-23）。
@@ -75,7 +75,7 @@ class Approval(db.Model):
     card_id = db.Column(db.String(50))
     device_id = db.Column(db.String(100))
 
-    user = db.relationship("User", backref="approvals")
+    user = db.relationship("User", backref="approvals", lazy="selectin")
 
 
 

@@ -25,10 +25,10 @@ class ScoreArchive(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     archived_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
-    exam = db.relationship("Exam", backref=db.backref("score_archives", lazy=True))
-    student = db.relationship("User", backref=db.backref("score_archives", lazy=True))
-    admin = db.relationship("Admin", backref=db.backref("score_archives", lazy=True))
-    subject_rel = db.relationship("Subject", backref=db.backref("score_archive_records", lazy=True))
+    exam = db.relationship("Exam", backref=db.backref("score_archives", lazy=True), lazy="selectin")
+    student = db.relationship("User", backref=db.backref("score_archives", lazy=True), lazy="selectin")
+    admin = db.relationship("Admin", backref=db.backref("score_archives", lazy=True), lazy="selectin")
+    subject_rel = db.relationship("Subject", backref=db.backref("score_archive_records", lazy=True), lazy="selectin")
 
 
 

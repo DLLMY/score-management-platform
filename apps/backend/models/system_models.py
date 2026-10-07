@@ -158,8 +158,8 @@ class AdminClass(db.Model):
     is_primary = db.Column(db.Boolean, default=False)
     assigned_at = db.Column(db.DateTime, default=datetime.now)
 
-    admin = db.relationship("Admin", backref=db.backref("class_links", lazy=True))
-    class_info = db.relationship("ClassInfo", backref=db.backref("admin_links", lazy=True))
+    admin = db.relationship("Admin", backref=db.backref("class_links", lazy=True), lazy="selectin")
+    class_info = db.relationship("ClassInfo", backref=db.backref("admin_links", lazy=True), lazy="selectin")
 
 
 

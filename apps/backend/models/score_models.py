@@ -293,8 +293,8 @@ class Exam(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-    class_info = db.relationship("ClassInfo", backref=db.backref("exams", lazy=True))
-    admin = db.relationship("Admin", backref=db.backref("exams", lazy=True))
+    class_info = db.relationship("ClassInfo", backref=db.backref("exams", lazy=True), lazy="selectin")
+    admin = db.relationship("Admin", backref=db.backref("exams", lazy=True), lazy="selectin")
 
 
 class Score(db.Model):
@@ -319,9 +319,9 @@ class Score(db.Model):
         ),
     )
 
-    exam = db.relationship("Exam", backref=db.backref("scores", lazy=True))
-    student = db.relationship("User", backref=db.backref("scores", lazy=True))
-    admin = db.relationship("Admin", backref=db.backref("scores", lazy=True))
+    exam = db.relationship("Exam", backref=db.backref("scores", lazy=True), lazy="selectin")
+    student = db.relationship("User", backref=db.backref("scores", lazy=True), lazy="selectin")
+    admin = db.relationship("Admin", backref=db.backref("scores", lazy=True), lazy="selectin")
     subject_rel = db.relationship("Subject", backref=db.backref("score_records", lazy=True), lazy="selectin")
 
     def to_dict(self):
@@ -391,9 +391,9 @@ class SubjectClass(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey("admin.id"), index=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-    subject = db.relationship("Subject", backref=db.backref("class_links", lazy=True))
-    class_info = db.relationship("ClassInfo", backref=db.backref("subject_links", lazy=True))
-    teacher = db.relationship("Admin", backref=db.backref("subject_teachings", lazy=True))
+    subject = db.relationship("Subject", backref=db.backref("class_links", lazy=True), lazy="selectin")
+    class_info = db.relationship("ClassInfo", backref=db.backref("subject_links", lazy=True), lazy="selectin")
+    teacher = db.relationship("Admin", backref=db.backref("subject_teachings", lazy=True), lazy="selectin")
 
     __table_args__ = (db.UniqueConstraint("subject_id", "class_info_id", name="uq_subject_class"),)
 
@@ -436,8 +436,8 @@ class CourseSchedule(db.Model):
         db.Index("ix_course_schedule_class_day_period", "class_info_id", "day_of_week", "period_number"),
     )
 
-    class_info = db.relationship("ClassInfo", backref=db.backref("schedules", lazy=True))
-    subject = db.relationship("Subject", backref=db.backref("schedules", lazy=True))
+    class_info = db.relationship("ClassInfo", backref=db.backref("schedules", lazy=True), lazy="selectin")
+    subject = db.relationship("Subject", backref=db.backref("schedules", lazy=True), lazy="selectin")
 
     def to_dict(self, fields=None):
         """基础字段序列化（B3 扩展 2026-08-23）。

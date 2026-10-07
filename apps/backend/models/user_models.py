@@ -15,7 +15,7 @@ class User(db.Model):
     gender = db.Column(db.String(10))
     class_name = db.Column(db.String(50), index=True)
     class_info_id = db.Column(db.Integer, db.ForeignKey("class_info.id"), index=True)
-    class_info = db.relationship("ClassInfo", backref=db.backref("users", lazy=True))
+    class_info = db.relationship("ClassInfo", backref=db.backref("users", lazy=True), lazy="selectin")
     phone = db.Column(db.String(20), index=True)
     parent_info = db.Column(db.String(500))
     father_name = db.Column(db.String(100))
@@ -181,7 +181,7 @@ class SubAccount(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
-    parent_admin = db.relationship("Admin", backref=db.backref("sub_accounts", lazy=True))
+    parent_admin = db.relationship("Admin", backref=db.backref("sub_accounts", lazy=True), lazy="selectin")
 
     @property
     def password(self):
@@ -286,7 +286,7 @@ class AdminRole(db.Model):
     role_code = db.Column(db.String(50), index=True)
     assigned_at = db.Column(db.DateTime, default=datetime.now)
 
-    admin = db.relationship("Admin", backref=db.backref("role_links", lazy=True))
+    admin = db.relationship("Admin", backref=db.backref("role_links", lazy=True), lazy="selectin")
 
 
 
