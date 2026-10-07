@@ -336,11 +336,17 @@ def _get_admin_permission_codes(admin):
     admin_roles = AdminRole.query.filter_by(admin_id=admin.id).all()
     role_codes = [ar.role_code for ar in admin_roles]
 
+    # 批量预加载所有角色的直接权限映射，消除逐 role 单查的 N+1
+    _mappings = (
+        RolePermissionMapping.query.filter(
+            RolePermissionMapping.role_code.in_(role_codes)
+        ).all()
+        if role_codes
+        else []
+    )
+    for m in _mappings:
+        permissions.add(m.permission_code)
     for role_code in role_codes:
-        # 获取直接权限
-        mappings = RolePermissionMapping.query.filter_by(role_code=role_code).all()
-        for m in mappings:
-            permissions.add(m.permission_code)
         # 获取继承权限
         permissions.update(_get_inherited_permissions(role_code))
 

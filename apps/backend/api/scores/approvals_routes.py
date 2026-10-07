@@ -288,9 +288,12 @@ class ApprovalBatchApprove(Resource):
             return APIResponse.error(message="请选择要审批的申请")
         if len(ids) > 100:
             return APIResponse.error(message="单次最多批量审批 100 条")
+        # 批量加载，消除逐条 Approval.query.get 的 N+1（单次最多 100 条）
+        _approvals = Approval.query.filter(Approval.id.in_(ids)).all()
+        _approval_map = {a.id: a for a in _approvals}
         results = []
         for aid in ids:
-            approval = Approval.query.get(aid)
+            approval = _approval_map.get(aid)
             if not approval:
                 results.append({"id": aid, "success": False, "message": "申请不存在"})
                 continue
@@ -326,9 +329,12 @@ class ApprovalBatchReject(Resource):
             return APIResponse.error(message="请选择要拒绝的申请")
         if len(ids) > 100:
             return APIResponse.error(message="单次最多批量拒绝 100 条")
+        # 批量加载，消除逐条 Approval.query.get 的 N+1（单次最多 100 条）
+        _approvals = Approval.query.filter(Approval.id.in_(ids)).all()
+        _approval_map = {a.id: a for a in _approvals}
         results = []
         for aid in ids:
-            approval = Approval.query.get(aid)
+            approval = _approval_map.get(aid)
             if not approval:
                 results.append({"id": aid, "success": False, "message": "申请不存在"})
                 continue

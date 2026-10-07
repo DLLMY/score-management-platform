@@ -309,10 +309,17 @@ class WarningService:
         Returns:
             dict: 配置字典
         """
+        # 批量加载预警配置，消除逐 key 单查的 N+1（_get_config 被每请求多次调用）
+        _keys = list(WarningService.DEFAULT_CONFIG.keys())
+        _rows = (
+            WarningConfig.query.filter(WarningConfig.config_key.in_(_keys)).all()
+            if _keys
+            else []
+        )
+        _cfg_map = {r.config_key: r.config_value for r in _rows}
         config = {}
         for key, default in WarningService.DEFAULT_CONFIG.items():
-            cfg = WarningConfig.query.filter_by(config_key=key).first()
-            config[key] = cfg.config_value if cfg else default
+            config[key] = _cfg_map.get(key, default)
         return config
 
     @staticmethod
