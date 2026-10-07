@@ -85,7 +85,7 @@ class ScoreRule(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
-    category = db.relationship("ScoreCategory", backref="rules")
+    category = db.relationship("ScoreCategory", backref="rules", lazy="selectin")
 
     def to_dict(self, fields=None):
         """积分规则序列化（B3 收敛 2026-09-05，对齐 ScoreRecord 二级派生纪律）。
@@ -147,8 +147,8 @@ class ScoreRecord(db.Model):
         db.Index("ix_score_record_student_created", "student_id", "created_at"),
     )
 
-    user = db.relationship("User", backref="records")
-    rule = db.relationship("ScoreRule", backref="records")
+    user = db.relationship("User", backref="records", lazy="selectin")
+    rule = db.relationship("ScoreRule", backref="records", lazy="selectin")
 
     def to_dict(self, fields=None):
         """积分记录序列化（B3 扩展 2026-08-23，DetachedInstanceError 加固 2026-08-29）。
@@ -322,7 +322,7 @@ class Score(db.Model):
     exam = db.relationship("Exam", backref=db.backref("scores", lazy=True))
     student = db.relationship("User", backref=db.backref("scores", lazy=True))
     admin = db.relationship("Admin", backref=db.backref("scores", lazy=True))
-    subject_rel = db.relationship("Subject", backref=db.backref("score_records", lazy=True))
+    subject_rel = db.relationship("Subject", backref=db.backref("score_records", lazy=True), lazy="selectin")
 
     def to_dict(self):
         return {

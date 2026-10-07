@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 import paho.mqtt.client as mqtt
+from paho.mqtt.client import SubscribeOptions
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +202,13 @@ class MQTTManager:
         if self.is_connected:
             self._subscribed_topics = []
             for topic, qos in self.CONTROL_SUBSCRIPTIONS:
-                client.subscribe(topic, qos=qos)
+                # 关键修复：控制连接订阅启用 no_local。否则后端会收到自己发布的下行结果
+                # （phonebox/unlock/A、/B、phonebox/ota/* 等），被当作上行请求再次派发，
+                # 形成自循环——典型为 card_not_found 结果无 card_id → 再次下发 card_not_found
+                # → 死循环，向设备灌入大量重复报文。no_local 由 MQTT 服务端阻断本端回环。
+                client.subscribe(
+                    topic, qos=qos, options=SubscribeOptions(qos=qos, noLocal=True)
+                )
                 self._subscribed_topics.append(topic)
             logger.info(
                 f"[MQTTManager] 控制连接已订阅: {[t[0] for t in self.CONTROL_SUBSCRIPTIONS]}"

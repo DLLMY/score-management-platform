@@ -253,6 +253,11 @@ class MQTTMessageService:
 
     @ensure_app_context
     def handle_unlock_message(self, data):
+        # 防御性守卫：下行结果报文（含 result 字段）被本端或其它后端实例回环接收时直接忽略，
+        # 避免与 phonebox/unlock/# 订阅形成自循环。no_local 已在订阅层阻断本端回环，
+        # 此处作为跨实例/异常回环的兜底，零契约变更（上行开锁请求不含 result 字段）。
+        if not isinstance(data, dict) or "result" in data:
+            return
         box_id = data.get("box_id", "A")
         card_id = data.get("card_id")
         # G1：下行补 device_id（新固件 v1.6.0+ 定向校验；缺省不输出）
