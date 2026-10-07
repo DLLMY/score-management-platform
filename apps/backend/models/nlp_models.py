@@ -12,7 +12,7 @@ class NLPScoringRule(db.Model):
     behavior_keyword = db.Column(db.String(200), index=True)
     behavior_description = db.Column(db.String(500))
     score_value = db.Column(db.Float)
-    score_type = db.Column(db.String(20))
+    score_type = db.Column(db.String(20), index=True)
     _behavior_tags = db.Column("behavior_tags", db.JSON)
     match_pattern = db.Column(db.String(500))
     priority = db.Column(db.Integer)

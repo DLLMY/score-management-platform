@@ -77,6 +77,30 @@ class WarningService:
                 "warning_reasons": {},
                 "message": "没有找到学生数据",
             }
+        # —— 批量预取消除 N+1：原实现对每个 user 各发 4 次 DB 查询
+        # （_get_no_positive_days / _get_today_unlock_count / _get_student_avg_score
+        #  / CompositeScore 查询），50 学生≈200+ 查询。改为 3 次批量查询后在内存
+        # 按 student_id 分组计算，每轮迭代仅做字典查询（O(1)）。
+        user_ids = [u.id for u in users]
+        since = datetime.now() - timedelta(days=30)
+        today = datetime.now().date()
+        today_start = datetime(today.year, today.month, today.day)
+        sr_rows = ScoreRecord.query.filter(
+            ScoreRecord.student_id.in_(user_ids),
+            ScoreRecord.created_at >= since,
+        ).all()
+        sr_by_user = {}
+        for _r in sr_rows:
+            sr_by_user.setdefault(_r.student_id, []).append(_r)
+        score_rows = Score.query.filter(Score.student_id.in_(user_ids)).all()
+        score_by_user = {}
+        for _s in score_rows:
+            score_by_user.setdefault(_s.student_id, []).append(_s)
+        comp_rows = CompositeScore.query.filter(
+            CompositeScore.student_id.in_(user_ids)
+        ).all()
+        comp_by_user = {_c.student_id: _c for _c in comp_rows}
+
         risk_students = []
         warning_reasons = {}
         for user in users:
@@ -87,19 +111,29 @@ class WarningService:
                 risk_level = (
                     "high" if user.current_score < int(config["score_threshold"]) / 2 else "medium"
                 )
-            no_positive_days = WarningService._get_no_positive_days(user.id)
+            positive_dates = {
+                _r.created_at.date()
+                for _r in sr_by_user.get(user.id, [])
+                if _r.score_change and _r.score_change > 0
+            }
+            no_positive_days = WarningService._consecutive_no_positive_days(positive_dates, today)
             if no_positive_days >= int(config["no_positive_days"]):
                 reasons.append(f"连续{no_positive_days}天无正向积分")
                 risk_level = WarningService.escalate_risk_level(risk_level, "medium")
-            daily_unlock_count = WarningService._get_today_unlock_count(user.id)
+            daily_unlock_count = sum(
+                1
+                for _r in sr_by_user.get(user.id, [])
+                if _r.description and "开锁" in _r.description and _r.created_at >= today_start
+            )
             if daily_unlock_count >= int(config["unlock_daily_limit"]):
                 reasons.append(f"今日开锁次数过多({daily_unlock_count}次)")
                 risk_level = WarningService.escalate_risk_level(risk_level, "medium")
-            avg_score = WarningService._get_student_avg_score(user.id)
+            _scores = [s.score for s in score_by_user.get(user.id, []) if s.score is not None]
+            avg_score = round(sum(_scores) / len(_scores), 2) if _scores else None
             if avg_score is not None and avg_score < float(config["low_score_threshold"]):
                 reasons.append(f"平均成绩低于{config['low_score_threshold']}分")
                 risk_level = WarningService.escalate_risk_level(risk_level, "high")
-            composite = CompositeScore.query.filter_by(student_id=user.id).first()
+            composite = comp_by_user.get(user.id)
             if composite and composite.composite_score < 40:
                 reasons.append("综合评分偏低")
                 risk_level = WarningService.escalate_risk_level(risk_level, "medium")
@@ -127,6 +161,18 @@ class WarningService:
         }
 
     @staticmethod
+    def _consecutive_no_positive_days(positive_dates, today=None):
+        """给定正向积分日期集合，计算从 today 起向前连续无正向积分的天数（最多 30）。"""
+        today = today or datetime.now().date()
+        days_count = 0
+        for i in range(30):
+            check_date = today - timedelta(days=i)
+            if check_date in positive_dates:
+                break
+            days_count += 1
+        return days_count
+
+    @staticmethod
     def _get_no_positive_days(user_id):
         """
         获取连续无正向积分的天数
@@ -146,13 +192,7 @@ class WarningService:
                 ScoreRecord.created_at >= since,
             ).all()
         }
-        days_count = 0
-        for i in range(30):
-            check_date = today - timedelta(days=i)
-            if check_date in positive_dates:
-                break
-            days_count += 1
-        return days_count
+        return WarningService._consecutive_no_positive_days(positive_dates, today)
 
     @staticmethod
     def _get_today_unlock_count(user_id):

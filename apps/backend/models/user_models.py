@@ -39,7 +39,7 @@ class User(db.Model):
     weekly_unlock_count = db.Column(db.Integer, default=0)
     week_start_date = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True, index=True)
-    role = db.Column(db.Text)
+    role = db.Column(db.Text, index=True)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  # R7
     # P0-d model/migration alignment: risk_score / last_risk_updated were previously
@@ -94,7 +94,7 @@ class Admin(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     _password = db.Column("password", db.String(200), nullable=False)
     role = db.Column(db.String(20), default="admin")
-    real_name = db.Column(db.String(50))
+    real_name = db.Column(db.String(50), index=True)
     phone = db.Column(db.String(20))
     class_name = db.Column(db.String(50))
     primary_class_id = db.Column(db.Integer, db.ForeignKey("class_info.id"))

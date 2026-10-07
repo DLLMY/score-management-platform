@@ -263,7 +263,7 @@ class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, index=True)
     exam_type = db.Column(db.String(50))
-    date = db.Column(db.DateTime)
+    date = db.Column(db.DateTime, index=True)
     description = db.Column(db.Text)
     subjects = db.Column(db.JSON)
     start_time = db.Column(db.DateTime, index=True)
@@ -431,6 +431,10 @@ class CourseSchedule(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+    __table_args__ = (
+        db.Index("ix_course_schedule_class_day_period", "class_info_id", "day_of_week", "period_number"),
+    )
 
     class_info = db.relationship("ClassInfo", backref=db.backref("schedules", lazy=True))
     subject = db.relationship("Subject", backref=db.backref("schedules", lazy=True))
