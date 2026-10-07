@@ -275,13 +275,14 @@ class DeviceGroupStats(Resource):
     @cached_api(ttl=60)
     def get(self):
         """获取设备分组统计"""
-        total_groups = DeviceGroup.query.count()
-        active_groups = DeviceGroup.query.filter_by(is_active=True).count()
+        # 一次性加载分组：total/active 由内存归类（2 次 COUNT + ALL -> 1 次查询）
+        groups = DeviceGroup.query.all()
+        total_groups = len(groups)
+        active_groups = sum(1 for g in groups if g.is_active)
         total_mappings = DeviceGroupMapping.query.count()
 
         # 获取每个分组的设备数量
         group_stats = []
-        groups = DeviceGroup.query.all()
         # 批量按 group_id 聚合设备数量，避免逐分组 COUNT（原实现每分组 1 次 SQL → 共 N 次）
         counts = dict(
             DeviceGroupMapping.query.with_entities(

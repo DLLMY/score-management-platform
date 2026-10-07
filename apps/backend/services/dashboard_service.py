@@ -33,8 +33,10 @@ class DashboardService:
             .all()
         )
 
-        total_devices = Device.query.count() or 0
-        online_devices = sum(1 for d in Device.query.all() if d.is_online) or 0
+        # 一次性加载设备，total/online 由内存归类（COUNT + ALL -> 1 次查询）
+        _devices = Device.query.all()
+        total_devices = len(_devices) or 0
+        online_devices = sum(1 for d in _devices if d.is_online) or 0
 
         total_admins = Admin.query.count() or 0
         total_rules = ScoreRule.query.filter_by(is_active=True).count() or 0

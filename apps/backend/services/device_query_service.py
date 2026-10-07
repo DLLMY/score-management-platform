@@ -6,8 +6,6 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
-
 from models import Alert, Device, DeviceHeartbeat, db
 from services.heartbeat_service import is_device_online
 from utils.permission import get_admin_class_ids
@@ -117,10 +115,12 @@ def get_device_alerts_view(resolved, severity, page, per_page):
 
 def get_device_stats_view():
     """获取设备基础统计，返回裸 data dict。"""
-    total = Device.query.count()
-    error = Device.query.filter_by(status="error").count()
+    # 一次性加载全部设备，避免 total/error/online 各自 COUNT（3 次查询 -> 1 次）
+    _devices = Device.query.all()
+    total = len(_devices)
+    error = sum(1 for d in _devices if d.status == "error")
     online_cutoff = datetime.now() - timedelta(seconds=60)
-    online = Device.query.filter(Device.last_heartbeat >= online_cutoff).count()
+    online = sum(1 for d in _devices if d.last_heartbeat is not None and d.last_heartbeat >= online_cutoff)
     offline = max(0, total - online - error)
     today = datetime.now().date()
     today_heartbeats = DeviceHeartbeat.query.filter(
@@ -148,29 +148,30 @@ def get_device_stats_view():
 
 def get_device_advanced_stats_view():
     """获取设备高级统计（@cached_api 直接包装裸 dict，须原样返回）。"""
-    total = Device.query.count()
-    error = Device.query.filter_by(status="error").count()
-    online = Device.query.filter(
-        Device.last_heartbeat >= datetime.now() - timedelta(seconds=60)
-    ).count()
+    # 一次性加载全部设备：total/error/online/signal 全部由内存归类（5 次查询 -> 1 次）
+    _devices = Device.query.all()
+    total = len(_devices)
+    error = sum(1 for d in _devices if d.status == "error")
+    online_cutoff = datetime.now() - timedelta(seconds=60)
+    online = sum(1 for d in _devices if d.last_heartbeat is not None and d.last_heartbeat >= online_cutoff)
     offline = total - online - error
+    _signal_devices = [d for d in _devices if d.wifi_signal is not None]
     avg_signal = (
-        db.session.query(func.avg(Device.wifi_signal))
-        .filter(Device.wifi_signal.isnot(None))
-        .scalar()
+        round(sum(d.wifi_signal for d in _signal_devices) / len(_signal_devices), 1)
+        if _signal_devices
+        else None
     )
-    alert_count = Alert.query.filter_by(source="device", is_resolved=False).count()
-    critical_alerts = Alert.query.filter_by(
-        source="device", is_resolved=False, severity="critical"
-    ).count()
+    # 设备相关告警一次性加载（2 次 COUNT -> 1 次）
+    _device_alerts = Alert.query.filter_by(source="device", is_resolved=False).all()
+    alert_count = len(_device_alerts)
+    critical_alerts = sum(1 for a in _device_alerts if a.severity == "critical")
     today = datetime.now().date()
     today_start = datetime.combine(today, datetime.min.time())
     today_heartbeats = DeviceHeartbeat.query.filter(
         DeviceHeartbeat.received_at >= today_start
     ).count()
-    devices_with_signal = Device.query.filter(Device.wifi_signal.isnot(None)).all()
     signal_distribution = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
-    for d in devices_with_signal:
+    for d in _signal_devices:
         if d.wifi_signal >= -50:
             signal_distribution["excellent"] += 1
         elif d.wifi_signal >= -70:

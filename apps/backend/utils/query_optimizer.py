@@ -230,8 +230,10 @@ class QueryOptimizer:
         from models import Device
 
         try:
-            total = Device.query.count()
-            online = sum(1 for d in Device.query.all() if d.is_online)
+            # 一次性加载设备，total/online 由内存归类（COUNT + ALL -> 1 次查询）
+            devices = Device.query.all()
+            total = len(devices)
+            online = sum(1 for d in devices if d.is_online)
         except Exception as e:
             logger.warning("获取设备状态汇总失败，降级返回空: %s", e, exc_info=True)
             total, online = 0, 0
