@@ -113,7 +113,10 @@ class HealthChecker:
         if not PSUTIL_AVAILABLE:
             return {"status": "unknown", "message": "psutil未安装"}
         try:
-            cpu_percent = psutil.cpu_percent(interval=0.1)  # 缩短检查时间
+            # 非阻塞采样：interval=0.1 会让每次健康探测同步阻塞 100ms，
+            # 而该端点被监控/K8s 探针/前端仪表盘高频轮询，代价被显著放大。
+            # interval=None 立即返回「距上次调用期间」的 CPU 均值（标准非阻塞用法）。
+            cpu_percent = psutil.cpu_percent(interval=None)
             if cpu_percent > 95:
                 return {"status": "critical", "message": f"CPU使用率过高: {cpu_percent}%"}
             if cpu_percent > 80:

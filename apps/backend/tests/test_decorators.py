@@ -23,7 +23,10 @@ def test_safe_handle_catches_exception_to_envelope():
     resp, status = boom()
     assert resp["success"] is False
     assert status == 500
-    assert "boom" in resp["message"]
+    # 实现加固（R 系列）：未捕获异常不再透传原始文案，统一返回兜底文案，
+    # 避免泄露 SQL/路径/堆栈等内部细节。此处断言兜底文案且原始异常细节不泄露。
+    assert resp["message"] == "服务器内部错误"
+    assert "boom" not in resp["message"]
 
 
 def test_safe_handle_passthrough_success():

@@ -12,9 +12,30 @@ class StudyGroupService:
         if is_active is not None:
             # R23 类型修正：query string 为字符串，需归一为 bool 后再与 Boolean 列比较
             # （直接传字符串会生成 `WHERE is_active = 'false'` → 恒空集）。
-            query = query.filter_by(is_active=is_active.lower() == "true")
+            # 同时兼容函数内部 bool 入参（默认 True）：is_active.lower() 在 bool 上抛
+            # AttributeError（真实 bug），故统一经 _normalize_is_active 归一为 bool。
+            flag = self._normalize_is_active(is_active)
+            if flag is not None:
+                query = query.filter_by(is_active=flag)
         groups = query.order_by(StudyGroup.score.desc()).all()
         return {"success": True, "data": [self._build_group_response(g) for g in groups]}
+
+    @staticmethod
+    def _normalize_is_active(is_active):
+        """归一 is_active 多态入参 → bool（兼容 bool / 字符串 / None）。
+
+        - None        → None（调用方据此跳过过滤）
+        - bool        → 原样透传
+        - str "true"  → True；"false"/其他 → False（R23 query-string 语义）
+        - 其它类型    → bool() 兜底
+        """
+        if is_active is None:
+            return None
+        if isinstance(is_active, bool):
+            return is_active
+        if isinstance(is_active, str):
+            return is_active.strip().lower() == "true"
+        return bool(is_active)
 
     def create_group(self, data):
         group = StudyGroup(

@@ -6,6 +6,46 @@ from config import config
 from models import Admin, MQTTConfig, db
 from utils.logger import log_error, log_info, log_warning
 from utils.security import hash_password
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+
+# 性能优化：config.SQLITE_CONFIG 此前仅定义、从未应用到真实 DBAPI 连接，
+# SQLite 实际以库默认运行（journal_mode=DELETE、cache_size≈2MB、mmap_size=0、
+# busy_timeout=0），并发下读写互斥且易抛 "database is locked"。
+# 此处在每个新建连接上应用性能类 PRAGMA（幂等，键来自下方白名单常量）。
+# 有意排除 foreign_keys：属正确性开关而非性能项，历史迁移脚本依赖其 OFF，
+# 全局开启会改变现有行为，需另行决策。
+_SQLITE_PERF_PRAGMAS = (
+    "journal_mode",
+    "cache_size",
+    "temp_store",
+    "mmap_size",
+    "synchronous",
+    "busy_timeout",
+    "locking_mode",
+)
+
+
+@event.listens_for(Engine, "connect")
+def _apply_sqlite_perf_pragmas(dbapi_connection, connection_record):
+    """为每个新建的 SQLite 连接应用性能 PRAGMA（WAL/缓存/mmap/busy_timeout）。
+
+    仅对 sqlite3 连接生效；非 SQLite 或 :memory: 库由 SQLite 自行忽略（无副作用）。
+    """
+    if not isinstance(dbapi_connection, sqlite3.Connection):
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        for key in _SQLITE_PERF_PRAGMAS:
+            value = getattr(config, "SQLITE_CONFIG", {}).get(key)
+            if value is None:
+                continue
+            cursor.execute(f"PRAGMA {key}={value}")
+    except Exception as e:
+        log_warning(f"应用 SQLite 性能 PRAGMA 失败（忽略，不影响启动）: {e}")
+    finally:
+        cursor.close()
 
 
 def init_database(app):

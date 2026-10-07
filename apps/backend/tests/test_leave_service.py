@@ -263,6 +263,9 @@ class TestResolveLeaveForUnlock:
         assert on_leave is False
         assert points == leave_service.LEAVE_UNLOCK_COST
         assert proceed is True
+        # resolve_leave_for_unlock 依 R26 设计不在内部 commit（交由调用方事务统一提交）；
+        # 此处模拟调用方提交后，断言自动销假已落库。
+        db_session.commit()
         db_session.refresh(a)
         assert a.status == "cancelled"  # 已自动销假
 
