@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import ssl
 import threading
 import time
@@ -924,6 +925,29 @@ class MQTTManager:
         else:
             self._reconnect_thread = t
 
+    @staticmethod
+    def _dispose_client(client):
+        """R9 连接泄漏修复：回收旧 paho 客户端。
+
+        此前重连路径（_schedule_reconnect -> _connect_control/_connect_telemetry）直接
+        覆盖 self._client / self._telemetry_client，旧客户端从不 disconnect/loop_stop：
+        1) 旧客户端 paho 自带 auto-reconnect（reconnect_delay_set 1-30s）会自行重连，
+           且 client_id 每次创建都带时间戳 -> broker 视为全新会话，永不替换旧会话；
+        2) 每次网络抖动净增 1 条连接/类型，旧连接永久堆积在 broker 上
+           （EMQX Cloud 连接数 954/1000 的根因）。
+        显式 disconnect + loop_stop 阻断旧客户端的自动重连循环，连接数收敛。
+        """
+        if not client:
+            return
+        try:
+            client.disconnect()
+        except Exception:
+            pass
+        try:
+            client.loop_stop()
+        except Exception:
+            pass
+
     def _create_and_connect_client(
         self, suffix, subscriptions, on_connect, on_message, on_disconnect
     ):
@@ -938,7 +962,11 @@ class MQTTManager:
         keepalive = cfg.get("keepalive", self.DEFAULT_CONFIG["keepalive"])
         transport = cfg.get("transport", self.DEFAULT_CONFIG.get("transport", "tcp"))
 
-        cid = f"{client_id}_{suffix}_{int(time.time())}"
+        # R9 连接泄漏修复：client_id 改为「进程内稳定」（原为每次连接都带 int(time.time())，
+        # 同一进程每次重连产生不同 client_id，broker 侧无法做会话替换，旧会话永久残留）。
+        # 稳定 id + clean_session=True：同进程重连时 broker 自动踢掉同 id 旧会话（自愈兜底）；
+        # 跨进程（Werkzeug reloader 父子进程 / 多实例）因 pid 不同互不干扰。
+        cid = f"{client_id}_{suffix}_{os.getpid()}"
         if transport == "websockets":
             client = mqtt.Client(client_id=cid, clean_session=True, transport="websockets")
             client.ws_set_options(path=cfg.get("ws_path", "/mqtt"))
@@ -992,6 +1020,9 @@ class MQTTManager:
             if self._state == MQTTConnectionState.CONNECTED:
                 return True
             self._state = MQTTConnectionState.CONNECTING
+        # R9 连接泄漏修复：重连前先回收旧客户端，阻断其 auto-reconnect 堆积连接
+        self._dispose_client(self._client)
+        self._client = None
         self._client = self._create_and_connect_client(
             "control",
             self.CONTROL_SUBSCRIPTIONS,
@@ -1006,6 +1037,9 @@ class MQTTManager:
             if self._telemetry_state == MQTTConnectionState.CONNECTED:
                 return True
             self._telemetry_state = MQTTConnectionState.CONNECTING
+        # R9 连接泄漏修复：重连前先回收旧客户端（含 service_init 遥测重试路径）
+        self._dispose_client(self._telemetry_client)
+        self._telemetry_client = None
         self._telemetry_client = self._create_and_connect_client(
             "telemetry",
             self.TELEMETRY_SUBSCRIPTIONS,
