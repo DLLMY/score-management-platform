@@ -19,6 +19,11 @@ class ClassCommittee(db.Model):
 
 
 
+
+    __table_args__ = (
+        db.Index("ix_class_committee_position", "position"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,
@@ -46,6 +51,11 @@ class CommitteeTerm(db.Model):
     is_current = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+
+
+    __table_args__ = (
+        db.Index("ix_committee_term_start_date", "start_date"),
+    )
 
     def to_dict(self, fields=None):
         data = {

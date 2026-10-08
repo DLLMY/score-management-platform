@@ -16,6 +16,11 @@ class MentalHealthRecord(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
+
+    __table_args__ = (
+        db.Index("ix_mental_health_record_created_at", "created_at"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,

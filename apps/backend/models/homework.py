@@ -19,6 +19,11 @@ class HomeworkAssignment(db.Model):
 
 
 
+
+    __table_args__ = (
+        db.Index("ix_homework_assignment_due_date", "due_date"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,

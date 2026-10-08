@@ -18,6 +18,11 @@ class StudyGuide(db.Model):
 
 
 
+
+    __table_args__ = (
+        db.Index("ix_study_guide_created_at", "created_at"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,
@@ -50,6 +55,11 @@ class ImprovementPlan(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("admin.id"))
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+
+
+    __table_args__ = (
+        db.Index("ix_improvement_plan_start_date", "start_date"),
+    )
 
     def to_dict(self, fields=None):
         data = {

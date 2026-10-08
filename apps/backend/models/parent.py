@@ -51,6 +51,11 @@ class ContactLog(db.Model):
     is_resolved = db.Column(db.Boolean, default=False)
 
 
+
+    __table_args__ = (
+        db.Index("ix_contact_log_contact_time", "contact_time"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,

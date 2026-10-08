@@ -21,6 +21,11 @@ class Activity(db.Model):
 
 
 
+
+    __table_args__ = (
+        db.Index("ix_activity_start_date", "start_date"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,

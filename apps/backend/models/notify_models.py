@@ -1,300 +1,306 @@
-from datetime import datetime
+from datetime import datetime
+
+from models import db
+
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+    type = db.Column(db.String(20), nullable=False, index=True)
+    title = db.Column(db.String(100))
+    content = db.Column(db.Text)
+    status = db.Column(db.String(20), default="pending", index=True)
+    phone = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+    sent_at = db.Column(db.DateTime)
+    # F9-B: 合并 admin_notifications 后，区分接收方（'user'=用户通知 / 'admin'=管理员通知）
+    recipient_type = db.Column(db.String(20), default="user", index=True)
+    admin_id = db.Column(db.Integer, index=True)
+    priority = db.Column(db.String(20), default="normal")
+    is_read = db.Column(db.Boolean, default=False)
+    read_at = db.Column(db.DateTime)
+    extra_data = db.Column(db.JSON)
+
+    user = db.relationship("User", backref="notifications", lazy="selectin")
+
+    def to_dict(self, fields=None):
+        """基础字段序列化（B3 扩展 2026-08-23）。
+
+        派生字段 user_name（关联 user.name）由路由侧补充；
+        端点字段子集：NOTIFICATION_FIELDS（完整）/ NOTIFICATION_MIN_FIELDS（精简）。
+        """
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "user_id": self.student_id,  # 响应别名（兼容既有端点字段）
+            "title": self.title,
+            "content": self.content,
+            "type": self.type,
+            "status": self.status,
+            "phone": self.phone,
+            "recipient_type": self.recipient_type,
+            "priority": self.priority,
+            "is_read": self.is_read,
+            "read_at": self.read_at.isoformat() if self.read_at else None,
+            "extra_data": self.extra_data,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "sent_at": self.sent_at.isoformat() if self.sent_at else None,
+            "admin_id": self.admin_id,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
+
+
+class Approval(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+    type = db.Column(db.String(20), nullable=False, index=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    score_change = db.Column(db.Float)
+    status = db.Column(db.String(20), default="pending", index=True)
+    approver_id = db.Column(db.Integer, index=True)
+    approve_time = db.Column(db.DateTime)
+    comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+    # P0-4 审批合并：由 leave_application 并入，承载请假明细
+    leave_type = db.Column(db.String(20))
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    # F1/F4 请假（硬件端）扩展字段：精确到时分秒的起止 + 设备维度。
+    # 保留 start_date/end_date(Date) 兼容既有审批视图，新增 DateTime 支撑请假时长计算。
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    card_id = db.Column(db.String(50))
+    device_id = db.Column(db.String(100))
+
+    user = db.relationship("User", backref="approvals", lazy="selectin")
+
+
+
+
 
-from models import db
+    __table_args__ = (
+        db.Index("ix_approval_end_time", "end_time"),
+        db.Index("ix_approval_start_date", "start_date"),
+    )
 
-
-class Notification(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
-    type = db.Column(db.String(20), nullable=False, index=True)
-    title = db.Column(db.String(100))
-    content = db.Column(db.Text)
-    status = db.Column(db.String(20), default="pending", index=True)
-    phone = db.Column(db.String(20))
-    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
-    sent_at = db.Column(db.DateTime)
-    # F9-B: 合并 admin_notifications 后，区分接收方（'user'=用户通知 / 'admin'=管理员通知）
-    recipient_type = db.Column(db.String(20), default="user", index=True)
-    admin_id = db.Column(db.Integer, index=True)
-    priority = db.Column(db.String(20), default="normal")
-    is_read = db.Column(db.Boolean, default=False)
-    read_at = db.Column(db.DateTime)
-    extra_data = db.Column(db.JSON)
-
-    user = db.relationship("User", backref="notifications", lazy="selectin")
-
-    def to_dict(self, fields=None):
-        """基础字段序列化（B3 扩展 2026-08-23）。
-
-        派生字段 user_name（关联 user.name）由路由侧补充；
-        端点字段子集：NOTIFICATION_FIELDS（完整）/ NOTIFICATION_MIN_FIELDS（精简）。
-        """
-        data = {
-            "id": self.id,
-            "student_id": self.student_id,
-            "user_id": self.student_id,  # 响应别名（兼容既有端点字段）
-            "title": self.title,
-            "content": self.content,
-            "type": self.type,
-            "status": self.status,
-            "phone": self.phone,
-            "recipient_type": self.recipient_type,
-            "priority": self.priority,
-            "is_read": self.is_read,
-            "read_at": self.read_at.isoformat() if self.read_at else None,
-            "extra_data": self.extra_data,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "sent_at": self.sent_at.isoformat() if self.sent_at else None,
-            "admin_id": self.admin_id,
-        }
-        if fields is None:
-            return data
-        return {k: data[k] for k in fields if k in data}
-
-
-class Approval(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
-    type = db.Column(db.String(20), nullable=False, index=True)
-    title = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    score_change = db.Column(db.Float)
-    status = db.Column(db.String(20), default="pending", index=True)
-    approver_id = db.Column(db.Integer, index=True)
-    approve_time = db.Column(db.DateTime)
-    comment = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
-    # P0-4 审批合并：由 leave_application 并入，承载请假明细
-    leave_type = db.Column(db.String(20))
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
-    # F1/F4 请假（硬件端）扩展字段：精确到时分秒的起止 + 设备维度。
-    # 保留 start_date/end_date(Date) 兼容既有审批视图，新增 DateTime 支撑请假时长计算。
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    card_id = db.Column(db.String(50))
-    device_id = db.Column(db.String(100))
-
-    user = db.relationship("User", backref="approvals", lazy="selectin")
-
-
-
-
-    def to_dict(self, fields=None):
-        data = {
-            "id": self.id,
-            "student_id": self.student_id,
-            "type": self.type,
-            "title": self.title,
-            "description": self.description,
-            "score_change": self.score_change,
-            "status": self.status,
-            "approver_id": self.approver_id,
-            "approve_time": self.approve_time.isoformat() if self.approve_time else None,
-            "comment": self.comment,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "leave_type": self.leave_type,
-            "start_date": self.start_date.isoformat() if self.start_date else None,
-            "end_date": self.end_date.isoformat() if self.end_date else None,
-            "start_time": self.start_time.isoformat() if self.start_time else None,
-            "end_time": self.end_time.isoformat() if self.end_time else None,
-            "card_id": self.card_id,
-            "device_id": self.device_id,
-        }
-        if fields is None:
-            return data
-        return {k: data[k] for k in fields if k in data}
-class NotifyAudit(db.Model):
-    """上课时间拦截 / 强制发送审计表"""
-
-    __tablename__ = "notify_audit"
-
-    id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(
-        db.String(50), index=True
-    )  # remote_notify / wol / scheduled / template / celery / ota / unlock
-    target_class_id = db.Column(db.Integer, index=True)
-    admin_id = db.Column(db.Integer, index=True)
-    payload = db.Column(db.Text)  # 下发内容（截断）
-    reason_code = db.Column(
-        db.String(50), index=True
-    )  # GLOBAL_TIME_RULE / CLASS_IN_SESSION / NORMAL / FORCE
-    reason_message = db.Column(db.String(200))
-    force_send = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
-
-
-
-    def to_dict(self, fields=None):
-        data = {
-            "id": self.id,
-            "type": self.type,
-            "target_class_id": self.target_class_id,
-            "admin_id": self.admin_id,
-            "payload": self.payload,
-            "reason_code": self.reason_code,
-            "reason_message": self.reason_message,
-            "force_send": self.force_send,
-            "created_at": self.created_at,
-        }
-        if fields:
-            return {k: v for k, v in data.items() if k in fields}
-        return data
-class ScheduledNotify(db.Model):
-    """定时通知"""
-
-    __tablename__ = "scheduled_notifies"
-
-    id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.Text)
-    volume = db.Column(db.Float, default=0.7)
-    speak = db.Column(db.Boolean, default=True)
-    popup = db.Column(db.Boolean, default=True)
-    timeout_sec = db.Column(db.Integer, default=8)
-    urgent = db.Column(db.Boolean, default=False)
-    send_mode = db.Column(db.String(50), default="broadcast")
-    device_id = db.Column(db.String(100))
-    scheduled_at = db.Column(db.DateTime, index=True)
-    repeat_type = db.Column(db.String(20), default="once")
-    repeat_interval = db.Column(db.Integer, default=1)
-    repeat_day_of_week = db.Column(db.Text)
-    repeat_end_at = db.Column(db.DateTime)
-    status = db.Column(db.String(20), default="pending", index=True)
-    last_sent_at = db.Column(db.DateTime)
-    next_send_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    template_id = db.Column(db.Integer, db.ForeignKey("notify_templates.id"), index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.now)
-    created_by = db.Column(
-        db.Integer
-    )  # 定时通知创建人（审计链）；修复历史遗漏：路由早已引用，模型/库表此前缺失
-
-
-
-
-    def to_dict(self, fields=None):
-        data = {
-            "id": self.id,
-            "text": self.text,
-            "volume": self.volume,
-            "speak": self.speak,
-            "popup": self.popup,
-            "timeout_sec": self.timeout_sec,
-            "urgent": self.urgent,
-            "send_mode": self.send_mode,
-            "device_id": self.device_id,
-            "scheduled_at": self.scheduled_at.isoformat() if self.scheduled_at else None,
-            "repeat_type": self.repeat_type,
-            "repeat_interval": self.repeat_interval,
-            "repeat_day_of_week": self.repeat_day_of_week,
-            "repeat_end_at": self.repeat_end_at.isoformat() if self.repeat_end_at else None,
-            "status": self.status,
-            "last_sent_at": self.last_sent_at.isoformat() if self.last_sent_at else None,
-            "next_send_at": self.next_send_at.isoformat() if self.next_send_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "template_id": self.template_id,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "created_by": self.created_by,
-        }
-        if fields is None:
-            return data
-        return {k: data[k] for k in fields if k in data}
-class NotifyTemplate(db.Model):
-    """通知模板"""
-
-    __tablename__ = "notify_templates"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    template = db.Column(db.Text)
-    text = db.Column(db.Text)
-    description = db.Column(db.String(500))
-    volume = db.Column(db.Float, default=0.7)
-    speak = db.Column(db.Boolean, default=True)
-    popup = db.Column(db.Boolean, default=True)
-    timeout_sec = db.Column(db.Integer, default=8)
-    urgent = db.Column(db.Boolean, default=False)
-    bg_color = db.Column(db.String(20), default="#000000")
-    text_color = db.Column(db.String(20), default="#FF0000")
-    font_size = db.Column(db.Integer, default=48)
-    language = db.Column(db.String(20), default="zh")
-    category = db.Column(db.String(50))
-    tags = db.Column(db.Text)  # JSON array stored as text
-    usage_count = db.Column(db.Integer, default=0)
-    is_active = db.Column(db.Boolean, default=True)
-    created_by = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now)
-
-
-
-    def to_dict(self, fields=None):
-        data = {
-            "id": self.id,
-            "name": self.name,
-            "template": self.template,
-            "text": self.text,
-            "description": self.description,
-            "volume": self.volume,
-            "speak": self.speak,
-            "popup": self.popup,
-            "timeout_sec": self.timeout_sec,
-            "urgent": self.urgent,
-            "bg_color": self.bg_color,
-            "text_color": self.text_color,
-            "font_size": self.font_size,
-            "language": self.language,
-            "category": self.category,
-            "tags": self.tags,
-            "usage_count": self.usage_count,
-            "is_active": self.is_active,
-            "created_by": self.created_by,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-        }
-        if fields:
-            return {k: v for k, v in data.items() if k in fields}
-        return data
-class NotifyHistory(db.Model):
-    """通知发送历史"""
-
-    __tablename__ = "notify_histories"
-
-    id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.Text)
-    volume = db.Column(db.Float, default=0.7)
-    speak = db.Column(db.Boolean, default=True)
-    popup = db.Column(db.Boolean, default=True)
-    timeout_sec = db.Column(db.Integer, default=8)
-    urgent = db.Column(db.Boolean, default=False)
-    send_mode = db.Column(db.String(50))
-    device_id = db.Column(db.String(100), db.ForeignKey("device.device_id"))
-    topic = db.Column(db.String(500))
-    template_id = db.Column(db.Integer, index=True)
-    notification_id = db.Column(db.Integer, db.ForeignKey("notification.id"), index=True)
-    status = db.Column(db.String(20), default="sent")
-    sent_by = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
-
-
-    def to_dict(self, fields=None):
-        data = {
-            "id": self.id,
-            "text": self.text,
-            "volume": self.volume,
-            "speak": self.speak,
-            "popup": self.popup,
-            "timeout_sec": self.timeout_sec,
-            "urgent": self.urgent,
-            "send_mode": self.send_mode,
-            "device_id": self.device_id,
-            "topic": self.topic,
-            "template_id": self.template_id,
-            "notification_id": self.notification_id,
-            "status": self.status,
-            "sent_by": self.sent_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-        if fields is None:
-            return data
-        return {k: data[k] for k in fields if k in data}
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "student_id": self.student_id,
+            "type": self.type,
+            "title": self.title,
+            "description": self.description,
+            "score_change": self.score_change,
+            "status": self.status,
+            "approver_id": self.approver_id,
+            "approve_time": self.approve_time.isoformat() if self.approve_time else None,
+            "comment": self.comment,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "leave_type": self.leave_type,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "card_id": self.card_id,
+            "device_id": self.device_id,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
+class NotifyAudit(db.Model):
+    """上课时间拦截 / 强制发送审计表"""
+
+    __tablename__ = "notify_audit"
+
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(
+        db.String(50), index=True
+    )  # remote_notify / wol / scheduled / template / celery / ota / unlock
+    target_class_id = db.Column(db.Integer, index=True)
+    admin_id = db.Column(db.Integer, index=True)
+    payload = db.Column(db.Text)  # 下发内容（截断）
+    reason_code = db.Column(
+        db.String(50), index=True
+    )  # GLOBAL_TIME_RULE / CLASS_IN_SESSION / NORMAL / FORCE
+    reason_message = db.Column(db.String(200))
+    force_send = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "type": self.type,
+            "target_class_id": self.target_class_id,
+            "admin_id": self.admin_id,
+            "payload": self.payload,
+            "reason_code": self.reason_code,
+            "reason_message": self.reason_message,
+            "force_send": self.force_send,
+            "created_at": self.created_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
+class ScheduledNotify(db.Model):
+    """定时通知"""
+
+    __tablename__ = "scheduled_notifies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text)
+    volume = db.Column(db.Float, default=0.7)
+    speak = db.Column(db.Boolean, default=True)
+    popup = db.Column(db.Boolean, default=True)
+    timeout_sec = db.Column(db.Integer, default=8)
+    urgent = db.Column(db.Boolean, default=False)
+    send_mode = db.Column(db.String(50), default="broadcast")
+    device_id = db.Column(db.String(100))
+    scheduled_at = db.Column(db.DateTime, index=True)
+    repeat_type = db.Column(db.String(20), default="once")
+    repeat_interval = db.Column(db.Integer, default=1)
+    repeat_day_of_week = db.Column(db.Text)
+    repeat_end_at = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default="pending", index=True)
+    last_sent_at = db.Column(db.DateTime)
+    next_send_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    template_id = db.Column(db.Integer, db.ForeignKey("notify_templates.id"), index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
+    created_by = db.Column(
+        db.Integer
+    )  # 定时通知创建人（审计链）；修复历史遗漏：路由早已引用，模型/库表此前缺失
+
+
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "text": self.text,
+            "volume": self.volume,
+            "speak": self.speak,
+            "popup": self.popup,
+            "timeout_sec": self.timeout_sec,
+            "urgent": self.urgent,
+            "send_mode": self.send_mode,
+            "device_id": self.device_id,
+            "scheduled_at": self.scheduled_at.isoformat() if self.scheduled_at else None,
+            "repeat_type": self.repeat_type,
+            "repeat_interval": self.repeat_interval,
+            "repeat_day_of_week": self.repeat_day_of_week,
+            "repeat_end_at": self.repeat_end_at.isoformat() if self.repeat_end_at else None,
+            "status": self.status,
+            "last_sent_at": self.last_sent_at.isoformat() if self.last_sent_at else None,
+            "next_send_at": self.next_send_at.isoformat() if self.next_send_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "template_id": self.template_id,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_by": self.created_by,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
+class NotifyTemplate(db.Model):
+    """通知模板"""
+
+    __tablename__ = "notify_templates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    template = db.Column(db.Text)
+    text = db.Column(db.Text)
+    description = db.Column(db.String(500))
+    volume = db.Column(db.Float, default=0.7)
+    speak = db.Column(db.Boolean, default=True)
+    popup = db.Column(db.Boolean, default=True)
+    timeout_sec = db.Column(db.Integer, default=8)
+    urgent = db.Column(db.Boolean, default=False)
+    bg_color = db.Column(db.String(20), default="#000000")
+    text_color = db.Column(db.String(20), default="#FF0000")
+    font_size = db.Column(db.Integer, default=48)
+    language = db.Column(db.String(20), default="zh")
+    category = db.Column(db.String(50))
+    tags = db.Column(db.Text)  # JSON array stored as text
+    usage_count = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
+
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "template": self.template,
+            "text": self.text,
+            "description": self.description,
+            "volume": self.volume,
+            "speak": self.speak,
+            "popup": self.popup,
+            "timeout_sec": self.timeout_sec,
+            "urgent": self.urgent,
+            "bg_color": self.bg_color,
+            "text_color": self.text_color,
+            "font_size": self.font_size,
+            "language": self.language,
+            "category": self.category,
+            "tags": self.tags,
+            "usage_count": self.usage_count,
+            "is_active": self.is_active,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+        if fields:
+            return {k: v for k, v in data.items() if k in fields}
+        return data
+class NotifyHistory(db.Model):
+    """通知发送历史"""
+
+    __tablename__ = "notify_histories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text)
+    volume = db.Column(db.Float, default=0.7)
+    speak = db.Column(db.Boolean, default=True)
+    popup = db.Column(db.Boolean, default=True)
+    timeout_sec = db.Column(db.Integer, default=8)
+    urgent = db.Column(db.Boolean, default=False)
+    send_mode = db.Column(db.String(50))
+    device_id = db.Column(db.String(100), db.ForeignKey("device.device_id"))
+    topic = db.Column(db.String(500))
+    template_id = db.Column(db.Integer, index=True)
+    notification_id = db.Column(db.Integer, db.ForeignKey("notification.id"), index=True)
+    status = db.Column(db.String(20), default="sent")
+    sent_by = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+
+    def to_dict(self, fields=None):
+        data = {
+            "id": self.id,
+            "text": self.text,
+            "volume": self.volume,
+            "speak": self.speak,
+            "popup": self.popup,
+            "timeout_sec": self.timeout_sec,
+            "urgent": self.urgent,
+            "send_mode": self.send_mode,
+            "device_id": self.device_id,
+            "topic": self.topic,
+            "template_id": self.template_id,
+            "notification_id": self.notification_id,
+            "status": self.status,
+            "sent_by": self.sent_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if fields is None:
+            return data
+        return {k: data[k] for k in fields if k in data}
