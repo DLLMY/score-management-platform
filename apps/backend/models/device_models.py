@@ -171,7 +171,7 @@ class Device(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
     # ---- WOL (Wake-on-LAN) 专属字段（F10: WOLDevice 并入 Device）----
-    mac_address = db.Column(db.String(20))
+    mac_address = db.Column(db.String(20), index=True)
     subnet_mask = db.Column(db.String(45))
     broadcast_ip = db.Column(db.String(45))
     wake_on_lan_enabled = db.Column(db.Boolean, default=True)
@@ -243,7 +243,7 @@ class Device(db.Model):
         return data
 class DeviceHeartbeat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(100), nullable=False)
+    device_id = db.Column(db.String(100), nullable=False, index=True)
     timestamp = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20))
     wifi_signal = db.Column(db.Integer)
