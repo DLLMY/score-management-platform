@@ -275,6 +275,11 @@ class Exam(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
+    # R8 修复: 按班级查考试并按开始时间倒序排布（避免排序溢出）
+    __table_args__ = (
+        db.Index("ix_exams_class_id_start_time", "class_id", "start_time"),
+    )
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -317,6 +322,9 @@ class Score(db.Model):
         db.UniqueConstraint(
             "exam_id", "student_id", "subject_id", name="uq_scores_exam_student_subject"
         ),
+        # R8 修复: 过滤+排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（按学生/考试查成绩并按录入时间倒序分页）
+        db.Index("ix_scores_student_id_entered_at", "student_id", "entered_at"),
+        db.Index("ix_scores_exam_id_entered_at", "exam_id", "entered_at"),
     )
 
     exam = db.relationship("Exam", backref=db.backref("scores", lazy=True), lazy="selectin")
@@ -480,6 +488,11 @@ class CompositeScore(db.Model):
     weights = db.Column(db.JSON)
     computed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now, index=True)
+
+    # R8 修复: 按学生查综合分并按综合分排序（排行榜/排序分页，避免排序溢出）
+    __table_args__ = (
+        db.Index("ix_composite_scores_student_id_composite_score", "student_id", "composite_score"),
+    )
 
 
 
