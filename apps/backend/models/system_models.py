@@ -22,6 +22,7 @@ class OperationLog(db.Model):
     __table_args__ = (
         db.Index("ix_operation_log_created_at", "created_at"),
         db.Index("ix_operation_log_user_created", "user_id", "created_at"),
+        db.Index("ix_log_operation_type", "operation_type"),
     )
 
 

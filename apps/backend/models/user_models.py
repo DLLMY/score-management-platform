@@ -390,7 +390,7 @@ class SecurityAudit(db.Model):
     severity = db.Column(db.String(20), default="info", index=True)
     user_id = db.Column(db.Integer, index=True)
     user_type = db.Column(db.String(30))
-    ip_address = db.Column(db.String(50))
+    ip_address = db.Column(db.String(50), index=True)
     user_agent = db.Column(db.String(500))
     request_path = db.Column(db.String(500))
     request_method = db.Column(db.String(10))
