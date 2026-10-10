@@ -19,7 +19,7 @@ from config import Config
 from models import db
 from services.redis_cache_service import get_cache_service
 from services.system_config_service import SystemConfigService
-from utils.api_cache_middleware import cached_api
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.decorators import safe_handle
 from utils.logger import log_warning
 from utils.permission import requires_permission
@@ -32,6 +32,7 @@ class SystemConfigResource(Resource):
     @ns_system.doc("get_system_config", description="Get system config", security="Bearer")
     @ns_system.response(200, "Success")
     @requires_permission("system.settings")
+    @cached_api(ttl=120)
     def get(self):
         """
         获取系统配置
@@ -69,6 +70,7 @@ class SystemConfigResource(Resource):
         data = ns_system.payload
         config = SystemConfigService.update_config(data)
         if config:
+            invalidate_cache("/api/system/config*")
             return APIResponse.success(data=config, message="系统配置更新成功")
         return APIResponse.error(message="更新系统配置失败", status_code=500)
 

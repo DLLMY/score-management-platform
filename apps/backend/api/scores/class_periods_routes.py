@@ -8,6 +8,7 @@ from services.class_period_service import (
     reset_class_periods,
     update_class_period,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.permission import requires_permission
 from utils.response import APIResponse
 
@@ -63,6 +64,7 @@ class ClassPeriodList(Resource):
     @ns_class_periods.doc("list_class_periods", description="获取课程节次列表")
     @ns_class_periods.response(200, "成功", class_period_list_response)
     @requires_permission("timetable.rule.manage")
+    @cached_api(ttl=120)
     def get(self):
         periods = ClassPeriod.query.order_by(
             ClassPeriod.sort_order, ClassPeriod.period_number
@@ -88,6 +90,7 @@ class ClassPeriodList(Resource):
             return APIResponse.bad_request(message=f'节次编号 {data.get("period_number")} 已存在')
 
         period = create_class_period(data)
+        invalidate_cache("/api/class-periods*")
 
         result = period.to_dict()
         result["duration"] = (period.end_hour * 60 + period.end_minute) - (
@@ -150,10 +153,10 @@ class ClassPeriodActiveList(Resource):
     @ns_class_periods.doc("list_active_class_periods", description="获取启用的课程节次列表")
     @ns_class_periods.response(200, "成功", class_period_list_response)
     @requires_permission("timetable.rule.manage")
+    @cached_api(ttl=120)
     def get(self):
         periods = (
             ClassPeriod.query.filter_by(is_active=True)
-            .order_by(ClassPeriod.sort_order, ClassPeriod.period_number)
             .order_by(ClassPeriod.sort_order, ClassPeriod.period_number)
         )
         result = []

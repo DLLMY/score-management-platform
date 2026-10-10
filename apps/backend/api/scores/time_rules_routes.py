@@ -8,6 +8,7 @@ from services.time_rule_service import (
     delete_time_rule,
     update_time_rule,
 )
+from utils.api_cache_middleware import cached_api, invalidate_cache
 from utils.permission import requires_permission
 from utils.response import APIResponse
 
@@ -85,6 +86,7 @@ class TimeRuleList(Resource):
     @ns_time_rules.doc("list_time_rules", description="获取时间规则列表")
     @ns_time_rules.response(200, "成功", time_rule_list_response)
     @requires_permission("timetable.rule.manage")
+    @cached_api(ttl=60)
     def get(self):
         """
         获取时间规则列表
@@ -135,6 +137,7 @@ class TimeRuleList(Resource):
         """
         data = ns_time_rules.payload
         rule = create_time_rule(data)
+        invalidate_cache("/api/time-rules*")
         return {
             "id": rule.id,
             "name": rule.name,
