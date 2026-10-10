@@ -48,6 +48,17 @@ class DashboardService:
             ScoreRecord.query.filter(ScoreRecord.created_at >= last_7_days).count() or 0
         )
 
+        # R14-dashboard: positive ratio over last 7 days (score_change>0 / total)
+        positive_records = (
+            ScoreRecord.query.filter(
+                ScoreRecord.created_at >= last_7_days, ScoreRecord.score_change > 0
+            ).count()
+            or 0
+        )
+        positive_ratio = (
+            round(positive_records / weekly_records * 100, 1) if weekly_records > 0 else 0
+        )
+
         category_stats = (
             db.session.query(
                 ScoreRecord.rule_id,
@@ -67,6 +78,7 @@ class DashboardService:
             "online_devices": online_devices,
             "today_records": today_records,
             "weekly_records": weekly_records,
+            "positive_ratio": positive_ratio,
             "avg_score": avg_score,
             "top_users": [
                 {

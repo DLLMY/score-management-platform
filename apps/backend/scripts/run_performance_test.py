@@ -132,7 +132,8 @@ class PerformanceBenchmark:
         print("=" * 70)
         self.start_time = datetime.now()
         endpoints = [
-            {"endpoint": "/api/dashboard", "method": "GET", "iterations": 50},
+            {"endpoint": "/api/dashboard/data", "method": "GET", "iterations": 50},
+            {"endpoint": "/api/dashboard/stats", "method": "GET", "iterations": 50},
             {"endpoint": "/api/users?page=1&page_size=20", "method": "GET", "iterations": 50},
             {"endpoint": "/api/classes", "method": "GET", "iterations": 50},
             {"endpoint": "/api/subjects", "method": "GET", "iterations": 50},
