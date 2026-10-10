@@ -3,6 +3,8 @@ import json
 import re
 from datetime import datetime
 
+from sqlalchemy import func
+
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
@@ -98,11 +100,18 @@ class ClassService:
             User.is_active,
         ).count()
 
-    def _build_class_response(self, class_info):
+    def _build_class_response(self, class_info, teachers=None, counts=None):
         # B3 收敛：基础列走 ClassInfo.to_dict，计算字段叠加（2026-08-30）
+        # teachers/counts 为批量预取字典（R13 消除 N+1）；None 时回退逐班查询以兼容详情页
         data = class_info.to_dict()
-        data["head_teacher_name"] = self._get_head_teacher_name(class_info.head_teacher_id)
-        data["student_count"] = self._get_student_count(class_info)
+        if teachers is not None:
+            data["head_teacher_name"] = teachers.get(class_info.head_teacher_id)
+        else:
+            data["head_teacher_name"] = self._get_head_teacher_name(class_info.head_teacher_id)
+        if counts is not None:
+            data["student_count"] = counts.get(class_info.name, 0)
+        else:
+            data["student_count"] = self._get_student_count(class_info)
         return data
 
     def get_class_list(self, page=1, per_page=10, keyword=None, admin=None):
@@ -127,9 +136,29 @@ class ClassService:
             classes = query.order_by(ClassInfo.name).paginate(
                 page=page, per_page=per_page, error_out=False
             )
+            items = classes.items
+
+            # R13：批量预取，消除 N+1（原每班各查 Admin + User.count，10 班≈20 次查询 → 2 次）
+            teacher_ids = {c.head_teacher_id for c in items if c.head_teacher_id}
+            teachers = (
+                {a.id: a.real_name for a in Admin.query.filter(Admin.id.in_(teacher_ids)).all()}
+                if teacher_ids
+                else {}
+            )
+            class_names = {c.name for c in items}
+            counts = (
+                {
+                    r[0]: r[1]
+                    for r in User.query.filter(
+                        User.class_name.in_(class_names), User.is_active
+                    ).with_entities(User.class_name, func.count()).group_by(User.class_name).all()
+                }
+                if class_names
+                else {}
+            )
 
             return {
-                "classes": [self._build_class_response(c) for c in classes.items],
+                "classes": [self._build_class_response(c, teachers, counts) for c in items],
                 "pagination": {
                     "page": page,
                     "per_page": per_page,
