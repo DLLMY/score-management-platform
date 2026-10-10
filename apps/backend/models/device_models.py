@@ -184,6 +184,11 @@ class Device(db.Model):
     class_info = db.relationship("ClassInfo", backref=db.backref("devices", lazy=True), lazy="selectin")
     admin = db.relationship("Admin", backref=db.backref("devices", lazy=True), lazy="selectin")
 
+    # R16 修复: 设备列表排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（ORDER BY created_at DESC, id DESC）
+    __table_args__ = (
+        db.Index("ix_device_created_at_id", "created_at", "id"),
+    )
+
     @property
     def is_online(self) -> bool:
         """是否在线：以 last_heartbeat 时效性为准（避免 status 陈旧导致「无心跳却显示在线」）。
@@ -255,11 +260,11 @@ class DeviceHeartbeat(db.Model):
 
 
 
-
-    __table_args__ = (
-        db.Index("ix_heartbeat_received_at", "received_at"),
-    )
-
+
+    __table_args__ = (
+        db.Index("ix_heartbeat_received_at", "received_at"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,
@@ -299,11 +304,11 @@ class FirmwareVersion(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     created_by = db.Column(db.Integer)
 
-
-    __table_args__ = (
-        db.Index("ix_firmware_version_created_at", "created_at"),
-    )
-
+
+    __table_args__ = (
+        db.Index("ix_firmware_version_created_at", "created_at"),
+    )
+
     def to_dict(self, fields=None):
         """基础字段序列化（B3 扩展 2026-08-23）。
 
@@ -346,12 +351,12 @@ class DeviceFirmwareUpdate(db.Model):
 
 
 
-
-    __table_args__ = (
-        db.Index("ix_device_firmware_update_started_at", "started_at"),
-        db.Index("ix_device_firmware_update_created_at", "created_at"),
-    )
-
+
+    __table_args__ = (
+        db.Index("ix_device_firmware_update_started_at", "started_at"),
+        db.Index("ix_device_firmware_update_created_at", "created_at"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,
@@ -384,6 +389,11 @@ class DeviceGroup(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
+
+    # R16 修复: 设备分组排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（ORDER BY sort_order, name）
+    __table_args__ = (
+        db.Index("ix_device_group_sort_order_name", "sort_order", "name"),
+    )
 
     def to_dict(self):
         return {

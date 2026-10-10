@@ -23,6 +23,11 @@ class Notification(db.Model):
 
     user = db.relationship("User", backref="notifications", lazy="selectin")
 
+    # R16 修复: 通知列表筛选+排序复合索引，覆盖 WHERE recipient_type=? ORDER BY created_at DESC, id DESC
+    __table_args__ = (
+        db.Index("ix_notification_recipient_created_id", "recipient_type", "created_at", "id"),
+    )
+
     def to_dict(self, fields=None):
         """基础字段序列化（B3 扩展 2026-08-23）。
 
@@ -80,12 +85,12 @@ class Approval(db.Model):
 
 
 
-
-    __table_args__ = (
-        db.Index("ix_approval_end_time", "end_time"),
-        db.Index("ix_approval_start_date", "start_date"),
-    )
-
+
+    __table_args__ = (
+        db.Index("ix_approval_end_time", "end_time"),
+        db.Index("ix_approval_start_date", "start_date"),
+    )
+
     def to_dict(self, fields=None):
         data = {
             "id": self.id,

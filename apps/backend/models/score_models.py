@@ -43,6 +43,11 @@ class Subject(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
+    # R16 修复: 科目列表排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（ORDER BY sort_order, name）
+    __table_args__ = (
+        db.Index("ix_subject_sort_order_name", "sort_order", "name"),
+    )
+
     def to_dict(self, fields=None):
         """基础字段序列化（B3 扩展 2026-08-23）。
 
@@ -86,6 +91,11 @@ class ScoreRule(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now)
 
     category = db.relationship("ScoreCategory", backref="rules", lazy="selectin")
+
+    # R16 修复: 规则筛选复合索引，覆盖 WHERE is_active=? AND category_id=? 过滤
+    __table_args__ = (
+        db.Index("ix_score_rule_is_active_category_id", "is_active", "category_id"),
+    )
 
     def to_dict(self, fields=None):
         """积分规则序列化（B3 收敛 2026-09-05，对齐 ScoreRecord 二级派生纪律）。
@@ -325,6 +335,10 @@ class Score(db.Model):
         # R8 修复: 过滤+排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（按学生/考试查成绩并按录入时间倒序分页）
         db.Index("ix_scores_student_id_entered_at", "student_id", "entered_at"),
         db.Index("ix_scores_exam_id_entered_at", "exam_id", "entered_at"),
+        # R16 修复: 排行榜排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY
+        # （考试排名：WHERE exam_id=? AND status=? ORDER BY score DESC, id DESC；成绩列表：ORDER BY score DESC, id DESC）
+        db.Index("ix_scores_exam_id_score_id", "exam_id", "score", "id"),
+        db.Index("ix_scores_score_id", "score", "id"),
     )
 
     exam = db.relationship("Exam", backref=db.backref("scores", lazy=True), lazy="selectin")
@@ -442,6 +456,8 @@ class CourseSchedule(db.Model):
 
     __table_args__ = (
         db.Index("ix_course_schedule_class_day_period", "class_info_id", "day_of_week", "period_number"),
+        # R16 修复: 课程表列表排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（ORDER BY day_of_week, period_number）
+        db.Index("ix_course_schedule_day_period", "day_of_week", "period_number"),
     )
 
     class_info = db.relationship("ClassInfo", backref=db.backref("schedules", lazy=True), lazy="selectin")

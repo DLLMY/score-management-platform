@@ -14,6 +14,11 @@ class DutyGroup(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
+    # R16 修复: 值日分组排序复合索引，消弭 USE TEMP B-TREE FOR ORDER BY（ORDER BY day_of_week, name）
+    __table_args__ = (
+        db.Index("ix_duty_group_day_name", "day_of_week", "name"),
+    )
+
 
 
     def to_dict(self, fields=None):
