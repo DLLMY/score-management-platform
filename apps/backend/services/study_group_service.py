@@ -18,7 +18,26 @@ class StudyGroupService:
             if flag is not None:
                 query = query.filter_by(is_active=flag)
         groups = query.order_by(StudyGroup.score.desc()).all()
-        return {"success": True, "data": [self._build_group_response(g) for g in groups]}
+        # R14 批量预取成员 + 学生姓名，消除逐组查成员、逐成员查姓名的 N+1
+        group_ids = [g.id for g in groups]
+        members = (
+            StudyGroupMember.query.filter(StudyGroupMember.group_id.in_(group_ids)).all()
+            if group_ids
+            else []
+        )
+        members_map = {}
+        prefetch_ids = []
+        for g in groups:
+            if g.leader_id:
+                prefetch_ids.append(g.leader_id)
+        for m in members:
+            members_map.setdefault(m.group_id, []).append(m)
+            prefetch_ids.append(m.student_id)
+        names.prefetch_students(prefetch_ids)
+        return {
+            "success": True,
+            "data": [self._build_group_response(g, members_map=members_map) for g in groups],
+        }
 
     @staticmethod
     def _normalize_is_active(is_active):
@@ -126,8 +145,11 @@ class StudyGroupService:
         db.session.commit()
         return {"success": True, "data": {"group_id": group_id, "new_score": group.score}}
 
-    def _build_group_response(self, group):
-        members = StudyGroupMember.query.filter_by(group_id=group.id).all()
+    def _build_group_response(self, group, members_map=None):
+        if members_map is not None:
+            members = members_map.get(group.id, [])
+        else:
+            members = StudyGroupMember.query.filter_by(group_id=group.id).all()
         return {
             "id": group.id,
             "class_id": group.class_id,

@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from models import db
 from models.activity import Activity, ActivityRegistration
+from sqlalchemy import func
 from services.entity_names import names
 from utils.entity_guard import class_not_found_response, require_class
 from utils.permission import get_admin_class_ids, get_current_admin
@@ -35,10 +36,14 @@ class ActivityService:
         query = query.order_by(Activity.start_date.desc(), Activity.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            items = pagination.items
+            reg_counts = self._batch_reg_counts([a.id for a in items])
             return {
                 "success": True,
                 "data": {
-                    "activities": [self._build_activity_response(a) for a in pagination.items],
+                    "activities": [
+                        self._build_activity_response(a, reg_counts=reg_counts) for a in items
+                    ],
                     "total": pagination.total,
                     "page": page,
                     "per_page": per_page,
@@ -46,7 +51,13 @@ class ActivityService:
                 },
             }
         activities = query.all()
-        return {"success": True, "data": [self._build_activity_response(a) for a in activities]}
+        reg_counts = self._batch_reg_counts([a.id for a in activities])
+        return {
+            "success": True,
+            "data": [
+                self._build_activity_response(a, reg_counts=reg_counts) for a in activities
+            ],
+        }
 
     def create_activity(self, data):
         admin = get_current_admin()
@@ -143,10 +154,28 @@ class ActivityService:
                 return {"success": False, "message": "无权操作该班级的数据"}, 403
         return None
 
-    def _build_activity_response(self, a):
-        reg_count = ActivityRegistration.query.filter_by(
-            activity_id=a.id, status="registered"
-        ).count()
+    def _batch_reg_counts(self, activity_ids):
+        """批量预取报名计数，消除列表逐活动 COUNT 的 N+1 查询（保留 _build_activity_response 兼容回退）。"""
+        if not activity_ids:
+            return {}
+        rows = (
+            ActivityRegistration.query.filter(
+                ActivityRegistration.activity_id.in_(activity_ids),
+                ActivityRegistration.status == "registered",
+            )
+            .with_entities(ActivityRegistration.activity_id, func.count())
+            .group_by(ActivityRegistration.activity_id)
+            .all()
+        )
+        return {r[0]: r[1] for r in rows}
+
+    def _build_activity_response(self, a, reg_counts=None):
+        if reg_counts is not None:
+            reg_count = reg_counts.get(a.id, 0)
+        else:
+            reg_count = ActivityRegistration.query.filter_by(
+                activity_id=a.id, status="registered"
+            ).count()
         return {
             "id": a.id,
             "class_id": a.class_id,

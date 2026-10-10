@@ -22,10 +22,13 @@ class DutyService:
         query = query.order_by(DutyGroup.day_of_week, DutyGroup.name)
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            groups = pagination.items
+            # R14 批量预热班级名称缓存，消除逐组 names.klass 的跨班 N+1
+            names.prefetch_classes([g.class_id for g in groups if g.class_id])
             return {
                 "success": True,
                 "data": {
-                    "groups": [self._build_group_response(g) for g in pagination.items],
+                    "groups": [self._build_group_response(g) for g in groups],
                     "total": pagination.total,
                     "page": page,
                     "per_page": per_page,
@@ -33,6 +36,7 @@ class DutyService:
                 },
             }
         groups = query.all()
+        names.prefetch_classes([g.class_id for g in groups if g.class_id])
         return {"success": True, "data": [self._build_group_response(g) for g in groups]}
 
     def create_group(self, data):

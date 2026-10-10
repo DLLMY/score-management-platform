@@ -87,5 +87,25 @@ class _Names:
         for i in want:
             store["student"].setdefault(i, None)
 
+    def prefetch_classes(self, ids):
+        """批量预热班级名称缓存，消除列表序列化的 N+1 查询（同构 prefetch_students）。"""
+        store = _cache()
+        if store is None:
+            return
+        want = set()
+        for i in ids:
+            try:
+                i = int(i)
+            except (TypeError, ValueError):
+                continue
+            if i not in store["class"]:
+                want.add(i)
+        if not want:
+            return
+        for c in ClassInfo.query.filter(ClassInfo.id.in_(want)).all():
+            store["class"][c.id] = c.name
+        for i in want:
+            store["class"].setdefault(i, None)
+
 
 names = _Names()

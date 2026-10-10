@@ -125,14 +125,21 @@ def get_exam_rankings_view(exam_id, subject=None, subject_id=None, page=1, per_p
         page=page, per_page=per_page, error_out=False
     )
     rankings = pagination.items
+    # R14 批量预取学生姓名，消除逐成绩 get_by_id 的 N+1 查询
+    student_ids = [s.student_id for s in rankings if s.student_id]
+    students = (
+        {u.id: u.name for u in User.query.filter(User.id.in_(student_ids)).all()}
+        if student_ids
+        else {}
+    )
     result = []
     for idx, score in enumerate(rankings):
         rank = (page - 1) * per_page + idx + 1
         entry = score.to_dict()
         entry["rank"] = rank
-        student = get_by_id(User, score.student_id)
-        if student:
-            entry["student_name"] = student.name
+        name = students.get(score.student_id)
+        if name is not None:
+            entry["student_name"] = name
         result.append(entry)
     return {
         "exam": exam.to_dict(),

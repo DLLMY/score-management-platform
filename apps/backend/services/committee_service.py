@@ -23,6 +23,8 @@ class CommitteeService:
         if is_active is not None:
             query = query.filter_by(is_active=is_active)
         members = query.order_by(ClassCommittee.position).all()
+        # R14 批量预热学生姓名缓存，消除逐成员 names.student 的 N+1 查询
+        names.prefetch_students([m.student_id for m in members if m.student_id])
         return {"success": True, "data": [self._build_member_response(m) for m in members]}
 
     def create_member(self, data):
