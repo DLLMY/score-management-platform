@@ -435,9 +435,28 @@ class ClassService:
         classes = query.order_by(ClassInfo.name).all()
         export_data = []
 
+        # R21: 批量预取，消除导出 N+1（原每班各查班主任 + 学生计数，N 班约 2N 次查询 -> 2 次）
+        head_teacher_ids = {c.head_teacher_id for c in classes if c.head_teacher_id}
+        teachers = (
+            {a.id: a.real_name for a in Admin.query.filter(Admin.id.in_(head_teacher_ids)).all()}
+            if head_teacher_ids
+            else {}
+        )
+        class_names = {c.name for c in classes}
+        counts = (
+            {
+                r[0]: r[1]
+                for r in User.query.filter(
+                    User.class_name.in_(class_names), User.is_active
+                ).with_entities(User.class_name, func.count()).group_by(User.class_name).all()
+            }
+            if class_names
+            else {}
+        )
+
         for cls in classes:
-            head_teacher = self._get_head_teacher_name(cls.head_teacher_id)
-            student_count = self._get_student_count(cls)
+            head_teacher = teachers.get(cls.head_teacher_id)
+            student_count = counts.get(cls.name, 0)
 
             export_data.append(
                 {
