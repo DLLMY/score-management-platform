@@ -281,14 +281,29 @@ class ClassService:
     def validate_associations(self):
         issues = []
         all_classes = ClassInfo.query.all()
+        if not all_classes:
+            return {"success": True, "total_classes": 0, "issues_found": 0, "issues": []}
+
+        # R20：批量预取所有班级的 AdminClass 关联（单次 IN 查询），消除逐班 2 次点查的 N+1
+        links = AdminClass.query.filter(
+            AdminClass.class_info_id.in_([c.id for c in all_classes])
+        ).all()
+        links_by_class = {}
+        for _link in links:
+            links_by_class.setdefault(_link.class_info_id, []).append(_link)
 
         for cls in all_classes:
             head_teacher_id = cls.head_teacher_id
 
             if head_teacher_id:
-                admin_link = AdminClass.query.filter_by(
-                    admin_id=head_teacher_id, class_info_id=cls.id
-                ).first()
+                admin_link = next(
+                    (
+                        _l
+                        for _l in links_by_class.get(cls.id, [])
+                        if _l.admin_id == head_teacher_id
+                    ),
+                    None,
+                )
 
                 if not admin_link:
                     issues.append(
@@ -314,7 +329,9 @@ class ClassService:
                         }
                     )
 
-            primary_link = AdminClass.query.filter_by(class_info_id=cls.id, is_primary=True).first()
+            primary_link = next(
+                (_l for _l in links_by_class.get(cls.id, []) if _l.is_primary), None
+            )
 
             if primary_link and cls.head_teacher_id != primary_link.admin_id:
                 issues.append(

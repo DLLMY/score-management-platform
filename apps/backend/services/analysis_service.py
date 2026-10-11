@@ -320,8 +320,9 @@ class AnalysisService:
 
         compare_data = []
         # 批量聚合：用 in_ + group_by 一次性取出各班级的 3 类聚合，替代按班级循环查询（原每班 3 次 → 共 3 次）
-        class_stats_map = dict(
-            db.session.query(
+        class_stats_map = {
+            r.class_name: r
+            for r in db.session.query(
                 User.class_name,
                 func.count(User.id).label("student_count"),
                 func.coalesce(func.sum(User.current_score), 0).label("total_score"),
@@ -332,9 +333,10 @@ class AnalysisService:
             .filter(User.class_name.in_(class_names))
             .group_by(User.class_name)
             .all()
-        )
-        period_records_map = dict(
-            db.session.query(
+        }
+        period_records_map = {
+            r.class_name: r
+            for r in db.session.query(
                 User.class_name,
                 func.count(ScoreRecord.id).label("total_records"),
                 func.coalesce(func.sum(ScoreRecord.score_change), 0).label("total_change"),
@@ -362,9 +364,10 @@ class AnalysisService:
             .filter(User.class_name.in_(class_names), ScoreRecord.created_at >= start_date)
             .group_by(User.class_name)
             .all()
-        )
-        unlock_stats_map = dict(
-            db.session.query(
+        }
+        unlock_stats_map = {
+            r.class_name: r
+            for r in db.session.query(
                 User.class_name,
                 func.count(ScoreRecord.id).label("unlock_count"),
                 func.coalesce(
@@ -385,34 +388,43 @@ class AnalysisService:
             )
             .group_by(User.class_name)
             .all()
+        }
+
+        # R20：批量预取每日趋势与各班 top5（单次 IN 查询覆盖全部班级），消除按班循环各 2 次点查的 N+1
+        daily_rows = (
+            db.session.query(
+                func.date(ScoreRecord.created_at).label("date"),
+                func.count(ScoreRecord.id).label("record_count"),
+                func.coalesce(func.sum(ScoreRecord.score_change), 0).label("score_change"),
+                User.class_name.label("class_name"),
+            )
+            .join(User)
+            .filter(User.class_name.in_(class_names), ScoreRecord.created_at >= start_date)
+            .group_by(func.date(ScoreRecord.created_at), User.class_name)
+            .order_by(func.date(ScoreRecord.created_at))
+            .all()
         )
+        daily_by_class = {}
+        for _r in daily_rows:
+            daily_by_class.setdefault(_r.class_name, []).append(_r)
+
+        top_rows = (
+            User.query.filter(User.class_name.in_(class_names))
+            .order_by(User.current_score.desc())
+            .all()
+        )
+        top_by_class = {}
+        for _u in top_rows:
+            top_by_class.setdefault(_u.class_name, []).append(_u)
+
 
         for class_name in class_names:
             class_stats = class_stats_map.get(class_name)
             period_records = period_records_map.get(class_name)
             unlock_stats = unlock_stats_map.get(class_name)
 
-            daily_trend = (
-                db.session.query(
-                    func.date(ScoreRecord.created_at).label("date"),
-                    func.count(ScoreRecord.id).label("record_count"),
-                    func.coalesce(func.sum(ScoreRecord.score_change), 0).label("score_change"),
-                )
-                .join(User)
-                .filter(
-                    User.class_name == class_name,
-                    ScoreRecord.created_at >= start_date,
-                )
-                .group_by(func.date(ScoreRecord.created_at))
-                .order_by(func.date(ScoreRecord.created_at))
-            )
-
-            top_students = (
-                User.query.filter_by(class_name=class_name)
-                .order_by(User.current_score.desc())
-                .limit(5)
-                .all()
-            )
+            daily_trend = daily_by_class.get(class_name, [])
+            top_students = top_by_class.get(class_name, [])[:5]
 
             compare_data.append(
                 {

@@ -502,14 +502,13 @@ class TestClassService:
             mock_class.name = "一班"
             mock_class.head_teacher_id = 1
 
-            mock_admin_class_query = MagicMock()
-            mock_admin_class_query.first.return_value = None
-
             with patch("services.class_service.ClassInfo") as MockClassInfo:
                 MockClassInfo.query.all.return_value = [mock_class]
 
                 with patch("services.class_service.AdminClass.query") as mock_admin_query:
-                    mock_admin_query.filter_by.return_value = mock_admin_class_query
+                    # R20: validate_associations 改为单次 IN 批量查询后按 class_info_id
+                    # 内存分组，此处模拟「该班级在 AdminClass 表中无关联记录」-> 期望 missing_link
+                    mock_admin_query.filter.return_value.all.return_value = []
 
                     result = service.validate_associations()
 
@@ -528,17 +527,17 @@ class TestClassService:
             mock_class.head_teacher_id = 1
 
             mock_admin_link = MagicMock()
-            mock_admin_link.is_primary = False
+            mock_admin_link.class_info_id = 1
             mock_admin_link.admin_id = 1
-
-            mock_admin_class_query = MagicMock()
-            mock_admin_class_query.first.return_value = mock_admin_link
+            mock_admin_link.is_primary = False
 
             with patch("services.class_service.ClassInfo") as MockClassInfo:
                 MockClassInfo.query.all.return_value = [mock_class]
 
                 with patch("services.class_service.AdminClass.query") as mock_admin_query:
-                    mock_admin_query.filter_by.return_value = mock_admin_class_query
+                    # R20: validate_associations 改为单次 IN 批量查询后按 class_info_id
+                    # 内存分组，此处模拟「该班级存在 AdminClass 关联但 is_primary=False」-> 期望 not_primary
+                    mock_admin_query.filter.return_value.all.return_value = [mock_admin_link]
 
                     result = service.validate_associations()
 
