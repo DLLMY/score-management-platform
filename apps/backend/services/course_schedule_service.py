@@ -11,6 +11,8 @@
 
 from datetime import datetime
 
+from flask import g, has_app_context
+
 from sqlalchemy.orm import joinedload
 
 from models import (
@@ -30,17 +32,61 @@ def format_day_of_week(day):
     return days[day] if 0 <= day <= 6 else "未知"
 
 
+_PERIOD_INFO_CACHE_KEY = "_course_period_info_cache"
+
+
+def _period_info_cache():
+    """请求级节次缓存载体（flask.g）。非请求上下文返回 None，退化为原单次查询。"""
+    if not has_app_context():
+        return None
+    store = getattr(g, _PERIOD_INFO_CACHE_KEY, None)
+    if store is None:
+        store = {}
+        setattr(g, _PERIOD_INFO_CACHE_KEY, store)
+    return store
+
+
 def get_period_info(period_number):
-    period = ClassPeriod.query.filter_by(period_number=period_number).first()
-    if period:
-        return {
-            "name": period.name,
-            "time": (
-                f"{period.start_hour:02d}:{period.start_minute:02d} - "
-                f"{period.end_hour:02d}:{period.end_minute:02d}"
-            ),
-        }
-    return {"name": f"第{period_number}节", "time": ""}
+    """课程节次响应信息。
+
+    R17 修复：节次为全局小表，原实现在列表/按班级序列化循环中逐行查 ClassPeriod 形成 N+1
+    （20 项列表触发 20 次查询）。改为请求级缓存——同请求内首次调用一次性预载全部活跃节次
+    （1 次查询），后续调用直接命中缓存，消除 N+1；返回结构与旧实现完全一致（零契约变更）。
+    非请求上下文（脚本直调）退化为原单次查询，保持行为正确。
+    """
+    store = _period_info_cache()
+    if store is not None and period_number in store:
+        return store[period_number]
+    # 首次访问（且处于请求上下文）：预载全部活跃节次，单次查询覆盖整请求
+    if store is not None and not store:
+        for p in ClassPeriod.query.filter_by(is_active=True).all():
+            store[p.period_number] = {
+                "name": p.name,
+                "time": (
+                    f"{p.start_hour:02d}:{p.start_minute:02d} - "
+                    f"{p.end_hour:02d}:{p.end_minute:02d}"
+                ),
+            }
+    info = store.get(period_number) if store is not None else None
+    if info is not None:
+        return info
+    # 缺失项（节次不存在）或脚本直调：兜底，缺失项也写入缓存避免同请求重复查
+    if store is None:
+        period = ClassPeriod.query.filter_by(period_number=period_number).first()
+        if period:
+            info = {
+                "name": period.name,
+                "time": (
+                    f"{period.start_hour:02d}:{period.start_minute:02d} - "
+                    f"{period.end_hour:02d}:{period.end_minute:02d}"
+                ),
+            }
+        else:
+            info = {"name": f"第{period_number}节", "time": ""}
+    else:
+        info = {"name": f"第{period_number}节", "time": ""}
+        store[period_number] = info
+    return info
 
 
 def _schedule_dict(schedule):

@@ -37,6 +37,7 @@ class ActivityService:
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
             items = pagination.items
+            names.prefetch_classes([a.class_id for a in items])
             reg_counts = self._batch_reg_counts([a.id for a in items])
             return {
                 "success": True,
@@ -51,6 +52,7 @@ class ActivityService:
                 },
             }
         activities = query.all()
+        names.prefetch_classes([a.class_id for a in activities])
         reg_counts = self._batch_reg_counts([a.id for a in activities])
         return {
             "success": True,
