@@ -34,6 +34,8 @@ class StudyGroupService:
             members_map.setdefault(m.group_id, []).append(m)
             prefetch_ids.append(m.student_id)
         names.prefetch_students(prefetch_ids)
+        names.prefetch_classes([g.class_id for g in groups if g.class_id])
+
         return {
             "success": True,
             "data": [self._build_group_response(g, members_map=members_map) for g in groups],

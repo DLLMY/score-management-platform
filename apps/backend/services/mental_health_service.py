@@ -29,6 +29,8 @@ class MentalHealthService:
         query = query.order_by(MentalHealthRecord.created_at.desc(), MentalHealthRecord.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_students([r.student_id for r in pagination.items if r.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -40,6 +42,8 @@ class MentalHealthService:
                 },
             }
         records = query.all()
+        names.prefetch_students([r.student_id for r in records if r.student_id])
+
         return {"success": True, "data": [self._build_record_response(r) for r in records]}
 
     def create_record(self, data):
@@ -81,6 +85,8 @@ class MentalHealthService:
         query = query.order_by(Alert.created_at.desc(), Alert.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_students([a.student_id for a in pagination.items if a.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -92,6 +98,8 @@ class MentalHealthService:
                 },
             }
         alerts = query.all()
+        names.prefetch_students([a.student_id for a in alerts if a.student_id])
+
         return {"success": True, "data": [self._build_alert_response(a) for a in alerts]}
 
     def resolve_alert(self, alert_id):

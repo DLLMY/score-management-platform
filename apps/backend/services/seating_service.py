@@ -152,6 +152,8 @@ class SeatingService:
             .order_by(SeatingSeat.row, SeatingSeat.col)
             .all()
         )
+        names.prefetch_students([s.student_id for s in seats if s.student_id])
+
         return {
             "id": chart.id,
             "name": chart.name,

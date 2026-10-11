@@ -28,6 +28,8 @@ class TeacherCommentService:
         query = query.order_by(TeacherComment.created_at.desc(), TeacherComment.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_students([c.student_id for c in pagination.items if c.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -39,6 +41,8 @@ class TeacherCommentService:
                 },
             }
         comments = query.all()
+        names.prefetch_students([c.student_id for c in comments if c.student_id])
+
         return {"success": True, "data": [self._build_response(c) for c in comments]}
 
     def get_comment(self, comment_id):

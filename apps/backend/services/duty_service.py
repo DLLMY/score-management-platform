@@ -91,6 +91,8 @@ class DutyService:
         query = query.order_by(DutyAssignment.date.desc(), DutyAssignment.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_students([a.student_id for a in pagination.items if a.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -102,6 +104,8 @@ class DutyService:
                 },
             }
         assignments = query.all()
+        names.prefetch_students([a.student_id for a in assignments if a.student_id])
+
         return {"success": True, "data": [self._build_assignment_response(a) for a in assignments]}
 
     def create_assignment(self, data):

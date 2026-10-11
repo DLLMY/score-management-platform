@@ -91,6 +91,10 @@ class StudyGuideService:
         query = query.order_by(ImprovementPlan.start_date.desc(), ImprovementPlan.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_subjects([p.subject_id for p in pagination.items if p.subject_id])
+
+            names.prefetch_students([p.student_id for p in pagination.items if p.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -102,6 +106,10 @@ class StudyGuideService:
                 },
             }
         plans = query.all()
+        names.prefetch_subjects([p.subject_id for p in plans if p.subject_id])
+
+        names.prefetch_students([p.student_id for p in plans if p.student_id])
+
         return {"success": True, "data": [self._build_plan_response(p) for p in plans]}
 
     def create_plan(self, data):

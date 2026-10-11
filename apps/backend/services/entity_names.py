@@ -107,5 +107,25 @@ class _Names:
         for i in want:
             store["class"].setdefault(i, None)
 
+    def prefetch_subjects(self, ids):
+        """批量预热科目名称缓存，消除列表序列化的 N+1 查询（同构 prefetch_classes）。"""
+        store = _cache()
+        if store is None:
+            return
+        want = set()
+        for i in ids:
+            try:
+                i = int(i)
+            except (TypeError, ValueError):
+                continue
+            if i not in store["subject"]:
+                want.add(i)
+        if not want:
+            return
+        for s in Subject.query.filter(Subject.id.in_(want)).all():
+            store["subject"][s.id] = s.name
+        for i in want:
+            store["subject"].setdefault(i, None)
+
 
 names = _Names()

@@ -34,6 +34,8 @@ class ParentService:
         query = query.order_by(ParentContact.id)
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_students([c.student_id for c in pagination.items if c.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -45,6 +47,8 @@ class ParentService:
                 },
             }
         contacts = query.all()
+        names.prefetch_students([c.student_id for c in contacts if c.student_id])
+
         return {"success": True, "data": [self._build_contact_response(c) for c in contacts]}
 
     def get_contact(self, contact_id):

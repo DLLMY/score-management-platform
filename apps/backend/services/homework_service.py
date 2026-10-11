@@ -25,6 +25,10 @@ class HomeworkService:
         query = query.order_by(HomeworkAssignment.due_date.desc(), HomeworkAssignment.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_subjects([a.subject_id for a in pagination.items if a.subject_id])
+
+            names.prefetch_classes([a.class_id for a in pagination.items if a.class_id])
+
             return {
                 "success": True,
                 "data": {
@@ -36,6 +40,10 @@ class HomeworkService:
                 },
             }
         assignments = query.all()
+        names.prefetch_subjects([a.subject_id for a in assignments if a.subject_id])
+
+        names.prefetch_classes([a.class_id for a in assignments if a.class_id])
+
         return {"success": True, "data": [self._build_assignment_response(a) for a in assignments]}
 
     def _parse_date(self, value):
@@ -71,6 +79,8 @@ class HomeworkService:
         if not assignment:
             return {"success": False, "message": "作业不存在"}, 404
         submissions = HomeworkSubmission.query.filter_by(assignment_id=assignment_id).all()
+        names.prefetch_students([s.student_id for s in submissions if s.student_id])
+
         submitted = [s for s in submissions if s.is_submitted]
         return {
             "success": True,

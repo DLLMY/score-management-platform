@@ -31,6 +31,8 @@ class CultureService:
         )
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_classes([r.class_id for r in pagination.items if r.class_id])
+
             return {
                 "success": True,
                 "data": {
@@ -42,6 +44,8 @@ class CultureService:
                 },
             }
         records = query.all()
+        names.prefetch_classes([r.class_id for r in records if r.class_id])
+
         return {"success": True, "data": [self._build_record_response(r) for r in records]}
 
     def create_record(self, data):

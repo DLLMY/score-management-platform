@@ -34,6 +34,10 @@ class AttendanceService:
         query = query.order_by(Attendance.date.desc(), Attendance.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_classes([r.class_id for r in pagination.items if r.class_id])
+
+            names.prefetch_students([r.student_id for r in pagination.items if r.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -45,6 +49,10 @@ class AttendanceService:
                 },
             }
         records = query.all()
+        names.prefetch_classes([r.class_id for r in records if r.class_id])
+
+        names.prefetch_students([r.student_id for r in records if r.student_id])
+
         return {"success": True, "data": [self._build_attendance_response(r) for r in records]}
 
     def record_attendance(self, data):
@@ -122,6 +130,8 @@ class AttendanceService:
         query = query.order_by(Approval.start_date.desc(), Approval.id.desc())
         if page is not None and per_page is not None:
             pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            names.prefetch_students([leave.student_id for leave in pagination.items if leave.student_id])
+
             return {
                 "success": True,
                 "data": {
@@ -133,6 +143,8 @@ class AttendanceService:
                 },
             }
         leaves = query.all()
+        names.prefetch_students([leave.student_id for leave in leaves if leave.student_id])
+
         return {"success": True, "data": [self._build_leave_response(leave) for leave in leaves]}
 
     def apply_leave(self, data):
