@@ -494,8 +494,18 @@ class CompositeScoreService:
             log_warning(f"[CompositeScore] 学生不存在或已停用: user_id={user_id}")
             return None
 
-        # R1-R9 复核补漏（原 P2-8）: 基数统一为全量活跃学生（与全量计算一致，原取 composite 表用户 → 结果不可比）
-        active_user_ids = [u.id for u in User.query.filter(User.is_active).all()]
+        # R19 性能修复：原实现先 `User.query.filter(is_active).all()` 仅取 id，
+        # 再 `User.query.filter(id.in_(active_user_ids)).all()` 重载同一批对象取 current_score
+        # —— 对同一批活跃用户做了两次整表全对象加载。合并为单条投影查询
+        # （仅取 id + current_score），既消除冗余整表扫描，又避免物化完整 User 行。
+        # 语义不变：active_user_ids 仍为全量活跃用户 id 列表（顺序由 DB 决定），
+        # behavior_map 仍为 id → current_score 映射。
+        _active_rows = (
+            User.query.filter(User.is_active)
+            .with_entities(User.id, User.current_score)
+            .all()
+        )
+        active_user_ids = [r.id for r in _active_rows]
         if not active_user_ids:
             log_info("[CompositeScore] 没有活跃学生的综合评分记录")
             return None
@@ -507,10 +517,7 @@ class CompositeScoreService:
             )
             return None
 
-        behavior_map = {
-            u.id: u.current_score or 0
-            for u in User.query.filter(User.id.in_(active_user_ids)).all()
-        }
+        behavior_map = {r.id: r.current_score or 0 for r in _active_rows}
 
         academic_map = {}
         academic_stats = (
