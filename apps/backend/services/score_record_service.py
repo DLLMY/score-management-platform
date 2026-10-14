@@ -279,39 +279,39 @@ def get_score_statistics(
     """
     from sqlalchemy import case, func
 
-    query = ScoreRecord.query
+    base_query = ScoreRecord.query
     if user_id:
-        query = query.filter(ScoreRecord.student_id == user_id)
+        base_query = base_query.filter(ScoreRecord.student_id == user_id)
     elif class_name:
-        query = query.join(User).filter(User.class_name == class_name)
+        base_query = base_query.join(User).filter(User.class_name == class_name)
     if start_dt:
-        query = query.filter(ScoreRecord.created_at >= start_dt)
+        base_query = base_query.filter(ScoreRecord.created_at >= start_dt)
     if end_dt:
-        query = query.filter(ScoreRecord.created_at <= end_dt)
-    query = _apply_isolation_filter(query, allowed_classes)
+        base_query = base_query.filter(ScoreRecord.created_at <= end_dt)
+    base_query = _apply_isolation_filter(base_query, allowed_classes)
 
-    total_records = query.count()
-
-    stats = (
+    # R24-6：总数 + 加分/减分汇总合并为单条查询（子查询内联，消除原 IN 子查询独立执行，省 1 查）
+    subq = base_query.subquery()
+    agg = (
         db.session.query(
+            func.count(subq.c.id).label("total_records"),
             func.coalesce(
-                func.sum(case((ScoreRecord.score_change > 0, ScoreRecord.score_change), else_=0)),
+                func.sum(case((subq.c.score_change > 0, subq.c.score_change), else_=0)),
                 0,
             ).label("total_add"),
             func.coalesce(
                 func.abs(
-                    func.sum(
-                        case((ScoreRecord.score_change < 0, ScoreRecord.score_change), else_=0)
-                    )
+                    func.sum(case((subq.c.score_change < 0, subq.c.score_change), else_=0))
                 ),
                 0,
             ).label("total_subtract"),
         )
-        .filter(ScoreRecord.id.in_(query.with_entities(ScoreRecord.id)))
+        .select_from(subq)
         .first()
     )
-    total_add = float(stats.total_add) if stats else 0
-    total_subtract = float(stats.total_subtract) if stats else 0
+    total_records = agg.total_records or 0
+    total_add = float(agg.total_add) if agg else 0
+    total_subtract = float(agg.total_subtract) if agg else 0
 
     today = datetime.now().date()
     today_records = ScoreRecord.query

@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy import case, func
+
 from models import (
     NLPBehaviorKeyword,
     NLPMatchResult,
@@ -183,22 +185,47 @@ class NLPRuleManagementService:
 
     def get_rule_statistics(self):
         """获取规则统计信息"""
-        total_rules = NLPScoringRule.query.filter(NLPScoringRule.is_active).count()
-        add_rules = NLPScoringRule.query.filter(
-            NLPScoringRule.score_type == "add", NLPScoringRule.is_active
-        ).count()
-        deduct_rules = NLPScoringRule.query.filter(
-            NLPScoringRule.score_type == "deduct", NLPScoringRule.is_active
-        ).count()
+        # R24-2：规则/用量/匹配三类计数各自合并为单条条件聚合（每类省 2 查）
+        rule_stats = (
+            db.session.query(
+                func.count(NLPScoringRule.id).label("total"),
+                func.count(case((NLPScoringRule.score_type == "add", NLPScoringRule.id))).label("add"),
+                func.count(case((NLPScoringRule.score_type == "deduct", NLPScoringRule.id))).label(
+                    "deduct"
+                ),
+            )
+            .filter(NLPScoringRule.is_active)
+            .first()
+        )
+        total_rules = rule_stats.total or 0
+        add_rules = rule_stats.add or 0
+        deduct_rules = rule_stats.deduct or 0
 
-        total_usage = NLPRuleUsage.query.count()
-        manual_corrections = NLPRuleUsage.query.filter(NLPRuleUsage.is_manual_correction).count()
+        usage_stats = (
+            db.session.query(
+                func.count(NLPRuleUsage.id).label("total"),
+                func.count(case((NLPRuleUsage.is_manual_correction == True, NLPRuleUsage.id))).label(
+                    "manual"
+                ),
+            )
+            .first()
+        )
+        total_usage = usage_stats.total or 0
+        manual_corrections = usage_stats.manual or 0
 
         # 使用数据库聚合查询，避免加载所有记录
-        total_count = NLPMatchResult.query.count()
+        match_stats = (
+            db.session.query(
+                func.count(NLPMatchResult.id).label("total"),
+                func.count(case((NLPMatchResult.is_manual_correction == True, NLPMatchResult.id))).label(
+                    "correct"
+                ),
+            )
+            .first()
+        )
+        total_count = match_stats.total or 0
         if total_count > 0:
-            correct_count = NLPMatchResult.query.filter(NLPMatchResult.is_manual_correction).count()
-            accuracy_rate = correct_count / total_count
+            accuracy_rate = round((match_stats.correct or 0) / total_count, 4)
         else:
             accuracy_rate = 0.0
 

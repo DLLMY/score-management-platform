@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import and_, case, func
+
 from models import Admin, Device, ScoreRecord, ScoreRule, User, db
 from services.redis_cache_service import get_cache_service
 
@@ -42,19 +44,32 @@ class DashboardService:
         total_rules = ScoreRule.query.filter_by(is_active=True).count() or 0
 
         today_start = datetime.combine(today, datetime.min.time())
-        today_records = ScoreRecord.query.filter(ScoreRecord.created_at >= today_start).count() or 0
 
-        weekly_records = (
-            ScoreRecord.query.filter(ScoreRecord.created_at >= last_7_days).count() or 0
+        # R24-5：今日/近7日/近7日正向 三类重叠窗计数合并为单条条件聚合（近7日窗口最大）
+        sr_stats = (
+            db.session.query(
+                func.count(case((ScoreRecord.created_at >= today_start, ScoreRecord.id))).label("today"),
+                func.count(case((ScoreRecord.created_at >= last_7_days, ScoreRecord.id))).label(
+                    "weekly"
+                ),
+                func.count(
+                    case(
+                        (
+                            and_(
+                                ScoreRecord.created_at >= last_7_days,
+                                ScoreRecord.score_change > 0,
+                            ),
+                            ScoreRecord.id,
+                        )
+                    )
+                ).label("positive"),
+            )
+            .first()
         )
+        today_records = sr_stats.today or 0
+        weekly_records = sr_stats.weekly or 0
+        positive_records = sr_stats.positive or 0
 
-        # R14-dashboard: positive ratio over last 7 days (score_change>0 / total)
-        positive_records = (
-            ScoreRecord.query.filter(
-                ScoreRecord.created_at >= last_7_days, ScoreRecord.score_change > 0
-            ).count()
-            or 0
-        )
         positive_ratio = (
             round(positive_records / weekly_records * 100, 1) if weekly_records > 0 else 0
         )

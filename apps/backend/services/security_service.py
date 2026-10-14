@@ -8,6 +8,7 @@ auth/student/admins/sub_accounts 跨模块导入，路由保留同名委托函�
 from datetime import datetime, timedelta
 
 from flask import request
+from sqlalchemy import case, func
 
 from models import LoginAttempt, RateLimitRecord, SecurityAudit, db
 
@@ -142,10 +143,21 @@ def get_audit_stats():
     last_24h = today_start - timedelta(hours=24)
     last_7d = today_start - timedelta(days=7)
 
+    # R24-4：total/last_24h/last_7d 三类重叠窗计数合并为单条条件聚合（全表一次扫描）
+    audit_agg = (
+        db.session.query(
+            func.count(SecurityAudit.id).label("total"),
+            func.count(case((SecurityAudit.created_at >= last_7d, SecurityAudit.id))).label("last_7d"),
+            func.count(case((SecurityAudit.created_at >= last_24h, SecurityAudit.id))).label(
+                "last_24h"
+            ),
+        )
+        .first()
+    )
     stats = {
-        "total": SecurityAudit.query.count(),
-        "last_24h": SecurityAudit.query.filter(SecurityAudit.created_at >= last_24h).count(),
-        "last_7d": SecurityAudit.query.filter(SecurityAudit.created_at >= last_7d).count(),
+        "total": audit_agg.total or 0,
+        "last_24h": audit_agg.last_24h or 0,
+        "last_7d": audit_agg.last_7d or 0,
         "by_severity": {},
         "by_type": {},
         "top_ips": [],

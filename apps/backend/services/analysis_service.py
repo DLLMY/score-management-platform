@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import case, distinct, func
+from sqlalchemy import and_, case, distinct, func
 from sqlalchemy.orm import joinedload
 
 from models import ScoreRecord, User, db
@@ -496,73 +496,82 @@ class AnalysisService:
         week_start = today_start - timedelta(days=today.weekday())
         month_start = today_start.replace(day=1)
 
-        total_users = User.query.filter_by(is_active=True).count()
-        total_students = User.query.filter(User.is_active, User.class_name.isnot(None)).count()
-
-        today_stats = (
-            db.session.query(
-                func.count(ScoreRecord.id).label("total_records"),
-                func.count(distinct(ScoreRecord.student_id)).label("active_users"),
-                func.sum(
-                    case(
-                        (ScoreRecord.description.contains("开锁"), 1),
-                        else_=0,
-                    )
-                ).label("unlock_count"),
-            )
-            .filter(ScoreRecord.created_at >= today_start)
-            .first()
-        )
-
-        today_unlock = today_stats.unlock_count or 0
-        today_active_users = today_stats.active_users or 0
-        today_new_records = today_stats.total_records or 0
-
-        week_stats = (
-            db.session.query(
-                func.sum(
-                    case(
-                        (ScoreRecord.description.contains("开锁"), 1),
-                        else_=0,
-                    )
-                ).label("unlock_count")
-            )
-            .filter(ScoreRecord.created_at >= week_start)
-            .first()
-        )
-
-        week_unlock = week_stats.unlock_count or 0
-
-        month_stats = (
-            db.session.query(
-                func.sum(
-                    case(
-                        (ScoreRecord.description.contains("开锁"), 1),
-                        else_=0,
-                    )
-                ).label("unlock_count"),
-                func.sum(
-                    case(
-                        (
-                            ScoreRecord.score_change < 0,
-                            ScoreRecord.score_change,
-                        ),
-                        else_=0,
-                    )
-                ).label("total_cost"),
-            )
-            .filter(ScoreRecord.created_at >= month_start)
-            .first()
-        )
-
-        month_unlock = month_stats.unlock_count or 0
-        month_cost = abs(month_stats.total_cost or 0)
-
         class_list = (
             db.session.query(User.class_name, func.count(User.id).label("count"))
             .filter(User.class_name.isnot(None), User.is_active)
             .all()
         )
+        total_students = sum(c.count for c in class_list)
+        total_users = User.query.filter_by(is_active=True).count()
+
+        # R24-1：月/周/日嵌套窗口合并为单条 ScoreRecord 条件聚合（月窗口最大，子窗口用 case 分档）
+        sr = (
+            db.session.query(
+                func.count(case((ScoreRecord.created_at >= today_start, ScoreRecord.id))).label(
+                    "today_records"
+                ),
+                func.count(
+                    distinct(case((ScoreRecord.created_at >= today_start, ScoreRecord.student_id)))
+                ).label("today_active"),
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                ScoreRecord.created_at >= today_start,
+                                ScoreRecord.description.contains("开锁"),
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("today_unlock"),
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                ScoreRecord.created_at >= week_start,
+                                ScoreRecord.description.contains("开锁"),
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("week_unlock"),
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                ScoreRecord.created_at >= month_start,
+                                ScoreRecord.description.contains("开锁"),
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("month_unlock"),
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                ScoreRecord.created_at >= month_start,
+                                ScoreRecord.score_change < 0,
+                            ),
+                            ScoreRecord.score_change,
+                        ),
+                        else_=0,
+                    )
+                ).label("month_cost"),
+            )
+            .filter(ScoreRecord.created_at >= month_start)
+            .first()
+        )
+
+        today_new_records = sr.today_records or 0
+        today_active_users = sr.today_active or 0
+        today_unlock = sr.today_unlock or 0
+        week_unlock = sr.week_unlock or 0
+        month_unlock = sr.month_unlock or 0
+        month_cost = abs(sr.month_cost or 0)
 
         top_classes = sorted(class_list, key=lambda x: x.count, reverse=True)[:5]
 

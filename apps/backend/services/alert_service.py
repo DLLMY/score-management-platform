@@ -7,6 +7,8 @@ import json
 import time
 from datetime import datetime, timedelta
 
+from sqlalchemy import case, func
+
 from models import Alert, User, db
 from utils.logger import log_error, log_info
 from utils.permission import get_admin_class_ids, get_current_admin
@@ -303,11 +305,18 @@ class AlertService:
     def get_alert_stats(self):
         """获取告警统计信息；失败返回 None（调用方据此返回业务失败，而非空统计冒充成功）"""
         try:
-            # 总告警数
-            total = Alert.query.count()
-
-            # 未读告警数
-            unread = Alert.query.filter(Alert.is_read == False).count()
+            # R24-3：总/未读/今日三类计数合并为单条条件聚合；severity 仍走 group_by（输出需要明细）
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            alert_stats = (
+                db.session.query(
+                    func.count(Alert.id).label("total"),
+                    func.count(case((Alert.is_read == False, Alert.id))).label("unread"),
+                    func.count(case((Alert.created_at >= today, Alert.id))).label("today"),
+                )
+                .first()
+            )
+            total = alert_stats.total or 0
+            unread = alert_stats.unread or 0
 
             # 按级别统计：一次 group_by 聚合替代逐级别 N 次 count（N+1 收敛）
             severity_stats = {sev: 0 for sev in self.SEVERITY_LEVELS}
@@ -319,9 +328,7 @@ class AlertService:
             for sev, cnt in rows:
                 severity_stats[sev] = cnt
 
-            # 今日告警数
-            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            today_count = Alert.query.filter(Alert.created_at >= today).count()
+            today_count = alert_stats.today or 0
 
             return {
                 "total": total,
