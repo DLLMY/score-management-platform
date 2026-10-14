@@ -50,3 +50,87 @@ class TestOperationLogRoutes:
         body = _json(resp)
         assert isinstance(body["by_type"], list)
         assert isinstance(body["by_day"], list)
+
+
+# ---- R23: 操作日志聚合查询合并的回归防护（5xCOUNT->条件聚合 / 4xCOUNT->2）----
+import re
+import time
+
+from sqlalchemy import event
+
+from models import OperationLog, db
+from services.operation_log_service import get_stats
+
+
+def _count_table_selects(app, fn, tables):
+    """统计 fn() 执行期间真实引用 tables 的 SELECT 条数（R22 同款 harness）。"""
+    pat = re.compile(
+        "|".join(r"(?:from|join)\s+%s\b|%s\." % (t, t) for t in tables)
+    )
+    counter = {"n": 0}
+
+    def _after(conn, cursor, statement, *args, **kwargs):
+        s = " ".join(statement.strip().lower().split())
+        if s.startswith("select") and pat.search(s):
+            counter["n"] += 1
+
+    engine = db.engine
+    event.listen(engine, "after_cursor_execute", _after)
+    try:
+        with app.app_context():
+            return fn(), counter["n"]
+    finally:
+        event.remove(engine, "after_cursor_execute", _after)
+
+
+class TestOperationLogAggregationR23:
+    """R23：get_stats /summary 聚合查询合并的回归防护。"""
+
+    def _seed(self, app, rows):
+        with app.app_context():
+            for r in rows:
+                db.session.add(OperationLog(operation_type=r[0], description=r[1]))
+            db.session.commit()
+
+    def test_get_stats_conditional_aggregation(self, app):
+        # 4 行，1 成功/0 失败/1 开A/1 开B（描述用词互不包含）
+        self._seed(app, [
+            ("login", "管理员登录成功"),
+            ("unlock", "开A箱操作"),
+            ("unlock", "开B箱操作"),
+            ("sync", "数据同步完成"),
+        ])
+        # 业务查询恒定 3：1 条件聚合 + by_type + by_day（旧逻辑 7）
+        (stats, cnt) = _count_table_selects(
+            app, lambda: get_stats(None, None), {"operation_log"}
+        )
+        assert cnt == 3, cnt
+        assert stats["total_count"] == 4
+        assert stats["success_count"] == 1
+        assert stats["failure_count"] == 0
+        assert stats["unlock_a_count"] == 1
+        assert stats["unlock_b_count"] == 1
+
+    def test_summary_conditional_aggregation(self, client, app, auth_headers):
+        self._seed(app, [
+            ("login", "管理员登录成功"),
+            ("unlock", "开A箱操作"),
+            ("unlock", "开B箱操作"),
+            ("sync", "数据同步完成"),
+        ])
+        # 唯一 ?v= 穿透 cached_api(ttl=60)；业务查询恒定 2：今日条件聚合 + 周计数（旧逻辑 4）
+        (resp, cnt) = _count_table_selects(
+            app,
+            lambda: client.get(
+                "/api/operation-logs/summary?v=r23s%d" % int(time.time() * 1000),
+                headers=auth_headers,
+            ),
+            {"operation_log"},
+        )
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert body["today"]["total"] == 4
+        assert body["today"]["success"] == 1
+        assert body["today"]["failure"] == 0
+        assert body["week"]["total"] == 4
+        assert cnt == 2, cnt

@@ -399,7 +399,27 @@ def is_admin_or_super_admin(admin):
     return has_permission(admin, "all")
 
 
+_CURRENT_ADMIN_MISSING = object()
+
+
 def get_current_admin():
+    # R23：请求级缓存——同一请求内身份固定，避免路由层 + service 层重复查库
+    # （单请求可省 ~1 次 Admin SELECT）。缓存严格绑定 flask.g（请求级），不跨请求/跨用户。
+    try:
+        cached = getattr(g, "_r23_cached_current_admin", _CURRENT_ADMIN_MISSING)
+    except RuntimeError:
+        cached = _CURRENT_ADMIN_MISSING
+    if cached is not _CURRENT_ADMIN_MISSING:
+        return cached
+    admin = _resolve_current_admin()
+    try:
+        g._r23_cached_current_admin = admin
+    except RuntimeError:
+        pass
+    return admin
+
+
+def _resolve_current_admin():
     # F6 修复: 仅接受 Authorization: Bearer <token>。
     # 原实现允许 X-Admin-Id 头作 token 回退，且 token 校验失败后直接按 id 查库返回 Admin——
     # 知道 admin id 即可伪造身份（CRITICAL）。现彻底移除该通道，校验失败一律返回 None。
@@ -432,7 +452,25 @@ def get_current_admin():
 
 
 def get_allowed_classes(admin_id):
-    """获取管理员允许访问的班级列表"""
+    """获取管理员允许访问的班级列表（带请求级缓存，避免同请求内重复计算）"""
+    # R23：请求级缓存——班级隔离集合同请求内固定，路由层 + service 层重复调用只算一次
+    # （单次调用 3 次 SELECT：admin / admin_class / class_info，缓存可省 2 次）。
+    try:
+        cache = getattr(g, "_r23_allowed_classes_cache", None)
+        if cache is None:
+            cache = {}
+            g._r23_allowed_classes_cache = cache
+    except RuntimeError:
+        cache = None
+    if cache is not None and admin_id in cache:
+        return cache[admin_id]
+    result = _compute_allowed_classes(admin_id)
+    if cache is not None:
+        cache[admin_id] = result
+    return result
+
+
+def _compute_allowed_classes(admin_id):
     admin = Admin.query.get(admin_id)
     if not admin:
         return None

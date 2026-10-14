@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from sqlalchemy import case, func
 
 from flask import request
 from flask_restx import Namespace, Resource
@@ -111,22 +112,19 @@ class OperationLogSummary(Resource):
         today = datetime.now().date()
         week_ago = today - timedelta(days=7)
 
-        today_logs = OperationLog.query.filter(
-            OperationLog.created_at >= datetime.combine(today, datetime.min.time())
-        ).count()
-
-        today_success = OperationLog.query.filter(
-            OperationLog.created_at >= datetime.combine(today, datetime.min.time()),
-            OperationLog.description.ilike("%成功%"),
-        ).count()
-
-        today_failure = OperationLog.query.filter(
-            OperationLog.created_at >= datetime.combine(today, datetime.min.time()),
-            OperationLog.description.ilike("%失败%"),
-        ).count()
-
+        today_start = datetime.combine(today, datetime.min.time())
+        week_start = datetime.combine(week_ago, datetime.min.time())
+        # R23：今日三项 COUNT 合并为单条条件聚合（同一时间窗），省 2 次查询。
+        today_agg = OperationLog.query.with_entities(
+            func.count(OperationLog.id),
+            func.sum(case((OperationLog.description.ilike("%成功%"), 1), else_=0)),
+            func.sum(case((OperationLog.description.ilike("%失败%"), 1), else_=0)),
+        ).filter(OperationLog.created_at >= today_start).one()
+        today_logs = today_agg[0] or 0
+        today_success = today_agg[1] or 0
+        today_failure = today_agg[2] or 0
         week_logs = OperationLog.query.filter(
-            OperationLog.created_at >= datetime.combine(week_ago, datetime.min.time())
+            OperationLog.created_at >= week_start
         ).count()
 
         return {

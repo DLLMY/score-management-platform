@@ -269,3 +269,86 @@ class TestPermissionUtils:
             admin = Admin(role="operator", username="test_operator")
             result = has_permission(admin, "device.view")
             assert isinstance(result, bool)
+
+
+# ---- R23: 身份/班级隔离解析请求级缓存的回归防护 ----
+import re
+
+from sqlalchemy import event
+
+from models import Admin, AdminClass, ClassInfo, db
+from utils.permission import get_allowed_classes, get_current_admin
+
+
+def _count_table_selects(app, fn, tables, warmup=None):
+    """统计 fn() 执行期间真实引用 tables 的 SELECT 条数（R22 同款 harness）。"""
+    pat = re.compile(
+        "|".join(r"(?:from|join)\s+%s\b|%s\." % (t, t) for t in tables)
+    )
+    counter = {"n": 0}
+
+    def _after(conn, cursor, statement, *args, **kwargs):
+        s = " ".join(statement.strip().lower().split())
+        if s.startswith("select") and pat.search(s):
+            counter["n"] += 1
+
+    engine = db.engine
+    event.listen(engine, "after_cursor_execute", _after)
+    try:
+        with app.app_context():
+            if warmup is not None:
+                warmup()
+                counter["n"] = 0  # 预热（含懒加载 DB 初始化）查询不计入
+            return fn(), counter["n"]
+    finally:
+        event.remove(engine, "after_cursor_execute", _after)
+
+
+class TestCurrentAdminRequestCacheR23:
+    """R23：get_current_admin 同请求内缓存，只查一次 admin。"""
+
+    def test_get_current_admin_cached_once(self, app, auth_headers):
+        token = auth_headers["Authorization"]
+
+        def fn():
+            with app.test_request_context(headers={"Authorization": token}):
+                a1 = get_current_admin()
+                a2 = get_current_admin()
+            return (a1, a2)
+
+        (res, cnt) = _count_table_selects(app, fn, {"admin"})
+        a1, a2 = res
+        assert a1 is not None and a2 is not None
+        assert a1 is a2  # 同对象（请求级缓存）
+        assert cnt == 1, cnt  # 第二次命中缓存，省 1 次 admin SELECT
+
+
+class TestAllowedClassesRequestCacheR23:
+    """R23：get_allowed_classes 同请求内缓存，只算一次（首次 3 查，二次 0 查）。"""
+
+    def test_get_allowed_classes_cached_once(self, app):
+        with app.app_context():
+            teacher = Admin(role="head_teacher", username="r23ht", password="testpass123")
+            db.session.add(teacher)
+            db.session.commit()
+            ci = ClassInfo(name="R23-1", is_active=True)
+            db.session.add(ci)
+            db.session.commit()
+            db.session.add(AdminClass(admin_id=teacher.id, class_info_id=ci.id))
+            db.session.commit()
+            admin_id = teacher.id
+
+        def fn():
+            r1 = get_allowed_classes(admin_id)
+            r2 = get_allowed_classes(admin_id)
+            return (r1, r2)
+
+        (res, cnt) = _count_table_selects(
+            app, fn, {"admin", "admin_class", "class_info"},
+            warmup=lambda: get_allowed_classes(admin_id),
+        )
+        r1, r2 = res
+        assert r1 == ["R23-1"]
+        assert r2 == ["R23-1"]
+        # 预热（冷查询+懒加载初始化）后，两次调用均命中请求级缓存 -> 0 查询
+        assert cnt == 0, cnt

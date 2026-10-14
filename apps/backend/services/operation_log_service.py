@@ -22,15 +22,19 @@ def get_stats(start_time, end_time):
     if end_time:
         query = query.filter(OperationLog.created_at <= datetime.fromisoformat(end_time))
 
-    total_count = query.count()
-
-    success_count = query.filter(OperationLog.description.ilike("%成功%")).count()
-
-    failure_count = query.filter(OperationLog.description.ilike("%失败%")).count()
-
-    unlock_a_count = query.filter(OperationLog.description.ilike("%开A箱%")).count()
-
-    unlock_b_count = query.filter(OperationLog.description.ilike("%开B箱%")).count()
+    # R23：原 5 条独立 COUNT(*) 合并为单条条件聚合（同一过滤集），省 4 次查询。
+    agg = query.with_entities(
+        func.count(OperationLog.id),
+        func.sum(case((OperationLog.description.ilike("%成功%"), 1), else_=0)),
+        func.sum(case((OperationLog.description.ilike("%失败%"), 1), else_=0)),
+        func.sum(case((OperationLog.description.ilike("%开A箱%"), 1), else_=0)),
+        func.sum(case((OperationLog.description.ilike("%开B箱%"), 1), else_=0)),
+    ).one()
+    total_count = agg[0] or 0
+    success_count = agg[1] or 0
+    failure_count = agg[2] or 0
+    unlock_a_count = agg[3] or 0
+    unlock_b_count = agg[4] or 0
 
     by_type = (
         db.session.query(

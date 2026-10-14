@@ -130,13 +130,17 @@ def aggregate():
             t = ET.parse(xml).getroot()
         except Exception:
             continue
-        def gi(k):
-            v = t.get(k)
-            return int(v) if v is not None else 0
-        tot["tests"] += gi("tests")
-        tot["failures"] += gi("failures")
-        tot["errors"] += gi("errors")
-        tot["skipped"] += gi("skipped")
+        # pytest 9.x 写出 <testsuites><testsuite .../></testsuites>，真实计数在子 <testsuite> 上；
+        # 直接读根 <testsuites> 的 tests 属性会得到 None -> 0，必须下钻到子节点累加。
+        suites = t.findall("testsuite") if t.tag == "testsuites" else [t]
+        for s in suites:
+            def gi(k):
+                v = s.get(k)
+                return int(v) if v is not None else 0
+            tot["tests"] += gi("tests")
+            tot["failures"] += gi("failures")
+            tot["errors"] += gi("errors")
+            tot["skipped"] += gi("skipped")
         for tc in t.iter("testcase"):
             cls = tc.get("classname", "")
             name = tc.get("name", "")

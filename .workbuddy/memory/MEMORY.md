@@ -4,12 +4,12 @@
 - 生产就绪 P0（占位密钥 / TLS / WS 入口 / 版本化迁移）全收官，零回归。
 - P0-d：reconcile.py（元数据驱动对账，按 db.metadata 自动补表/列/索引，幂等零依赖）+ seed_defaults.py（12 默认节次 + 5 预警，幂等）接入 `app/db_init.py::init_database` 的 `ensure_database_ready`，受 TESTING 守卫；runner.py 弃用。
 - 模型/迁移漂移已收口进模型（User.risk_score / User.last_risk_updated / ScoreRecord.operation_log_id），由 create_all / reconcile 统一维护。
-- 项目已无大型工程债；优化轮 R7–R10 + OPT-1/2 全收官，全量回归 **2318 passed / 0 failed / 0 errors / 7 skipped** 零回归。
+- 项目已无大型工程债；**零回归性能修复战役 R7–R23 全收官**（关系懒加载维度 + api 层 helper-delegated N+1 全扫闭环 + R23 请求级 flask.g 缓存（C1/C2）+ 操作日志条件聚合收口（C3/C4）），全量回归基线升至 **2325 passed / 0 failed / 0 errors / 7 skipped** 零回归（R23 新增 4 防护用例）。R22 提交 `8f69520`，R23 提交待 push 后 `git ls-remote` 核验。
 
 ## 运行 / 测试口径（铁律）
 - 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端**强杀 5000 端口持有者**再重启（SocketIO 不 reload，勿杀 celery beat）。
 - 回归必须 `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug）。
-- 沙箱单进程全量 pytest 超时退出（function 级 app fixture 累积 2000+ app 实例）→ 用 `run_regression_batched.py`（`FLASK_LIGHTWEIGHT=true` + 分进程 ≤150 用例 / ≤10 文件 / 整批 timeout 600，剔除 `test_app_init` 整文件 + `test_api_contract` 两用例）。**重跑前先确认无残留旧后台 pytest 进程（共享 XML 竞态）**，`chunk 019` 重 fixture 批次需延长超时。
+- 沙箱单进程全量 pytest 超时退出（function 级 app fixture 累积 2000+ app 实例）→ 用 `run_regression_batched.py`（`FLASK_LIGHTWEIGHT=true` + 分进程 ≤150 用例 / ≤10 文件 / 整批 timeout 600，剔除 `test_app_init` 整文件 + `test_api_contract` 两用例）。**重跑前先确认无残留旧后台 pytest 进程（共享 XML 竞态）**，`chunk 019` 重 fixture 批次需延长超时。**`aggregate()` 须下钻 `<testsuites>→<testsuite>` 取 tests（pytest 9.x 根节点为 testsuites，直读根 tests 属性=0 假零）**。
 - 单测三要素：exit=0 / 无 failed / 报告文件数==磁盘文件数；**禁 commit 除非用户显式要求**。
 - ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）；`run_validation.py` 语法门必过再提交。
 
