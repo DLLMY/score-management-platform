@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
+from sqlalchemy import case, func
 
 from models import NotifyHistory
 from utils.api_cache_middleware import cached_api, invalidate_cache
@@ -112,18 +113,26 @@ class HistoryStats(Resource):
         today = datetime.now().date()
         week_ago = today - timedelta(days=7)
         month_ago = today - timedelta(days=30)
-        total_count = NotifyHistory.query.count()
-        today_count = NotifyHistory.query.filter(
-            NotifyHistory.created_at >= datetime.combine(today, datetime.min.time())
-        ).count()
-        week_count = NotifyHistory.query.filter(
-            NotifyHistory.created_at >= datetime.combine(week_ago, datetime.min.time())
-        ).count()
-        month_count = NotifyHistory.query.filter(
-            NotifyHistory.created_at >= datetime.combine(month_ago, datetime.min.time())
-        ).count()
-        success_count = NotifyHistory.query.filter_by(status="sent").count()
-        fail_count = NotifyHistory.query.filter_by(status="failed").count()
+        today_start = datetime.combine(today, datetime.min.time())
+        week_start = datetime.combine(week_ago, datetime.min.time())
+        month_start = datetime.combine(month_ago, datetime.min.time())
+        # R25-1: total/today/week/month/sent/failed 6 COUNT -> 1 条件聚合（同 R24 模式）
+        agg = (
+            NotifyHistory.query.with_entities(
+                func.count(NotifyHistory.id),
+                func.sum(case((NotifyHistory.created_at >= today_start, 1), else_=0)),
+                func.sum(case((NotifyHistory.created_at >= week_start, 1), else_=0)),
+                func.sum(case((NotifyHistory.created_at >= month_start, 1), else_=0)),
+                func.sum(case((NotifyHistory.status == "sent", 1), else_=0)),
+                func.sum(case((NotifyHistory.status == "failed", 1), else_=0)),
+            ).one()
+        )
+        total_count = agg[0] or 0
+        today_count = agg[1] or 0
+        week_count = agg[2] or 0
+        month_count = agg[3] or 0
+        success_count = agg[4] or 0
+        fail_count = agg[5] or 0
         return {
             "total_count": total_count,
             "today_count": today_count,

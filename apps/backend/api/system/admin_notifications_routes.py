@@ -8,6 +8,7 @@ F9-B 合并说明：
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
+from sqlalchemy import case, func
 
 from models import Notification
 from services.admin_notifications_service import (
@@ -188,17 +189,16 @@ class AdminNotificationCount(Resource):
         admin_id = request.args.get("admin_id", type=int)
 
         if admin_id:
-            unread_count = Notification.query.filter_by(
-                admin_id=admin_id, recipient_type="admin", is_read=False
-            ).count()
-            total_count = Notification.query.filter_by(
-                admin_id=admin_id, recipient_type="admin"
-            ).count()
+            base = Notification.query.filter_by(admin_id=admin_id, recipient_type="admin")
         else:
-            unread_count = Notification.query.filter_by(
-                recipient_type="admin", is_read=False
-            ).count()
-            total_count = Notification.query.filter_by(recipient_type="admin").count()
+            base = Notification.query.filter_by(recipient_type="admin")
+        # R25-2: unread + total 2 COUNT -> 1 条件聚合
+        agg = base.with_entities(
+            func.count(Notification.id),
+            func.sum(case((Notification.is_read.is_(False), 1), else_=0)),
+        ).one()
+        total_count = agg[0] or 0
+        unread_count = agg[1] or 0
 
         return APIResponse.success(data={"unread_count": unread_count, "total_count": total_count})
 

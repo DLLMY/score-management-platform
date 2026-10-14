@@ -67,9 +67,11 @@ def get_subject_classes_view(subject_id):
         return None
     links = SubjectClass.query.filter_by(subject_id=subject_id).all()
     result = []
+    # R25-5: SubjectClass 的 class_info/teacher 关系为 lazy="selectin"，加载 links 时已
+    # 自动批量预取；直接复用关系，消除原每行 2xget_by_id 的 N+1。
     for link in links:
-        teacher = get_by_id(Admin, link.teacher_id) if link.teacher_id else None
-        class_info = get_by_id(ClassInfo, link.class_info_id)
+        teacher = link.teacher
+        class_info = link.class_info
         result.append(
             {
                 "id": link.id,

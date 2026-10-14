@@ -12,7 +12,6 @@
 from datetime import datetime
 
 from flask import g, has_app_context
-
 from sqlalchemy.orm import joinedload
 
 from models import (
@@ -418,9 +417,11 @@ def build_schedule_export_data(class_info_id):
 
     export_data = []
     class_info = None
+    # R25-4: CourseSchedule 的 class_info/subject 关系为 lazy="selectin"，加载 schedules
+    # 时已自动批量预取；直接复用关系，消除原每行 2xget_by_id 的 N+1。
     for schedule in schedules:
-        class_info = get_by_id(ClassInfo, schedule.class_info_id)
-        subject = get_by_id(Subject, schedule.subject_id)
+        class_info = schedule.class_info
+        subject = schedule.subject
 
         export_data.append(
             {

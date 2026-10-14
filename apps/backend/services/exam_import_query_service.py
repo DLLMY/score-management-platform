@@ -4,7 +4,7 @@
 路由层仅负责解析请求参数与信封封装，保持契约不变。
 """
 
-from models import Admin, Exam, Score, User, get_by_id
+from models import Score
 
 
 def get_import_history_view(exam_id=None, page=1, per_page=20):
@@ -22,10 +22,13 @@ def get_import_history_view(exam_id=None, page=1, per_page=20):
     )
 
     results = []
+    # R25-3: Score 的 student/exam/admin/subject_rel 关系为 lazy="selectin"，加载
+    # pagination.items 时已自动批量预取；直接复用关系，消除原每行 3xget_by_id 的 N+1。
     for score in pagination.items:
-        student = get_by_id(User, score.student_id)
-        exam = get_by_id(Exam, score.exam_id)
-        entered_by_admin = get_by_id(Admin, score.entered_by) if score.entered_by else None
+        student = score.student
+        exam = score.exam
+        entered_by_admin = score.admin
+        subject = score.subject_rel
 
         results.append(
             {
@@ -33,7 +36,7 @@ def get_import_history_view(exam_id=None, page=1, per_page=20):
                 "exam_name": exam.name if exam else None,
                 "student_name": student.name if student else None,
                 "student_card_id": student.card_id if student else None,
-                "subject": score.subject_rel.name if score.subject_rel else "",
+                "subject": subject.name if subject else "",
                 "score": score.score,
                 "full_score": score.full_score,
                 "status": score.status,

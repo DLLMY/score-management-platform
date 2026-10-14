@@ -59,3 +59,13 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
   - score_record_service.get_score_statistics：总数+加减汇总(2→1，消除 IN 子查询) = 省 1 查（today_count 因口径忽略 start/end_dt 保留独立查询）。
   - **R24-7 composite_score_service.get_student_composite_score 已回退**：合并取分+排名为相关子查询后破坏既有 mock 单测 `test_composite_score_service::test_get_student_composite_score`（该测试桩的是原始 `query.filter_by().first()`+`query.filter().count()` 双查序列，合并后 mock 不命中→返回 None）。逻辑对真实库正确，但与 mock 强耦合且仅省 1 查，按「破坏既存测试宁可回退」铁律 `git checkout HEAD` 字节级还原。
   - 合计省约 13 查；配套 `tests/test_r24_aggregation.py`（删除 composite 类后 **15 用例**全绿）+ ruff C901 0 新增 + 全量回归 **2340/0/0/7 零回归**（22 分块 hung=0，独立聚合复核一致）。**EOL 守恒**：analysis/alert/dashboard=CRLF，nlp_rule/security/score_record=LF；composite_score_service.py 已还原 HEAD。**双处索引**：本次仅改查询形态，未新增索引，无需同步。
+  - **R24 提交 `1cd686f`**（10 文件 +529/−93）已 push 并经 `git ls-remote` 核验一致；提交前另修净 3 处 R24 import 新增 lint（alert/nlp_rule/security 重复导入+分组、test UP009，零行为变更，29 用例复跑通过）。**教训**：mock 单测桩 `Model.query` 双查序列时，任何查询合并都会误判——仅被 mock 覆盖且收益 ≤1 查的合并应最低优先级甚至不做。
+
+
+## R25 读路径优化（簇 D 计数合并 + 簇 N+1 关系复用，用户确认全部 5 处）
+- **簇 D（同表多 COUNT → 单条条件聚合，R24 模板）**：`notify_history_routes` 6 COUNT→1；`admin_notifications_routes` unread+total 2→1（if/else 各一组）。cached_api 路由用唯一 `?v=` 穿透缓存后计数。
+- **簇 N+1（循环 get_by_id → 复用 selectin 关系）**：`exam_import_query_service` / `course_schedule_service` / `subject_service` 三处列表端点。**关键洞察**：这些模型的关系本就是 `lazy="selectin"`（R7 时代），加载父对象时 SQLAlchemy 已自动批量预取；原始 `get_by_id` 是与 selectin **冗余**的 N+1。最优解=**直接用关系**（`score.student/exam/admin/subject_rel`、`schedule.class_info/subject`、`link.class_info/teacher`），零额外查询。曾误用"批量 IN 查询"反而与 selectin 重复（debug 见每组查询 2× 计数）——**教训：消除列表 N+1 前，先查目标模型关系是否已 selectin，避免重复造轮子**。
+- 省查询：exam 每行 3 个 get_by_id、schedule/subject 每行 2 个 get_by_id 全消除（收益随页/列表大小缩放；exam 默认页 20 行省 ~60 查）。
+- 测试 `tests/test_r25_aggregation.py`（10 用例全绿）：SQL 计数 harness（notify/admin 目标表 SELECT==1；exam/schedule/subject ==4/2/2=selectin 批量数，证明 get_by_id 已消除）+ 契约 key + 数值正确性。
+- ruff 6 文件全净（含修净 course_schedule 既存 I001、exam import 收缩为 `Score` only）。EOL 守恒：notify/admin_notif=CRLF，exam/course_schedule/subject/test=LF。
+- 全量回归 **2350/0/0/7 零回归**（22 分块 hung=0，独立聚合复核一致；2340+10）。R25 报告 `docs/reports/深度评估与优化报告-20261014-25.md`。
