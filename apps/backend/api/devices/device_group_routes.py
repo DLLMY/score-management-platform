@@ -323,14 +323,21 @@ class DeviceGroups(Resource):
             return APIResponse.not_found(message="设备不存在")
 
         mappings = DeviceGroupMapping.query.filter_by(device_id=device_id).all()
+        # R22: 批量预取分组，消除逐映射 get_by_id N+1（原每个映射 1 次查询 -> 1 次 IN）
+        group_ids = {m.group_id for m in mappings}
+        group_map = (
+            {g.id: g for g in DeviceGroup.query.filter(DeviceGroup.id.in_(group_ids)).all()}
+            if group_ids
+            else {}
+        )
         groups = []
         for mapping in mappings:
-            group = get_by_id(DeviceGroup, mapping.group_id)
+            group = group_map.get(mapping.group_id)
             if group:
                 group_data = group.to_dict()
                 group_data["mapping_id"] = mapping.id
                 group_data["added_at"] = (
-                    mapping.created_at.strftime("%Y-%m-%d %H:%M:%S") if mapping.created_at else None
+                    mapping.added_at.strftime("%Y-%m-%d %H:%M:%S") if mapping.added_at else None
                 )
                 groups.append(group_data)
 
@@ -352,6 +359,21 @@ class DeviceGroupOptions(Resource):
         groups = (
             DeviceGroup.query.filter_by(is_active=True).order_by(DeviceGroup.sort_order.asc()).all()
         )
+        # R22: 批量分组计数，消除逐分组 count N+1（原每组 1 次 COUNT -> 1 次 group_by）
+        group_ids = [g.id for g in groups]
+        count_map = (
+            {
+                r[0]: r[1]
+                for r in DeviceGroupMapping.query.with_entities(
+                    DeviceGroupMapping.group_id, func.count(DeviceGroupMapping.id)
+                )
+                .filter(DeviceGroupMapping.group_id.in_(group_ids))
+                .group_by(DeviceGroupMapping.group_id)
+                .all()
+            }
+            if group_ids
+            else {}
+        )
 
         return APIResponse.success(
             data=[
@@ -359,7 +381,7 @@ class DeviceGroupOptions(Resource):
                     "id": g.id,
                     "name": g.name,
                     "location": g.location,
-                    "device_count": DeviceGroupMapping.query.filter_by(group_id=g.id).count(),
+                    "device_count": count_map.get(g.id, 0),
                 }
                 for g in groups
             ]

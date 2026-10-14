@@ -1,7 +1,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 
-from models import Admin, AdminClass, ClassInfo, get_by_id
+from models import Admin, AdminClass, ClassInfo
 from services.academics_service import academics_service
 from utils.api_cache_middleware import invalidate_cache
 from utils.permission import requires_permission
@@ -63,7 +63,8 @@ class AdminClasses(Resource):
         class_links = AdminClass.query.filter_by(admin_id=admin_id).all()
         classes = []
         for link in class_links:
-            class_info = get_by_id(ClassInfo, link.class_info_id)
+            # R22: 改用模型层 selectin 关系，消除逐链接 get_by_id N+1（1 次 IN 批量加载）
+            class_info = link.class_info
             if class_info:
                 classes.append(
                     {

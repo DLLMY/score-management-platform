@@ -6,7 +6,10 @@
 - GET 列表
 """
 
+import re
+
 import pytest
+from sqlalchemy import event
 
 from models import Admin, AdminClass, ClassInfo, db
 
@@ -112,3 +115,44 @@ class TestAdminClassesRoutes:
         with app.app_context():
             resp = client.post(f"/api/admin-classes/1/remove-class/{cls_id}", headers=auth_headers)
             assert resp.status_code == 404
+
+
+class TestAdminClassesReadNPlusOne:
+    """R22：GET 管理员班级列表走模型层 selectin 关系的 N+1 回归防护。"""
+
+    def test_get_list_batched_no_n_plus_one(self, client, app, auth_headers):
+        with app.app_context():
+            for i in range(4):
+                c = ClassInfo(name=f"r22cls_{i}", grade="高一")
+                db.session.add(c)
+                db.session.flush()
+                db.session.add(
+                    AdminClass(admin_id=1, class_info_id=c.id, is_primary=(i == 0))
+                )
+            db.session.commit()
+
+        pat = re.compile(
+            r"(?:from|join)\s*admin_class\b|admin_class\.|(?:from|join)\s*class_info\b|class_info\."
+        )
+        counter = {"n": 0}
+
+        def _after(conn, cursor, statement, *args, **kwargs):
+            s = " ".join(statement.strip().lower().split())
+            if s.startswith("select") and pat.search(s):
+                counter["n"] += 1
+
+        engine = db.engine
+        event.listen(engine, "after_cursor_execute", _after)
+        try:
+            with app.app_context():
+                resp = client.get("/api/admin-classes/1?v=r22", headers=auth_headers)
+        finally:
+            event.remove(engine, "after_cursor_execute", _after)
+
+        assert resp.status_code == 200
+        # 业务查询恒定 2（links + selectin IN）；旧逻辑逐链接 get_by_id = 1+L
+        assert counter["n"] == 2, counter["n"]
+        rows = resp.get_json()
+        assert [r["class_name"] for r in rows] == [f"r22cls_{i}" for i in range(4)]
+        assert rows[0]["is_primary"] is True
+        assert all(r["is_primary"] is False for r in rows[1:])

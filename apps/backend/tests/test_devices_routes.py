@@ -8,6 +8,12 @@ try:
 except ImportError:
     pass
 
+import re
+
+from sqlalchemy import event
+
+from models import DeviceGroup, DeviceGroupMapping, db, get_by_id
+
 
 class TestDevicesRoutes:
 
@@ -468,3 +474,81 @@ class TestDeviceGroupWriteEndpoints:
                 f"/api/device-group/{gid}/devices/grp_dev_001", headers=auth_headers
             )
             assert rem2.status_code == 404
+
+
+# ---- R22: 设备分组读路径 N+1 回归防护（批量预取 + drive-by added_at 修复）----
+def _count_table_selects(app, fn, tables):
+    """统计 fn() 执行期间真实引用 tables 的 SELECT 条数。
+
+    精确表引用匹配（from/join <t> 或 <t>.），排除认证 RBAC 恒定开销与
+    admin.primary_class_id 之类跨表别名字段干扰；cached_api 用唯一 query 参数穿透。
+    """
+    pat = re.compile(
+        "|".join(r"(?:from|join)\s+%s\b|%s\." % (t, t) for t in tables)
+    )
+    counter = {"n": 0}
+
+    def _after(conn, cursor, statement, *args, **kwargs):
+        s = " ".join(statement.strip().lower().split())
+        if s.startswith("select") and pat.search(s):
+            counter["n"] += 1
+
+    engine = db.engine
+    event.listen(engine, "after_cursor_execute", _after)
+    try:
+        with app.app_context():
+            return fn(), counter["n"]
+    finally:
+        event.remove(engine, "after_cursor_execute", _after)
+
+
+class TestDeviceGroupReadNPlusOne:
+    """R22：分组选项/设备分组列表读路径批量预取的 N+1 回归防护。"""
+
+    def test_options_device_count_batched(self, client, app, auth_headers):
+        with app.app_context():
+            for i in range(6):
+                g = DeviceGroup(name=f"r22opt_{i}", is_active=True, sort_order=i)
+                db.session.add(g)
+                db.session.flush()
+                if i % 2 == 0:
+                    db.session.add(DeviceGroupMapping(device_id=f"r22dev_{i}", group_id=g.id))
+            db.session.commit()
+
+        (resp, cnt) = _count_table_selects(
+            app,
+            lambda: client.get("/api/device-group/options?v=r22a", headers=auth_headers),
+            {"device_groups", "device_group_mappings"},
+        )
+        assert resp.status_code == 200
+        # 业务查询恒定 2（groups 列表 + group_by 计数）；旧逻辑逐组 count = 1+G
+        assert cnt == 2, cnt
+        rows = resp.get_json()["data"]
+        by_name = {r["name"]: r["device_count"] for r in rows}
+        for i in range(6):
+            assert by_name[f"r22opt_{i}"] == (1 if i % 2 == 0 else 0)
+
+    def test_device_groups_batched(self, client, app, auth_headers):
+        with app.app_context():
+            db.session.add(Device(device_id="r22dev", name="R22设备", status="online"))
+            db.session.flush()
+            for i in range(5):
+                g = DeviceGroup(name=f"r22dg_{i}", is_active=True, sort_order=i)
+                db.session.add(g)
+                db.session.flush()
+                db.session.add(DeviceGroupMapping(device_id="r22dev", group_id=g.id))
+            db.session.commit()
+
+        (resp, cnt) = _count_table_selects(
+            app,
+            lambda: client.get(
+                "/api/device-group/device/r22dev/groups?v=r22b", headers=auth_headers
+            ),
+            {"device_groups", "device_group_mappings"},
+        )
+        assert resp.status_code == 200
+        # 业务查询恒定 2（mappings + groups IN）；旧逻辑逐映射 get_by_id = 1+M
+        assert cnt == 2, cnt
+        rows = resp.get_json()["data"]
+        assert [r["name"] for r in rows] == [f"r22dg_{i}" for i in range(5)]
+        assert all("mapping_id" in r and "added_at" in r for r in rows)
