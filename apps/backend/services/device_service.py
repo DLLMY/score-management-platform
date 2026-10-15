@@ -442,40 +442,54 @@ def delete_device_group(group):
 def add_devices_to_group(group_id, device_ids):
     """批量添加设备到分组的事务核心。返回 {added, failed} 与原始路由一致。
 
-    设备存在性 / 是否已在该组 的校验（产生 failed 列表项）随事务一并处理，
-    逐条写映射后统一提交并刷新 group.device_count。
+    写路径 N+1 批处理（R28）：原循环对每台设备各发一次 Device.query 与一次
+    DeviceGroupMapping.query（每设备 2 查，N 台 = 2N）。改为按 group_id 一次性
+    批量预取「组内已有映射」+ 按 device_ids 一次性批量预取「存在设备」，循环内
+    仅做内存查表，查询数从 2N 降为 2（批量 IN）+ 2（末尾 count/get_by_id），
+    收益随批量放大。逐条语义完全等价：设备不存在 / 已在组内 的 failed 判定、
+    added/failed 返回数组内容（保留原始 device_id 入参类型）、以及重复 device_id
+    的处理（本批已添加的设备在后续重复元素中判为「已在分组中」）均不变。
     """
     added = []
     failed = []
 
-    for device_id in device_ids:
-        device = Device.query.filter_by(device_id=str(device_id)).first()
-        if not device:
-            failed.append({"device_id": device_id, "reason": "设备不存在"})
-            continue
+    # 统一按字符串身份查表（与原 Device.query.filter_by(device_id=str(device_id)) 一致）
+    device_id_keys = [str(d) for d in device_ids]
 
-        # 检查是否已存在
-        existing = DeviceGroupMapping.query.filter_by(
-            group_id=group_id, device_id=device_id
-        ).first()
-        if existing:
-            failed.append({"device_id": device_id, "reason": "设备已在分组中"})
-            continue
+    # 批量预取组内已有映射（一次查询，覆盖全部待加设备）
+    existing_rows = DeviceGroupMapping.query.filter(
+        DeviceGroupMapping.group_id == group_id,
+        DeviceGroupMapping.device_id.in_(device_id_keys),
+    ).all()
+    existing_set = {row.device_id for row in existing_rows}
 
-        mapping = DeviceGroupMapping(group_id=group_id, device_id=device_id)
+    # 批量预取存在设备（一次查询，覆盖全部待加设备）
+    found_devices = Device.query.filter(Device.device_id.in_(device_id_keys)).all()
+    found_set = {d.device_id for d in found_devices}
+
+    planned_add = set()
+    for raw_id in device_ids:
+        key = str(raw_id)
+        if key not in found_set:
+            failed.append({"device_id": raw_id, "reason": "设备不存在"})
+            continue
+        if key in existing_set or key in planned_add:
+            failed.append({"device_id": raw_id, "reason": "设备已在分组中"})
+            continue
+        mapping = DeviceGroupMapping(group_id=group_id, device_id=key)
         db.session.add(mapping)
-        added.append(device_id)
+        added.append(raw_id)
+        planned_add.add(key)
 
     db.session.commit()
 
-    # 更新设备计数
+    # 更新设备计数（与原逻辑一致：统一提交后回写）
     group = get_by_id(DeviceGroup, group_id)
     if group:
         group.device_count = DeviceGroupMapping.query.filter_by(group_id=group_id).count()
         db.session.commit()
 
     return {"added": added, "failed": failed}
-
 
 def remove_device_from_group(group_id, device_id):
     """从分组移除单台设备的映射并更新计数。

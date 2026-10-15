@@ -75,4 +75,14 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 - **新类「假经济优化」**：早前把多次 COUNT 改成 `Device.query.all()` 取全表 + Python len/sum 计数，转移整表行却只为数几个值；DB 条件聚合（1 查询只回传计数）严格更优。R24/R25 Class D 模式可收割此类。
 - device_query_service.get_device_stats_view：total/error/online → 1 条条件聚合；get_device_advanced_stats_view：+avg_signal(func.avg)+signal_distribution(case 互斥分档)+Alert 2 计数 → 条件聚合。
 - **dashboard online 排除**：Device.is_online=@property→is_device_online（per-device heartbeat_timeout + OTA 保护窗 + status），语义复杂，不冒险下推。
-- 测试 test_r26_aggregation.py（4 用例）：新旧均 1 条目标表 SELECT，语句计数无法区分，改用「SQL 形状（含 count/avg）+ 数值」证明。全量回归 **2354/0/0/7 零回归**（22 分块 hung=0；2350+4）。R26 报告 `docs/reports/深度评估与优化报告-20261015-26.md`。
+- 测试 test_r26_aggregation.py（4 用例）：新旧均 1 条目标表 SELECT，语句计数无法区分，改用「SQL 形状（含 count/avg）+ 数值」证明。全量回归 **2354/0/0/7 零回归**（22 分块 hung=0；2350+4）。**R26 提交 `c7ad36c`** 已 push 并经 `git ls-remote` 核验一致；R26 报告 `docs/reports/深度评估与优化报告-20261015-26.md`。
+
+## R27 评估结论（读路径优化已做透，2026-10-15）
+- R23–R26 四轮把低风险/零契约/可批处理的读路径优化收干净：条件聚合（簇 D）、循环 get_by_id→selectin 关系（簇 N+1）、请求级 flask.g 缓存、取全表再计数假经济纠正。基线 2325→2354 全程零回归。
+- **剩余候选**：① Class F 二级 N+1——score_predict/risk_predict/rule_recommendation/attribution/engagement/prediction 的"取全部用户→循环 per-user 预测"，批处理需重构预测算法（高复杂）；② 写路径 N+1——device_service 批量加组（**R28 已试点**）、heartbeat_service 超时处理、nlp_rule_service 匹配更新。用户已确认暂存读路径优化，未来会话不必重复扫描此片地面。
+
+## R28 写路径 N+1 试点（device_service 批量加组，2026-10-15）
+- **改写**：`services/device_service.py::add_devices_to_group` 循环内逐台 2 查（2N+1）→ 两次批量 `.in_()` 预取（existing_set/found_set）+ `planned_add` 集合复刻 autoflush 语义，查询数恒为 4（与 N 无关）。纯 LF，EOL 守恒（441→492 行）。
+- **配套测试**：`tests/test_r28_device_group_nplus1.py`（4 用例，纯 LF）：HTTP 路径目标表 SELECT 恒为 3（harness 表 `{device,device_group_mappings}`，注意 `Device.__tablename__=="device"` 单数）+ 3 语义用例（断言真实映射行数，因 `DeviceGroup` 无 `device_count` 列、原末尾赋值是死代码）。
+- **回归**：2358/0/0/7 零回归（task oF6bRE，22 分块 hung=0）。**已通过但未 commit**（铁律，待 AskUserQuestion 确认）。
+- **关键洞察**：写路径 N+1 与读路径不同——需精确复刻 autoflush/事务可见性语义；`planned_add` 集合是零行为差异的关键。写路径批处理风险高，按"试点→评估→批量"节奏推进，不硬凑。
