@@ -68,4 +68,11 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 - 省查询：exam 每行 3 个 get_by_id、schedule/subject 每行 2 个 get_by_id 全消除（收益随页/列表大小缩放；exam 默认页 20 行省 ~60 查）。
 - 测试 `tests/test_r25_aggregation.py`（10 用例全绿）：SQL 计数 harness（notify/admin 目标表 SELECT==1；exam/schedule/subject ==4/2/2=selectin 批量数，证明 get_by_id 已消除）+ 契约 key + 数值正确性。
 - ruff 6 文件全净（含修净 course_schedule 既存 I001、exam import 收缩为 `Score` only）。EOL 守恒：notify/admin_notif=CRLF，exam/course_schedule/subject/test=LF。
-- 全量回归 **2350/0/0/7 零回归**（22 分块 hung=0，独立聚合复核一致；2340+10）。R25 报告 `docs/reports/深度评估与优化报告-20261014-25.md`。
+- 全量回归 **2350/0/0/7 零回归**（22 分块 hung=0，独立聚合复核一致；2340+10）。**R25 提交 `3d7aa8e`** 已 push 并经 `git ls-remote` 核验一致；R25 报告 `docs/reports/深度评估与优化报告-20261014-25.md`。
+
+
+## R26 读路径优化（device_query 假经济 → DB 条件聚合，用户确认 2 处）
+- **新类「假经济优化」**：早前把多次 COUNT 改成 `Device.query.all()` 取全表 + Python len/sum 计数，转移整表行却只为数几个值；DB 条件聚合（1 查询只回传计数）严格更优。R24/R25 Class D 模式可收割此类。
+- device_query_service.get_device_stats_view：total/error/online → 1 条条件聚合；get_device_advanced_stats_view：+avg_signal(func.avg)+signal_distribution(case 互斥分档)+Alert 2 计数 → 条件聚合。
+- **dashboard online 排除**：Device.is_online=@property→is_device_online（per-device heartbeat_timeout + OTA 保护窗 + status），语义复杂，不冒险下推。
+- 测试 test_r26_aggregation.py（4 用例）：新旧均 1 条目标表 SELECT，语句计数无法区分，改用「SQL 形状（含 count/avg）+ 数值」证明。全量回归 **2354/0/0/7 零回归**（22 分块 hung=0；2350+4）。R26 报告 `docs/reports/深度评估与优化报告-20261015-26.md`。
