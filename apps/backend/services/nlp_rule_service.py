@@ -279,21 +279,55 @@ class NLPRuleManagementService:
         if total_count > 0:
 
             usage_records = NLPRuleUsage.query.all()
-            for usage in usage_records:
-                rule = get_by_id(NLPScoringRule, usage.rule_id)
-                if rule:
-                    correct_usage = NLPMatchResult.query.filter(
-                        NLPMatchResult.matched_rule_id == rule.id,
-                        NLPMatchResult.is_manual_correction,
-                    ).count()
-                    total_usage = NLPMatchResult.query.filter(
-                        NLPMatchResult.matched_rule_id == rule.id
-                    ).count()
+            # R30: 循环内逐条 get_by_id(rule) + 3 个 .count()（约 3U+ 查）批处理为
+            # 单次 rule_ids IN 预取 + 两条 group_by 条件聚合（match 的 total/correct、
+            # usage 计数），查询数恒为 3 与 U（usage 数）无关。
+            # 改为遍历「唯一 rule_id」设置 accuracy_rate/usage_count，与原多写同值幂等
+            # （同一 rule 被多条 usage 引用时原逻辑也反复写相同值）。
+            rule_ids = {u.rule_id for u in usage_records if u.rule_id is not None}
+            if rule_ids:
+                rules_by_id = {
+                    r.id: r
+                    for r in NLPScoringRule.query.filter(
+                        NLPScoringRule.id.in_(rule_ids)
+                    ).all()
+                }
+                match_stats = (
+                    db.session.query(
+                        NLPMatchResult.matched_rule_id,
+                        func.count(NLPMatchResult.id).label("total"),
+                        func.count(
+                            case((NLPMatchResult.is_manual_correction, NLPMatchResult.id))
+                        ).label("correct"),
+                    )
+                    .filter(NLPMatchResult.matched_rule_id.in_(rule_ids))
+                    .group_by(NLPMatchResult.matched_rule_id)
+                    .all()
+                )
+                match_by_rule = {
+                    m.matched_rule_id: (m.total or 0, m.correct or 0) for m in match_stats
+                }
+                usage_stats = (
+                    db.session.query(
+                        NLPRuleUsage.rule_id,
+                        func.count(NLPRuleUsage.id).label("cnt"),
+                    )
+                    .filter(NLPRuleUsage.rule_id.in_(rule_ids))
+                    .group_by(NLPRuleUsage.rule_id)
+                    .all()
+                )
+                usage_by_rule = {u.rule_id: u.cnt or 0 for u in usage_stats}
+
+                for rule_id in rule_ids:
+                    rule = rules_by_id.get(rule_id)
+                    if rule is None:
+                        continue
+                    total_usage, correct_usage = match_by_rule.get(rule_id, (0, 0))
                     if total_usage > 0:
                         rule.accuracy_rate = correct_usage / total_usage
-                    rule.usage_count = NLPRuleUsage.query.filter(
-                        NLPRuleUsage.rule_id == rule.id
-                    ).count()
+                    rule.usage_count = usage_by_rule.get(rule_id, 0)
+            else:
+                rules_by_id = {}
 
             with db_session_scope(detach=False):
                 pass

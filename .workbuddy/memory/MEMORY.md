@@ -84,5 +84,21 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 ## R28 写路径 N+1 试点（device_service 批量加组，2026-10-15）
 - **改写**：`services/device_service.py::add_devices_to_group` 循环内逐台 2 查（2N+1）→ 两次批量 `.in_()` 预取（existing_set/found_set）+ `planned_add` 集合复刻 autoflush 语义，查询数恒为 4（与 N 无关）。纯 LF，EOL 守恒（441→492 行）。
 - **配套测试**：`tests/test_r28_device_group_nplus1.py`（4 用例，纯 LF）：HTTP 路径目标表 SELECT 恒为 3（harness 表 `{device,device_group_mappings}`，注意 `Device.__tablename__=="device"` 单数）+ 3 语义用例（断言真实映射行数，因 `DeviceGroup` 无 `device_count` 列、原末尾赋值是死代码）。
-- **回归**：2358/0/0/7 零回归（task oF6bRE，22 分块 hung=0）。**已通过但未 commit**（铁律，待 AskUserQuestion 确认）。
+- **回归**：2358/0/0/7 零回归（task oF6bRE，22 分块 hung=0）。**已提交**：commit `c0ee179`（4 文件 +182/−20）→ push origin main → `git ls-remote` 核验 LOCAL==REMOTE==`c0ee179` 一致。
 - **关键洞察**：写路径 N+1 与读路径不同——需精确复刻 autoflush/事务可见性语义；`planned_add` 集合是零行为差异的关键。写路径批处理风险高，按"试点→评估→批量"节奏推进，不硬凑。
+
+## R29 写路径 N+1（heartbeat 超时告警批处理，2026-10-15）
+- **改写**：`services/heartbeat_service.py::check_heartbeat_timeout` 循环内逐台 `Alert.query.filter_by(device_id, alert_type="heartbeat_timeout", is_resolved=False, source="device").first()` 存在性检查（N 台=N 查）→ 循环前单次 `Alert.query.filter(Alert.device_id.in_(timeout_ids), alert_type=..., is_resolved=False, source="device").all()` + `existing_alert_ids` 集合判定。查询数恒为 2（超时设备 1 + 告警存在性 1）与 N 无关。精确复刻 autoflush/事务语义（IN 在循环前、session 干净，循环内仅 add/标记 offline）。CRLF，EOL 守恒。
+- **配套测试**：`tests/test_r29_heartbeat_timeout_nplus1.py`（4 用例）：目标表 `{device,alert}` SELECT 恒为 2（证明告警存在性 IN 与超时设备数无关）+ 3 语义用例（全超时新建告警 / 部分已存在跳过 / 重复触发幂等）。既有 `test_heartbeat_service.py` 10 例无回归。
+- **回归**：全量 **2365/0/0/7 零回归**（task Sl2265，与 R30 同批 22 分块 hung=0）。**未 commit**（铁律，待用户确认）。
+
+## R30 写路径 N+1（nlp train_model 匹配统计批处理，2026-10-15）
+- **改写**：`services/nlp_rule_service.py::train_model` 循环 `usage_records` 内 `get_by_id(rule)` + 3 count（correct=is_manual_correction=True / total match / usage_count，约 3U 查）→ 循环前 `rule_ids IN` 预取 `NLPScoringRule` + `NLPMatchResult.group_by(matched_rule_id)` 条件聚合（total/correct）+ `NLPRuleUsage.group_by(rule_id)` 计数。遍历唯一 rule_ids 设置 accuracy_rate（人工纠正数/总数，原语义保留）/usage_count，与原多写同值幂等等价。查询数恒为 5（all + rule IN + match group_by + usage group_by + commit 后 expire 重载基线）与 U 无关。LF，EOL 守恒。
+- **关键坑**：`expire_on_commit=True`（db_session_scope detach=False）致 commit 后已加载 `match_results` 过期，被 L301/L304/L305 访问属性时逐对象惰性重载 3 条 SELECT——属固定基线（原代码同样存在），非 N+1 残留；R30 消除的是随 U 增长的部分（U=2 时 nlp_match_results 5 条恒定）。
+- **配套测试**：`tests/test_r30_nlp_train_model_nplus1.py`（3 用例）：SQL 计数与 U 无关（恒定）+ 数值正确性（accuracy_rate=人工纠正数/总数 原语义 + usage_count）+ 既有 `test_nlp_rule_service.py` 27 例无回归。
+- **回归**：全量 **2365/0/0/7 零回归**（task Sl2265，与 R29 同批 22 分块 hung=0）。**未 commit**（铁律，待用户确认）。
+
+## 写路径 N+1 战役收官（R28–R30，2026-10-15）
+- 三候选全部落地：device_service 批量加组（R28）、heartbeat 超时告警 IN 预取（R29）、nlp train_model 匹配统计批处理（R30）。基线 2325→2365（写路径 +10 用例）。全程零回归。
+- **统一模式**：循环前单次 `.in_()` / `group_by` 预取 + 内存集合判定，精确复刻 autoflush/事务可见性语义（写路径与读路径本质差异）。
+- **剩余写路径 N+1**：本批三处已覆盖 R27 罗列的全部写路径候选。后续若再发现，按同模板（预取+集合、零契约、针对性 SQL 计数 harness）推进，不硬凑。

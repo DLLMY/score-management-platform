@@ -202,16 +202,24 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
         logger.info(f"发现 {len(timeout_devices)} 台设备心跳超时")
 
         alerts_created = 0
+        # R29: 循环内逐台 Alert.query.filter_by(...).first() 存在性检查（N 台=N 查）
+        # 批处理为单次 IN 预取；IN 在循环前、session 干净，与原逐台查询语义等价
+        # （原循环内 autoflush 仅 flush 其他设备的待插入告警，不影响当前设备判定）。
+        if timeout_devices:
+            timeout_device_ids = [d.device_id for d in timeout_devices]
+            existing_alerts = Alert.query.filter(
+                Alert.device_id.in_(timeout_device_ids),
+                Alert.alert_type == "heartbeat_timeout",
+                Alert.is_resolved == False,
+                Alert.source == "device",
+            ).all()
+            existing_alert_device_ids = {a.device_id for a in existing_alerts}
+        else:
+            existing_alert_device_ids = set()
+
         for device in timeout_devices:
             # F9-A: 心跳超时告警统一写入 alert 表，来源标记为 'device'
-            existing_alert = Alert.query.filter_by(
-                device_id=device.device_id,
-                alert_type="heartbeat_timeout",
-                is_resolved=False,
-                source="device",
-            ).first()
-
-            if not existing_alert:
+            if device.device_id not in existing_alert_device_ids:
                 alert = Alert(
                     device_id=device.device_id,
                     alert_type="heartbeat_timeout",
