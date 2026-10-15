@@ -7,10 +7,14 @@ from typing import ClassVar
 
 import numpy as np
 
-from models import ScoreRecord, User, db, get_by_id
+from models import Approval, Attendance, ScoreRecord, User, db, get_by_id
 
 
 class RiskPredictService:
+    # R31 瞬态批量特征缓存：predict_batch 写入、get_risk_features 命中，循环结束后清空。
+    # 用于消除逐生 N+1，且不改变 predict_risk 公开签名（零测试破坏性）。
+    _bulk_features = None
+
     RISK_LEVELS: ClassVar[dict] = {
         "high": {
             "name": "高风险",
@@ -156,23 +160,18 @@ class RiskPredictService:
 
     @staticmethod
     def get_risk_features(user_id, days=30):
-        """
-        获取风险特征数据
+        """获取风险特征数据（单用户入口，供 predict_risk 等单生端点使用）。"""
+        # R31：命中批量预取缓存则直接返回，避免逐生 N+1
+        cache = RiskPredictService._bulk_features
+        if cache is not None and user_id in cache:
+            return cache[user_id]
 
-        Args:
-            user_id: 学生ID
-            days: 统计天数
-
-        Returns:
-            dict: 风险特征
-        """
         user = get_by_id(User, user_id)
         if not user:
             return None
 
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-
         records = (
             ScoreRecord.query.filter(
                 ScoreRecord.student_id == user_id,
@@ -181,9 +180,18 @@ class RiskPredictService:
             .order_by(ScoreRecord.created_at)
             .all()
         )
+        attendance_tuple = RiskPredictService._get_attendance_stats(user_id, start_date, end_date)
+        return RiskPredictService._build_risk_features(
+            user, days, start_date, end_date, records, attendance_tuple
+        )
 
+    @staticmethod
+    def _build_risk_features(user, days, start_date, end_date, records, attendance_tuple):
+        """从已预取的内存数据计算单生风险特征，与 get_risk_features 逐字段等价。
+        records：该生 ScoreRecord 列表；attendance_tuple：(rate, absent, late, total, leave_days)。
+        """
         features = {
-            "user_id": user_id,
+            "user_id": user.id,
             "name": user.name,
             "class_name": user.class_name,
             "current_score": user.current_score,
@@ -193,7 +201,6 @@ class RiskPredictService:
         if records:
             score_changes = [r.score_change for r in records]
 
-            # 积分趋势特征
             cumulative_scores = []
             current = user.current_score - sum(score_changes)
             for change in score_changes:
@@ -217,24 +224,19 @@ class RiskPredictService:
                 features["score_trend_7d"] = 0.0
                 features["score_trend_30d"] = 0.0
 
-            # 波动性特征
             features["score_volatility"] = round(np.std(score_changes), 2)
 
-            # 正向/负向统计
             positive_count = sum(1 for c in score_changes if c > 0)
             negative_count = sum(1 for c in score_changes if c < 0)
             features["positive_rate"] = round(positive_count / len(score_changes), 2)
             features["negative_rate"] = round(negative_count / len(score_changes), 2)
 
-            # 连续无正向积分天数
             features["no_positive_days"] = RiskPredictService._count_consecutive_no_positive(
                 score_changes
             )
 
-            # 日均解锁次数（简化为记录数）
             features["daily_record_count"] = round(len(records) / days, 2)
 
-            # 下降率
             if len(cumulative_scores) >= 14:
                 earlier_avg = np.mean(cumulative_scores[:-7])
                 recent_avg = np.mean(cumulative_scores[-7:])
@@ -253,19 +255,19 @@ class RiskPredictService:
             features["daily_record_count"] = 0.0
             features["score_decline_rate"] = 0.0
 
-        # 真实出勤特征：直接读取 attendance 表（替代原 score_record 活跃度代理）。
-        # 无考勤记录时返回 None，detect_attendance_risk 会回退到代理判断，保持历史行为不变。
-        attendance_rate, absent_count, late_count, total_attendance, leave_days = (
-            RiskPredictService._get_attendance_stats(user_id, start_date, end_date)
-        )
+        (
+            attendance_rate,
+            absent_count,
+            late_count,
+            total_attendance,
+            leave_days,
+        ) = attendance_tuple
         features["attendance_rate"] = attendance_rate
         features["attendance_absent_count"] = absent_count
         features["attendance_late_count"] = late_count
         features["attendance_total"] = total_attendance
         features["attendance_leave_days"] = leave_days
 
-        # 班级对比特征（RP5：经 _get_class_aggregates 复用单条聚合 + 短 TTL 缓存，
-        # 消除逐生全量加载同班同学的 O(N^2) 放大）
         agg = RiskPredictService._get_class_aggregates(user.class_name, days)
         if agg:
             scores = agg["scores"]
@@ -288,6 +290,77 @@ class RiskPredictService:
         return features
 
     @staticmethod
+    def get_risk_features_bulk(users, days=30):
+        """批量获取风险特征：3 条 IN 预取（ScoreRecord/Attendance/Approval）+ 复用已加载
+        users + 班级聚合（TTL 缓存），将 predict_batch 逐生 ~4N 查询降为恒定 ~4 条。
+        返回 {user_id: features}，与 get_risk_features 逐字段等价（共用 _build_risk_features）。
+        """
+        if not users:
+            return {}
+
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        s_date = start_date.date()
+        e_date = end_date.date()
+        user_ids = [u.id for u in users]
+
+        all_records = (
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id.in_(user_ids),
+                ScoreRecord.created_at >= start_date,
+            )
+            .order_by(ScoreRecord.created_at)
+            .all()
+        )
+        records_by_user = {}
+        for r in all_records:
+            records_by_user.setdefault(r.student_id, []).append(r)
+
+        attendance_rows = (
+            Attendance.query.filter(
+                Attendance.student_id.in_(user_ids),
+                Attendance.date >= s_date,
+                Attendance.date <= e_date,
+            )
+            .all()
+        )
+        attendance_by_user = {}
+        for r in attendance_rows:
+            attendance_by_user.setdefault(r.student_id, []).append(r)
+
+        approval_rows = (
+            Approval.query.filter(
+                Approval.student_id.in_(user_ids),
+                Approval.type == "leave",
+                Approval.status == "approved",
+                Approval.start_date <= e_date,
+                Approval.end_date >= s_date,
+            )
+            .all()
+        )
+        approval_by_user = {}
+        for a in approval_rows:
+            approval_by_user.setdefault(a.student_id, []).append(a)
+
+        features_map = {}
+        for user in users:
+            att_tuple = RiskPredictService._attendance_tuple_from_rows(
+                attendance_by_user.get(user.id, []),
+                approval_by_user.get(user.id, []),
+                start_date,
+                end_date,
+            )
+            features_map[user.id] = RiskPredictService._build_risk_features(
+                user,
+                days,
+                start_date,
+                end_date,
+                records_by_user.get(user.id, []),
+                att_tuple,
+            )
+        return features_map
+
+    @staticmethod
     def _count_consecutive_no_positive(changes):
         """计算连续无正向积分天数"""
         max_count = 0
@@ -301,17 +374,33 @@ class RiskPredictService:
         return max_count
 
     @staticmethod
-    def _get_attendance_stats(user_id, start_date, end_date):
-        """从 attendance 表读取真实出勤统计。
+    def _attendance_tuple_from_rows(attendance_records, approval_records, start_date, end_date):
+        """从已预取的考勤/请假行计算 (rate, absent, late, total, leave_days)。
+        与 _get_attendance_stats 的元组计算逐字段等价；无考勤行时返回 (None,0,0,0,0)。
+        """
+        s_date = start_date.date() if isinstance(start_date, datetime) else start_date
+        e_date = end_date.date() if isinstance(end_date, datetime) else end_date
+        total = len(attendance_records)
+        if total == 0:
+            return None, 0, 0,0, 0
+        attended = sum(1 for r in attendance_records if r.status in ("present", "late"))
+        absent = sum(1 for r in attendance_records if r.status == "absent")
+        late = sum(1 for r in attendance_records if r.status == "late")
+        rate = round(attended / total, 3)
+        leave_days = 0
+        for lv in approval_records:
+            ls = max(lv.start_date, s_date)
+            le = min(lv.end_date, e_date)
+            if le >= ls:
+                leave_days += (le - ls).days + 1
+        return rate, absent, late, total, leave_days
 
-        Returns:
-            (attendance_rate, absent_count, late_count, total, leave_days)
-            - attendance_rate：出勤率（出勤+迟到 占 总记录），无记录或异常时返回 None 以触发代理回退。
-            - leave_days：统计窗口内已批准请假天数（不计入缺勤风险）。
+    @staticmethod
+    def _get_attendance_stats(user_id, start_date, end_date):
+        """从 attendance 表读取真实出勤统计（单用户入口，供 get_risk_features 使用）。
+        内部改为先按 user_id 取行、再经 _attendance_tuple_from_rows 计算，元组语义不变。
         """
         try:
-            from models import Approval, Attendance
-
             s_date = start_date.date() if isinstance(start_date, datetime) else start_date
             e_date = end_date.date() if isinstance(end_date, datetime) else end_date
 
@@ -320,17 +409,6 @@ class RiskPredictService:
                 Attendance.date >= s_date,
                 Attendance.date <= e_date,
             ).all()
-            total = len(records)
-            if total == 0:
-                return None, 0, 0, 0, 0
-
-            # 出勤 = 出勤 + 迟到（迟到视为已到）；缺勤为未到
-            attended = sum(1 for r in records if r.status in ("present", "late"))
-            absent = sum(1 for r in records if r.status == "absent")
-            late = sum(1 for r in records if r.status == "late")
-            rate = round(attended / total, 3)
-
-            # 已批准的请假不计入缺勤风险
             leaves = Approval.query.filter(
                 Approval.student_id == user_id,
                 Approval.type == "leave",
@@ -338,17 +416,8 @@ class RiskPredictService:
                 Approval.start_date <= e_date,
                 Approval.end_date >= s_date,
             ).all()
-            leave_days = 0
-            for lv in leaves:
-                ls = max(lv.start_date, s_date)
-                le = min(lv.end_date, e_date)
-                if le >= ls:
-                    leave_days += (le - ls).days + 1
-
-            return rate, absent, late, total, leave_days
+            return RiskPredictService._attendance_tuple_from_rows(records, leaves, start_date, end_date)
         except Exception:
-            # 诚实失败：全 None 传导，调用方（detect_attendance_risk）见 attendance_rate=None
-            # 走代理回退，不把缺勤/迟到伪装成 0（避免系统故障被读作"表现正常"）。
             logging.getLogger(__name__).warning(
                 "考勤指标计算失败，诚实返回全 None（调用方走代理回退）", exc_info=True
             )
@@ -654,34 +723,24 @@ class RiskPredictService:
 
     @staticmethod
     def predict_risk(user_id, days=30):
-        """
-        预测学生风险
-
-        Args:
-            user_id: 学生ID
-            days: 统计天数
-
-        Returns:
-            dict: 风险预测结果
-        """
+        """预测学生风险（单用户端点，供路由与 predict_batch 复用）。"""
         features = RiskPredictService.get_risk_features(user_id, days)
-
         if not features:
             return {"user_id": user_id, "error": "学生不存在"}
+        return RiskPredictService._assemble_risk_result(user_id, features)
 
-        # 检测各类型风险
+    @staticmethod
+    def _assemble_risk_result(user_id, features):
+        """从已计算的特征组装风险预测结果（纯函数，无 DB）。与 predict_risk 原逻辑逐字段等价。"""
         academic_risk = RiskPredictService.detect_score_risk(features)
         behavior_risk = RiskPredictService.detect_behavior_risk(features)
         attendance_risk = RiskPredictService.detect_attendance_risk(features)
 
-        # 综合风险评估
         risk_types = [academic_risk, behavior_risk, attendance_risk]
 
-        # 计算综合风险评分（加权），权重来自训练结果，未训练时回退默认
         weights = RiskPredictService._resolve_weights()
         overall_score = sum(r["risk_score"] * weights[r["type"]] for r in risk_types)
 
-        # 确定综合风险级别
         if overall_score >= 0.7:
             overall_level = "high"
         elif overall_score >= 0.4:
@@ -689,15 +748,10 @@ class RiskPredictService:
         else:
             overall_level = "low"
 
-        # 获取所有风险因素
         all_factors = []
         for risk in risk_types:
             all_factors.extend(risk["factors"])
 
-        # RP1：按统一「严重度」降序排因素——不同因子的 score 方向不同
-        # （如 class_percentile 越低越坏、no_positive_days 越高越坏），原排序因正负号
-        # 混用导致良性高值（如 percentile=95）被排到最前。这里按因子语义归一为
-        # severity（越高越坏）后再降序，确保 Top5 风险因子排序正确。
         _FACTOR_SEVERITY_DIR = {
             "score_trend_30d": "lower_worse",
             "score_trend_7d": "lower_worse",
@@ -720,7 +774,6 @@ class RiskPredictService:
             f["severity"] = s if direction == "higher_worse" else -s
         all_factors.sort(key=lambda x: x.get("severity", 0), reverse=True)
 
-        # 生成干预建议
         suggestions = []
         if academic_risk["risk_level"] in ["high", "medium"]:
             suggestions.extend(["关注学习状态，提供学习辅导", "分析成绩下降原因"])
@@ -731,7 +784,6 @@ class RiskPredictService:
         if attendance_risk["risk_level"] in ["high", "medium"]:
             suggestions.extend(["核实出勤情况", "联系家长确认学生状态"])
 
-        # 推荐行动
         recommended_actions = RiskPredictService.RISK_LEVELS[overall_level]["actions"]
 
         return {
@@ -782,30 +834,41 @@ class RiskPredictService:
 
         total_score = 0.0
 
-        for user in users:
-            try:
-                result = RiskPredictService.predict_risk(user.id, days)
-            except Exception as e:
-                # 单生异常隔离：失败学生不影响其余学生与整体响应
-                failed_students.append(
-                    {
-                        "user_id": int(user.id),
-                        "name": user.name,
-                        "class_name": getattr(user, "class_name", "") or "",
-                        "error": str(e),
-                    }
-                )
-                continue
-            results.append(result)
+        # R31 批量预取特征写入瞬态缓存；get_risk_features 命中后逐生零额外查询。
+        # 失败（异常输入 / 测试 mock 环境）时回退逐生路径，零行为差异。
+        try:
+            RiskPredictService._bulk_features = RiskPredictService.get_risk_features_bulk(users, days)
+        except Exception:
+            RiskPredictService._bulk_features = None
 
-            if "overall_risk_score" in result:
-                total_score += result["overall_risk_score"]
-                if result["overall_risk_level"] == "high":
-                    summary["high_risk"] += 1
-                elif result["overall_risk_level"] == "medium":
-                    summary["medium_risk"] += 1
-                else:
-                    summary["low_risk"] += 1
+        try:
+            for user in users:
+                try:
+                    result = RiskPredictService.predict_risk(user.id, days)
+                except Exception as e:
+                    # 单生异常隔离：失败学生不影响其余学生与整体响应
+                    failed_students.append(
+                        {
+                            "user_id": int(user.id),
+                            "name": user.name,
+                            "class_name": getattr(user, "class_name", "") or "",
+                            "error": str(e),
+                        }
+                    )
+                    continue
+                results.append(result)
+
+                if "overall_risk_score" in result:
+                    total_score += result["overall_risk_score"]
+                    if result["overall_risk_level"] == "high":
+                        summary["high_risk"] += 1
+                    elif result["overall_risk_level"] == "medium":
+                        summary["medium_risk"] += 1
+                    else:
+                        summary["low_risk"] += 1
+        finally:
+            # 清空瞬态批量特征缓存，避免泄漏到后续单生调用
+            RiskPredictService._bulk_features = None
 
         if results:
             summary["avg_risk_score"] = round(total_score / len(results), 2)

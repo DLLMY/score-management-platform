@@ -98,6 +98,12 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 - **配套测试**：`tests/test_r30_nlp_train_model_nplus1.py`（3 用例）：SQL 计数与 U 无关（恒定）+ 数值正确性（accuracy_rate=人工纠正数/总数 原语义 + usage_count）+ 既有 `test_nlp_rule_service.py` 27 例无回归。
 - **回归**：全量 **2365/0/0/7 零回归**（task Sl2265，与 R29 同批 22 分块 hung=0）。**未 commit**（铁律，待用户确认）。
 
+## R31 Class F 二级 N+1 试点（risk_predict 批量重构，2026-10-15）
+- **最终方案（瞬态类属性缓存，零测试破坏性）**：`RiskPredictService._bulk_features = None` 类属性；`get_risk_features(user_id, days)` 顶部命中缓存即返；`predict_batch` 先写 `_bulk_features = get_risk_features_bulk(users, days)` → 循环调**原始** `predict_risk(user.id, days)`（公开签名不变）→ `finally` 清缓存。`get_risk_features_bulk` = ScoreRecord/Attendance/Approval 三条 `.in_()` 预取 + 复用已加载 users + `_get_class_aggregates`（TTL 缓存）；新增 `_build_risk_features`（与单生共用、逐字段等价）、`_attendance_tuple_from_rows`（与 `_get_attendance_stats` 元组语义等价，后者保留供 `test_honest_error_handling` 直测）。查询数从随 N 放大降为恒定：目标表 score_record/attendance/approval 各 1 条 IN、user 表（取生列表 + 关系 selectin 预取 + 班级聚合）恒定与 N 无关。纯 CRLF（1105 行），EOL 守恒。
+- **为何放弃 `features=` 形参**：首轮给 `predict_risk(user_id, days, features=None)` 加可选形参，但既有 `test_predict_batch_isolates_single_failure` 的 mock `side_effect=(user_id, days=30)` 签名不兼容 → 两用户均进失败分支（rc=1）。类属性缓存让单生 `get_risk_features` 命中批量预取，**不改 `predict_risk` 签名**，所有 mock 测试（train_risk_model 的 get_risk_features mock、isolation 的 predict_risk mock、honest_error 的 _get_attendance_stats 直测）零破坏性。
+- **配套测试**：`tests/test_r31_risk_predict_batch_nplus1.py`（3 用例，纯 LF）：SQL 计数 harness（表 `{user,score_record,attendance,approval}`）证明目标表 SELECT 数与 N 无关（N=2 vs N=8 各表相等 + score_record/attendance/approval 各恒 1；user 表恒 4 含 selectin 关系预取，非缺陷）+ 批量 vs 单生数值完全等价 + `get_risk_features_bulk` 与 `get_risk_features` 特征一致。本地 TestRiskBatchIsolation+test_risk_predict_service+test_honest_error_handling+R31 共 37 全绿；ruff default+C901 全净。
+- **回归**：全量分块回归 task tMmhUP：**2368 passed / 0 failed / 0 errors / 7 skipped**（22 分块 hung=0，独立聚合复核一致；2365 基线 + R31 3 = 2368），零回归。**未 commit**（铁律，待用户确认收尾：提交并推送 / 暂存不提交 + 是否继续其余 5 处 Class F）。
+
 ## 写路径 N+1 战役收官（R28–R30，2026-10-15）
 - 三候选全部落地：device_service 批量加组（R28）、heartbeat 超时告警 IN 预取（R29）、nlp train_model 匹配统计批处理（R30）。基线 2325→2365（写路径 +10 用例）。全程零回归。
 - **统一模式**：循环前单次 `.in_()` / `group_by` 预取 + 内存集合判定，精确复刻 autoflush/事务可见性语义（写路径与读路径本质差异）。
