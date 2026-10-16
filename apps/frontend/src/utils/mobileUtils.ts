@@ -1,17 +1,17 @@
 import logger from './logger';
-export const isMobileDevice = (): boolean => {
+const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined') return false;
 
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-export const isIOS = (): boolean => {
+const isIOS = (): boolean => {
   if (typeof window === 'undefined') return false;
 
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 };
 
-export const isAndroid = (): boolean => {
+const isAndroid = (): boolean => {
   if (typeof window === 'undefined') return false;
 
   return /Android/i.test(navigator.userAgent);
@@ -40,19 +40,19 @@ export const getScreenSize = (): 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' => {
   return 'xxl';
 };
 
-export const isLandscape = (): boolean => {
+const isLandscape = (): boolean => {
   if (typeof window === 'undefined') return false;
 
   return window.innerHeight < window.innerWidth;
 };
 
-export const isRetina = (): boolean => {
+const isRetina = (): boolean => {
   if (typeof window === 'undefined') return false;
 
   return !!(window.devicePixelRatio && window.devicePixelRatio >= 2);
 };
 
-export const getViewportHeight = (): number => {
+const getViewportHeight = (): number => {
   if (typeof window === 'undefined') return 0;
 
   const height = window.innerHeight;
@@ -65,7 +65,7 @@ export const getViewportHeight = (): number => {
   return height;
 };
 
-export const lockScroll = (): void => {
+const lockScroll = (): void => {
   if (typeof document === 'undefined') return;
 
   document.body.style.overflow = 'hidden';
@@ -73,7 +73,7 @@ export const lockScroll = (): void => {
   document.body.style.width = '100%';
 };
 
-export const unlockScroll = (): void => {
+const unlockScroll = (): void => {
   if (typeof document === 'undefined') return;
 
   document.body.style.overflow = '';
@@ -81,28 +81,7 @@ export const unlockScroll = (): void => {
   document.body.style.width = '';
 };
 
-export const formatDateMobile = (date: Date | string): string => {
-  const d = new Date(date);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-
-  if (diff < 60000) return '刚刚';
-
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-
-  if (diff < 172800000) return '昨天';
-
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
-
-  return d.toLocaleDateString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
-export const formatNumberMobile = (num: number): string => {
+const formatNumberMobile = (num: number): string => {
   if (num >= 10000000) {
     return `${(num / 10000000).toFixed(1)}千万`;
   }
@@ -115,7 +94,7 @@ export const formatNumberMobile = (num: number): string => {
   return num.toString();
 };
 
-export const copyToClipboard = async (text: string): Promise<boolean> => {
+const copyToClipboard = async (text: string): Promise<boolean> => {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     await navigator.clipboard.writeText(text);
     return true;
@@ -145,7 +124,7 @@ interface ShareContentOptions {
   url?: string;
 }
 
-export const shareContent = async ({ title, text, url }: ShareContentOptions): Promise<boolean> => {
+const shareContent = async ({ title, text, url }: ShareContentOptions): Promise<boolean> => {
   if (navigator.share) {
     try {
       await navigator.share({ title, text, url });
@@ -165,13 +144,13 @@ export const shareContent = async ({ title, text, url }: ShareContentOptions): P
   return false;
 };
 
-export const makePhoneCall = (phoneNumber: string): void => {
+const makePhoneCall = (phoneNumber: string): void => {
   if (typeof window === 'undefined') return;
 
   window.location.href = `tel:${phoneNumber}`;
 };
 
-export const sendSMS = (phoneNumber: string, message = ''): void => {
+const sendSMS = (phoneNumber: string, message = ''): void => {
   if (typeof window === 'undefined') return;
 
   window.location.href = `sms:${phoneNumber}${
@@ -179,7 +158,7 @@ export const sendSMS = (phoneNumber: string, message = ''): void => {
   }`;
 };
 
-export const openMap = (latitude: number, longitude: number, label = ''): void => {
+const openMap = (latitude: number, longitude: number, label = ''): void => {
   if (typeof window === 'undefined') return;
 
   const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -191,7 +170,7 @@ export const openMap = (latitude: number, longitude: number, label = ''): void =
   }
 };
 
-export const vibrate = (pattern: number | number[] = 50): void => {
+const vibrate = (pattern: number | number[] = 50): void => {
   if (typeof navigator === 'undefined') return;
 
   if (navigator.vibrate) {
@@ -206,7 +185,7 @@ interface SafeArea {
   left: number;
 }
 
-export const getSafeArea = (): SafeArea => {
+const getSafeArea = (): SafeArea => {
   if (typeof window === 'undefined') {
     return { top: 0, right: 0, bottom: 0, left: 0 };
   }
@@ -221,7 +200,7 @@ export const getSafeArea = (): SafeArea => {
   };
 };
 
-export const preloadImage = (src: string): Promise<HTMLImageElement> => {
+const preloadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);

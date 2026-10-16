@@ -1,4 +1,4 @@
-import { config, getApiUrl, getWebSocketUrl } from '../config';
+import { config } from '../config';
 
 interface Environment {
   isElectron: boolean;
@@ -23,20 +23,6 @@ export const environment: Environment = {
   isWeb: isWeb(),
   isProduction: config.app.isProduction,
   isDevelopment: config.app.isDevelopment,
-};
-
-export const getBaseURL = (): string => {
-  if (isElectron()) {
-    return 'http://localhost:5000';
-  }
-  return getApiUrl();
-};
-
-export const getWebSocketURL = (): string => {
-  if (isElectron()) {
-    return 'ws://localhost:5000';
-  }
-  return getWebSocketUrl();
 };
 
 export default environment;

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useMediaQuery } from '../useMediaQuery';
-import { useIsMobile } from '../useIsMobile';
 
 type Mql = {
   matches: boolean;
@@ -88,21 +87,5 @@ describe('useMediaQuery · 响应式媒体查询', () => {
     window.matchMedia = vi.fn().mockReturnValue(inst);
     renderHook(() => useMediaQuery('(max-width: 767px)'));
     expect(inst.addListener).toHaveBeenCalledWith(expect.any(Function));
-  });
-});
-
-describe('useIsMobile · 移动端视口 (<768px)', () => {
-  afterEach(() => vi.restoreAllMocks());
-
-  it('视口匹配移动断点 → true', () => {
-    mockMatchMedia(true);
-    const { result } = renderHook(() => useIsMobile());
-    expect(result.current).toBe(true);
-  });
-
-  it('视口不匹配 → false', () => {
-    mockMatchMedia(false);
-    const { result } = renderHook(() => useIsMobile());
-    expect(result.current).toBe(false);
   });
 });

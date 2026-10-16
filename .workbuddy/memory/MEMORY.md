@@ -1,123 +1,39 @@
 # 管理平台设计 — 长期记忆
 
 ## 主线状态
-- 生产就绪 P0（占位密钥 / TLS / WS 入口 / 版本化迁移）全收官，零回归。
-- P0-d：reconcile.py（元数据驱动对账，按 db.metadata 自动补表/列/索引，幂等零依赖）+ seed_defaults.py（12 默认节次 + 5 预警，幂等）接入 `app/db_init.py::init_database` 的 `ensure_database_ready`，受 TESTING 守卫；runner.py 弃用。
-- 模型/迁移漂移已收口进模型（User.risk_score / User.last_risk_updated / ScoreRecord.operation_log_id），由 create_all / reconcile 统一维护。
-- 项目已无大型工程债；**零回归性能修复战役 R7–R23 全收官**（关系懒加载维度 + api 层 helper-delegated N+1 全扫闭环 + R23 请求级 flask.g 缓存（C1/C2）+ 操作日志条件聚合收口（C3/C4）），全量回归基线升至 **2325 passed / 0 failed / 0 errors / 7 skipped** 零回归（R23 新增 4 防护用例）。R23 提交 `edd84bf` 已 push 并经 `git ls-remote` 核验一致（R22=`8f69520`）。
+- P0 收官（占位密钥/TLS/WS 入口/版本化迁移）；P0-d：`reconcile.py`（元数据驱动对账，幂等零依赖）+ `seed_defaults.py`（12 节次+5 预警）接入 `db_init.ensure_database_ready`（TESTING 守卫）。
+- 模型/迁移漂移收口进模型（User.risk_score/last_risk_updated、ScoreRecord.operation_log_id），create_all/reconcile 统一维护。
+- **性能与零回归战役 R7–R31+F1–F5 全收官**：读路径（R23–R26）、写路径（R28–R30）、Class F 二级 N+1（R31+F1–F5）。基线 2325→**2389/0/0/7** 全程零回归。
 
-## 运行 / 测试口径（铁律）
-- 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端**强杀 5000 端口持有者**再重启（SocketIO 不 reload，勿杀 celery beat）。
-- 回归必须 `apps/backend/.venv/Scripts/python.exe`（系统 Py3.11 缺 werkzeug）。
-- 沙箱单进程全量 pytest 超时退出（function 级 app fixture 累积 2000+ app 实例）→ 用 `run_regression_batched.py`（`FLASK_LIGHTWEIGHT=true` + 分进程 ≤150 用例 / ≤10 文件 / 整批 timeout 600，剔除 `test_app_init` 整文件 + `test_api_contract` 两用例）。**重跑前先确认无残留旧后台 pytest 进程（共享 XML 竞态）**，`chunk 019` 重 fixture 批次需延长超时。**`aggregate()` 须下钻 `<testsuites>→<testsuite>` 取 tests（pytest 9.x 根节点为 testsuites，直读根 tests 属性=0 假零）**。
-- 单测三要素：exit=0 / 无 failed / 报告文件数==磁盘文件数；**禁 commit 除非用户显式要求**。
-- ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）；`run_validation.py` 语法门必过再提交。
+## 运行/测试口径（铁律）
+- 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端强杀 5000 端口持有者再重启（勿杀 celery beat）。
+- 回归必须 `apps/backend/.venv/Scripts/python.exe`；沙箱单进程全量 pytest 超时 → `run_regression_batched.py`（FLASK_LIGHTWEIGHT=true，22 分块 ≤150 用例/≤10 文件，剔除 test_app_init+test_api_contract 两例）。重跑前确认无残留后台 pytest（XML 竞态）；**aggregate() 须下钻 testsuites→testsuite（pytest 9.x 直读根 tests=0 假零）**。
+- 单测三要素：exit=0/无 failed/报告文件数==磁盘文件数；**禁 commit 除非用户显式要求**。
+- ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）；`run_validation.py` 语法门必过。
 
-## 后端铁律
+## 后端/前端铁律
 - 路由唯一源 `app/api_versioning.py::register_v1_routes`；信封 `{success,code,data}`；create 双元组 `[env,201]`；未跑回归=重构未完成。
-- RBAC：`verify_rbac_consistency.py --check-only`（G2 68/DB 70/seed 66/teacher 30）；班级隔离 `_CLASS_SCOPE_PREFIXES` 12 词根；`db_session_scope` 写路径 `detach=False`。
-- 枚举常量化只收拢字面量绝不做跨语义合并；收紧判据留兜底（`is_device_online or status=="online"`）。
-
-## 前端规范
-tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 100/singleQuote/semi/jsxSingleQuote/lf；导入走 barrel；含 JSX 的 hook 必 `.tsx`。四闸门用 managed Node 22.22.2 直调二进制（tsc/eslint/prettier/vitest）。
+- RBAC：`verify_rbac_consistency.py --check-only`（G2 68/DB 70/seed 66/teacher 30）；班级隔离 `_CLASS_SCOPE_PREFIXES` 12 词根；写路径 `db_session_scope(detach=False)`；枚举常量化只收拢字面量不跨语义合并、收紧判据留兜底。
+- 前端：tsconfig 严格档；禁 `any`；src 全 LF；prettier 100/singleQuote/semi/jsxSingleQuote/lf；导入走 barrel；含 JSX 的 hook 必 `.tsx`；四闸门用 managed Node 22.22.2。
 
 ## ESP32 / OTA
-- `device_type` 维度闭合（`FirmwareVersion.device_type` + `get_latest_active_firmware(device_type)`）；phonebox 无缝 OTA 全链路闭环（register/heartbeat→try_auto_negotiate→publish_ota_command→phonebox/ota/{id} 订阅→performOTAUpdate，含 HMAC 验签/断点续传/MD5/Boot 回滚）。doorlock 记 C2 硬件推迟（固件缺 Update.h，后端维度已就绪）。
-- 硬件对接文档唯一入口 `docs/esp32/`（7 文件）；后端源码是唯一事实来源。
+- device_type 维度闭合（FirmwareVersion.device_type + get_latest_active_firmware(device_type)）；phonebox 无缝 OTA 全链路闭环（HMAC/断点续传/MD5/Boot 回滚）；doorlock C2 硬件推迟（固件缺 Update.h）。硬件文档唯一入口 `docs/esp32/`。
+- **R9 遗留**：切回 EMQX Cloud 缺凭据，后端仍连 hivemq；待用户发主机+用户名+密码后「管理端改配置重启+设备端同步切」。
 
 ## 关键坑（沙箱必读）
-- **EOL 守恒**：backend 多数 `.py` 为 CRLF，改写前逐文件检测实际行尾再守恒（存在纯 LF 例外，禁断言 crlf>0）。
-- **git-bash coreutils 损坏**（rm/ls/grep/find/tail/cd 均 command not found）→ 文件增删/行数/列举一律用 Python 脚本；pytest 用 `os.chdir` 包装。
-- `PYTEST_ADDOPTS=--timeout=300`：长回归传 `--timeout=0`；多独立 pytest 进程分批 + `--junitxml` 聚合。
-- 绝不直接改 `.git` 内部文件；远程同步只信 `git ls-remote origin <branch>`，不信用 `git status -sb` ahead/behind。
-- **packed-refs CRLF→badRefName 损坏**：`.git/packed-refs` 被写成 CRLF → `git fsck` 报 `badRefName` + 全零 SHA 墓碑行、commit 时 `geometric repack failed`。`git update-ref -d` 因 `?` 触发 Windows 文件名非法无法用 → 必须用 Python `open(pr,'wb')` 写回**纯 LF** 干净 packed-refs（先备份 `.bak`），再 `git fsck` 核验 + push + `ls-remote` 核验。
-- **装饰器工厂不可用 `partial` 占位**：`safe_handle(default_status=500,...)` 首参是 `default_status` 非 `func`；复用须 `def f(func): return safe_handle(...)(func)`，否则路由函数被填入 default_status 槽 → TypeError → 被 conftest `walk_packages(api)` 吞掉 → 命名空间 0 注册 → 全部路由测试 404 假象。
-- **前端 `vitest --coverage` 清理 `coverage/.tmp` 触发 safe-delete 守卫崩溃**（退出码非0但覆盖率已算完、测试全绿）：读 `coverage/coverage-summary.json` 取四指标即可；或不带 `--coverage` 跑 `vitest run` 干净 EXIT=0。
+- **EOL 守恒**：backend 多数 .py 为 CRLF，改写前逐文件检测实际行尾（有纯 LF 例外，禁断言 crlf>0）。
+- git-bash coreutils 损坏（rm/ls/grep/find/tail/cd 均 not found）→ 文件增删/列举一律用 Python 脚本。长回归传 `--timeout=0`（PYTEST_ADDOPTS 默认 300）；多 pytest 进程分批 + `--junitxml` 聚合。
+- 绝不直接改 `.git` 内部文件；远程同步只信 `git ls-remote origin <branch>`。
+- **packed-refs CRLF→badRefName 损坏**：Python `open(pr,'wb')` 写回纯 LF 干净 packed-refs（先备份 .bak），fsck+push+ls-remote 核验。
+- **装饰器工厂不可用 partial 占位**：`safe_handle(default_status=500,...)` 首参非 func；复用须 `def f(func): return safe_handle(...)(func)`，否则路由被 conftest walk_packages 吞掉→命名空间 0 注册→路由测试 404 假象。
+- **vitest --coverage 清理 coverage/.tmp 触发 safe-delete 守卫崩溃**：读 `coverage/coverage-summary.json` 取四指标，或不带 --coverage 跑 `vitest run`。
+- **Read 显示与磁盘真相可能有偏差**（CRLF 文件）——锚点替换前必须二进制核验。
+- 模型关系 `lazy="selectin"`：IN 预取行时 ORM 自动附带 user IN 查询（非缺陷）；断言证「与 N 无关」而非硬等于小值。
+- mock 单测桩 `Model.query` 双查序列时查询合并会误判——仅被 mock 覆盖且收益 ≤1 查宁可不做。
+- 索引双处定义：模型层 `__table_args__`/`index=True`（create_all+reconcile 覆盖新库）+ `scripts/create_indexes.py::get_all_indexes()`（启动自举覆盖现有库）；增索引须同步两处并 EOL 守恒。
 
-## 索引双处定义架构（R7–R10 已大量增改，必读）
-- ① 模型层 `__table_args__` / `index=True` / `db.Index`：经 `db.create_all()` + `migrations/reconcile.py` 覆盖**新建/测试库**。
-- ② `scripts/create_indexes.py::get_all_indexes()` 清单：经启动自举（`app/db_init.py`）与 verify 闸门覆盖**现有库**。
-- 两处漂移（同一索引仅一处有）会导致测试库或现有库缺索引——每次增索引须同步两处并 EOL 守恒。
-
-## 性能优化已落地（OPT-1/2 + R7–R10）
-- OPT-1：`app/db_init.py` 性能 PRAGMA（WAL / cache_size=-100000 / temp_store=memory / mmap_size=256MB / synchronous=1 / busy_timeout=5000 / locking_mode=NORMAL），读密集 1.88x。**foreign_keys 维持 OFF**（正确性开关，历史迁移依赖 OFF，需专项迁移+回归才开）。
-- OPT-2：`diagnostics.check_cpu_usage` 改 `interval=None` 非阻塞（109ms→0.56ms）。
-- R7 列级 FULL-SCAN / R8 filter+order+limit 复合（score_models 4 复合）/ R9 MQTT 连接泄漏（mqtt_manager.py client_id 进程内稳定 + 旧客户端 `_dispose_client` 回收）/ R10 order_by 单列排序完备性（12 模型 + 18 清单索引，TEMP B-TREE 28→8）：全量 2325/0/0/7 零回归（R23 收官，+4 防护用例）。
-
-## R9 遗留（待用户凭据）
-- 切回 EMQX Cloud 已确认方向，但缺 EMQX 主机+用户名+密码；后端 broker 仍连 hivemq（`mqtt_config` 唯一行指向 broker.hivemq.com，设备端亦连 hivemq）。待用户发凭据后执行「管理端改配置重启 + 设备端同步切」（见 2026-10-08.md §13）。
-
-## R23/R24 条件聚合收口战役（读路径零契约优化）
-- **模式**：`func.count()` + `func.sum(case((cond,val),else_=0))` 将多 COUNT / 嵌套时间窗聚合合并为单条 DB 查询；R24 复用 R23 的 SQL 计数 harness（`tests/test_operation_log_routes.py` / `test_permission_utils.py`::_count_table_selects）证明合并真实发生，再加契约 key 断言 + 数值正确性。
-- **R23 已收官**：commit `edd84bf`（9 文件 +357/−34，msg "R23: 请求级 flask.g 缓存 + 操作日志条件聚合收口（零回归 2325/0/0/7）"），远程 `git ls-remote` 核验一致。
-- **R24（用户确认全部 7 处；composite 一处已回退，实际落地 6 处）**：纯只读 COUNT/聚合合并 →
-  - analysis_service.get_dashboard_summary：月/周/日嵌套窗(3→1) + 双 User 计数(3→2) = 省 3 查。
-  - nlp_rule_service.get_rule_statistics：规则(3→1) + 用量(2→1) + 匹配(2→1) = 省 4 查。
-  - alert_service.get_alert_stats：总/未读/今日(3→1) + severity group_by 保留 = 省 2 查。
-  - security_service.get_audit_stats：total/last_24h/last_7d(3→1) = 省 2 查。
-  - dashboard_service.get_dashboard_data：今日/近7日/近7日正向(3→1) + category_stats 保留 = 省 2 查。
-  - score_record_service.get_score_statistics：总数+加减汇总(2→1，消除 IN 子查询) = 省 1 查（today_count 因口径忽略 start/end_dt 保留独立查询）。
-  - **R24-7 composite_score_service.get_student_composite_score 已回退**：合并取分+排名为相关子查询后破坏既有 mock 单测 `test_composite_score_service::test_get_student_composite_score`（该测试桩的是原始 `query.filter_by().first()`+`query.filter().count()` 双查序列，合并后 mock 不命中→返回 None）。逻辑对真实库正确，但与 mock 强耦合且仅省 1 查，按「破坏既存测试宁可回退」铁律 `git checkout HEAD` 字节级还原。
-  - 合计省约 13 查；配套 `tests/test_r24_aggregation.py`（删除 composite 类后 **15 用例**全绿）+ ruff C901 0 新增 + 全量回归 **2340/0/0/7 零回归**（22 分块 hung=0，独立聚合复核一致）。**EOL 守恒**：analysis/alert/dashboard=CRLF，nlp_rule/security/score_record=LF；composite_score_service.py 已还原 HEAD。**双处索引**：本次仅改查询形态，未新增索引，无需同步。
-  - **R24 提交 `1cd686f`**（10 文件 +529/−93）已 push 并经 `git ls-remote` 核验一致；提交前另修净 3 处 R24 import 新增 lint（alert/nlp_rule/security 重复导入+分组、test UP009，零行为变更，29 用例复跑通过）。**教训**：mock 单测桩 `Model.query` 双查序列时，任何查询合并都会误判——仅被 mock 覆盖且收益 ≤1 查的合并应最低优先级甚至不做。
-
-
-## R25 读路径优化（簇 D 计数合并 + 簇 N+1 关系复用，用户确认全部 5 处）
-- **簇 D（同表多 COUNT → 单条条件聚合，R24 模板）**：`notify_history_routes` 6 COUNT→1；`admin_notifications_routes` unread+total 2→1（if/else 各一组）。cached_api 路由用唯一 `?v=` 穿透缓存后计数。
-- **簇 N+1（循环 get_by_id → 复用 selectin 关系）**：`exam_import_query_service` / `course_schedule_service` / `subject_service` 三处列表端点。**关键洞察**：这些模型的关系本就是 `lazy="selectin"`（R7 时代），加载父对象时 SQLAlchemy 已自动批量预取；原始 `get_by_id` 是与 selectin **冗余**的 N+1。最优解=**直接用关系**（`score.student/exam/admin/subject_rel`、`schedule.class_info/subject`、`link.class_info/teacher`），零额外查询。曾误用"批量 IN 查询"反而与 selectin 重复（debug 见每组查询 2× 计数）——**教训：消除列表 N+1 前，先查目标模型关系是否已 selectin，避免重复造轮子**。
-- 省查询：exam 每行 3 个 get_by_id、schedule/subject 每行 2 个 get_by_id 全消除（收益随页/列表大小缩放；exam 默认页 20 行省 ~60 查）。
-- 测试 `tests/test_r25_aggregation.py`（10 用例全绿）：SQL 计数 harness（notify/admin 目标表 SELECT==1；exam/schedule/subject ==4/2/2=selectin 批量数，证明 get_by_id 已消除）+ 契约 key + 数值正确性。
-- ruff 6 文件全净（含修净 course_schedule 既存 I001、exam import 收缩为 `Score` only）。EOL 守恒：notify/admin_notif=CRLF，exam/course_schedule/subject/test=LF。
-- 全量回归 **2350/0/0/7 零回归**（22 分块 hung=0，独立聚合复核一致；2340+10）。**R25 提交 `3d7aa8e`** 已 push 并经 `git ls-remote` 核验一致；R25 报告 `docs/reports/深度评估与优化报告-20261014-25.md`。
-
-
-## R26 读路径优化（device_query 假经济 → DB 条件聚合，用户确认 2 处）
-- **新类「假经济优化」**：早前把多次 COUNT 改成 `Device.query.all()` 取全表 + Python len/sum 计数，转移整表行却只为数几个值；DB 条件聚合（1 查询只回传计数）严格更优。R24/R25 Class D 模式可收割此类。
-- device_query_service.get_device_stats_view：total/error/online → 1 条条件聚合；get_device_advanced_stats_view：+avg_signal(func.avg)+signal_distribution(case 互斥分档)+Alert 2 计数 → 条件聚合。
-- **dashboard online 排除**：Device.is_online=@property→is_device_online（per-device heartbeat_timeout + OTA 保护窗 + status），语义复杂，不冒险下推。
-- 测试 test_r26_aggregation.py（4 用例）：新旧均 1 条目标表 SELECT，语句计数无法区分，改用「SQL 形状（含 count/avg）+ 数值」证明。全量回归 **2354/0/0/7 零回归**（22 分块 hung=0；2350+4）。**R26 提交 `c7ad36c`** 已 push 并经 `git ls-remote` 核验一致；R26 报告 `docs/reports/深度评估与优化报告-20261015-26.md`。
-
-## R27 评估结论（读路径优化已做透，2026-10-15）
-- R23–R26 四轮把低风险/零契约/可批处理的读路径优化收干净：条件聚合（簇 D）、循环 get_by_id→selectin 关系（簇 N+1）、请求级 flask.g 缓存、取全表再计数假经济纠正。基线 2325→2354 全程零回归。
-- **剩余候选**：① Class F 二级 N+1——score_predict/risk_predict/rule_recommendation/attribution/engagement/prediction 的"取全部用户→循环 per-user 预测"，批处理需重构预测算法（高复杂）；② 写路径 N+1——device_service 批量加组（**R28 已试点**）、heartbeat_service 超时处理、nlp_rule_service 匹配更新。用户已确认暂存读路径优化，未来会话不必重复扫描此片地面。
-
-## R28 写路径 N+1 试点（device_service 批量加组，2026-10-15）
-- **改写**：`services/device_service.py::add_devices_to_group` 循环内逐台 2 查（2N+1）→ 两次批量 `.in_()` 预取（existing_set/found_set）+ `planned_add` 集合复刻 autoflush 语义，查询数恒为 4（与 N 无关）。纯 LF，EOL 守恒（441→492 行）。
-- **配套测试**：`tests/test_r28_device_group_nplus1.py`（4 用例，纯 LF）：HTTP 路径目标表 SELECT 恒为 3（harness 表 `{device,device_group_mappings}`，注意 `Device.__tablename__=="device"` 单数）+ 3 语义用例（断言真实映射行数，因 `DeviceGroup` 无 `device_count` 列、原末尾赋值是死代码）。
-- **回归**：2358/0/0/7 零回归（task oF6bRE，22 分块 hung=0）。**已提交**：commit `c0ee179`（4 文件 +182/−20）→ push origin main → `git ls-remote` 核验 LOCAL==REMOTE==`c0ee179` 一致。
-- **关键洞察**：写路径 N+1 与读路径不同——需精确复刻 autoflush/事务可见性语义；`planned_add` 集合是零行为差异的关键。写路径批处理风险高，按"试点→评估→批量"节奏推进，不硬凑。
-
-## R29 写路径 N+1（heartbeat 超时告警批处理，2026-10-15）
-- **改写**：`services/heartbeat_service.py::check_heartbeat_timeout` 循环内逐台 `Alert.query.filter_by(device_id, alert_type="heartbeat_timeout", is_resolved=False, source="device").first()` 存在性检查（N 台=N 查）→ 循环前单次 `Alert.query.filter(Alert.device_id.in_(timeout_ids), alert_type=..., is_resolved=False, source="device").all()` + `existing_alert_ids` 集合判定。查询数恒为 2（超时设备 1 + 告警存在性 1）与 N 无关。精确复刻 autoflush/事务语义（IN 在循环前、session 干净，循环内仅 add/标记 offline）。CRLF，EOL 守恒。
-- **配套测试**：`tests/test_r29_heartbeat_timeout_nplus1.py`（4 用例）：目标表 `{device,alert}` SELECT 恒为 2（证明告警存在性 IN 与超时设备数无关）+ 3 语义用例（全超时新建告警 / 部分已存在跳过 / 重复触发幂等）。既有 `test_heartbeat_service.py` 10 例无回归。
-- **回归**：全量 **2365/0/0/7 零回归**（task Sl2265，与 R30 同批 22 分块 hung=0）。**未 commit**（铁律，待用户确认）。
-
-## R30 写路径 N+1（nlp train_model 匹配统计批处理，2026-10-15）
-- **改写**：`services/nlp_rule_service.py::train_model` 循环 `usage_records` 内 `get_by_id(rule)` + 3 count（correct=is_manual_correction=True / total match / usage_count，约 3U 查）→ 循环前 `rule_ids IN` 预取 `NLPScoringRule` + `NLPMatchResult.group_by(matched_rule_id)` 条件聚合（total/correct）+ `NLPRuleUsage.group_by(rule_id)` 计数。遍历唯一 rule_ids 设置 accuracy_rate（人工纠正数/总数，原语义保留）/usage_count，与原多写同值幂等等价。查询数恒为 5（all + rule IN + match group_by + usage group_by + commit 后 expire 重载基线）与 U 无关。LF，EOL 守恒。
-- **关键坑**：`expire_on_commit=True`（db_session_scope detach=False）致 commit 后已加载 `match_results` 过期，被 L301/L304/L305 访问属性时逐对象惰性重载 3 条 SELECT——属固定基线（原代码同样存在），非 N+1 残留；R30 消除的是随 U 增长的部分（U=2 时 nlp_match_results 5 条恒定）。
-- **配套测试**：`tests/test_r30_nlp_train_model_nplus1.py`（3 用例）：SQL 计数与 U 无关（恒定）+ 数值正确性（accuracy_rate=人工纠正数/总数 原语义 + usage_count）+ 既有 `test_nlp_rule_service.py` 27 例无回归。
-- **回归**：全量 **2365/0/0/7 零回归**（task Sl2265，与 R29 同批 22 分块 hung=0）。**未 commit**（铁律，待用户确认）。
-
-## R31 Class F 二级 N+1 试点（risk_predict 批量重构，2026-10-15）
-- **最终方案（瞬态类属性缓存，零测试破坏性）**：`RiskPredictService._bulk_features = None` 类属性；`get_risk_features(user_id, days)` 顶部命中缓存即返；`predict_batch` 先写 `_bulk_features = get_risk_features_bulk(users, days)` → 循环调**原始** `predict_risk(user.id, days)`（公开签名不变）→ `finally` 清缓存。`get_risk_features_bulk` = ScoreRecord/Attendance/Approval 三条 `.in_()` 预取 + 复用已加载 users + `_get_class_aggregates`（TTL 缓存）；新增 `_build_risk_features`（与单生共用、逐字段等价）、`_attendance_tuple_from_rows`（与 `_get_attendance_stats` 元组语义等价，后者保留供 `test_honest_error_handling` 直测）。查询数从随 N 放大降为恒定：目标表 score_record/attendance/approval 各 1 条 IN、user 表（取生列表 + 关系 selectin 预取 + 班级聚合）恒定与 N 无关。纯 CRLF（1105 行），EOL 守恒。
-- **为何放弃 `features=` 形参**：首轮给 `predict_risk(user_id, days, features=None)` 加可选形参，但既有 `test_predict_batch_isolates_single_failure` 的 mock `side_effect=(user_id, days=30)` 签名不兼容 → 两用户均进失败分支（rc=1）。类属性缓存让单生 `get_risk_features` 命中批量预取，**不改 `predict_risk` 签名**，所有 mock 测试（train_risk_model 的 get_risk_features mock、isolation 的 predict_risk mock、honest_error 的 _get_attendance_stats 直测）零破坏性。
-- **配套测试**：`tests/test_r31_risk_predict_batch_nplus1.py`（3 用例，纯 LF）：SQL 计数 harness（表 `{user,score_record,attendance,approval}`）证明目标表 SELECT 数与 N 无关（N=2 vs N=8 各表相等 + score_record/attendance/approval 各恒 1；user 表恒 4 含 selectin 关系预取，非缺陷）+ 批量 vs 单生数值完全等价 + `get_risk_features_bulk` 与 `get_risk_features` 特征一致。本地 TestRiskBatchIsolation+test_risk_predict_service+test_honest_error_handling+R31 共 37 全绿；ruff default+C901 全净。
-- **回归**：全量分块回归 task tMmhUP：**2368 passed / 0 failed / 0 errors / 7 skipped**（22 分块 hung=0，独立聚合复核一致；2365 基线 + R31 3 = 2368），零回归。已提交 `af12c4a` 并 push（`git ls-remote` 核验一致）。
-
-## Class F 扩量收官（F1–F5，2026-10-16）
-- 用户确认「继续扩量其余5处」，R31 瞬态缓存模式推广至 score_predict / prediction / rule_recommendation / attribution / engagement，全部零回归收官。基线 2368→**2389**（+21 用例）。
-- **统一模式**：批量入口循环前一次 IN 预取（按主键分组）+ 单生函数顶部命中即返 + try/finally 清理；批量入口间 save-restore（`_prev_bulk`）防嵌套覆盖；数值等价靠共用纯函数/内存分流；SQL 计数 harness 证「与 N 无关」。
-- **落地明细**（均为纯 CRLF，EOL 守恒）：
-  - F2 `prediction_service.py`：predict_batch→每生 1 查 ScoreRecord → 1 条 IN（`_prefetch_score_history`）。
-  - F3 `rule_recommendation_service.py`：规则维度 N+1（suggest_rule_optimizations/get_rule_statistics/evaluate_model→get_rule_effectiveness 每规则 1 查）→ 1 条 IN 按 rule_id 分组（`_prefetch_rule_records` + `_collect_rule_effectiveness` 辅助降 C901）。
-  - F1 `score_predict_service.py`：4 个批量入口每生 3 查 → 三缓存（`_bulk_users`/`_bulk_records`/`_bulk_class_users`，None class_name 用 IS NULL）；`get_score_distribution` 无 days 参数预取窗口固定 30。
-  - F5 `engagement_service.py`：batch_rank 每生 5 查 → 4 条 IN + 作业全局 1 条（`_prefetch_engagement`）；抽 `_sum_leave_days` 纯函数、`_calc_homework_rate` 加 `submissions=None`；`batch_rank` 内写模块级 `_BULK` 必须 `global`；weekly_trend 异质 end_date 不纳入预取。
-  - F4 `attribution_service.py`（最复杂）：batch_analyze 每生 9 查 → 5 条预取（Score join Exam before/after 各 1 + ScoreRecord/Attendance/HomeworkSubmission 各 1 条 IN 后内存分流）；**窗口基准时间统一取自缓存 ref**（否则每生 datetime.now() 微秒差致缓存键不命中）；抽 3 纯函数 + `_MISSING` 哨兵。
-- **共性现象（非缺陷）**：模型的 student/rule 关系为 `lazy="selectin"`，IN 预取行时 ORM 自动附带 1 条 user IN 查询——断言证「与 N 无关」而非硬等于小值（R31/F2/F3/F5 同款）。
-- **坑**：① Read 工具显示与磁盘真相可能有偏差（evaluate_model message 实为「没有学生数据」）——锚点替换前必须二进制核验；② C901 敏感点（F3 evaluate_model 11→抽辅助）；③ 测试 seed 唯一约束冲突（class_info.name / subject.code）须加班级前缀。
-- 新测试 5 文件 21 用例（test_f1~f5_*_nplus1.py，纯 LF）；全量回归 task nUJi8n：**2389/0/0/7**（22 分块 hung=0，独立聚合一致），零回归。**未 commit**（铁律）。
-
-## 写路径 N+1 战役收官（R28–R30，2026-10-15）
-- 三候选全部落地：device_service 批量加组（R28）、heartbeat 超时告警 IN 预取（R29）、nlp train_model 匹配统计批处理（R30）。基线 2325→2365（写路径 +10 用例）。全程零回归。
-- **统一模式**：循环前单次 `.in_()` / `group_by` 预取 + 内存集合判定，精确复刻 autoflush/事务可见性语义（写路径与读路径本质差异）。
-- **剩余写路径 N+1**：本批三处已覆盖 R27 罗列的全部写路径候选。后续若再发现，按同模板（预取+集合、零契约、针对性 SQL 计数 harness）推进，不硬凑。
+## 优化战役模式速查（详细过程见各日日志）
+- **R23–R26 读路径**：条件聚合（func.count+func.sum(case) 合并多 COUNT/时间窗）；循环 get_by_id→selectin 关系（先查关系是否已 selectin）；请求级 flask.g 缓存；假经济（取全表再计数）纠正为 DB 聚合。
+- **R28–R30 写路径**：循环前 `.in_()`/`group_by` 预取 + 内存集合判定，精确复刻 autoflush/事务语义（planned_add 集合是零行为差异关键）。
+- **R31+F1–F5 Class F**：瞬态类属性缓存（`_bulk_*`）——批量入口循环前 IN 预取（按主键分组）+ 单生函数顶部命中即返 + try/finally 清理；入口间 save-restore（`_prev_bulk`）防嵌套覆盖；不改公开签名保 mock 零破坏；SQL 计数 harness 证与 N 无关 + 数值等价；F4 窗口基准时间须取自缓存 ref（否则 datetime.now() 微秒差致键不命中）。
+- 提交（均 push+ls-remote 核验）：R23=`edd84bf` R24=`1cd686f` R25=`3d7aa8e` R26=`c7ad36c` R28=`c0ee179` R29+R30=`a1fd352` R31=`af12c4a` F1–F5=`1107699`。
