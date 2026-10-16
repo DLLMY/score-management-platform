@@ -10,6 +10,7 @@
   “相关性归因”而非“因果归因”。
 """
 
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -30,6 +31,9 @@ SENSITIVITY: dict[str, float] = {
     "attendance": 30.0,  # 出勤率：0~1 差值
     "homework": 25.0,  # 作业提交率：0~1 差值
 }
+# 缓存查询哨兵：区分「缓存值为 None」与「键不存在」
+_MISSING = object()
+
 FACTOR_LABELS: dict[str, str] = {
     "behavior": "行为积分",
     "attendance": "出勤",
@@ -37,7 +41,35 @@ FACTOR_LABELS: dict[str, str] = {
 }
 
 
+def _avg_daily_from_rows(rows, start, end):
+    """窗口内行为积分日均分值（纯函数，与 _avg_daily_points 查询后逻辑一致）。"""
+    if not rows:
+        return None
+    total = sum(r.score_change for r in rows)
+    days_span = max((end - start).days, 1)
+    return total / days_span
+
+
+def _attendance_rate_from_rows(rows):
+    """出勤率（present/late/early 计出勤；纯函数，与 _attendance_rate 查询后逻辑一致）。"""
+    if not rows:
+        return None
+    attended = sum(1 for r in rows if r.status in ("present", "late", "early"))
+    return attended / len(rows)
+
+
+def _homework_rate_from_rows(rows):
+    """作业提交率（按已提交记录计；纯函数，与 _homework_rate 查询后逻辑一致）。"""
+    if not rows:
+        return None
+    submitted = sum(1 for r in rows if r.is_submitted)
+    return submitted / len(rows)
+
+
 class AttributionService:
+    # 瞬态批量缓存：batch_analyze 循环前预取，helper 命中即返，用后即清
+    _bulk = None
+
     # ------------------------------------------------------------------
     # 纯函数核心（无 DB 依赖，单测友好）
     # ------------------------------------------------------------------
@@ -191,15 +223,23 @@ class AttributionService:
         Returns:
             dict: 归因结果（含 has_data / confidence / factors 等）
         """
-        user = get_by_id(User, user_id)
-        if not user:
-            return {"user_id": user_id, "error": "学生不存在"}
-
         days = max(int(days), 1)
-        now = datetime.now()
-        recent_start = now - timedelta(days=days)
-        prior_start = now - timedelta(days=2 * days)
-        prior_end = recent_start
+        bulk = AttributionService._bulk
+        if bulk is not None and user_id in bulk["users"]:
+            # 批量路径：复用预取用户与统一窗口基准时间（保证缓存键匹配）
+            user = bulk["users"][user_id]
+            now = bulk["ref"]["now"]
+            recent_start = bulk["ref"]["recent_start"]
+            prior_start = bulk["ref"]["prior_start"]
+            prior_end = bulk["ref"]["prior_end"]
+        else:
+            user = get_by_id(User, user_id)
+            if not user:
+                return {"user_id": user_id, "error": "学生不存在"}
+            now = datetime.now()
+            recent_start = now - timedelta(days=days)
+            prior_start = now - timedelta(days=2 * days)
+            prior_end = recent_start
 
         # 学业成绩：按考试日期聚合每个窗口的平均分
         score_before, score_after, exam_counts = AttributionService._score_windows(
@@ -262,22 +302,28 @@ class AttributionService:
         students: list[dict] = []
         failed_students: list[dict] = []
         with_data = 0
+        _prev_bulk = AttributionService._bulk
+        if _prev_bulk is None:
+            AttributionService._bulk = AttributionService._prefetch_attribution(users, days)
 
-        for u in users:
-            try:
-                res = AttributionService.analyze_score_attribution(u.id, days)
-                if res.get("has_data"):
-                    with_data += 1
-                students.append(res)
-            except Exception as exc:  # 单生异常隔离，保证全班其余结果可用
-                failed_students.append(
-                    {
-                        "user_id": int(u.id),
-                        "name": u.name,
-                        "class_name": getattr(u, "class_name", "") or "",
-                        "error": str(exc),
-                    }
-                )
+        try:
+            for u in users:
+                try:
+                    res = AttributionService.analyze_score_attribution(u.id, days)
+                    if res.get("has_data"):
+                        with_data += 1
+                    students.append(res)
+                except Exception as exc:  # 单生异常隔离，保证全班其余结果可用
+                    failed_students.append(
+                        {
+                            "user_id": int(u.id),
+                            "name": u.name,
+                            "class_name": getattr(u, "class_name", "") or "",
+                            "error": str(exc),
+                        }
+                    )
+        finally:
+            AttributionService._bulk = _prev_bulk
 
         return {
             "class_name": class_name or "",
@@ -291,8 +337,129 @@ class AttributionService:
         }
 
     @staticmethod
+    def _prefetch_attribution(users, days):
+        """batch_analyze 循环前批量预取：5 条查询恒定与 N 无关。
+
+          - Score join Exam：before/after 窗口各 1 条（SQL 边界与原实现逐字一致）；
+          - ScoreRecord / Attendance / HomeworkSubmission 各 1 条 IN，
+            覆盖 [prior_start, now) 后在内存按窗口分流（datetime/date 比较无类型风险）。
+        原每生 9 查（N 生 = 9N+1）→ 批量 5 查 + 调用方已执行的 users 查询。
+        """
+        days = max(int(days), 1)
+        now = datetime.now()
+        recent_start = now - timedelta(days=days)
+        prior_start = now - timedelta(days=2 * days)
+        prior_end = recent_start
+        user_ids = [u.id for u in users]
+
+        # 学业成绩：两窗口 join 查询（SQL 边界与原 _score_windows 一致）
+        before_rows = (
+            Score.query.join(Exam, Score.exam_id == Exam.id)
+            .filter(
+                Score.student_id.in_(user_ids),
+                Exam.date >= prior_start,
+                Exam.date < prior_end,
+            )
+            .all()
+        )
+        after_rows = (
+            Score.query.join(Exam, Score.exam_id == Exam.id)
+            .filter(
+                Score.student_id.in_(user_ids),
+                Exam.date >= recent_start,
+                Exam.date < now,
+            )
+            .all()
+        )
+        score_windows = {}
+        for uid in user_ids:
+            b = [r for r in before_rows if r.student_id == uid]
+            a = [r for r in after_rows if r.student_id == uid]
+            bv = [r.score for r in b if r.score is not None]
+            av = [r.score for r in a if r.score is not None]
+            score_windows[uid] = (
+                float(np.mean(bv)) if bv else None,
+                float(np.mean(av)) if av else None,
+                (len(b), len(a)),
+            )
+
+        # 行为积分：一次 IN 预取后按窗口内存分流
+        rec_rows = ScoreRecord.query.filter(
+            ScoreRecord.student_id.in_(user_ids),
+            ScoreRecord.created_at >= prior_start,
+            ScoreRecord.created_at < now,
+        ).all()
+        rec_g = defaultdict(list)
+        for r in rec_rows:
+            rec_g[r.student_id].append(r)
+        behavior = {}
+        for uid in user_ids:
+            rows_u = rec_g.get(uid, [])
+            behavior[(uid, prior_start, prior_end)] = _avg_daily_from_rows(
+                [r for r in rows_u if r.created_at < prior_end], prior_start, prior_end
+            )
+            behavior[(uid, recent_start, now)] = _avg_daily_from_rows(
+                [r for r in rows_u if r.created_at >= recent_start], recent_start, now
+            )
+
+        # 出勤：date 粒度（与原 _attendance_rate 的 start.date()/end.date() 一致）
+        att_rows = Attendance.query.filter(
+            Attendance.student_id.in_(user_ids),
+            Attendance.date >= prior_start.date(),
+            Attendance.date < now.date(),
+        ).all()
+        att_g = defaultdict(list)
+        for r in att_rows:
+            att_g[r.student_id].append(r)
+        attendance = {}
+        for uid in user_ids:
+            rows_u = att_g.get(uid, [])
+            attendance[(uid, prior_start, prior_end)] = _attendance_rate_from_rows(
+                [r for r in rows_u if r.date < prior_end.date()]
+            )
+            attendance[(uid, recent_start, now)] = _attendance_rate_from_rows(
+                [r for r in rows_u if r.date >= recent_start.date()]
+            )
+
+        # 作业提交：submitted_at 窗口内存分流
+        hw_rows = HomeworkSubmission.query.filter(
+            HomeworkSubmission.student_id.in_(user_ids),
+            HomeworkSubmission.submitted_at >= prior_start,
+            HomeworkSubmission.submitted_at < now,
+        ).all()
+        hw_g = defaultdict(list)
+        for r in hw_rows:
+            hw_g[r.student_id].append(r)
+        homework = {}
+        for uid in user_ids:
+            rows_u = hw_g.get(uid, [])
+            homework[(uid, prior_start, prior_end)] = _homework_rate_from_rows(
+                [r for r in rows_u if r.submitted_at < prior_end]
+            )
+            homework[(uid, recent_start, now)] = _homework_rate_from_rows(
+                [r for r in rows_u if r.submitted_at >= recent_start]
+            )
+
+        return {
+            "users": {u.id: u for u in users},
+            "ref": {
+                "now": now,
+                "recent_start": recent_start,
+                "prior_start": prior_start,
+                "prior_end": prior_end,
+            },
+            "score_windows": score_windows,
+            "behavior": behavior,
+            "attendance": attendance,
+            "homework": homework,
+        }
+
+    @staticmethod
     def _score_windows(user_id, prior_start, prior_end, recent_start, now):
         """返回 (前期均分, 近期均分, (前期考试数, 近期考试数))。无成绩返回 (None, None, counts)。"""
+        bulk = AttributionService._bulk
+        if bulk is not None and user_id in bulk["score_windows"]:
+            return bulk["score_windows"][user_id]
         before_rows = (
             Score.query.join(Exam, Score.exam_id == Exam.id)
             .filter(Score.student_id == user_id, Exam.date >= prior_start, Exam.date < prior_end)
@@ -312,20 +479,26 @@ class AttributionService:
     @staticmethod
     def _avg_daily_points(user_id, start, end):
         """返回窗口内行为积分日均分值；无记录返回 None。"""
+        bulk = AttributionService._bulk
+        if bulk is not None:
+            v = bulk["behavior"].get((user_id, start, end), _MISSING)
+            if v is not _MISSING:
+                return v
         rows = ScoreRecord.query.filter(
             ScoreRecord.student_id == user_id,
             ScoreRecord.created_at >= start,
             ScoreRecord.created_at < end,
         ).all()
-        if not rows:
-            return None
-        total = sum(r.score_change for r in rows)
-        days_span = max((end - start).days, 1)
-        return total / days_span
+        return _avg_daily_from_rows(rows, start, end)
 
     @staticmethod
     def _attendance_rate(user_id, start, end):
         """返回窗口内出勤率（present/late 计为出勤）；无记录返回 None。"""
+        bulk = AttributionService._bulk
+        if bulk is not None:
+            v = bulk["attendance"].get((user_id, start, end), _MISSING)
+            if v is not _MISSING:
+                return v
         start_d = start.date()
         end_d = end.date()
         rows = Attendance.query.filter(
@@ -333,23 +506,22 @@ class AttributionService:
             Attendance.date >= start_d,
             Attendance.date < end_d,
         ).all()
-        if not rows:
-            return None
-        attended = sum(1 for r in rows if r.status in ("present", "late", "early"))
-        return attended / len(rows)
+        return _attendance_rate_from_rows(rows)
 
     @staticmethod
     def _homework_rate(user_id, start, end):
         """返回窗口内作业提交率（按已提交记录计）；无记录返回 None。"""
+        bulk = AttributionService._bulk
+        if bulk is not None:
+            v = bulk["homework"].get((user_id, start, end), _MISSING)
+            if v is not _MISSING:
+                return v
         rows = HomeworkSubmission.query.filter(
             HomeworkSubmission.student_id == user_id,
             HomeworkSubmission.submitted_at >= start,
             HomeworkSubmission.submitted_at < end,
         ).all()
-        if not rows:
-            return None
-        submitted = sum(1 for r in rows if r.is_submitted)
-        return submitted / len(rows)
+        return _homework_rate_from_rows(rows)
 
     @staticmethod
     def _confidence(score_before, score_after, exam_counts, has_behavior, has_att, has_hw):

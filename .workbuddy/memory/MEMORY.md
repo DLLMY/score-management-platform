@@ -102,7 +102,20 @@ tsconfig 严格档；禁 `any`；Context value useMemo；src 全 LF；prettier 1
 - **最终方案（瞬态类属性缓存，零测试破坏性）**：`RiskPredictService._bulk_features = None` 类属性；`get_risk_features(user_id, days)` 顶部命中缓存即返；`predict_batch` 先写 `_bulk_features = get_risk_features_bulk(users, days)` → 循环调**原始** `predict_risk(user.id, days)`（公开签名不变）→ `finally` 清缓存。`get_risk_features_bulk` = ScoreRecord/Attendance/Approval 三条 `.in_()` 预取 + 复用已加载 users + `_get_class_aggregates`（TTL 缓存）；新增 `_build_risk_features`（与单生共用、逐字段等价）、`_attendance_tuple_from_rows`（与 `_get_attendance_stats` 元组语义等价，后者保留供 `test_honest_error_handling` 直测）。查询数从随 N 放大降为恒定：目标表 score_record/attendance/approval 各 1 条 IN、user 表（取生列表 + 关系 selectin 预取 + 班级聚合）恒定与 N 无关。纯 CRLF（1105 行），EOL 守恒。
 - **为何放弃 `features=` 形参**：首轮给 `predict_risk(user_id, days, features=None)` 加可选形参，但既有 `test_predict_batch_isolates_single_failure` 的 mock `side_effect=(user_id, days=30)` 签名不兼容 → 两用户均进失败分支（rc=1）。类属性缓存让单生 `get_risk_features` 命中批量预取，**不改 `predict_risk` 签名**，所有 mock 测试（train_risk_model 的 get_risk_features mock、isolation 的 predict_risk mock、honest_error 的 _get_attendance_stats 直测）零破坏性。
 - **配套测试**：`tests/test_r31_risk_predict_batch_nplus1.py`（3 用例，纯 LF）：SQL 计数 harness（表 `{user,score_record,attendance,approval}`）证明目标表 SELECT 数与 N 无关（N=2 vs N=8 各表相等 + score_record/attendance/approval 各恒 1；user 表恒 4 含 selectin 关系预取，非缺陷）+ 批量 vs 单生数值完全等价 + `get_risk_features_bulk` 与 `get_risk_features` 特征一致。本地 TestRiskBatchIsolation+test_risk_predict_service+test_honest_error_handling+R31 共 37 全绿；ruff default+C901 全净。
-- **回归**：全量分块回归 task tMmhUP：**2368 passed / 0 failed / 0 errors / 7 skipped**（22 分块 hung=0，独立聚合复核一致；2365 基线 + R31 3 = 2368），零回归。**未 commit**（铁律，待用户确认收尾：提交并推送 / 暂存不提交 + 是否继续其余 5 处 Class F）。
+- **回归**：全量分块回归 task tMmhUP：**2368 passed / 0 failed / 0 errors / 7 skipped**（22 分块 hung=0，独立聚合复核一致；2365 基线 + R31 3 = 2368），零回归。已提交 `af12c4a` 并 push（`git ls-remote` 核验一致）。
+
+## Class F 扩量收官（F1–F5，2026-10-16）
+- 用户确认「继续扩量其余5处」，R31 瞬态缓存模式推广至 score_predict / prediction / rule_recommendation / attribution / engagement，全部零回归收官。基线 2368→**2389**（+21 用例）。
+- **统一模式**：批量入口循环前一次 IN 预取（按主键分组）+ 单生函数顶部命中即返 + try/finally 清理；批量入口间 save-restore（`_prev_bulk`）防嵌套覆盖；数值等价靠共用纯函数/内存分流；SQL 计数 harness 证「与 N 无关」。
+- **落地明细**（均为纯 CRLF，EOL 守恒）：
+  - F2 `prediction_service.py`：predict_batch→每生 1 查 ScoreRecord → 1 条 IN（`_prefetch_score_history`）。
+  - F3 `rule_recommendation_service.py`：规则维度 N+1（suggest_rule_optimizations/get_rule_statistics/evaluate_model→get_rule_effectiveness 每规则 1 查）→ 1 条 IN 按 rule_id 分组（`_prefetch_rule_records` + `_collect_rule_effectiveness` 辅助降 C901）。
+  - F1 `score_predict_service.py`：4 个批量入口每生 3 查 → 三缓存（`_bulk_users`/`_bulk_records`/`_bulk_class_users`，None class_name 用 IS NULL）；`get_score_distribution` 无 days 参数预取窗口固定 30。
+  - F5 `engagement_service.py`：batch_rank 每生 5 查 → 4 条 IN + 作业全局 1 条（`_prefetch_engagement`）；抽 `_sum_leave_days` 纯函数、`_calc_homework_rate` 加 `submissions=None`；`batch_rank` 内写模块级 `_BULK` 必须 `global`；weekly_trend 异质 end_date 不纳入预取。
+  - F4 `attribution_service.py`（最复杂）：batch_analyze 每生 9 查 → 5 条预取（Score join Exam before/after 各 1 + ScoreRecord/Attendance/HomeworkSubmission 各 1 条 IN 后内存分流）；**窗口基准时间统一取自缓存 ref**（否则每生 datetime.now() 微秒差致缓存键不命中）；抽 3 纯函数 + `_MISSING` 哨兵。
+- **共性现象（非缺陷）**：模型的 student/rule 关系为 `lazy="selectin"`，IN 预取行时 ORM 自动附带 1 条 user IN 查询——断言证「与 N 无关」而非硬等于小值（R31/F2/F3/F5 同款）。
+- **坑**：① Read 工具显示与磁盘真相可能有偏差（evaluate_model message 实为「没有学生数据」）——锚点替换前必须二进制核验；② C901 敏感点（F3 evaluate_model 11→抽辅助）；③ 测试 seed 唯一约束冲突（class_info.name / subject.code）须加班级前缀。
+- 新测试 5 文件 21 用例（test_f1~f5_*_nplus1.py，纯 LF）；全量回归 task nUJi8n：**2389/0/0/7**（22 分块 hung=0，独立聚合一致），零回归。**未 commit**（铁律）。
 
 ## 写路径 N+1 战役收官（R28–R30，2026-10-15）
 - 三候选全部落地：device_service 批量加组（R28）、heartbeat 超时告警 IN 预取（R29）、nlp train_model 匹配统计批处理（R30）。基线 2325→2365（写路径 +10 用例）。全程零回归。

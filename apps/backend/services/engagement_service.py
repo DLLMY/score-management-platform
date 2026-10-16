@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 from models import (
@@ -36,6 +37,11 @@ LEAVE_PENALTY_CAP = 15.0
 LEVEL_HIGH = 70
 LEVEL_MEDIUM = 45
 
+# 瞬态批量缓存：batch_rank 循环前预取，calculate_engagement 命中即返，用后即清
+# 结构：{attendance:{sid:rows}, assignments:[...], records:{sid:rows},
+#        leaves:{sid:rows}, submissions:{sid:rows}}
+_BULK = None
+
 
 def _to_date(value):
     """将 datetime/date 归一为 date。"""
@@ -44,14 +50,8 @@ def _to_date(value):
     return value
 
 
-def _count_leave_days(user_id, cutoff, now):
-    """统计窗口内已批准请假的天数（按与窗口重叠的实际天数计）。"""
-    leaves = Approval.query.filter(
-        Approval.student_id == user_id,
-        Approval.type == "leave",
-        Approval.status == "approved",
-        Approval.end_date >= cutoff,
-    ).all()
+def _sum_leave_days(leaves, cutoff, now):
+    """统计已批准请假行在窗口内的重叠天数（纯函数，与 _count_leave_days 等价）。"""
     total = 0
     for lv in leaves:
         start = _to_date(lv.start_date)
@@ -63,6 +63,17 @@ def _count_leave_days(user_id, cutoff, now):
         if e >= s:
             total += (e - s).days + 1
     return total
+
+
+def _count_leave_days(user_id, cutoff, now):
+    """统计窗口内已批准请假的天数（按与窗口重叠的实际天数计）。"""
+    leaves = Approval.query.filter(
+        Approval.student_id == user_id,
+        Approval.type == "leave",
+        Approval.status == "approved",
+        Approval.end_date >= cutoff,
+    ).all()
+    return _sum_leave_days(leaves, cutoff, now)
 
 
 def calculate_engagement(user_id, days=30, end_date=None):
@@ -93,28 +104,41 @@ def calculate_engagement(user_id, days=30, end_date=None):
     cutoff = now - timedelta(days=days)
     cutoff_dt = datetime.combine(cutoff, datetime.min.time())
 
-    # ---- 出勤 ----
-    attendances = Attendance.query.filter(
-        Attendance.student_id == user_id,
-        Attendance.date >= cutoff,
-    ).all()
-    attendance_rate = _calc_attendance_rate(attendances)
+    # ---- 取数（批量预取命中或单生查询，逐字段等价）----
+    bulk = _BULK
+    if bulk is not None and user_id in bulk["attendance"]:
+        attendances = bulk["attendance"].get(user_id, [])
+        assignments = bulk["assignments"]
+        records = bulk["records"].get(user_id, [])
+        attendance_rate = _calc_attendance_rate(attendances)
+        homework_rate = _calc_homework_rate(
+            assignments, user_id, bulk["submissions"].get(user_id, [])
+        )
+        activity_rate = _calc_activity_rate(records, days)
+        leave_days = _sum_leave_days(bulk["leaves"].get(user_id, []), cutoff, now)
+    else:
+        # ---- 出勤 ----
+        attendances = Attendance.query.filter(
+            Attendance.student_id == user_id,
+            Attendance.date >= cutoff,
+        ).all()
+        attendance_rate = _calc_attendance_rate(attendances)
 
-    # ---- 作业 ----
-    assignments = HomeworkAssignment.query.filter(
-        HomeworkAssignment.assigned_date >= cutoff,
-    ).all()
-    homework_rate = _calc_homework_rate(assignments, user_id)
+        # ---- 作业 ----
+        assignments = HomeworkAssignment.query.filter(
+            HomeworkAssignment.assigned_date >= cutoff,
+        ).all()
+        homework_rate = _calc_homework_rate(assignments, user_id)
 
-    # ---- 积分活跃度（无积分行为记录时记为缺失，参与权重重归一化）----
-    records = ScoreRecord.query.filter(
-        ScoreRecord.student_id == user_id,
-        ScoreRecord.created_at >= cutoff_dt,
-    ).all()
-    activity_rate = _calc_activity_rate(records, days)
+        # ---- 积分活跃度（无积分行为记录时记为缺失，参与权重重归一化）----
+        records = ScoreRecord.query.filter(
+            ScoreRecord.student_id == user_id,
+            ScoreRecord.created_at >= cutoff_dt,
+        ).all()
+        activity_rate = _calc_activity_rate(records, days)
 
-    # ---- 请假 ----
-    leave_days = _count_leave_days(user_id, cutoff, now)
+        # ---- 请假 ----
+        leave_days = _count_leave_days(user_id, cutoff, now)
 
     # ---- 汇总 ----
     rates = {
@@ -217,16 +241,21 @@ def _calc_attendance_rate(attendances):
     return weighted / len(attendances)
 
 
-def _calc_homework_rate(assignments, user_id):
-    """计算作业提交率（迟交半价；无作业返回 None）。"""
+def _calc_homework_rate(assignments, user_id, submissions=None):
+    """计算作业提交率（迟交半价；无作业返回 None）。
+
+    submissions 为 None 时走 DB 查询（单生路径）；批量预取命中时由调用方
+    传入该生的提交行列表（与查询结果逐字段等价）。
+    """
     if not assignments:
         return None
     sub_map = {}
-    subs = HomeworkSubmission.query.filter(
-        HomeworkSubmission.student_id == user_id,
-        HomeworkSubmission.assignment_id.in_([a.id for a in assignments]),
-    ).all()
-    for s in subs:
+    if submissions is None:
+        submissions = HomeworkSubmission.query.filter(
+            HomeworkSubmission.student_id == user_id,
+            HomeworkSubmission.assignment_id.in_([a.id for a in assignments]),
+        ).all()
+    for s in submissions:
         sub_map[s.assignment_id] = s
     submitted = 0
     late = 0
@@ -325,6 +354,7 @@ def batch_rank(class_name=None, days=30):
             failed_students: [隔离的单生异常 {user_id,name,class_name,error}],
         }
     """
+    global _BULK
     days = max(int(days), 1)
     query = User.query
     if class_name:
@@ -333,47 +363,53 @@ def batch_rank(class_name=None, days=30):
     total = len(users)
     students = []
     failed_students = []
+    _prev_bulk = _BULK
+    if _prev_bulk is None:
+        _BULK = _prefetch_engagement(users, days)
 
-    for u in users:
-        try:
-            res = calculate_engagement(u.id, days)
-            students.append(
-                {
-                    "user_id": int(u.id),
-                    "name": u.name,
-                    "class_name": getattr(u, "class_name", "") or "",
-                    "engagement_score": float(res["engagement_score"]),
-                    "level": res["level"],
-                    "has_data": bool(res["has_data"]),
-                    "components": {
-                        "attendance_rate": (
-                            round(float(res["components"]["attendance_rate"]), 3)
-                            if res["components"].get("attendance_rate") is not None
-                            else None
-                        ),
-                        "homework_rate": (
-                            round(float(res["components"]["homework_rate"]), 3)
-                            if res["components"].get("homework_rate") is not None
-                            else None
-                        ),
-                        "activity_rate": (
-                            round(float(res["components"]["activity_rate"]), 3)
-                            if res["components"].get("activity_rate") is not None
-                            else None
-                        ),
-                        "leave_days": int(res["components"].get("leave_days", 0)),
-                    },
-                }
-            )
-        except Exception as exc:
-            failed_students.append(
-                {
-                    "user_id": int(u.id),
-                    "name": u.name,
-                    "class_name": getattr(u, "class_name", "") or "",
-                    "error": str(exc),
-                }
-            )
+    try:
+        for u in users:
+            try:
+                res = calculate_engagement(u.id, days)
+                students.append(
+                    {
+                        "user_id": int(u.id),
+                        "name": u.name,
+                        "class_name": getattr(u, "class_name", "") or "",
+                        "engagement_score": float(res["engagement_score"]),
+                        "level": res["level"],
+                        "has_data": bool(res["has_data"]),
+                        "components": {
+                            "attendance_rate": (
+                                round(float(res["components"]["attendance_rate"]), 3)
+                                if res["components"].get("attendance_rate") is not None
+                                else None
+                            ),
+                            "homework_rate": (
+                                round(float(res["components"]["homework_rate"]), 3)
+                                if res["components"].get("homework_rate") is not None
+                                else None
+                            ),
+                            "activity_rate": (
+                                round(float(res["components"]["activity_rate"]), 3)
+                                if res["components"].get("activity_rate") is not None
+                                else None
+                            ),
+                            "leave_days": int(res["components"].get("leave_days", 0)),
+                        },
+                    }
+                )
+            except Exception as exc:
+                failed_students.append(
+                    {
+                        "user_id": int(u.id),
+                        "name": u.name,
+                        "class_name": getattr(u, "class_name", "") or "",
+                        "error": str(exc),
+                    }
+                )
+    finally:
+        _BULK = _prev_bulk
 
     # 有数据优先；同档按分数降序；无数据排最后
     students.sort(key=lambda r: (not r["has_data"], -r["engagement_score"]))
@@ -402,3 +438,57 @@ class EngagementService:
     calculate_engagement = staticmethod(calculate_engagement)
     weekly_trend = staticmethod(weekly_trend)
     batch_rank = staticmethod(batch_rank)
+def _prefetch_engagement(users, days):
+    """batch_rank 循环前批量预取：4 条 IN（按 student_id 分组）+ 作业全局 1 条。
+
+    与单生 calculate_engagement 的逐项查询等价：
+          - Attendance：student_id IN + date >= cutoff（同窗口）；
+          - HomeworkAssignment：assigned_date >= cutoff（全局，与学生无关）；
+          - ScoreRecord：student_id IN + created_at >= cutoff_dt；
+          - Approval：student_id IN + type/status/end_date 条件；
+          - HomeworkSubmission：student_id IN + assignment_id IN（assignments 派生）。
+        查询数恒为 4~5，与学生数 N 无关（原逐生 5N 条）。
+        """
+    days = max(int(days), 1)
+    user_ids = [int(u.id) for u in users]
+    now = datetime.now().date()
+    cutoff = now - timedelta(days=days)
+    cutoff_dt = datetime.combine(cutoff, datetime.min.time())
+
+    attendances = Attendance.query.filter(
+        Attendance.student_id.in_(user_ids),
+        Attendance.date >= cutoff,
+    ).all()
+    assignments = HomeworkAssignment.query.filter(
+        HomeworkAssignment.assigned_date >= cutoff,
+    ).all()
+    records = ScoreRecord.query.filter(
+        ScoreRecord.student_id.in_(user_ids),
+        ScoreRecord.created_at >= cutoff_dt,
+    ).all()
+    leaves = Approval.query.filter(
+        Approval.student_id.in_(user_ids),
+        Approval.type == "leave",
+        Approval.status == "approved",
+        Approval.end_date >= cutoff,
+    ).all()
+    submissions = []
+    if assignments:
+        submissions = HomeworkSubmission.query.filter(
+            HomeworkSubmission.student_id.in_(user_ids),
+            HomeworkSubmission.assignment_id.in_([a.id for a in assignments]),
+        ).all()
+
+    def _group(rows):
+        grouped = defaultdict(list)
+        for r in rows:
+            grouped[r.student_id].append(r)
+        return grouped
+
+    return {
+        "attendance": _group(attendances),
+        "assignments": assignments,
+        "records": _group(records),
+        "leaves": _group(leaves),
+        "submissions": _group(submissions),
+    }

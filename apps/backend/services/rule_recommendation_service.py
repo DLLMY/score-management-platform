@@ -24,6 +24,9 @@ class RuleRecommendationService:
         },
     }
 
+    # 瞬态批量缓存：批量入口循环前预取各规则积分记录，单生查询命中即返，用后即清
+    _bulk_rule_records = None
+
     @staticmethod
     def get_rule_effectiveness(rule_id, days=30):
         """
@@ -36,13 +39,17 @@ class RuleRecommendationService:
         Returns:
             dict: 规则有效性统计
         """
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-
-        records = ScoreRecord.query.filter(
-            ScoreRecord.rule_id == rule_id,
-            ScoreRecord.created_at >= start_date,
-        ).all()
+        # 批量预取命中：批量入口已按 rule_id 分组注入记录（与单条查询等价）
+        bulk = RuleRecommendationService._bulk_rule_records
+        if bulk is not None and rule_id in bulk:
+            records = bulk[rule_id]
+        else:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            records = ScoreRecord.query.filter(
+                ScoreRecord.rule_id == rule_id,
+                ScoreRecord.created_at >= start_date,
+            ).all()
 
         if not records:
             return {
@@ -231,79 +238,89 @@ class RuleRecommendationService:
             list: 规则优化建议列表
         """
         rules = ScoreRule.query.all()
+        _prev_bulk = RuleRecommendationService._bulk_rule_records
+        if _prev_bulk is None:
+            RuleRecommendationService._bulk_rule_records = (
+                RuleRecommendationService._prefetch_rule_records(
+                    [r.id for r in rules], days
+                )
+            )
 
         optimizations = []
 
-        for rule in rules:
-            effectiveness = RuleRecommendationService.get_rule_effectiveness(rule.id, days)
+        try:
+            for rule in rules:
+                effectiveness = RuleRecommendationService.get_rule_effectiveness(rule.id, days)
 
-            # 分析优化机会
-            suggestions = []
+                # 分析优化机会
+                suggestions = []
 
-            # 使用频率低的规则
-            if effectiveness["usage_count"] < 5:
-                suggestions.append(
-                    {
-                        "type": "low_usage",
-                        "message": f"规则'{rule.name}'使用频率低，建议评估是否需要保留或调整触发条件",
-                    }
-                )
+                # 使用频率低的规则
+                if effectiveness["usage_count"] < 5:
+                    suggestions.append(
+                        {
+                            "type": "low_usage",
+                            "message": f"规则'{rule.name}'使用频率低，建议评估是否需要保留或调整触发条件",
+                        }
+                    )
 
-            # 效果不明显的规则
-            if abs(effectiveness["avg_score_change"]) < 1 and effectiveness["usage_count"] > 10:
-                suggested_score = rule.score * 1.5
-                suggestions.append(
-                    {
-                        "type": "low_impact",
-                        "message": f"规则'{rule.name}'效果不明显，建议调整分值",
-                        "current_score": rule.score,
-                        "suggested_score": round(suggested_score, 0),
-                    }
-                )
+                # 效果不明显的规则
+                if abs(effectiveness["avg_score_change"]) < 1 and effectiveness["usage_count"] > 10:
+                    suggested_score = rule.score * 1.5
+                    suggestions.append(
+                        {
+                            "type": "low_impact",
+                            "message": f"规则'{rule.name}'效果不明显，建议调整分值",
+                            "current_score": rule.score,
+                            "suggested_score": round(suggested_score, 0),
+                        }
+                    )
 
-            # 效果显著的规则
-            if effectiveness["effectiveness"] > 0.7 and abs(rule.score) < 10:
-                suggested_score = rule.score * 1.3
-                suggestions.append(
-                    {
-                        "type": "high_effectiveness",
-                        "message": f"规则'{rule.name}'效果显著，建议提高分值以增强激励",
-                        "current_score": rule.score,
-                        "suggested_score": round(suggested_score, 0),
-                    }
-                )
+                # 效果显著的规则
+                if effectiveness["effectiveness"] > 0.7 and abs(rule.score) < 10:
+                    suggested_score = rule.score * 1.3
+                    suggestions.append(
+                        {
+                            "type": "high_effectiveness",
+                            "message": f"规则'{rule.name}'效果显著，建议提高分值以增强激励",
+                            "current_score": rule.score,
+                            "suggested_score": round(suggested_score, 0),
+                        }
+                    )
 
-            # 趋势下降的规则
-            if effectiveness["trend"] == "decreasing":
-                suggestions.append(
-                    {
-                        "type": "declining",
-                        "message": f"规则'{rule.name}'效果呈下降趋势，建议评估规则适用性",
-                    }
-                )
+                # 趋势下降的规则
+                if effectiveness["trend"] == "decreasing":
+                    suggestions.append(
+                        {
+                            "type": "declining",
+                            "message": f"规则'{rule.name}'效果呈下降趋势，建议评估规则适用性",
+                        }
+                    )
 
-            if suggestions:
-                # 规整 category 为字符串，避免 SQLAlchemy 关系对象被 jsonify
-                _cat = rule.category
-                if isinstance(_cat, ScoreCategory):
-                    rule_category_name = _cat.name
-                elif isinstance(_cat, str):
-                    rule_category_name = _cat
-                else:
-                    rule_category_name = None
-                optimizations.append(
-                    {
-                        "type": "optimization",
-                        "rule_id": rule.id,
-                        "rule_name": rule.name,
-                        "rule_category": rule_category_name,
-                        "current_score": rule.score,
-                        "effectiveness": effectiveness["effectiveness"],
-                        "usage_count": effectiveness["usage_count"],
-                        "trend": effectiveness["trend"],
-                        "suggestions": suggestions,
-                    }
-                )
+                if suggestions:
+                    # 规整 category 为字符串，避免 SQLAlchemy 关系对象被 jsonify
+                    _cat = rule.category
+                    if isinstance(_cat, ScoreCategory):
+                        rule_category_name = _cat.name
+                    elif isinstance(_cat, str):
+                        rule_category_name = _cat
+                    else:
+                        rule_category_name = None
+                    optimizations.append(
+                        {
+                            "type": "optimization",
+                            "rule_id": rule.id,
+                            "rule_name": rule.name,
+                            "rule_category": rule_category_name,
+                            "current_score": rule.score,
+                            "effectiveness": effectiveness["effectiveness"],
+                            "usage_count": effectiveness["usage_count"],
+                            "trend": effectiveness["trend"],
+                            "suggestions": suggestions,
+                        }
+                    )
+        finally:
+            RuleRecommendationService._bulk_rule_records = _prev_bulk
 
         # 按有效性排序
         optimizations.sort(key=lambda x: x["effectiveness"], reverse=True)
@@ -504,6 +521,13 @@ class RuleRecommendationService:
             dict: 规则统计信息
         """
         rules = ScoreRule.query.all()
+        _prev_bulk = RuleRecommendationService._bulk_rule_records
+        if _prev_bulk is None:
+            RuleRecommendationService._bulk_rule_records = (
+                RuleRecommendationService._prefetch_rule_records(
+                    [r.id for r in rules], days
+                )
+            )
 
         stats = {
             "total_rules": len(rules),
@@ -516,32 +540,35 @@ class RuleRecommendationService:
 
         effectiveness_scores = []
 
-        for rule in rules:
-            eff = RuleRecommendationService.get_rule_effectiveness(rule.id, days)
-            effectiveness_scores.append(eff["effectiveness"])
+        try:
+            for rule in rules:
+                eff = RuleRecommendationService.get_rule_effectiveness(rule.id, days)
+                effectiveness_scores.append(eff["effectiveness"])
 
-            if eff["usage_count"] > 0:
-                stats["active_rules"] += 1
-                if eff["effectiveness"] > 0.6:
-                    stats["high_effectiveness"].append(
-                        {
-                            "rule_id": rule.id,
-                            "rule_name": rule.name,
-                            "effectiveness": eff["effectiveness"],
-                            "usage_count": eff["usage_count"],
-                        }
-                    )
-                elif eff["effectiveness"] < 0.2:
-                    stats["low_effectiveness"].append(
-                        {
-                            "rule_id": rule.id,
-                            "rule_name": rule.name,
-                            "effectiveness": eff["effectiveness"],
-                            "usage_count": eff["usage_count"],
-                        }
-                    )
-            else:
-                stats["inactive_rules"] += 1
+                if eff["usage_count"] > 0:
+                    stats["active_rules"] += 1
+                    if eff["effectiveness"] > 0.6:
+                        stats["high_effectiveness"].append(
+                            {
+                                "rule_id": rule.id,
+                                "rule_name": rule.name,
+                                "effectiveness": eff["effectiveness"],
+                                "usage_count": eff["usage_count"],
+                            }
+                        )
+                    elif eff["effectiveness"] < 0.2:
+                        stats["low_effectiveness"].append(
+                            {
+                                "rule_id": rule.id,
+                                "rule_name": rule.name,
+                                "effectiveness": eff["effectiveness"],
+                                "usage_count": eff["usage_count"],
+                            }
+                        )
+                else:
+                    stats["inactive_rules"] += 1
+        finally:
+            RuleRecommendationService._bulk_rule_records = _prev_bulk
 
         if effectiveness_scores:
             stats["avg_effectiveness"] = round(np.mean(effectiveness_scores), 2)
@@ -708,10 +735,9 @@ class RuleRecommendationService:
         coverage_rate = round(covered / len(records), 4) if records else 0.0
 
         # 计算规则有效性
-        effectiveness_scores = []
-        for rule in existing_rules:
-            eff = RuleRecommendationService.get_rule_effectiveness(rule.id, days)
-            effectiveness_scores.append(eff["effectiveness"])
+        effectiveness_scores = RuleRecommendationService._collect_rule_effectiveness(
+            existing_rules, days
+        )
 
         avg_effectiveness = np.mean(effectiveness_scores) if effectiveness_scores else 0
 
@@ -734,3 +760,43 @@ class RuleRecommendationService:
                 "combination_recommendations": recommendations["summary"]["combination_count"],
             },
         }
+    @staticmethod
+    def _collect_rule_effectiveness(rules, days):
+        """逐规则汇总有效性分数（批量 IN 预取 + 瞬态缓存，查询数与规则数无关）。
+
+        save-restore 模式：外层已设缓存时复用不覆盖，finally 恢复外层，
+        由最外层统一清理；独立调用时自设自清。
+        """
+        scores = []
+        _prev_bulk = RuleRecommendationService._bulk_rule_records
+        if _prev_bulk is None:
+            RuleRecommendationService._bulk_rule_records = (
+                RuleRecommendationService._prefetch_rule_records([r.id for r in rules], days)
+            )
+        try:
+            for rule in rules:
+                eff = RuleRecommendationService.get_rule_effectiveness(rule.id, days)
+                scores.append(eff["effectiveness"])
+        finally:
+            RuleRecommendationService._bulk_rule_records = _prev_bulk
+        return scores
+
+    @staticmethod
+    def _prefetch_rule_records(rule_ids, days=30):
+        """批量入口循环前一次 IN 预取各规则的积分记录，按 rule_id 分组。
+
+        与单生 get_rule_effectiveness 的查询等价：同一窗口
+        （created_at >= now - days）、无 ORDER BY（组内保持底层返回顺序，
+        与单条 rule_id=? 索引扫描的 rowid 升序一致）。
+        查询数恒为 1，与规则数 R 无关（原逐规则 R 条）。
+        """
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        rows = ScoreRecord.query.filter(
+            ScoreRecord.rule_id.in_(rule_ids),
+            ScoreRecord.created_at >= start_date,
+        ).all()
+        grouped = defaultdict(list)
+        for r in rows:
+            grouped[r.rule_id].append(r)
+        return {rid: grouped.get(rid, []) for rid in rule_ids}

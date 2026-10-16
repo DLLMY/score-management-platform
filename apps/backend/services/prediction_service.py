@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -15,6 +16,9 @@ CACHE_PREFIX = "prediction:"
 class PredictionService:
     """学生行为预测服务类"""
 
+    # 瞬态批量缓存：predict_batch 预取全班积分历史后注入，单生查询命中即返，用后即清
+    _bulk_history = None
+
     @staticmethod
     def get_student_score_history(user_id, days=30):
         """
@@ -26,6 +30,10 @@ class PredictionService:
             list: 积分变化记录列表
         """
         start_date = datetime.now() - timedelta(days=days)
+        # 批量预取命中：predict_batch 已按 student_id 分组注入历史（与原查询逐字段等价）
+        bulk = PredictionService._bulk_history
+        if bulk is not None and user_id in bulk:
+            return bulk[user_id]
         records = (
             ScoreRecord.query.filter(
                 ScoreRecord.student_id == user_id, ScoreRecord.created_at >= start_date
@@ -166,6 +174,7 @@ class PredictionService:
         if class_name:
             query = query.filter(User.class_name == class_name)
         users = query.all()
+        PredictionService._bulk_history = PredictionService._prefetch_score_history(users)
         results = {
             "total_students": len(users),
             "predictions": [],
@@ -173,35 +182,38 @@ class PredictionService:
             "failed": 0,
             "failed_students": [],
         }
-        for user in users:
-            try:
-                prediction = PredictionService.predict_future_scores(user.id, days)
-            except Exception as e:
-                # 单生异常隔离：失败学生不影响其余学生与整体响应
-                results["failed"] += 1
-                results["failed_students"].append(
+        try:
+            for user in users:
+                try:
+                    prediction = PredictionService.predict_future_scores(user.id, days)
+                except Exception as e:
+                    # 单生异常隔离：失败学生不影响其余学生与整体响应
+                    results["failed"] += 1
+                    results["failed_students"].append(
+                        {
+                            "user_id": int(user.id),
+                            "name": user.name,
+                            "class_name": getattr(user, "class_name", "") or "",
+                            "error": str(e),
+                        }
+                    )
+                    continue
+                results["predictions"].append(
                     {
-                        "user_id": int(user.id),
+                        "user_id": user.id,
                         "name": user.name,
-                        "class_name": getattr(user, "class_name", "") or "",
-                        "error": str(e),
+                        "class_name": user.class_name,
+                        "prediction": prediction,
                     }
                 )
-                continue
-            results["predictions"].append(
-                {
-                    "user_id": user.id,
-                    "name": user.name,
-                    "class_name": user.class_name,
-                    "prediction": prediction,
-                }
-            )
-            if prediction["trend"] == "rising":
-                results["summary"]["rising_count"] += 1
-            elif prediction["trend"] == "stable":
-                results["summary"]["stable_count"] += 1
-            else:
-                results["summary"]["falling_count"] += 1
+                if prediction["trend"] == "rising":
+                    results["summary"]["rising_count"] += 1
+                elif prediction["trend"] == "stable":
+                    results["summary"]["stable_count"] += 1
+                else:
+                    results["summary"]["falling_count"] += 1
+        finally:
+            PredictionService._bulk_history = None
         return results
 
     @staticmethod
@@ -302,3 +314,43 @@ class PredictionService:
         for days in [7, 14, 30]:
             cache_key = f"{CACHE_PREFIX}predict:{user_id}:{days}"
             cache.delete(cache_key)
+
+    @staticmethod
+    def _prefetch_score_history(users, days=30):
+        """predict_batch 批量预取：一次 IN 查询取全班积分历史，按 student_id 分组。
+
+        与单生 get_student_score_history 逐字段等价：
+          - 同一窗口（created_at >= now - days，order_by created_at 升序）；
+          - cumulative_score 按同一顺序累加；
+          - rule_name 经 hasattr 兼容检查。
+        查询数恒为 1（+ 调用方已执行的 users 查询），与 N 无关。
+        """
+        start_date = datetime.now() - timedelta(days=days)
+        user_ids = [u.id for u in users]
+        rows = (
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id.in_(user_ids),
+                ScoreRecord.created_at >= start_date,
+            )
+            .order_by(ScoreRecord.created_at.asc())
+            .all()
+        )
+        grouped = defaultdict(list)
+        for r in rows:
+            grouped[r.student_id].append(r)
+        result = {}
+        for uid in user_ids:
+            history = []
+            cumulative_score = 0
+            for record in grouped.get(uid, []):
+                cumulative_score += record.score_change
+                history.append(
+                    {
+                        "date": record.created_at.isoformat(),
+                        "score_change": record.score_change,
+                        "cumulative_score": cumulative_score,
+                        "rule_name": record.rule_name if hasattr(record, "rule_name") else None,
+                    }
+                )
+            result[uid] = history
+        return result

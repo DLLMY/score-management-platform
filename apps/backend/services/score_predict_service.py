@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -6,10 +7,18 @@ from models import ScoreRecord, User, get_by_id
 
 
 class ScorePredictService:
+    # 瞬态批量缓存：批量入口循环前预取，单生查询命中即返，用后即清
+    _bulk_users = None
+    _bulk_records = None
+    _bulk_class_users = None
 
     @staticmethod
     def _get_score_records(user_id, days=30):
         """获取学生积分记录"""
+        bulk = ScorePredictService._bulk_records
+        if bulk is not None and user_id in bulk:
+            return bulk[user_id]
+
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
 
@@ -34,7 +43,11 @@ class ScorePredictService:
         Returns:
             dict: 特征数据
         """
-        user = get_by_id(User, user_id)
+        bulk_users = ScorePredictService._bulk_users
+        if bulk_users is not None and user_id in bulk_users:
+            user = bulk_users[user_id]
+        else:
+            user = get_by_id(User, user_id)
         if not user:
             return None
 
@@ -115,7 +128,11 @@ class ScorePredictService:
             features["recent_trend"] = "stable"
 
         # 班级排名特征
-        class_users = User.query.filter(User.class_name == user.class_name).all()
+        bulk_class = ScorePredictService._bulk_class_users
+        if bulk_class is not None and user.class_name in bulk_class:
+            class_users = bulk_class[user.class_name]
+        else:
+            class_users = User.query.filter(User.class_name == user.class_name).all()
         if class_users:
             scores = [u.current_score for u in class_users]
             features["class_rank"] = sum(1 for s in scores if s > user.current_score) + 1
@@ -264,6 +281,17 @@ class ScorePredictService:
             query = query.filter(User.class_name == class_name)
 
         users = query.all()
+        _prev_users = ScorePredictService._bulk_users
+        _prev_records = ScorePredictService._bulk_records
+        _prev_class = ScorePredictService._bulk_class_users
+        if _prev_users is None:
+            ScorePredictService._bulk_users = {u.id: u for u in users}
+            ScorePredictService._bulk_records = ScorePredictService._prefetch_score_records(
+                users, days
+            )
+            ScorePredictService._bulk_class_users = ScorePredictService._prefetch_class_users(
+                users
+            )
 
         predictions = []
         failed_students = []
@@ -277,33 +305,38 @@ class ScorePredictService:
 
         total_score = 0.0
 
-        for user in users:
-            try:
-                result = ScorePredictService.predict_exam_score(user.id, days)
-            except Exception as e:
-                # 单生异常隔离：失败学生不影响其余学生与整体响应
-                failed_students.append(
-                    {
-                        "user_id": int(user.id),
-                        "name": user.name,
-                        "class_name": getattr(user, "class_name", "") or "",
-                        "error": str(e),
-                    }
-                )
-                continue
-            predictions.append(result)
+        try:
+            for user in users:
+                try:
+                    result = ScorePredictService.predict_exam_score(user.id, days)
+                except Exception as e:
+                    # 单生异常隔离：失败学生不影响其余学生与整体响应
+                    failed_students.append(
+                        {
+                            "user_id": int(user.id),
+                            "name": user.name,
+                            "class_name": getattr(user, "class_name", "") or "",
+                            "error": str(e),
+                        }
+                    )
+                    continue
+                predictions.append(result)
 
-            if "predicted_score" in result:
-                total_score += result["predicted_score"]
-                if result["predicted_score"] >= 80:
-                    summary["high_performance"] += 1
-                elif result["predicted_score"] >= 60:
-                    summary["medium_performance"] += 1
-                else:
-                    summary["low_performance"] += 1
+                if "predicted_score" in result:
+                    total_score += result["predicted_score"]
+                    if result["predicted_score"] >= 80:
+                        summary["high_performance"] += 1
+                    elif result["predicted_score"] >= 60:
+                        summary["medium_performance"] += 1
+                    else:
+                        summary["low_performance"] += 1
 
-        if predictions:
-            summary["avg_predicted_score"] = round(total_score / len(predictions), 2)
+            if predictions:
+                summary["avg_predicted_score"] = round(total_score / len(predictions), 2)
+        finally:
+            ScorePredictService._bulk_users = _prev_users
+            ScorePredictService._bulk_records = _prev_records
+            ScorePredictService._bulk_class_users = _prev_class
 
         # 按预测成绩排序
         predictions.sort(key=lambda x: x.get("predicted_score", 0), reverse=True)
@@ -333,6 +366,17 @@ class ScorePredictService:
             query = query.filter(User.class_name == class_name)
 
         users = query.all()
+        _prev_users = ScorePredictService._bulk_users
+        _prev_records = ScorePredictService._bulk_records
+        _prev_class = ScorePredictService._bulk_class_users
+        if _prev_users is None:
+            ScorePredictService._bulk_users = {u.id: u for u in users}
+            ScorePredictService._bulk_records = ScorePredictService._prefetch_score_records(
+                users, 30
+            )
+            ScorePredictService._bulk_class_users = ScorePredictService._prefetch_class_users(
+                users
+            )
 
         if not users:
             return {
@@ -341,11 +385,16 @@ class ScorePredictService:
                 "summary": {"total_students": 0},
             }
 
-        scores = []
-        for user in users:
-            result = ScorePredictService.predict_exam_score(user.id)
-            if "predicted_score" in result:
-                scores.append(result["predicted_score"])
+        try:
+            scores = []
+            for user in users:
+                result = ScorePredictService.predict_exam_score(user.id)
+                if "predicted_score" in result:
+                    scores.append(result["predicted_score"])
+        finally:
+            ScorePredictService._bulk_users = _prev_users
+            ScorePredictService._bulk_records = _prev_records
+            ScorePredictService._bulk_class_users = _prev_class
 
         # 计算分布
         if scores:
@@ -402,6 +451,17 @@ class ScorePredictService:
         """
         query = User.query.filter(User.role == "student")
         users = query.all()
+        _prev_users = ScorePredictService._bulk_users
+        _prev_records = ScorePredictService._bulk_records
+        _prev_class = ScorePredictService._bulk_class_users
+        if _prev_users is None:
+            ScorePredictService._bulk_users = {u.id: u for u in users}
+            ScorePredictService._bulk_records = ScorePredictService._prefetch_score_records(
+                users, days
+            )
+            ScorePredictService._bulk_class_users = ScorePredictService._prefetch_class_users(
+                users
+            )
 
         if not users:
             return {
@@ -411,14 +471,19 @@ class ScorePredictService:
             }
 
         # 收集训练数据特征
-        features_list = []
-        valid_users = 0
+        try:
+            features_list = []
+            valid_users = 0
 
-        for user in users:
-            features = ScorePredictService.get_student_features(user.id, days)
-            if features and features["total_records"] > 0:
-                features_list.append(features)
-                valid_users += 1
+            for user in users:
+                features = ScorePredictService.get_student_features(user.id, days)
+                if features and features["total_records"] > 0:
+                    features_list.append(features)
+                    valid_users += 1
+        finally:
+            ScorePredictService._bulk_users = _prev_users
+            ScorePredictService._bulk_records = _prev_records
+            ScorePredictService._bulk_class_users = _prev_class
 
         if not features_list:
             return {
@@ -501,6 +566,17 @@ class ScorePredictService:
         """
         query = User.query.filter(User.role == "student")
         users = query.all()
+        _prev_users = ScorePredictService._bulk_users
+        _prev_records = ScorePredictService._bulk_records
+        _prev_class = ScorePredictService._bulk_class_users
+        if _prev_users is None:
+            ScorePredictService._bulk_users = {u.id: u for u in users}
+            ScorePredictService._bulk_records = ScorePredictService._prefetch_score_records(
+                users, days
+            )
+            ScorePredictService._bulk_class_users = ScorePredictService._prefetch_class_users(
+                users
+            )
 
         if not users:
             return {
@@ -509,17 +585,22 @@ class ScorePredictService:
                 "metrics": {},
             }
 
-        predictions = []
-        actual_scores = []
+        try:
+            predictions = []
+            actual_scores = []
 
-        for user in users:
-            result = ScorePredictService.predict_exam_score(user.id, days)
-            if "predicted_score" in result:
-                predictions.append(result["predicted_score"])
-                # 注意：系统无真实考试成绩标签。此处以用户当前积分作为真实值锚点，
-                # 仅用于评估预测公式相对原始积分的偏离（公式自洽性），
-                # 不能代表对真实学业成绩的预测准确性。
-                actual_scores.append(user.current_score)
+            for user in users:
+                result = ScorePredictService.predict_exam_score(user.id, days)
+                if "predicted_score" in result:
+                    predictions.append(result["predicted_score"])
+                    # 注意：系统无真实考试成绩标签。此处以用户当前积分作为真实值锚点，
+                    # 仅用于评估预测公式相对原始积分的偏离（公式自洽性），
+                    # 不能代表对真实学业成绩的预测准确性。
+                    actual_scores.append(user.current_score)
+        finally:
+            ScorePredictService._bulk_users = _prev_users
+            ScorePredictService._bulk_records = _prev_records
+            ScorePredictService._bulk_class_users = _prev_class
 
         if len(predictions) < 2:
             return {
@@ -576,3 +657,43 @@ class ScorePredictService:
                 "avg_actual_score": round(np.mean(actual_arr), 2),
             },
         }
+    @staticmethod
+    def _prefetch_score_records(users, days=30):
+        """批量入口循环前一次 IN 预取全班积分记录，按 student_id 分组。
+
+        与单生 _get_score_records 等价：同一窗口
+        （created_at >= now - days）、order_by(created_at)（组内顺序一致）。
+        查询数恒为 1，与学生数 N 无关（原逐生 N 条）。
+        """
+        start_date = datetime.now() - timedelta(days=days)
+        user_ids = [u.id for u in users]
+        rows = (
+            ScoreRecord.query.filter(
+                ScoreRecord.student_id.in_(user_ids),
+                ScoreRecord.created_at >= start_date,
+            )
+            .order_by(ScoreRecord.created_at)
+            .all()
+        )
+        grouped = defaultdict(list)
+        for r in rows:
+            grouped[r.student_id].append(r)
+        return {uid: grouped.get(uid, []) for uid in user_ids}
+
+    @staticmethod
+    def _prefetch_class_users(users):
+        """批量入口循环前预取各班级学生名单，按 class_name 分组。
+
+        与单生班级排名查询（User.class_name == X，无 role 过滤）语义一致；
+        class_name 为 None 时用 IS NULL（IN 不含 NULL 语义不同）。
+        查询数恒为 1~2，与班级数无关（原逐生每生 1 条）。
+        """
+        class_names = {u.class_name for u in users}
+        result = {}
+        non_null = [c for c in class_names if c is not None]
+        if non_null:
+            for r in User.query.filter(User.class_name.in_(non_null)).all():
+                result.setdefault(r.class_name, []).append(r)
+        if None in class_names:
+            result[None] = User.query.filter(User.class_name.is_(None)).all()
+        return result
