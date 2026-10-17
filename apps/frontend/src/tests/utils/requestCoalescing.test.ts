@@ -3,7 +3,6 @@ import {
   requestCoalescer,
   coalesceRequest,
   invalidateRequestCache,
-  clearAllRequestCache,
 } from '../../utils/requestCoalescing';
 
 describe('RequestCoalescer', () => {
@@ -146,9 +145,5 @@ describe('requestCoalescer singleton', () => {
 
   test('invalidateRequestCache should delegate to singleton', () => {
     invalidateRequestCache('/api/test');
-  });
-
-  test('clearAllRequestCache should delegate to singleton', () => {
-    clearAllRequestCache();
   });
 });

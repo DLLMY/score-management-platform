@@ -79,41 +79,6 @@ export const generatePlaceholder = (
 };
 
 /**
- * 检查浏览器是否支持WebP格式
- * @returns Promise<boolean>
- */
-export const supportsWebP = (): Promise<boolean> => {
-  if (typeof window === 'undefined') return Promise.resolve(false);
-
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    img.src =
-      'data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAABBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==';
-  });
-};
-
-/**
- * 获取图片尺寸
- * @param src 图片URL
- * @returns 包含width和height的Promise
- */
-export const getImageDimensions = (src: string): Promise<{ width: number; height: number }> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      resolve({ width: img.width, height: img.height });
-      img.src = '';
-    };
-    img.onerror = () => {
-      reject(new Error(`Failed to load image: ${src}`));
-    };
-    img.src = src;
-  });
-};
-
-/**
  * 图片加载错误处理
  * @param e 错误事件
  */

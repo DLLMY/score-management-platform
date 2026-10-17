@@ -164,7 +164,10 @@ def init_config(app, lightweight=False):
     load_dotenv(os.path.join(basedir, ".env"))
 
     if not lightweight:
-        app.json_encoder = LazyJSONEncoder
+        # Flask 2.3 起 app.json_encoder 已移除；flasgger 的 LazyJSONEncoder 本身
+        # 就是 DefaultJSONProvider 子类，正确用法是赋给 app.json（否则 LazyString
+        # 无法序列化，/api/spec Swagger spec 端点会 500）
+        app.json = LazyJSONEncoder(app)
 
     if not lightweight:
         swagger_template = {

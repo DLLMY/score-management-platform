@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  downloadBlob,
-  downloadTextAsFile,
-  fetchAndDownload,
-  resolveFilenameFromResponse,
-} from '../download';
+import { downloadBlob, downloadTextAsFile } from '../download';
 
 describe('utils/download', () => {
   let anchor: HTMLAnchorElement;
@@ -50,94 +45,5 @@ describe('utils/download', () => {
     downloadTextAsFile('x', 'c.json');
     expect(anchor.download).toBe('c.json');
     expect(clickSpy).toHaveBeenCalled();
-  });
-
-  it('fetchAndDownload：GET 成功 → 触发下载', async () => {
-    const blob = new Blob(['data']);
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      blob: () => Promise.resolve(blob),
-    });
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
-    await fetchAndDownload('/api/x', 'd.xlsx');
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/x',
-      expect.objectContaining({ credentials: 'include' })
-    );
-    expect(clickSpy).toHaveBeenCalled();
-  });
-
-  it('fetchAndDownload：POST + body + headers 透传', async () => {
-    const blob = new Blob(['data']);
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      blob: () => Promise.resolve(blob),
-    });
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
-    await fetchAndDownload('/api/x', 'e.xlsx', {
-      method: 'POST',
-      body: '{"k":1}',
-      headers: { Authorization: 'Bearer t' },
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/x',
-      expect.objectContaining({
-        method: 'POST',
-        body: '{"k":1}',
-        headers: { Authorization: 'Bearer t' },
-        credentials: 'include',
-      })
-    );
-  });
-
-  it('fetchAndDownload：非 ok → 抛错（优先用响应文本）', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve('boom'),
-    });
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
-    await expect(fetchAndDownload('/api/x', 'f.xlsx')).rejects.toThrow('boom');
-  });
-
-  it('fetchAndDownload：非 ok 无文本 → 用状态码', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      text: () => Promise.resolve(''),
-    });
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
-    await expect(fetchAndDownload('/api/x', 'g.xlsx')).rejects.toThrow('下载失败 (404)');
-  });
-
-  it('resolveFilenameFromResponse：UTF-8 星号编码', () => {
-    const resp = {
-      headers: { get: () => "attachment; filename*=UTF-8''%E6%B5%8B%E8%AF%95.csv" },
-    } as unknown as Response;
-    expect(resolveFilenameFromResponse(resp, 'fallback.csv')).toBe('测试.csv');
-  });
-
-  it('resolveFilenameFromResponse：ASCII filename', () => {
-    const resp = {
-      headers: { get: () => 'attachment; filename="plain.csv"' },
-    } as unknown as Response;
-    expect(resolveFilenameFromResponse(resp, 'fallback.csv')).toBe('plain.csv');
-  });
-
-  it('resolveFilenameFromResponse：无 header → fallback', () => {
-    const resp = { headers: { get: () => null } } as unknown as Response;
-    expect(resolveFilenameFromResponse(resp, 'fallback.csv')).toBe('fallback.csv');
-  });
-
-  it('fetchAndDownload：非 ok 且 text() 抛错 → 回退状态码', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: () => Promise.reject(new Error('read fail')),
-    });
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
-    await expect(fetchAndDownload('/api/x', 'h.xlsx')).rejects.toThrow('下载失败 (500)');
   });
 });

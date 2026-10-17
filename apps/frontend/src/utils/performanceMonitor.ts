@@ -177,39 +177,4 @@ class PerformanceMonitor {
 
 export const performanceMonitor = new PerformanceMonitor();
 
-export const monitorApiRequest = <T>(name: string, fetcher: () => Promise<T>): Promise<T> => {
-  const id = performanceMonitor.start(name, 'api');
-  return fetcher().then(
-    (result) => {
-      performanceMonitor.end(id);
-      return result;
-    },
-    (error) => {
-      performanceMonitor.end(id);
-      performanceMonitor.recordError(name);
-      throw error;
-    }
-  );
-};
-
-export const withPerformanceMonitoring = <T extends (...args: unknown[]) => Promise<unknown>>(
-  fn: T,
-  name: string
-): T => {
-  return ((...args: unknown[]) => {
-    const id = performanceMonitor.start(name, 'api');
-    return fn(...args).then(
-      (result) => {
-        performanceMonitor.end(id);
-        return result;
-      },
-      (error) => {
-        performanceMonitor.end(id);
-        performanceMonitor.recordError(name);
-        throw error;
-      }
-    );
-  }) as T;
-};
-
 export { PerformanceMonitor };

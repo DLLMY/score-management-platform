@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   RequestCoalescer,
   requestCoalescer,
   coalesceRequest,
   invalidateRequestCache,
-  clearAllRequestCache,
 } from '../requestCoalescing';
 
 describe('RequestCoalescer · 合并与缓存', () => {
@@ -112,17 +111,11 @@ describe('RequestCoalescer · 合并与缓存', () => {
 });
 
 describe('requestCoalescing · 模块级单例导出', () => {
-  afterEach(() => {
-    clearAllRequestCache();
-  });
-
-  it('coalesceRequest / invalidateRequestCache / clearAllRequestCache 操作同一单例', async () => {
+  it('coalesceRequest / invalidateRequestCache 操作同一单例', async () => {
     const fetcher = vi.fn().mockResolvedValue('v');
     await coalesceRequest({ url: '/s', method: 'GET' }, fetcher);
     expect(requestCoalescer.getCacheSize()).toBeGreaterThanOrEqual(1);
     invalidateRequestCache('/s');
-    expect(requestCoalescer.getCacheSize()).toBe(0);
-    clearAllRequestCache();
     expect(requestCoalescer.getCacheSize()).toBe(0);
   });
 });

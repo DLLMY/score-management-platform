@@ -133,8 +133,4 @@ export const invalidateRequestCache = (url: string): void => {
   requestCoalescer.invalidateCache(url);
 };
 
-export const clearAllRequestCache = (): void => {
-  requestCoalescer.clearAll();
-};
-
 export { RequestCoalescer };

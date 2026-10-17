@@ -1,9 +1,4 @@
-import {
-  PerformanceMonitor,
-  performanceMonitor,
-  monitorApiRequest,
-  withPerformanceMonitoring,
-} from '../../utils/performanceMonitor';
+import { PerformanceMonitor, performanceMonitor } from '../../utils/performanceMonitor';
 
 describe('PerformanceMonitor', () => {
   let monitor: PerformanceMonitor;
@@ -207,62 +202,5 @@ describe('PerformanceMonitor', () => {
 describe('performanceMonitor singleton', () => {
   test('should export singleton instance', () => {
     expect(performanceMonitor).toBeInstanceOf(PerformanceMonitor);
-  });
-});
-
-describe('monitorApiRequest', () => {
-  beforeEach(() => {
-    performanceMonitor.reset();
-  });
-
-  test('should monitor successful API requests', async () => {
-    const fetcher = jest.fn().mockResolvedValue('result');
-
-    await monitorApiRequest('test-api', fetcher);
-
-    expect(fetcher).toHaveBeenCalled();
-
-    const stats = performanceMonitor.getStats();
-    expect(stats.totalRequests).toBe(1);
-  });
-
-  test('should monitor failed API requests', async () => {
-    const error = new Error('API error');
-    const fetcher = jest.fn().mockRejectedValue(error);
-
-    await expect(monitorApiRequest('test-api', fetcher)).rejects.toThrow(error);
-
-    expect(fetcher).toHaveBeenCalled();
-
-    const stats = performanceMonitor.getStats();
-    expect(stats.totalRequests).toBe(1);
-    expect(stats.errors).toBe(1);
-  });
-});
-
-describe('withPerformanceMonitoring', () => {
-  beforeEach(() => {
-    performanceMonitor.reset();
-  });
-
-  test('should wrap function with performance monitoring', async () => {
-    const originalFn = jest.fn().mockResolvedValue('result');
-    const wrappedFn = withPerformanceMonitoring(originalFn, 'wrapped-api');
-
-    await wrappedFn();
-
-    expect(originalFn).toHaveBeenCalled();
-
-    const stats = performanceMonitor.getStats();
-    expect(stats.totalRequests).toBeGreaterThan(0);
-  });
-
-  test('should pass arguments to original function', async () => {
-    const originalFn = jest.fn().mockResolvedValue('result');
-    const wrappedFn = withPerformanceMonitoring(originalFn, 'wrapped-api');
-
-    await wrappedFn('arg1', { key: 'value' });
-
-    expect(originalFn).toHaveBeenCalledWith('arg1', { key: 'value' });
   });
 });

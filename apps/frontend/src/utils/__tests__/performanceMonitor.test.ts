@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  PerformanceMonitor,
-  monitorApiRequest,
-  withPerformanceMonitoring,
-} from '../performanceMonitor';
+import { PerformanceMonitor } from '../performanceMonitor';
 
 vi.mock('../logger', () => ({
   default: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
@@ -87,19 +83,5 @@ describe('PerformanceMonitor', () => {
     m.reset();
     expect(m.getStats().errors).toBe(0);
     expect(m.getRecentEntries(10).length).toBe(0);
-  });
-
-  it('monitorApiRequest 包装成功与失败', async () => {
-    const ok = await monitorApiRequest('g', () => Promise.resolve(1));
-    expect(ok).toBe(1);
-    await expect(monitorApiRequest('b', () => Promise.reject(new Error('x')))).rejects.toThrow();
-  });
-
-  it('withPerformanceMonitoring 包装函数并记录', async () => {
-    const fn = withPerformanceMonitoring(
-      async (...args: unknown[]) => (args[0] as number) * 2,
-      'dbl'
-    );
-    expect(await fn(3)).toBe(6);
   });
 });

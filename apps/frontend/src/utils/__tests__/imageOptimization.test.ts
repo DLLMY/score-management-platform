@@ -4,8 +4,6 @@ import {
   getOptimizedImageUrl,
   getResponsiveImage,
   generatePlaceholder,
-  supportsWebP,
-  getImageDimensions,
   handleImageError,
 } from '../imageOptimization';
 
@@ -95,33 +93,6 @@ describe('imageOptimization', () => {
       const url = generatePlaceholder(200, 100, '#000000');
       expect(url).toContain('200x100');
       expect(url).toContain('#000000');
-    });
-  });
-
-  describe('supportsWebP', () => {
-    it('window 未定义时返回 false', async () => {
-      vi.stubGlobal('window', undefined);
-      await expect(supportsWebP()).resolves.toBe(false);
-    });
-    it('Image onload → true', async () => {
-      imageResult = { width: 1, height: 1 };
-      await expect(supportsWebP()).resolves.toBe(true);
-    });
-    it('Image onerror → false', async () => {
-      imageResult = 'error';
-      await expect(supportsWebP()).resolves.toBe(false);
-    });
-  });
-
-  describe('getImageDimensions', () => {
-    it('onload 解析宽高', async () => {
-      imageResult = { width: 640, height: 480 };
-      const dims = await getImageDimensions('/img.png');
-      expect(dims).toEqual({ width: 640, height: 480 });
-    });
-    it('onerror 拒绝', async () => {
-      imageResult = 'error';
-      await expect(getImageDimensions('/img.png')).rejects.toThrow(/Failed to load image/);
     });
   });
 
