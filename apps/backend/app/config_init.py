@@ -148,7 +148,11 @@ def _check_redis_connectivity(app):
         db = config.REDIS_DB
         pwd = config.REDIS_PASSWORD
         url = f"redis://:{pwd}@{host}:{port}/{db}" if pwd else f"redis://{host}:{port}/{db}"
-        r = redis.Redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
+        # protocol=2：RESP2 回落，兼容 Redis 5.x 旧服务（redis-py 5+ 默认 RESP3，
+        # 旧服务不认 HELLO 命令会误判不可达）
+        r = redis.Redis.from_url(
+            url, socket_connect_timeout=2, socket_timeout=2, protocol=2
+        )
         r.ping()
         logger.info("[R1] Redis 连通性 OK (%s)", url)
     except Exception as e:

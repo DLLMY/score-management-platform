@@ -148,7 +148,9 @@ class RedisCache:
         probe_url = f"redis://{host}:{port}/{db}"
         while time.time() < deadline:
             try:
-                probe = redis.from_url(probe_url, socket_connect_timeout=2, socket_timeout=2)
+                probe = redis.from_url(
+                    probe_url, socket_connect_timeout=2, socket_timeout=2, protocol=2
+                )
                 if probe.ping():
                     return True
             except Exception:
@@ -223,7 +225,8 @@ class RedisCache:
     def _create_connection_pool(self, url: str) -> bool:
         """兼容旧测试：根据 URL 创建连接池。"""
         try:
-            self._pool = redis.ConnectionPool.from_url(url)
+            # protocol=2：RESP2 回落，兼容 Redis 5.x 旧服务
+            self._pool = redis.ConnectionPool.from_url(url, protocol=2)
             return True
         except Exception:
             logger.debug("Redis 创建连接池失败（降级）", exc_info=True)
@@ -239,6 +242,7 @@ class RedisCache:
                 socket_timeout=2,
                 socket_connect_timeout=2,
                 retry_on_timeout=True,
+                protocol=2,  # RESP2 回落，兼容 Redis 5.x 旧服务
             )
             client.ping()
             self.client = client

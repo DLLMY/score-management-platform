@@ -36,6 +36,7 @@ class NLPCache:
                 port=config_loader.get_config("REDIS_PORT", 6379),
                 db=config_loader.get_config("REDIS_DB", 0),
                 socket_timeout=5,
+                protocol=2,  # RESP2 回落，兼容 Redis 5.x 旧服务
             )
             self._redis.ping()
             self._redis_available = True
