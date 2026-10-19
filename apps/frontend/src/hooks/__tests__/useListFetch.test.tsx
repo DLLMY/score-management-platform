@@ -7,6 +7,173 @@ interface Item {
   id: number;
 }
 
+describe('useListFetch · 基础拉取（分页 / params / 错误）', () => {
+  it('fetches paginated items and exposes total', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [{ id: 1 }, { id: 2 }], total: 2 });
+    const { result } = renderHook(() =>
+      useListFetch<Item>({
+        fetcher,
+        params: { page: 1, pageSize: 10 },
+        debounceDelay: 0,
+      })
+    );
+
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.items).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(result.current.total).toBe(2);
+    expect(result.current.error).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches when page changes', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [], total: 0 });
+    const { rerender } = renderHook(
+      ({ page }: { page: number }) =>
+        useListFetch<Item>({
+          fetcher,
+          params: { page, pageSize: 10 },
+          debounceDelay: 0,
+        }),
+      { initialProps: { page: 1 } }
+    );
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    rerender({ page: 2 });
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+  });
+
+  it('refetches when filter params change', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [], total: 0 });
+    const { rerender } = renderHook(
+      ({ status }: { status: string }) =>
+        useListFetch<Item>({
+          fetcher,
+          params: { page: 1, pageSize: 10, status },
+          debounceDelay: 0,
+        }),
+      { initialProps: { status: 'active' } }
+    );
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    rerender({ status: 'inactive' });
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+  });
+
+  it('passes params to fetcher', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [], total: 0 });
+    renderHook(() =>
+      useListFetch<Item>({
+        fetcher,
+        params: { page: 2, pageSize: 25, keyword: '张' },
+        debounceDelay: 0,
+      })
+    );
+
+    await waitFor(() =>
+      expect(fetcher).toHaveBeenCalledWith({
+        page: 2,
+        pageSize: 25,
+        keyword: '张',
+        skipCache: false,
+      })
+    );
+  });
+
+  it('sets error when fetcher rejects', async () => {
+    const error = new Error('load failed');
+    const fetcher = vi.fn().mockRejectedValue(error);
+    const { result } = renderHook(() =>
+      useListFetch<number>({
+        fetcher,
+        params: { page: 1, pageSize: 10 },
+        debounceDelay: 0,
+      })
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error?.message).toBe('load failed');
+  });
+
+  it('refetch manually triggers a new fetch', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [1], total: 1 });
+    const { result } = renderHook(() =>
+      useListFetch<number>({
+        fetcher,
+        params: { page: 1, pageSize: 10 },
+        debounceDelay: 0,
+      })
+    );
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await result.current.refetch();
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('useListFetch · enabled 语义（按需加载）', () => {
+  it('enabled=false 时挂载不自动请求', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [], total: 0 });
+    const { result } = renderHook(() =>
+      useListFetch<number>({
+        fetcher,
+        params: { page: 1, pageSize: 10 },
+        debounceDelay: 0,
+        enabled: false,
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.items).toEqual([]);
+  });
+
+  it('enabled 由 false 变 true 时触发拉取', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [7], total: 1 });
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useListFetch<number>({
+          fetcher,
+          params: { page: 1, pageSize: 10 },
+          debounceDelay: 0,
+          enabled,
+        }),
+      { initialProps: { enabled: false } }
+    );
+
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fetcher).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.items).toEqual([7]));
+  });
+
+  it('enabled=false 时手动 refetch 仍可强制触发', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ items: [1], total: 1 });
+    const { result } = renderHook(() =>
+      useListFetch<number>({
+        fetcher,
+        params: { page: 1, pageSize: 10 },
+        debounceDelay: 0,
+        enabled: false,
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fetcher).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(result.current.items).toEqual([1]));
+  });
+});
+
 describe('useListFetch 乐观覆写（mutate/setItems/setTotal）', () => {
   it('本地覆写即时生效，新服务端数据到达后自动让位', async () => {
     const fetcher = vi.fn();

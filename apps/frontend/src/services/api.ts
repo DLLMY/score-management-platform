@@ -947,12 +947,18 @@ const executeRequest = async (
             clearStudentAuth();
             setTimeout(() => {
               // S2: HashRouter 下必须带 #，否则整页加载服务器路径且 hash 丢失 → 卡空白页
-              window.location.hash = '#/student/login';
+              // window 守卫：测试 worker teardown 后定时器残留触发时无 window（node 环境）会崩 worker
+              if (typeof window !== 'undefined') {
+                window.location.hash = '#/student/login';
+              }
             }, 100);
           } else {
             clearAuthData();
             setTimeout(() => {
-              window.location.hash = '#/login';
+              // window 守卫：测试 worker teardown 后定时器残留触发时无 window（node 环境）会崩 worker
+              if (typeof window !== 'undefined') {
+                window.location.hash = '#/login';
+              }
             }, 100);
           }
           const apiError = new Error('登录状态已失效，请重新登录') as ApiError;

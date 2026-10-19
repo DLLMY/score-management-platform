@@ -8,6 +8,7 @@
 ## 运行/测试口径（铁律）
 - 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端强杀 5000 端口持有者再重启（勿杀 celery beat）。
 - 回归必须 `apps/backend/.venv/Scripts/python.exe`；沙箱单进程全量 pytest 超时 → `run_regression_batched.py`（FLASK_LIGHTWEIGHT=true，22 分块 ≤150 用例/≤10 文件，剔除 test_app_init+test_api_contract 两例）。重跑前确认无残留后台 pytest（XML 竞态）；**aggregate() 须下钻 testsuites→testsuite（pytest 9.x 直读根 tests=0 假零）**。
+- **环境已对齐（2026-10-18）**：.venv 与 `requirements.lock.txt` 一致（57 包 / flask 3.1.3 / numpy 2.4.6 / pandas 3.0.6 / redis 8.1.0 等 7 破坏性 major），本地回归与 CI 同基。Dockerfile 仍用 requirements.txt（>= 宽松装最新）。**skipped 基线=7**（4 SQLite 并发环境 + auth/dashboard/nlp/ota 单例）；Redis 客户端全部 `protocol=2`（RESP2 回落兼容旧 Redis 服务，勿删）。
 - 单测三要素：exit=0/无 failed/报告文件数==磁盘文件数；**禁 commit 除非用户显式要求**。
 - ruff 唯一口径 `ruff check apps/backend`（+`--select C901`）；`run_validation.py` 语法门必过。
 
@@ -37,3 +38,9 @@
 - **R28–R30 写路径**：循环前 `.in_()`/`group_by` 预取 + 内存集合判定，精确复刻 autoflush/事务语义（planned_add 集合是零行为差异关键）。
 - **R31+F1–F5 Class F**：瞬态类属性缓存（`_bulk_*`）——批量入口循环前 IN 预取（按主键分组）+ 单生函数顶部命中即返 + try/finally 清理；入口间 save-restore（`_prev_bulk`）防嵌套覆盖；不改公开签名保 mock 零破坏；SQL 计数 harness 证与 N 无关 + 数值等价；F4 窗口基准时间须取自缓存 ref（否则 datetime.now() 微秒差致键不命中）。
 - 提交（均 push+ls-remote 核验）：R23=`edd84bf` R24=`1cd686f` R25=`3d7aa8e` R26=`c7ad36c` R28=`c0ee179` R29+R30=`a1fd352` R31=`af12c4a` F1–F5=`1107699`。
+
+## 前端页面架构约定（2026-10-19 评估确认）
+- **「装配层单文件 + 域目录」是刻意架构，非烂尾**：45/45 双形态页面全部为 `pages/Xxx.tsx`（装配层/路由入口，import 域 View+Logic）+ `pages/xxx/`（域实现：View/Logic/Hooks/components/types）。命名约定统一：目录 camelCase + 文件 PascalCase。
+- **0 孤儿目录、0 歧义实现**：生产代码 pages import 全部带显式文件名（0 个目录路径）；测试代码经整合后同样 0 残留。
+- **Win FS 大小写不敏感陷阱**：`from '../../pages/StudentPortal'`（Pascal）在 Win 上同时匹配 `StudentPortal.tsx`（文件优先）与 `studentPortal/`（目录）——测试曾大量使用此歧义写法，整合时已全部改为显式 `'../<Pascal>'`；新代码禁止目录路径 import pages。
+- 厚装配层（如 AttendanceManage 512 行）是既定形态，非债项；如需拆分按 R 系列优化战役另行评估。
