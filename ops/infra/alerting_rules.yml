@@ -1,8 +1,12 @@
 # Prometheus 告警规则（P1-f 监控/告警闭环收尾）
 #
 # 配合 ops/infra/prometheus.yml 的 rule_files 加载；指标由后端
-# app/metrics_exporter.py 暴露（flask_http_* / flask_exceptions_total /
-# score_app_info + ProcessCollector 的 process_*）。
+# app/metrics_exporter.py 暴露：
+#   HTTP/进程级：flask_http_requests_total / flask_http_request_duration_seconds /
+#                flask_exceptions_total / score_app_info + ProcessCollector 的 process_*
+#   业务级：ota_updates_total{device_type,status} / ota_negotiations_total{result} /
+#           mqtt_connection_state{link} / mqtt_messages_total{direction,link} /
+#           score_devices_online / score_devices_total / redis_cache_ops_total{operation,result}
 # 规则触发后由 Alertmanager（ops/infra/alertmanager.yml）分发到通知渠道。
 #
 # 验证：promtool check rules alerting_rules.yml
@@ -85,3 +89,43 @@ groups:
           summary: "后端进程 CPU 使用率偏高"
           description: >-
             单进程 CPU 使用率 > 80% 持续 10 分钟，关注计算密集路径（NLP/导出/评分）。
+
+      # ── 业务指标告警（P1-Grafana）───────────────────────────────────────
+      # MQTT 链路断连：任一 link（control/telemetry）掉线，设备上下行将中断
+      - alert: MQTTLinkDown
+        expr: min(mqtt_connection_state) == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MQTT 链路断连"
+          description: >-
+            某条 MQTT 链路连接状态为 0 持续 1 分钟（link 见 mqtt_connection_state），
+            设备上下行将中断，检查 EMQX/broker 连通性与凭证。
+
+      # OTA 升级失败率过高（完成+失败中失败占比 > 20%）
+      - alert: OTAFailureRateHigh
+        expr: |
+          sum(rate(ota_updates_total{status="failed"}[5m]))
+            /
+          clamp_min(sum(rate(ota_updates_total{status=~"completed|failed"}[5m])), 0.0001) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OTA 升级失败率过高"
+          description: >-
+            近 5 分钟 OTA 完成+失败中失败占比 > 20%（当前 {{ $value | humanizePercentage }}），
+            关注固件版本与 OTA 链路（见 ota_updates_total by device_type）。
+
+      # 设备离线率过高（在线占比 < 50%）
+      - alert: DevicesMostlyOffline
+        expr: score_devices_online / clamp_min(score_devices_total, 1) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "设备离线率过高"
+          description: >-
+            在线设备占比 < 50% 持续 10 分钟（当前 {{ $value | humanizePercentage }}），
+            排查网络/MQTT 掉线或大范围断电（见 score_devices_online）。

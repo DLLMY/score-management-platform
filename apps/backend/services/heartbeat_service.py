@@ -259,6 +259,18 @@ def check_heartbeat_timeout(timeout_seconds: int = 60) -> dict:
             "total_timeout": len(timeout_devices),
             "alerts_created": alerts_created,
         }
+
+        # P1-Grafana：刷新设备在线/总数 gauge（每周期一次，供设备在线率面板）。
+        # 放在 db.session.remove() 之前，复用当前可用 session；失败不影响主流程。
+        try:
+            from app.metrics_exporter import set_device_counts
+
+            _all_devs = Device.query.all()
+            _now = datetime.now()
+            _online = sum(1 for _d in _all_devs if is_device_online(_d, _now))
+            set_device_counts(_online, len(_all_devs))
+        except Exception as _ce:
+            logger.warning(f"设备在线 gauge 刷新失败(已忽略): {_ce}")
     finally:
         # P5: 后台线程（心跳检查每30s）无请求上下文，app_context teardown
         # 不一定可靠释放 scoped session；显式 remove 保证连接归还连接池，

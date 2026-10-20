@@ -3,7 +3,8 @@
 ## 主线状态
 - P0 收官（占位密钥/TLS/WS 入口/版本化迁移）；P0-d：`reconcile.py`（元数据驱动对账，幂等零依赖）+ `seed_defaults.py`（12 节次+5 预警）接入 `db_init.ensure_database_ready`（TESTING 守卫）。
 - 模型/迁移漂移收口进模型（User.risk_score/last_risk_updated、ScoreRecord.operation_log_id），create_all/reconcile 统一维护。
-- **性能与零回归战役 R7–R31+F1–F5 全收官**：读路径（R23–R26）、写路径（R28–R30）、Class F 二级 N+1（R31+F1–F5）。基线 2325→**2389/0/0/7** 全程零回归。
+- **性能与零回归战役 R7–R31+F1–F5 全收官**：读路径（R23–R26）、写路径（R28–R30）、Class F 二级 N+1（R31+F1–F5）。基线 2325→**2397/0/0/7**（P1 指标埋点补测后 passed 2389→2397，skipped=7 不变）全程零回归。
+- **P1 可观测性看板收官**：`/metrics` 独立 registry 暴露 HTTP/进程级 + 7 业务指标（ota_updates/ota_negotiations/mqtt_connection_state/mqtt_messages/score_devices_online|total/redis_cache_ops），埋点走模块级延迟包装函数（循环依赖安全）+ helper try/except。看板 `grafana/dashboard.json`（18 面板，uid=score-backend-monitor）。**监控权威目录 `ops/infra/`**：alerting_rules.yml（6 HTTP/进程 + 3 业务告警 MQTTLinkDown/OTAFailureRateHigh/DevicesMostlyOffline）、一键栈 `docker-compose.monitoring.yml`（prom+alertmanager+grafana:3001，共享主 compose 默认网络）+ grafana provisioning 自动加载；旧重复目录 `prometheus/` 已删。校验门 `ops/infra/validate_monitoring.py`（替代沙箱缺失的 promtool，11 断言）。
 
 ## 运行/测试口径（铁律）
 - 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端强杀 5000 端口持有者再重启（勿杀 celery beat）。

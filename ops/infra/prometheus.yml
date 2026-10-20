@@ -10,19 +10,9 @@
 #     prom/prometheus
 #   浏览器打开 http://localhost:9090 → Status → Targets 应看到 score-backend UP。
 #
-# 用法二（并入 compose 监控栈，可选）：
-#   在 docker-compose.yml 的 services: 下追加：
-#     prometheus:
-#       image: prom/prometheus:latest
-#       container_name: score-management-prometheus
-#       volumes:
-#         - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-#       ports:
-#         - "9090:9090"
-#       depends_on:
-#         - backend
-#       restart: unless-stopped
-#   （同 project 网络即可用服务名 backend:5000 抓取，无需改 backend 端口暴露。）
+# 用法二（并入一键监控栈，推荐）：
+#   监控栈编排见同目录 docker-compose.monitoring.yml（Prometheus + Alertmanager + Grafana），
+#   与主 docker-compose.yml 同目录运行即共享默认网络，可直接用服务名 backend:5000 抓取。
 
 global:
   scrape_interval: 15s
@@ -35,7 +25,8 @@ rule_files:
   - "alerting_rules.yml"
 
 # 告警分发：Prometheus 评估命中后推送给 Alertmanager
-# 注：需同时部署 Alertmanager（compose 片段见本文件末尾注释），否则仅评估不分发
+# 注：需同时部署 Alertmanager，否则仅评估不分发；一键监控栈（含 Alertmanager）
+#     见同目录 docker-compose.monitoring.yml。
 alerting:
   alertmanagers:
     - static_configs:
@@ -57,35 +48,11 @@ scrape_configs:
   #     - targets: ["node-exporter:9100"]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 告警闭环部署片段（P1-f 收尾，可选启用）
+# 告警闭环部署（P1-f 收尾）
 #
-# 1) 在 docker-compose.yml 的 services: 下追加 Alertmanager 服务：
+# 一键监控栈（Prometheus + Alertmanager + Grafana）见同目录
+# docker-compose.monitoring.yml；与主 docker-compose.yml 同目录运行即共享网络。
 #
-#   alertmanager:
-#     image: prom/alertmanager:latest
-#     container_name: score-management-alertmanager
-#     volumes:
-#       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-#     ports:
-#       - "9093:9093"
-#     depends_on:
-#       - backend
-#     restart: unless-stopped
-#
-# 2) 如需把 Prometheus 本身也纳入 compose 监控栈，追加：
-#
-#   prometheus:
-#     image: prom/prometheus:latest
-#     container_name: score-management-prometheus
-#     volumes:
-#       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-#       - ./alerting_rules.yml:/etc/prometheus/alerting_rules.yml:ro
-#     ports:
-#       - "9090:9090"
-#     depends_on:
-#       - backend
-#     restart: unless-stopped
-#
-# 3) 校验规则语法：promtool check rules alerting_rules.yml
-# 4) 通知渠道（Webhook/邮件/企业微信/钉钉）在 alertmanager.yml 中填充，凭据经 secret 注入。
+# 1) 校验规则语法：promtool check rules alerting_rules.yml
+# 2) 通知渠道（Webhook/邮件/企业微信/钉钉）在 alertmanager.yml 中填充，凭据经 secret 注入。
 # ─────────────────────────────────────────────────────────────────────────────

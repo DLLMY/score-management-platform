@@ -13,6 +13,21 @@ from paho.mqtt.client import SubscribeOptions
 
 logger = logging.getLogger(__name__)
 
+# P1-Grafana 业务指标埋点：延迟导入避免与 app 包循环依赖（运行时 app 已完整初始化）
+def record_mqtt_message(direction, link):
+    from app.metrics_exporter import record_mqtt_message as _metrics_impl
+    _metrics_impl(direction, link)
+
+
+def record_ota_update(device_type, status):
+    from app.metrics_exporter import record_ota_update as _metrics_impl
+    _metrics_impl(device_type, status)
+
+
+def set_mqtt_connection(link, connected):
+    from app.metrics_exporter import set_mqtt_connection as _metrics_impl
+    _metrics_impl(link, connected)
+
 
 class MQTTConnectionState(Enum):
     DISCONNECTED = "disconnected"
@@ -187,6 +202,7 @@ class MQTTManager:
                 # R2: 成功连上即视为「已知好」配置，记录以便后续回退
                 if self._config:
                     self._last_known_good = dict(self._config)
+                set_mqtt_connection("control", True)
                 logger.info("[MQTTManager] 控制连接成功!")
             else:
                 self._state = MQTTConnectionState.ERROR
@@ -220,6 +236,7 @@ class MQTTManager:
         with self._state_lock:
             if rc == 0:
                 self._telemetry_state = MQTTConnectionState.CONNECTED
+                set_mqtt_connection("telemetry", True)
                 logger.info("[MQTTManager] 遥测连接成功!")
             else:
                 self._telemetry_state = MQTTConnectionState.ERROR
@@ -237,6 +254,7 @@ class MQTTManager:
         with self._state_lock:
             self._state = MQTTConnectionState.DISCONNECTED
             self._subscribed_topics = []
+        set_mqtt_connection("control", False)
         logger.info(f"[MQTTManager] 控制连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
             logger.warning("[MQTTManager] 控制连接意外断开，准备重连...")
@@ -246,6 +264,7 @@ class MQTTManager:
         with self._state_lock:
             self._telemetry_state = MQTTConnectionState.DISCONNECTED
             self._telemetry_subscribed_topics = []
+        set_mqtt_connection("telemetry", False)
         logger.info(f"[MQTTManager] 遥测连接断开, rc={rc}")
         if rc != 0 and self._should_reconnect:
             logger.warning("[MQTTManager] 遥测连接意外断开，准备重连...")
@@ -255,6 +274,7 @@ class MQTTManager:
         try:
             message = msg.payload.decode()
             topic = msg.topic
+            record_mqtt_message("received", "control")
             # 控制消息写 MQTTLog（审计），并即时派发到业务回调。
             self._queue_message(topic, message)
             # score/add、score/undo、phonebox/query、phonebox/unlock/、phonebox/ota/、
@@ -276,6 +296,7 @@ class MQTTManager:
         try:
             message = msg.payload.decode()
             topic = msg.topic
+            record_mqtt_message("received", "telemetry")
             # 控制类 topic 由控制连接处理，遥测连接收到则跳过，避免重复业务派发
             if topic in self._CONTROL_TOPIC_EXACT or topic.startswith(self._CONTROL_TOPIC_PREFIXES):
                 return
@@ -678,6 +699,7 @@ class MQTTManager:
         """
         from models import DeviceFirmwareUpdate, db
 
+        record_ota_update(device.device_type if device else None, "started")
         record = DeviceFirmwareUpdate(
             device_id=device_id,
             from_version=from_version,
@@ -733,6 +755,7 @@ class MQTTManager:
             db.session.commit()
             logger.info(f"[OTA] 设备 {device_id} 升级成功: {from_version} -> {to_version}")
 
+        record_ota_update(device.device_type if device else None, "completed")
         device_ota_status = None
         if device:
             device_ota_status = "idle"
@@ -765,6 +788,8 @@ class MQTTManager:
             record.error_message = error_message
             db.session.commit()
             logger.error(f"[OTA] 设备 {device_id} 升级失败: {error_message}")
+
+        record_ota_update(device.device_type if device else None, "failed")
 
         log = OperationLog(
             operation_type="firmware_upgrade_failed",
@@ -1098,6 +1123,7 @@ class MQTTManager:
             # 检查发布结果
             if result.rc == 0:
                 logger.info(f"[MQTTManager] 发布成功: {topic}")
+                record_mqtt_message("published", "control")
                 return True
             error_messages = {
                 1: "协议错误",

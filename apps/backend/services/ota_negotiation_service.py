@@ -27,6 +27,10 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 from config import config
+# P1-Grafana 业务指标埋点：延迟导入避免与 app 包循环依赖（运行时 app 已完整初始化）
+def record_ota_negotiation(result):
+    from app.metrics_exporter import record_ota_negotiation as _metrics_impl
+    _metrics_impl(result)
 
 _ota_cfg = config.get_ota_config()  # #196 T8: OTA 配置统一收口到 Config
 
@@ -380,32 +384,34 @@ def negotiate(device, reported_version, device_type=None):
 
     latest = get_latest_active_firmware(wanted_type)
     if not latest:
-        return {"action": "no_firmware", "device_type": wanted_type}
-
-    if compare_versions(reported_version or "", latest.version) >= 0:
-        return {
+        result = {"action": "no_firmware", "device_type": wanted_type}
+    elif compare_versions(reported_version or "", latest.version) >= 0:
+        result = {
             "action": "up_to_date",
             "latest_version": latest.version,
-            "device_type": wanted_type,
+            "device_type": wanted_type
         }
-
-    if (
+    elif (
         latest.min_compatible_version
         and compare_versions(reported_version or "0", latest.min_compatible_version) < 0
     ):
-        return {
+        result = {
             "action": "skip_too_old",
             "latest_version": latest.version,
             "min_compatible_version": latest.min_compatible_version,
-            "device_type": wanted_type,
+            "device_type": wanted_type
+        }
+    else:
+        result = {
+            "action": "upgrade",
+            "firmware": latest,
+            "latest_version": latest.version,
+            "device_type": wanted_type
         }
 
-    return {
-        "action": "upgrade",
-        "firmware": latest,
-        "latest_version": latest.version,
-        "device_type": wanted_type,
-    }
+    # P1-Grafana：记录一次版本协商结果（helper 内部 try/except，绝不阻断主流程）
+    record_ota_negotiation(result["action"])
+    return result
 
 
 def can_auto_push(device):

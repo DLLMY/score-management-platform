@@ -1,0 +1,75 @@
+version: '3.8'
+
+# =============================================================================
+# 独立监控栈（可选启用）：Prometheus + Alertmanager + Grafana
+#
+# 本文件与主 docker-compose.yml 同目录、同 Compose project（默认 project 名 =
+# 所在目录名 "infra"），因此共享默认网络 infra_default——监控栈可直接用服务名
+# backend:5000 抓取 /metrics（见 prometheus.yml 的 targets），无需改后端端口暴露。
+#
+# 启用方式（先起主栈，再起监控栈；两者须同目录运行以共享默认网络）：
+#   docker-compose -f docker-compose.yml up -d
+#   docker-compose -f docker-compose.monitoring.yml up -d
+#
+# 访问：
+#   Prometheus   http://localhost:9090  (Status → Targets 应见 score-backend UP)
+#   Alertmanager http://localhost:9093
+#   Grafana      http://localhost:3001  (默认 admin / ${GRAFANA_ADMIN_PASSWORD:-admin})
+#
+# 说明：
+# - Grafana 用 3001，避开前端 3000；如需改见 grafana ports。
+# - 数据源与看板经 provisioning 自动加载（ops/infra/grafana/provisioning），无需手导。
+# - 看板 JSON 单源在仓根 grafana/dashboard.json，compose 挂载进 Grafana（勿复制）。
+# - Alertmanager 通知渠道为占位 webhook，按需在 alertmanager.yml 填充真实渠道；
+#   敏感凭据经 secret / 环境变量注入，勿明文入仓。
+# =============================================================================
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: score-management-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerting_rules.yml:/etc/prometheus/alerting_rules.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - alertmanager
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: score-management-alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: score-management-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../grafana/dashboard.json:/var/lib/grafana/dashboards/score-backend-monitor.json:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+  grafana-data:
+    driver: local

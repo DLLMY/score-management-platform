@@ -1,0 +1,18 @@
+# Grafana 数据源 provisioning（P1-f 一键监控栈）
+#
+# 挂载到容器 /etc/grafana/provisioning/datasources/（见 docker-compose.monitoring.yml），
+# Grafana 启动时自动创建 Prometheus 数据源，无需在 UI 手动添加。
+# URL 用服务名 prometheus:9090（监控栈内部网络解析）。
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    version: 1

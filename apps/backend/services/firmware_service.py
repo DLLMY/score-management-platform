@@ -22,6 +22,11 @@ from datetime import datetime, timedelta
 from models import Device, DeviceFirmwareUpdate, FirmwareVersion, db
 from utils.audit_log import write_operation_log
 
+# P1-Grafana 业务指标埋点：延迟导入避免与 app 包循环依赖（运行时 app 已完整初始化）
+def record_ota_update(device_type, status):
+    from app.metrics_exporter import record_ota_update as _metrics_impl
+    _metrics_impl(device_type, status)
+
 
 def _apply_ota_protect_window(device_id, protect_until):
     """G4: 设置/清除设备 OTA 离线保护窗。
@@ -134,6 +139,7 @@ def report_ota_status(
         )
         db.session.add(update_record)
         db.session.commit()
+        record_ota_update(None, "started")
         # G4: 开启 OTA 离线保护窗（now+10min），升级期间心跳中断不判离线/不告警
         _apply_ota_protect_window(device_id, datetime.now() + timedelta(minutes=10))
         return
@@ -153,6 +159,7 @@ def report_ota_status(
 
         # G4: 升级结束，解除离线保护窗
         _apply_ota_protect_window(device_id, None)
+        record_ota_update(None, "completed")
 
         write_operation_log(
             "firmware_upgrade",
@@ -179,6 +186,7 @@ def report_ota_status(
 
         # G4: 升级失败，解除离线保护窗
         _apply_ota_protect_window(device_id, None)
+        record_ota_update(None, "failed")
 
         write_operation_log(
             "firmware_upgrade",

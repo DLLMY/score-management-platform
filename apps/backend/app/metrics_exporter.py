@@ -61,6 +61,61 @@ APP_INFO = Gauge(
 )
 APP_INFO.labels(version="1.0.0").set(1)
 
+# ---------------------------------------------------------------------------
+# 业务指标（P1-Grafana：OTA / MQTT / 设备在线 / 缓存）
+#
+# 与 HTTP/进程级指标共用同一独立 ``registry``，但由业务事件点以纯增量方式埋点，
+# 不依赖 Flask app 上下文、也不受 TESTING 守卫影响（计数器在模块加载即创建；
+# 仅 ``/metrics`` 路由注册受 TESTING 守卫）。所有埋点通过下方 helper 完成，
+# 内部统一 try/except，绝不阻断主业务流程。
+# ---------------------------------------------------------------------------
+OTA_UPDATES = Counter(
+    "ota_updates_total",
+    "OTA update outcomes reported by devices.",
+    ["device_type", "status"],
+    registry=registry,
+)
+
+OTA_NEGOTIATIONS = Counter(
+    "ota_negotiations_total",
+    "OTA version-negotiation outcomes by decision action.",
+    ["result"],
+    registry=registry,
+)
+
+MQTT_CONNECTION_STATE = Gauge(
+    "mqtt_connection_state",
+    "MQTT broker connection state per link (1 connected, 0 otherwise).",
+    ["link"],
+    registry=registry,
+)
+
+MQTT_MESSAGES = Counter(
+    "mqtt_messages_total",
+    "MQTT messages handled (received/published) per link.",
+    ["direction", "link"],
+    registry=registry,
+)
+
+DEVICES_ONLINE = Gauge(
+    "score_devices_online",
+    "Number of devices currently considered online.",
+    registry=registry,
+)
+
+DEVICES_TOTAL = Gauge(
+    "score_devices_total",
+    "Total number of device records.",
+    registry=registry,
+)
+
+REDIS_CACHE_OPS = Counter(
+    "redis_cache_ops_total",
+    "Redis cache operations by operation and result.",
+    ["operation", "result"],
+    registry=registry,
+)
+
 
 def _on_request_exception(sender, exception, **_extra):
     """记录未捕获异常（通过信号，避免覆盖既有 errorhandler）。"""
@@ -114,3 +169,63 @@ def init_metrics(app):
             limiter.exempt(metrics)
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# 业务指标埋点 helper（全部 try/except 包裹，绝不阻断主业务流程）
+# ---------------------------------------------------------------------------
+def _norm_device_type(device_type):
+    """归一化 device_type 标签（None/空 → 'phonebox'，与模型 server_default 一致）。"""
+    if not device_type:
+        return "phonebox"
+    text = str(device_type).strip()
+    return text or "phonebox"
+
+
+def record_ota_update(device_type, status):
+    """记录一次 OTA 上报结果（status: started/completed/failed）。"""
+    try:
+        OTA_UPDATES.labels(device_type=_norm_device_type(device_type), status=status).inc()
+    except Exception:
+        pass
+
+
+def record_ota_negotiation(result):
+    """记录一次版本协商结果（result: no_firmware/up_to_date/skip_too_old/upgrade）。"""
+    try:
+        OTA_NEGOTIATIONS.labels(result=result).inc()
+    except Exception:
+        pass
+
+
+def set_mqtt_connection(link, connected):
+    """设置某条 MQTT 链路连接状态（link: control/telemetry）。"""
+    try:
+        MQTT_CONNECTION_STATE.labels(link=link).set(1 if connected else 0)
+    except Exception:
+        pass
+
+
+def record_mqtt_message(direction, link):
+    """记录一条 MQTT 消息（direction: received/published；link: control/telemetry）。"""
+    try:
+        MQTT_MESSAGES.labels(direction=direction, link=link).inc()
+    except Exception:
+        pass
+
+
+def set_device_counts(online, total):
+    """设置设备在线/总数快照（供设备在线率面板）。"""
+    try:
+        DEVICES_ONLINE.set(int(online))
+        DEVICES_TOTAL.set(int(total))
+    except Exception:
+        pass
+
+
+def record_redis_op(operation, result):
+    """记录一次 Redis 缓存操作（operation: get/set/delete；result: hit/miss/ok/err）。"""
+    try:
+        REDIS_CACHE_OPS.labels(operation=operation, result=result).inc()
+    except Exception:
+        pass
