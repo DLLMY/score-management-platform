@@ -5,6 +5,7 @@
 - 模型/迁移漂移收口进模型（User.risk_score/last_risk_updated、ScoreRecord.operation_log_id），create_all/reconcile 统一维护。
 - **性能与零回归战役 R7–R31+F1–F5 全收官**：读路径（R23–R26）、写路径（R28–R30）、Class F 二级 N+1（R31+F1–F5）。基线 2325→**2397/0/0/7**（P1 指标埋点补测后 passed 2389→2397，skipped=7 不变）全程零回归。
 - **P1 可观测性看板收官**：`/metrics` 独立 registry 暴露 HTTP/进程级 + 7 业务指标（ota_updates/ota_negotiations/mqtt_connection_state/mqtt_messages/score_devices_online|total/redis_cache_ops），埋点走模块级延迟包装函数（循环依赖安全）+ helper try/except。看板 `grafana/dashboard.json`（18 面板，uid=score-backend-monitor）。**监控权威目录 `ops/infra/`**：alerting_rules.yml（6 HTTP/进程 + 3 业务告警 MQTTLinkDown/OTAFailureRateHigh/DevicesMostlyOffline）、一键栈 `docker-compose.monitoring.yml`（prom+alertmanager+grafana:3001，共享主 compose 默认网络）+ grafana provisioning 自动加载；旧重复目录 `prometheus/` 已删。校验门 `ops/infra/validate_monitoring.py`（替代沙箱缺失的 promtool，11 断言）。
+- **Celery 任务 worker 环境修复（2026-10-21，未 commit）**：celery_app 无 ContextTask 基座 → `tasks/scheduled_tasks.py` 4/6 个 beat 任务在生产 worker 下崩溃/静默失败（缺 app_context + 调不存在的 `cache.set_stats` + `warmup_cache()` 漏传 app）。修复模式：模块级 `_resolve_flask_app()`（有环境上下文沿用 current_app，否则取 app 单例）+ 任务自包上下文；`set_stats`→`cache.set`（key 不变）；health_check MQTT 导入修正为 `services.mqtt_manager.mqtt_manager`。回归守卫 `tests/test_scheduled_tasks_worker_ctx.py`（无外层 app_context 直调任务模拟 worker）。**教训：测试用 `with app.app_context()` 包裹任务调用会掩盖生产缺陷**。
 
 ## 运行/测试口径（铁律）
 - 后端 dev：`python run.py --env development --host 127.0.0.1 --port 5000`；改后端强杀 5000 端口持有者再重启（勿杀 celery beat）。
@@ -23,6 +24,9 @@
 - **R9 遗留**：切回 EMQX Cloud 缺凭据，后端仍连 hivemq；待用户发主机+用户名+密码后「管理端改配置重启+设备端同步切」。
 
 ## 关键坑（沙箱必读）
+- **Write 工具在 Windows 落盘即 CRLF**：行尾转换必须「文本模式读（universal newlines）+ `newline=` 参数写回」；**禁正则折叠连续换行**（`re.sub(rb'(?:\r\n|\r|\n)+', b'\n')` 会把空行一并吞掉，已两次损坏文件）；写后二进制核验 `crlf/lone_cr/空行对数` 三指标。
+- **`.venv/Scripts/python.exe` 是转发 shim**：真实执行在系统 Python311 子进程（进程树呈 venv python 近零 CPU 空等、系统 python 承重）；与用户记忆「pytest 用系统 Python 3.11」一致。排查进程时勿把 shim+真实进程误判为双跑/XML 竞态——曾据 PPID 误报，CPU 时间可证单线。
+- **测试会话内 `from app import app` 解析到真实 app 单例**（instance/score_management.db，TESTING=False），不是 conftest fixture 的内存库——`_build_test_app()` 是裸 Flask 不走 create_app，不会更新 `sys.modules['app'].app`。任务/服务内裸用单例会在测试中连真实库（已实证）：要么优先沿用 current_app（有环境上下文时），要么测试用 sys.modules 桩/属性重定向把单例换成测试 app。
 - **EOL 守恒**：backend 多数 .py 为 CRLF，改写前逐文件检测实际行尾（有纯 LF 例外，禁断言 crlf>0）。
 - git-bash coreutils 损坏（rm/ls/grep/find/tail/cd 均 not found）→ 文件增删/列举一律用 Python 脚本。长回归传 `--timeout=0`（PYTEST_ADDOPTS 默认 300）；多 pytest 进程分批 + `--junitxml` 聚合。
 - 绝不直接改 `.git` 内部文件；远程同步只信 `git ls-remote origin <branch>`。
