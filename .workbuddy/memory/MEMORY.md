@@ -37,6 +37,7 @@
 - 模型关系 `lazy="selectin"`：IN 预取行时 ORM 自动附带 user IN 查询（非缺陷）；断言证「与 N 无关」而非硬等于小值。
 - mock 单测桩 `Model.query` 双查序列时查询合并会误判——仅被 mock 覆盖且收益 ≤1 查宁可不做。
 - 索引双处定义：模型层 `__table_args__`/`index=True`（create_all+reconcile 覆盖新库）+ `scripts/create_indexes.py::get_all_indexes()`（启动自举覆盖现有库）；增索引须同步两处并 EOL 守恒。
+- **@celery_app.task 装饰后任务名绑定 Task 实例，直调即走 Task.__call__**（2026-10-22 实证）：给 celery_app 设 ContextTask 基座时，__call__ 必须先查 has_app_context() 快路径（有上下文直接 self.run），否则「测试 app 上下文内直调任务实例」的既有用例会经基座导入 app 单例误连真实库（archive 用例单跑连 instance/score_management.db 读不到测试播种数据即此因）；语义与 tasks.scheduled_tasks._resolve_flask_app 一致。另：EagerResult.successful 是方法非属性（须 successful() 调用）；测试注册探针任务后须 celery_app.tasks.pop(name) 防污染全局 registry。
 
 ## 优化战役模式速查（详细过程见各日日志）
 - **R23–R26 读路径**：条件聚合（func.count+func.sum(case) 合并多 COUNT/时间窗）；循环 get_by_id→selectin 关系（先查关系是否已 selectin）；请求级 flask.g 缓存；假经济（取全表再计数）纠正为 DB 聚合。

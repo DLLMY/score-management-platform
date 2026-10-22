@@ -48,7 +48,6 @@ def clean_expired_results():
         )
         # 清理过期的Celery任务结果（超过24小时的）
         # Celery结果存储在 celery-task-meta-* 键中
-        datetime.now() - timedelta(hours=24)
         # 扫描并删除过期键
         keys = redis_client.keys("celery-task-meta-*")
         deleted_count = 0
@@ -72,10 +71,11 @@ def sync_device_status():
     """
     log_info(f"[Scheduled Task] 同步设备状态 - {datetime.now()}")
     try:
-        from app import app as flask_app
         from models import Device
 
-        with flask_app.app_context():
+        # 2026-10-22 统一：与同文件其他任务一致走 _resolve_flask_app()
+        # （原 from app import app 在测试会话内会解析到真实库单例）
+        with _resolve_flask_app().app_context():
             # 检查离线设备（超过5分钟无心跳）
             offline_threshold = datetime.now() - timedelta(minutes=5)
             offline_devices = Device.query.filter(

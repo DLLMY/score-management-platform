@@ -79,7 +79,7 @@ def _build_parser():
     parser.add_argument(
         "-q",
         "--queues",
-        default="default,notification,mqtt,export",
+        default="default,notification,mqtt,export,score",
         help="Comma-separated list of queues to consume",
     )
     parser.add_argument(

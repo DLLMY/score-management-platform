@@ -172,6 +172,15 @@ class Config:
             "exchange_type": "direct",
             "routing_key": "notification",
         },
+        # 2026-10-22 修复：score 队列此前只有 tasks.score_tasks.recalc_user_score
+        # 声明 queue="score"，但此处未声明、routes 未映射、worker -Q 不含 score
+        # → 异步重算任务入队后无消费者（CELERY_ASYNC_SCORE_RECALC=true 时综合分
+        # 静默不更新）。补齐声明使队列链闭合。
+        "score": {
+            "exchange": "score",
+            "exchange_type": "direct",
+            "routing_key": "score",
+        },
         "default": {
             "exchange": "default",
             "exchange_type": "direct",
@@ -182,7 +191,11 @@ class Config:
         "tasks.mqtt_tasks.*": {"queue": "mqtt"},
         "tasks.export_tasks.*": {"queue": "export"},
         "tasks.notification_tasks.*": {"queue": "notification"},
+        "tasks.score_tasks.*": {"queue": "score"},
     }
+    # 2026-10-22：显式默认队列名（celery 内建默认是 "celery"，与 worker -Q 的
+    # "default" 不一致——忘写 queue 参数的任务会滞留无人消费的 "celery" 队列）。
+    CELERY_TASK_DEFAULT_QUEUE = "default"
     # Celery定时任务（Celery Beat）
     CELERY_BEAT_SCHEDULE: ClassVar[dict] = {
         "clean-expired-results": {

@@ -106,11 +106,12 @@ def scheduled_leave_expiry(app):
         try:
             from models import db
             db.session.remove()
-        except Exception:
-            pass
+        except Exception as e:
+            log_warning(f"清理 db.session 失败(已忽略): {e}")
 
 
 def shutdown_scheduler():
     if scheduler:
         scheduler.shutdown()
         log_info("定时任务调度器已关闭")
+

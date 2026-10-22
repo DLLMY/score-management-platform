@@ -1,14 +1,19 @@
-"""定时任务 worker 环境回归守卫（2026-10-21）。
+"""定时任务 worker 环境回归守卫（2026-10-21 创建，2026-10-22 扩展）。
 
-背景：celery worker 无 Flask app_context（celery_app.py 未设 ContextTask 基座），
-tasks/scheduled_tasks.py 的 daily_summary / health_check / archive_operation_logs
-既不自包上下文、又调用了 RedisCache 不存在的方法 set_stats；warmup_cache_task
-漏传 app 参数 → TypeError。以上缺陷导致 beat 调度（config.py CELERY_BEAT_SCHEDULE）
-6 个任务中 4 个在生产 worker 下崩溃或静默失败：
-- health_check（每小时）：set_stats AttributeError 逃逸 → 任务崩溃；
-- daily_summary（每日）：无 app_context → success=False；
-- warmup_cache_task（每 30 分钟）：漏传 app → TypeError → 静默失败；
-- archive_operation_logs（被调时）：无 app_context → except 内 rollback 再抛 → 崩溃。
+背景：celery worker 无 Flask app_context。两层修复、双层守卫：
+- 2026-10-21（任务层兜底）：celery_app.py 未设 ContextTask 基座，
+  tasks/scheduled_tasks.py 的 daily_summary / health_check / archive_operation_logs
+  既不自包上下文、又调用了 RedisCache 不存在的方法 set_stats；warmup_cache_task
+  漏传 app 参数 → TypeError。以上缺陷导致 beat 调度（config.py CELERY_BEAT_SCHEDULE）
+  6 个任务中 4 个在生产 worker 下崩溃或静默失败：
+  - health_check（每小时）：set_stats AttributeError 逃逸 → 任务崩溃；
+  - daily_summary（每日）：无 app_context → success=False；
+  - warmup_cache_task（每 30 分钟）：漏传 app → TypeError → 静默失败；
+  - archive_operation_logs（被调时）：无 app_context → except 内 rollback 再抛 → 崩溃。
+- 2026-10-22（协议层根治）：celery_app.py 设 ContextTask 基座，所有经
+  .delay()/.apply_async() 派发的任务在 worker 侧自动获得 app_context，
+  防止未来新任务再犯「忘记自包」错误；既有任务内层自包变为安全嵌套。
+  另将 sync_device_status 统一走 _resolve_flask_app()（防测试连真实库）。
 
 既有 test_scheduled_tasks_archive.py 以 `with app.app_context():` 包裹调用，
 掩盖了「任务自身不提供上下文」的缺陷（测试绿、生产崩）。
@@ -18,7 +23,9 @@ tasks/scheduled_tasks.py 的 daily_summary / health_check / archive_operation_lo
 2. daily_summary 汇总数值与旧版 Python 参考实现逐项相等（条件聚合语义等价，
    覆盖 score_change=0 与 student_id=NULL 边界）；
 3. 缓存写入走 set() 且 key/TTL 契约正确（防回归到不存在的 set_stats）；
-4. 全程不触碰真实库：worker_app 夹具把 `from app import app` 解析到的单例
+4. ContextTask 基座契约：已注册任务均为其实例，且经 apply() 协议执行时
+   has_app_context() 为 True（协议层注入上下文的不变量）；
+5. 全程不触碰真实库：worker_app 夹具把 `from app import app` 解析到的单例
    换成测试 app（探针实证：测试会话内该导入会解析到 instance/score_management.db）。
 """
 
@@ -181,3 +188,61 @@ class TestWorkerContextGuards:
 
         result = warmup_cache_task()
         assert result["success"] is True, result
+
+
+class TestContextTaskBase:
+    """ContextTask 基座契约守卫（2026-10-22 深度修复，协议层根治）。"""
+
+    def test_registered_tasks_use_context_task_base(self):
+        """所有已注册的 tasks.* 任务实例均为 ContextTask 基座之子类。"""
+        # 导入任务模块触发装饰器注册（celery_app include 列表中的模块）
+        import tasks.export_tasks
+        import tasks.mqtt_tasks
+        import tasks.notification_tasks
+        import tasks.scheduled_tasks
+        import tasks.score_tasks
+        from celery_app import ContextTask, celery_app
+
+        registered = {
+            name: task
+            for name, task in celery_app.tasks.items()
+            if name.startswith("tasks.")
+        }
+        assert registered, "未发现任何 tasks.* 注册任务（include/注册链断裂？）"
+        for name, task in registered.items():
+            assert isinstance(task, ContextTask), f"{name} 未使用 ContextTask 基座"
+
+    def test_apply_protocol_injects_app_context(self, worker_app):
+        """经任务协议（apply）执行时自动获得 app_context（worker 侧不变量）。"""
+        from flask import has_app_context
+
+        from celery_app import celery_app
+
+        @celery_app.task(name="tests.probe_has_app_context")
+        def _probe():
+            return {"has_ctx": has_app_context()}
+
+        try:
+            result = _probe.apply()  # 本地执行，走 ContextTask.__call__
+            assert result.successful() is True
+            assert result.result["has_ctx"] is True
+        finally:
+            celery_app.tasks.pop("tests.probe_has_app_context", None)
+
+    def test_score_queue_declared_routed_and_registered(self):
+        """score 队列链闭合：声明 + 路由 + 任务注册（防无消费者黑洞回归）。
+
+        背景：recalc_user_score 声明 queue=\"score\"，但 task_queues/routes 未声明、
+        worker -Q 不含 score → CELERY_ASYNC_SCORE_RECALC=true 时异步重算任务入队后
+        无消费者，综合分静默不更新（2026-10-22 修复）。
+        """
+        import tasks.score_tasks  # 触发任务注册
+        from celery_app import celery_app
+
+        queues = celery_app.amqp.queues  # Queues(dict 子类)：name -> Queue
+        assert "score" in queues, "task_queues 未声明 score 队列"
+        routes = celery_app.conf.task_routes
+        assert routes.get("tasks.score_tasks.*", {}).get("queue") == "score", "routes 未映射 score"
+        assert "tasks.score_tasks.recalc_user_score" in celery_app.tasks, "score 任务未注册"
+        # 默认队列名必须与 worker -Q 的 \"default\" 一致（防忘写 queue 的任务滞留 \"celery\"）
+        assert celery_app.conf.task_default_queue == "default"

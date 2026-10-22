@@ -54,7 +54,7 @@ services:
       context: ../..
       dockerfile: ./Dockerfile
     container_name: score-management-celery-worker
-    command: celery -A celery_app worker -Q default,notification,mqtt,export -c 4 --loglevel=info
+    command: celery -A celery_app worker -Q default,notification,mqtt,export,score -c 4 --loglevel=info
     volumes:
       - backend-data:/app/backend/instance
       - backend-logs:/app/backend/logs
