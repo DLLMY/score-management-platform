@@ -64,19 +64,6 @@ score_change_model = ns_remote_notify.model(
 )
 
 
-def _resolve_class_from_device(device_id):
-    """根据设备ID（MQTT客户端标识）反查所属班级"""
-    if not device_id:
-        return None
-    try:
-        dev = Device.query.filter_by(device_id=str(device_id)).first()
-        if dev and dev.class_info_id:
-            return dev.class_info_id
-    except Exception as e:
-        # 反查失败会导致上课时间拦截按"无班级"放行，须留痕
-        logger.warning(f"设备班级反查失败(device_id={device_id}): {e}")
-    return None
-
 
 def _block_if_not_allowed(
     force_send,
@@ -320,7 +307,7 @@ class RemoteNotifySendToDevice(Resource):
         """
         args = ns_remote_notify.payload
         force_send = args.get("force_send", False)
-        cls_id = _resolve_class_from_device(device_id)
+        cls_id = ClassTimeChecker.resolve_class_from_device(device_id)
 
         blocked = _block_if_not_allowed(
             force_send,
@@ -392,7 +379,7 @@ class ScoreChangeNotify(Resource):
         args = ns_remote_notify.payload
         force_send = args.get("force_send", False)
         device_id = args.get("device_id")
-        cls_id = _resolve_class_from_device(device_id)
+        cls_id = ClassTimeChecker.resolve_class_from_device(device_id)
 
         blocked = _block_if_not_allowed(
             force_send,

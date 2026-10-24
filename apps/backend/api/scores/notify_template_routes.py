@@ -1,10 +1,11 @@
+import json
 import logging
 from datetime import datetime
 
 from flask import g
 from flask_restx import Namespace, Resource, fields
 
-from models import Device, NotifyTemplate
+from models import NotifyTemplate
 from services.class_time_checker import ClassTimeChecker
 from services.mqtt_service import publish_mqtt
 from services.notify_template_service import (
@@ -19,21 +20,6 @@ from utils.response import APIResponse
 from utils.serialize import serialize_dt
 
 logger = logging.getLogger(__name__)
-import json
-
-
-def _resolve_class_from_device(device_id):
-    if not device_id:
-        return None
-    try:
-        dev = Device.query.filter_by(device_id=str(device_id)).first()
-        if dev and dev.class_info_id:
-            return dev.class_info_id
-    except Exception as e:
-        # 设备查表失败仅降级为"无法解析班级"，不影响模板创建流程，但需留痕（T9 日志化）。
-        logger.warning(f"由设备解析班级失败 device_id={device_id}: {e}", exc_info=True)
-    return None
-
 
 ns_notify_template = Namespace("notify_templates", description="通知模板管理")
 
@@ -209,7 +195,7 @@ class TemplateUse(Resource):
             topics = ["phonebox/remote/notify"]
         # 上课时间拦截（广播按全校+任意班级；指定设备按班级课表反查）
         cls_id = (
-            _resolve_class_from_device(device_id) if (send_mode == "device" and device_id) else None
+            ClassTimeChecker.resolve_class_from_device(device_id) if (send_mode == "device" and device_id) else None
         )
         if cls_id:
             allowed, check_message, reason_code, _ = ClassTimeChecker.is_notification_allowed(

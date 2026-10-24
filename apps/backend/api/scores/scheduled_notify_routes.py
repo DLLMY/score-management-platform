@@ -5,18 +5,16 @@ from datetime import datetime
 from flask import g, request
 from flask_restx import Namespace, Resource, fields
 
-from models import Device, ScheduledNotify
+from models import ScheduledNotify
 from services.class_time_checker import ClassTimeChecker
 from services.mqtt_service import publish_mqtt
 from services.scheduled_notify_service import (
     _serialize_scheduled,
     cancel_scheduled_notify,
-    commit_scheduled_session,
     create_scheduled_notify,
     delete_scheduled_notify,
     get_scheduled_detail_view,
     get_scheduled_list_view,
-    record_scheduled_history,
     record_scheduled_notify_sent,
     rollback_scheduled_session,
     update_scheduled_notify,
@@ -26,19 +24,6 @@ from utils.permission import has_permission, requires_permission
 from utils.response import APIResponse
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_class_from_device(device_id):
-    if not device_id:
-        return None
-    try:
-        dev = Device.query.filter_by(device_id=str(device_id)).first()
-        if dev and dev.class_info_id:
-            return dev.class_info_id
-    except Exception as e:
-        # 反查失败会导致上课时间拦截按"无班级"放行，须留痕
-        logger.warning(f"设备班级反查失败(device_id={device_id}): {e}", exc_info=True)
-    return None
 
 
 ns_scheduled_notify = Namespace("scheduled_notify", description="定时通知管理")
@@ -187,81 +172,6 @@ class ScheduledTrigger(Resource):
             rollback_scheduled_session()  # 失败回滚，避免脏 session 污染后续请求
             logger.error("%s: %s", "发送失败", e, exc_info=True)
             return APIResponse.error(message="发送失败")
-def process_scheduled_notifications():
-    """处理到期的定时通知（定时任务调用）"""
-    now = datetime.now()
-    pending_notifications = ScheduledNotify.query.filter(
-        ScheduledNotify.status == "pending",
-        ScheduledNotify.next_send_at <= now,
-    ).all()
-    for notify in pending_notifications:
-        try:
-            message = {
-                "text": notify.text,
-                "volume": notify.volume,
-                "speak": notify.speak,
-                "popup": notify.popup,
-                "timeout_sec": notify.timeout_sec,
-                "urgent": notify.urgent,
-                "timestamp": datetime.now().isoformat(),
-            }
-            topics = []
-            if notify.send_mode == "broadcast":
-                topics = ["phonebox/remote/notify", "phonebox/remote/notify/all"]
-            elif notify.send_mode == "device" and notify.device_id:
-                topics = [f"phonebox/remote/notify/{notify.device_id}"]
-            else:
-                topics = ["phonebox/remote/notify"]
-            # 上课时间拦截（执行那一刻才判）：广播按全校+任意班级；指定设备按班级课表
-            cls_id = (
-                _resolve_class_from_device(notify.device_id)
-                if (notify.send_mode == "device" and notify.device_id)
-                else None
-            )
-            if cls_id:
-                allowed, _, reason_code, _ = ClassTimeChecker.is_notification_allowed(
-                    target_class_info_id=cls_id, force_send=False
-                )
-            else:
-                blocked, _, reason_code = ClassTimeChecker.is_broadcast_blocked(force_send=False)
-                allowed = not blocked
-            if not allowed:
-                ClassTimeChecker.log_notify_audit(
-                    "scheduled_notify",
-                    cls_id,
-                    None,
-                    {"id": notify.id},
-                    reason_code or "GLOBAL_TIME_RULE",
-                    "上课时间，定时通知跳过发送",
-                    force_send=False,
-                )
-                continue  # 保持 pending，待非上课时段重试
-
-            # publish 结果校验：MQTT 断连时 publish_mqtt 返回 False。
-            # 此前忽略返回值 → 失败也标 sent + NotifyHistory=sent（假状态）。
-            # 任一 topic 失败：不更新 last_sent_at/status，保持 pending 待下轮重试。
-            publish_results = []
-            for topic in topics:
-                try:
-                    ok = publish_mqtt(topic, json.dumps(message))
-                except Exception:
-                    ok = False
-                publish_results.append((topic, bool(ok)))
-            if not all(ok for _, ok in publish_results):
-                failed_topics = [t for t, ok in publish_results if not ok]
-                logger.warning(
-                    f"定时通知(id={notify.id}) MQTT发布失败，保持pending待重试: {failed_topics}"
-                )
-                continue
-
-            record_scheduled_history(notify, topics)
-        except Exception:
-            rollback_scheduled_session()  # 单条失败回滚，避免脏 session 影响下一条与最终 commit
-            notify.status = "failed"
-    commit_scheduled_session()
-
-
-
 def _st_build_notify_topics(notify):
     """根据发送模式构造 MQTT topic 列表（保留原分支语义）。"""
     if notify.send_mode == "broadcast":
@@ -274,7 +184,7 @@ def _st_build_notify_topics(notify):
 def _st_check_notify_allowed(notify, force_send):
     """上课时间拦截判定（广播按全校；指定设备按班级课表反查）。"""
     cls_id = (
-        _resolve_class_from_device(notify.device_id)
+        ClassTimeChecker.resolve_class_from_device(notify.device_id)
         if (notify.send_mode == "device" and notify.device_id)
         else None
     )

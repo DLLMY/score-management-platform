@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from models import ClassPeriod, CourseSchedule, TimeRule, User
+from models import ClassPeriod, CourseSchedule, Device, TimeRule, User
 from utils.logger import log_warning
 
 
@@ -16,6 +16,24 @@ class ClassTimeChecker:
     3. 按班级课表反查（course_schedules + class_periods）：该班此刻在第几节且有课（含自习） -> 拦截（CLASS_IN_SESSION）
     4. 否则放行
     """
+
+    @staticmethod
+    def resolve_class_from_device(device_id):
+        """根据设备ID（MQTT客户端标识）反查所属班级 class_info_id。
+
+        供"指定设备"模式的通知路由 / 后台任务将 device_id 解析为 target_class_info_id，
+        喂给 is_notification_allowed / is_broadcast_blocked 做上课时间拦截。反查失败降级为
+        None（按"无班级"放行），但须留痕——否则上课时间拦截会静默失效。
+        """
+        if not device_id:
+            return None
+        try:
+            dev = Device.query.filter_by(device_id=str(device_id)).first()
+            if dev and dev.class_info_id:
+                return dev.class_info_id
+        except Exception as e:
+            log_warning(f"设备班级反查失败(device_id={device_id}): {e}", exception=e)
+        return None
 
     @staticmethod
     def is_during_class_time(

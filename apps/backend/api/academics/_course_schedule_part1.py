@@ -337,7 +337,7 @@ class CourseScheduleNow(Resource):
         """返回当前是否处于上课时间、当前节次与科目。
 
         可传 class_info_id 精确查询某班；也可传 device_id 按设备反查班级
-        （与下发端点 _resolve_class_from_device 口径一致，供"指定设备"模式的徽章使用）。
+        （与 ClassTimeChecker.resolve_class_from_device 口径一致，供"指定设备"模式的徽章使用）。
         """
         class_info_id = request.args.get("class_info_id", type=int)
         if not class_info_id:

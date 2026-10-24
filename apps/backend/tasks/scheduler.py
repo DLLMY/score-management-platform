@@ -21,8 +21,8 @@ from utils.logger import log_debug, log_info, log_warning
 
 def scheduled_approval_timeout_check(app):
     try:
-        from api.monitoring.mqtt_routes import publish_mqtt
         from models import Approval, SystemConfig
+        from services.mqtt_service import publish_mqtt
 
         with app.app_context():
             config = SystemConfig.query.first()
@@ -74,7 +74,7 @@ def scheduled_approval_timeout_check(app):
 
 def scheduled_notify_check(app):
     try:
-        from api.scores.scheduled_notify_routes import process_scheduled_notifications
+        from services.scheduled_notify_service import process_scheduled_notifications
 
         with app.app_context():
             process_scheduled_notifications()
