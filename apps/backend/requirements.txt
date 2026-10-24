@@ -52,7 +52,6 @@ urllib3>=2.8.0
 # ================ 运行期实际依赖（此前缺失，导致 pip install 后无法启动） ================
 flask-socketio>=5.3
 celery>=5.3
-dependency-injector>=4.41
 prometheus-client>=0.19
 concurrent-log-handler>=0.9.25
 

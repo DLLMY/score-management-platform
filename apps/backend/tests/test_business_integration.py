@@ -27,10 +27,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from di import DIContainer
-except ImportError:
-    pass
 
 try:
     from config.config_loader import config_loader
@@ -108,20 +104,6 @@ class TestBusinessIntegration:
         assert hasattr(service, "calculate_correlation")
         assert hasattr(service, "standardize_data")
         assert hasattr(service, "normalize_data")
-
-    def test_di_container_class_availability(self):
-        """Test DI container class is properly defined"""
-        from di import DIContainer
-
-        container = DIContainer()
-        assert hasattr(container, "notification_service")
-        assert hasattr(container, "mqtt_manager")
-        assert hasattr(container, "redis_cache_service")
-        assert hasattr(container, "export_service")
-        assert hasattr(container, "reward_system")
-        assert hasattr(container, "score_distribution_controller")
-        assert hasattr(container, "rule_execution_engine")
-        assert hasattr(container, "anomaly_service")
 
     def test_config_loader_methods(self):
         """Test config_loader methods availability"""

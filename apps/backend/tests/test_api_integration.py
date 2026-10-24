@@ -22,10 +22,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from di import DIContainer
-except ImportError:
-    pass
 
 try:
     from config.config_loader import ConfigLoader
@@ -86,18 +82,6 @@ class TestServiceIntegration:
         service = MQTTManagementService()
         assert service is not None
 
-    def test_di_container_basic_services(self):
-        """Test DI container has basic services defined"""
-        from di import DIContainer
-
-        container = DIContainer()
-
-        assert hasattr(container, "notification_service")
-        assert hasattr(container, "redis_cache_service")
-        assert hasattr(container, "alert_service")
-        assert hasattr(container, "mqtt_manager")
-        assert hasattr(container, "mqtt_message_service")
-
     def test_config_loader_has_watcher(self):
         """Test config loader has watcher method"""
         from config.config_loader import ConfigLoader
@@ -137,7 +121,6 @@ class TestServiceIntegration:
         from app import service_init
 
         assert hasattr(service_init, "init_services")
-        assert hasattr(service_init, "init_di_container")
         assert hasattr(service_init, "init_config_watcher")
         assert hasattr(service_init, "init_mqtt")
         assert hasattr(service_init, "init_cache_warmup")

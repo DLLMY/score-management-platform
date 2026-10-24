@@ -21,7 +21,6 @@ _ACTIVE_SCHEDULERS = []
 def init_services(app, lightweight=False):
     if not lightweight:
         init_redis_cache(app)
-        init_di_container(app)
         init_config_watcher(app)
         # 在 Celery Worker 进程中跳过 MQTT 连接与调度器：
         # worker 仅需 DB/Redis 上下文处理异步任务，自建 MQTT 双连接会与后端共用
@@ -94,14 +93,6 @@ def init_redis_cache(app):
         log_info("Redis 缓存服务初始化完成")
     except Exception as e:
         log_error(f"Redis 缓存服务初始化失败(已降级为内存缓存): {e}", exception=e)
-
-
-def init_di_container(app):
-    from di import init_container
-
-    container = init_container(app)
-    log_info("依赖注入容器初始化完成")
-    return container
 
 
 def init_config_watcher(app):

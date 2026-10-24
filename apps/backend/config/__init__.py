@@ -4,7 +4,14 @@ import sys
 
 """
 配置模块初始化
-统一从config.py导入配置项，保持向后兼容
+统一从 config.py 导入配置项，保持向后兼容。
+
+实现说明（2026-10-23 重构）：
+此前本文件手工逐条 re-export config.py 的 ~40 个常量，新增常量必须同时在两处
+登记，否则消费者 `from config import X` 会触发 ImportError 链式崩溃（celery 修复时
+曾踩中 CELERY_TASK_DEFAULT_QUEUE）。现改为**程序化 re-export**：加载 config.py 后
+动态暴露 Config 实例（及模块顶层）的全部 UPPER_CASE 配置属性，彻底消除漏登记隐患，
+且消费者 import 路径零改动。
 """
 
 _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,117 +23,31 @@ _config_module = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_config_module)
 Config = _config_module.Config
 config = Config()
-CELERY_BROKER_URL = config.CELERY_BROKER_URL
-CELERY_RESULT_BACKEND = config.CELERY_RESULT_BACKEND
-CELERY_TASK_SERIALIZER = config.CELERY_TASK_SERIALIZER
-CELERY_RESULT_SERIALIZER = config.CELERY_RESULT_SERIALIZER
-CELERY_ACCEPT_CONTENT = config.CELERY_ACCEPT_CONTENT
-CELERY_TIMEZONE = config.CELERY_TIMEZONE
-CELERY_ENABLE_UTC = config.CELERY_ENABLE_UTC
-CELERY_WORKER_CONCURRENCY = config.CELERY_WORKER_CONCURRENCY
-CELERY_WORKER_PREFETCH_MULTIPLIER = config.CELERY_WORKER_PREFETCH_MULTIPLIER
-CELERY_TASK_QUEUES = config.CELERY_TASK_QUEUES
-CELERY_TASK_ROUTES = config.CELERY_TASK_ROUTES
-CELERY_TASK_DEFAULT_QUEUE = config.CELERY_TASK_DEFAULT_QUEUE
-CELERY_BEAT_SCHEDULE = config.CELERY_BEAT_SCHEDULE
-CELERY_BEAT_SCHEDULER = config.CELERY_BEAT_SCHEDULER
-CELERY_BEAT_SCHEDULE_FILENAME = config.CELERY_BEAT_SCHEDULE_FILENAME
-CELERY_TASK_ACKS_LATE = config.CELERY_TASK_ACKS_LATE
-CELERY_TASK_REJECT_ON_WORKER_LOST = config.CELERY_TASK_REJECT_ON_WORKER_LOST
-CELERY_TASK_DEFAULT_RETRY_DELAY = config.CELERY_TASK_DEFAULT_RETRY_DELAY
-CELERY_TASK_MAX_RETRIES = config.CELERY_TASK_MAX_RETRIES
-CELERY_TASK_TIME_LIMIT = config.CELERY_TASK_TIME_LIMIT
-CELERY_TASK_SOFT_TIME_LIMIT = config.CELERY_TASK_SOFT_TIME_LIMIT
-FLASK_APP = config.FLASK_APP
-APP_ENV = config.APP_ENV
-FLASK_ENV = config.FLASK_ENV
-FLASK_DEBUG = config.FLASK_DEBUG
-FLASK_SECRET_KEY = config.FLASK_SECRET_KEY
-FLASK_HOST = config.FLASK_HOST
-FLASK_PORT = config.FLASK_PORT
-DATABASE_URI = config.DATABASE_URI
-SQLALCHEMY_TRACK_MODIFICATIONS = config.SQLALCHEMY_TRACK_MODIFICATIONS
-SQLALCHEMY_ENGINE_OPTIONS = config.SQLALCHEMY_ENGINE_OPTIONS
-REDIS_HOST = config.REDIS_HOST
-REDIS_PORT = config.REDIS_PORT
-REDIS_DB = config.REDIS_DB
-REDIS_PASSWORD = config.REDIS_PASSWORD
-MQTT_BROKER = config.MQTT_BROKER
-MQTT_PORT = config.MQTT_PORT
-MQTT_CLIENT_ID = config.MQTT_CLIENT_ID
-MQTT_USERNAME = config.MQTT_USERNAME
-MQTT_PASSWORD = config.MQTT_PASSWORD
-MQTT_SSL = config.MQTT_SSL
-MQTT_TIMEOUT = config.MQTT_TIMEOUT
-MQTT_KEEPALIVE = config.MQTT_KEEPALIVE
-MQTT_TOPIC_PREFIX = config.MQTT_TOPIC_PREFIX
-JWT_SECRET_KEY = config.JWT_SECRET_KEY
-JWT_ACCESS_TOKEN_EXPIRES = config.JWT_ACCESS_TOKEN_EXPIRES
-JWT_REFRESH_TOKEN_EXPIRES = config.JWT_REFRESH_TOKEN_EXPIRES
-JWT_ALGORITHM = config.JWT_ALGORITHM
-CSRF_SECRET_KEY = config.CSRF_SECRET_KEY
-WTF_CSRF_ENABLED = config.WTF_CSRF_ENABLED
-WTF_CSRF_TIME_LIMIT = config.WTF_CSRF_TIME_LIMIT
-CSRF_TOKEN_LENGTH = config.CSRF_TOKEN_LENGTH
-RATE_LIMIT_ENABLED = config.RATE_LIMIT_ENABLED
-RATE_LIMIT_PER_MINUTE = config.RATE_LIMIT_PER_MINUTE
-RATE_LIMIT_PER_HOUR = config.RATE_LIMIT_PER_HOUR
-__all__ = [
-    "APP_ENV",
-    "CELERY_ACCEPT_CONTENT",
-    "CELERY_BEAT_SCHEDULE",
-    "CELERY_BEAT_SCHEDULER",
-    "CELERY_BEAT_SCHEDULE_FILENAME",
-    "CELERY_BROKER_URL",
-    "CELERY_ENABLE_UTC",
-    "CELERY_RESULT_BACKEND",
-    "CELERY_RESULT_SERIALIZER",
-    "CELERY_TASK_ACKS_LATE",
-    "CELERY_TASK_DEFAULT_QUEUE",
-    "CELERY_TASK_DEFAULT_RETRY_DELAY",
-    "CELERY_TASK_MAX_RETRIES",
-    "CELERY_TASK_QUEUES",
-    "CELERY_TASK_REJECT_ON_WORKER_LOST",
-    "CELERY_TASK_ROUTES",
-    "CELERY_TASK_SERIALIZER",
-    "CELERY_TASK_SOFT_TIME_LIMIT",
-    "CELERY_TASK_TIME_LIMIT",
-    "CELERY_TIMEZONE",
-    "CELERY_WORKER_CONCURRENCY",
-    "CELERY_WORKER_PREFETCH_MULTIPLIER",
-    "CSRF_SECRET_KEY",
-    "CSRF_TOKEN_LENGTH",
-    "DATABASE_URI",
-    "FLASK_APP",
-    "FLASK_DEBUG",
-    "FLASK_ENV",
-    "FLASK_HOST",
-    "FLASK_PORT",
-    "FLASK_SECRET_KEY",
-    "JWT_ACCESS_TOKEN_EXPIRES",
-    "JWT_ALGORITHM",
-    "JWT_REFRESH_TOKEN_EXPIRES",
-    "JWT_SECRET_KEY",
-    "MQTT_BROKER",
-    "MQTT_CLIENT_ID",
-    "MQTT_KEEPALIVE",
-    "MQTT_PASSWORD",
-    "MQTT_PORT",
-    "MQTT_SSL",
-    "MQTT_TIMEOUT",
-    "MQTT_TOPIC_PREFIX",
-    "MQTT_USERNAME",
-    "RATE_LIMIT_ENABLED",
-    "RATE_LIMIT_PER_HOUR",
-    "RATE_LIMIT_PER_MINUTE",
-    "REDIS_DB",
-    "REDIS_HOST",
-    "REDIS_PASSWORD",
-    "REDIS_PORT",
-    "SQLALCHEMY_ENGINE_OPTIONS",
-    "SQLALCHEMY_TRACK_MODIFICATIONS",
-    "WTF_CSRF_ENABLED",
-    "WTF_CSRF_TIME_LIMIT",
-    "Config",
-    "config",
-]
+
+# 程序化 re-export：动态暴露 Config 实例（及模块顶层）的全部 UPPER_CASE 配置属性，
+# 消除手工逐条登记的漏登记隐患（消费者 `from config import X` 不再因遗漏而 ImportError）。
+# 注：真实常量定义在 Config 类/实例上（`config.CELERY_BROKER_URL` 等），不在
+# config.py 模块顶层，故主遍历 config 实例，再补充模块顶层常量。
+_EXCLUDED = {
+    "__builtins__",
+    "__doc__",
+    "__file__",
+    "__name__",
+    "__package__",
+    "__loader__",
+    "__spec__",
+    "__annotations__",
+}
+__all__ = ["Config", "config"]
+_seen = set()
+for _src in (config, _config_module):
+    for _name in dir(_src):
+        if _name.startswith("_"):
+            continue
+        if _name in _EXCLUDED:
+            continue
+        if _name.isupper() and _name not in _seen:
+            globals()[_name] = getattr(_src, _name)
+            __all__.append(_name)
+            _seen.add(_name)
+__all__ = sorted(__all__)
