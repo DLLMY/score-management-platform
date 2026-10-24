@@ -410,6 +410,35 @@ def handle_leave_query(data):
 
 
 # ---------------------------------------------------------------------------
+# 教师/管理员代销假（REST: POST /api/leave/{id}/cancel）
+# ---------------------------------------------------------------------------
+def cancel_leave_by_admin(leave_id, admin):
+    """教师/管理员代销假（取消待审批/生效中的请假）。
+
+    返回 (leave, error)：成功时 leave 为 Approval 且 error=None；失败时 leave=None、
+    error=(message, status_code)。班级隔离校验在此完成。
+
+    事务边界：沿用 db_session_scope(detach=False) 统一提交（与 _find_active_leave
+    同款 R26 约束），不在函数内裸 commit，避免提前提交调用方事务。detach=False
+    保留对象供调用方序列化（_serialize_leave）。
+    """
+    leave = Approval.query.get(leave_id)
+    if leave is None or leave.type != "leave":
+        return None, ("请假记录不存在", 404)
+    if leave.status in ("cancelled", "expired", "rejected"):
+        return None, ("该请假已结束，无法代销假", 400)
+    # 班级隔离：班主任仅可操作本班学生的请假，admin/super_admin 不受限
+    if admin is not None and admin.role not in ("admin", "super_admin"):
+        if leave.user is None or leave.user.class_info_id != admin.primary_class_id:
+            return None, ("无权操作其他班级的请假", 403)
+    leave.status = "cancelled"
+    leave.approver_id = admin.id if admin else None
+    with db_session_scope(detach=False):
+        pass  # 上述 status/approver_id 变更在此统一提交
+    return leave, None
+
+
+# ---------------------------------------------------------------------------
 # 周期过期任务（F5 双保险之一，供 scheduler 调用）
 # ---------------------------------------------------------------------------
 def expire_leaves(app=None):

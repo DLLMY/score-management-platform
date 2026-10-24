@@ -18,6 +18,7 @@ from flask import g
 from flask_restx import Namespace, Resource, fields
 
 from models import Approval, User
+from services.leave_service import cancel_leave_by_admin
 from utils.decorators import safe_handle
 from utils.permission import get_current_admin, requires_permission
 from utils.response import APIResponse
@@ -103,21 +104,9 @@ class LeaveCancelResource(Resource):
     @safe_handle(message="代销假失败", default_status=500)
     def post(self, leave_id):
         admin = get_current_admin()
-        leave = Approval.query.get(leave_id)
-        if leave is None or leave.type != "leave":
-            return APIResponse.error(message="请假记录不存在", status_code=404)
-        if leave.status in ("cancelled", "expired", "rejected"):
-            return APIResponse.error(message="该请假已结束，无法代销假", status_code=400)
-        # 班级隔离：班主任仅可操作本班学生的请假，admin/super_admin 不受限
-        if admin is not None and admin.role not in ("admin", "super_admin"):
-            if leave.user is None or leave.user.class_info_id != admin.primary_class_id:
-                return APIResponse.error(message="无权操作其他班级的请假", status_code=403)
-
-        leave.status = "cancelled"
-        leave.approver_id = admin.id if admin else None
-        from models import db
-
-        db.session.commit()
+        leave, err = cancel_leave_by_admin(leave_id, admin)
+        if err:
+            return APIResponse.error(message=err[0], status_code=err[1])
 
         # 通知设备端（若有）：该生请假已结束，下次刷卡查询将得到 on_leave=false
         if leave.device_id:

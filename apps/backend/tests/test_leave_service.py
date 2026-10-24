@@ -297,6 +297,50 @@ class TestLeaveStatusAndIso:
         assert out == "2026-01-01T10:00:00+08:00"
 
 
+class TestCancelLeaveByAdmin:
+    def test_cancel_success_sets_approver(self, db_session, mock_publish):
+        cls = _make_class(db_session)
+        user = _make_user(db_session, cls.id)
+        a = _active_leave(db_session, user, hours=3)
+        teacher = _make_teacher(db_session, class_info_id=cls.id)
+        leave, err = leave_service.cancel_leave_by_admin(a.id, teacher)
+        assert err is None
+        assert leave is not None
+        assert leave.status == "cancelled"
+        assert leave.approver_id == teacher.id
+        # 落库复核（detach=False 保留对象，refresh 后状态一致）
+        db_session.refresh(leave)
+        assert leave.status == "cancelled"
+        assert leave.approver_id == teacher.id
+
+    def test_cancel_class_isolation_forbidden(self, db_session, mock_publish):
+        cls_a = _make_class(db_session)
+        cls_b = _make_class(db_session)
+        user = _make_user(db_session, cls_a.id)
+        a = _active_leave(db_session, user, hours=3)
+        teacher_b = _make_teacher(db_session, class_info_id=cls_b.id)  # 不同班
+        leave, err = leave_service.cancel_leave_by_admin(a.id, teacher_b)
+        assert leave is None
+        assert err == ("无权操作其他班级的请假", 403)
+
+    def test_cancel_nonexistent(self, db_session, mock_publish):
+        teacher = _make_teacher(db_session)
+        leave, err = leave_service.cancel_leave_by_admin(999999, teacher)
+        assert leave is None
+        assert err == ("请假记录不存在", 404)
+
+    def test_cancel_already_finished(self, db_session, mock_publish):
+        cls = _make_class(db_session)
+        user = _make_user(db_session, cls.id)
+        a = _active_leave(db_session, user, hours=3)
+        a.status = "cancelled"
+        db_session.commit()
+        teacher = _make_teacher(db_session, class_info_id=cls.id)
+        leave, err = leave_service.cancel_leave_by_admin(a.id, teacher)
+        assert leave is None
+        assert err == ("该请假已结束，无法代销假", 400)
+
+
 # ---------------------------------------------------------------------------
 # REST 端点
 # ---------------------------------------------------------------------------
