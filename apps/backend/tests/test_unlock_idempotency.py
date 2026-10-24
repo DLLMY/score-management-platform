@@ -9,10 +9,10 @@ from services.mqtt_message_service import MQTTMessageService
 # ---------------- G2：unlock msg_id 幂等去重 ----------------
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 @patch("models.TimeRule")
-@patch("services.mqtt_message_service.db_session_scope")
+@patch("services.mqtt_message._shared.db_session_scope")
 def test_unlock_same_msg_id_only_deduct_once(
     mock_db_scope, mock_time_rule, mock_manager, mock_publish, app
 ):
@@ -45,10 +45,10 @@ def test_unlock_same_msg_id_only_deduct_once(
         assert updated.today_unlock_count == 1
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 @patch("models.TimeRule")
-@patch("services.mqtt_message_service.db_session_scope")
+@patch("services.mqtt_message._shared.db_session_scope")
 def test_unlock_different_msg_id_deduct_twice(
     mock_db_scope, mock_time_rule, mock_manager, mock_publish, app
 ):
@@ -79,10 +79,10 @@ def test_unlock_different_msg_id_deduct_twice(
         assert updated.today_unlock_count == 2
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 @patch("models.TimeRule")
-@patch("services.mqtt_message_service.db_session_scope")
+@patch("services.mqtt_message._shared.db_session_scope")
 def test_unlock_empty_msg_id_no_dedup(
     mock_db_scope, mock_time_rule, mock_manager, mock_publish, app
 ):
@@ -112,7 +112,7 @@ def test_unlock_empty_msg_id_no_dedup(
 # ---------------- G1：下行补 device_id ----------------
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
+@patch("services.mqtt_message._shared.publish_mqtt")
 def test_publish_unlock_result_includes_device_id(mock_publish):
     """开锁结果下行 payload 含 device_id（G1 定向校验字段）。"""
     service = MQTTMessageService()
@@ -124,7 +124,7 @@ def test_publish_unlock_result_includes_device_id(mock_publish):
     assert payload["result"] == "true"
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
+@patch("services.mqtt_message._shared.publish_mqtt")
 def test_publish_unlock_result_no_device_id_when_absent(mock_publish):
     """缺省 device_id 时 payload 不输出该字段（零破坏性）。"""
     service = MQTTMessageService()
@@ -134,8 +134,8 @@ def test_publish_unlock_result_no_device_id_when_absent(mock_publish):
     assert "device_id" not in payload
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 def test_query_downlink_includes_device_id(mock_manager, mock_publish):
     """query 下行结果同样透传 device_id（G1 镜像）。"""
     mock_user = Mock()
@@ -150,10 +150,10 @@ def test_query_downlink_includes_device_id(mock_manager, mock_publish):
     assert payload["device_id"] == "dev-query"
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 @patch("models.TimeRule")
-@patch("services.mqtt_message_service.db_session_scope")
+@patch("services.mqtt_message._shared.db_session_scope")
 def test_unlock_downlink_device_id_isolated(
     mock_db_scope, mock_time_rule, mock_manager, mock_publish, app
 ):
@@ -183,8 +183,8 @@ def test_unlock_downlink_device_id_isolated(
 # ---------------- G8：强制服务器时钟 ----------------
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 @patch("models.TimeRule")
 def test_unlock_server_clock_ignores_device_hour_block(
     mock_time_rule, mock_manager, mock_publish
@@ -204,7 +204,7 @@ def test_unlock_server_clock_ignores_device_hour_block(
         def now(cls, tz=None):
             return datetime(2026, 1, 1, 14, 30, 0)
 
-    with patch("services.mqtt_message_service.datetime", _FixedDateTime):
+    with patch("services.mqtt_message._shared.datetime", _FixedDateTime):
         service = MQTTMessageService()
         service.handle_unlock_message(
             {"box_id": "A", "card_id": "123", "hour": 10, "minute": 0}
@@ -216,10 +216,10 @@ def test_unlock_server_clock_ignores_device_hour_block(
     assert payload["reason"] == "not_in_time"
 
 
-@patch("services.mqtt_message_service.publish_mqtt")
-@patch("services.mqtt_message_service.mqtt_manager")
+@patch("services.mqtt_message._shared.publish_mqtt")
+@patch("services.mqtt_message._shared.mqtt_manager")
 @patch("models.TimeRule")
-@patch("services.mqtt_message_service.db_session_scope")
+@patch("services.mqtt_message._shared.db_session_scope")
 def test_unlock_server_clock_ignores_device_hour_allow(
     mock_db_scope, mock_time_rule, mock_manager, mock_publish, app
 ):
@@ -249,7 +249,7 @@ def test_unlock_server_clock_ignores_device_hour_allow(
             def now(cls, tz=None):
                 return datetime(2026, 1, 1, 10, 0, 0)
 
-        with patch("services.mqtt_message_service.datetime", _FixedDateTime):
+        with patch("services.mqtt_message._shared.datetime", _FixedDateTime):
             service = MQTTMessageService()
             service.handle_unlock_message(
                 {"box_id": "A", "card_id": "123", "hour": 3, "minute": 0, "msg_id": "m-g8-allow"}

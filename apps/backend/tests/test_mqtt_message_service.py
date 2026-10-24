@@ -64,7 +64,7 @@ class TestMQTTMessageService:
 
         assert not result
 
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_check_rule_limit_no_rule(self, mock_get_by_id):
         """测试规则不存在"""
         mock_get_by_id.return_value = None
@@ -75,7 +75,7 @@ class TestMQTTMessageService:
         assert not result["allow"]
         assert "Rule not found" in result["message"]
 
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_check_rule_limit_no_daily_limit(self, mock_get_by_id):
         """测试无每日限制"""
         mock_rule = Mock()
@@ -133,8 +133,8 @@ class TestMQTTMessageService:
         assert service.apply_score_limit(-10) == 0
         assert service.apply_score_limit(50) == 50
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.User")
     def test_handle_query_message_no_card(self, mock_user, mock_manager, mock_publish):
         """测试查询消息无card_id"""
@@ -147,8 +147,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["result"] == "false"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.User")
     def test_handle_query_message_user_not_found(self, mock_user, mock_manager, mock_publish):
         """测试查询消息用户不存在"""
@@ -162,8 +162,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["result"] == "false"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_handle_query_message_success(self, mock_manager, mock_publish):
         """测试查询消息成功"""
         mock_user = Mock()
@@ -178,7 +178,7 @@ class TestMQTTMessageService:
         assert payload["result"] == "true"
         assert payload["current_score"] == 85
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_publish_unlock_result(self, mock_publish):
         """测试发布解锁结果"""
 
@@ -188,8 +188,8 @@ class TestMQTTMessageService:
         mock_publish.assert_called_once()
         assert mock_publish.call_args[0][0] == "phonebox/unlock/box1"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_handle_points_query_no_card(self, mock_manager, mock_publish):
         """测试积分查询无card_id"""
 
@@ -200,8 +200,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.User")
     def test_handle_points_query_user_not_found(self, mock_user, mock_manager, mock_publish):
         """测试积分查询用户不存在"""
@@ -215,8 +215,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_handle_points_query_success(self, mock_manager, mock_publish):
         """测试积分查询成功"""
         mock_user = Mock()
@@ -235,8 +235,8 @@ class TestMQTTMessageService:
 
     # ---------- G3: points/result 下行补 device_id（新固件 v1.6.0+ 定向校验） ----------
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_g3_points_query_success_includes_device_id(self, mock_manager, mock_publish):
         """G3: 积分查询成功下行 payload 应包含 device_id（多设备定向）。"""
         mock_user = Mock()
@@ -253,8 +253,8 @@ class TestMQTTMessageService:
         assert payload["success"]
         assert payload["device_id"] == "dev1"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_g3_points_query_no_card_includes_device_id(self, mock_manager, mock_publish):
         """G3: 积分查询缺 card_id 的错误下行也应带 device_id。"""
         service = MQTTMessageService()
@@ -265,8 +265,8 @@ class TestMQTTMessageService:
         assert not payload["success"]
         assert payload["device_id"] == "dev1"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_g3_points_query_no_device_id_omits_field(self, mock_manager, mock_publish):
         """G3: 旧设备不上行 device_id 时，下行 payload 不应含该字段（零破坏）。"""
         mock_user = Mock()
@@ -282,8 +282,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert "device_id" not in payload
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_g3_points_add_no_card_includes_device_id(self, mock_manager, mock_publish):
         """G3: 积分加分（无 card_id 错误分支）下行带 device_id。"""
         service = MQTTMessageService()
@@ -294,8 +294,8 @@ class TestMQTTMessageService:
         assert not payload["success"]
         assert payload["device_id"] == "dev1"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     def test_g3_points_sub_no_card_includes_device_id(self, mock_manager, mock_publish):
         """G3: 积分减分（无 card_id 错误分支）下行带 device_id。"""
         service = MQTTMessageService()
@@ -306,8 +306,8 @@ class TestMQTTMessageService:
         assert not payload["success"]
         assert payload["device_id"] == "dev1"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.TimeRule")
     def test_handle_unlock_message_not_in_time(self, mock_time_rule, mock_manager, mock_publish):
         """测试解锁消息-不在允许时间内（G8：时段判定强制用服务器时钟，忽略设备上行 hour/minute）"""
@@ -327,7 +327,7 @@ class TestMQTTMessageService:
             def now(cls, tz=None):
                 return datetime(2026, 1, 1, 14, 30, 0)
 
-        with patch("services.mqtt_message_service.datetime", _FixedDateTime):
+        with patch("services.mqtt_message._shared.datetime", _FixedDateTime):
             service = MQTTMessageService()
             service.handle_unlock_message(
                 {"box_id": "A", "card_id": "123", "hour": 10, "minute": 0}
@@ -338,8 +338,8 @@ class TestMQTTMessageService:
         assert payload["result"] == "false"
         assert payload["reason"] == "not_in_time"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.TimeRule")
     def test_handle_unlock_message_no_card(self, mock_time_rule, mock_manager, mock_publish):
         """测试解锁消息-无card_id"""
@@ -352,8 +352,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["result"] == "false"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.TimeRule")
     @patch("models.User")
     def test_handle_unlock_message_user_not_found(
@@ -371,8 +371,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["result"] == "false"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.TimeRule")
     def test_handle_unlock_message_score_low(self, mock_time_rule, mock_manager, mock_publish, app):
         """测试解锁消息-积分不足（R2 起走 UnlockValidator 真实校验，需真实学生记录）"""
@@ -397,10 +397,10 @@ class TestMQTTMessageService:
         assert payload["result"] == "false"
         assert payload["reason"] == "score_low"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.TimeRule")
-    @patch("services.mqtt_message_service.db_session_scope")
+    @patch("services.mqtt_message._shared.db_session_scope")
     def test_handle_unlock_message_success(
         self, mock_db_scope, mock_time_rule, mock_manager, mock_publish, app
     ):
@@ -432,7 +432,7 @@ class TestMQTTMessageService:
             assert updated.today_unlock_count == 1
             mock_manager.set_cached_user.assert_called_once()
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_handle_points_add_no_card(self, mock_publish):
         """测试积分增加-无card_id"""
 
@@ -443,7 +443,7 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_handle_points_add_invalid_amount(self, mock_publish):
         """测试积分增加-无效金额"""
 
@@ -454,8 +454,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
     @patch("models.User")
     def test_handle_points_add_user_not_found(self, mock_user, mock_manager, mock_publish):
         """测试积分增加-用户不存在"""
@@ -469,9 +469,9 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
-    @patch("services.mqtt_message_service.db_session_scope")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
+    @patch("services.mqtt_message._shared.db_session_scope")
     def test_handle_points_add_success(self, mock_db_scope, mock_manager, mock_publish, app):
         """测试积分增加-成功"""
         mock_user = Mock()
@@ -490,7 +490,7 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_handle_points_sub_no_card(self, mock_publish):
         """测试积分扣除-无card_id"""
 
@@ -501,7 +501,7 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_handle_points_sub_invalid_amount(self, mock_publish):
         """测试积分扣除-无效金额"""
 
@@ -512,9 +512,9 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.mqtt_manager")
-    @patch("services.mqtt_message_service.db_session_scope")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.mqtt_manager")
+    @patch("services.mqtt_message._shared.db_session_scope")
     def test_handle_points_sub_success(self, mock_db_scope, mock_manager, mock_publish, app):
         """测试积分扣除-成功"""
         mock_user = Mock()
@@ -533,8 +533,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.db_session_scope")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.db_session_scope")
     def test_handle_heartbeat_message(self, mock_db_scope, mock_publish, app):
         """测试心跳消息处理"""
 
@@ -579,7 +579,7 @@ class TestMQTTMessageService:
             is False
         )
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_handle_heartbeat_lwt_offline_marks_device_offline(self, mock_publish, app):
         """G7: 收到 broker 代发的离线遗嘱，设备秒级置 offline（不强制 online、不自动注册）。"""
         service = MQTTMessageService()
@@ -624,7 +624,7 @@ class TestMQTTMessageService:
         mark_device_offline_by_lwt(None)
         assert True
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_handle_score_add_invalid_undo_code(self, mock_publish):
         """测试积分撤销-无效代码"""
 
@@ -635,8 +635,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_handle_score_undo_record_not_found(self, mock_get_by_id, mock_publish):
         """测试积分撤销-记录不存在"""
         mock_get_by_id.return_value = None
@@ -648,8 +648,8 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_handle_score_undo_already_undone(self, mock_get_by_id, mock_publish):
         """测试积分撤销-已撤销"""
 
@@ -667,9 +667,9 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.db_session_scope")
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.db_session_scope")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_handle_score_undo_success(self, mock_get_by_id, mock_db_scope, mock_publish):
         """测试积分撤销-成功"""
         mock_record = Mock()
@@ -703,7 +703,7 @@ class TestMQTTMessageService:
 
         assert result is None
 
-    @patch("services.mqtt_message_service.mqtt_logs")
+    @patch("services.mqtt_message._shared.mqtt_logs")
     def test_handle_mqtt_message_valid(self, mock_logs):
         """测试MQTT消息处理-有效消息"""
 
@@ -713,7 +713,7 @@ class TestMQTTMessageService:
             service.handle_mqtt_message(None, "phonebox/query", '{"card_id": "123"}')
             mock_query.assert_called_once()
 
-    @patch("services.mqtt_message_service.mqtt_logs")
+    @patch("services.mqtt_message._shared.mqtt_logs")
     def test_handle_mqtt_message_score_add(self, mock_logs):
         """测试MQTT消息处理-积分增加"""
 
@@ -723,7 +723,7 @@ class TestMQTTMessageService:
             service.handle_mqtt_message(None, "score/add", '{"user_id": 1, "score_change": 10}')
             mock_add.assert_called_once()
 
-    @patch("services.mqtt_message_service.mqtt_logs")
+    @patch("services.mqtt_message._shared.mqtt_logs")
     def test_handle_mqtt_message_score_undo(self, mock_logs):
         """测试MQTT消息处理-积分撤销"""
 
@@ -733,7 +733,7 @@ class TestMQTTMessageService:
             service.handle_mqtt_message(None, "score/undo", '{"undo_code": "UNDO_123"}')
             mock_undo.assert_called_once()
 
-    @patch("services.mqtt_message_service.mqtt_logs")
+    @patch("services.mqtt_message._shared.mqtt_logs")
     def test_handle_mqtt_message_heartbeat(self, mock_logs):
         """测试MQTT消息处理-心跳"""
 
@@ -743,10 +743,10 @@ class TestMQTTMessageService:
             service.handle_mqtt_message(None, "phonebox/heartbeat", '{"device_id": "dev001"}')
             mock_heartbeat.assert_called_once()
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.db_session_scope")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.db_session_scope")
     @patch("models.ProcessedMessage")
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_handle_score_add_idempotent(
         self, mock_get_by_id, mock_processed, mock_db_scope, mock_publish
     ):
@@ -763,7 +763,7 @@ class TestMQTTMessageService:
         assert payload["success"]
         assert "already processed" in payload["message"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_try_insert_processed_concurrent_conflict(self, mock_publish):
         """并发重发同一 msg_id：ProcessedMessage 唯一约束冲突时应回退到幂等响应，不抛异常。"""
         from sqlalchemy.exc import IntegrityError
@@ -794,7 +794,7 @@ class TestMQTTMessageService:
             assert "already processed" in payload["message"]
             assert payload["record_id"] == 999
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     def test_try_insert_processed_no_conflict(self, mock_publish):
         """正常路径：无冲突 / 无 msg_id 时应返回 False 且不发幂等响应。"""
 
@@ -816,9 +816,9 @@ class TestMQTTMessageService:
             assert service._try_insert_processed(None, 1, 50, "c", "topic") is False
             mock_publish.assert_not_called()
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     @patch("models.ProcessedMessage")
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.get_by_id")
     def test_handle_score_add_user_not_found(self, mock_get_by_id, mock_processed, mock_publish):
         """测试积分增加-用户不存在"""
         mock_processed.query.filter_by.return_value.first.return_value = None
@@ -831,10 +831,10 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert not payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
-    @patch("services.mqtt_message_service.db_session_scope")
+    @patch("services.mqtt_message._shared.publish_mqtt")
+    @patch("services.mqtt_message._shared.db_session_scope")
     @patch("models.ProcessedMessage")
-    @patch("services.mqtt_message_service.get_by_id")
+    @patch("services.mqtt_message._shared.get_by_id")
     @patch("models.ScoreRule")
     @patch("models.ScoreRecord")
     @patch("models.db")
@@ -880,7 +880,7 @@ class TestMQTTMessageService:
         payload = json.loads(mock_publish.call_args[0][1])
         assert payload["success"]
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     @patch("models.ScoreRule")
     def test_handle_score_rules_query_success(self, mock_rule, mock_publish):
         """测试设备查询积分规则：返回启用规则列表"""
@@ -910,7 +910,7 @@ class TestMQTTMessageService:
         assert payload["rules"][0]["name"] == "课堂表现加分"
         assert payload["request_id"] == "req_rules_1"
 
-    @patch("services.mqtt_message_service.publish_mqtt")
+    @patch("services.mqtt_message._shared.publish_mqtt")
     @patch("models.ScoreRule")
     def test_handle_score_rules_query_failure(self, mock_rule, mock_publish):
         """测试设备查询规则查询异常：诚实返回失败而非伪装空列表"""

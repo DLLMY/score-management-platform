@@ -190,9 +190,17 @@ class TestR1R9ReviewRegression:
 
     def test_mqtt_no_python_readmodifywrite(self):
         """R5 复核: mqtt_message_service 不应再有 apply_score_limit 读改写（rule_name/score_change 路径已原子化）"""
+        import inspect
+        import pathlib
+
         import services.mqtt_message_service as m
 
+        # 服务已按领域拆分至 services/mqtt_message/ 包：采集主模块 + 包内全部源码，
+        # 保持「全服务仅 1 处 apply_score_limit 定义、无残留调用」的断言语义。
         src = inspect.getsource(m)
+        pkg_dir = pathlib.Path(m.__file__).parent / "mqtt_message"
+        for p in sorted(pkg_dir.glob("*.py")):
+            src += p.read_text(encoding="utf-8")
         # 仅保留定义处 1 次；若残留调用即回归
         assert src.count("apply_score_limit(") == 1, "mqtt 不得再残留 Python 读改写加分"
 

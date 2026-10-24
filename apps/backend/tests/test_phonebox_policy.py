@@ -366,7 +366,9 @@ def _capture_unlock(monkeypatch):
     """拦截 publish_mqtt，捕获下发给设备的开箱结果。"""
     import json as _json
 
-    import services.mqtt_message_service as mms
+    # MQTT 消息服务拆分后：共享符号（publish_mqtt / mqtt_manager 等）单一来源为
+    # services.mqtt_message._shared，patch 须打在该模块才能穿透 mixin 方法。
+    from services.mqtt_message import _shared
 
     captured = {}
 
@@ -378,10 +380,10 @@ def _capture_unlock(monkeypatch):
             captured["payload"] = payload
         return True
 
-    monkeypatch.setattr(mms, "publish_mqtt", fake_publish)
+    monkeypatch.setattr(_shared, "publish_mqtt", fake_publish)
     # 用户缓存会跨用例串味，禁用之
-    monkeypatch.setattr(mms.mqtt_manager, "get_cached_user", lambda card_id: None)
-    monkeypatch.setattr(mms.mqtt_manager, "set_cached_user", lambda card_id, user: None)
+    monkeypatch.setattr(_shared.mqtt_manager, "get_cached_user", lambda card_id: None)
+    monkeypatch.setattr(_shared.mqtt_manager, "set_cached_user", lambda card_id, user: None)
     return captured
 
 
