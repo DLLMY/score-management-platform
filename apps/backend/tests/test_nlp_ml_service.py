@@ -440,7 +440,7 @@ class TestNLPMLTrainingService:
         model = SVC(kernel="linear")
         model.fit(X, y)
 
-        with patch("services.nlp_ml_service.MODEL_DIR", str(tmp_path)):
+        with patch("services.nlp_ml._training_mixin.MODEL_DIR", str(tmp_path)):
             model_path = service._save_model("test_algo", model, vectorizer)
 
             assert model_path is not None
@@ -456,7 +456,7 @@ class TestNLPMLTrainingService:
 
         service = NLPMLTrainingService()
 
-        with patch("services.nlp_ml_service.MODEL_DIR", str(tmp_path)):
+        with patch("services.nlp_ml._training_mixin.MODEL_DIR", str(tmp_path)):
             loaded_model, loaded_vectorizer = service._load_model("non_existent")
 
             assert loaded_model is None
