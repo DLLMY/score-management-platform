@@ -45,6 +45,13 @@
 - **R31+F1–F5 Class F**：瞬态类属性缓存（`_bulk_*`）——批量入口循环前 IN 预取（按主键分组）+ 单生函数顶部命中即返 + try/finally 清理；入口间 save-restore（`_prev_bulk`）防嵌套覆盖；不改公开签名保 mock 零破坏；SQL 计数 harness 证与 N 无关 + 数值等价；F4 窗口基准时间须取自缓存 ref（否则 datetime.now() 微秒差致键不命中）。
 - 提交（均 push+ls-remote 核验）：R23=`edd84bf` R24=`1cd686f` R25=`3d7aa8e` R26=`c7ad36c` R28=`c0ee179` R29+R30=`a1fd352` R31=`af12c4a` F1–F5=`1107699`。
 
+## 服务层 god-class 拆分战役（复用 NLP mixin 模式）
+- **模式**：god-class → `services/<domain>/` 子包（域 mixin + 主文件薄组合层）；`__module__` 不变；消费方 `from services.X import ...` 零变更；AST 守恒断言（方法集+装饰器计数一致）。
+- **`_shared.py` 叶模块破环**：枚举/前向函数/被 patch 符号集中于此（单源）；mixin 经 `_shared.X` 属性级访问穿透 patch（勿用 `from _shared import X` 快照，patch 无法覆盖）。
+- **已收官批次**：① MQTTManager `c88129f`；② NLPMLTrainingService+NLPRuleManagementService+MQTTMessageService `db2ecf5`；③ AcademicsService（2026-10-25，主文件 1003→38 行，8 mixin，零回归 2408/0/0/7）。
+- **一次性脚本**（仓库根，禁提交）：`split_mqtt_manager.py` / `split_nlp_ml_service.py` / `split_nlp_rule_service.py` / `split_mqtt_message_service.py` / `split_academics_service.py`；`.pre-split.bak` 已 gitignore。
+- **剩余候选**（需先 classmethod 化/模块函数化，硬编码类名 self 引用阻断 mixin 拆分）：RiskPredictService(1156) / RuleRecommendationService / ExportService / CompositeScoreService / AnalysisService。
+
 ## 前端页面架构约定（2026-10-19 评估确认）
 - **「装配层单文件 + 域目录」是刻意架构，非烂尾**：45/45 双形态页面全部为 `pages/Xxx.tsx`（装配层/路由入口，import 域 View+Logic）+ `pages/xxx/`（域实现：View/Logic/Hooks/components/types）。命名约定统一：目录 camelCase + 文件 PascalCase。
 - **0 孤儿目录、0 歧义实现**：生产代码 pages import 全部带显式文件名（0 个目录路径）；测试代码经整合后同样 0 残留。
