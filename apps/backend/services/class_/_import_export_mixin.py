@@ -1,0 +1,430 @@
+from services.class_ import _shared
+"""班级导入导出：export_classes/import_classes + 全部 7 导入助手 + 常量。"""
+
+from datetime import datetime
+import io
+import json
+import re
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from sqlalchemy import func
+from models import (
+    User,
+)
+from utils.excel_utils import sanitize_spreadsheet_value
+
+
+def _lookup_admin_by_name(head_teacher_name):
+    """按姓名解析班主任 admin，返回 (admin, error)；error 非 None 表示解析失败。"""
+    if not isinstance(head_teacher_name, str) or len(head_teacher_name.strip()) == 0:
+        return None, "班主任姓名格式无效，必须为非空字符串"
+    if len(head_teacher_name.strip()) > 50:
+        return None, "班主任姓名长度超过限制（最大50字符）"
+    admin = _shared.Admin.query.filter(_shared.Admin.real_name == head_teacher_name.strip()).first()
+    if not admin:
+        admin = _shared.Admin.query.filter(_shared.Admin.username == head_teacher_name.strip()).first()
+    if not admin:
+        return None, f'班主任 "{head_teacher_name}" 在系统中不存在'
+    if admin.role not in ["admin", "teacher"]:
+        return None, f'用户 "{head_teacher_name}" 的角色不是管理员或教师，无法担任班主任'
+    return admin, None
+
+def _lookup_admin_by_id(head_teacher_id):
+    """按 ID 解析班主任 admin，返回 (admin, error)；error 非 None 表示解析失败。"""
+    if not isinstance(head_teacher_id, (int, str)):
+        return None, "班主任ID格式无效，必须为数字"
+    try:
+        admin_id = int(head_teacher_id)
+        admin = _shared.get_by_id(_shared.Admin, admin_id)
+        if not admin:
+            return None, f'班主任ID "{head_teacher_id}" 在系统中不存在'
+        if admin.role not in ["admin", "teacher"]:
+            return None, f'用户ID "{head_teacher_id}" 的角色不是管理员或教师，无法担任班主任'
+        return admin, None
+    except ValueError:
+        return None, "班主任ID格式无效，必须为有效数字"
+
+def _resolve_admin_relation(head_teacher_name, head_teacher_id):
+    """解析班主任 admin 关联，返回 (resolved_head_teacher_id, errors)。"""
+    errors = []
+    if head_teacher_name and head_teacher_id:
+        errors.append("不能同时提供班主任姓名和班主任ID")
+        return None, errors
+    if head_teacher_name:
+        admin, err = _lookup_admin_by_name(head_teacher_name)
+        if err:
+            errors.append(err)
+            return None, errors
+        return admin.id, errors
+    if head_teacher_id:
+        admin, err = _lookup_admin_by_id(head_teacher_id)
+        if err:
+            errors.append(err)
+            return None, errors
+        return admin.id, errors
+    return None, errors
+
+_HEAD_TEACHER_MISSING = object()
+
+def _rule_failed(rule_type, value, params):
+    """判断单条校验规则是否失败（与原始 import_classes.validate_item 的复合条件等价）。"""
+    if rule_type == "required":
+        return value is None
+    if rule_type == "max_length":
+        return bool(value) and len(str(value)) > params.get("max", 100)
+    if rule_type == "min_length":
+        return bool(value) and len(str(value)) < params.get("min", 1)
+    if rule_type == "regex":
+        return bool(value) and not re.match(params.get("pattern", ""), str(value))
+    return False
+
+def _validate_import_item(item, validation_rules):
+    """校验单条导入记录（自 ClassService.import_classes 抽出，行为等价）。"""
+    errors = []
+    for rule in validation_rules:
+        field = rule["field"]
+        rule_type = rule["rule_type"]
+        params = rule.get("params", {})
+        message = rule.get("message", f"{field}验证失败")
+        value = item.get(field)
+        if _rule_failed(rule_type, value, params):
+            errors.append(message)
+    return errors
+
+def _resolve_import_relations(item, field_mappings):
+    """解析导入记录的关联字段（如班主任），返回 (resolved_item, errors)。"""
+    resolved = item.copy()
+    validation_errors = []
+
+    for mapping in field_mappings:
+        relation = mapping.get("relation")
+        if relation == "admin":
+            head_teacher_name = item.get("head_teacher_name")
+            head_teacher_id = item.get("head_teacher_id")
+            resolved_id, errs = _resolve_admin_relation(head_teacher_name, head_teacher_id)
+            validation_errors.extend(errs)
+            if resolved_id is not None:
+                resolved["head_teacher_id"] = resolved_id
+
+    return resolved, validation_errors
+
+def _process_single_class(resolved_item, conflict_strategy):
+    """处理单条班级记录的冲突策略（跳过/更新/新建），返回 (action, message)。
+
+    action 取值: skipped / updated / created / noop。
+    message 为 None 时表示无需向结果追加消息（noop 兜底，保持原实现语义）。
+    """
+    existing = _shared.ClassInfo.query.filter_by(name=resolved_item["name"]).first()
+    if existing:
+        if conflict_strategy == "skip":
+            return "skipped", {
+                "name": resolved_item["name"],
+                "action": "skipped",
+                "message": (f'班级 "{resolved_item["name"]}" 已存在，已跳过'),
+            }
+        if conflict_strategy == "update":
+            existing.grade = resolved_item.get("grade", existing.grade)
+            existing.description = resolved_item.get("description", existing.description)
+            existing.is_active = resolved_item.get("is_active", existing.is_active)
+            existing.updated_at = datetime.now()
+            _ht = resolved_item.get("head_teacher_id", _HEAD_TEACHER_MISSING)
+            if _ht is not _HEAD_TEACHER_MISSING:
+                existing.head_teacher_id = _ht
+                if _ht:
+                    admin_link = _shared.AdminClass.query.filter_by(
+                        admin_id=_ht,
+                        class_info_id=existing.id,
+                    ).first()
+                    if admin_link:
+                        admin_link.is_primary = True
+                    else:
+                        admin_link = _shared.AdminClass(
+                            admin_id=_ht,
+                            class_info_id=existing.id,
+                            is_primary=True,
+                            assigned_at=datetime.now(),
+                        )
+                        _shared.db.session.add(admin_link)
+            return "updated", {
+                "name": resolved_item["name"],
+                "action": "updated",
+                "message": (f'班级 "{resolved_item["name"]}" 已更新'),
+            }
+        # 已知策略之外的兜底：保持原实现「不写消息、仍计成功」语义
+        return "noop", None
+
+    new_class = _shared.ClassInfo(
+        name=resolved_item["name"],
+        grade=resolved_item.get("grade"),
+        description=resolved_item.get("description"),
+        head_teacher_id=resolved_item.get("head_teacher_id"),
+        is_active=resolved_item.get("is_active", True),
+    )
+    _shared.db.session.add(new_class)
+    _shared.db.session.flush()
+    if resolved_item.get("head_teacher_id"):
+        admin_link = _shared.AdminClass(
+            admin_id=resolved_item["head_teacher_id"],
+            class_info_id=new_class.id,
+            is_primary=True,
+            assigned_at=datetime.now(),
+        )
+        _shared.db.session.add(admin_link)
+    return "created", {
+        "name": resolved_item["name"],
+        "action": "created",
+        "message": f'班级 "{resolved_item["name"]}" 已创建',
+    }
+
+
+class _ClassImportExportMixin:
+    def export_classes(self, keyword=None, export_format="json"):
+        query = _shared.ClassInfo.query
+        if keyword:
+            query = query.filter(
+                _shared.db.or_(
+                    _shared.ClassInfo.name.like(f"%{keyword}%"),
+                    _shared.ClassInfo.grade.like(f"%{keyword}%"),
+                )
+            )
+
+        classes = query.order_by(_shared.ClassInfo.name).all()
+        export_data = []
+
+        # R21: 批量预取，消除导出 N+1（原每班各查班主任 + 学生计数，N 班约 2N 次查询 -> 2 次）
+        head_teacher_ids = {c.head_teacher_id for c in classes if c.head_teacher_id}
+        teachers = (
+            {a.id: a.real_name for a in _shared.Admin.query.filter(_shared.Admin.id.in_(head_teacher_ids)).all()}
+            if head_teacher_ids
+            else {}
+        )
+        class_names = {c.name for c in classes}
+        counts = (
+            {
+                r[0]: r[1]
+                for r in User.query.filter(
+                    User.class_name.in_(class_names), User.is_active
+                ).with_entities(User.class_name, func.count()).group_by(User.class_name).all()
+            }
+            if class_names
+            else {}
+        )
+
+        for cls in classes:
+            head_teacher = teachers.get(cls.head_teacher_id)
+            student_count = counts.get(cls.name, 0)
+
+            export_data.append(
+                {
+                    "name": cls.name,
+                    "grade": cls.grade,
+                    "description": cls.description,
+                    "head_teacher_id": cls.head_teacher_id,
+                    "head_teacher_name": head_teacher,
+                    "student_count": student_count,
+                    "is_active": "是" if cls.is_active else "否",
+                    "created_at": (cls.created_at.isoformat() if cls.created_at else None),
+                    "updated_at": (cls.updated_at.isoformat() if cls.updated_at else None),
+                }
+            )
+
+        if export_format == "excel":
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "班级数据"
+
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            header_alignment = Alignment(horizontal="center", vertical="center")
+            thin_border = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
+            )
+
+            headers = [
+                "班级名称",
+                "年级",
+                "描述",
+                "班主任ID",
+                "班主任姓名",
+                "学生数量",
+                "是否启用",
+                "创建时间",
+                "更新时间",
+            ]
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+                cell.border = thin_border
+
+            for row_idx, item in enumerate(export_data, 2):
+                # R22 公式注入防护：整行经 sanitize 中和（name/description/班主任姓名均为用户可控）
+                safe_item = {k: sanitize_spreadsheet_value(v) for k, v in item.items()}
+                ws.cell(row=row_idx, column=1, value=safe_item.get("name")).border = thin_border
+                ws.cell(row=row_idx, column=2, value=safe_item.get("grade")).border = thin_border
+                ws.cell(
+                    row=row_idx, column=3, value=safe_item.get("description")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=4, value=safe_item.get("head_teacher_id")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=5, value=safe_item.get("head_teacher_name")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=6, value=safe_item.get("student_count")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=7, value=safe_item.get("is_active")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=8, value=safe_item.get("created_at")
+                ).border = thin_border
+                ws.cell(
+                    row=row_idx, column=9, value=safe_item.get("updated_at")
+                ).border = thin_border
+
+            column_widths = [15, 10, 30, 12, 12, 10, 10, 20, 20]
+            for i, width in enumerate(column_widths, 1):
+                col_letter = chr(64 + i) if i <= 26 else f"A{chr(64 + i - 26)}"
+                ws.column_dimensions[col_letter].width = width
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+
+            filename = f'classes_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}' ".xlsx"
+            return {
+                "type": "excel",
+                "data": buf,
+                "filename": filename,
+            }
+        output = {
+            "export_time": datetime.now().isoformat(),
+            "total": len(export_data),
+            "data": export_data,
+        }
+
+        json_str = json.dumps(output, ensure_ascii=False, indent=2)
+        buf = io.BytesIO(json_str.encode("utf-8"))
+        buf.seek(0)
+
+        filename = f'classes_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}' ".json"
+        return {
+            "type": "json",
+            "data": buf,
+            "filename": filename,
+        }
+
+    def import_classes(self, import_list, config=None):
+        default_mappings = [
+            {
+                "source_field": "班级名称",
+                "target_field": "name",
+                "field_type": "string",
+                "required": True,
+            },
+            {
+                "source_field": "年级",
+                "target_field": "grade",
+                "field_type": "string",
+            },
+            {
+                "source_field": "描述",
+                "target_field": "description",
+                "field_type": "string",
+            },
+            {
+                "source_field": "班主任ID",
+                "target_field": "head_teacher_id",
+                "field_type": "integer",
+                "relation": "admin",
+            },
+            {
+                "source_field": "班主任姓名",
+                "target_field": "head_teacher_name",
+                "field_type": "string",
+                "relation": "admin",
+            },
+            {
+                "source_field": "是否启用",
+                "target_field": "is_active",
+                "field_type": "boolean",
+            },
+        ]
+
+        field_mappings = config.field_mappings if config else default_mappings
+        validation_rules = config.validation_rules if config else []
+        conflict_strategy = config.conflict_strategy if config else "update"
+
+        success_count = 0
+        failed_count = 0
+        messages = []
+
+        with _shared.db_session_scope(detach=False):
+            for item in import_list:
+                try:
+                    errors = _validate_import_item(item, validation_rules)
+                    if errors:
+                        failed_count += 1
+                        messages.append(
+                            {
+                                "name": item.get("name", "未知"),
+                                "action": "failed",
+                                "message": (f'验证失败: {", ".join(errors)}'),
+                                "row_data": item,
+                                "error_fields": list(
+                                    {
+                                        rule["field"]
+                                        for rule in validation_rules
+                                        if item.get(rule["field"]) is None
+                                    }
+                                ),
+                            }
+                        )
+                        continue
+
+                    resolved_item, relation_errors = _resolve_import_relations(item, field_mappings)
+                    if relation_errors:
+                        failed_count += 1
+                        messages.append(
+                            {
+                                "name": item.get("name", "未知"),
+                                "action": "failed",
+                                "message": (f'关联验证失败: {", ".join(relation_errors)}'),
+                                "row_data": item,
+                                "error_fields": (
+                                    ["head_teacher_name", "head_teacher_id"]
+                                    if "head_teacher_name" in item or "head_teacher_id" in item
+                                    else []
+                                ),
+                            }
+                        )
+                        continue
+
+                    action, msg = _process_single_class(resolved_item, conflict_strategy)
+                    if msg is not None:
+                        messages.append(msg)
+                    if action != "skipped":
+                        success_count += 1
+                except Exception as e:
+                    failed_count += 1
+                    messages.append(
+                        {
+                            "name": item.get("name", "未知"),
+                            "action": "failed",
+                            "message": f"导入失败: {e!s}",
+                        }
+                    )
+
+        return {
+            "success": True,
+            "total": len(import_list),
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "messages": messages,
+        }
